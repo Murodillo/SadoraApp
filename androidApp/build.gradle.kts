@@ -50,5 +50,8 @@ android {
     }
     buildFeatures {
         compose = true
+        // MainActivity picks the API environment from DEBUG and reports VERSION_NAME to
+        // the backend, so the generated BuildConfig has to exist.
+        buildConfig = true
     }
 }

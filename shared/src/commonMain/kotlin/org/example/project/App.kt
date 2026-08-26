@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -21,6 +22,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import org.example.project.data.SadoraGraph
+import org.example.project.data.SessionState
+import org.example.project.data.applyServerProfile
 import org.example.project.design.SadoraTheme
 import org.example.project.design.Spacing
 import org.example.project.model.AppState
@@ -76,7 +80,7 @@ import org.example.project.ui.settings.SettingsDetailScreen
  */
 @Composable
 @Preview
-fun App() {
+fun App(graph: SadoraGraph? = null) {
     val state = remember { AppState() }
     val navigator = remember { Navigator() }
 
@@ -87,8 +91,10 @@ fun App() {
             modifier = Modifier.fillMaxSize(),
         ) { phase ->
             when (phase) {
-                AppPhase.Splash -> SplashScreen(
-                    onReady = { navigator.goTo(AppPhase.Onboarding) },
+                AppPhase.Splash -> SplashGate(
+                    graph = graph,
+                    state = state,
+                    onResolved = navigator::goTo,
                 )
 
                 AppPhase.Onboarding -> OnboardingFlow(
@@ -109,6 +115,46 @@ fun App() {
             }
         }
     }
+}
+
+/**
+ * Splash, holding until two things are true: the animation has had its moment, and the
+ * stored session has been resolved.
+ *
+ * Waiting for both is what stops the app flashing the sign-in screen at a user who is
+ * already signed in — resolving a session takes a network round trip, and routing on the
+ * animation alone would show sign-in and then yank it away.
+ *
+ * With no graph — previews and the `@Preview` entry point — it behaves as before and
+ * goes straight to onboarding.
+ */
+@Composable
+private fun SplashGate(
+    graph: SadoraGraph?,
+    state: AppState,
+    onResolved: (AppPhase) -> Unit,
+) {
+    var animationDone by remember { mutableStateOf(false) }
+    var session by remember { mutableStateOf<SessionState>(SessionState.Unknown) }
+
+    LaunchedEffect(graph) {
+        session = graph?.repository?.resume() ?: SessionState.SignedOut
+    }
+
+    LaunchedEffect(animationDone, session) {
+        val resolved = session
+        if (!animationDone || resolved is SessionState.Unknown) return@LaunchedEffect
+        if (resolved is SessionState.SignedIn) {
+            state.applyServerProfile(resolved.user, resolved.entitlements)
+            // Onboarding is a gate, not a screen: a half-registered account goes back
+            // into the flow rather than into an app with no profile behind it.
+            onResolved(if (resolved.needsOnboarding) AppPhase.Onboarding else AppPhase.Main)
+        } else {
+            onResolved(AppPhase.Onboarding)
+        }
+    }
+
+    SplashScreen(onReady = { animationDone = true })
 }
 
 /**
