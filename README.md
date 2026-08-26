@@ -1,31 +1,154 @@
-This is a Kotlin Multiplatform project targeting Android, iOS.
+# SADORA
 
-* [/iosApp](./iosApp/iosApp) contains an iOS application. Even if you’re sharing your UI with Compose Multiplatform,
-  you need this entry point for your iOS app. This is also where you should add SwiftUI code for your project.
+Ayollar salomatligi ilovasi — sikl, homiladorlik, menopauza, uyqu, ovqatlanish va
+kayfiyat bir joyda. Kotlin Multiplatform + Compose Multiplatform, Android va iOS
+uchun bitta umumiy UI.
 
-* [/shared](./shared/src) is for code that will be shared across your Compose Multiplatform applications.
-  It contains several subfolders:
-  - [commonMain](./shared/src/commonMain/kotlin) is for code that’s common for all targets.
-  - Other folders are for Kotlin code that will be compiled for only the platform indicated in the folder name.
-    For example, if you want to use Apple’s CoreCrypto for the iOS part of your Kotlin app,
-    the [iosMain](./shared/src/iosMain/kotlin) folder would be the right place for such calls.
-    Similarly, if you want to edit the Desktop (JVM) specific part, the [jvmMain](./shared/src/jvmMain/kotlin)
-    folder is the appropriate location.
+> **Har bir ayol. Har bir lahza.**
 
-### Running the apps
-
-Use the run configurations provided by the run widget in your IDE's toolbar. You can also use these commands and options:
-
-- Android app: `./gradlew :androidApp:assembleDebug`
-- iOS app: open the [/iosApp](./iosApp) directory in Xcode and run it from there.
-
-### Running tests
-
-Use the run button in your IDE's editor gutter, or run tests using Gradle tasks:
-
-- Android tests: `./gradlew :shared:testAndroidHostTest`
-- iOS tests: `./gradlew :shared:iosSimulatorArm64Test`
+Interfeys tili — o'zbekcha. Ilova ichida uch til nazarda tutilgan (UZ / RU / EN),
+hozircha faqat o'zbekchasi yozilgan.
 
 ---
 
-Learn more about [Kotlin Multiplatform](https://www.jetbrains.com/help/kotlin-multiplatform-dev/get-started.html)…
+## Ishga tushirish
+
+```bash
+./gradlew :androidApp:assembleDebug
+```
+
+iOS uchun `iosApp/iosApp.xcodeproj` faylini Xcode'da oching va ishga tushiring.
+
+Testlar:
+
+```bash
+./gradlew :shared:iosSimulatorArm64Test
+```
+
+Android SDK yo'li `local.properties` faylida ko'rsatiladi (bu fayl git'ga
+qo'shilmaydi):
+
+```
+sdk.dir=/Users/<siz>/Library/Android/sdk
+```
+
+---
+
+## Arxitektura
+
+Butun UI `:shared` modulining `commonMain` manbasida — Android va iOS bir xil
+kodni ishlatadi. Platformaga xos qism juda kichik: ikkala tomonda ham faqat
+`App()` ni chaqiradigan ingichka kirish nuqtasi.
+
+```
+androidApp/          MainActivity — App() ni chaqiradi
+iosApp/              SwiftUI ContentView — App() ni chaqiradi
+shared/src/commonMain/kotlin/org/example/project/
+├── App.kt           Ildiz: AppState va Navigator shu yerda yashaydi
+├── design/          Dizayn tokenlari (ranglar, tipografika, o'lchamlar, mavzu)
+├── model/           Domen modeli va namuna ma'lumotlar
+├── nav/             Navigatsiya holati (Tab, Route, Navigator)
+└── ui/
+    ├── components/  Komponentlar kutubxonasi
+    ├── onboarding/  14 ta ekran: splash → kirish
+    ├── core/        5 ta asosiy tab
+    ├── journey/     "Yo'l" tabi va hayot bosqichlari
+    ├── modules/     Modullar (skaner, ong, dorilar, uyqu, bilim…)
+    └── settings/    Profil ichidagi sozlama ekranlari
+```
+
+### Qatlamlar
+
+Bog'liqlik bir tomonga oqadi — `design` → `model` → `components` → ekranlar → `App`.
+Hech bir ekran boshqa ekranni to'g'ridan-to'g'ri chaqirmaydi; ular faqat
+`onOpen(Route)` orqali gaplashadi, shuning uchun har bir ekranni alohida ko'rish
+va ko'chirish mumkin.
+
+**`design/`** — dizayn tizimining yagona manbasi. `SadoraColors` ikkala mavzu
+uchun ham *barcha* tokenlarni belgilaydi, shuning uchun ekranlar `if (dark)` yozmaydi;
+ular `Sadora.colors.primary` deb yozadi va mavzu o'zi hal qiladi. Tipografika ettita
+qadamdan iborat, radius va masofalar 8pt panjarasiga bog'langan.
+
+**`model/`** — `AppState` butun ilova uchun bitta xotiradagi do'kon. Backend hali
+yo'q, shuning uchun ekranlar to'g'ridan-to'g'ri shu yerdan o'qiydi va yozadi.
+Hammasi Compose state, ya'ni har qanday o'zgarish tegishli ekranni qayta chizadi.
+
+**`nav/`** — navigatsiya kutubxonasi qo'shilmagan. `Navigator` joriy fazani
+(splash / onboarding / kirish / asosiy), joriy tabni va route'lar stekini saqlaydi.
+`replaceTop` chiziqli oqimlar uchun — masalan kamera → tahlil → natija, bu yerda
+orqaga qadam tashlash noto'g'ri bo'lardi.
+
+### Hayot bosqichi — eng katta shox
+
+`LifeStage` ilovadagi eng katta tarmoqlanish. U "Yo'l" tabini butunlay
+almashtiradi va tab yorlig'ini ham o'zgartiradi — homilador foydalanuvchi "Sikl"
+emas, "Homilador" deb ko'radi.
+
+Muhim jihat: homiladorlik, tug'ruqdan keyingi davr va menopauza uchun sikl
+bashorati **umuman ko'rsatilmaydi**. Bu "o'chirilgan Sikl ekrani" emas — har biri
+o'z maketiga, o'z asosiy ko'rsatkichiga va o'z tiliga ega.
+
+| Bosqich | Asosiy ko'rsatkich | Bashorat |
+|---|---|---|
+| Sikl / Rejalashtirish | Sikl kuni | Bor, "Taxminiy" belgisi bilan |
+| Homiladorlik | Hafta | Yo'q |
+| Tug'ruqdan keyin | Tiklanish haftasi | Yo'q |
+| Perimenopauza | Muntazamlik grafigi | Yo'q |
+| Menopauza | Balans balli | Yo'q |
+
+---
+
+## Dizayn qoidalari
+
+Bular shunchaki uslub emas — kodda ataylab saqlangan qarorlar.
+
+**Gradient faqat to'rt joyda.** Hero, AI, Premium CTA va markaziy FAB. Boshqa
+hech qayerda. Shuning uchun `AiSummaryCard` va `PremiumCtaButton` gradientni
+o'zida saqlaydi, `SadoraCard` esa yo'q.
+
+**Rang hech qachon yagona indikator emas.** Kalendarda qayd etilgan kunlar
+to'ldirilgan, bashorat qilinganlari faqat konturli; afsona ikkalasini so'z bilan
+ham yozadi. Dori qabul panjarasida ham xuddi shunday.
+
+**Har bir bashorat belgilanadi.** "Taxminiy" nishoni bashorat ko'rsatilgan har bir
+joyda turadi.
+
+**Sabab-natija da'vo qilinmaydi.** Tahlillar "ko'pincha birga kuzatilgan" deb
+yozadi, "sabab bo'lgan" demaydi.
+
+**Tibbiy ko'rsatma berilmaydi.** Dorilar ekrani o'tkazib yuborilgan qabul haqida
+maslahat bermaydi — retsept yoki farmatsevtga yo'naltiradi. Yagona istisno:
+homiladorlikda bola harakati sezilarli kamaysa, ilova kechiktirmasdan shifokorga
+murojaat qilishni aytadi.
+
+**Premium bloklovchi emas.** Bepul rejadagi hamma narsa qoladi. Qulflangan bloklar
+yashirilmaydi, xiralashgan holda ko'rinadi — foydalanuvchi nima qo'shilishini
+ko'radi. Paywall'da "Hozir emas" tugmasi "Premium'ni ko'rish" bilan bir xil
+vaznda.
+
+**Teginish maydoni ≥ 44×44.** Kontrast AA darajasida — shuning uchun yorug'
+mavzuda matn uchun `primary` emas, quyuqroq `textAccent` ishlatiladi.
+
+---
+
+## Holat va keyingi qadamlar
+
+Hozircha bu to'liq ishlaydigan UI prototipi: barcha ekranlar chizilgan, oqimlar
+bog'langan, holat real vaqtda o'zgaradi.
+
+Hali yo'q:
+
+- **Backend va saqlash** — `AppState` xotirada, ilova qayta ishga tushsa nolga qaytadi
+- **Haqiqiy AI** — javoblar namuna matn
+- **Qurilma integratsiyasi** — Apple Health / Oura ma'lumotlari namuna
+- **RU va EN tarjimalari** — matnlar hozircha kodda o'zbekcha
+- **Admin panel** — dizaynda bor (16-bo'lim), lekin u 1440px web dashboard,
+  mobil ilovaga kirmaydi
+
+---
+
+## Dizayn manbasi
+
+Dizayn Claude Design'da, bir nechta faylga bo'lingan: poydevor va palitra,
+onboarding, mobil yadro, modullar. Ekranlar har bir faylda ikki marta —
+yorug' va qorong'i mavzu.
