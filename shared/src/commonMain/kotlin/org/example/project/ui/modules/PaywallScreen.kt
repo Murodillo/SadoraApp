@@ -16,6 +16,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -28,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import org.example.project.design.Radius
 import org.example.project.design.Sadora
 import org.example.project.design.Spacing
+import org.example.project.data.SadoraController
 import org.example.project.model.AppState
 import org.example.project.ui.components.CardLabel
 import org.example.project.ui.components.PremiumCtaButton
@@ -55,10 +58,12 @@ private val features = listOf(
 @Composable
 fun PaywallScreen(
     state: AppState,
+    controller: SadoraController,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val c = Sadora.colors
+    val scope = rememberCoroutineScope()
     var annual by remember { mutableStateOf(true) }
 
     Column(modifier) {
@@ -192,10 +197,20 @@ fun PaywallScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(Spacing.xs),
                 ) {
-                    PremiumCtaButton("Premium'ni boshlash", onClick = {
-                        state.isPremium = true
-                        onClose()
-                    })
+                    PremiumCtaButton(
+                        if (controller.busy) "Tekshirilmoqda…" else "Premium'ni boshlash",
+                        enabled = !controller.busy,
+                        onClick = {
+                            scope.launch {
+                                // Store purchase belongs to the platform billing SDK.
+                                // Until that lands, ask the server what the tier is now
+                                // rather than flipping the flag locally and lying to
+                                // every screen that reads it.
+                                controller.refreshEntitlements()
+                                onClose()
+                            }
+                        },
+                    )
                     Text(
                         "Istalgan vaqtda bekor qilish mumkin",
                         style = Sadora.type.body,

@@ -6,6 +6,7 @@ import io.ktor.client.request.HttpRequestData
 import io.ktor.client.request.HttpResponseData
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
+import io.ktor.http.content.TextContent
 import io.ktor.http.headersOf
 import io.ktor.utils.io.ByteReadChannel
 import kotlin.time.Duration.Companion.minutes
@@ -85,14 +86,21 @@ fun errorBody(code: String, message: String, details: Map<String, String> = empt
 fun MockRequestHandlerScope.plain(body: String, status: HttpStatusCode): HttpResponseData =
     respond(ByteReadChannel(body), status, headersOf(HttpHeaders.ContentType, "text/html"))
 
-/** Records every path the client asked for, so tests can assert on call counts. */
+/**
+ * Records every path the client asked for, and every request body it sent, so tests can
+ * assert both on call counts and on what actually went over the wire.
+ */
 class RecordingEngine(
     private val handler: suspend MockRequestHandlerScope.(HttpRequestData) -> HttpResponseData,
 ) {
     val paths = mutableListOf<String>()
 
+    /** Serialized request bodies, in order. Empty string for a body-less request. */
+    val bodies = mutableListOf<String>()
+
     fun build(): MockEngine = MockEngine { request ->
         paths.add(request.url.encodedPath)
+        bodies.add((request.body as? TextContent)?.text.orEmpty())
         handler(request)
     }
 

@@ -14,7 +14,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import kotlinx.coroutines.launch
+import androidx.compose.runtime.rememberCoroutineScope
+import org.example.project.data.AuthDestination
+import org.example.project.data.SadoraController
 import org.example.project.model.AppState
+import uz.sadora.contract.OtpChallenge
 
 /** The ordered onboarding steps. Step numbering in the UI is "n/9". */
 enum class OnboardingStep(val indicator: String?) {
@@ -41,16 +46,33 @@ enum class OnboardingStep(val indicator: String?) {
 @Composable
 fun OnboardingFlow(
     state: AppState,
+    controller: SadoraController,
     onFinished: () -> Unit,
     onSignInInstead: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var step by remember { mutableStateOf(OnboardingStep.Intro1) }
     val steps = remember { OnboardingStep.entries }
+    val scope = rememberCoroutineScope()
+    // Carried from the sign-up step to the OTP step.
+    var challenge by remember { mutableStateOf<OtpChallenge?>(null) }
 
     fun advance() {
         val next = steps.getOrNull(step.ordinal + 1)
         if (next == null) onFinished() else step = next
+    }
+
+    /**
+     * Submits the flow, and only then leaves it.
+     *
+     * Staying put on failure is deliberate: onboarding is sent as one request, so a
+     * user who advances past a failed submit would land in an app whose server has no
+     * profile for her.
+     */
+    fun submitAndFinish() {
+        scope.launch {
+            if (controller.completeOnboarding()) onFinished()
+        }
     }
 
     fun back() {
@@ -92,17 +114,34 @@ fun OnboardingFlow(
 
                     OnboardingStep.SignUp -> SignUpStep(
                         state = state,
+                        controller = controller,
                         step = current.indicator,
                         onBack = ::back,
-                        onNext = ::advance,
+                        onChallenge = {
+                            challenge = it
+                            advance()
+                        },
+                        // Apple, Google and e-mail sign-up skip the OTP screen; where
+                        // they land depends on whether the account already has a profile.
+                        onAuthenticated = { destination ->
+                            if (destination == AuthDestination.Main) {
+                                onFinished()
+                            } else {
+                                step = OnboardingStep.Personal
+                            }
+                        },
                         onSignInInstead = onSignInInstead,
                     )
 
                     OnboardingStep.Otp -> OtpStep(
                         state = state,
+                        controller = controller,
+                        challenge = challenge,
                         step = current.indicator,
                         onBack = ::back,
-                        onNext = ::advance,
+                        onVerified = { destination ->
+                            if (destination == AuthDestination.Main) onFinished() else advance()
+                        },
                     )
 
                     OnboardingStep.Personal -> PersonalStep(
@@ -135,6 +174,7 @@ fun OnboardingFlow(
 
                     OnboardingStep.Privacy -> PrivacyStep(
                         state = state,
+                        controller = controller,
                         step = current.indicator,
                         onBack = ::back,
                         onNext = ::advance,
@@ -142,7 +182,8 @@ fun OnboardingFlow(
 
                     OnboardingStep.Ready -> ReadyStep(
                         state = state,
-                        onEnter = onFinished,
+                        controller = controller,
+                        onEnter = ::submitAndFinish,
                     )
                 }
             }

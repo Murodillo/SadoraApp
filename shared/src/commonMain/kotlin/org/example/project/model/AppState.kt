@@ -58,7 +58,14 @@ class AppState {
     var consentAnalytics by mutableStateOf(false)
 
     // ---- subscription ----
-    var isPremium by mutableStateOf(true)
+    /**
+     * Free until the server says otherwise.
+     *
+     * The prototype defaulted to true so the Premium screens were visible; with real
+     * entitlements behind it that default would show paid content to someone who has
+     * not paid, so the tier now only ever comes from [Entitlements].
+     */
+    var isPremium by mutableStateOf(false)
     var premiumRenewal by mutableStateOf("14-mart 2027-yilgacha")
 
     // ---- appearance ----

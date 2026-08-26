@@ -22,6 +22,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import org.example.project.data.SadoraController
 import org.example.project.data.SadoraGraph
 import org.example.project.data.SessionState
 import org.example.project.data.applyServerProfile
@@ -83,6 +84,8 @@ import org.example.project.ui.settings.SettingsDetailScreen
 fun App(graph: SadoraGraph? = null) {
     val state = remember { AppState() }
     val navigator = remember { Navigator() }
+    // One controller for the whole app; with no graph it runs everything locally.
+    val controller = remember(graph, state) { SadoraController(graph?.repository, state) }
 
     SadoraTheme(darkTheme = state.darkTheme) {
         AnimatedContent(
@@ -99,6 +102,7 @@ fun App(graph: SadoraGraph? = null) {
 
                 AppPhase.Onboarding -> OnboardingFlow(
                     state = state,
+                    controller = controller,
                     onFinished = { navigator.goTo(AppPhase.Main) },
                     onSignInInstead = { navigator.goTo(AppPhase.SignIn) },
                 )
@@ -106,12 +110,13 @@ fun App(graph: SadoraGraph? = null) {
                 AppPhase.SignIn -> Box(Modifier.fillMaxSize().statusBarsPadding()) {
                     SignInScreen(
                         state = state,
-                        onSignedIn = { navigator.goTo(AppPhase.Main) },
+                        controller = controller,
+                        onSignedIn = { navigator.goTo(it) },
                         onRegisterInstead = { navigator.goTo(AppPhase.Onboarding) },
                     )
                 }
 
-                AppPhase.Main -> MainShell(state, navigator)
+                AppPhase.Main -> MainShell(state, navigator, controller)
             }
         }
     }
@@ -162,7 +167,7 @@ private fun SplashGate(
  * that can be raised from any tab.
  */
 @Composable
-private fun MainShell(state: AppState, navigator: Navigator) {
+private fun MainShell(state: AppState, navigator: Navigator, controller: SadoraController) {
     var showWaterSheet by remember { mutableStateOf(false) }
     var showSymptomSheet by remember { mutableStateOf(false) }
     var toast by remember { mutableStateOf<String?>(null) }
@@ -180,9 +185,21 @@ private fun MainShell(state: AppState, navigator: Navigator) {
             Box(Modifier.weight(1f)) {
                 val route = navigator.current
                 if (route != null) {
-                    PushedScreen(route, state, navigator, onSymptomSheet = { showSymptomSheet = true })
+                    PushedScreen(
+                        route,
+                        state,
+                        navigator,
+                        controller,
+                        onSymptomSheet = { showSymptomSheet = true },
+                    )
                 } else {
-                    RootTab(navigator.tab, state, navigator, onAddWater = { showWaterSheet = true })
+                    RootTab(
+                        navigator.tab,
+                        state,
+                        navigator,
+                        controller,
+                        onAddWater = { showWaterSheet = true },
+                    )
                 }
             }
 
@@ -245,6 +262,7 @@ private fun RootTab(
     tab: Tab,
     state: AppState,
     navigator: Navigator,
+    controller: SadoraController,
     onAddWater: () -> Unit,
 ) {
     when (tab) {
@@ -275,7 +293,12 @@ private fun RootTab(
             onAddWater = onAddWater,
         )
 
-        Tab.Profile -> ProfileScreen(state = state, onOpen = navigator::push)
+        Tab.Profile -> ProfileScreen(
+            state = state,
+            controller = controller,
+            onOpen = navigator::push,
+            onSignedOut = { navigator.goTo(AppPhase.SignIn) },
+        )
     }
 }
 
@@ -284,6 +307,7 @@ private fun PushedScreen(
     route: Route,
     state: AppState,
     navigator: Navigator,
+    controller: SadoraController,
     onSymptomSheet: () -> Unit,
 ) {
     val close = navigator::pop
@@ -326,7 +350,7 @@ private fun PushedScreen(
         Route.Knowledge -> KnowledgeScreen(state, close, navigator::push)
         is Route.Article -> ArticleScreen(route.title, close)
         Route.DataSources -> DataSourcesScreen(close)
-        Route.Paywall -> PaywallScreen(state, close)
+        Route.Paywall -> PaywallScreen(state, controller, close)
 
         // Settings detail screens reuse the existing surfaces they configure.
         Route.PersonalDetails,
@@ -335,6 +359,12 @@ private fun PushedScreen(
         Route.Notifications,
         Route.PrivacySecurity,
         Route.About,
-        -> SettingsDetailScreen(route, state, close)
+        -> SettingsDetailScreen(
+            route = route,
+            state = state,
+            controller = controller,
+            onClose = close,
+            onSignedOut = { navigator.goTo(AppPhase.SignIn) },
+        )
     }
 }

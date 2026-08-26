@@ -9,6 +9,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -18,10 +21,13 @@ import androidx.compose.ui.unit.dp
 import org.example.project.design.Radius
 import org.example.project.design.Sadora
 import org.example.project.design.Spacing
+import org.example.project.data.SadoraController
 import org.example.project.model.AppState
 import org.example.project.nav.Route
 import org.example.project.ui.components.Avatar
 import org.example.project.ui.components.BadgeTone
+import org.example.project.ui.components.ButtonTone
+import org.example.project.ui.components.SadoraButton
 import org.example.project.ui.components.ChipFlowRow
 import org.example.project.ui.components.SadoraBadge
 import org.example.project.ui.components.SadoraCard
@@ -40,10 +46,17 @@ import org.example.project.ui.components.noRippleClickable
 @Composable
 fun ProfileScreen(
     state: AppState,
+    controller: SadoraController,
     onOpen: (Route) -> Unit,
+    onSignedOut: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val c = Sadora.colors
+    val scope = rememberCoroutineScope()
+
+    // The tier can change outside the app — a purchase on another device, a lapsed
+    // subscription — so re-check it whenever Profile is opened.
+    LaunchedEffect(Unit) { controller.refreshEntitlements() }
 
     Column(modifier) {
         SadoraTopBar("Profil")
@@ -114,6 +127,20 @@ fun ProfileScreen(
                     ) { state.darkTheme = !state.darkTheme }
                     SettingsRow("ℹ", "SADORA haqida") { onOpen(Route.About) }
                 }
+            }
+
+            item {
+                SadoraButton(
+                    if (controller.busy) "Chiqilmoqda…" else "Chiqish",
+                    tone = ButtonTone.Secondary,
+                    enabled = !controller.busy,
+                    onClick = {
+                        scope.launch {
+                            controller.signOut()
+                            onSignedOut()
+                        }
+                    },
+                )
             }
         }
     }

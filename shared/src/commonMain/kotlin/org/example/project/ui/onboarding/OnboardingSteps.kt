@@ -33,6 +33,13 @@ import kotlinx.coroutines.delay
 import org.example.project.design.Radius
 import org.example.project.design.Sadora
 import org.example.project.design.Spacing
+import kotlinx.coroutines.launch
+import androidx.compose.runtime.rememberCoroutineScope
+import org.example.project.data.AuthDestination
+import org.example.project.data.SadoraController
+import org.example.project.nav.AppPhase
+import uz.sadora.contract.AuthProvider
+import uz.sadora.contract.OtpChallenge
 import org.example.project.model.AppLanguage
 import org.example.project.model.AppState
 import org.example.project.model.Goal
@@ -223,14 +230,18 @@ fun LanguageStep(state: AppState, step: String?, onBack: () -> Unit, onNext: () 
 @Composable
 fun SignUpStep(
     state: AppState,
+    controller: SadoraController,
     step: String?,
     onBack: () -> Unit,
-    onNext: () -> Unit,
+    onChallenge: (OtpChallenge) -> Unit,
+    onAuthenticated: (AuthDestination) -> Unit,
     onSignInInstead: () -> Unit,
 ) {
     val c = Sadora.colors
+    val scope = rememberCoroutineScope()
     var method by remember { mutableStateOf(0) }
     var agreed by remember { mutableStateOf(true) }
+    var password by remember { mutableStateOf("") }
 
     StepScaffold(
         title = "Hisob yaratish",
@@ -238,7 +249,20 @@ fun SignUpStep(
         step = step,
         onBack = onBack,
         footer = {
-            SadoraButton("Kodni yuborish", onNext, enabled = agreed)
+            SadoraButton(
+                if (method == 0) "Kodni yuborish" else "Ro'yxatdan o'tish",
+                enabled = agreed && !controller.busy,
+                onClick = {
+                    scope.launch {
+                        if (method == 0) {
+                            controller.requestOtp(state.phone)?.let(onChallenge)
+                        } else {
+                            controller.registerWithEmail(state.email, password, state.name)
+                                ?.let(onAuthenticated)
+                        }
+                    }
+                },
+            )
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("Hisobim bor · ", style = Sadora.type.body, color = c.muted)
                 Text(
@@ -250,8 +274,31 @@ fun SignUpStep(
             }
         },
     ) {
-        SadoraButton("Apple bilan davom etish", onNext, tone = ButtonTone.Secondary, leading = "")
-        SadoraButton("Google bilan davom etish", onNext, tone = ButtonTone.Secondary, leading = "G")
+        SadoraButton(
+            "Apple bilan davom etish",
+            tone = ButtonTone.Secondary,
+            leading = "",
+            enabled = !controller.busy,
+            // The real token comes from the platform SDK; until that is wired the call
+            // goes out with an empty one and the server rejects it, surfacing an error
+            // rather than silently pretending to sign in.
+            onClick = {
+                scope.launch {
+                    controller.signInWithSocial(AuthProvider.APPLE, "")?.let(onAuthenticated)
+                }
+            },
+        )
+        SadoraButton(
+            "Google bilan davom etish",
+            tone = ButtonTone.Secondary,
+            leading = "G",
+            enabled = !controller.busy,
+            onClick = {
+                scope.launch {
+                    controller.signInWithSocial(AuthProvider.GOOGLE, "")?.let(onAuthenticated)
+                }
+            },
+        )
 
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.weight(1f).height(1.dp).background(c.line))
@@ -276,7 +323,17 @@ fun SignUpStep(
                 placeholder = "siz@example.com",
                 keyboardType = KeyboardType.Email,
             )
+            SadoraTextField(
+                value = password,
+                onValueChange = { password = it },
+                label = "Parol",
+                placeholder = "kamida 8 belgi",
+                isPassword = true,
+                keyboardType = KeyboardType.Password,
+            )
         }
+
+        controller.error?.let { org.example.project.ui.components.ErrorStrip(it) }
 
         Row(
             verticalAlignment = Alignment.Top,
@@ -295,12 +352,23 @@ fun SignUpStep(
 // ---------------------------------------------------------------- 3/9 OTP
 
 @Composable
-fun OtpStep(state: AppState, step: String?, onBack: () -> Unit, onNext: () -> Unit) {
+fun OtpStep(
+    state: AppState,
+    controller: SadoraController,
+    challenge: OtpChallenge?,
+    step: String?,
+    onBack: () -> Unit,
+    onVerified: (AuthDestination) -> Unit,
+) {
     val c = Sadora.colors
-    var code by remember { mutableStateOf("482") }
-    var secondsLeft by remember { mutableStateOf(42) }
-    var attemptsLeft by remember { mutableStateOf(3) }
-    var showError by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    // In development the server hands back the code, so there is nothing to go and read.
+    var code by remember(challenge) { mutableStateOf(challenge?.devCode.orEmpty()) }
+    var current by remember(challenge) { mutableStateOf(challenge) }
+    var secondsLeft by remember(current) {
+        mutableStateOf(current?.resendAfterSeconds ?: 42)
+    }
+    val attemptsLeft = current?.attemptsLeft ?: 3
 
     LaunchedEffect(secondsLeft) {
         if (secondsLeft > 0) {
@@ -318,18 +386,21 @@ fun OtpStep(state: AppState, step: String?, onBack: () -> Unit, onNext: () -> Un
             SadoraButton(
                 "Tasdiqlash",
                 onClick = {
-                    if (code.length == 6) {
-                        onNext()
-                    } else {
-                        showError = true
-                        attemptsLeft = (attemptsLeft - 1).coerceAtLeast(0)
+                    val challengeId = current?.challengeId
+                    scope.launch {
+                        if (challengeId == null) {
+                            // No backend behind the app — accept the code and move on.
+                            onVerified(AuthDestination.Onboarding)
+                        } else {
+                            controller.verifyOtp(challengeId, code)?.let(onVerified)
+                        }
                     }
                 },
-                enabled = code.isNotEmpty(),
+                enabled = code.length == 6 && !controller.busy,
             )
         },
     ) {
-        OtpInput(code, isError = showError)
+        OtpInput(code, isError = controller.error != null)
 
         // Digit pad kept simple: the design shows a partially entered code.
         Row(
@@ -342,8 +413,12 @@ fun OtpStep(state: AppState, step: String?, onBack: () -> Unit, onNext: () -> Un
                 style = Sadora.type.body.copy(fontWeight = FontWeight.SemiBold),
                 color = if (secondsLeft == 0) c.textAccent else c.muted2,
                 modifier = Modifier.noRippleClickable(enabled = secondsLeft == 0) {
-                    secondsLeft = 42
-                    showError = false
+                    scope.launch {
+                        controller.requestOtp(state.phone)?.let {
+                            current = it
+                            code = it.devCode.orEmpty()
+                        }
+                    }
                 },
             )
             Text(
@@ -353,9 +428,9 @@ fun OtpStep(state: AppState, step: String?, onBack: () -> Unit, onNext: () -> Un
             )
         }
 
-        if (showError) {
+        controller.error?.let { message ->
             org.example.project.ui.components.ErrorStrip(
-                "Kod noto'g'ri. Yana $attemptsLeft marta urinish mumkin.",
+                if (attemptsLeft > 0) "$message Yana $attemptsLeft marta urinish mumkin." else message,
             )
         }
 
@@ -367,11 +442,11 @@ fun OtpStep(state: AppState, step: String?, onBack: () -> Unit, onNext: () -> Un
         NumberPad(
             onDigit = {
                 if (code.length < 6) code += it
-                showError = false
+                controller.clearError()
             },
             onDelete = {
                 code = code.dropLast(1)
-                showError = false
+                controller.clearError()
             },
         )
     }
@@ -561,7 +636,13 @@ fun PermissionsStep(state: AppState, step: String?, onBack: () -> Unit, onNext: 
 // ---------------------------------------------------------------- 8/9 privacy
 
 @Composable
-fun PrivacyStep(state: AppState, step: String?, onBack: () -> Unit, onNext: () -> Unit) {
+fun PrivacyStep(
+    state: AppState,
+    controller: SadoraController,
+    step: String?,
+    onBack: () -> Unit,
+    onNext: () -> Unit,
+) {
     val c = Sadora.colors
     StepScaffold(
         title = "Maxfiylik va rozilik",
@@ -601,7 +682,7 @@ fun PrivacyStep(state: AppState, step: String?, onBack: () -> Unit, onNext: () -
 // ---------------------------------------------------------------- ready
 
 @Composable
-fun ReadyStep(state: AppState, onEnter: () -> Unit) {
+fun ReadyStep(state: AppState, controller: SadoraController, onEnter: () -> Unit) {
     val c = Sadora.colors
     Column(
         Modifier.fillMaxSize().padding(horizontal = Spacing.screen),
@@ -629,7 +710,12 @@ fun ReadyStep(state: AppState, onEnter: () -> Unit) {
             SummaryLine("${state.goals.size} maqsad belgilandi")
         }
         Spacer(Modifier.weight(1f))
-        SadoraButton("SADORA'ga kirish", onEnter)
+        controller.error?.let { org.example.project.ui.components.ErrorStrip(it) }
+        SadoraButton(
+            if (controller.busy) "Saqlanmoqda…" else "SADORA'ga kirish",
+            onEnter,
+            enabled = !controller.busy,
+        )
         Spacer(Modifier.height(Spacing.md))
     }
 }
@@ -651,13 +737,30 @@ private fun SummaryLine(text: String) {
 @Composable
 fun SignInScreen(
     state: AppState,
-    onSignedIn: () -> Unit,
+    controller: SadoraController,
+    onSignedIn: (AppPhase) -> Unit,
     onRegisterInstead: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val c = Sadora.colors
+    val scope = rememberCoroutineScope()
     var password by remember { mutableStateOf("") }
     var rememberMe by remember { mutableStateOf(true) }
+
+    fun finish(destination: AuthDestination) {
+        onSignedIn(
+            if (destination == AuthDestination.Main) AppPhase.Main else AppPhase.Onboarding,
+        )
+    }
+
+    fun submit() {
+        scope.launch {
+            // The field is labelled "telefon raqami", but the backend signs in by
+            // e-mail and password. Whichever the user typed, send it as the identifier.
+            val identifier = state.email.ifBlank { state.phone }
+            controller.signInWithEmail(identifier, password)?.let(::finish)
+        }
+    }
 
     Column(
         modifier
@@ -681,11 +784,11 @@ fun SignInScreen(
             Text("Hisobingizga kirib davom eting", style = Sadora.type.body, color = c.muted)
         }
         SadoraTextField(
-            state.phone,
-            { state.phone = it },
-            label = "Telefon raqami",
-            leading = "+998",
-            keyboardType = KeyboardType.Phone,
+            state.email,
+            { state.email = it },
+            label = "E-mail",
+            placeholder = "siz@example.com",
+            keyboardType = KeyboardType.Email,
         )
         SadoraTextField(
             password,
@@ -710,15 +813,38 @@ fun SignInScreen(
             }
             Text("Parolni tikladingizmi?", style = Sadora.type.body, color = c.textAccent)
         }
-        SadoraButton("Kirish", onSignedIn)
+        controller.error?.let { org.example.project.ui.components.ErrorStrip(it) }
+        SadoraButton(
+            if (controller.busy) "Kirilmoqda…" else "Kirish",
+            onClick = ::submit,
+            enabled = password.isNotBlank() && !controller.busy,
+        )
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.weight(1f).height(1.dp).background(c.line))
             Text("  yoki  ", style = Sadora.type.body, color = c.muted)
             Box(Modifier.weight(1f).height(1.dp).background(c.line))
         }
         Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-            SadoraButton("Google", onSignedIn, tone = ButtonTone.Secondary, leading = "G", modifier = Modifier.weight(1f))
-            SadoraButton("Face ID", onSignedIn, tone = ButtonTone.Secondary, leading = "☉", modifier = Modifier.weight(1f))
+            SadoraButton(
+                "Google",
+                tone = ButtonTone.Secondary,
+                leading = "G",
+                enabled = !controller.busy,
+                modifier = Modifier.weight(1f),
+                onClick = {
+                    scope.launch {
+                        controller.signInWithSocial(AuthProvider.GOOGLE, "")?.let(::finish)
+                    }
+                },
+            )
+            SadoraButton(
+                "Face ID",
+                tone = ButtonTone.Secondary,
+                leading = "☉",
+                enabled = !controller.busy,
+                modifier = Modifier.weight(1f),
+                onClick = ::submit,
+            )
         }
         Row(
             Modifier.fillMaxWidth(),

@@ -153,16 +153,23 @@ mavzuda matn uchun `primary` emas, quyuqroq `textAccent` ishlatiladi.
 Hozircha bu to'liq ishlaydigan UI prototipi: barcha ekranlar chizilgan, oqimlar
 bog'langan, holat real vaqtda o'zgaradi.
 
-Backend'ning 1-sprint qamrovi yozilgan va ishlaydi: ro'yxatdan o'tish (telefon OTP,
-Apple/Google, email), profil va onboarding, entitlements va limitlar, feature flags,
-admin panel API'si. Ilova hali unga ulanmagan — mobil tarmoq qatlami keyingi qadam.
+Backend'ning 1-sprint qamrovi yozilgan va ilova **unga ulangan**: ro'yxatdan o'tish
+(telefon OTP, Apple/Google, email), kirish, profil va onboarding, roziliklar,
+entitlements va feature flags. Sessiya qurilmada saqlanadi, shuning uchun ilova qayta
+ishga tushganda foydalanuvchi kirgan holida qoladi.
+
+Ulanish `data/SadoraController` orqali: ekranlar wire tiplarini bilmaydi, controller
+esa `busy`/`error` holatini bir joyda boshqaradi. Backend bo'lmasa (`@Preview`,
+testlar) hamma amal lokal bajariladi va ilova prototip sifatida ishlayveradi.
 
 Hali yo'q:
 
-- **Ilovaning backend'ga ulanishi** — `AppState` hozircha xotirada, ilova qayta ishga
-  tushsa nolga qaytadi
+- **Sog'liq ma'lumotlarining saqlanishi** — sikl, ovqat, kayfiyat va dorilar hozircha
+  xotirada; ularning API'si 2–3-sprintda
 - **Qolgan backend API'lari** — sikl, Mind, Nutrition, Meds, wearable va AI Gateway
-  (2–3-sprint)
+- **To'lov** — paywall tugmasi hozir faqat entitlements'ni qayta so'raydi; App Store /
+  Google Play billing SDK'si ulanmagan
+- **Apple/Google kirish** — tugmalar bor, lekin platforma SDK'si idToken bermaydi
 - **Haqiqiy AI** — javoblar namuna matn
 - **Qurilma integratsiyasi** — Apple Health / Oura ma'lumotlari namuna
 - **RU va EN tarjimalari** — matnlar hozircha kodda o'zbekcha
