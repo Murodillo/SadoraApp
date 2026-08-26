@@ -1,0 +1,98 @@
+# SADORA backend
+
+Ktor (Netty) + PostgreSQL + Exposed + Flyway. Tijorat taklifining **1-sprint** backend
+qamrovi: autentifikatsiya, profil va onboarding, entitlements/limitlar servisi, feature
+flags va admin panel API'si.
+
+## Modullar
+
+| Modul | Nima |
+|---|---|
+| `:contract` | Mobil va backend bo'lishadigan DTO'lar (KMP: jvm + android + ios). Backend maydon nomini o'zgartirsa, mobil build sinadi — runtime'da emas |
+| `:server` | Ktor ilovasi. `uz.sadora.server` |
+
+## Ishga tushirish
+
+```bash
+docker compose up -d
+```
+
+```bash
+./gradlew :server:run
+```
+
+Boshqa loyihaning Postgres'i 5432 ni band qilgan bo'lsa:
+
+```bash
+SADORA_DB_PORT=5433 docker compose up -d
+```
+
+```bash
+DB_URL=jdbc:postgresql://localhost:5433/sadora ./gradlew :server:run
+```
+
+Birinchi admin hisobini yaratish (jadval bo'sh bo'lgandagina ishlaydi):
+
+```bash
+ADMIN_BOOTSTRAP_EMAIL=owner@sadora.uz ADMIN_BOOTSTRAP_PASSWORD=changeme123 ./gradlew :server:run
+```
+
+Sozlamalar — `.env.example`. Hammasida dev qiymati bor, shuning uchun hech narsa
+bermasdan ham ko'tariladi. `AppConfig` prod'da ikki narsani rad etadi: dev JWT kaliti va
+`OTP_EXPOSE_CODE=true`.
+
+## Hujjatlar va tekshirish
+
+```bash
+./gradlew :server:test :contract:jvmTest
+```
+
+* Swagger UI (faqat dev/stage): <http://localhost:8080/docs>
+* OpenAPI: [`openapi.yaml`](src/main/resources/openapi/openapi.yaml)
+* `GET /health/live` — jarayon tirikmi (bazaga tegmaydi)
+* `GET /health/ready` — trafikka tayyormi (bazani ham tekshiradi)
+
+## Arxitektura qarorlari
+
+**Sog'liq ma'lumotlari admin'ga ko'rinmaydi — bu tuzilma darajasida.** TZ 17-bo'limi
+talabi. `AdminService` faqat `UserRepository`, `EntitlementRepository` va
+`SubscriptionRepository` ga bog'liq; ularning hech biri sikl, simptom, kayfiyat, dori yoki
+AI yozishmasiga yeta olmaydi. `AdminUserSummary` va `AdminUserCard` tiplarida bunday
+maydon uchun joy yo'q. Ya'ni keyinchalik "operator uchun istisno" qo'shish uchun shu
+bog'liqliklarni o'zgartirish kerak bo'ladi — bu ko'rinadigan qaror.
+
+**Entitlement uchta qatlamdan yig'iladi:** tarif bo'yicha `feature_definitions` →
+foydalanuvchi `user_entitlement_overrides` → `feature_usage_daily` dagi sarf. Definitions
+60 soniya keshlanadi (admin o'zgartirsa darhol invalidatsiya qilinadi), sarf esa
+keshlanmaydi — keshlangan "3 tadan 3 tasi qoldi" bir limitni ikki marta sarflashga yo'l
+ochadi.
+
+**Kunlik limit foydalanuvchining vaqt mintaqasida hisoblanadi.** Toshkent UTC+5, ya'ni
+server yarim tunida hisoblansa limit har kuni besh soat kech yangilanadi.
+
+**Refresh tokenlar aylanadi va oila bo'lib bekor qilinadi.** Har ishlatishda eskisi bekor
+qilinib, o'rniga yangisi beriladi. Allaqachon ishlatilgan token qayta kelsa — yo o'g'irlangan
+nusxa, yo noto'g'ri retry; ikkalasida ham butun oila bekor qilinadi va hodisa audit log'ga
+tushadi. Foydalanuvchi foydasiga xato qilish o'g'rini tizimda qoldirish demakdir.
+
+**Rollout barqaror hash bo'yicha bo'linadi.** `hash(flagKey + userId) % 100`. 5% dan 20% ga
+kengaytirish faqat yangi foydalanuvchi qo'shadi, hech kimni chiqarib yubormaydi; ikki turli
+bayroq bir xil odamlarni tanlamaydi.
+
+**Vaqt: baza `timestamptz`, domen `kotlin.time.Instant`, JVM UTC ga qadab qo'yilgan.**
+Konvertatsiya `core/Time.kt` da, repository chegarasida.
+
+**Parol — bcrypt (cost 12), refresh token va OTP — SHA-256.** Parol past entropiyali va
+taxmin qilinadi, shuning uchun ataylab sekin; tasodifiy 256-bitli token uchun sekin hash
+foyda bermaydi.
+
+**Flyway sxemaning egasi.** `SchemaUtils.create` hech qachon chaqirilmaydi. Exposed
+jadval obyektlari faqat query qurish uchun; ular migratsiyadan farq qilsa — bug
+obyektda, migratsiyada emas.
+
+## Nima hali yo'q (2–3-sprint)
+
+Sikl/homiladorlik/simptom/Mind/Nutrition/Meds API'lari · wearable normalizatsiya qatlami ·
+bildirishnoma scheduler'i · AI Gateway va uning xarajat logi · App Store / Google Play va
+Payme/Click webhook'lari · hisobni haqiqiy o'chirish job'i · SMS provayderi
+(`OtpSender` interfeysi tayyor, hozircha log'ga yozadi) · admin 2FA enrolment ekrani.

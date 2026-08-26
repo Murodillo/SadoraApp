@@ -43,6 +43,28 @@ class JwtService(private val config: JwtConfig) {
         return AccessToken(token, expiresAt)
     }
 
+    /**
+     * Admin tokens carry the role so route guards do not need a database read on every
+     * request. A role change therefore takes effect on the operator's next sign-in,
+     * which is acceptable for a team of five to ten; revoking access is done by
+     * deactivating the account, and that is checked at sign-in.
+     */
+    fun issueAdminToken(adminId: Uuid, role: uz.sadora.server.plugins.AdminRole): AccessToken {
+        val issuedAt = now()
+        val expiresAt = issuedAt + config.accessTokenTtl
+        val token = JWT.create()
+            .withIssuer(config.issuer)
+            .withAudience(config.audience)
+            .withSubject(adminId.toString())
+            .withClaim(CLAIM_TYPE, TokenSubjectType.ADMIN.name.lowercase())
+            .withClaim(uz.sadora.server.plugins.CLAIM_ROLE, role.name.lowercase())
+            .withJWTId(Uuid.random().toString())
+            .withIssuedAt(issuedAt.toJavaDate())
+            .withExpiresAt(expiresAt.toJavaDate())
+            .sign(algorithm)
+        return AccessToken(token, expiresAt)
+    }
+
     companion object {
         const val CLAIM_TYPE = "typ"
     }

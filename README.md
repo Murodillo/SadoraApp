@@ -19,10 +19,25 @@ hozircha faqat o'zbekchasi yozilgan.
 
 iOS uchun `iosApp/iosApp.xcodeproj` faylini Xcode'da oching va ishga tushiring.
 
+Backend uchun Postgres va Redis'ni ko'taring, keyin serverni ishga tushiring —
+batafsil [server/README.md](./server/README.md):
+
+```bash
+docker compose up -d
+```
+
+```bash
+./gradlew :server:run
+```
+
 Testlar:
 
 ```bash
 ./gradlew :shared:iosSimulatorArm64Test
+```
+
+```bash
+./gradlew :server:test :contract:jvmTest
 ```
 
 Android SDK yo'li `local.properties` faylida ko'rsatiladi (bu fayl git'ga
@@ -43,6 +58,8 @@ kodni ishlatadi. Platformaga xos qism juda kichik: ikkala tomonda ham faqat
 ```
 androidApp/          MainActivity — App() ni chaqiradi
 iosApp/              SwiftUI ContentView — App() ni chaqiradi
+contract/            Mobil va backend bo'lishadigan DTO'lar (KMP)
+server/              Ktor backend — server/README.md
 shared/src/commonMain/kotlin/org/example/project/
 ├── App.kt           Ildiz: AppState va Navigator shu yerda yashaydi
 ├── design/          Dizayn tokenlari (ranglar, tipografika, o'lchamlar, mavzu)
@@ -136,9 +153,16 @@ mavzuda matn uchun `primary` emas, quyuqroq `textAccent` ishlatiladi.
 Hozircha bu to'liq ishlaydigan UI prototipi: barcha ekranlar chizilgan, oqimlar
 bog'langan, holat real vaqtda o'zgaradi.
 
+Backend'ning 1-sprint qamrovi yozilgan va ishlaydi: ro'yxatdan o'tish (telefon OTP,
+Apple/Google, email), profil va onboarding, entitlements va limitlar, feature flags,
+admin panel API'si. Ilova hali unga ulanmagan — mobil tarmoq qatlami keyingi qadam.
+
 Hali yo'q:
 
-- **Backend va saqlash** — `AppState` xotirada, ilova qayta ishga tushsa nolga qaytadi
+- **Ilovaning backend'ga ulanishi** — `AppState` hozircha xotirada, ilova qayta ishga
+  tushsa nolga qaytadi
+- **Qolgan backend API'lari** — sikl, Mind, Nutrition, Meds, wearable va AI Gateway
+  (2–3-sprint)
 - **Haqiqiy AI** — javoblar namuna matn
 - **Qurilma integratsiyasi** — Apple Health / Oura ma'lumotlari namuna
 - **RU va EN tarjimalari** — matnlar hozircha kodda o'zbekcha

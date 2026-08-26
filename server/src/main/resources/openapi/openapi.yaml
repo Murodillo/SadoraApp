@@ -1,0 +1,1093 @@
+openapi: 3.0.3
+info:
+  title: SADORA API
+  version: 0.1.0
+  description: |
+    SADORA — ayollar wellbeing platformasi. Sprint 1 qamrovi: autentifikatsiya,
+    profil va onboarding, entitlements va limitlar, feature flags, admin panel API'si.
+
+    Umumiy qoidalar:
+      * Barcha javoblar `application/json`.
+      * Xatolik doim `{ "error": { "code", "message", "details", "requestId" } }` ko'rinishida.
+        Mijoz `code` bo'yicha shoxlanadi, `message` matniga tayanmaydi.
+      * Vaqt qiymatlari ISO-8601 UTC instant (`2026-08-27T09:15:00Z`), sanalar `YYYY-MM-DD`.
+      * Har bir javobda `X-Request-Id` sarlavhasi bor; xatolik hisobotlarida shuni yuboring.
+servers:
+  - url: http://localhost:8080
+    description: Local
+  - url: https://api.stage.sadora.uz
+    description: Stage
+  - url: https://api.sadora.uz
+    description: Production
+
+tags:
+  - name: Health
+  - name: Auth
+  - name: Profile
+  - name: Entitlements
+  - name: Admin
+
+paths:
+  /health/live:
+    get:
+      tags: [Health]
+      summary: Jarayon ishlayaptimi (bazaga tegmaydi)
+      responses:
+        "200": { $ref: "#/components/responses/Health" }
+
+  /health/ready:
+    get:
+      tags: [Health]
+      summary: Trafik qabul qilishga tayyormi (bazani ham tekshiradi)
+      responses:
+        "200": { $ref: "#/components/responses/Health" }
+        "503": { $ref: "#/components/responses/Health" }
+
+  /v1/auth/otp/request:
+    post:
+      tags: [Auth]
+      summary: Telefonga OTP kod yuborish
+      description: |
+        Telefon raqami E.164 ga normallashtiriladi. Bir raqamga soatiga
+        `OTP_MAX_PER_HOUR` martadan ko'p yuborilmaydi. `devCode` faqat dev/stage'da
+        qaytariladi.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/OtpRequest" }
+      responses:
+        "201":
+          description: Kod yuborildi
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OtpChallenge" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+
+  /v1/auth/otp/verify:
+    post:
+      tags: [Auth]
+      summary: OTP kodni tekshirish va kirish
+      description: Foydalanuvchi topilmasa yangi hisob yaratiladi (`isNewUser = true`).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/OtpVerifyRequest" }
+      responses:
+        "200": { $ref: "#/components/responses/AuthSession" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /v1/auth/social:
+    post:
+      tags: [Auth]
+      summary: Apple yoki Google orqali kirish
+      description: |
+        `idToken` provayderning JWKS kalitlari bo'yicha server tomonida tekshiriladi.
+        Tasdiqlangan email mavjud hisobga ulanadi; tasdiqlanmagani ulanmaydi.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SocialSignInRequest" }
+      responses:
+        "200": { $ref: "#/components/responses/AuthSession" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /v1/auth/email/register:
+    post:
+      tags: [Auth]
+      summary: Email va parol bilan ro'yxatdan o'tish
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/EmailRegisterRequest" }
+      responses:
+        "201": { $ref: "#/components/responses/AuthSession" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /v1/auth/email/login:
+    post:
+      tags: [Auth]
+      summary: Email va parol bilan kirish
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/EmailSignInRequest" }
+      responses:
+        "200": { $ref: "#/components/responses/AuthSession" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /v1/auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Tokenlarni yangilash
+      description: |
+        Refresh token aylanadi: ishlatilgani bekor qilinadi va o'rniga yangisi beriladi.
+        Allaqachon ishlatilgan token qayta yuborilsa, butun oila bekor qilinadi va
+        hodisa audit log'ga yoziladi.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RefreshRequest" }
+      responses:
+        "200": { $ref: "#/components/responses/AuthSession" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /v1/auth/logout:
+    post:
+      tags: [Auth]
+      security: [{ bearerAuth: [] }]
+      summary: Chiqish
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/LogoutRequest" }
+      responses:
+        "200": { $ref: "#/components/responses/Ack" }
+
+  /v1/bootstrap:
+    get:
+      tags: [Profile]
+      security: [{ bearerAuth: [] }]
+      summary: Sovuq startda kerak bo'lgan hamma narsa
+      parameters:
+        - { name: platform, in: query, schema: { $ref: "#/components/schemas/Platform" } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Bootstrap" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /v1/me:
+    get:
+      tags: [Profile]
+      security: [{ bearerAuth: [] }]
+      summary: Profil
+      responses:
+        "200": { $ref: "#/components/responses/UserProfile" }
+    patch:
+      tags: [Profile]
+      security: [{ bearerAuth: [] }]
+      summary: Profilni qisman yangilash
+      description: "`null` maydon — o'zgarishsiz qoldirish degani."
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/UpdateProfileRequest" }
+      responses:
+        "200": { $ref: "#/components/responses/UserProfile" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+    delete:
+      tags: [Profile]
+      security: [{ bearerAuth: [] }]
+      summary: Hisobni o'chirishni boshlash
+      description: Hisob `deletion_pending` holatiga o'tadi va barcha sessiyalar bekor qilinadi.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DeleteAccountRequest" }
+      responses:
+        "200": { $ref: "#/components/responses/Ack" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+
+  /v1/me/onboarding:
+    post:
+      tags: [Profile]
+      security: [{ bearerAuth: [] }]
+      summary: Onboarding'ni yakunlash
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/OnboardingRequest" }
+      responses:
+        "200": { $ref: "#/components/responses/UserProfile" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+
+  /v1/me/consents:
+    get:
+      tags: [Profile]
+      security: [{ bearerAuth: [] }]
+      summary: Joriy roziliklar
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Consents" }
+    put:
+      tags: [Profile]
+      security: [{ bearerAuth: [] }]
+      summary: Roziliklarni yangilash
+      description: Har bir o'zgarish `consent_events` jadvaliga alohida yozuv sifatida tushadi.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ConsentGrants" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Consents" }
+
+  /v1/me/devices:
+    post:
+      tags: [Profile]
+      security: [{ bearerAuth: [] }]
+      summary: Qurilmani ro'yxatdan o'tkazish yoki push tokenni yangilash
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [device]
+              properties:
+                device: { $ref: "#/components/schemas/DeviceInfo" }
+      responses:
+        "200": { $ref: "#/components/responses/Ack" }
+
+  /v1/entitlements:
+    get:
+      tags: [Entitlements]
+      security: [{ bearerAuth: [] }]
+      summary: Funksiyalar, limitlar va sarflangan miqdor
+      description: |
+        Kunlik va oylik hisob foydalanuvchining o'z vaqt mintaqasida yuritiladi,
+        shuning uchun limit uning yarim tunida yangilanadi.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Entitlements" }
+
+  /v1/subscription:
+    get:
+      tags: [Entitlements]
+      security: [{ bearerAuth: [] }]
+      summary: Obuna holati
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SubscriptionStatus" }
+
+  /v1/feature-flags:
+    get:
+      tags: [Entitlements]
+      security: [{ bearerAuth: [] }]
+      summary: Foydalanuvchi uchun hisoblangan bayroqlar
+      parameters:
+        - { name: platform, in: query, schema: { $ref: "#/components/schemas/Platform" } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FeatureFlags" }
+
+  /v1/admin/auth/login:
+    post:
+      tags: [Admin]
+      summary: Admin panelga kirish (email + parol + 2FA)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string, format: password }
+                totpCode: { type: string, description: "2FA yoqilgan bo'lsa majburiy" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AdminSession" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /v1/admin/users:
+    get:
+      tags: [Admin]
+      security: [{ bearerAuth: [] }]
+      summary: Foydalanuvchilar ro'yxati
+      description: |
+        Rollar: Owner, Admin, Support, Analyst. Javobda sog'liq ma'lumotlari yo'q —
+        faqat hisob va texnik metadata (TZ 17-bo'lim).
+      parameters:
+        - { name: q, in: query, schema: { type: string }, description: "email / telefon / ism" }
+        - { name: status, in: query, schema: { $ref: "#/components/schemas/AccountStatus" } }
+        - { name: language, in: query, schema: { $ref: "#/components/schemas/Language" } }
+        - { name: lifeStage, in: query, schema: { $ref: "#/components/schemas/LifeStage" } }
+        - { name: limit, in: query, schema: { type: integer, default: 50, maximum: 200 } }
+        - { name: offset, in: query, schema: { type: integer, default: 0 } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/AdminUserSummary" }
+                  total: { type: integer, format: int64 }
+                  limit: { type: integer }
+                  offset: { type: integer }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /v1/admin/users/{id}:
+    get:
+      tags: [Admin]
+      security: [{ bearerAuth: [] }]
+      summary: Foydalanuvchi kartochkasi (Umumiy / Obuna / Texnik)
+      parameters: [{ $ref: "#/components/parameters/UserId" }]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AdminUserCard" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /v1/admin/users/{id}/block:
+    post:
+      tags: [Admin]
+      security: [{ bearerAuth: [] }]
+      summary: Hisobni bloklash yoki blokdan chiqarish
+      description: Sabab majburiy va audit log'ga tushadi. Bloklashda barcha sessiyalar bekor qilinadi.
+      parameters: [{ $ref: "#/components/parameters/UserId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [blocked, reason]
+              properties:
+                blocked: { type: boolean }
+                reason: { type: string, minLength: 1 }
+      responses:
+        "200": { $ref: "#/components/responses/Ack" }
+
+  /v1/admin/users/{id}/premium:
+    post:
+      tags: [Admin]
+      security: [{ bearerAuth: [] }]
+      summary: Qo'lda Premium berish
+      description: Firibgarlikdan himoya sifatida sabab majburiy va audit yozuvi yaratiladi.
+      parameters: [{ $ref: "#/components/parameters/UserId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                expiresAt: { type: string, format: date-time, nullable: true }
+                reason: { type: string, minLength: 1 }
+      responses:
+        "200": { $ref: "#/components/responses/Ack" }
+
+  /v1/admin/features:
+    get:
+      tags: [Admin]
+      security: [{ bearerAuth: [] }]
+      summary: Entitlements va limitlar jadvali
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/FeatureDefinition" }
+
+  /v1/admin/features/{key}:
+    put:
+      tags: [Admin]
+      security: [{ bearerAuth: [] }]
+      summary: Funksiya limitlarini o'zgartirish
+      description: O'zgarish ilovani yangilamasdan kuchga kiradi.
+      parameters: [{ $ref: "#/components/parameters/FeatureKey" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/UpdateFeatureDefinitionRequest" }
+      responses:
+        "200": { $ref: "#/components/responses/Ack" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /v1/admin/users/{id}/features/{key}:
+    put:
+      tags: [Admin]
+      security: [{ bearerAuth: [] }]
+      summary: Foydalanuvchi uchun alohida override o'rnatish
+      parameters:
+        - { $ref: "#/components/parameters/UserId" }
+        - { $ref: "#/components/parameters/FeatureKey" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                enabled: { type: boolean, nullable: true }
+                dailyLimit: { type: integer, nullable: true }
+                monthlyLimit: { type: integer, nullable: true }
+                reason: { type: string, minLength: 1 }
+                expiresAt: { type: string, format: date-time, nullable: true }
+      responses:
+        "200": { $ref: "#/components/responses/Ack" }
+    delete:
+      tags: [Admin]
+      security: [{ bearerAuth: [] }]
+      summary: Override'ni olib tashlash
+      parameters:
+        - { $ref: "#/components/parameters/UserId" }
+        - { $ref: "#/components/parameters/FeatureKey" }
+      responses:
+        "200": { $ref: "#/components/responses/Ack" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /v1/admin/flags:
+    get:
+      tags: [Admin]
+      security: [{ bearerAuth: [] }]
+      summary: Feature flags va ularning qoidalari
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/AdminFlag" }
+
+  /v1/admin/flags/{key}:
+    put:
+      tags: [Admin]
+      security: [{ bearerAuth: [] }]
+      summary: Bayroqni yoqish/o'chirish (kill switch)
+      parameters: [{ $ref: "#/components/parameters/FlagKey" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [enabled, defaultValue]
+              properties:
+                enabled: { type: boolean }
+                defaultValue: { type: boolean }
+      responses:
+        "200": { $ref: "#/components/responses/Ack" }
+
+  /v1/admin/flags/{key}/rules:
+    post:
+      tags: [Admin]
+      security: [{ bearerAuth: [] }]
+      summary: Targeting qoidasi qo'shish
+      description: |
+        `rolloutPercentage` foydalanuvchi id va bayroq kalitidan olingan barqaror hash
+        bo'yicha bo'linadi — 5% dan 20% ga kengaytirish faqat yangi foydalanuvchi qo'shadi.
+      parameters: [{ $ref: "#/components/parameters/FlagKey" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateFlagRuleRequest" }
+      responses:
+        "201":
+          description: Yaratildi
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { id: { type: string, format: uuid } }
+
+  /v1/admin/flags/{key}/rules/{ruleId}:
+    delete:
+      tags: [Admin]
+      security: [{ bearerAuth: [] }]
+      summary: Qoidani o'chirish
+      parameters:
+        - { $ref: "#/components/parameters/FlagKey" }
+        - { name: ruleId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200": { $ref: "#/components/responses/Ack" }
+
+  /v1/admin/audit:
+    get:
+      tags: [Admin]
+      security: [{ bearerAuth: [] }]
+      summary: Audit log (faqat Owner)
+      parameters:
+        - { name: action, in: query, schema: { type: string } }
+        - { name: entityType, in: query, schema: { type: string } }
+        - { name: entityId, in: query, schema: { type: string } }
+        - { name: limit, in: query, schema: { type: integer, default: 50, maximum: 200 } }
+        - { name: offset, in: query, schema: { type: integer, default: 0 } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/AuditEntry" }
+                  total: { type: integer, format: int64 }
+                  limit: { type: integer }
+                  offset: { type: integer }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    UserId:
+      name: id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    FeatureKey:
+      name: key
+      in: path
+      required: true
+      schema: { type: string, example: ai_chat }
+    FlagKey:
+      name: key
+      in: path
+      required: true
+      schema: { type: string, example: ai_chat_enabled }
+
+  responses:
+    Health:
+      description: Holat
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              status: { type: string }
+              environment: { type: string }
+              version: { type: string }
+    Ack:
+      description: Bajarildi
+      content:
+        application/json:
+          schema:
+            type: object
+            properties: { ok: { type: boolean } }
+    AuthSession:
+      description: Sessiya
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/AuthSession" }
+    UserProfile:
+      description: Profil
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/UserProfile" }
+    BadRequest:
+      description: So'rov noto'g'ri
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ApiErrorResponse" }
+    Unauthorized:
+      description: Avtorizatsiya talab qilinadi
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ApiErrorResponse" }
+    Forbidden:
+      description: Ruxsat yo'q
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ApiErrorResponse" }
+    NotFound:
+      description: Topilmadi
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ApiErrorResponse" }
+    Conflict:
+      description: Ziddiyat
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ApiErrorResponse" }
+    RateLimited:
+      description: Juda ko'p so'rov
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ApiErrorResponse" }
+
+  schemas:
+    Language:
+      type: string
+      enum: [uz, ru, en]
+    LifeStage:
+      type: string
+      enum: [cycle, trying_to_conceive, pregnancy, postpartum, perimenopause, menopause]
+    Goal:
+      type: string
+      enum:
+        [understand_cycle, sleep_better, more_energy, less_stress, eat_balanced,
+         drink_water, be_active, remember_meds]
+    Platform:
+      type: string
+      enum: [ios, android, web]
+    AccountStatus:
+      type: string
+      enum: [active, blocked, deletion_pending]
+    SubscriptionTier:
+      type: string
+      enum: [free, premium]
+    SubscriptionSource:
+      type: string
+      enum: [app_store, google_play, payme, click, manual]
+    AuthProvider:
+      type: string
+      enum: [phone, email, apple, google]
+
+    ApiErrorResponse:
+      type: object
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+              enum:
+                [validation_failed, unauthorized, forbidden, not_found, conflict,
+                 rate_limited, otp_invalid, otp_expired, otp_too_many_attempts,
+                 token_expired, token_revoked, social_token_invalid, account_blocked,
+                 entitlement_required, limit_reached, feature_disabled, internal_error]
+            message: { type: string }
+            details:
+              type: object
+              additionalProperties: { type: string }
+            requestId: { type: string, nullable: true }
+
+    DeviceInfo:
+      type: object
+      required: [deviceId, platform]
+      properties:
+        deviceId: { type: string }
+        platform: { $ref: "#/components/schemas/Platform" }
+        osVersion: { type: string, nullable: true }
+        appVersion: { type: string, nullable: true }
+        model: { type: string, nullable: true }
+        pushToken: { type: string, nullable: true }
+        timezone: { type: string, nullable: true, example: Asia/Tashkent }
+
+    OtpRequest:
+      type: object
+      required: [phone]
+      properties:
+        phone: { type: string, example: "+998901234567" }
+        language: { $ref: "#/components/schemas/Language" }
+
+    OtpChallenge:
+      type: object
+      properties:
+        challengeId: { type: string, format: uuid }
+        expiresAt: { type: string, format: date-time }
+        resendAfterSeconds: { type: integer }
+        attemptsLeft: { type: integer }
+        devCode: { type: string, nullable: true, description: "Faqat dev/stage" }
+
+    OtpVerifyRequest:
+      type: object
+      required: [challengeId, code, device]
+      properties:
+        challengeId: { type: string, format: uuid }
+        code: { type: string, example: "123456" }
+        device: { $ref: "#/components/schemas/DeviceInfo" }
+
+    SocialSignInRequest:
+      type: object
+      required: [provider, idToken, device]
+      properties:
+        provider: { type: string, enum: [apple, google] }
+        idToken: { type: string }
+        fullName: { type: string, nullable: true, description: "Apple ismni faqat bir marta beradi" }
+        device: { $ref: "#/components/schemas/DeviceInfo" }
+
+    EmailRegisterRequest:
+      type: object
+      required: [email, password, name, device]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string, minLength: 8 }
+        name: { type: string }
+        language: { $ref: "#/components/schemas/Language" }
+        device: { $ref: "#/components/schemas/DeviceInfo" }
+
+    EmailSignInRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string }
+        device: { $ref: "#/components/schemas/DeviceInfo" }
+
+    RefreshRequest:
+      type: object
+      required: [refreshToken]
+      properties:
+        refreshToken: { type: string }
+
+    LogoutRequest:
+      type: object
+      properties:
+        refreshToken: { type: string, nullable: true }
+        allDevices: { type: boolean, default: false }
+
+    TokenPair:
+      type: object
+      properties:
+        accessToken: { type: string }
+        refreshToken: { type: string }
+        accessExpiresAt: { type: string, format: date-time }
+        refreshExpiresAt: { type: string, format: date-time }
+        tokenType: { type: string, example: Bearer }
+
+    AuthSession:
+      type: object
+      properties:
+        tokens: { $ref: "#/components/schemas/TokenPair" }
+        user: { $ref: "#/components/schemas/UserProfile" }
+        entitlements: { $ref: "#/components/schemas/Entitlements" }
+        isNewUser: { type: boolean }
+
+    UserProfile:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        phone: { type: string, nullable: true }
+        email: { type: string, nullable: true }
+        name: { type: string }
+        language: { $ref: "#/components/schemas/Language" }
+        timezone: { type: string }
+        lifeStage: { $ref: "#/components/schemas/LifeStage" }
+        birthDate: { type: string, format: date, nullable: true }
+        heightCm: { type: integer, nullable: true }
+        weightKg: { type: integer, nullable: true }
+        goals:
+          type: array
+          items: { $ref: "#/components/schemas/Goal" }
+        avatarUrl: { type: string, nullable: true }
+        onboardingCompleted: { type: boolean }
+        status: { $ref: "#/components/schemas/AccountStatus" }
+        createdAt: { type: string, format: date-time }
+
+    UpdateProfileRequest:
+      type: object
+      properties:
+        name: { type: string, nullable: true }
+        language: { $ref: "#/components/schemas/Language" }
+        timezone: { type: string, nullable: true }
+        lifeStage: { $ref: "#/components/schemas/LifeStage" }
+        birthDate: { type: string, format: date, nullable: true }
+        heightCm: { type: integer, nullable: true, minimum: 80, maximum: 250 }
+        weightKg: { type: integer, nullable: true, minimum: 25, maximum: 300 }
+        goals:
+          type: array
+          nullable: true
+          items: { $ref: "#/components/schemas/Goal" }
+
+    CycleBaseline:
+      type: object
+      properties:
+        lastPeriodStart: { type: string, format: date, nullable: true }
+        averageCycleLength: { type: integer, default: 28, minimum: 15, maximum: 60 }
+        averagePeriodLength: { type: integer, default: 5, minimum: 1, maximum: 15 }
+        cycleIsRegular: { type: boolean, default: true }
+
+    StageBaseline:
+      type: object
+      properties:
+        dueDate: { type: string, format: date, nullable: true }
+        birthDate: { type: string, format: date, nullable: true }
+        lastPeriodStart: { type: string, format: date, nullable: true }
+
+    PermissionGrants:
+      type: object
+      properties:
+        notifications: { type: boolean, default: false }
+        healthData: { type: boolean, default: false }
+        camera: { type: boolean, default: false }
+
+    ConsentGrants:
+      type: object
+      properties:
+        storeHealth: { type: boolean, default: false }
+        aiInsights: { type: boolean, default: false }
+        analytics: { type: boolean, default: false }
+        marketing: { type: boolean, default: false }
+        policyVersion: { type: string, nullable: true }
+
+    Consents:
+      type: object
+      properties:
+        storeHealth: { type: boolean }
+        aiInsights: { type: boolean }
+        analytics: { type: boolean }
+        marketing: { type: boolean }
+        policyVersion: { type: string }
+        updatedAt: { type: string, format: date-time }
+
+    OnboardingRequest:
+      type: object
+      required: [name, language, timezone, lifeStage]
+      properties:
+        name: { type: string }
+        language: { $ref: "#/components/schemas/Language" }
+        timezone: { type: string, example: Asia/Tashkent }
+        lifeStage: { $ref: "#/components/schemas/LifeStage" }
+        birthDate: { type: string, format: date, nullable: true }
+        heightCm: { type: integer, nullable: true }
+        weightKg: { type: integer, nullable: true }
+        goals:
+          type: array
+          items: { $ref: "#/components/schemas/Goal" }
+        cycle: { $ref: "#/components/schemas/CycleBaseline" }
+        stage: { $ref: "#/components/schemas/StageBaseline" }
+        permissions: { $ref: "#/components/schemas/PermissionGrants" }
+        consents: { $ref: "#/components/schemas/ConsentGrants" }
+
+    DeleteAccountRequest:
+      type: object
+      required: [confirmation]
+      properties:
+        reason: { type: string, nullable: true }
+        confirmation: { type: string, enum: [DELETE] }
+
+    FeatureEntitlement:
+      type: object
+      properties:
+        key: { type: string, example: ai_chat }
+        enabled: { type: boolean }
+        dailyLimit: { type: integer, nullable: true, description: "null — limitsiz" }
+        monthlyLimit: { type: integer, nullable: true }
+        usedToday: { type: integer }
+        usedThisMonth: { type: integer }
+
+    Entitlements:
+      type: object
+      properties:
+        tier: { $ref: "#/components/schemas/SubscriptionTier" }
+        features:
+          type: array
+          items: { $ref: "#/components/schemas/FeatureEntitlement" }
+        source: { $ref: "#/components/schemas/SubscriptionSource" }
+        expiresAt: { type: string, format: date-time, nullable: true }
+        inGracePeriod: { type: boolean }
+        evaluatedAt: { type: string, format: date-time }
+
+    SubscriptionStatus:
+      type: object
+      properties:
+        tier: { $ref: "#/components/schemas/SubscriptionTier" }
+        source: { $ref: "#/components/schemas/SubscriptionSource" }
+        productId: { type: string, nullable: true }
+        startedAt: { type: string, format: date-time, nullable: true }
+        expiresAt: { type: string, format: date-time, nullable: true }
+        autoRenewing: { type: boolean }
+        inGracePeriod: { type: boolean }
+
+    FeatureFlags:
+      type: object
+      properties:
+        flags:
+          type: object
+          additionalProperties: { type: boolean }
+        evaluatedAt: { type: string, format: date-time }
+        ttlSeconds: { type: integer, default: 300 }
+
+    Bootstrap:
+      type: object
+      properties:
+        user: { $ref: "#/components/schemas/UserProfile" }
+        entitlements: { $ref: "#/components/schemas/Entitlements" }
+        flags: { $ref: "#/components/schemas/FeatureFlags" }
+        consents: { $ref: "#/components/schemas/Consents" }
+        serverTime: { type: string, format: date-time }
+        minimumAppVersion: { type: string, nullable: true }
+
+    AdminSession:
+      type: object
+      properties:
+        accessToken: { type: string }
+        expiresAt: { type: string, format: date-time }
+        name: { type: string }
+        email: { type: string }
+        role: { type: string, enum: [OWNER, ADMIN, SUPPORT, ANALYST] }
+
+    AdminUserSummary:
+      type: object
+      description: "Sog'liq ma'lumotlari ataylab yo'q — operator ularni ko'ra olmaydi."
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        phone: { type: string, nullable: true }
+        email: { type: string, nullable: true }
+        language: { $ref: "#/components/schemas/Language" }
+        lifeStage: { $ref: "#/components/schemas/LifeStage" }
+        tier: { $ref: "#/components/schemas/SubscriptionTier" }
+        status: { $ref: "#/components/schemas/AccountStatus" }
+        registeredAt: { type: string, format: date-time }
+        lastActiveAt: { type: string, format: date-time, nullable: true }
+
+    AdminUserCard:
+      type: object
+      properties:
+        general: { $ref: "#/components/schemas/AdminUserSummary" }
+        subscription:
+          type: object
+          properties:
+            tier: { $ref: "#/components/schemas/SubscriptionTier" }
+            source: { $ref: "#/components/schemas/SubscriptionSource" }
+            expiresAt: { type: string, format: date-time, nullable: true }
+            inGracePeriod: { type: boolean }
+            history:
+              type: array
+              items:
+                type: object
+                properties:
+                  source: { $ref: "#/components/schemas/SubscriptionSource" }
+                  productId: { type: string, nullable: true }
+                  startedAt: { type: string, format: date-time }
+                  expiresAt: { type: string, format: date-time, nullable: true }
+        technical:
+          type: object
+          properties:
+            timezone: { type: string }
+            devices:
+              type: array
+              items:
+                type: object
+                properties:
+                  deviceId: { type: string }
+                  platform: { type: string }
+                  model: { type: string, nullable: true }
+                  appVersion: { type: string, nullable: true }
+                  lastSeenAt: { type: string, format: date-time }
+            featureUsage:
+              type: array
+              items:
+                type: object
+                properties:
+                  featureKey: { type: string }
+                  usedToday: { type: integer }
+                  usedThisMonth: { type: integer }
+
+    FeatureDefinition:
+      type: object
+      properties:
+        key: { type: string }
+        description: { type: string }
+        freeEnabled: { type: boolean }
+        premiumEnabled: { type: boolean }
+        freeDailyLimit: { type: integer, nullable: true }
+        freeMonthlyLimit: { type: integer, nullable: true }
+        premiumDailyLimit: { type: integer, nullable: true }
+        premiumMonthlyLimit: { type: integer, nullable: true }
+
+    UpdateFeatureDefinitionRequest:
+      type: object
+      required: [freeEnabled, premiumEnabled]
+      properties:
+        freeEnabled: { type: boolean }
+        premiumEnabled: { type: boolean }
+        freeDailyLimit: { type: integer, nullable: true }
+        freeMonthlyLimit: { type: integer, nullable: true }
+        premiumDailyLimit: { type: integer, nullable: true }
+        premiumMonthlyLimit: { type: integer, nullable: true }
+
+    AdminFlag:
+      type: object
+      properties:
+        key: { type: string }
+        description: { type: string }
+        enabled: { type: boolean }
+        defaultValue: { type: boolean }
+        rules:
+          type: array
+          items: { $ref: "#/components/schemas/FlagRule" }
+
+    FlagRule:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        environment: { type: string, nullable: true, enum: [DEV, STAGE, PROD] }
+        country: { type: string, nullable: true }
+        language: { type: string, nullable: true }
+        lifeStage: { type: string, nullable: true }
+        platform: { type: string, nullable: true }
+        cohort: { type: string, nullable: true }
+        rolloutPercentage: { type: integer, minimum: 0, maximum: 100 }
+        value: { type: boolean }
+        priority: { type: integer }
+
+    CreateFlagRuleRequest:
+      type: object
+      properties:
+        environment: { type: string, nullable: true }
+        country: { type: string, nullable: true }
+        language: { type: string, nullable: true }
+        lifeStage: { type: string, nullable: true }
+        platform: { type: string, nullable: true }
+        cohort: { type: string, nullable: true }
+        rolloutPercentage: { type: integer, default: 100, minimum: 0, maximum: 100 }
+        value: { type: boolean, default: true }
+        priority: { type: integer, default: 100 }
+
+    AuditEntry:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        actorType: { type: string, enum: [user, admin, system] }
+        actorId: { type: string, format: uuid, nullable: true }
+        actorLabel: { type: string, nullable: true }
+        action: { type: string, example: subscription.granted }
+        entityType: { type: string, nullable: true }
+        entityId: { type: string, nullable: true }
+        reason: { type: string, nullable: true }
+        metadata:
+          type: object
+          additionalProperties: { type: string }
+        ip: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }

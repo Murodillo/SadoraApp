@@ -22,6 +22,7 @@ import uz.sadora.server.core.NotFoundException
 import uz.sadora.server.core.ValidationException
 import uz.sadora.server.core.isValidTimeZone
 import uz.sadora.server.core.now
+import uz.sadora.server.db.dbQuery
 import uz.sadora.server.entitlement.EntitlementService
 import uz.sadora.server.flags.FeatureFlagService
 import uz.sadora.server.flags.FlagContext
@@ -122,6 +123,11 @@ class UserService(
      * Onboarding lands in one call so a user who drops out halfway leaves no half-built
      * profile. The baselines are stage-aware: a pregnancy user's cycle answers are not
      * stored, because the app never predicts a cycle for her.
+     *
+     * Everything is validated before the first write, and the writes then run in a
+     * single transaction. Both halves matter — an earlier version validated the cycle
+     * length after replacing the goal rows, so a rejected request cleared the goals the
+     * user had set on a previous attempt.
      */
     suspend fun completeOnboarding(
         userId: Uuid,
@@ -132,34 +138,40 @@ class UserService(
             throw ValidationException("timezone", "Noma'lum vaqt mintaqasi")
         }
         if (request.name.isBlank()) throw ValidationException("name", "Bo'sh bo'lishi mumkin emas")
+        request.heightCm?.let {
+            if (it !in 80..250) throw ValidationException("heightCm", "80–250 oralig'ida bo'lishi kerak")
+        }
+        request.weightKg?.let {
+            if (it !in 25..300) throw ValidationException("weightKg", "25–300 oralig'ida bo'lishi kerak")
+        }
 
-        users.updateProfile(
-            userId = userId,
-            name = request.name.trim(),
-            language = request.language,
-            timezone = request.timezone,
-            lifeStage = request.lifeStage,
-            birthDate = request.birthDate,
-            heightCm = request.heightCm,
-            weightKg = request.weightKg,
-        )
-        users.replaceGoals(userId, request.goals)
-
-        if (request.lifeStage.predictsCycle) {
-            request.cycle?.let { baseline ->
-                if (baseline.averageCycleLength !in 15..60) {
-                    throw ValidationException("cycle.averageCycleLength", "15–60 kun oralig'ida")
-                }
-                if (baseline.averagePeriodLength !in 1..15) {
-                    throw ValidationException("cycle.averagePeriodLength", "1–15 kun oralig'ida")
-                }
-                users.saveCycleBaseline(userId, baseline)
+        val cycleBaseline = request.cycle?.takeIf { request.lifeStage.predictsCycle }
+        cycleBaseline?.let { baseline ->
+            if (baseline.averageCycleLength !in 15..60) {
+                throw ValidationException("cycle.averageCycleLength", "15–60 kun oralig'ida")
+            }
+            if (baseline.averagePeriodLength !in 1..15) {
+                throw ValidationException("cycle.averagePeriodLength", "1–15 kun oralig'ida")
             }
         }
-        request.stage?.let { users.saveStageBaseline(userId, it) }
 
-        users.saveConsents(userId, request.consents, config.policyVersion)
-        users.markOnboarded(userId)
+        dbQuery {
+            users.applyProfileUpdate(
+                userId = userId,
+                name = request.name.trim(),
+                language = request.language,
+                timezone = request.timezone,
+                lifeStage = request.lifeStage,
+                birthDate = request.birthDate,
+                heightCm = request.heightCm,
+                weightKg = request.weightKg,
+            )
+            users.applyGoals(userId, request.goals)
+            cycleBaseline?.let { users.applyCycleBaseline(userId, it) }
+            request.stage?.let { users.applyStageBaseline(userId, it) }
+            users.applyConsents(userId, request.consents, config.policyVersion)
+            users.applyOnboarded(userId)
+        }
 
         audit.record(
             AuditEntry(
