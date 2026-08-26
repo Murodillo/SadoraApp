@@ -150,6 +150,35 @@ fun NutritionScreen(
                 }
             }
 
+            item {
+                SadoraCard(padding = Spacing.sm, onClick = { onOpen(Route.Balance) }) {
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                    ) {
+                        Box(
+                            Modifier
+                                .size(44.dp)
+                                .clip(RoundedCornerShape(Radius.md))
+                                .background(c.surface2),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text("◍", style = Sadora.type.h2, color = c.accentText)
+                        }
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Text("Balans", style = Sadora.type.h3, color = c.text)
+                            Text(
+                                "Ovqat, suv, faollik va uyqu — to'rt yo'nalish",
+                                style = Sadora.type.body,
+                                color = c.muted,
+                            )
+                        }
+                        Text("›", style = Sadora.type.h3, color = c.muted2)
+                    }
+                }
+            }
+
             item { SectionHeader("Bugungi ovqatlar", action = "Barchasi") }
 
             items(state.meals.size) { index ->

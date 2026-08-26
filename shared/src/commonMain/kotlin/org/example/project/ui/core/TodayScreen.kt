@@ -29,6 +29,7 @@ import org.example.project.nav.Route
 import org.example.project.ui.components.AiSummaryCard
 import org.example.project.ui.components.BadgeTone
 import org.example.project.ui.components.CardLabel
+import org.example.project.ui.components.EmptyState
 import org.example.project.ui.components.GreetingHeader
 import org.example.project.ui.components.PillButton
 import org.example.project.ui.components.ProgressRing
@@ -65,6 +66,11 @@ fun TodayScreen(
 
         if (isLoading) {
             TodaySkeleton()
+            return@Column
+        }
+
+        if (state.isNewUser) {
+            TodayEmpty(onStart = { onOpen(Route.Mind) })
             return@Column
         }
 
@@ -341,6 +347,38 @@ private fun MedicationCard(
             }
             PillButton("Qabul qildim", onTake, tone = ButtonTone.Primary)
         }
+    }
+}
+
+/**
+ * Empty Today — a brand-new account with nothing logged yet.
+ *
+ * Shows what the screen will become rather than an apology for being blank, and
+ * offers exactly one action so there is no choice to make.
+ */
+@Composable
+private fun TodayEmpty(onStart: () -> Unit) {
+    val c = Sadora.colors
+    Column(
+        Modifier.fillMaxWidth().padding(horizontal = Spacing.screen),
+        verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+    ) {
+        SadoraCard {
+            CardLabel("Bugungi xulosa")
+            Text(
+                "Hozircha ma'lumot yo'q. Birinchi belgini qo'shsangiz, bu yerda kunlik " +
+                    "xulosa va grafiklar paydo bo'ladi.",
+                style = Sadora.type.body,
+                color = c.muted,
+            )
+        }
+
+        EmptyState(
+            title = "Bugundan boshlaymizmi?",
+            body = "Kayfiyat, suv yoki ovqat — qaysi biridan boshlash sizga qulay bo'lsa.",
+            actionText = "Birinchi belgini qo'shish",
+            onAction = onStart,
+        )
     }
 }
 

@@ -83,6 +83,12 @@ class AppState {
     var carbsG by mutableStateOf(132)
     var carbsGoalG by mutableStateOf(210)
 
+    /**
+     * True until the user has logged anything. Drives Today's empty state — the
+     * fourth Today state in the design, alongside free, premium and skeleton.
+     */
+    var isNewUser by mutableStateOf(false)
+
     var mood by mutableStateOf(Mood.Good)
     var steps by mutableStateOf(6420)
     var sleepMinutes by mutableStateOf(400) // 6s 40d
