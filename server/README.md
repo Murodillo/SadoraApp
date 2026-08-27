@@ -47,6 +47,8 @@ bermasdan ham ko'tariladi. `AppConfig` prod'da ikki narsani rad etadi: dev JWT k
 ./gradlew :server:test :contract:jvmTest
 ```
 
+* **Admin panel: <http://localhost:8080/v1/admin/ui/>** — server bilan birga beriladi,
+  alohida deploy talab qilmaydi
 * Swagger UI (faqat dev/stage): <http://localhost:8080/docs>
 * OpenAPI: [`openapi.yaml`](src/main/resources/openapi/openapi.yaml)
 * `GET /health/live` — jarayon tirikmi (bazaga tegmaydi)

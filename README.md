@@ -30,6 +30,11 @@ docker compose up -d
 ./gradlew :server:run
 ```
 
+Admin panel server bilan birga ko'tariladi:
+<http://localhost:8080/v1/admin/ui/>. Birinchi admin hisobini yaratish uchun
+`ADMIN_BOOTSTRAP_EMAIL` va `ADMIN_BOOTSTRAP_PASSWORD` bering — batafsil
+[server/README.md](./server/README.md).
+
 Testlar:
 
 ```bash
@@ -60,6 +65,7 @@ androidApp/          MainActivity — App() ni chaqiradi
 iosApp/              SwiftUI ContentView — App() ni chaqiradi
 contract/            Mobil va backend bo'lishadigan DTO'lar (KMP)
 server/              Ktor backend — server/README.md
+  └ resources/admin/ Admin panel (build qadamisiz, server beradi)
 shared/src/commonMain/kotlin/org/example/project/
 ├── App.kt           Ildiz: AppState va Navigator shu yerda yashaydi
 ├── design/          Dizayn tokenlari (ranglar, tipografika, o'lchamlar, mavzu)
@@ -173,8 +179,6 @@ Hali yo'q:
 - **Haqiqiy AI** — javoblar namuna matn
 - **Qurilma integratsiyasi** — Apple Health / Oura ma'lumotlari namuna
 - **RU va EN tarjimalari** — matnlar hozircha kodda o'zbekcha
-- **Admin panel** — dizaynda bor (16-bo'lim), lekin u 1440px web dashboard,
-  mobil ilovaga kirmaydi
 
 ---
 

@@ -2,6 +2,7 @@ package uz.sadora.server.admin
 
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.auth.authenticate
+import io.ktor.server.http.content.staticResources
 import io.ktor.server.plugins.ratelimit.rateLimit
 import io.ktor.server.request.receive
 import io.ktor.server.response.respond
@@ -44,6 +45,17 @@ fun Route.adminRoutes(
     refreshTokens: RefreshTokenService,
 ) {
     route("/admin") {
+
+        /**
+         * The panel itself, served from the jar.
+         *
+         * Static and public on purpose: the sign-in screen has to load before there is
+         * a token to authorise it with. Everything the panel can actually *do* sits
+         * behind [ADMIN_AUTH] below.
+         */
+        staticResources("/ui", "admin") {
+            default("index.html")
+        }
 
         rateLimit(RateLimits.AUTH) {
             post("/auth/login") {
