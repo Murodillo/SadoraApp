@@ -30,22 +30,14 @@ docker compose up -d
 ./gradlew :server:run
 ```
 
-> **Hozircha ikkita admin panel bor va bittasini tanlash kerak.** Ikkalasi ham bir xil
-> backend API'siga ulanadi:
->
-> * `server/src/main/resources/admin/` — vanilla JS, build qadamisiz, server o'zi beradi
->   (<http://localhost:8080/v1/admin/ui/>)
-> * `admin/` — React + TypeScript, alohida ilova, taklifning 2-bo'limidagi tavsiya
->   ([admin/README.md](./admin/README.md))
-
-React panelni ishga tushirish:
+Admin panel (backend ishlab turganda) — <http://localhost:5173>, batafsil
+[admin/README.md](./admin/README.md):
 
 ```bash
 npm --prefix admin install && npm --prefix admin run dev
 ```
 
-Vanilla panel server bilan birga ko'tariladi:
-<http://localhost:8080/v1/admin/ui/>. Birinchi admin hisobini yaratish uchun
+Birinchi admin hisobini yaratish uchun
 `ADMIN_BOOTSTRAP_EMAIL` va `ADMIN_BOOTSTRAP_PASSWORD` bering — batafsil
 [server/README.md](./server/README.md).
 
@@ -77,10 +69,9 @@ kodni ishlatadi. Platformaga xos qism juda kichik: ikkala tomonda ham faqat
 ```
 androidApp/          MainActivity — App() ni chaqiradi
 iosApp/              SwiftUI ContentView — App() ni chaqiradi
-admin/               React + TS admin panel (tanlov kutilmoqda)
+admin/               React + TS admin panel — admin/README.md
 contract/            Mobil va backend bo'lishadigan DTO'lar (KMP)
 server/              Ktor backend — server/README.md
-  └ resources/admin/ Vanilla JS admin panel (tanlov kutilmoqda)
 shared/src/commonMain/kotlin/org/example/project/
 ├── App.kt           Ildiz: AppState va Navigator shu yerda yashaydi
 ├── design/          Dizayn tokenlari (ranglar, tipografika, o'lchamlar, mavzu)
