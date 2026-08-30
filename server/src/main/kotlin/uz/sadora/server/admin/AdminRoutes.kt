@@ -42,6 +42,7 @@ fun Route.adminRoutes(
     adminAuth: AdminAuthService,
     adminService: AdminService,
     auditRepository: AuditRepository,
+    statsRepository: AdminStatsRepository,
     refreshTokens: RefreshTokenService,
 ) {
     route("/admin") {
@@ -65,6 +66,22 @@ fun Route.adminRoutes(
         }
 
         authenticate(ADMIN_AUTH) {
+
+            // --- dashboard ------------------------------------------------------
+            get("/stats") {
+                call.requireAdminRole(AdminRole.OWNER, AdminRole.ADMIN, AdminRole.SUPPORT, AdminRole.ANALYST)
+                call.respond(statsRepository.stats())
+            }
+
+            get("/stats/signups") {
+                call.requireAdminRole(AdminRole.OWNER, AdminRole.ADMIN, AdminRole.ANALYST)
+                call.respond(statsRepository.signUpsPerDay(call.intParameter("days", 14, 90)))
+            }
+
+            get("/stats/events") {
+                call.requireAdminRole(AdminRole.OWNER, AdminRole.ADMIN, AdminRole.SUPPORT, AdminRole.ANALYST)
+                call.respond(statsRepository.recentEvents(call.intParameter("limit", 12, 50)))
+            }
 
             // --- users: list and card -----------------------------------------
             get("/users") {

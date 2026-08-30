@@ -41,7 +41,10 @@ data class FlagRule(
 class FeatureFlagRepository {
 
     suspend fun all(): List<FlagDefinition> = dbQuery {
-        FeatureFlagsTable.selectAll().map { it.toDefinition() }
+        // Same reason as the feature definitions: a toggled flag must not jump rows.
+        FeatureFlagsTable.selectAll()
+            .orderBy(FeatureFlagsTable.key to SortOrder.ASC)
+            .map { it.toDefinition() }
     }
 
     suspend fun rules(): List<FlagRule> = dbQuery {

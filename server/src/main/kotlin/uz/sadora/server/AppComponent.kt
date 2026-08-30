@@ -2,6 +2,7 @@ package uz.sadora.server
 
 import uz.sadora.server.admin.AdminAuthService
 import uz.sadora.server.admin.AdminService
+import uz.sadora.server.admin.AdminStatsRepository
 import uz.sadora.server.audit.AuditRepository
 import uz.sadora.server.audit.AuditService
 import uz.sadora.server.auth.AuthService
@@ -36,6 +37,7 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
 
     val auditService = AuditService()
     val auditRepository = AuditRepository()
+    val statsRepository = AdminStatsRepository()
 
     val userRepository = UserRepository()
     val entitlementRepository = EntitlementRepository()

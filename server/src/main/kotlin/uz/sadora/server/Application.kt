@@ -84,6 +84,7 @@ fun Application.apiModule(component: AppComponent) {
                 adminAuth = component.adminAuthService,
                 adminService = component.adminService,
                 auditRepository = component.auditRepository,
+                statsRepository = component.statsRepository,
                 refreshTokens = component.refreshTokenService,
             )
         }
