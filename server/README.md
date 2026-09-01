@@ -37,6 +37,11 @@ Birinchi admin hisobini yaratish (jadval bo'sh bo'lgandagina ishlaydi):
 ADMIN_BOOTSTRAP_EMAIL=owner@sadora.uz ADMIN_BOOTSTRAP_PASSWORD=changeme123 ./gradlew :server:run
 ```
 
+Server JVM 21 ga kompilyatsiya qilinadi. Gradle o'z toolchain'ini yuklab oladi, lekin
+`./gradlew :server:installDist` yasagan skript `PATH` dagi `java` ni ishlatadi — eskiroq
+JDK bo'lsa `UnsupportedClassVersionError` beradi. Shuning uchun distributivni
+ko'tarishdan oldin `JAVA_HOME` ni 21 ga qo'ying (Docker образи buni o'zi hal qiladi).
+
 Sozlamalar — `.env.example`. Hammasida dev qiymati bor, shuning uchun hech narsa
 bermasdan ham ko'tariladi. `AppConfig` prod'da ikki narsani rad etadi: dev JWT kaliti va
 `OTP_EXPOSE_CODE=true`.

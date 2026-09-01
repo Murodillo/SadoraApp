@@ -60,6 +60,13 @@ sdk.dir=/Users/<siz>/Library/Android/sdk
 
 ---
 
+## CI
+
+Har bir push GitHub Actions'da tekshiriladi: backend testlari va migratsiyalarning
+haqiqiy Postgres ustida ko'tarilishi, shared modul testlari, Android APK yig'ilishi,
+admin panelning typecheck va build'i. Kotlin/Native (iOS) faqat `main` ga PR va push'da
+— macOS runner'lari o'n barobar qimmat.
+
 ## Arxitektura
 
 Butun UI `:shared` modulining `commonMain` manbasida — Android va iOS bir xil
