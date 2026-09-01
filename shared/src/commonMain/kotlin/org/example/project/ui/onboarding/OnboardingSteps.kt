@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -70,7 +72,11 @@ private fun StepScaffold(
     content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit,
 ) {
     val c = Sadora.colors
-    Column(Modifier.fillMaxSize()) {
+    // The activity draws edge to edge, so the status and navigation bars sit over the
+    // content unless the scaffold makes room. Without this the footer button lands
+    // underneath the navigation bar and onboarding cannot be finished at all on a device
+    // with the three-button layout.
+    Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
         SadoraTopBar(title = "", onBack = onBack, step = step)
         Column(
             Modifier

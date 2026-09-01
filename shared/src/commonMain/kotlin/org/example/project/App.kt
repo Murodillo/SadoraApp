@@ -17,12 +17,16 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import org.example.project.data.SadoraController
+import kotlinx.coroutines.launch
+import org.example.project.data.HealthController
+import org.example.project.data.HealthSync
 import org.example.project.data.SadoraGraph
 import org.example.project.data.SessionState
 import org.example.project.data.applyServerProfile
@@ -87,6 +91,12 @@ fun App(graph: SadoraGraph? = null) {
     // One controller for the whole app; with no graph it runs everything locally.
     val controller = remember(graph, state) { SadoraController(graph?.repository, state) }
 
+    // The health tabs get their own controller; it mirrors what it loads onto [state],
+    // so the screens keep reading the store they already read.
+    val health = remember(graph, state) {
+        graph?.healthController(state) ?: HealthController(null, null, null, null)
+    }
+
     SadoraTheme(darkTheme = state.darkTheme) {
         AnimatedContent(
             targetState = navigator.phase,
@@ -116,7 +126,7 @@ fun App(graph: SadoraGraph? = null) {
                     )
                 }
 
-                AppPhase.Main -> MainShell(state, navigator, controller)
+                AppPhase.Main -> MainShell(state, navigator, controller, health)
             }
         }
     }
@@ -167,7 +177,23 @@ private fun SplashGate(
  * that can be raised from any tab.
  */
 @Composable
-private fun MainShell(state: AppState, navigator: Navigator, controller: SadoraController) {
+private fun MainShell(
+    state: AppState,
+    navigator: Navigator,
+    controller: SadoraController,
+    health: HealthController,
+) {
+    val scope = rememberCoroutineScope()
+
+    // One load on entering the shell. Failures are silent — a tab that could not reach
+    // the server shows its empty state rather than a banner over the whole app.
+    LaunchedEffect(health) {
+        // Every screen already edits the store; the sink is what carries those edits on
+        // to the server, so none of them had to learn about it.
+        state.sync = HealthSync(health, scope)
+        health.loadAll()
+    }
+
     var showWaterSheet by remember { mutableStateOf(false) }
     var showSymptomSheet by remember { mutableStateOf(false) }
     var toast by remember { mutableStateOf<String?>(null) }

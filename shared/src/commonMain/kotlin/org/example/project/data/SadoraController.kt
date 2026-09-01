@@ -1,8 +1,5 @@
 package org.example.project.data
 
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import org.example.project.model.AppState
 import uz.sadora.contract.AuthProvider
 import uz.sadora.contract.OtpChallenge
@@ -25,20 +22,16 @@ class SadoraController(
     private val repository: SadoraRepository?,
     private val state: AppState,
 ) {
-    /** True while a call is in flight, so buttons can disable themselves. */
-    var busy by mutableStateOf(false)
-        private set
+    /** Busy and error live in [ApiCallState] so every controller handles them alike. */
+    val calls = ApiCallState()
 
-    /** The last failure, already turned into something a person can read. */
-    var error by mutableStateOf<String?>(null)
-        private set
+    val busy: Boolean get() = calls.busy
+    val error: String? get() = calls.error
 
     /** True when there is no backend behind the app. */
     val isOffline: Boolean get() = repository == null
 
-    fun clearError() {
-        error = null
-    }
+    fun clearError() = calls.clearError()
 
     // ---------------------------------------------------------------- auth
 
@@ -129,12 +122,7 @@ class SadoraController(
     // ---------------------------------------------------------------- account
 
     suspend fun signOut() {
-        busy = true
-        try {
-            repository?.signOut()
-        } finally {
-            busy = false
-        }
+        calls.run { ApiResult.Success(repository?.signOut()) }
     }
 
     suspend fun deleteAccount(reason: String?): Boolean {
@@ -155,19 +143,7 @@ class SadoraController(
         block: suspend (SadoraRepository) -> ApiResult<T>,
     ): T? {
         val repo = repository ?: return null
-        busy = true
-        if (!silent) error = null
-        return try {
-            when (val result = block(repo)) {
-                is ApiResult.Success -> result.value
-                is ApiResult.Failure -> {
-                    if (!silent) error = result.failure.readable()
-                    null
-                }
-            }
-        } finally {
-            busy = false
-        }
+        return calls.run(silent) { block(repo) }
     }
 
     private fun timezoneOrDefault(): String = repository?.deviceTimezone ?: "Asia/Tashkent"

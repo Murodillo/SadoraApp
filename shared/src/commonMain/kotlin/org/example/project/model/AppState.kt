@@ -104,21 +104,31 @@ class AppState {
     val meals = mutableStateListOf(*SampleData.meals.toTypedArray())
     val medications = mutableStateListOf(*SampleData.medications.toTypedArray())
 
+    /**
+     * Set once the app has a backend. Every mutation below reports through it, so the
+     * screens stay unaware that anything is being synced.
+     */
+    var sync: AppStateSync? = null
+
     fun toggleGoal(goal: Goal) {
         if (!goals.remove(goal)) goals.add(goal)
     }
 
     fun toggleSymptom(symptom: String) {
-        if (!symptoms.remove(symptom)) symptoms.add(symptom)
+        val added = !symptoms.remove(symptom)
+        if (added) symptoms.add(symptom)
+        sync?.symptomToggled(symptom, added)
     }
 
     fun addWater(ml: Int) {
         waterMl = (waterMl + ml).coerceAtLeast(0)
+        sync?.waterAdded(ml)
     }
 
     fun markMedicationTaken(id: String) {
         val index = medications.indexOfFirst { it.id == id }
         if (index >= 0) medications[index] = medications[index].copy(status = MedStatus.Taken)
+        sync?.doseTaken(id)
     }
 
     fun logMeal(meal: Meal) {
@@ -127,6 +137,7 @@ class AppState {
         proteinG += meal.protein
         fatG += meal.fat
         carbsG += meal.carbs
+        sync?.mealLogged(meal)
     }
 
     /**
