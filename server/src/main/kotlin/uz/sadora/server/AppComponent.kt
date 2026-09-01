@@ -19,8 +19,13 @@ import uz.sadora.server.entitlement.EntitlementRepository
 import uz.sadora.server.entitlement.EntitlementService
 import uz.sadora.server.entitlement.SubscriptionRepository
 import uz.sadora.server.flags.FeatureFlagRepository
+import uz.sadora.server.health.HealthAccess
 import uz.sadora.server.health.HealthRepository
 import uz.sadora.server.health.HealthService
+import uz.sadora.server.health.MindRepository
+import uz.sadora.server.health.MindService
+import uz.sadora.server.health.NutritionRepository
+import uz.sadora.server.health.NutritionService
 import uz.sadora.server.flags.FeatureFlagService
 import uz.sadora.server.user.UserRepository
 import uz.sadora.server.user.UserService
@@ -46,6 +51,8 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
     val subscriptionRepository = SubscriptionRepository()
     val flagRepository = FeatureFlagRepository()
     val healthRepository = HealthRepository()
+    val mindRepository = MindRepository()
+    val nutritionRepository = NutritionRepository()
 
     val entitlementService = EntitlementService(entitlementRepository)
     val flagService = FeatureFlagService(flagRepository)
@@ -74,11 +81,10 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
         config = config,
     )
 
-    val healthService = HealthService(
-        repository = healthRepository,
-        users = userRepository,
-        entitlements = entitlementService,
-    )
+    val healthAccess = HealthAccess(userRepository, entitlementService)
+    val healthService = HealthService(healthRepository, healthAccess)
+    val mindService = MindService(mindRepository, healthRepository, healthAccess)
+    val nutritionService = NutritionService(nutritionRepository, healthAccess)
 
     val adminAuthService = AdminAuthService(jwtService, auditService)
 

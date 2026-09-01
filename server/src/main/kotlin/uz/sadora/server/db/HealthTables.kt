@@ -2,6 +2,7 @@ package uz.sadora.server.db
 
 import org.jetbrains.exposed.v1.core.Table
 import org.jetbrains.exposed.v1.datetime.date
+import org.jetbrains.exposed.v1.datetime.time
 import org.jetbrains.exposed.v1.datetime.timestampWithTimeZone
 
 /**
@@ -29,6 +30,8 @@ object DailyLogs : Table("daily_logs") {
     val flow = text("flow").nullable()
     val mood = text("mood").nullable()
     val energy = integer("energy").nullable()
+    val stress = integer("stress").nullable()
+    val waterMl = integer("water_ml")
     val note = text("note").nullable()
     val createdAt = timestampWithTimeZone("created_at")
     val updatedAt = timestampWithTimeZone("updated_at")
@@ -60,4 +63,66 @@ object DailySymptoms : Table("daily_symptoms") {
     val severity = text("severity")
 
     override val primaryKey = PrimaryKey(userId, logDate, symptomKey)
+}
+
+object JournalEntries : Table("journal_entries") {
+    val id = uuid("id")
+    val userId = uuid("user_id").references(Users.id)
+    val entryDate = date("entry_date")
+    val body = text("body")
+    val createdAt = timestampWithTimeZone("created_at")
+    val updatedAt = timestampWithTimeZone("updated_at")
+
+    override val primaryKey = PrimaryKey(id)
+}
+
+object MindPractices : Table("mind_practices") {
+    val id = uuid("id")
+    val userId = uuid("user_id").references(Users.id)
+    val kind = text("kind")
+    val durationSeconds = integer("duration_seconds")
+    val completedAt = timestampWithTimeZone("completed_at")
+
+    override val primaryKey = PrimaryKey(id)
+}
+
+object Meals : Table("meals") {
+    val id = uuid("id")
+    val userId = uuid("user_id").references(Users.id)
+    val logDate = date("log_date")
+    val slot = text("slot")
+    val eatenAt = time("eaten_at").nullable()
+    val description = text("description")
+    val kcal = integer("kcal")
+    val proteinG = integer("protein_g")
+    val fatG = integer("fat_g")
+    val carbsG = integer("carbs_g")
+    val createdAt = timestampWithTimeZone("created_at")
+
+    override val primaryKey = PrimaryKey(id)
+}
+
+object NutritionGoalsTable : Table("nutrition_goals") {
+    val userId = uuid("user_id").references(Users.id)
+    val calorieGoal = integer("calorie_goal")
+    val proteinGoalG = integer("protein_goal_g")
+    val fatGoalG = integer("fat_goal_g")
+    val carbsGoalG = integer("carbs_goal_g")
+    val waterGoalMl = integer("water_goal_ml")
+    val updatedAt = timestampWithTimeZone("updated_at")
+
+    override val primaryKey = PrimaryKey(userId)
+}
+
+object FoodItems : Table("food_items") {
+    val key = text("key")
+    val name = text("name")
+    val kcal = integer("kcal")
+    val proteinG = integer("protein_g")
+    val fatG = integer("fat_g")
+    val carbsG = integer("carbs_g")
+    val perPiece = bool("per_piece")
+    val active = bool("active")
+
+    override val primaryKey = PrimaryKey(key)
 }

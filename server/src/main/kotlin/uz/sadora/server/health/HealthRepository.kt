@@ -173,6 +173,7 @@ class HealthRepository {
                     flow = enumFromDb<FlowLevel>(row[DailyLogs.flow]),
                     mood = enumFromDb<MoodLevel>(row[DailyLogs.mood]),
                     energy = row[DailyLogs.energy],
+                    stress = row[DailyLogs.stress],
                     symptoms = symptoms[date].orEmpty(),
                     note = row[DailyLogs.note],
                     updatedAt = row[DailyLogs.updatedAt].toKotlinInstant(),
@@ -198,6 +199,7 @@ class HealthRepository {
             it[flow] = request.flow?.dbValue()
             it[mood] = request.mood?.dbValue()
             it[energy] = request.energy
+            it[stress] = request.stress
             it[note] = request.note?.takeIf { text -> text.isNotBlank() }
             it[createdAt] = timestamp
             it[updatedAt] = timestamp

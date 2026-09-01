@@ -22,6 +22,35 @@ class WireFormatTest {
         assertEquals("\"deletion_pending\"", json.encodeToString(AccountStatus.DELETION_PENDING))
     }
 
+    @Test
+    fun `the health enums keep the spellings the database stores`() {
+        assertEquals("\"trying_to_conceive\"", json.encodeToString(LifeStage.TRYING_TO_CONCEIVE))
+        assertEquals("\"period\"", json.encodeToString(CyclePhase.PERIOD))
+        assertEquals("\"spotting\"", json.encodeToString(FlowLevel.SPOTTING))
+        assertEquals("\"great\"", json.encodeToString(MoodLevel.GREAT))
+        assertEquals("\"moderate\"", json.encodeToString(SymptomSeverity.MODERATE))
+        assertEquals("\"breakfast\"", json.encodeToString(MealSlot.BREAKFAST))
+        assertEquals("\"breathing\"", json.encodeToString(MindPracticeKind.BREATHING))
+        assertEquals("\"digestion\"", json.encodeToString(SymptomCategory.DIGESTION))
+    }
+
+    /**
+     * `none` is a real answer the client branches on, so its spelling is part of the
+     * contract just as much as a field name.
+     */
+    @Test
+    fun `an absent prediction serialises as none with a stated reason`() {
+        val prediction = CyclePrediction(
+            confidence = PredictionConfidence.NONE,
+            reason = PredictionReasons.STAGE_DOES_NOT_PREDICT,
+        )
+        val encoded = json.encodeToString(prediction)
+        assertTrue("\"confidence\":\"none\"" in encoded, encoded)
+        assertTrue("\"reason\":\"stage_does_not_predict\"" in encoded, encoded)
+        assertTrue("nextPeriodStart" !in encoded, "an absent date must not appear at all")
+        assertTrue(!prediction.hasPrediction)
+    }
+
     /** An older app build must survive a server that added a field. */
     @Test
     fun `unknown fields are ignored when decoding`() {

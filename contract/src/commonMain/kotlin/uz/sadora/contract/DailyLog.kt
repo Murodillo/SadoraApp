@@ -75,12 +75,15 @@ data class DailyLog(
     val mood: MoodLevel? = null,
     /** 1–5, the same shape as mood. */
     val energy: Int? = null,
+    /** 1–5, where 5 is the most stressed. The Mind tab's third dial. */
+    val stress: Int? = null,
     val symptoms: List<SymptomEntry> = emptyList(),
     val note: String? = null,
     val updatedAt: Instant? = null,
 ) {
     val isEmpty: Boolean
-        get() = flow == null && mood == null && energy == null && symptoms.isEmpty() && note.isNullOrBlank()
+        get() = flow == null && mood == null && energy == null && stress == null &&
+            symptoms.isEmpty() && note.isNullOrBlank()
 }
 
 /**
@@ -92,6 +95,7 @@ data class SaveDailyLogRequest(
     val flow: FlowLevel? = null,
     val mood: MoodLevel? = null,
     val energy: Int? = null,
+    val stress: Int? = null,
     val symptoms: List<SymptomEntry> = emptyList(),
     val note: String? = null,
 )

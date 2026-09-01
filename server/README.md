@@ -102,9 +102,19 @@ sana berilmaydi; 28 kun o'ylab topilmaydi. Sikl bashorat qilmaydigan bosqichlar
 (homiladorlik, menopauza) umuman prognoz olmaydi. Sikl kuni va faza bitta manbadan
 hisoblanadi, shuning uchun ular hech qachon bir-biriga zid javob bermaydi.
 
+**Kunlik yozuv — bitta qator.** Sikl kundaligi ham, Mind check-in'i ham `daily_logs`
+ning o'sha qatoriga yozadi: 14-sentyabrdagi kayfiyat — bitta fakt, uni qaysi ekran
+qayd etganidan qat'i nazar. Check-in faqat uchta maydonni almashtiradi, shuning uchun
+u bir soat oldin kiritilgan simptomni o'chirib yubormaydi.
+
+**Ovqatlanish jamlanmasi hisoblagichda saqlanmaydi.** Har safar qayd etilgan
+ovqatlardan yig'iladi — aks holda o'chirilgan ovqat kunlik raqamni buzib qoldirardi.
+Makrolar yeyilgan holicha saqlanadi: katalog tuzatilsa, o'tgan oyda nima yeganini
+jimgina o'zgartirmasligi kerak.
+
 ## Nima hali yo'q (2–3-sprint)
 
-Mind/Nutrition/Meds API'lari · wearable normalizatsiya qatlami ·
+Meds API'si · wearable normalizatsiya qatlami ·
 bildirishnoma scheduler'i · AI Gateway va uning xarajat logi · App Store / Google Play va
 Payme/Click webhook'lari · hisobni haqiqiy o'chirish job'i · SMS provayderi
 (`OtpSender` interfeysi tayyor, hozircha log'ga yozadi) · admin 2FA enrolment ekrani.

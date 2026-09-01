@@ -20,14 +20,11 @@ import uz.sadora.contract.PeriodEntry
 import uz.sadora.contract.SaveDailyLogRequest
 import uz.sadora.contract.SymptomDefinition
 import uz.sadora.contract.UpdatePeriodRequest
-import uz.sadora.server.core.ConsentRequiredException
 import uz.sadora.server.core.NotFoundException
 import uz.sadora.server.core.ValidationException
 import uz.sadora.server.core.dayIn
 import uz.sadora.server.core.now
-import uz.sadora.server.entitlement.EntitlementService
 import uz.sadora.server.user.UserRecord
-import uz.sadora.server.user.UserRepository
 
 /**
  * Cycle and daily logging.
@@ -39,13 +36,12 @@ import uz.sadora.server.user.UserRepository
  */
 class HealthService(
     private val repository: HealthRepository,
-    private val users: UserRepository,
-    private val entitlements: EntitlementService,
+    private val access: HealthAccess,
 ) {
     // ---------------------------------------------------------------- reads
 
     suspend fun status(userId: Uuid): CycleStatus {
-        val user = requireUser(userId)
+        val user = access.requireUser(userId)
         val today = now().dayIn(user.timezone)
         val periods = repository.periodsOf(userId)
         val prediction = predictionFor(user, periods, today)
@@ -66,7 +62,7 @@ class HealthService(
     }
 
     suspend fun calendar(userId: Uuid, from: LocalDate, to: LocalDate): CycleCalendar {
-        val user = requireUser(userId)
+        val user = access.requireUser(userId)
         if (from > to) throw ValidationException("from", "Boshlanish sanasi tugashdan keyin bo'lishi mumkin emas")
         val span = from.daysUntil(to)
         if (span > MAX_CALENDAR_DAYS) {
@@ -100,7 +96,7 @@ class HealthService(
     }
 
     suspend fun history(userId: Uuid): CycleHistory {
-        val user = requireUser(userId)
+        val user = access.requireUser(userId)
         val today = now().dayIn(user.timezone)
         val periods = repository.periodsOf(userId)
         val prediction = predictionFor(user, periods, today)
@@ -142,14 +138,14 @@ class HealthService(
     }
 
     suspend fun symptomCatalogue(userId: Uuid, lifeStage: LifeStage?): List<SymptomDefinition> {
-        val stage = lifeStage ?: requireUser(userId).lifeStage
+        val stage = lifeStage ?: access.requireUser(userId).lifeStage
         return repository.symptomCatalogue(stage)
     }
 
     // ---------------------------------------------------------------- writes
 
     suspend fun addPeriod(userId: Uuid, request: LogPeriodRequest): PeriodEntry {
-        val user = requireWritable(userId)
+        val user = access.requireWritable(userId, FeatureKeys.CYCLE_PREDICTION)
         val today = now().dayIn(user.timezone)
         validatePeriod(request.startedOn, request.endedOn, today)
 
@@ -159,7 +155,7 @@ class HealthService(
     }
 
     suspend fun updatePeriod(userId: Uuid, id: Uuid, request: UpdatePeriodRequest): PeriodEntry {
-        val user = requireWritable(userId)
+        val user = access.requireWritable(userId, FeatureKeys.CYCLE_PREDICTION)
         val today = now().dayIn(user.timezone)
         val existing = repository.periodById(userId, id)
             ?: throw NotFoundException("Hayz yozuvi topilmadi")
@@ -174,12 +170,12 @@ class HealthService(
     }
 
     suspend fun deletePeriod(userId: Uuid, id: Uuid) {
-        requireWritable(userId)
+        access.requireWritable(userId, FeatureKeys.CYCLE_PREDICTION)
         if (!repository.deletePeriod(userId, id)) throw NotFoundException("Hayz yozuvi topilmadi")
     }
 
     suspend fun saveLog(userId: Uuid, date: LocalDate, request: SaveDailyLogRequest): DailyLog {
-        val user = requireWritable(userId)
+        val user = access.requireWritable(userId, FeatureKeys.CYCLE_PREDICTION)
         val today = now().dayIn(user.timezone)
         if (date > today) throw ValidationException("date", "Kelajakdagi kun uchun yozuv qo'shib bo'lmaydi")
 
@@ -209,27 +205,11 @@ class HealthService(
     }
 
     suspend fun deleteLog(userId: Uuid, date: LocalDate) {
-        requireWritable(userId)
+        access.requireWritable(userId, FeatureKeys.CYCLE_PREDICTION)
         repository.deleteLog(userId, date)
     }
 
     // ---------------------------------------------------------------- plumbing
-
-    private suspend fun requireUser(userId: Uuid): UserRecord =
-        users.findById(userId) ?: throw NotFoundException("Foydalanuvchi topilmadi")
-
-    /**
-     * Both gates, in the order that gives the clearest error: consent first, because a
-     * user who has not agreed to storage should be sent to the privacy screen rather
-     * than told about her subscription.
-     */
-    private suspend fun requireWritable(userId: Uuid): UserRecord {
-        val user = requireUser(userId)
-        val consents = users.consentsOf(userId)
-        if (consents?.storeHealth != true) throw ConsentRequiredException("store_health")
-        entitlements.requireAvailable(userId, FeatureKeys.CYCLE_PREDICTION, user.timezone)
-        return user
-    }
 
     private suspend fun predictionFor(
         user: UserRecord,

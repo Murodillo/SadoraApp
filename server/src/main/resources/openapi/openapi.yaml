@@ -26,6 +26,8 @@ tags:
   - name: Profile
   - name: Entitlements
   - name: Cycle
+  - name: Mind
+  - name: Nutrition
   - name: Admin
 
 paths:
@@ -500,6 +502,257 @@ paths:
               schema:
                 type: array
                 items: { $ref: "#/components/schemas/SymptomDefinition" }
+
+  /v1/mind/today:
+    get:
+      tags: [Mind]
+      security: [{ bearerAuth: [] }]
+      summary: Mind tab — check-in, kundalik, mashqlar va 14 kunlik o'rtachalar
+      description: |
+        O'rtachalar oddiy arifmetik o'rtacha, boshqa hech narsa emas — ekran
+        "ko'pincha birga kuzatilgan" deydi, "sabab bo'lgan" demaydi.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MindSummary" }
+
+  /v1/mind/check-in:
+    put:
+      tags: [Mind]
+      security: [{ bearerAuth: [] }]
+      summary: Bugungi kayfiyat, energiya va stress
+      description: |
+        Kunlik yozuvning uch maydonini almashtiradi, qolganiga tegmaydi — o'sha kuni
+        sikl kundaligidan yozilgan simptom yoki izoh o'chib ketmaydi.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/MindCheckIn" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MindCheckIn" }
+        "403": { $ref: "#/components/responses/ConsentRequired" }
+
+  /v1/mind/journal:
+    get:
+      tags: [Mind]
+      security: [{ bearerAuth: [] }]
+      summary: Kundalik yozuvlari
+      parameters:
+        - { name: from, in: query, schema: { type: string, format: date } }
+        - { name: to, in: query, schema: { type: string, format: date } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/JournalEntry" }
+    post:
+      tags: [Mind]
+      security: [{ bearerAuth: [] }]
+      summary: Yangi kundalik yozuvi
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [date, body]
+              properties:
+                date: { type: string, format: date }
+                body: { type: string, minLength: 1, maxLength: 5000 }
+      responses:
+        "201":
+          description: Yaratildi
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/JournalEntry" }
+        "403": { $ref: "#/components/responses/ConsentRequired" }
+
+  /v1/mind/journal/{id}:
+    patch:
+      tags: [Mind]
+      security: [{ bearerAuth: [] }]
+      summary: Yozuvni tahrirlash
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [body]
+              properties: { body: { type: string } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/JournalEntry" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [Mind]
+      security: [{ bearerAuth: [] }]
+      summary: Yozuvni o'chirish
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200": { $ref: "#/components/responses/Ack" }
+
+  /v1/mind/practices:
+    post:
+      tags: [Mind]
+      security: [{ bearerAuth: [] }]
+      summary: Nafas mashqini qayd etish
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [durationSeconds]
+              properties:
+                kind: { type: string, enum: [breathing, meditation, grounding] }
+                durationSeconds: { type: integer, minimum: 1, maximum: 7200 }
+      responses:
+        "201":
+          description: Yaratildi
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MindPractice" }
+
+  /v1/nutrition/today:
+    get:
+      tags: [Nutrition]
+      security: [{ bearerAuth: [] }]
+      summary: Bugungi ovqatlanish
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/NutritionDay" }
+
+  /v1/nutrition/days/{date}:
+    get:
+      tags: [Nutrition]
+      security: [{ bearerAuth: [] }]
+      summary: Bir kunlik ovqatlanish
+      parameters: [{ $ref: "#/components/parameters/LogDate" }]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/NutritionDay" }
+
+  /v1/nutrition/meals:
+    post:
+      tags: [Nutrition]
+      security: [{ bearerAuth: [] }]
+      summary: Ovqat qo'shish
+      description: |
+        Makrolar yeyilgan holicha saqlanadi, katalogdan qayta hisoblanmaydi — katalog
+        tuzatilsa, o'tgan martda nima yeganini jimgina o'zgartirib qo'ymasligi kerak.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/LogMealRequest" }
+      responses:
+        "201":
+          description: Yaratildi
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Meal" }
+        "403": { $ref: "#/components/responses/ConsentRequired" }
+
+  /v1/nutrition/meals/{id}:
+    delete:
+      tags: [Nutrition]
+      security: [{ bearerAuth: [] }]
+      summary: Ovqatni o'chirish
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200": { $ref: "#/components/responses/Ack" }
+
+  /v1/nutrition/water:
+    post:
+      tags: [Nutrition]
+      security: [{ bearerAuth: [] }]
+      summary: Suv qo'shish yoki qaytarish
+      description: "`ml` manfiy bo'lishi mumkin — ilovadagi «Qaytarish» shu yo'l bilan ishlaydi."
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ml]
+              properties: { ml: { type: integer, example: 250 } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/WaterState" }
+
+  /v1/nutrition/goals:
+    get:
+      tags: [Nutrition]
+      security: [{ bearerAuth: [] }]
+      summary: Kunlik maqsadlar
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/NutritionGoals" }
+    put:
+      tags: [Nutrition]
+      security: [{ bearerAuth: [] }]
+      summary: Maqsadlarni o'zgartirish
+      description: |
+        Chegaralar bor, lekin maqsad tanadan hisoblanmaydi — bu mahsulot bermaydigan
+        parhez maslahati bo'lardi.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/NutritionGoals" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/NutritionGoals" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+
+  /v1/nutrition/foods:
+    get:
+      tags: [Nutrition]
+      security: [{ bearerAuth: [] }]
+      summary: Taom katalogi bo'yicha qidiruv
+      parameters:
+        - { name: q, in: query, schema: { type: string }, example: somsa }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/FoodItem" }
 
   /v1/admin/auth/login:
     post:
@@ -1280,6 +1533,7 @@ components:
         flow: { $ref: "#/components/schemas/FlowLevel" }
         mood: { $ref: "#/components/schemas/MoodLevel" }
         energy: { type: integer, nullable: true, minimum: 1, maximum: 5 }
+        stress: { type: integer, nullable: true, minimum: 1, maximum: 5 }
         symptoms:
           type: array
           items: { $ref: "#/components/schemas/SymptomEntry" }
@@ -1293,6 +1547,7 @@ components:
         flow: { $ref: "#/components/schemas/FlowLevel" }
         mood: { $ref: "#/components/schemas/MoodLevel" }
         energy: { type: integer, nullable: true, minimum: 1, maximum: 5 }
+        stress: { type: integer, nullable: true, minimum: 1, maximum: 5 }
         symptoms:
           type: array
           items: { $ref: "#/components/schemas/SymptomEntry" }
@@ -1306,6 +1561,133 @@ components:
         logs:
           type: array
           items: { $ref: "#/components/schemas/DailyLog" }
+
+    MindPracticeKind:
+      type: string
+      enum: [breathing, meditation, grounding]
+    MealSlot:
+      type: string
+      enum: [breakfast, lunch, dinner, snack]
+
+    MindCheckIn:
+      type: object
+      properties:
+        mood: { $ref: "#/components/schemas/MoodLevel" }
+        energy: { type: integer, nullable: true, minimum: 1, maximum: 5 }
+        stress:
+          type: integer
+          nullable: true
+          minimum: 1
+          maximum: 5
+          description: "5 — eng ko'p stress"
+
+    JournalEntry:
+      type: object
+      description: "Ilovada «Faqat siz ko'rasiz» deb belgilangan — admin API'ga umuman chiqmaydi"
+      properties:
+        id: { type: string, format: uuid }
+        date: { type: string, format: date }
+        body: { type: string }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    MindPractice:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        kind: { $ref: "#/components/schemas/MindPracticeKind" }
+        durationSeconds: { type: integer }
+        completedAt: { type: string, format: date-time }
+
+    MindSummary:
+      type: object
+      properties:
+        today: { type: string, format: date }
+        checkIn: { $ref: "#/components/schemas/MindCheckIn" }
+        recentEntries:
+          type: array
+          items: { $ref: "#/components/schemas/JournalEntry" }
+        recentPractices:
+          type: array
+          items: { $ref: "#/components/schemas/MindPractice" }
+        averageMood: { type: number, nullable: true }
+        averageEnergy: { type: number, nullable: true }
+        averageStress: { type: number, nullable: true }
+        daysLogged: { type: integer }
+        windowDays: { type: integer, default: 14 }
+
+    FoodItem:
+      type: object
+      description: "100 g uchun, `perPiece` belgilangan bo'lsa — bir dona uchun"
+      properties:
+        key: { type: string }
+        name: { type: string }
+        kcal: { type: integer }
+        proteinG: { type: integer }
+        fatG: { type: integer }
+        carbsG: { type: integer }
+        perPiece: { type: boolean }
+
+    Meal:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        date: { type: string, format: date }
+        slot: { $ref: "#/components/schemas/MealSlot" }
+        eatenAt: { type: string, nullable: true, example: "08:20" }
+        description: { type: string }
+        kcal: { type: integer }
+        proteinG: { type: integer }
+        fatG: { type: integer }
+        carbsG: { type: integer }
+        createdAt: { type: string, format: date-time }
+
+    LogMealRequest:
+      type: object
+      required: [date, slot, description, kcal]
+      properties:
+        date: { type: string, format: date }
+        slot: { $ref: "#/components/schemas/MealSlot" }
+        eatenAt: { type: string, nullable: true, example: "08:20" }
+        description: { type: string, maxLength: 200 }
+        kcal: { type: integer, minimum: 0, maximum: 10000 }
+        proteinG: { type: integer, default: 0 }
+        fatG: { type: integer, default: 0 }
+        carbsG: { type: integer, default: 0 }
+
+    NutritionGoals:
+      type: object
+      properties:
+        calorieGoal: { type: integer, default: 1850, minimum: 800, maximum: 6000 }
+        proteinGoalG: { type: integer, default: 85 }
+        fatGoalG: { type: integer, default: 62 }
+        carbsGoalG: { type: integer, default: 210 }
+        waterGoalMl: { type: integer, default: 2000 }
+
+    NutritionDay:
+      type: object
+      properties:
+        date: { type: string, format: date }
+        meals:
+          type: array
+          items: { $ref: "#/components/schemas/Meal" }
+        totals:
+          type: object
+          description: "Qayd etilgan ovqatlardan yig'iladi, alohida hisoblagichda saqlanmaydi"
+          properties:
+            kcal: { type: integer }
+            proteinG: { type: integer }
+            fatG: { type: integer }
+            carbsG: { type: integer }
+        goals: { $ref: "#/components/schemas/NutritionGoals" }
+        waterMl: { type: integer }
+
+    WaterState:
+      type: object
+      properties:
+        date: { type: string, format: date }
+        waterMl: { type: integer }
+        waterGoalMl: { type: integer }
 
     AdminSession:
       type: object
