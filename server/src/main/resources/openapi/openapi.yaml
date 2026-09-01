@@ -102,33 +102,6 @@ paths:
         "200": { $ref: "#/components/responses/AuthSession" }
         "401": { $ref: "#/components/responses/Unauthorized" }
 
-  /v1/auth/email/register:
-    post:
-      tags: [Auth]
-      summary: Email va parol bilan ro'yxatdan o'tish
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: "#/components/schemas/EmailRegisterRequest" }
-      responses:
-        "201": { $ref: "#/components/responses/AuthSession" }
-        "400": { $ref: "#/components/responses/BadRequest" }
-        "409": { $ref: "#/components/responses/Conflict" }
-
-  /v1/auth/email/login:
-    post:
-      tags: [Auth]
-      summary: Email va parol bilan kirish
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: "#/components/schemas/EmailSignInRequest" }
-      responses:
-        "200": { $ref: "#/components/responses/AuthSession" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-
   /v1/auth/refresh:
     post:
       tags: [Auth]
@@ -1539,7 +1512,7 @@ components:
       enum: [app_store, google_play, payme, click, manual]
     AuthProvider:
       type: string
-      enum: [phone, email, apple, google]
+      enum: [phone, apple, google]
 
     ApiErrorResponse:
       type: object
@@ -1605,24 +1578,6 @@ components:
         provider: { type: string, enum: [apple, google] }
         idToken: { type: string }
         fullName: { type: string, nullable: true, description: "Apple ismni faqat bir marta beradi" }
-        device: { $ref: "#/components/schemas/DeviceInfo" }
-
-    EmailRegisterRequest:
-      type: object
-      required: [email, password, name, device]
-      properties:
-        email: { type: string, format: email }
-        password: { type: string, minLength: 8 }
-        name: { type: string }
-        language: { $ref: "#/components/schemas/Language" }
-        device: { $ref: "#/components/schemas/DeviceInfo" }
-
-    EmailSignInRequest:
-      type: object
-      required: [email, password]
-      properties:
-        email: { type: string, format: email }
-        password: { type: string }
         device: { $ref: "#/components/schemas/DeviceInfo" }
 
     RefreshRequest:

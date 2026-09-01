@@ -51,26 +51,6 @@ class SadoraController(
         return session.user.destination()
     }
 
-    suspend fun signInWithEmail(email: String, password: String): AuthDestination? {
-        val repo = repository ?: return AuthDestination.Main
-        val session = call { repo.signInWithEmail(email.trim(), password) } ?: return null
-        state.applyServerProfile(session.user, session.entitlements)
-        return session.user.destination()
-    }
-
-    suspend fun registerWithEmail(
-        email: String,
-        password: String,
-        name: String,
-    ): AuthDestination? {
-        val repo = repository ?: return AuthDestination.Onboarding
-        val session = call {
-            repo.registerWithEmail(email.trim(), password, name.trim())
-        } ?: return null
-        state.applyServerProfile(session.user, session.entitlements)
-        return session.user.destination()
-    }
-
     suspend fun signInWithSocial(provider: AuthProvider, idToken: String): AuthDestination? {
         val repo = repository ?: return AuthDestination.Onboarding
         val session = call { repo.signInWithSocial(provider, idToken) } ?: return null

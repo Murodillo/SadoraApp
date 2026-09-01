@@ -83,6 +83,12 @@ bayroq bir xil odamlarni tanlamaydi.
 **Vaqt: baza `timestamptz`, domen `kotlin.time.Instant`, JVM UTC ga qadab qo'yilgan.**
 Konvertatsiya `core/Time.kt` da, repository chegarasida.
 
+**Foydalanuvchilarda parol yo'q.** Kirish — telefonga kelgan kodni tasdiqlash: mavjud
+raqam uchun u hisobni qaytaradi, yangisi uchun ochadi, shuning uchun «ro'yxatdan o'tish»
+va «kirish» bitta amal. Bu ataylab: parol bilan ochilgan hisobga qaytib kirib
+bo'lmasdi, hech bir mijoz ishlatmaydigan parol yo'li esa hech kim kuzatmaydigan yo'l
+bo'lardi. Admin panelning o'z paroli bor — alohida realm, 2FA ortida.
+
 **Parol — bcrypt (cost 12), refresh token va OTP — SHA-256.** Parol past entropiyali va
 taxmin qilinadi, shuning uchun ataylab sekin; tasodifiy 256-bitli token uchun sekin hash
 foyda bermaydi.

@@ -24,6 +24,11 @@ object Users : Table("users") {
     val id = uuid("id")
     val phone = text("phone").nullable()
     val email = text("email").nullable()
+    /**
+     * Unused since users sign in by phone code. Left in place rather than dropped: a
+     * migration that deletes a column deletes whatever it holds, and this one is not in
+     * the way. Admin passwords live in [AdminUsers], which is a separate realm.
+     */
     val passwordHash = text("password_hash").nullable()
     val name = text("name")
     val language = text("language")

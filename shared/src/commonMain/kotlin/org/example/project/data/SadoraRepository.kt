@@ -6,11 +6,8 @@ import uz.sadora.contract.AuthSession
 import uz.sadora.contract.Bootstrap
 import uz.sadora.contract.ConsentGrants
 import uz.sadora.contract.Consents
-import uz.sadora.contract.EmailRegisterRequest
-import uz.sadora.contract.EmailSignInRequest
 import uz.sadora.contract.Entitlements
 import uz.sadora.contract.FeatureFlags
-import uz.sadora.contract.Language
 import uz.sadora.contract.OnboardingRequest
 import uz.sadora.contract.OtpChallenge
 import uz.sadora.contract.SocialSignInRequest
@@ -71,20 +68,6 @@ class SadoraRepository(
 
     suspend fun verifyOtp(challengeId: String, code: String): ApiResult<AuthSession> =
         api.verifyOtp(challengeId, code, device.toDeviceInfo(appVersion)).applySession()
-
-    suspend fun signInWithEmail(email: String, password: String): ApiResult<AuthSession> =
-        api.signInWithEmail(
-            EmailSignInRequest(email, password, device.toDeviceInfo(appVersion)),
-        ).applySession()
-
-    suspend fun registerWithEmail(
-        email: String,
-        password: String,
-        name: String,
-        language: Language = Language.UZ,
-    ): ApiResult<AuthSession> = api.registerWithEmail(
-        EmailRegisterRequest(email, password, name, language, device.toDeviceInfo(appVersion)),
-    ).applySession()
 
     suspend fun signInWithSocial(
         provider: AuthProvider,

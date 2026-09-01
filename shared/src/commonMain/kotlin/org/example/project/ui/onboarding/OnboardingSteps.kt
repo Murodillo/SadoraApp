@@ -245,9 +245,7 @@ fun SignUpStep(
 ) {
     val c = Sadora.colors
     val scope = rememberCoroutineScope()
-    var method by remember { mutableStateOf(0) }
     var agreed by remember { mutableStateOf(true) }
-    var password by remember { mutableStateOf("") }
 
     StepScaffold(
         title = "Hisob yaratish",
@@ -256,17 +254,12 @@ fun SignUpStep(
         onBack = onBack,
         footer = {
             SadoraButton(
-                if (method == 0) "Kodni yuborish" else "Ro'yxatdan o'tish",
-                enabled = agreed && !controller.busy,
+                if (controller.busy) "Yuborilmoqda…" else "Kodni yuborish",
+                enabled = agreed &&
+                    state.phone.count { it.isDigit() } >= 9 &&
+                    !controller.busy,
                 onClick = {
-                    scope.launch {
-                        if (method == 0) {
-                            controller.requestOtp(state.phone)?.let(onChallenge)
-                        } else {
-                            controller.registerWithEmail(state.email, password, state.name)
-                                ?.let(onAuthenticated)
-                        }
-                    }
+                    scope.launch { controller.requestOtp(state.phone)?.let(onChallenge) }
                 },
             )
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -312,32 +305,17 @@ fun SignUpStep(
             Box(Modifier.weight(1f).height(1.dp).background(c.line))
         }
 
-        TabSwitch(listOf("Telefon", "E-mail"), method, { method = it })
-
-        if (method == 0) {
-            SadoraTextField(
-                value = state.phone,
-                onValueChange = { state.phone = it },
-                leading = "+998",
-                placeholder = "90 123 45 67",
-                keyboardType = KeyboardType.Phone,
-            )
-        } else {
-            SadoraTextField(
-                value = state.email,
-                onValueChange = { state.email = it },
-                placeholder = "siz@example.com",
-                keyboardType = KeyboardType.Email,
-            )
-            SadoraTextField(
-                value = password,
-                onValueChange = { password = it },
-                label = "Parol",
-                placeholder = "kamida 8 belgi",
-                isPassword = true,
-                keyboardType = KeyboardType.Password,
-            )
-        }
+        // Phone only. An account opened with an e-mail and a password could not be signed
+        // back into — sign-in is the code exchange — so offering it would have created
+        // accounts with no way back in.
+        SadoraTextField(
+            value = state.phone,
+            onValueChange = { state.phone = it },
+            label = "Telefon raqami",
+            leading = "+998",
+            placeholder = "90 123 45 67",
+            keyboardType = KeyboardType.Phone,
+        )
 
         controller.error?.let { org.example.project.ui.components.ErrorStrip(it) }
 
@@ -750,8 +728,12 @@ fun SignInScreen(
 ) {
     val c = Sadora.colors
     val scope = rememberCoroutineScope()
-    var password by remember { mutableStateOf("") }
-    var rememberMe by remember { mutableStateOf(true) }
+
+    // Signing in is the same phone-and-code exchange as signing up: verifying a code for
+    // a number the backend already knows returns that account. There is no password to
+    // hold, and nothing for a user who signed up by phone to have forgotten.
+    var challenge by remember { mutableStateOf<OtpChallenge?>(null) }
+    var awaitingCode by remember { mutableStateOf(false) }
 
     fun finish(destination: AuthDestination) {
         onSignedIn(
@@ -759,12 +741,29 @@ fun SignInScreen(
         )
     }
 
-    fun submit() {
+    if (awaitingCode) {
+        // The same step the sign-up flow uses, without its step counter — one code entry
+        // to keep correct rather than two that drift apart.
+        OtpStep(
+            state = state,
+            controller = controller,
+            challenge = challenge,
+            step = null,
+            onBack = {
+                controller.clearError()
+                awaitingCode = false
+            },
+            onVerified = ::finish,
+        )
+        return
+    }
+
+    fun sendCode() {
         scope.launch {
-            // The field is labelled "telefon raqami", but the backend signs in by
-            // e-mail and password. Whichever the user typed, send it as the identifier.
-            val identifier = state.email.ifBlank { state.phone }
-            controller.signInWithEmail(identifier, password)?.let(::finish)
+            controller.requestOtp(state.phone)?.let {
+                challenge = it
+                awaitingCode = true
+            }
         }
     }
 
@@ -787,50 +786,49 @@ fun SignInScreen(
         }
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text("Xush kelibsiz", style = Sadora.type.h1, color = c.text)
-            Text("Hisobingizga kirib davom eting", style = Sadora.type.body, color = c.muted)
+            Text("Raqamingizga kod yuboramiz", style = Sadora.type.body, color = c.muted)
         }
+
         SadoraTextField(
-            state.email,
-            { state.email = it },
-            label = "E-mail",
-            placeholder = "siz@example.com",
-            keyboardType = KeyboardType.Email,
+            value = state.phone,
+            onValueChange = {
+                state.phone = it
+                controller.clearError()
+            },
+            label = "Telefon raqami",
+            leading = "+998",
+            placeholder = "90 123 45 67",
+            keyboardType = KeyboardType.Phone,
         )
-        SadoraTextField(
-            password,
-            { password = it },
-            label = "Parol",
-            placeholder = "••••••••",
-            isPassword = true,
-            trailing = "◡",
-            keyboardType = KeyboardType.Password,
-        )
-        Row(
-            Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
-            ) {
-                SadoraCheckbox(rememberMe, { rememberMe = it })
-                Text("Eslab qolish", style = Sadora.type.body, color = c.text)
-            }
-            Text("Parolni tikladingizmi?", style = Sadora.type.body, color = c.textAccent)
-        }
+
         controller.error?.let { org.example.project.ui.components.ErrorStrip(it) }
+
         SadoraButton(
-            if (controller.busy) "Kirilmoqda…" else "Kirish",
-            onClick = ::submit,
-            enabled = password.isNotBlank() && !controller.busy,
+            if (controller.busy) "Yuborilmoqda…" else "Kodni yuborish",
+            onClick = ::sendCode,
+            // Nine digits is a complete Uzbek number; the server normalises the spacing.
+            enabled = state.phone.count { it.isDigit() } >= 9 && !controller.busy,
         )
+
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.weight(1f).height(1.dp).background(c.line))
             Text("  yoki  ", style = Sadora.type.body, color = c.muted)
             Box(Modifier.weight(1f).height(1.dp).background(c.line))
         }
+
         Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+            SadoraButton(
+                "Apple",
+                tone = ButtonTone.Secondary,
+                leading = "",
+                enabled = !controller.busy,
+                modifier = Modifier.weight(1f),
+                onClick = {
+                    scope.launch {
+                        controller.signInWithSocial(AuthProvider.APPLE, "")?.let(::finish)
+                    }
+                },
+            )
             SadoraButton(
                 "Google",
                 tone = ButtonTone.Secondary,
@@ -843,15 +841,8 @@ fun SignInScreen(
                     }
                 },
             )
-            SadoraButton(
-                "Face ID",
-                tone = ButtonTone.Secondary,
-                leading = "☉",
-                enabled = !controller.busy,
-                modifier = Modifier.weight(1f),
-                onClick = ::submit,
-            )
         }
+
         Row(
             Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.Center,

@@ -10,8 +10,6 @@ import io.ktor.server.routing.Route
 import io.ktor.server.routing.post
 import io.ktor.server.routing.route
 import uz.sadora.contract.Ack
-import uz.sadora.contract.EmailRegisterRequest
-import uz.sadora.contract.EmailSignInRequest
 import uz.sadora.contract.LogoutRequest
 import uz.sadora.contract.OtpRequest
 import uz.sadora.contract.OtpVerifyRequest
@@ -45,19 +43,6 @@ fun Route.authRoutes(authService: AuthService, otpService: OtpService) {
             post("/social") {
                 val request = call.receive<SocialSignInRequest>()
                 call.respond(authService.signInWithSocial(request, call.requestContext()))
-            }
-
-            post("/email/register") {
-                val request = call.receive<EmailRegisterRequest>()
-                call.respond(
-                    HttpStatusCode.Created,
-                    authService.registerWithEmail(request, call.requestContext()),
-                )
-            }
-
-            post("/email/login") {
-                val request = call.receive<EmailSignInRequest>()
-                call.respond(authService.signInWithEmail(request, call.requestContext()))
             }
 
             post("/refresh") {

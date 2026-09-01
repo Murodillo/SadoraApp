@@ -46,7 +46,8 @@ class SadoraControllerTest {
         assertTrue(offline.completeOnboarding())
         assertTrue(offline.saveProfile())
         assertTrue(offline.saveConsents())
-        assertEquals(AuthDestination.Main, offline.signInWithEmail("a@b.uz", "secret"))
+        // With no backend a code cannot be checked, so the flow continues into onboarding.
+        assertEquals(AuthDestination.Onboarding, offline.verifyOtp("challenge-1", "123456"))
         assertNull(offline.error)
     }
 
@@ -103,7 +104,7 @@ class SadoraControllerTest {
         }
         val (controller, state) = controller(recording = recording)
 
-        assertEquals(AuthDestination.Onboarding, controller.signInWithEmail("a@b.uz", "secret"))
+        assertEquals(AuthDestination.Onboarding, controller.verifyOtp("challenge-1", "123456"))
         // The profile still lands, so the flow resumes with what the server already knows.
         assertEquals("Malika", state.name)
     }
@@ -115,21 +116,18 @@ class SadoraControllerTest {
         }
         val (controller, _) = controller(recording = recording)
 
-        assertEquals(AuthDestination.Main, controller.signInWithEmail("a@b.uz", "secret"))
+        assertEquals(AuthDestination.Main, controller.verifyOtp("challenge-1", "123456"))
     }
 
     @Test
-    fun `a rejected sign-in returns null and leaves a readable message`() = runTest {
+    fun `a wrong code returns null and leaves a readable message`() = runTest {
         val recording = RecordingEngine {
-            json(
-                errorBody(ErrorCodes.UNAUTHORIZED, "Bad credentials"),
-                HttpStatusCode.Unauthorized,
-            )
+            json(errorBody(ErrorCodes.OTP_INVALID, "Kod noto'g'ri"), HttpStatusCode.BadRequest)
         }
         val (controller, _) = controller(recording = recording)
 
-        assertNull(controller.signInWithEmail("a@b.uz", "nope"))
-        assertEquals("Sessiya tugadi. Qaytadan kiring.", controller.error)
+        assertNull(controller.verifyOtp("challenge-1", "000000"))
+        assertEquals("Kod noto'g'ri", controller.error)
     }
 
     // ---------------------------------------------------------------- entitlements

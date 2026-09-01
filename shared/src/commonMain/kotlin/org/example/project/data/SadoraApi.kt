@@ -8,8 +8,6 @@ import uz.sadora.contract.ConsentGrants
 import uz.sadora.contract.Consents
 import uz.sadora.contract.DeleteAccountRequest
 import uz.sadora.contract.DeviceInfo
-import uz.sadora.contract.EmailRegisterRequest
-import uz.sadora.contract.EmailSignInRequest
 import uz.sadora.contract.Entitlements
 import uz.sadora.contract.FeatureFlags
 import uz.sadora.contract.LogoutRequest
@@ -49,12 +47,6 @@ class SadoraApi internal constructor(
 
     suspend fun signInWithSocial(request: SocialSignInRequest): ApiResult<AuthSession> =
         caller.unauthenticated("v1/auth/social") { setBody(request) }
-
-    suspend fun registerWithEmail(request: EmailRegisterRequest): ApiResult<AuthSession> =
-        caller.unauthenticated("v1/auth/email/register") { setBody(request) }
-
-    suspend fun signInWithEmail(request: EmailSignInRequest): ApiResult<AuthSession> =
-        caller.unauthenticated("v1/auth/email/login") { setBody(request) }
 
     suspend fun refreshSession(): ApiResult<AuthSession> = caller.refreshSession()
 

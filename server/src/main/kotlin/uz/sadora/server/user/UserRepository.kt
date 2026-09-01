@@ -90,7 +90,6 @@ class UserRepository {
             it[Users.id] = id
             it[phone] = newUser.phone
             it[email] = newUser.email?.normalizeEmail()
-            it[passwordHash] = newUser.passwordHash
             it[name] = newUser.name
             it[language] = newUser.language.dbValue()
             it[timezone] = newUser.timezone
@@ -397,7 +396,6 @@ private fun ResultRow.toUserRecord(): UserRecord = UserRecord(
     id = this[Users.id],
     phone = this[Users.phone],
     email = this[Users.email],
-    passwordHash = this[Users.passwordHash],
     name = this[Users.name],
     language = enumFromDb(this[Users.language], Language.UZ),
     timezone = this[Users.timezone],
