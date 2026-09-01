@@ -131,9 +131,17 @@ tick o'rtasida qayta ishga tushish ham xavfsiz.
 emas — foydalanuvchi o'zi qo'ygan vaqt. Ammo uning o'z kalitini o'chirishi baribir
 ustun turadi: bu byudjet emas, qaror.
 
-## Nima hali yo'q (3-sprint)
+**Provayderdagi farqlar moslik jadvalida tugaydi.** Metrika nomi, birligi va
+ko'paytiruvchisi — `provider_metric_mappings` dagi qatorlar, kod emas. Yangi provayder
+qo'shish yoki maydonini o'zgartirgan provayderga ergashish admin panelidagi bitta
+qator; sinovda Oura shu yo'l bilan, kod o'zgartirmasdan ulandi.
 
-Wearable normalizatsiya qatlami ·
+**Kunlik jamlanma qayta hisoblanadi, oshirilmaydi.** Qayta sinxronlangan namuna
+qiymatni joyida o'zgartiradi — oshirib boriladigan jami esa namunalardan uzoqlashib
+ketardi va buni hech narsa sezmasdi. Ikki manba bir metrikani bersa, biri tanlanadi:
+telefon va soat qadamlarini qo'shish kunni ikkilantiradi.
+
+## Nima hali yo'q (3-sprint)
 bildirishnoma scheduler'i · AI Gateway va uning xarajat logi · App Store / Google Play va
 Payme/Click webhook'lari · hisobni haqiqiy o'chirish job'i · SMS provayderi
 (`OtpSender` interfeysi tayyor, hozircha log'ga yozadi) · admin 2FA enrolment ekrani.

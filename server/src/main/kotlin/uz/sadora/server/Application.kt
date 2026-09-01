@@ -21,6 +21,8 @@ import uz.sadora.server.health.mindRoutes
 import uz.sadora.server.health.nutritionRoutes
 import uz.sadora.server.notify.adminNotificationRoutes
 import uz.sadora.server.notify.notificationRoutes
+import uz.sadora.server.wearable.adminWearableRoutes
+import uz.sadora.server.wearable.wearableRoutes
 import uz.sadora.server.plugins.configureHttp
 import uz.sadora.server.plugins.configureMonitoring
 import uz.sadora.server.plugins.configureRateLimit
@@ -95,6 +97,8 @@ fun Application.apiModule(component: AppComponent) {
             medicationRoutes(component.medicationService)
             notificationRoutes(component.notificationService)
             adminNotificationRoutes(component.notificationService, component.auditService)
+            wearableRoutes(component.wearableService)
+            adminWearableRoutes(component.wearableService, component.wearableRepository, component.auditService)
             adminRoutes(
                 adminAuth = component.adminAuthService,
                 adminService = component.adminService,

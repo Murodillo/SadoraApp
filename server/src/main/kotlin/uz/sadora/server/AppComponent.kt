@@ -34,6 +34,8 @@ import uz.sadora.server.notify.NotificationRepository
 import uz.sadora.server.notify.NotificationScheduler
 import uz.sadora.server.notify.NotificationService
 import uz.sadora.server.user.UserRepository
+import uz.sadora.server.wearable.WearableRepository
+import uz.sadora.server.wearable.WearableService
 import uz.sadora.server.user.UserService
 
 /**
@@ -60,6 +62,7 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
     val mindRepository = MindRepository()
     val nutritionRepository = NutritionRepository()
     val medicationRepository = MedicationRepository()
+    val wearableRepository = WearableRepository()
 
     val entitlementService = EntitlementService(entitlementRepository)
     val flagService = FeatureFlagService(flagRepository)
@@ -93,6 +96,7 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
     val mindService = MindService(mindRepository, healthRepository, healthAccess)
     val nutritionService = NutritionService(nutritionRepository, healthAccess)
     val medicationService = MedicationService(medicationRepository, healthAccess)
+    val wearableService = WearableService(wearableRepository, healthAccess)
 
     val notificationRepository = NotificationRepository()
     val notificationService = NotificationService(notificationRepository)

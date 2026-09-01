@@ -30,6 +30,7 @@ tags:
   - name: Nutrition
   - name: Meds
   - name: Notifications
+  - name: Wearables
   - name: Admin
 
 paths:
@@ -1034,6 +1035,118 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/FrequencyCaps" }
+
+  /v1/health-data/samples:
+    post:
+      tags: [Wearables]
+      security: [{ bearerAuth: [] }]
+      summary: Qurilmadan namunalarni yuborish
+      description: |
+        HealthKit va Health Connect qurilmada o'qiladi — ular platformaga xos API'lar va
+        native qoladi — natija esa shu yerga to'plam bo'lib yuboriladi.
+        `externalId` bo'yicha takrorlanmaydi: bir xil namuna ikkinchi marta kelsa,
+        qator yangilanadi, qadamlar ikkilanmaydi.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/IngestSamplesRequest" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/IngestResult" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/ConsentRequired" }
+
+  /v1/health-data/today:
+    get:
+      tags: [Wearables]
+      security: [{ bearerAuth: [] }]
+      summary: Bugungi jamlanma
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DailyHealth" }
+
+  /v1/health-data/daily:
+    get:
+      tags: [Wearables]
+      security: [{ bearerAuth: [] }]
+      summary: Kunlik jamlanmalar oralig'i
+      parameters:
+        - { name: from, in: query, schema: { type: string, format: date } }
+        - { name: to, in: query, schema: { type: string, format: date } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DailyHealthRange" }
+
+  /v1/health-data/sources:
+    get:
+      tags: [Wearables]
+      security: [{ bearerAuth: [] }]
+      summary: Data Sources ekrani — ulangan manbalar
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/ProviderStatus" }
+
+  /v1/admin/wearables/providers:
+    get:
+      tags: [Admin]
+      security: [{ bearerAuth: [] }]
+      summary: Provayderlar holati (11-sahifa)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    provider: { $ref: "#/components/schemas/HealthProvider" }
+                    sampleCount: { type: integer, format: int64 }
+                    lastSampleAt: { type: string, nullable: true }
+
+  /v1/admin/wearables/mappings:
+    get:
+      tags: [Admin]
+      security: [{ bearerAuth: [] }]
+      summary: Ma'lumot moslashtirish jadvali (12-sahifa)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/MetricMapping" }
+    put:
+      tags: [Admin]
+      security: [{ bearerAuth: [] }]
+      summary: Moslikni saqlash
+      description: |
+        Yangi provayder qo'shish yoki maydon nomini o'zgartirgan provayderga ergashish —
+        shu yerdagi bitta qator. Migratsiya ham, reliz ham kerak emas.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/MetricMapping" }
+      responses:
+        "200": { $ref: "#/components/responses/Ack" }
 
   /v1/admin/auth/login:
     post:
@@ -2130,6 +2243,107 @@ components:
       properties:
         maxPerDay: { type: integer, default: 6, minimum: 0, maximum: 50 }
         maxPerWeek: { type: integer, default: 25, minimum: 0, maximum: 300 }
+
+    HealthProvider:
+      type: string
+      enum: [apple_health, health_connect, oura, garmin, whoop, fitbit, samsung_health, manual]
+    HealthMetric:
+      type: string
+      enum:
+        [steps, active_energy, distance, heart_rate, resting_heart_rate, hrv,
+         respiratory_rate, body_temperature, sleep_duration, sleep_deep, sleep_rem, weight]
+
+    HealthSampleInput:
+      type: object
+      required: [provider, externalId, metric, value, startedAt]
+      properties:
+        provider: { $ref: "#/components/schemas/HealthProvider" }
+        externalId:
+          type: string
+          description: "Provayderning o'z identifikatori — qayta sinxronlashni xavfsiz qiladi"
+        metric: { type: string, example: HKQuantityTypeIdentifierStepCount }
+        value: { type: number }
+        unit: { type: string, nullable: true }
+        startedAt: { type: string, format: date-time }
+        endedAt: { type: string, format: date-time, nullable: true }
+        sourceDevice: { type: string, nullable: true }
+
+    IngestSamplesRequest:
+      type: object
+      required: [samples]
+      properties:
+        samples:
+          type: array
+          maxItems: 2000
+          items: { $ref: "#/components/schemas/HealthSampleInput" }
+        timezone: { type: string, nullable: true, example: Asia/Tashkent }
+
+    IngestResult:
+      type: object
+      properties:
+        accepted: { type: integer }
+        updated: { type: integer }
+        unmapped:
+          type: array
+          description: "Mosligi yo'q metrikalar — ilova ularni yuborishni to'xtatishi kerak"
+          items: { type: string }
+        rejected: { type: integer }
+        daysAffected:
+          type: array
+          items: { type: string, format: date }
+
+    DailyMetric:
+      type: object
+      properties:
+        metric: { $ref: "#/components/schemas/HealthMetric" }
+        value: { type: number }
+        unit: { type: string }
+        sampleCount: { type: integer }
+        providers:
+          type: array
+          items: { $ref: "#/components/schemas/HealthProvider" }
+
+    DailyHealth:
+      type: object
+      properties:
+        date: { type: string, format: date }
+        metrics:
+          type: array
+          items: { $ref: "#/components/schemas/DailyMetric" }
+
+    DailyHealthRange:
+      type: object
+      properties:
+        from: { type: string, format: date }
+        to: { type: string, format: date }
+        days:
+          type: array
+          items: { $ref: "#/components/schemas/DailyHealth" }
+
+    ProviderStatus:
+      type: object
+      properties:
+        provider: { $ref: "#/components/schemas/HealthProvider" }
+        connected: { type: boolean }
+        lastSampleAt: { type: string, format: date-time, nullable: true }
+        sampleCount: { type: integer, format: int64 }
+        metrics:
+          type: array
+          items: { $ref: "#/components/schemas/HealthMetric" }
+
+    MetricMapping:
+      type: object
+      required: [provider, providerMetric, metric]
+      properties:
+        provider: { $ref: "#/components/schemas/HealthProvider" }
+        providerMetric: { type: string }
+        metric: { $ref: "#/components/schemas/HealthMetric" }
+        providerUnit: { type: string, nullable: true }
+        scale:
+          type: number
+          default: 1.0
+          description: "Kanonik birlikka o'tkazish ko'paytiruvchisi — kJ dan kcal ga 0.239"
+        active: { type: boolean, default: true }
 
     AdminSession:
       type: object

@@ -163,3 +163,46 @@ object MedicationIntakes : Table("medication_intakes") {
 
     override val primaryKey = PrimaryKey(medicationId, dueOn, dueAt)
 }
+
+object HealthSamples : Table("health_samples") {
+    val id = uuid("id")
+    val userId = uuid("user_id").references(Users.id)
+    val provider = text("provider")
+    val externalId = text("external_id")
+    val metric = text("metric")
+    val value = double("value")
+    val unit = text("unit")
+    val startedAt = timestampWithTimeZone("started_at")
+    val endedAt = timestampWithTimeZone("ended_at").nullable()
+    /** The calendar day in the user's timezone, fixed at ingest. */
+    val localDate = date("local_date")
+    val sourceDevice = text("source_device").nullable()
+    val recordedAt = timestampWithTimeZone("recorded_at")
+
+    override val primaryKey = PrimaryKey(id)
+}
+
+object DailyHealthMetrics : Table("daily_health_metrics") {
+    val userId = uuid("user_id").references(Users.id)
+    val localDate = date("local_date")
+    val metric = text("metric")
+    val value = double("value")
+    val unit = text("unit")
+    val sampleCount = integer("sample_count")
+    val providers = text("providers")
+    val updatedAt = timestampWithTimeZone("updated_at")
+
+    override val primaryKey = PrimaryKey(userId, localDate, metric)
+}
+
+object ProviderMetricMappings : Table("provider_metric_mappings") {
+    val provider = text("provider")
+    val providerMetric = text("provider_metric")
+    val metric = text("metric")
+    val providerUnit = text("provider_unit").nullable()
+    val scale = double("scale")
+    val active = bool("active")
+    val updatedAt = timestampWithTimeZone("updated_at")
+
+    override val primaryKey = PrimaryKey(provider, providerMetric)
+}
