@@ -25,6 +25,7 @@ tags:
   - name: Auth
   - name: Profile
   - name: Entitlements
+  - name: Cycle
   - name: Admin
 
 paths:
@@ -301,6 +302,204 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/FeatureFlags" }
+
+  /v1/cycle/status:
+    get:
+      tags: [Cycle]
+      security: [{ bearerAuth: [] }]
+      summary: Bugungi holat — sikl kuni, faza, keyingi hayz
+      description: |
+        Sikl kuni va faza bitta manbadan hisoblanadi: qayd etilgan hayz o'z siklini
+        belgilaydi, undan keyin prognoz panjarasi ishlatiladi. `phaseIsPredicted` — bu
+        qiymat qayd etilgan fakt emas, xulosa ekanini bildiradi.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CycleStatus" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /v1/cycle/calendar:
+    get:
+      tags: [Cycle]
+      security: [{ bearerAuth: [] }]
+      summary: Kalendar — kun bo'yicha faza, oqim va simptomlar soni
+      description: |
+        `isPredicted` alohida maydon: qayd etilgan kunlar to'ldirilgan, bashorat
+        qilinganlari konturli chiziladi — rang hech qachon yagona indikator emas.
+      parameters:
+        - { name: from, in: query, schema: { type: string, format: date } }
+        - { name: to, in: query, schema: { type: string, format: date } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CycleCalendar" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+
+  /v1/cycle/history:
+    get:
+      tags: [Cycle]
+      security: [{ bearerAuth: [] }]
+      summary: Tugagan sikllar va statistika
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CycleHistory" }
+
+  /v1/cycle/periods:
+    get:
+      tags: [Cycle]
+      security: [{ bearerAuth: [] }]
+      summary: Qayd etilgan hayzlar
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/PeriodEntry" }
+    post:
+      tags: [Cycle]
+      security: [{ bearerAuth: [] }]
+      summary: Hayzni qayd etish
+      description: "`store_health` roziligi shart, aks holda `consent_required`."
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [startedOn]
+              properties:
+                startedOn: { type: string, format: date }
+                endedOn: { type: string, format: date, nullable: true }
+      responses:
+        "201":
+          description: Yaratildi
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PeriodEntry" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/ConsentRequired" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /v1/cycle/periods/{id}:
+    patch:
+      tags: [Cycle]
+      security: [{ bearerAuth: [] }]
+      summary: Hayz yozuvini tahrirlash
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                startedOn: { type: string, format: date, nullable: true }
+                endedOn: { type: string, format: date, nullable: true }
+                clearEnd:
+                  type: boolean
+                  default: false
+                  description: "Xato bilan yopilgan hayzni qayta ochish"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PeriodEntry" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [Cycle]
+      security: [{ bearerAuth: [] }]
+      summary: Hayz yozuvini o'chirish
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200": { $ref: "#/components/responses/Ack" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /v1/days:
+    get:
+      tags: [Cycle]
+      security: [{ bearerAuth: [] }]
+      summary: Oraliqdagi kunlik yozuvlar
+      parameters:
+        - { name: from, in: query, required: true, schema: { type: string, format: date } }
+        - { name: to, in: query, schema: { type: string, format: date } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DailyLogRange" }
+
+  /v1/days/{date}:
+    get:
+      tags: [Cycle]
+      security: [{ bearerAuth: [] }]
+      summary: Bir kunlik yozuv
+      parameters: [{ $ref: "#/components/parameters/LogDate" }]
+      responses:
+        "200":
+          description: "Yozuv yo'q bo'lsa ham bo'sh obyekt qaytadi"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DailyLog" }
+    put:
+      tags: [Cycle]
+      security: [{ bearerAuth: [] }]
+      summary: Kunlik yozuvni saqlash
+      description: |
+        Kunni butunlay almashtiradi — yuborilmagan maydon tozalanadi. Butunlay bo'sh
+        so'rov kunni o'chiradi. `store_health` roziligi shart.
+      parameters: [{ $ref: "#/components/parameters/LogDate" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SaveDailyLogRequest" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DailyLog" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/ConsentRequired" }
+    delete:
+      tags: [Cycle]
+      security: [{ bearerAuth: [] }]
+      summary: Kunlik yozuvni o'chirish
+      parameters: [{ $ref: "#/components/parameters/LogDate" }]
+      responses:
+        "200": { $ref: "#/components/responses/Ack" }
+
+  /v1/symptoms:
+    get:
+      tags: [Cycle]
+      security: [{ bearerAuth: [] }]
+      summary: Simptom katalogi
+      description: |
+        Bosqichga qarab filtrlanadi — issiqlik to'lqini menopauzada bor, siklda yo'q.
+        Ro'yxat backend'da, shuning uchun uni ilovani yangilamasdan kengaytirish mumkin.
+      parameters:
+        - { name: lifeStage, in: query, schema: { $ref: "#/components/schemas/LifeStage" } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/SymptomDefinition" }
 
   /v1/admin/auth/login:
     post:
@@ -592,6 +791,11 @@ components:
       in: path
       required: true
       schema: { type: string, example: ai_chat_enabled }
+    LogDate:
+      name: date
+      in: path
+      required: true
+      schema: { type: string, format: date }
 
   responses:
     Health:
@@ -646,6 +850,11 @@ components:
       content:
         application/json:
           schema: { $ref: "#/components/schemas/ApiErrorResponse" }
+    ConsentRequired:
+      description: "Sog'liq ma'lumotlarini saqlash roziligi berilmagan"
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ApiErrorResponse" }
     RateLimited:
       description: Juda ko'p so'rov
       content:
@@ -693,7 +902,8 @@ components:
                 [validation_failed, unauthorized, forbidden, not_found, conflict,
                  rate_limited, otp_invalid, otp_expired, otp_too_many_attempts,
                  token_expired, token_revoked, social_token_invalid, account_blocked,
-                 entitlement_required, limit_reached, feature_disabled, internal_error]
+                 entitlement_required, consent_required, limit_reached, feature_disabled,
+                 internal_error]
             message: { type: string }
             details:
               type: object
@@ -946,6 +1156,156 @@ components:
         consents: { $ref: "#/components/schemas/Consents" }
         serverTime: { type: string, format: date-time }
         minimumAppVersion: { type: string, nullable: true }
+
+    CyclePhase:
+      type: string
+      enum: [period, follicular, fertile, luteal]
+    FlowLevel:
+      type: string
+      enum: [spotting, light, medium, heavy]
+    MoodLevel:
+      type: string
+      enum: [bad, low, ok, good, great]
+    SymptomSeverity:
+      type: string
+      enum: [mild, moderate, severe]
+    SymptomCategory:
+      type: string
+      enum: [bleeding, pain, digestion, skin, mood, sleep, energy, other]
+
+    CyclePrediction:
+      type: object
+      description: |
+        Har bir sana — taxmin. `confidence: none` to'liq javob: ma'lumot yetarli
+        bo'lmasa tizim 28 kunni o'ylab topmaydi, buni ochiq aytadi.
+      properties:
+        confidence: { type: string, enum: [none, low, medium, high] }
+        reason:
+          type: string
+          enum:
+            [stage_does_not_predict, no_data, only_baseline, few_cycles, irregular, sufficient]
+        nextPeriodStart: { type: string, format: date, nullable: true }
+        nextPeriodEnd: { type: string, format: date, nullable: true }
+        ovulationOn: { type: string, format: date, nullable: true }
+        fertileFrom: { type: string, format: date, nullable: true }
+        fertileUntil: { type: string, format: date, nullable: true }
+        averageCycleLength: { type: integer, nullable: true }
+        averagePeriodLength: { type: integer, nullable: true }
+        variationDays: { type: integer, nullable: true, description: "Sikllar tarqalishi" }
+        basedOnCycles: { type: integer }
+
+    PeriodEntry:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        startedOn: { type: string, format: date }
+        endedOn: { type: string, format: date, nullable: true }
+        createdAt: { type: string, format: date-time }
+
+    CycleStatus:
+      type: object
+      properties:
+        cycleDay: { type: integer, nullable: true }
+        phase: { $ref: "#/components/schemas/CyclePhase" }
+        phaseIsPredicted: { type: boolean }
+        currentPeriod: { $ref: "#/components/schemas/PeriodEntry" }
+        lastPeriodStart: { type: string, format: date, nullable: true }
+        daysUntilNextPeriod: { type: integer, nullable: true }
+        prediction: { $ref: "#/components/schemas/CyclePrediction" }
+        today: { type: string, format: date }
+
+    CycleDay:
+      type: object
+      properties:
+        date: { type: string, format: date }
+        phase: { $ref: "#/components/schemas/CyclePhase" }
+        isPredicted:
+          type: boolean
+          description: "Qayd etilgan kunlar to'ldirilgan, bashoratlar konturli chiziladi"
+        flow: { $ref: "#/components/schemas/FlowLevel" }
+        hasNote: { type: boolean }
+        symptomCount: { type: integer }
+
+    CycleCalendar:
+      type: object
+      properties:
+        from: { type: string, format: date }
+        to: { type: string, format: date }
+        days:
+          type: array
+          items: { $ref: "#/components/schemas/CycleDay" }
+        prediction: { $ref: "#/components/schemas/CyclePrediction" }
+
+    CycleHistory:
+      type: object
+      properties:
+        cycles:
+          type: array
+          items:
+            type: object
+            properties:
+              startedOn: { type: string, format: date }
+              endedOn: { type: string, format: date }
+              cycleLength: { type: integer }
+              periodLength: { type: integer, nullable: true }
+        averageCycleLength: { type: integer, nullable: true }
+        averagePeriodLength: { type: integer, nullable: true }
+        shortestCycle: { type: integer, nullable: true }
+        longestCycle: { type: integer, nullable: true }
+        prediction: { $ref: "#/components/schemas/CyclePrediction" }
+
+    SymptomDefinition:
+      type: object
+      properties:
+        key: { type: string, example: hot_flush }
+        label: { type: string }
+        category: { $ref: "#/components/schemas/SymptomCategory" }
+        lifeStages:
+          type: array
+          description: "Bo'sh bo'lsa — barcha bosqichlarda ko'rinadi"
+          items: { $ref: "#/components/schemas/LifeStage" }
+        sortOrder: { type: integer }
+
+    SymptomEntry:
+      type: object
+      required: [key]
+      properties:
+        key: { type: string }
+        severity: { $ref: "#/components/schemas/SymptomSeverity" }
+
+    DailyLog:
+      type: object
+      properties:
+        date: { type: string, format: date }
+        flow: { $ref: "#/components/schemas/FlowLevel" }
+        mood: { $ref: "#/components/schemas/MoodLevel" }
+        energy: { type: integer, nullable: true, minimum: 1, maximum: 5 }
+        symptoms:
+          type: array
+          items: { $ref: "#/components/schemas/SymptomEntry" }
+        note: { type: string, nullable: true, maxLength: 1000 }
+        updatedAt: { type: string, format: date-time, nullable: true }
+
+    SaveDailyLogRequest:
+      type: object
+      description: "Kunni butunlay almashtiradi — yuborilmagan maydon tozalanadi"
+      properties:
+        flow: { $ref: "#/components/schemas/FlowLevel" }
+        mood: { $ref: "#/components/schemas/MoodLevel" }
+        energy: { type: integer, nullable: true, minimum: 1, maximum: 5 }
+        symptoms:
+          type: array
+          items: { $ref: "#/components/schemas/SymptomEntry" }
+        note: { type: string, nullable: true }
+
+    DailyLogRange:
+      type: object
+      properties:
+        from: { type: string, format: date }
+        to: { type: string, format: date }
+        logs:
+          type: array
+          items: { $ref: "#/components/schemas/DailyLog" }
 
     AdminSession:
       type: object

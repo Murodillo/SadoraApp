@@ -91,9 +91,20 @@ foyda bermaydi.
 jadval obyektlari faqat query qurish uchun; ular migratsiyadan farq qilsa — bug
 obyektda, migratsiyada emas.
 
+**Sog'liq ma'lumotlari alohida chegara ortida.** `db/HealthTables.kt` — sikl, kunlik
+yozuvlar, simptomlar — `AdminService` yetib bora olmaydigan joyda; u faqat hisob
+repozitoriylariga bog'liq. Yozishdan oldin ikki darvoza: `store_health` roziligi va
+tarif bo'yicha funksiya yoqilganligi. O'qish rozilikka bog'liq emas — saqlashga
+rozilikni qaytarib olish o'z ma'lumotini ko'rish huquqini bekor qilmaydi.
+
+**Prognoz taxmin qilmaydi.** Ma'lumot yetarli bo'lmasa `confidence: none` qaytadi va
+sana berilmaydi; 28 kun o'ylab topilmaydi. Sikl bashorat qilmaydigan bosqichlar
+(homiladorlik, menopauza) umuman prognoz olmaydi. Sikl kuni va faza bitta manbadan
+hisoblanadi, shuning uchun ular hech qachon bir-biriga zid javob bermaydi.
+
 ## Nima hali yo'q (2–3-sprint)
 
-Sikl/homiladorlik/simptom/Mind/Nutrition/Meds API'lari · wearable normalizatsiya qatlami ·
+Mind/Nutrition/Meds API'lari · wearable normalizatsiya qatlami ·
 bildirishnoma scheduler'i · AI Gateway va uning xarajat logi · App Store / Google Play va
 Payme/Click webhook'lari · hisobni haqiqiy o'chirish job'i · SMS provayderi
 (`OtpSender` interfeysi tayyor, hozircha log'ga yozadi) · admin 2FA enrolment ekrani.

@@ -12,9 +12,10 @@ import org.slf4j.LoggerFactory
 import uz.sadora.contract.API_VERSION
 import uz.sadora.server.admin.AdminBootstrap
 import uz.sadora.server.admin.adminRoutes
-import uz.sadora.server.api.healthRoutes
+import uz.sadora.server.api.healthCheckRoutes
 import uz.sadora.server.auth.authRoutes
 import uz.sadora.server.config.AppConfig
+import uz.sadora.server.health.healthRoutes
 import uz.sadora.server.plugins.configureHttp
 import uz.sadora.server.plugins.configureMonitoring
 import uz.sadora.server.plugins.configureRateLimit
@@ -65,7 +66,7 @@ fun Application.apiModule(component: AppComponent) {
     configureSecurity(component.jwtService)
 
     routing {
-        healthRoutes(config.environment.name.lowercase(), SERVER_VERSION)
+        healthCheckRoutes(config.environment.name.lowercase(), SERVER_VERSION)
 
         // The spec is served only where it is useful; production does not publish it.
         if (!config.environment.isProduction) {
@@ -80,6 +81,7 @@ fun Application.apiModule(component: AppComponent) {
                 flagService = component.flagService,
                 config = config,
             )
+            healthRoutes(component.healthService)
             adminRoutes(
                 adminAuth = component.adminAuthService,
                 adminService = component.adminService,

@@ -70,3 +70,16 @@ class EntitlementRequiredException(featureKey: String) : ApiException(
     "Bu funksiya Premium obunada mavjud",
     mapOf("feature" to featureKey),
 )
+
+/**
+ * Raised when health data arrives without the consent that permits storing it.
+ *
+ * Separate from [ForbiddenException] so the client can route to the privacy screen and
+ * offer to grant it, rather than showing a dead end.
+ */
+class ConsentRequiredException(consentKey: String) : ApiException(
+    HttpStatusCode.Forbidden,
+    ErrorCodes.CONSENT_REQUIRED,
+    "Sog'liq ma'lumotlarini saqlash uchun rozilik kerak",
+    mapOf("consent" to consentKey),
+)
