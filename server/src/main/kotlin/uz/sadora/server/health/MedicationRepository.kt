@@ -46,6 +46,19 @@ class MedicationRepository {
         query.orderBy(Medications.createdAt to SortOrder.ASC).map { it.toRecord() }
     }
 
+    /**
+     * Every active course with reminders on, across all users, for the scheduler.
+     *
+     * A full scan is honest at this scale and would not be at a much larger one — the
+     * shape that replaces it is a per-user next-due index, and the tick is the only
+     * caller, so changing it later touches one query.
+     */
+    suspend fun withRemindersEnabled(): List<Pair<Uuid, MedicationRecord>> = dbQuery {
+        Medications.selectAll()
+            .where { (Medications.active eq true) and (Medications.remindersEnabled eq true) }
+            .map { it[Medications.userId] to it.toRecord() }
+    }
+
     suspend fun byId(userId: Uuid, id: Uuid): MedicationRecord? = dbQuery {
         Medications.selectAll()
             .where { (Medications.id eq id) and (Medications.userId eq userId) }

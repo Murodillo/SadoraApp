@@ -29,6 +29,10 @@ import uz.sadora.server.health.MindService
 import uz.sadora.server.health.NutritionRepository
 import uz.sadora.server.health.NutritionService
 import uz.sadora.server.flags.FeatureFlagService
+import uz.sadora.server.notify.LoggingPushSender
+import uz.sadora.server.notify.NotificationRepository
+import uz.sadora.server.notify.NotificationScheduler
+import uz.sadora.server.notify.NotificationService
 import uz.sadora.server.user.UserRepository
 import uz.sadora.server.user.UserService
 
@@ -90,6 +94,15 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
     val nutritionService = NutritionService(nutritionRepository, healthAccess)
     val medicationService = MedicationService(medicationRepository, healthAccess)
 
+    val notificationRepository = NotificationRepository()
+    val notificationService = NotificationService(notificationRepository)
+    val notificationScheduler = NotificationScheduler(
+        notifications = notificationRepository,
+        medications = medicationRepository,
+        users = userRepository,
+        sender = LoggingPushSender(),
+    )
+
     val adminAuthService = AdminAuthService(jwtService, auditService)
 
     val adminService = AdminService(
@@ -103,6 +116,7 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
     )
 
     override fun close() {
+        notificationScheduler.stop()
         cache.close()
         databaseFactory.close()
     }

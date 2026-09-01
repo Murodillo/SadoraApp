@@ -121,7 +121,17 @@ qayta yozardi. Arxivlash o'chirish emas: `endedOn` qo'yiladi va tarix joyida qol
 qilingan, o'tkazilgan, kutilmoqda. Ball ham, tavsiya matni ham yo'q: ilova o'tkazib
 yuborilgan qabul haqida ko'rsatma bermaydi, retsept yoki farmatsevtga yo'naltiradi.
 
-## Nima hali yo'q (2–3-sprint)
+**Bildirishnomalar outbox orqali ketadi.** Scheduler har daqiqada tiklaydi, jadvaldan
+nomzodlarni topadi va qarorini — jumladan **to'xtatish qarorini sababi bilan** —
+outbox'ga yozadi. «Nega eslatma kelmadi» degan savolga javob beradigan yagona narsa
+shu. Har bir nomzodda dedupe kalit bor, shuning uchun har daqiqada ishlash ham,
+tick o'rtasida qayta ishga tushish ham xavfsiz.
+
+**Dori eslatmasi sokin soatlarni va chegaralarni chetlab o'tadi.** U reklama trafigi
+emas — foydalanuvchi o'zi qo'ygan vaqt. Ammo uning o'z kalitini o'chirishi baribir
+ustun turadi: bu byudjet emas, qaror.
+
+## Nima hali yo'q (3-sprint)
 
 Wearable normalizatsiya qatlami ·
 bildirishnoma scheduler'i · AI Gateway va uning xarajat logi · App Store / Google Play va

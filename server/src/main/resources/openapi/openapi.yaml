@@ -29,6 +29,7 @@ tags:
   - name: Mind
   - name: Nutrition
   - name: Meds
+  - name: Notifications
   - name: Admin
 
 paths:
@@ -915,6 +916,124 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/MedicationHistory" }
+
+  /v1/notifications/settings:
+    get:
+      tags: [Notifications]
+      security: [{ bearerAuth: [] }]
+      summary: Bildirishnoma sozlamalari
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/NotificationSettings" }
+    put:
+      tags: [Notifications]
+      security: [{ bearerAuth: [] }]
+      summary: Sozlamalarni o'zgartirish
+      description: |
+        Sokin oynaning ikkala chegarasi birga beriladi — yarmi qolsa, oyna yo hech
+        narsani, yo hamma narsani o'chirib qo'yardi. `clearQuietHours` oynani olib
+        tashlaydi.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                enabled: { type: boolean, nullable: true }
+                categories:
+                  type: object
+                  nullable: true
+                  additionalProperties: { type: boolean }
+                quietFrom: { type: string, nullable: true, example: "22:00" }
+                quietUntil: { type: string, nullable: true, example: "07:00" }
+                clearQuietHours: { type: boolean, default: false }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/NotificationSettings" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+
+  /v1/notifications/history:
+    get:
+      tags: [Notifications]
+      security: [{ bearerAuth: [] }]
+      summary: Yuborilgan va to'xtatilgan bildirishnomalar
+      description: |
+        To'xtatilganlari ham sababi bilan ko'rinadi — «nega eslatma kelmadi» degan
+        savolga javob beradigan yagona narsa shu.
+      parameters:
+        - { name: limit, in: query, schema: { type: integer, default: 50, maximum: 200 } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/NotificationMessage" }
+
+  /v1/admin/notifications/templates:
+    get:
+      tags: [Admin]
+      security: [{ bearerAuth: [] }]
+      summary: Bildirishnoma shablonlari
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/NotificationTemplate" }
+    put:
+      tags: [Admin]
+      security: [{ bearerAuth: [] }]
+      summary: Shablonni saqlash
+      description: "Matn backend'da — so'zlashni tuzatish yoki tarjima qo'shish reliz talab qilmaydi."
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/NotificationTemplate" }
+      responses:
+        "200": { $ref: "#/components/responses/Ack" }
+
+  /v1/admin/notifications/caps:
+    get:
+      tags: [Admin]
+      security: [{ bearerAuth: [] }]
+      summary: Chastota chegaralari
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FrequencyCaps" }
+    put:
+      tags: [Admin]
+      security: [{ bearerAuth: [] }]
+      summary: Chegaralarni o'zgartirish
+      description: |
+        Dori eslatmalari va tizim xabarlari chegaraga bo'ysunmaydi — o'z vaqtida
+        qo'yilgan eslatmani byudjet uchun ushlab qolish ilovaning asosiy vazifasini
+        bajarmasligi bo'lardi.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/FrequencyCaps" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FrequencyCaps" }
 
   /v1/admin/auth/login:
     post:
@@ -1957,6 +2076,60 @@ components:
         takenCount: { type: integer }
         skippedCount: { type: integer }
         pendingCount: { type: integer }
+
+    NotificationCategory:
+      type: string
+      enum: [med_reminder, cycle, daily_check_in, water, insight, system]
+    NotificationStatus:
+      type: string
+      enum: [queued, sent, failed, suppressed]
+
+    NotificationSettings:
+      type: object
+      properties:
+        enabled: { type: boolean }
+        categories:
+          type: object
+          description: "Ko'rsatilmagan kategoriya — yoqilgan"
+          additionalProperties: { type: boolean }
+        quietFrom: { type: string, nullable: true, example: "22:00" }
+        quietUntil:
+          type: string
+          nullable: true
+          example: "07:00"
+          description: "Oyna yarim tundan o'tishi mumkin — 22:00–07:00 odatiy holat"
+
+    NotificationMessage:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        category: { $ref: "#/components/schemas/NotificationCategory" }
+        title: { type: string }
+        body: { type: string }
+        scheduledFor: { type: string, format: date-time }
+        status: { $ref: "#/components/schemas/NotificationStatus" }
+        sentAt: { type: string, format: date-time, nullable: true }
+        suppressedReason:
+          type: string
+          nullable: true
+          enum: [notifications_off, category_off, quiet_hours, daily_cap, weekly_cap, no_device]
+
+    NotificationTemplate:
+      type: object
+      required: [key, language, category, title, body]
+      properties:
+        key: { type: string, example: med_reminder }
+        language: { type: string, enum: [uz, ru, en] }
+        category: { $ref: "#/components/schemas/NotificationCategory" }
+        title: { type: string, description: "{{name}} va {{time}} o'zgaruvchilari" }
+        body: { type: string }
+        active: { type: boolean, default: true }
+
+    FrequencyCaps:
+      type: object
+      properties:
+        maxPerDay: { type: integer, default: 6, minimum: 0, maximum: 50 }
+        maxPerWeek: { type: integer, default: 25, minimum: 0, maximum: 300 }
 
     AdminSession:
       type: object

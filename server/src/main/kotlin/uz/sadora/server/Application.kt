@@ -19,6 +19,8 @@ import uz.sadora.server.health.healthRoutes
 import uz.sadora.server.health.medicationRoutes
 import uz.sadora.server.health.mindRoutes
 import uz.sadora.server.health.nutritionRoutes
+import uz.sadora.server.notify.adminNotificationRoutes
+import uz.sadora.server.notify.notificationRoutes
 import uz.sadora.server.plugins.configureHttp
 import uz.sadora.server.plugins.configureMonitoring
 import uz.sadora.server.plugins.configureRateLimit
@@ -39,6 +41,9 @@ fun main() {
     val component = AppComponent(config)
 
     runBlocking { AdminBootstrap.run() }
+
+    // Reminders only mean anything if something is running to send them.
+    component.notificationScheduler.start()
 
     Runtime.getRuntime().addShutdownHook(Thread { component.close() })
 
@@ -88,6 +93,8 @@ fun Application.apiModule(component: AppComponent) {
             mindRoutes(component.mindService)
             nutritionRoutes(component.nutritionService)
             medicationRoutes(component.medicationService)
+            notificationRoutes(component.notificationService)
+            adminNotificationRoutes(component.notificationService, component.auditService)
             adminRoutes(
                 adminAuth = component.adminAuthService,
                 adminService = component.adminService,
