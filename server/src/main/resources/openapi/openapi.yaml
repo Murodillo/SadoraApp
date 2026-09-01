@@ -28,6 +28,7 @@ tags:
   - name: Cycle
   - name: Mind
   - name: Nutrition
+  - name: Meds
   - name: Admin
 
 paths:
@@ -754,6 +755,167 @@ paths:
                 type: array
                 items: { $ref: "#/components/schemas/FoodItem" }
 
+  /v1/meds:
+    get:
+      tags: [Meds]
+      security: [{ bearerAuth: [] }]
+      summary: Dorilar ro'yxati
+      parameters:
+        - { name: includeArchived, in: query, schema: { type: boolean, default: false } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Medication" }
+    post:
+      tags: [Meds]
+      security: [{ bearerAuth: [] }]
+      summary: Dori qo'shish
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SaveMedicationRequest" }
+      responses:
+        "201":
+          description: Yaratildi
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Medication" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/ConsentRequired" }
+
+  /v1/meds/today:
+    get:
+      tags: [Meds]
+      security: [{ bearerAuth: [] }]
+      summary: Bugungi qabullar
+      description: |
+        Qabullar jadvaldan hisoblanadi, oldindan yozilmaydi — kursni o'zgartirish
+        kelajakdagi qator qoldiqlarini qoldirmaydi. Faqat foydalanuvchi qilgan ish
+        saqlanadi; yozuvi yo'q qabul — `pending`.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MedicationDay" }
+
+  /v1/meds/days/{date}:
+    get:
+      tags: [Meds]
+      security: [{ bearerAuth: [] }]
+      summary: Bir kunlik qabullar
+      parameters: [{ $ref: "#/components/parameters/LogDate" }]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MedicationDay" }
+
+  /v1/meds/{id}:
+    put:
+      tags: [Meds]
+      security: [{ bearerAuth: [] }]
+      summary: Dorini tahrirlash
+      parameters: [{ $ref: "#/components/parameters/MedicationId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SaveMedicationRequest" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Medication" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [Meds]
+      security: [{ bearerAuth: [] }]
+      summary: Dorini arxivlash
+      description: |
+        O'chirmaydi — `active: false` qilib, `endedOn` ni bugunga qo'yadi. Qabul tarixi
+        saqlanib qoladi: «martda ichganmidim» degan savol javobsiz qolmasligi kerak.
+      parameters: [{ $ref: "#/components/parameters/MedicationId" }]
+      responses:
+        "200": { $ref: "#/components/responses/Ack" }
+
+  /v1/meds/{id}/doses:
+    post:
+      tags: [Meds]
+      security: [{ bearerAuth: [] }]
+      summary: Qabulni belgilash
+      description: |
+        `taken` yoki `skipped`. `pending` yuborilsa yozuv o'chiriladi — xato bosishni
+        qaytarish shu. Zaxira faqat `taken` ga kirish va undan chiqishda o'zgaradi,
+        shuning uchun ikki marta bosish ikki dozani yechib olmaydi.
+      parameters: [{ $ref: "#/components/parameters/MedicationId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [dueOn, dueAt, status]
+              properties:
+                dueOn: { type: string, format: date }
+                dueAt: { type: string, example: "08:00" }
+                status: { type: string, enum: [pending, taken, skipped] }
+      responses:
+        "200":
+          description: Yangilangan kun
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MedicationDay" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+
+  /v1/meds/{id}/stock:
+    post:
+      tags: [Meds]
+      security: [{ bearerAuth: [] }]
+      summary: Zaxirani to'ldirish
+      parameters: [{ $ref: "#/components/parameters/MedicationId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [units]
+              properties:
+                units: { type: integer, description: "Manfiy qiymat ortiqcha hisobni tuzatadi" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Medication" }
+
+  /v1/meds/{id}/history:
+    get:
+      tags: [Meds]
+      security: [{ bearerAuth: [] }]
+      summary: Qabul tarixi
+      description: |
+        Faqat sanoq: nechta qabul qilingan, o'tkazilgan, kutilmoqda. Ataylab ball ham,
+        maslahat ham yo'q — ilova o'tkazib yuborilgan qabul haqida ko'rsatma bermaydi,
+        retsept yoki farmatsevtga yo'naltiradi.
+      parameters:
+        - { $ref: "#/components/parameters/MedicationId" }
+        - { name: days, in: query, schema: { type: integer, default: 14, maximum: 180 } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MedicationHistory" }
+
   /v1/admin/auth/login:
     post:
       tags: [Admin]
@@ -1049,6 +1211,11 @@ components:
       in: path
       required: true
       schema: { type: string, format: date }
+    MedicationId:
+      name: id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
 
   responses:
     Health:
@@ -1688,6 +1855,108 @@ components:
         date: { type: string, format: date }
         waterMl: { type: integer }
         waterGoalMl: { type: integer }
+
+    Weekday:
+      type: string
+      enum: [mon, tue, wed, thu, fri, sat, sun]
+    ScheduleKind:
+      type: string
+      enum: [daily, weekdays, interval]
+    FoodRelation:
+      type: string
+      enum: [any, before, with, after]
+    DoseStatus:
+      type: string
+      enum: [pending, taken, skipped]
+
+    MedicationSchedule:
+      type: object
+      properties:
+        kind: { $ref: "#/components/schemas/ScheduleKind" }
+        times:
+          type: array
+          description: "Kundagi har bir qabul vaqti — kuniga ikki marta bitta dori, ikkita emas"
+          items: { type: string, example: "08:00" }
+        weekdays:
+          type: array
+          items: { $ref: "#/components/schemas/Weekday" }
+        intervalDays: { type: integer, nullable: true, minimum: 1, maximum: 90 }
+
+    Medication:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        emoji: { type: string, nullable: true }
+        dosage: { type: string, nullable: true }
+        unit: { type: string, nullable: true }
+        foodRelation: { $ref: "#/components/schemas/FoodRelation" }
+        note: { type: string, nullable: true }
+        schedule: { $ref: "#/components/schemas/MedicationSchedule" }
+        remindersEnabled: { type: boolean }
+        startedOn: { type: string, format: date }
+        endedOn: { type: string, format: date, nullable: true }
+        stockUnits: { type: integer, nullable: true }
+        stockDaysLeft:
+          type: integer
+          nullable: true
+          description: "Zaxira va jadvaldan hisoblanadi; zaxira kuzatilmasa — null"
+        active: { type: boolean }
+        createdAt: { type: string, format: date-time }
+
+    SaveMedicationRequest:
+      type: object
+      required: [name, schedule]
+      properties:
+        name: { type: string, maxLength: 120 }
+        emoji: { type: string, nullable: true }
+        dosage: { type: string, nullable: true }
+        unit: { type: string, nullable: true }
+        foodRelation: { $ref: "#/components/schemas/FoodRelation" }
+        note: { type: string, nullable: true }
+        schedule: { $ref: "#/components/schemas/MedicationSchedule" }
+        remindersEnabled: { type: boolean, default: true }
+        startedOn: { type: string, format: date, nullable: true }
+        endedOn: { type: string, format: date, nullable: true }
+        stockUnits: { type: integer, nullable: true }
+
+    MedicationDose:
+      type: object
+      properties:
+        medicationId: { type: string, format: uuid }
+        name: { type: string }
+        emoji: { type: string, nullable: true }
+        dosage: { type: string, nullable: true }
+        foodRelation: { $ref: "#/components/schemas/FoodRelation" }
+        dueOn: { type: string, format: date }
+        dueAt: { type: string, example: "08:00" }
+        status: { $ref: "#/components/schemas/DoseStatus" }
+        takenAt: { type: string, format: date-time, nullable: true }
+        isLate:
+          type: boolean
+          description: "Muddatidan bir soat kechroq belgilangan — faqat tarix uchun fakt"
+
+    MedicationDay:
+      type: object
+      description: "Sanoqlar yuborilmaydi — mijoz `doses` ro'yxatidan o'zi hisoblaydi"
+      properties:
+        date: { type: string, format: date }
+        doses:
+          type: array
+          items: { $ref: "#/components/schemas/MedicationDose" }
+
+    MedicationHistory:
+      type: object
+      properties:
+        medicationId: { type: string, format: uuid }
+        from: { type: string, format: date }
+        to: { type: string, format: date }
+        days:
+          type: array
+          items: { $ref: "#/components/schemas/MedicationDay" }
+        takenCount: { type: integer }
+        skippedCount: { type: integer }
+        pendingCount: { type: integer }
 
     AdminSession:
       type: object

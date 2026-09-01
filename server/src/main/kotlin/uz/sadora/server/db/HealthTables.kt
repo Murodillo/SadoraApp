@@ -126,3 +126,40 @@ object FoodItems : Table("food_items") {
 
     override val primaryKey = PrimaryKey(key)
 }
+
+object Medications : Table("medications") {
+    val id = uuid("id")
+    val userId = uuid("user_id").references(Users.id)
+    val name = text("name")
+    val emoji = text("emoji").nullable()
+    val dosage = text("dosage").nullable()
+    val unit = text("unit").nullable()
+    val foodRelation = text("food_relation")
+    val note = text("note").nullable()
+    val scheduleKind = text("schedule_kind")
+    /** Comma-separated `HH:MM`, one entry per dose in the day. */
+    val times = text("times")
+    /** Comma-separated ISO weekday numbers, for the weekday schedule. */
+    val weekdays = text("weekdays")
+    val intervalDays = integer("interval_days").nullable()
+    val remindersEnabled = bool("reminders_enabled")
+    val startedOn = date("started_on")
+    val endedOn = date("ended_on").nullable()
+    val stockUnits = integer("stock_units").nullable()
+    val active = bool("active")
+    val createdAt = timestampWithTimeZone("created_at")
+    val updatedAt = timestampWithTimeZone("updated_at")
+
+    override val primaryKey = PrimaryKey(id)
+}
+
+object MedicationIntakes : Table("medication_intakes") {
+    val medicationId = uuid("medication_id").references(Medications.id)
+    val userId = uuid("user_id").references(Users.id)
+    val dueOn = date("due_on")
+    val dueAt = time("due_at")
+    val status = text("status")
+    val recordedAt = timestampWithTimeZone("recorded_at")
+
+    override val primaryKey = PrimaryKey(medicationId, dueOn, dueAt)
+}

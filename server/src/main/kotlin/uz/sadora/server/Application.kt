@@ -16,6 +16,7 @@ import uz.sadora.server.api.healthCheckRoutes
 import uz.sadora.server.auth.authRoutes
 import uz.sadora.server.config.AppConfig
 import uz.sadora.server.health.healthRoutes
+import uz.sadora.server.health.medicationRoutes
 import uz.sadora.server.health.mindRoutes
 import uz.sadora.server.health.nutritionRoutes
 import uz.sadora.server.plugins.configureHttp
@@ -86,6 +87,7 @@ fun Application.apiModule(component: AppComponent) {
             healthRoutes(component.healthService)
             mindRoutes(component.mindService)
             nutritionRoutes(component.nutritionService)
+            medicationRoutes(component.medicationService)
             adminRoutes(
                 adminAuth = component.adminAuthService,
                 adminService = component.adminService,

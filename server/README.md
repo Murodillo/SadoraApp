@@ -112,9 +112,18 @@ ovqatlardan yig'iladi — aks holda o'chirilgan ovqat kunlik raqamni buzib qoldi
 Makrolar yeyilgan holicha saqlanadi: katalog tuzatilsa, o'tgan oyda nima yeganini
 jimgina o'zgartirmasligi kerak.
 
+**Dori qabullari oldindan yozilmaydi.** Ular jadvaldan o'qish paytida hisoblanadi;
+saqlanadigan yagona narsa — foydalanuvchi qilgan ish. Bir yillik qatorlarni oldindan
+yaratish kursni tahrirlaganda eskilarini qoldirar va jadval o'zgarishi tarixni jimgina
+qayta yozardi. Arxivlash o'chirish emas: `endedOn` qo'yiladi va tarix joyida qoladi.
+
+**Dorilar bo'yicha maslahat berilmaydi.** Tarix faqat sanoq qaytaradi — nechta qabul
+qilingan, o'tkazilgan, kutilmoqda. Ball ham, tavsiya matni ham yo'q: ilova o'tkazib
+yuborilgan qabul haqida ko'rsatma bermaydi, retsept yoki farmatsevtga yo'naltiradi.
+
 ## Nima hali yo'q (2–3-sprint)
 
-Meds API'si · wearable normalizatsiya qatlami ·
+Wearable normalizatsiya qatlami ·
 bildirishnoma scheduler'i · AI Gateway va uning xarajat logi · App Store / Google Play va
 Payme/Click webhook'lari · hisobni haqiqiy o'chirish job'i · SMS provayderi
 (`OtpSender` interfeysi tayyor, hozircha log'ga yozadi) · admin 2FA enrolment ekrani.
