@@ -39,7 +39,7 @@
 
   --shade:     rgba(30,26,46,.06);
   --shade-2:   rgba(30,26,46,.10);
-  --aurora:    .17;
+  --aurora:    .26;
   --glass:     rgba(255,255,255,.72);
 
   /* Geometriya — 8pt panjara, Dimens.kt */
@@ -72,7 +72,7 @@
     --on-primary:#131020;
     --shade:     rgba(0,0,0,.34);
     --shade-2:   rgba(0,0,0,.46);
-    --aurora:    .26;
+    --aurora:    .36;
     --glass:     rgba(28,23,48,.72);
   }
 }
@@ -96,7 +96,7 @@
   --on-primary:#131020;
   --shade:     rgba(0,0,0,.34);
   --shade-2:   rgba(0,0,0,.46);
-  --aurora:    .26;
+  --aurora:    .36;
   --glass:     rgba(28,23,48,.72);
 }
 
@@ -150,7 +150,7 @@ body {
   text-wrap: balance;
 }
 .h3 { font-size: 17px; font-weight: 600; line-height: 1.35; letter-spacing: -.01em; }
-.lede { font-size: clamp(16px, 1.6vw, 19px); line-height: 1.62; color: var(--muted); max-width: 58ch; }
+.lede { font-size: clamp(16px, 1.6vw, 19px); line-height: 1.62; color: var(--muted); max-width: 58ch; text-wrap: pretty; }
 .small { font-size: 13.5px; line-height: 1.55; color: var(--muted); }
 .tnum { font-variant-numeric: tabular-nums; }
 
@@ -217,17 +217,24 @@ body {
 .stagescope { position: relative; isolation: isolate; }
 
 .aurora {
-  position: absolute; inset: -140px -10vw auto; height: 780px;
+  position: absolute; inset: -180px 0 auto 20%; height: 830px;
   z-index: -1; pointer-events: none; overflow: hidden;
+  /* Konteyner qirrasi ko'rinmasin — chetlari to'liq so'niydi */
+  --fade: radial-gradient(78% 62% at 62% 34%, #000 0%, rgba(0,0,0,.9) 26%, transparent 72%);
+  -webkit-mask-image: var(--fade);
+          mask-image: var(--fade);
+}
+@media (max-width: 780px) {
+  .aurora { inset: -140px 0 auto 0; height: 700px; }
 }
 .aurora i {
   position: absolute; display: block; border-radius: 999px;
-  filter: blur(90px); opacity: var(--aurora);
+  filter: blur(104px); opacity: var(--aurora);
   transition: background-color .9s ease;
 }
 .aurora i:nth-child(1) { width: 620px; height: 620px; top: -120px; right: -60px; background: var(--stage-b); animation: drift1 26s ease-in-out infinite; }
 .aurora i:nth-child(2) { width: 520px; height: 520px; top: 120px; right: 340px; background: var(--stage-a); animation: drift2 32s ease-in-out infinite; }
-.aurora i:nth-child(3) { width: 420px; height: 420px; top: 420px; left: -60px; background: var(--accent); opacity: calc(var(--aurora) * .6); animation: drift1 38s ease-in-out infinite reverse; }
+.aurora i:nth-child(3) { width: 420px; height: 420px; top: 430px; left: 30px; background: var(--accent); opacity: calc(var(--aurora) * .6); animation: drift1 38s ease-in-out infinite reverse; }
 
 @keyframes drift1 { 0%,100% { transform: translate3d(0,0,0) scale(1); } 50% { transform: translate3d(-46px, 40px, 0) scale(1.1); } }
 @keyframes drift2 { 0%,100% { transform: translate3d(0,0,0) scale(1.06); } 50% { transform: translate3d(56px, -34px, 0) scale(.94); } }
@@ -249,6 +256,10 @@ body {
 .hero-cta { display: flex; flex-wrap: wrap; gap: 12px; padding-top: 4px; }
 .hero-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; padding-top: 6px; }
 .dotsep { width: 4px; height: 4px; border-radius: 999px; background: var(--line); flex: none; }
+@media (max-width: 560px) {
+  .hero-foot { flex-direction: column; align-items: flex-start; gap: 4px; }
+  .hero-foot .dotsep { display: none; }
+}
 
 /* ---------- Telefon maketi ---------- */
 
@@ -429,7 +440,12 @@ body {
 
 .grid { display: grid; gap: 16px; }
 .g-tabs { grid-template-columns: repeat(auto-fit, minmax(232px, 1fr)); }
+@media (min-width: 900px) {
+  .g-tabs { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .g-tabs > :nth-child(2) { grid-column: span 2; }
+}
 .g-mods { grid-template-columns: repeat(auto-fit, minmax(178px, 1fr)); }
+@media (min-width: 900px) { .g-mods { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 
 .card {
   background: var(--surface); border: 1px solid var(--line);
@@ -471,8 +487,8 @@ body {
   display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-height: 74px;
 }
 
-.sw { width: 46px; height: 30px; border-radius: var(--r-xs); background: linear-gradient(120deg, var(--secondary), var(--primary)); }
-.sw-flat { width: 46px; height: 30px; border-radius: var(--r-xs); background: var(--surface-2); border: 1px solid var(--line); }
+.sw { width: 38px; height: 27px; border-radius: var(--r-xs); background: linear-gradient(120deg, var(--secondary), var(--primary)); }
+.sw-flat { width: 38px; height: 27px; border-radius: var(--r-xs); background: var(--surface-2); border: 1px solid var(--line); }
 .demo-lbl { font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; font-weight: 600; color: var(--muted-2); width: 100%; }
 
 .legend { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--muted); }
