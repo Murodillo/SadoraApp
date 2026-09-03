@@ -47,6 +47,34 @@ data class UpdateProfileRequest(
     val goals: List<Goal>? = null,
 )
 
+/** How long she has been trying to conceive, asked once during onboarding. */
+@Serializable
+enum class ConceptionWindow {
+    @SerialName("just_started") JUST_STARTED,
+    @SerialName("under_3_months") UNDER_3_MONTHS,
+    @SerialName("three_to_six_months") THREE_TO_SIX_MONTHS,
+    @SerialName("six_to_twelve_months") SIX_TO_TWELVE_MONTHS,
+    @SerialName("over_a_year") OVER_A_YEAR,
+}
+
+/**
+ * Contraception used in the six months before onboarding.
+ *
+ * It matters for predictions rather than for demographics: hormonal methods suppress
+ * ovulation, so a cycle recorded shortly after stopping one is not yet a baseline the
+ * app should predict from.
+ */
+@Serializable
+enum class BirthControl {
+    @SerialName("none") NONE,
+    @SerialName("still_using") STILL_USING,
+    @SerialName("pill") PILL,
+    @SerialName("iud") IUD,
+    @SerialName("barrier") BARRIER,
+    @SerialName("other") OTHER,
+    @SerialName("undisclosed") UNDISCLOSED,
+}
+
 /**
  * Cycle baseline collected during onboarding. Only meaningful for stages where
  * [LifeStage.predictsCycle] is true; the server ignores it otherwise.
@@ -57,6 +85,9 @@ data class CycleBaseline(
     val averageCycleLength: Int = 28,
     val averagePeriodLength: Int = 5,
     val cycleIsRegular: Boolean = true,
+    /** Only asked of users trying to conceive. */
+    val conceptionWindow: ConceptionWindow? = null,
+    val birthControl: BirthControl? = null,
 )
 
 /** Stage-specific baseline: due date for pregnancy, birth date for postpartum. */

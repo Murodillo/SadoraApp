@@ -4,14 +4,17 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -19,7 +22,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import org.example.project.design.IconSize
+import org.example.project.design.Radius
 import org.example.project.design.Sadora
+import org.example.project.design.SadoraIcons
 import org.example.project.design.Spacing
 import org.example.project.model.AppState
 import org.example.project.model.Fmt
@@ -28,6 +34,7 @@ import org.example.project.model.SampleData
 import org.example.project.nav.Route
 import org.example.project.ui.components.AiSummaryCard
 import org.example.project.ui.components.BadgeTone
+import org.example.project.ui.components.ButtonTone
 import org.example.project.ui.components.CardLabel
 import org.example.project.ui.components.EmptyState
 import org.example.project.ui.components.GreetingHeader
@@ -38,7 +45,6 @@ import org.example.project.ui.components.SadoraCard
 import org.example.project.ui.components.SadoraProgressBar
 import org.example.project.ui.components.ScreenContent
 import org.example.project.ui.components.Skeleton
-import org.example.project.ui.components.ButtonTone
 import org.example.project.ui.components.noRippleClickable
 
 /**
@@ -62,6 +68,7 @@ fun TodayScreen(
             greeting = "Xayrli tong",
             name = state.name,
             onAvatarClick = { onOpen(Route.PersonalDetails) },
+            onNotificationsClick = { onOpen(Route.Notifications) },
         )
 
         if (isLoading) {
@@ -81,6 +88,7 @@ fun TodayScreen(
                         body = "Kecha ${state.sleepLabel()} uxlagansiz va energiyangiz " +
                             "odatdagidan pastroq. Bugun suvni ko'proq iching va yengil " +
                             "yurishni rejalashtiring.",
+                        onClick = { onOpen(Route.AiChat) },
                     )
                 } else {
                     FreeSummaryCard(state, onUpgrade = { onOpen(Route.Paywall) })
@@ -90,18 +98,34 @@ fun TodayScreen(
             item { JourneyCard(state) }
 
             item {
-                Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                    MindCard(state, Modifier.weight(1f), onOpen = { onOpen(Route.Mind) })
-                    WaterCard(state, Modifier.weight(1f), onAdd = onAddWater)
+                // Side-by-side cards hold different amounts of text, so the row is
+                // measured to the taller one and both stretch to fill it.
+                Row(
+                    Modifier.height(IntrinsicSize.Min),
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                ) {
+                    MindCard(
+                        state,
+                        Modifier.weight(1f).fillMaxHeight(),
+                        onOpen = { onOpen(Route.Mind) },
+                    )
+                    WaterCard(state, Modifier.weight(1f).fillMaxHeight(), onAdd = onAddWater)
                 }
             }
 
             item { NutritionSummaryCard(state) }
 
             item {
-                Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                    ActivityCard(state, Modifier.weight(1f))
-                    SleepCard(state, Modifier.weight(1f), onOpen = { onOpen(Route.Sleep) })
+                Row(
+                    Modifier.height(IntrinsicSize.Min),
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                ) {
+                    ActivityCard(state, Modifier.weight(1f).fillMaxHeight())
+                    SleepCard(
+                        state,
+                        Modifier.weight(1f).fillMaxHeight(),
+                        onOpen = { onOpen(Route.Sleep) },
+                    )
                 }
             }
 
@@ -127,7 +151,17 @@ fun TodayScreen(
 private fun FreeSummaryCard(state: AppState, onUpgrade: () -> Unit) {
     val c = Sadora.colors
     SadoraCard {
-        CardLabel("Bugungi xulosa", trailing = { Text("◷", color = c.muted) })
+        CardLabel(
+            "Bugungi xulosa",
+            trailing = {
+                Icon(
+                    SadoraIcons.Clock,
+                    contentDescription = null,
+                    Modifier.size(IconSize.md),
+                    tint = c.muted,
+                )
+            },
+        )
         Text(
             "Sikl ${state.cycleDay}-kuni — unumdor davr. Kechki dori 20:00 da.",
             style = Sadora.type.h3,
@@ -138,7 +172,12 @@ private fun FreeSummaryCard(state: AppState, onUpgrade: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
         ) {
-            Text("✦", style = Sadora.type.h3, color = c.secondary)
+            Icon(
+                SadoraIcons.Sparkle,
+                contentDescription = null,
+                Modifier.size(18.dp),
+                tint = c.secondary,
+            )
             Text(
                 "AI shaxsiy xulosasi Premium'da",
                 style = Sadora.type.body,
@@ -207,7 +246,7 @@ private fun JourneyCard(state: AppState) {
                         style = Sadora.type.body,
                         color = c.muted,
                     )
-                    SadoraBadge("TAXMINIY", BadgeTone.Estimated, leading = "◷")
+                    SadoraBadge("TAXMINIY", BadgeTone.Estimated, icon = SadoraIcons.Clock)
                 } else {
                     Text(stage.subtitle, style = Sadora.type.body, color = c.muted)
                 }
@@ -255,12 +294,15 @@ private fun WaterCard(state: AppState, modifier: Modifier = Modifier, onAdd: () 
         Row(
             Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
+            horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
         ) {
+            // Weighted, so the button is measured first and keeps its full width; the
+            // label gives up space instead of squeezing "+250" onto two lines.
             Text(
                 "Yana ${state.waterGoalMl - state.waterMl} ml",
                 style = Sadora.type.body,
                 color = c.muted,
+                modifier = Modifier.weight(1f),
             )
             PillButton("+250", onAdd)
         }
@@ -336,7 +378,7 @@ private fun MedicationCard(
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
         ) {
             Box(
-                Modifier.size(40.dp).clip(RoundedCornerShape(14.dp)).background(c.surface2),
+                Modifier.size(40.dp).clip(RoundedCornerShape(Radius.sm)).background(c.surface2),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(emoji, style = Sadora.type.h3)

@@ -2,6 +2,8 @@ package org.example.project.data
 
 import org.example.project.model.AppLanguage
 import org.example.project.model.AppState
+import org.example.project.model.BirthControl
+import org.example.project.model.ConceptionWindow
 import org.example.project.model.Goal
 import org.example.project.model.LifeStage
 import uz.sadora.contract.ConsentGrants
@@ -10,9 +12,12 @@ import uz.sadora.contract.CycleBaseline
 import uz.sadora.contract.Entitlements
 import uz.sadora.contract.OnboardingRequest
 import uz.sadora.contract.PermissionGrants
+import uz.sadora.contract.StageBaseline
 import uz.sadora.contract.UpdateProfileRequest
 import uz.sadora.contract.SubscriptionTier
 import uz.sadora.contract.UserProfile
+import uz.sadora.contract.BirthControl as WireBirthControl
+import uz.sadora.contract.ConceptionWindow as WireConceptionWindow
 import uz.sadora.contract.Goal as WireGoal
 import uz.sadora.contract.Language as WireLanguage
 import uz.sadora.contract.LifeStage as WireLifeStage
@@ -42,6 +47,22 @@ fun AppState.applyServerProfile(profile: UserProfile, entitlements: Entitlements
     goals.addAll(profile.goals.mapNotNull { it.toAppGoal() })
 
     isPremium = entitlements.tier == SubscriptionTier.PREMIUM
+}
+
+/**
+ * Applies a freshly authenticated session.
+ *
+ * An account that has not finished onboarding has an empty profile on the server, while
+ * the answers collected so far live only on [AppState] — sign-up now comes *after* the
+ * profile questions. Applying that empty profile would wipe every one of them, so only
+ * the entitlements are taken until there is a real profile to apply.
+ */
+fun AppState.applyServerSession(profile: UserProfile, entitlements: Entitlements) {
+    if (profile.onboardingCompleted) {
+        applyServerProfile(profile, entitlements)
+    } else {
+        isPremium = entitlements.tier == SubscriptionTier.PREMIUM
+    }
 }
 
 private fun WireLanguage.toAppLanguage(): AppLanguage? = when (this) {
@@ -97,15 +118,36 @@ fun AppState.toOnboardingRequest(timezone: String): OnboardingRequest = Onboardi
     // The server ignores the cycle baseline for stages that do not predict one.
     cycle = if (lifeStage.predictsCycle) {
         CycleBaseline(
+            // The anchor the server predicts from when nothing is logged yet. Sending
+            // it is what makes Today show a real cycle day on the first launch after
+            // onboarding rather than an empty state.
+            lastPeriodStart = lastPeriodStart,
             averageCycleLength = averageCycleLength,
             averagePeriodLength = averagePeriodLength,
+            cycleIsRegular = cycleIsRegular,
+            conceptionWindow = conceptionWindow?.toWire(),
+            birthControl = birthControl?.toWire(),
         )
     } else {
         null
     },
+    stage = toStageBaseline(),
     permissions = toPermissionGrants(),
     consents = toConsentGrants(),
 )
+
+/**
+ * The stage-specific dates, or null for the stages that have none.
+ *
+ * Only the date belonging to the chosen stage is sent: a due date left over from a
+ * pregnancy the user has since moved on from would otherwise follow her into
+ * postpartum and be read as current.
+ */
+private fun AppState.toStageBaseline(): StageBaseline? = when (lifeStage) {
+    LifeStage.Pregnancy -> dueDate?.let { StageBaseline(dueDate = it) }
+    LifeStage.Postpartum -> babyBirthDate?.let { StageBaseline(birthDate = it) }
+    else -> lastPeriodStart?.let { StageBaseline(lastPeriodStart = it) }
+}
 
 /** A partial update carrying only the fields the profile screens can edit. */
 fun AppState.toUpdateProfileRequest(timezone: String? = null): UpdateProfileRequest =
@@ -153,6 +195,24 @@ private fun LifeStage.toWire(): WireLifeStage = when (this) {
     LifeStage.Postpartum -> WireLifeStage.POSTPARTUM
     LifeStage.Perimenopause -> WireLifeStage.PERIMENOPAUSE
     LifeStage.Menopause -> WireLifeStage.MENOPAUSE
+}
+
+private fun ConceptionWindow.toWire(): WireConceptionWindow = when (this) {
+    ConceptionWindow.JustStarted -> WireConceptionWindow.JUST_STARTED
+    ConceptionWindow.UnderThreeMonths -> WireConceptionWindow.UNDER_3_MONTHS
+    ConceptionWindow.ThreeToSix -> WireConceptionWindow.THREE_TO_SIX_MONTHS
+    ConceptionWindow.SixToTwelve -> WireConceptionWindow.SIX_TO_TWELVE_MONTHS
+    ConceptionWindow.OverAYear -> WireConceptionWindow.OVER_A_YEAR
+}
+
+private fun BirthControl.toWire(): WireBirthControl = when (this) {
+    BirthControl.None -> WireBirthControl.NONE
+    BirthControl.StillUsing -> WireBirthControl.STILL_USING
+    BirthControl.Pill -> WireBirthControl.PILL
+    BirthControl.Iud -> WireBirthControl.IUD
+    BirthControl.Barrier -> WireBirthControl.BARRIER
+    BirthControl.Other -> WireBirthControl.OTHER
+    BirthControl.Undisclosed -> WireBirthControl.UNDISCLOSED
 }
 
 private fun Goal.toWire(): WireGoal = when (this) {

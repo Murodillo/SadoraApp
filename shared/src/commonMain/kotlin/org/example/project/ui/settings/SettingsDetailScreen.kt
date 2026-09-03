@@ -53,6 +53,7 @@ fun SettingsDetailScreen(
     state: AppState,
     controller: SadoraController,
     onClose: () -> Unit,
+    onOpen: (Route) -> Unit,
     onSignedOut: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -62,7 +63,7 @@ fun SettingsDetailScreen(
             Route.GoalsSettings -> GoalsSettings(state, controller, onClose)
             Route.LifeStageSettings -> LifeStageSettings(state, controller, onClose)
             Route.Notifications -> NotificationSettings(state, onClose)
-            Route.PrivacySecurity -> PrivacySettings(state, controller, onClose, onSignedOut)
+            Route.PrivacySecurity -> PrivacySettings(state, controller, onClose, onOpen, onSignedOut)
             Route.About -> About(onClose)
             else -> About(onClose)
         }
@@ -226,6 +227,7 @@ private fun PrivacySettings(
     state: AppState,
     controller: SadoraController,
     onClose: () -> Unit,
+    onOpen: (Route) -> Unit,
     onSignedOut: () -> Unit,
 ) {
     val c = Sadora.colors
@@ -267,6 +269,22 @@ private fun PrivacySettings(
                 enabled = !controller.busy,
                 onClick = { scope.launch { controller.saveConsents() } },
             )
+        }
+
+        item {
+            SadoraCard {
+                CardLabel("Huquqiy hujjatlar")
+                SadoraButton(
+                    "Foydalanish shartlari",
+                    { onOpen(Route.Terms) },
+                    tone = ButtonTone.Secondary,
+                )
+                SadoraButton(
+                    "Maxfiylik siyosati",
+                    { onOpen(Route.PrivacyPolicy) },
+                    tone = ButtonTone.Secondary,
+                )
+            }
         }
 
         item {

@@ -143,6 +143,8 @@ object CycleBaselines : Table("cycle_baselines") {
     val averageCycleLength = integer("average_cycle_length")
     val averagePeriodLength = integer("average_period_length")
     val isRegular = bool("is_regular")
+    val conceptionWindow = text("conception_window").nullable()
+    val birthControl = text("birth_control").nullable()
     val updatedAt = timestampWithTimeZone("updated_at")
 
     override val primaryKey = PrimaryKey(userId)

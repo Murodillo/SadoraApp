@@ -205,6 +205,8 @@ class UserRepository {
             it[averageCycleLength] = baseline.averageCycleLength
             it[averagePeriodLength] = baseline.averagePeriodLength
             it[isRegular] = baseline.cycleIsRegular
+            it[conceptionWindow] = baseline.conceptionWindow?.dbValue()
+            it[birthControl] = baseline.birthControl?.dbValue()
             it[updatedAt] = now().toOffsetDateTime()
         }
     }

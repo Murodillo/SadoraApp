@@ -180,6 +180,39 @@ class HealthController(
 
     // ---------------------------------------------------------------- cycle writes
 
+    /**
+     * Sends the period starts collected by the onboarding calendar, once.
+     *
+     * They are logged as real periods rather than left in the cycle baseline because
+     * the predictor counts observed cycles: three logged starts give it two measured
+     * cycle lengths and a spread, where the baseline can only ever supply an anchor and
+     * an assumed length. The list is cleared whether or not the calls land, so a failed
+     * flush cannot duplicate her periods on the next launch — the baseline still
+     * carries the anchor in that case.
+     */
+    suspend fun flushOnboardingPeriods() {
+        val store = state ?: return
+        val pending = store.takeMarkedPeriods()
+        if (pending.isEmpty()) return
+        val api = cycleApi ?: return
+        pending.forEach { period ->
+            calls.run(silent = true) {
+                // The span she actually marked, not an assumed length — so the server
+                // can measure period length as well as cycle length, instead of
+                // falling back to the baseline for it.
+                api.logPeriod(
+                    LogPeriodRequest(
+                        startedOn = period.start,
+                        endedOn = period.endInclusive,
+                    ),
+                )
+            }
+        }
+        // One refresh for the batch rather than one per date.
+        refreshCycle()
+        loadCalendarAroundToday()
+    }
+
     suspend fun logPeriodStart(date: LocalDate): Boolean {
         val api = cycleApi ?: return true
         calls.run { api.logPeriod(LogPeriodRequest(startedOn = date)) } ?: return false

@@ -1,5 +1,8 @@
 package org.example.project.data
 
+import kotlin.time.Clock
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.todayIn
 import org.example.project.model.AppState
 import uz.sadora.contract.AuthProvider
 import uz.sadora.contract.OtpChallenge
@@ -47,14 +50,14 @@ class SadoraController(
     suspend fun verifyOtp(challengeId: String, code: String): AuthDestination? {
         val repo = repository ?: return AuthDestination.Onboarding
         val session = call { repo.verifyOtp(challengeId, code) } ?: return null
-        state.applyServerProfile(session.user, session.entitlements)
+        state.applyServerSession(session.user, session.entitlements)
         return session.user.destination()
     }
 
     suspend fun signInWithSocial(provider: AuthProvider, idToken: String): AuthDestination? {
         val repo = repository ?: return AuthDestination.Onboarding
         val session = call { repo.signInWithSocial(provider, idToken) } ?: return null
-        state.applyServerProfile(session.user, session.entitlements)
+        state.applyServerSession(session.user, session.entitlements)
         return session.user.destination()
     }
 
@@ -67,6 +70,9 @@ class SadoraController(
      * dropping her into an app whose server knows nothing about her.
      */
     suspend fun completeOnboarding(): Boolean {
+        // Ahead of the request, so Today is already right when the flow hands over —
+        // and still right if the app is opened offline before the first sync.
+        state.recomputeCycleDay(Clock.System.todayIn(TimeZone.currentSystemDefault()))
         val repo = repository ?: return true
         val request = state.toOnboardingRequest(timezoneOrDefault())
         val profile = call { repo.completeOnboarding(request) } ?: return false
