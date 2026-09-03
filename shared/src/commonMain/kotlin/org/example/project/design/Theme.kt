@@ -30,7 +30,7 @@ object Sadora {
  */
 @Composable
 fun SadoraTheme(
-    darkTheme: Boolean = true,
+    darkTheme: Boolean = false,
     content: @Composable () -> Unit,
 ) {
     val colors = if (darkTheme) SadoraDarkColors else SadoraLightColors

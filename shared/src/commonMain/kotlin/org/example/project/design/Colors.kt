@@ -89,7 +89,7 @@ val SadoraDarkColors = SadoraColors(
     isDark = true,
 )
 
-val LocalSadoraColors = staticCompositionLocalOf { SadoraDarkColors }
+val LocalSadoraColors = staticCompositionLocalOf { SadoraLightColors }
 
 /**
  * Per-life-stage accents. Pregnancy and postpartum shift to a warm palette so the
@@ -99,6 +99,12 @@ val LocalSadoraColors = staticCompositionLocalOf { SadoraDarkColors }
 data class StagePalette(val start: Color, val end: Color, val tint: Color)
 
 object StagePalettes {
+    /**
+     * Text on the warm pregnancy/postpartum gradients. Those are too light for
+     * [SadoraColors.onPrimary] in either theme, so they take a fixed dark ink.
+     */
+    val warmInk = Color(0xFF2A1145)
+
     val cycle = StagePalette(Color(0xFF9B85FF), Color(0xFFFF6E8C), Color(0xFFFF6E8C))
     val pregnancy = StagePalette(Color(0xFFFFB020), Color(0xFFFF8E92), Color(0xFFFF8E92))
     val postpartum = StagePalette(Color(0xFFFF8AA3), Color(0xFFFFB020), Color(0xFFFF8AA3))

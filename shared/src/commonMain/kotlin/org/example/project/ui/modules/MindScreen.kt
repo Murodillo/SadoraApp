@@ -8,17 +8,17 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import org.example.project.design.Radius
 import org.example.project.design.Sadora
+import org.example.project.design.SadoraIcons
 import org.example.project.design.Spacing
 import org.example.project.model.AppState
 import org.example.project.model.Mood
@@ -125,7 +125,7 @@ fun MindScreen(
             }
 
             item {
-                val onGradient = if (c.isDark) c.bg else Color.White
+                val onGradient = c.onPrimary
                 Column(
                     Modifier
                         .fillMaxWidth()
@@ -144,7 +144,12 @@ fun MindScreen(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
                         ) {
-                            Text("✦", style = Sadora.type.h3, color = onGradient)
+                            Icon(
+                                SadoraIcons.Sparkle,
+                                contentDescription = null,
+                                Modifier.size(18.dp),
+                                tint = onGradient,
+                            )
                             Text(
                                 "AI Ong yordamchisi",
                                 style = Sadora.type.h3,
@@ -153,7 +158,7 @@ fun MindScreen(
                         }
                         Box(
                             Modifier
-                                .clip(RoundedCornerShape(999.dp))
+                                .clip(Radius.chip)
                                 .background(onGradient.copy(alpha = 0.2f))
                                 .padding(horizontal = Spacing.xs, vertical = 3.dp),
                         ) {

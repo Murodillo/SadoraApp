@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -15,7 +14,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import org.example.project.design.Radius
 import org.example.project.design.Sadora
+import org.example.project.design.SadoraIcons
 import org.example.project.design.Spacing
 import org.example.project.model.AppState
 import org.example.project.model.SampleData
@@ -140,7 +141,7 @@ fun SleepScreen(
 
             item {
                 SadoraCard(padding = Spacing.xs) {
-                    SettingsRow("✎", "Uyquni qo'lda kiritish") {}
+                    SettingsRow(SadoraIcons.Pencil, "Uyquni qo'lda kiritish") {}
                 }
             }
         }
@@ -153,7 +154,7 @@ private fun LegendDot(color: Color) {
     Box(
         Modifier
             .size(8.dp)
-            .clip(RoundedCornerShape(999.dp))
+            .clip(Radius.chip)
             .background(color),
     )
 }

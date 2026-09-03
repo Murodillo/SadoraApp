@@ -11,26 +11,27 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import kotlinx.coroutines.launch
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
+import org.example.project.data.SadoraController
 import org.example.project.design.Radius
 import org.example.project.design.Sadora
+import org.example.project.design.SadoraIcons
 import org.example.project.design.Spacing
-import org.example.project.data.SadoraController
 import org.example.project.model.AppState
 import org.example.project.ui.components.CardLabel
 import org.example.project.ui.components.PremiumCtaButton
@@ -74,7 +75,7 @@ fun PaywallScreen(
             Box(
                 Modifier
                     .size(40.dp)
-                    .clip(RoundedCornerShape(999.dp))
+                    .clip(Radius.chip)
                     .background(c.surface2)
                     .noRippleClickable(onClick = onClose),
                 contentAlignment = Alignment.Center,
@@ -97,10 +98,11 @@ fun PaywallScreen(
                             .background(Brush.linearGradient(listOf(c.secondary, c.primary))),
                         contentAlignment = Alignment.Center,
                     ) {
-                        Text(
-                            "✦",
-                            style = Sadora.type.h1,
-                            color = if (c.isDark) c.bg else Color.White,
+                        Icon(
+                            SadoraIcons.Sparkle,
+                            contentDescription = null,
+                            Modifier.size(28.dp),
+                            tint = c.onPrimary,
                         )
                     }
                     Text("SADORA Premium", style = Sadora.type.h1, color = c.text)
@@ -216,11 +218,16 @@ fun PaywallScreen(
                         style = Sadora.type.body,
                         color = c.muted,
                     )
+                    // No billing SDK yet, so restoring means asking the server what
+                    // this account is actually entitled to — the same call the main
+                    // button makes.
                     Text(
                         "Xaridni tiklash",
                         style = Sadora.type.body.copy(fontWeight = FontWeight.SemiBold),
                         color = c.textAccent,
-                        modifier = Modifier.noRippleClickable {},
+                        modifier = Modifier.noRippleClickable(enabled = !controller.busy) {
+                            scope.launch { controller.refreshEntitlements() }
+                        },
                     )
                 }
             }
@@ -258,7 +265,7 @@ private fun PlanOption(
                 if (discount != null) {
                     Box(
                         Modifier
-                            .clip(RoundedCornerShape(999.dp))
+                            .clip(Radius.chip)
                             .background(c.success.copy(alpha = 0.16f))
                             .padding(horizontal = 6.dp, vertical = 2.dp),
                     ) {

@@ -60,6 +60,7 @@ data class AppConfig(
                     resendAfter = env("OTP_RESEND_SECONDS", "60").toInt().seconds,
                     maxPerPhonePerHour = env("OTP_MAX_PER_HOUR", "5").toInt(),
                     exposeCode = env("OTP_EXPOSE_CODE", "true").toBoolean(),
+                    fixedCode = envOrNull("OTP_FIXED_CODE"),
                 ),
                 social = SocialConfig(
                     appleBundleIds = env("APPLE_BUNDLE_IDS", "uz.sadora.app")
@@ -76,7 +77,8 @@ data class AppConfig(
 
         /**
          * Guards the settings that are convenient in dev and dangerous in production:
-         * a shipped-by-default signing key, and OTP codes returned in the response body.
+         * a shipped-by-default signing key, OTP codes returned in the response body, and
+         * a fixed OTP code.
          */
         private fun AppConfig.verifyProductionSafety() {
             if (!environment.isProduction) return
@@ -85,6 +87,7 @@ data class AppConfig(
             }
             require(jwt.secret.length >= 32) { "JWT_SECRET must be at least 32 characters." }
             require(!otp.exposeCode) { "OTP_EXPOSE_CODE must be false in production." }
+            require(otp.fixedCode == null) { "OTP_FIXED_CODE must not be set in production." }
         }
 
         private const val DEV_JWT_SECRET = "dev-only-secret-change-me-0123456789abcdef"
@@ -126,6 +129,12 @@ data class OtpConfig(
     val maxPerPhonePerHour: Int,
     /** Returns the code in the API response. Refused in production by [AppConfig]. */
     val exposeCode: Boolean,
+    /**
+     * Issues this code instead of a random one, so a tester on a real phone does not
+     * have to read the response body or the server log. Refused in production by
+     * [AppConfig]; [codeLength] is ignored while it is set.
+     */
+    val fixedCode: String? = null,
 )
 
 data class SocialConfig(

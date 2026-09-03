@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -23,7 +22,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import org.example.project.design.Radius
 import org.example.project.design.Sadora
+import org.example.project.design.SadoraIcons
 import org.example.project.design.Spacing
+import org.example.project.design.StagePalettes
 import org.example.project.model.AppState
 import org.example.project.model.Fmt
 import org.example.project.model.LifeStage
@@ -31,7 +32,6 @@ import org.example.project.model.SampleData
 import org.example.project.nav.Route
 import org.example.project.ui.components.BadgeTone
 import org.example.project.ui.components.ButtonTone
-import org.example.project.ui.components.SadoraButton
 import org.example.project.ui.components.CardLabel
 import org.example.project.ui.components.ChipFlowRow
 import org.example.project.ui.components.DisclaimerNote
@@ -40,6 +40,7 @@ import org.example.project.ui.components.LabeledProgress
 import org.example.project.ui.components.PremiumGradientBadge
 import org.example.project.ui.components.ProgressRing
 import org.example.project.ui.components.SadoraBadge
+import org.example.project.ui.components.SadoraButton
 import org.example.project.ui.components.SadoraCard
 import org.example.project.ui.components.SadoraTopBar
 import org.example.project.ui.components.ScreenContent
@@ -118,7 +119,7 @@ private fun CycleJourney(state: AppState, onOpen: (Route) -> Unit) {
                     ) {
                         Text("Ovulyatsiya", style = Sadora.type.h2, color = c.text)
                         Text("Keyingi hayz — 14 kun", style = Sadora.type.body, color = c.muted)
-                        SadoraBadge("TAXMINIY", BadgeTone.Estimated, leading = "◷")
+                        SadoraBadge("TAXMINIY", BadgeTone.Estimated, icon = SadoraIcons.Clock)
                     }
                 }
                 PhaseLegend()
@@ -138,7 +139,11 @@ private fun CycleJourney(state: AppState, onOpen: (Route) -> Unit) {
                             onClick = { state.toggleSymptom(symptom) },
                         )
                     }
-                    SelectChip("+ Qo'shish", selected = false, onClick = {})
+                    SelectChip(
+                            "+ Qo'shish",
+                            selected = false,
+                            onClick = { onOpen(Route.StageSymptoms) },
+                        )
                 }
             }
         }
@@ -187,7 +192,7 @@ private fun PhaseLegend() {
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
             ) {
-                Box(Modifier.size(8.dp).clip(RoundedCornerShape(999.dp)).background(color))
+                Box(Modifier.size(8.dp).clip(Radius.chip).background(color))
                 Text(label, style = Sadora.type.body, color = c.muted)
             }
         }
@@ -262,7 +267,7 @@ private fun PregnancyJourney(state: AppState, onOpen: (Route) -> Unit) {
                     .padding(Spacing.md),
                 verticalArrangement = Arrangement.spacedBy(Spacing.xs),
             ) {
-                val onWarm = Color(0xFF2A1145)
+                val onWarm = StagePalettes.warmInk
                 Row(verticalAlignment = Alignment.Bottom) {
                     Text("${state.pregnancyWeek}", style = Sadora.type.data, color = onWarm)
                     Text(
@@ -307,7 +312,11 @@ private fun PregnancyJourney(state: AppState, onOpen: (Route) -> Unit) {
                             onClick = { state.toggleSymptom(symptom) },
                         )
                     }
-                    SelectChip("+ Qo'shish", selected = false, onClick = {})
+                    SelectChip(
+                            "+ Qo'shish",
+                            selected = false,
+                            onClick = { onOpen(Route.StageSymptoms) },
+                        )
                 }
             }
         }
@@ -371,7 +380,7 @@ private fun PregnancyJourney(state: AppState, onOpen: (Route) -> Unit) {
 @Composable
 private fun AiAdviceCard(body: String) {
     val c = Sadora.colors
-    val onGradient = if (c.isDark) c.bg else Color.White
+    val onGradient = c.onPrimary
     Column(
         Modifier
             .fillMaxWidth()
@@ -388,7 +397,7 @@ private fun AiAdviceCard(body: String) {
             Text("SADORA AI · TAVSIYA", style = Sadora.type.caption, color = onGradient)
             Box(
                 Modifier
-                    .clip(RoundedCornerShape(999.dp))
+                    .clip(Radius.chip)
                     .background(onGradient.copy(alpha = 0.2f))
                     .padding(horizontal = Spacing.xs, vertical = 3.dp),
             ) {
@@ -622,7 +631,11 @@ private fun MenopauseJourney(state: AppState, onOpen: (Route) -> Unit) {
                             onClick = { state.toggleSymptom(symptom) },
                         )
                     }
-                    SelectChip("+ Qo'shish", selected = false, onClick = {})
+                    SelectChip(
+                            "+ Qo'shish",
+                            selected = false,
+                            onClick = { onOpen(Route.StageSymptoms) },
+                        )
                 }
             }
         }

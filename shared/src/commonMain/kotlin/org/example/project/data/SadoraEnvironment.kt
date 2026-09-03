@@ -14,6 +14,16 @@ data class SadoraEnvironment(
         fun development(): SadoraEnvironment =
             SadoraEnvironment(baseUrl = developmentBaseUrl(), verboseLogging = true)
 
+        /**
+         * Development against a host reachable over the network.
+         *
+         * A physical phone cannot resolve [developmentBaseUrl] — 10.0.2.2 exists only
+         * inside the emulator — so a build meant for a real device is pointed at the
+         * development machine's address on the local network instead.
+         */
+        fun development(host: String): SadoraEnvironment =
+            SadoraEnvironment(baseUrl = "http://$host:8080", verboseLogging = true)
+
         val Stage: SadoraEnvironment = SadoraEnvironment("https://api.stage.sadora.uz")
         val Production: SadoraEnvironment = SadoraEnvironment("https://api.sadora.uz")
     }

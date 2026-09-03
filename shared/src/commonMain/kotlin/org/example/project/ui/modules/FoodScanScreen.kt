@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -212,7 +211,7 @@ private fun StepperButton(glyph: String, onClick: () -> Unit) {
     Box(
         Modifier
             .size(36.dp)
-            .clip(RoundedCornerShape(999.dp))
+            .clip(Radius.chip)
             .background(c.surface2)
             .noRippleClickable(onClick = onClick),
         contentAlignment = Alignment.Center,

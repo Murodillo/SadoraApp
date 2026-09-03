@@ -41,6 +41,8 @@ kotlin {
     
     sourceSets {
         androidMain.dependencies {
+            // Only for BackHandler; the shared UI otherwise never touches an Activity.
+            implementation(libs.androidx.activity.compose)
             implementation(libs.compose.uiToolingPreview)
             implementation(libs.compose.uiTooling)
             implementation(libs.ktor.client.okhttp)

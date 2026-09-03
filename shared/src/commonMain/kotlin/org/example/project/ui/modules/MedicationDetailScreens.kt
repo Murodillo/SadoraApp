@@ -20,7 +20,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import org.example.project.design.Radius
@@ -130,7 +129,7 @@ fun AddMedicationScreen(
                                 Modifier
                                     .weight(1f)
                                     .aspectRatio(1f)
-                                    .clip(RoundedCornerShape(999.dp))
+                                    .clip(Radius.chip)
                                     .background(if (on) c.primary else c.surface2)
                                     .noRippleClickable { if (!days.remove(day)) days.add(day) },
                                 contentAlignment = Alignment.Center,

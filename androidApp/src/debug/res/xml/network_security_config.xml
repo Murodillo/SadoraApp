@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Debug-only override of the main config.
+
+  A debug build can be pointed at any address on the developer's network with
+  -Psadora.devHost, and that address is not known when this file is written, so
+  cleartext is permitted outright here. This file is in the `debug` source set, so a
+  release build still uses the strict config in `main` and never carries the exception.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>

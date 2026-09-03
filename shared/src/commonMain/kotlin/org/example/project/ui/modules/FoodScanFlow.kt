@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -22,12 +23,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import org.example.project.design.Radius
 import org.example.project.design.Sadora
+import org.example.project.design.SadoraIcons
 import org.example.project.design.Spacing
 import org.example.project.model.AppState
 import org.example.project.ui.components.ButtonTone
@@ -114,7 +115,7 @@ fun FoodScanCameraScreen(
                 Box(
                     Modifier
                         .size(72.dp)
-                        .clip(RoundedCornerShape(999.dp))
+                        .clip(Radius.chip)
                         .background(c.primary)
                         .noRippleClickable(onClick = onCapture),
                 )
@@ -190,7 +191,12 @@ fun FoodScanAnalyzingScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
             ) {
-                Text("✦", style = Sadora.type.h2, color = c.secondary)
+                Icon(
+                    SadoraIcons.Sparkle,
+                    contentDescription = null,
+                    Modifier.size(22.dp),
+                    tint = c.secondary,
+                )
                 Column {
                     Text("Tahlil qilinmoqda…", style = Sadora.type.h3, color = c.text)
                     Text(

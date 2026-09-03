@@ -118,14 +118,14 @@ fun SadoraProgressBar(
         modifier
             .fillMaxWidth()
             .height(height)
-            .clip(RoundedCornerShape(999.dp))
+            .clip(Radius.chip)
             .background(c.surface2),
     ) {
         Box(
             Modifier
                 .fillMaxWidth(progress.coerceIn(0f, 1f))
                 .fillMaxHeight()
-                .clip(RoundedCornerShape(999.dp))
+                .clip(Radius.chip)
                 .then(
                     if (gradient) {
                         Modifier.background(Brush.horizontalGradient(listOf(c.secondary, c.primary)))
@@ -212,7 +212,7 @@ fun StackedBar(
         modifier
             .fillMaxWidth()
             .height(height)
-            .clip(RoundedCornerShape(999.dp)),
+            .clip(Radius.chip),
         horizontalArrangement = Arrangement.spacedBy(2.dp),
     ) {
         segments.forEach { (fraction, color) ->
@@ -220,7 +220,7 @@ fun StackedBar(
                 Modifier
                     .weight(fraction.coerceAtLeast(0.01f))
                     .fillMaxHeight()
-                    .clip(RoundedCornerShape(999.dp))
+                    .clip(Radius.chip)
                     .background(color),
             )
         }

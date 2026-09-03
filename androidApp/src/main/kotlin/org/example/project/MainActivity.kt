@@ -23,7 +23,11 @@ class MainActivity : ComponentActivity() {
             tokenStorage = AndroidTokenStorage(applicationContext),
             device = AndroidDeviceIdentity(applicationContext),
             environment = if (BuildConfig.DEBUG) {
-                SadoraEnvironment.development()
+                // DEV_HOST is empty unless the build passed -Psadora.devHost, so the
+                // ordinary debug build still points at the emulator's host loopback.
+                BuildConfig.DEV_HOST.takeIf { it.isNotEmpty() }
+                    ?.let(SadoraEnvironment::development)
+                    ?: SadoraEnvironment.development()
             } else {
                 SadoraEnvironment.Production
             },

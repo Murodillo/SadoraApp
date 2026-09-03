@@ -148,7 +148,7 @@ fun SadoraSwitch(
     Box(
         modifier
             .size(width = 46.dp, height = 28.dp)
-            .clip(RoundedCornerShape(999.dp))
+            .clip(Radius.chip)
             .background(track)
             .noRippleClickable { onCheckedChange(!checked) }
             .padding(3.dp),
@@ -157,7 +157,7 @@ fun SadoraSwitch(
         Box(
             Modifier
                 .size(22.dp)
-                .clip(RoundedCornerShape(999.dp))
+                .clip(Radius.chip)
                 .background(if (checked) c.onPrimary else c.muted),
         )
     }

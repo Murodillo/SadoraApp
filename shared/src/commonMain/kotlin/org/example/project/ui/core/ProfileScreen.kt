@@ -6,30 +6,32 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.rememberCoroutineScope
-import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
+import org.example.project.data.SadoraController
+import org.example.project.design.IconSize
 import org.example.project.design.Radius
 import org.example.project.design.Sadora
+import org.example.project.design.SadoraIcons
 import org.example.project.design.Spacing
-import org.example.project.data.SadoraController
 import org.example.project.model.AppState
 import org.example.project.nav.Route
 import org.example.project.ui.components.Avatar
 import org.example.project.ui.components.BadgeTone
 import org.example.project.ui.components.ButtonTone
-import org.example.project.ui.components.SadoraButton
 import org.example.project.ui.components.ChipFlowRow
 import org.example.project.ui.components.SadoraBadge
+import org.example.project.ui.components.SadoraButton
 import org.example.project.ui.components.SadoraCard
 import org.example.project.ui.components.SadoraTopBar
 import org.example.project.ui.components.ScreenContent
@@ -81,7 +83,12 @@ fun ProfileScreen(
                             )
                             Text(state.email, style = Sadora.type.body, color = c.muted)
                         }
-                        Text("›", style = Sadora.type.h3, color = c.muted2)
+                        Icon(
+    SadoraIcons.ChevronRight,
+    contentDescription = null,
+    Modifier.size(IconSize.md),
+    tint = c.muted2,
+)
                     }
                 }
             }
@@ -92,40 +99,46 @@ fun ProfileScreen(
 
             item {
                 SadoraCard(padding = Spacing.xs) {
-                    SettingsRow("◷", "Uyqu") { onOpen(Route.Sleep) }
-                    SettingsRow("☺", "Ong") { onOpen(Route.Mind) }
-                    SettingsRow("💊", "Dorilar") { onOpen(Route.Medications) }
-                    SettingsRow("◫", "Tahlillar") { onOpen(Route.Insights) }
-                    SettingsRow("✎", "Bilim") { onOpen(Route.Knowledge) }
+                    SettingsRow(SadoraIcons.Moon, "Uyqu") { onOpen(Route.Sleep) }
+                    SettingsRow(SadoraIcons.Bloom, "Ong") { onOpen(Route.Mind) }
+                    SettingsRow(SadoraIcons.Pill, "Dorilar") { onOpen(Route.Medications) }
+                    SettingsRow(SadoraIcons.Chart, "Tahlillar") { onOpen(Route.Insights) }
+                    SettingsRow(SadoraIcons.Book, "Bilim") { onOpen(Route.Knowledge) }
                 }
             }
 
             item {
                 SadoraCard(padding = Spacing.xs) {
-                    SettingsRow("◉", "Shaxsiy ma'lumotlar") { onOpen(Route.PersonalDetails) }
-                    SettingsRow("◎", "Maqsadlar") { onOpen(Route.GoalsSettings) }
+                    SettingsRow(SadoraIcons.Profile, "Shaxsiy ma'lumotlar") { onOpen(Route.PersonalDetails) }
+                    SettingsRow(SadoraIcons.Target, "Maqsadlar") { onOpen(Route.GoalsSettings) }
                     SettingsRow(
-                        "◔",
+                        SadoraIcons.Journey,
                         "Hayot bosqichi",
                         value = state.lifeStage.title,
                     ) { onOpen(Route.LifeStageSettings) }
-                    SettingsRow("⌚", "Ulangan qurilmalar", value = "2") {
+                    SettingsRow(SadoraIcons.Watch, "Ulangan qurilmalar", value = "2") {
                         onOpen(Route.DataSources)
                     }
-                    SettingsRow("🔔", "Bildirishnomalar") { onOpen(Route.Notifications) }
-                    SettingsRow("🔒", "Maxfiylik va xavfsizlik") { onOpen(Route.PrivacySecurity) }
+                    SettingsRow(SadoraIcons.Bell, "Bildirishnomalar") { onOpen(Route.Notifications) }
+                    SettingsRow(SadoraIcons.Lock, "Maxfiylik va xavfsizlik") { onOpen(Route.PrivacySecurity) }
                 }
             }
 
             item {
                 SadoraCard(padding = Spacing.xs) {
-                    SettingsRow("🌐", "Til", value = state.language.native) {}
+                    // Only Uzbek is written; a chevron would promise a screen that does not exist.
                     SettingsRow(
-                        if (state.darkTheme) "🌙" else "☀️",
+                        SadoraIcons.Globe,
+                        "Til",
+                        value = state.language.native,
+                        showChevron = false,
+                    )
+                    SettingsRow(
+                        if (state.darkTheme) SadoraIcons.Moon else SadoraIcons.Today,
                         "Mavzu",
                         value = if (state.darkTheme) "Qorong'i" else "Yorug'",
                     ) { state.darkTheme = !state.darkTheme }
-                    SettingsRow("ℹ", "SADORA haqida") { onOpen(Route.About) }
+                    SettingsRow(SadoraIcons.Info, "SADORA haqida") { onOpen(Route.About) }
                 }
             }
 
@@ -150,7 +163,7 @@ fun ProfileScreen(
 @Composable
 private fun PremiumStatusCard(state: AppState) {
     val c = Sadora.colors
-    val onGradient = if (c.isDark) c.bg else Color.White
+    val onGradient = c.onPrimary
     Column(
         Modifier
             .fillMaxWidth()
@@ -167,7 +180,7 @@ private fun PremiumStatusCard(state: AppState) {
             Text("SADORA PREMIUM", style = Sadora.type.caption, color = onGradient)
             androidx.compose.foundation.layout.Box(
                 Modifier
-                    .clip(RoundedCornerShape(999.dp))
+                    .clip(Radius.chip)
                     .background(onGradient.copy(alpha = 0.22f))
                     .padding(horizontal = Spacing.xs, vertical = 3.dp),
             ) {
@@ -181,7 +194,7 @@ private fun PremiumStatusCard(state: AppState) {
             listOf("AI chat", "Ovqat skaneri", "Kengaytirilgan tahlil").forEach { feature ->
                 androidx.compose.foundation.layout.Box(
                     Modifier
-                        .clip(RoundedCornerShape(999.dp))
+                        .clip(Radius.chip)
                         .background(onGradient.copy(alpha = 0.18f))
                         .padding(horizontal = Spacing.xs, vertical = 4.dp),
                 ) {
@@ -207,7 +220,12 @@ private fun UpgradeCard(onUpgrade: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
         ) {
-            Text("✦", style = Sadora.type.h1, color = c.secondary)
+            Icon(
+                SadoraIcons.Sparkle,
+                contentDescription = null,
+                Modifier.size(28.dp),
+                tint = c.secondary,
+            )
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text("SADORA Premium", style = Sadora.type.h3, color = c.text)
                 Text(
@@ -216,7 +234,12 @@ private fun UpgradeCard(onUpgrade: () -> Unit) {
                     color = c.muted,
                 )
             }
-            Text("›", style = Sadora.type.h3, color = c.muted2)
+            Icon(
+    SadoraIcons.ChevronRight,
+    contentDescription = null,
+    Modifier.size(IconSize.md),
+    tint = c.muted2,
+)
         }
     }
 }

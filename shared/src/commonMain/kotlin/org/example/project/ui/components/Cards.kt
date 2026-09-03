@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -23,12 +24,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
+import org.example.project.design.IconSize
 import org.example.project.design.MinTouchTarget
 import org.example.project.design.Radius
 import org.example.project.design.Sadora
+import org.example.project.design.SadoraIcons
 import org.example.project.design.Spacing
 
 /** The standard surface: 22dp radius, hairline border, no drop shadow in dark. */
@@ -103,7 +107,7 @@ fun SectionHeader(
  */
 @Composable
 fun SettingsRow(
-    icon: String,
+    icon: ImageVector,
     title: String,
     modifier: Modifier = Modifier,
     value: String? = null,
@@ -125,11 +129,23 @@ fun SettingsRow(
             Modifier.size(34.dp).clip(RoundedCornerShape(Radius.sm)).background(c.surface2),
             contentAlignment = Alignment.Center,
         ) {
-            Text(icon, style = Sadora.type.h3, color = iconTint ?: c.secondary)
+            Icon(
+                icon,
+                contentDescription = null,
+                Modifier.size(IconSize.md),
+                tint = iconTint ?: c.secondary,
+            )
         }
         Text(title, style = Sadora.type.h3, color = c.text, modifier = Modifier.weight(1f))
         if (value != null) Text(value, style = Sadora.type.body, color = c.muted)
-        if (showChevron) Text("›", style = Sadora.type.h3, color = c.muted2)
+        if (showChevron) {
+            Icon(
+                SadoraIcons.ChevronRight,
+                contentDescription = null,
+                Modifier.size(IconSize.md),
+                tint = c.muted2,
+            )
+        }
     }
 }
 
@@ -199,7 +215,7 @@ fun ImagePlaceholder(
             ),
         contentAlignment = Alignment.Center,
     ) {
-        Text(label, style = Sadora.type.caption, color = Color.White.copy(alpha = 0.85f))
+        Text(label, style = Sadora.type.caption, color = c.onPrimary.copy(alpha = 0.85f))
     }
 }
 
@@ -213,13 +229,18 @@ fun AiSummaryCard(
     label: String = "SADORA AI · KUNLIK XULOSA",
     footnote: String = "Ma'lumotlaringiz asosida · AI tomonidan yaratilgan",
     showPremiumBadge: Boolean = true,
+    /** Opens the full AI chat. This card is the way in now that AI has no tab. */
+    onClick: (() -> Unit)? = null,
 ) {
     val c = Sadora.colors
-    val onGradient = if (c.isDark) c.bg else Color.White
+    val onGradient = c.onPrimary
     Column(
         modifier = modifier
             .fillMaxWidth()
             .clip(Radius.card)
+            .then(
+                if (onClick != null) Modifier.noRippleClickable(onClick = onClick) else Modifier,
+            )
             .background(Brush.linearGradient(listOf(c.secondary, c.primary)))
             .padding(Spacing.md),
         verticalArrangement = Arrangement.spacedBy(Spacing.xs),
@@ -237,7 +258,7 @@ fun AiSummaryCard(
             Spacer(Modifier.weight(1f))
             if (showPremiumBadge) {
                 Box(
-                    Modifier.clip(RoundedCornerShape(999.dp))
+                    Modifier.clip(Radius.chip)
                         .background(onGradient.copy(alpha = 0.2f))
                         .padding(horizontal = Spacing.xs, vertical = 3.dp),
                 ) {
