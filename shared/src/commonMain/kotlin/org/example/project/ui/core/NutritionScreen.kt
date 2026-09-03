@@ -9,14 +9,17 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
+import org.example.project.design.IconSize
 import org.example.project.design.Radius
 import org.example.project.design.Sadora
+import org.example.project.design.SadoraIcons
 import org.example.project.design.Spacing
 import org.example.project.model.AppState
 import org.example.project.model.Fmt
@@ -57,7 +60,7 @@ fun NutritionScreen(
                 Box(
                     Modifier
                         .size(40.dp)
-                        .clip(RoundedCornerShape(999.dp))
+                        .clip(Radius.chip)
                         .background(c.surface2)
                         .noRippleClickable { onOpen(Route.FoodScanCamera) },
                     contentAlignment = Alignment.Center,
@@ -174,7 +177,12 @@ fun NutritionScreen(
                                 color = c.muted,
                             )
                         }
-                        Text("›", style = Sadora.type.h3, color = c.muted2)
+                        Icon(
+    SadoraIcons.ChevronRight,
+    contentDescription = null,
+    Modifier.size(IconSize.md),
+    tint = c.muted2,
+)
                     }
                 }
             }

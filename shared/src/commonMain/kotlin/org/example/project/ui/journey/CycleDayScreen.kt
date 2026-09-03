@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -153,7 +152,7 @@ private fun LoggedLine(emoji: String, text: String) {
         horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
     ) {
         Box(
-            Modifier.clip(RoundedCornerShape(999.dp)).background(c.surface2).padding(6.dp),
+            Modifier.clip(Radius.chip).background(c.surface2).padding(6.dp),
         ) {
             Text(emoji, style = Sadora.type.body)
         }

@@ -1,5 +1,6 @@
 package org.example.project.ui.onboarding
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -9,34 +10,53 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.union
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.foundation.background
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import org.example.project.data.AuthDestination
+import org.example.project.data.SadoraController
 import org.example.project.design.Radius
 import org.example.project.design.Sadora
+import org.example.project.design.SadoraIcons
 import org.example.project.design.Spacing
 import org.example.project.model.AppLanguage
 import org.example.project.model.AppState
 import org.example.project.model.Goal
 import org.example.project.model.LifeStage
+import org.example.project.nav.AppPhase
 import org.example.project.ui.components.ButtonTone
 import org.example.project.ui.components.ChipFlowRow
 import org.example.project.ui.components.ConsentRow
@@ -51,6 +71,8 @@ import org.example.project.ui.components.SadoraTopBar
 import org.example.project.ui.components.SelectChip
 import org.example.project.ui.components.TabSwitch
 import org.example.project.ui.components.noRippleClickable
+import uz.sadora.contract.AuthProvider
+import uz.sadora.contract.OtpChallenge
 
 /** Shared layout for a numbered onboarding step: header, body, pinned footer. */
 @Composable
@@ -63,7 +85,11 @@ private fun StepScaffold(
     content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit,
 ) {
     val c = Sadora.colors
-    Column(Modifier.fillMaxSize()) {
+    // The activity draws edge to edge, so the status and navigation bars sit over the
+    // content unless the scaffold makes room. Without this the footer button lands
+    // underneath the navigation bar and onboarding cannot be finished at all on a device
+    // with the three-button layout.
+    Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
         SadoraTopBar(title = "", onBack = onBack, step = step)
         Column(
             Modifier
@@ -89,297 +115,10 @@ private fun StepScaffold(
     }
 }
 
-// ---------------------------------------------------------------- splash
-
-/**
- * Splash. The wordmark breathes and the progress line animates while the app
- * restores session state.
- */
-@Composable
-fun SplashScreen(onReady: () -> Unit, modifier: Modifier = Modifier) {
-    val c = Sadora.colors
-    LaunchedEffect(Unit) {
-        delay(1400)
-        onReady()
-    }
-    Column(
-        modifier
-            .fillMaxSize()
-            .padding(Spacing.xl),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Box(
-            Modifier
-                .size(76.dp)
-                .clip(RoundedCornerShape(26.dp))
-                .background(androidx.compose.ui.graphics.Brush.linearGradient(listOf(c.secondary, c.primary))),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text("✦", style = Sadora.type.display, color = if (c.isDark) c.bg else androidx.compose.ui.graphics.Color.White)
-        }
-        Spacer(Modifier.height(Spacing.md))
-        Text(
-            "SADORA",
-            style = Sadora.type.h1.copy(letterSpacing = androidx.compose.ui.unit.TextUnit(0.28f, androidx.compose.ui.unit.TextUnitType.Em)),
-            color = c.text,
-        )
-        Spacer(Modifier.height(Spacing.xs))
-        Text("HAR BIR AYOL. HAR BIR LAHZA.", style = Sadora.type.caption, color = c.secondary)
-        Spacer(Modifier.height(Spacing.xl))
-        org.example.project.ui.components.SadoraProgressBar(0.6f, gradient = true, height = 4.dp)
-        Spacer(Modifier.height(Spacing.sm))
-        Text("Ma'lumotlar yuklanmoqda…", style = Sadora.type.body, color = c.muted)
-    }
-}
-
-// ---------------------------------------------------------------- intro
-
-private data class IntroContent(
-    val title: String,
-    val body: String,
-    val primary: String,
-    val secondary: String,
-)
-
-private val introSlides = listOf(
-    IntroContent(
-        "Har bir ayol. Har bir lahza.",
-        "Sikl, homiladorlik, menopauza, uyqu, ovqatlanish va kayfiyat — bir joyda, sizga moslashgan holda.",
-        "Davom etish",
-        "O'tkazib yuborish",
-    ),
-    IntroContent(
-        "Raqamlarni tushunadigan yordamchi",
-        "SADORA AI ma'lumotlaringizni o'qib, bugun nima muhim ekanini oddiy tilda aytadi.",
-        "Davom etish",
-        "O'tkazib yuborish",
-    ),
-    IntroContent(
-        "Ma'lumot sizniki",
-        "Nimani yozish va nimani ulashishni o'zingiz tanlaysiz. Istalgan vaqtda eksport yoki o'chirish mumkin.",
-        "Boshlash",
-        "Hisobim bor",
-    ),
-)
-
-@Composable
-fun IntroSlide(index: Int, onNext: () -> Unit, onSkip: () -> Unit, modifier: Modifier = Modifier) {
-    val c = Sadora.colors
-    val slide = introSlides[index]
-    Column(
-        modifier.fillMaxSize().padding(horizontal = Spacing.screen),
-        verticalArrangement = Arrangement.spacedBy(Spacing.md),
-    ) {
-        Spacer(Modifier.height(Spacing.xs))
-        ImagePlaceholder(
-            Modifier.fillMaxWidth().aspectRatio(1.05f),
-            shape = Radius.card,
-        )
-        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            repeat(introSlides.size) { dot ->
-                Box(
-                    Modifier
-                        .size(width = if (dot == index) 22.dp else 7.dp, height = 7.dp)
-                        .clip(RoundedCornerShape(999.dp))
-                        .background(if (dot == index) c.primary else c.line),
-                )
-            }
-        }
-        Text(slide.title, style = Sadora.type.h1, color = c.text)
-        Text(slide.body, style = Sadora.type.body, color = c.muted)
-        Spacer(Modifier.weight(1f))
-        SadoraButton(slide.primary, onNext)
-        SadoraButton(slide.secondary, onSkip, tone = ButtonTone.Ghost)
-        Spacer(Modifier.height(Spacing.md))
-    }
-}
-
-// ---------------------------------------------------------------- 1/9 language
-
-@Composable
-fun LanguageStep(state: AppState, step: String?, onBack: () -> Unit, onNext: () -> Unit) {
-    StepScaffold(
-        title = "Tilni tanlang",
-        subtitle = "Keyinroq Profil bo'limida o'zgartirishingiz mumkin.",
-        step = step,
-        onBack = onBack,
-        footer = { SadoraButton("Davom etish", onNext) },
-    ) {
-        AppLanguage.entries.forEach { language ->
-            OptionRow(
-                title = language.native,
-                subtitle = language.english,
-                leading = language.code,
-                selected = state.language == language,
-                onClick = { state.language = language },
-            )
-        }
-    }
-}
-
-// ---------------------------------------------------------------- 2/9 sign up
-
-@Composable
-fun SignUpStep(
-    state: AppState,
-    step: String?,
-    onBack: () -> Unit,
-    onNext: () -> Unit,
-    onSignInInstead: () -> Unit,
-) {
-    val c = Sadora.colors
-    var method by remember { mutableStateOf(0) }
-    var agreed by remember { mutableStateOf(true) }
-
-    StepScaffold(
-        title = "Hisob yaratish",
-        subtitle = "Ma'lumotlaringiz shifrlangan holda saqlanadi.",
-        step = step,
-        onBack = onBack,
-        footer = {
-            SadoraButton("Kodni yuborish", onNext, enabled = agreed)
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Hisobim bor · ", style = Sadora.type.body, color = c.muted)
-                Text(
-                    "Kirish",
-                    style = Sadora.type.body.copy(fontWeight = FontWeight.SemiBold),
-                    color = c.textAccent,
-                    modifier = Modifier.noRippleClickable(onClick = onSignInInstead),
-                )
-            }
-        },
-    ) {
-        SadoraButton("Apple bilan davom etish", onNext, tone = ButtonTone.Secondary, leading = "")
-        SadoraButton("Google bilan davom etish", onNext, tone = ButtonTone.Secondary, leading = "G")
-
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.weight(1f).height(1.dp).background(c.line))
-            Text("  yoki  ", style = Sadora.type.body, color = c.muted)
-            Box(Modifier.weight(1f).height(1.dp).background(c.line))
-        }
-
-        TabSwitch(listOf("Telefon", "E-mail"), method, { method = it })
-
-        if (method == 0) {
-            SadoraTextField(
-                value = state.phone,
-                onValueChange = { state.phone = it },
-                leading = "+998",
-                placeholder = "90 123 45 67",
-                keyboardType = KeyboardType.Phone,
-            )
-        } else {
-            SadoraTextField(
-                value = state.email,
-                onValueChange = { state.email = it },
-                placeholder = "siz@example.com",
-                keyboardType = KeyboardType.Email,
-            )
-        }
-
-        Row(
-            verticalAlignment = Alignment.Top,
-            horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
-        ) {
-            SadoraCheckbox(agreed, { agreed = it })
-            Text(
-                "Foydalanish shartlari va Maxfiylik siyosati ga roziman",
-                style = Sadora.type.body,
-                color = c.muted,
-            )
-        }
-    }
-}
-
-// ---------------------------------------------------------------- 3/9 OTP
-
-@Composable
-fun OtpStep(state: AppState, step: String?, onBack: () -> Unit, onNext: () -> Unit) {
-    val c = Sadora.colors
-    var code by remember { mutableStateOf("482") }
-    var secondsLeft by remember { mutableStateOf(42) }
-    var attemptsLeft by remember { mutableStateOf(3) }
-    var showError by remember { mutableStateOf(false) }
-
-    LaunchedEffect(secondsLeft) {
-        if (secondsLeft > 0) {
-            delay(1000)
-            secondsLeft--
-        }
-    }
-
-    StepScaffold(
-        title = "Kodni kiriting",
-        subtitle = "+998 ${state.phone} raqamiga 6 xonali kod yubordik.",
-        step = step,
-        onBack = onBack,
-        footer = {
-            SadoraButton(
-                "Tasdiqlash",
-                onClick = {
-                    if (code.length == 6) {
-                        onNext()
-                    } else {
-                        showError = true
-                        attemptsLeft = (attemptsLeft - 1).coerceAtLeast(0)
-                    }
-                },
-                enabled = code.isNotEmpty(),
-            )
-        },
-    ) {
-        OtpInput(code, isError = showError)
-
-        // Digit pad kept simple: the design shows a partially entered code.
-        Row(
-            Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                "Qayta yuborish",
-                style = Sadora.type.body.copy(fontWeight = FontWeight.SemiBold),
-                color = if (secondsLeft == 0) c.textAccent else c.muted2,
-                modifier = Modifier.noRippleClickable(enabled = secondsLeft == 0) {
-                    secondsLeft = 42
-                    showError = false
-                },
-            )
-            Text(
-                "00:" + secondsLeft.toString().padStart(2, '0'),
-                style = Sadora.type.body,
-                color = c.muted,
-            )
-        }
-
-        if (showError) {
-            org.example.project.ui.components.ErrorStrip(
-                "Kod noto'g'ri. Yana $attemptsLeft marta urinish mumkin.",
-            )
-        }
-
-        DisclaimerNote(
-            "Kodni hech kimga aytmang. SADORA xodimlari kodni so'ramaydi.",
-            icon = "🔒",
-        )
-
-        NumberPad(
-            onDigit = {
-                if (code.length < 6) code += it
-                showError = false
-            },
-            onDelete = {
-                code = code.dropLast(1)
-                showError = false
-            },
-        )
-    }
-}
 
 /** Numeric keypad for the OTP step. */
 @Composable
-private fun NumberPad(onDigit: (String) -> Unit, onDelete: () -> Unit) {
+internal fun NumberPad(onDigit: (String) -> Unit, onDelete: () -> Unit) {
     val c = Sadora.colors
     val rows = listOf(
         listOf("1", "2", "3"),
@@ -413,195 +152,11 @@ private fun NumberPad(onDigit: (String) -> Unit, onDelete: () -> Unit) {
     }
 }
 
-// ---------------------------------------------------------------- 4/9 personal
-
-@Composable
-fun PersonalStep(state: AppState, step: String?, onBack: () -> Unit, onNext: () -> Unit) {
-    val c = Sadora.colors
-    StepScaffold(
-        title = "Siz haqingizda",
-        subtitle = "Bu ma'lumotlar hisob-kitoblarni aniqroq qiladi.",
-        step = step,
-        onBack = onBack,
-        footer = {
-            SadoraButton("Davom etish", onNext)
-            SadoraButton("Hozircha o'tkazib yuborish", onNext, tone = ButtonTone.Ghost)
-        },
-    ) {
-        SadoraTextField(state.name, { state.name = it }, label = "Ism", placeholder = "Ismingiz")
-        SadoraTextField(
-            state.birthDate,
-            { state.birthDate = it },
-            label = "Tug'ilgan sana",
-            trailing = "▾",
-            keyboardType = KeyboardType.Number,
-        )
-        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-            SadoraTextField(
-                state.heightCm,
-                { state.heightCm = it },
-                label = "Bo'y",
-                suffix = "sm",
-                keyboardType = KeyboardType.Number,
-                modifier = Modifier.weight(1f),
-            )
-            SadoraTextField(
-                state.weightKg,
-                { state.weightKg = it },
-                label = "Vazn",
-                suffix = "kg",
-                keyboardType = KeyboardType.Number,
-                modifier = Modifier.weight(1f),
-            )
-        }
-        Text(
-            "Vazn ixtiyoriy va hech qachon boshqalarga ko'rsatilmaydi.",
-            style = Sadora.type.body,
-            color = c.muted,
-        )
-    }
-}
-
-// ---------------------------------------------------------------- 5/9 goals
-
-@Composable
-fun GoalsStep(state: AppState, step: String?, onBack: () -> Unit, onNext: () -> Unit) {
-    val c = Sadora.colors
-    StepScaffold(
-        title = "Maqsadlaringiz",
-        subtitle = "Bir nechtasini tanlang.",
-        step = step,
-        onBack = onBack,
-        footer = {
-            Text(
-                "${state.goals.size} tanlandi",
-                style = Sadora.type.body,
-                color = c.muted,
-                modifier = Modifier.padding(bottom = Spacing.xxs),
-            )
-            SadoraButton("Davom etish", onNext, enabled = state.goals.isNotEmpty())
-        },
-    ) {
-        ChipFlowRow {
-            Goal.entries.forEach { goal ->
-                SelectChip(
-                    label = goal.label,
-                    selected = goal in state.goals,
-                    onClick = { state.toggleGoal(goal) },
-                )
-            }
-        }
-    }
-}
-
-// ---------------------------------------------------------------- 6/9 life stage
-
-@Composable
-fun LifeStageStep(state: AppState, step: String?, onBack: () -> Unit, onNext: () -> Unit) {
-    StepScaffold(
-        title = "Hayot bosqichi",
-        subtitle = "Keyingi ekranlar shu tanlovga qarab shartli ko'rsatiladi.",
-        step = step,
-        onBack = onBack,
-        footer = { SadoraButton("Davom etish", onNext) },
-    ) {
-        LifeStage.entries.forEach { stage ->
-            OptionRow(
-                title = stage.title,
-                subtitle = stage.subtitle,
-                leading = stage.glyph,
-                selected = state.lifeStage == stage,
-                onClick = { state.lifeStage = stage },
-            )
-        }
-    }
-}
-
-// ---------------------------------------------------------------- 7/9 permissions
-
-@Composable
-fun PermissionsStep(state: AppState, step: String?, onBack: () -> Unit, onNext: () -> Unit) {
-    StepScaffold(
-        title = "Ruxsatlar",
-        subtitle = "Har birini keyinroq o'zgartirishingiz mumkin.",
-        step = step,
-        onBack = onBack,
-        footer = {
-            SadoraButton("Ruxsat berish", onNext)
-            SadoraButton("Hozir emas", onNext, tone = ButtonTone.Ghost)
-        },
-    ) {
-        OptionRow(
-            title = "Bildirishnomalar",
-            subtitle = "Dori vaqti, hayz eslatmasi",
-            leading = "🔔",
-            selected = state.notificationsAllowed,
-            onClick = { state.notificationsAllowed = !state.notificationsAllowed },
-        )
-        OptionRow(
-            title = "Salomatlik ma'lumotlari",
-            subtitle = "Qadamlar, uyqu, puls",
-            leading = "⌚",
-            selected = state.healthDataAllowed,
-            onClick = { state.healthDataAllowed = !state.healthDataAllowed },
-        )
-        OptionRow(
-            title = "Kamera",
-            subtitle = "Ovqat skaneri uchun",
-            leading = "📷",
-            selected = state.cameraAllowed,
-            onClick = { state.cameraAllowed = !state.cameraAllowed },
-        )
-        DisclaimerNote(
-            "Ruxsat bermasangiz ham ilova to'liq ishlaydi — ma'lumotni qo'lda kiritish mumkin.",
-        )
-    }
-}
-
-// ---------------------------------------------------------------- 8/9 privacy
-
-@Composable
-fun PrivacyStep(state: AppState, step: String?, onBack: () -> Unit, onNext: () -> Unit) {
-    val c = Sadora.colors
-    StepScaffold(
-        title = "Maxfiylik va rozilik",
-        subtitle = "Nimaga rozilik berishni o'zingiz tanlaysiz.",
-        step = step,
-        onBack = onBack,
-        footer = {
-            SadoraButton("Qabul qilaman", onNext, enabled = state.consentStoreHealth)
-            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.md)) {
-                Text("Maxfiylik siyosati", style = Sadora.type.body, color = c.textAccent)
-                Text("Shartlar", style = Sadora.type.body, color = c.textAccent)
-            }
-        },
-    ) {
-        ConsentRow(
-            title = "Salomatlik ma'lumotlarini saqlash",
-            body = "Ilova ishlashi uchun zarur. Ma'lumot shifrlangan holda saqlanadi.",
-            checked = state.consentStoreHealth,
-            onCheckedChange = { state.consentStoreHealth = it },
-            required = true,
-        )
-        ConsentRow(
-            title = "AI xulosalar uchun ishlatish",
-            body = "Shaxsiy xulosa va tavsiyalar tayyorlash uchun.",
-            checked = state.consentAiInsights,
-            onCheckedChange = { state.consentAiInsights = it },
-        )
-        ConsentRow(
-            title = "Anonim analitika",
-            body = "Ixtiyoriy. Ilovani yaxshilashga yordam beradi.",
-            checked = state.consentAnalytics,
-            onCheckedChange = { state.consentAnalytics = it },
-        )
-    }
-}
 
 // ---------------------------------------------------------------- ready
 
 @Composable
-fun ReadyStep(state: AppState, onEnter: () -> Unit) {
+fun ReadyStep(state: AppState, controller: SadoraController, onEnter: () -> Unit) {
     val c = Sadora.colors
     Column(
         Modifier.fillMaxSize().padding(horizontal = Spacing.screen),
@@ -611,13 +166,15 @@ fun ReadyStep(state: AppState, onEnter: () -> Unit) {
         Box(
             Modifier
                 .size(72.dp)
-                .clip(RoundedCornerShape(999.dp))
+                .clip(Radius.chip)
                 .background(c.success.copy(alpha = 0.16f)),
             contentAlignment = Alignment.Center,
         ) {
             Text("✓", style = Sadora.type.display, color = c.success)
         }
-        Text("Hammasi tayyor, ${state.name}", style = Sadora.type.h1, color = c.text)
+        val greeting = state.name.trim()
+            .let { if (it.isEmpty()) "Hammasi tayyor" else "Hammasi tayyor, $it" }
+        Text(greeting, style = Sadora.type.h1, color = c.text)
         Text(
             "Bugun ekranini siklingiz, maqsadlaringiz va ulangan qurilmalaringiz asosida sozladik.",
             style = Sadora.type.body,
@@ -629,7 +186,12 @@ fun ReadyStep(state: AppState, onEnter: () -> Unit) {
             SummaryLine("${state.goals.size} maqsad belgilandi")
         }
         Spacer(Modifier.weight(1f))
-        SadoraButton("SADORA'ga kirish", onEnter)
+        controller.error?.let { org.example.project.ui.components.ErrorStrip(it) }
+        SadoraButton(
+            if (controller.busy) "Saqlanmoqda…" else "SADORA'ga kirish",
+            onEnter,
+            enabled = !controller.busy,
+        )
         Spacer(Modifier.height(Spacing.md))
     }
 }
@@ -651,17 +213,85 @@ private fun SummaryLine(text: String) {
 @Composable
 fun SignInScreen(
     state: AppState,
-    onSignedIn: () -> Unit,
+    controller: SadoraController,
+    onSignedIn: (AppPhase) -> Unit,
     onRegisterInstead: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val c = Sadora.colors
-    var password by remember { mutableStateOf("") }
-    var rememberMe by remember { mutableStateOf(true) }
+    val scope = rememberCoroutineScope()
+    val focus = LocalFocusManager.current
+
+    // Signing in is the same phone-and-code exchange as signing up: verifying a code for
+    // a number the backend already knows returns that account. There is no password to
+    // hold, and nothing for a user who signed up by phone to have forgotten.
+    var challenge by remember { mutableStateOf<OtpChallenge?>(null) }
+    var awaitingCode by remember { mutableStateOf(false) }
+    var code by remember(challenge) { mutableStateOf(challenge?.devCode.orEmpty()) }
+    var secondsLeft by remember(challenge) { mutableStateOf(challenge?.resendAfterSeconds ?: 42) }
+
+    LaunchedEffect(secondsLeft, awaitingCode) {
+        if (awaitingCode && secondsLeft > 0) {
+            delay(1000)
+            secondsLeft--
+        }
+    }
+
+    fun finish(destination: AuthDestination) {
+        onSignedIn(
+            if (destination == AuthDestination.Main) AppPhase.Main else AppPhase.Onboarding,
+        )
+    }
+
+    fun sendCode() {
+        scope.launch {
+            controller.requestOtp(state.phone)?.let {
+                challenge = it
+                awaitingCode = true
+            }
+        }
+    }
+
+    if (awaitingCode) {
+        // The same page the sign-up flow uses, with the progress bar already full —
+        // one code entry to keep correct rather than two that drift apart.
+        OtpQuestion(
+            phone = state.phone,
+            code = code,
+            onCode = {
+                code = it
+                controller.clearError()
+            },
+            busy = controller.busy,
+            error = controller.error,
+            secondsLeft = secondsLeft,
+            progress = 1f,
+            onBack = {
+                controller.clearError()
+                awaitingCode = false
+            },
+            onVerify = {
+                val challengeId = challenge?.challengeId
+                scope.launch {
+                    if (challengeId == null) {
+                        finish(AuthDestination.Onboarding)
+                    } else {
+                        controller.verifyOtp(challengeId, code)?.let(::finish)
+                    }
+                }
+            },
+            onResend = ::sendCode,
+        )
+        return
+    }
 
     Column(
         modifier
             .fillMaxSize()
+            // Same two fixes as the onboarding questions: the content lifts above the
+            // keyboard, and a tap on the empty space around the field dismisses it.
+            .windowInsetsPadding(WindowInsets.navigationBars.union(WindowInsets.ime))
+            .pointerInput(Unit) { detectTapGestures { focus.clearFocus() } }
             .verticalScroll(rememberScrollState())
             .padding(horizontal = Spacing.screen),
         verticalArrangement = Arrangement.spacedBy(Spacing.md),
@@ -671,55 +301,77 @@ fun SignInScreen(
             Modifier
                 .size(56.dp)
                 .clip(RoundedCornerShape(Radius.lg))
-                .background(androidx.compose.ui.graphics.Brush.linearGradient(listOf(c.secondary, c.primary))),
+                .background(Brush.linearGradient(listOf(c.secondary, c.primary))),
             contentAlignment = Alignment.Center,
         ) {
-            Text("✦", style = Sadora.type.h1, color = if (c.isDark) c.bg else androidx.compose.ui.graphics.Color.White)
+            Icon(
+                SadoraIcons.Sparkle,
+                contentDescription = null,
+                Modifier.size(28.dp),
+                tint = c.onPrimary,
+            )
         }
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text("Xush kelibsiz", style = Sadora.type.h1, color = c.text)
-            Text("Hisobingizga kirib davom eting", style = Sadora.type.body, color = c.muted)
+            Text("Raqamingizga kod yuboramiz", style = Sadora.type.body, color = c.muted)
         }
+
         SadoraTextField(
-            state.phone,
-            { state.phone = it },
+            value = state.phone,
+            onValueChange = {
+                state.phone = it
+                controller.clearError()
+            },
             label = "Telefon raqami",
             leading = "+998",
+            placeholder = "90 123 45 67",
             keyboardType = KeyboardType.Phone,
+            imeAction = ImeAction.Done,
+            keyboardActions = KeyboardActions(onDone = { focus.clearFocus() }),
         )
-        SadoraTextField(
-            password,
-            { password = it },
-            label = "Parol",
-            placeholder = "••••••••",
-            isPassword = true,
-            trailing = "◡",
-            keyboardType = KeyboardType.Password,
+
+        controller.error?.let { org.example.project.ui.components.ErrorStrip(it) }
+
+        SadoraButton(
+            if (controller.busy) "Yuborilmoqda…" else "Kodni yuborish",
+            onClick = ::sendCode,
+            // Nine digits is a complete Uzbek number; the server normalises the spacing.
+            enabled = state.phone.count { it.isDigit() } >= 9 && !controller.busy,
         )
-        Row(
-            Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
-            ) {
-                SadoraCheckbox(rememberMe, { rememberMe = it })
-                Text("Eslab qolish", style = Sadora.type.body, color = c.text)
-            }
-            Text("Parolni tikladingizmi?", style = Sadora.type.body, color = c.textAccent)
-        }
-        SadoraButton("Kirish", onSignedIn)
+
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.weight(1f).height(1.dp).background(c.line))
             Text("  yoki  ", style = Sadora.type.body, color = c.muted)
             Box(Modifier.weight(1f).height(1.dp).background(c.line))
         }
+
         Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-            SadoraButton("Google", onSignedIn, tone = ButtonTone.Secondary, leading = "G", modifier = Modifier.weight(1f))
-            SadoraButton("Face ID", onSignedIn, tone = ButtonTone.Secondary, leading = "☉", modifier = Modifier.weight(1f))
+            SadoraButton(
+                "Apple",
+                tone = ButtonTone.Secondary,
+                leading = "",
+                enabled = !controller.busy,
+                modifier = Modifier.weight(1f),
+                onClick = {
+                    scope.launch {
+                        controller.signInWithSocial(AuthProvider.APPLE, "")?.let(::finish)
+                    }
+                },
+            )
+            SadoraButton(
+                "Google",
+                tone = ButtonTone.Secondary,
+                leading = "G",
+                enabled = !controller.busy,
+                modifier = Modifier.weight(1f),
+                onClick = {
+                    scope.launch {
+                        controller.signInWithSocial(AuthProvider.GOOGLE, "")?.let(::finish)
+                    }
+                },
+            )
         }
+
         Row(
             Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.Center,

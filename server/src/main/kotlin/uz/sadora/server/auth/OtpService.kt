@@ -50,7 +50,9 @@ class OtpService(
             )
         }
 
-        val code = randomNumericCode(config.codeLength)
+        // A fixed code is a dev convenience so a tester on a real phone can type the
+        // same digits every time; AppConfig refuses it outside development.
+        val code = config.fixedCode ?: randomNumericCode(config.codeLength)
         val challengeId = Uuid.random()
         val expiresAt = now() + config.ttl
 

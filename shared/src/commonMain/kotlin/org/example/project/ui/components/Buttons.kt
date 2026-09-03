@@ -11,7 +11,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -23,8 +24,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import org.example.project.design.IconSize
 import org.example.project.design.MinTouchTarget
 import org.example.project.design.Radius
 import org.example.project.design.Sadora
@@ -44,6 +47,8 @@ fun SadoraButton(
     tone: ButtonTone = ButtonTone.Primary,
     enabled: Boolean = true,
     leading: String? = null,
+    /** Preferred over [leading]: a vector follows the button's content colour. */
+    icon: ImageVector? = null,
     fillWidth: Boolean = true,
 ) {
     val c = Sadora.colors
@@ -85,7 +90,9 @@ fun SadoraButton(
             horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            if (leading != null) {
+            if (icon != null) {
+                Icon(icon, contentDescription = null, Modifier.size(IconSize.md), tint = content)
+            } else if (leading != null) {
                 Text(leading, color = content, style = Sadora.type.h3)
             }
             Text(
@@ -126,7 +133,7 @@ fun PremiumCtaButton(
     ) {
         Text(
             text = text,
-            color = if (c.isDark) c.bg else Color.White,
+            color = c.onPrimary,
             style = Sadora.type.h3.copy(fontWeight = FontWeight.Bold),
         )
     }
@@ -145,13 +152,21 @@ fun PillButton(
     val fg = if (tone == ButtonTone.Primary) c.onPrimary else c.text
     Box(
         modifier = modifier
-            .clip(RoundedCornerShape(999.dp))
+            .clip(Radius.chip)
             .background(bg)
             .defaultMinSize(minHeight = 36.dp)
             .noRippleClickable(onClick = onClick)
             .padding(horizontal = 14.dp, vertical = Spacing.xs),
         contentAlignment = Alignment.Center,
     ) {
-        Text(text, color = fg, style = Sadora.type.body.copy(fontWeight = FontWeight.SemiBold))
+        // A pill is sized to its label; wrapping it onto a second line is always a
+        // layout bug at the call site, so it never wraps here.
+        Text(
+            text,
+            color = fg,
+            style = Sadora.type.body.copy(fontWeight = FontWeight.SemiBold),
+            maxLines = 1,
+            softWrap = false,
+        )
     }
 }

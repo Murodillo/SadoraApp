@@ -4,14 +4,18 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.vector.ImageVector
+import org.example.project.design.SadoraIcons
 
 /** The five root destinations. */
-enum class Tab(val glyph: String, val label: String) {
-    Today("◆", "Bugun"),
-    Journey("◔", "Sikl"),
-    Ai("✦", "AI"),
-    Nutrition("◍", "Ovqat"),
-    Profile("◯", "Profil"),
+enum class Tab(val icon: ImageVector, val label: String) {
+    Today(SadoraIcons.Today, "Bugun"),
+    Journey(SadoraIcons.Journey, "Sikl"),
+
+    /** The raised centre button. Anonymous, which is why it is a lock and not a chat bubble. */
+    Chat(SadoraIcons.Lock, "Maxfiy"),
+    Nutrition(SadoraIcons.Nutrition, "Ovqat"),
+    Profile(SadoraIcons.Profile, "Profil"),
 }
 
 /** Screens pushed on top of a tab. */
@@ -57,6 +61,10 @@ sealed interface Route {
     data object Notifications : Route
     data object PrivacySecurity : Route
     data object About : Route
+
+    // Legal
+    data object Terms : Route
+    data object PrivacyPolicy : Route
 }
 
 /** Where the app is before the main tabs take over. */

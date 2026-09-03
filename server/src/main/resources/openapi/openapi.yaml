@@ -1,0 +1,2446 @@
+openapi: 3.0.3
+info:
+  title: SADORA API
+  version: 0.1.0
+  description: |
+    SADORA — ayollar wellbeing platformasi. Sprint 1 qamrovi: autentifikatsiya,
+    profil va onboarding, entitlements va limitlar, feature flags, admin panel API'si.
+
+    Umumiy qoidalar:
+      * Barcha javoblar `application/json`.
+      * Xatolik doim `{ "error": { "code", "message", "details", "requestId" } }` ko'rinishida.
+        Mijoz `code` bo'yicha shoxlanadi, `message` matniga tayanmaydi.
+      * Vaqt qiymatlari ISO-8601 UTC instant (`2026-08-27T09:15:00Z`), sanalar `YYYY-MM-DD`.
+      * Har bir javobda `X-Request-Id` sarlavhasi bor; xatolik hisobotlarida shuni yuboring.
+servers:
+  - url: http://localhost:8080
+    description: Local
+  - url: https://api.stage.sadora.uz
+    description: Stage
+  - url: https://api.sadora.uz
+    description: Production
+
+tags:
+  - name: Health
+  - name: Auth
+  - name: Profile
+  - name: Entitlements
+  - name: Cycle
+  - name: Mind
+  - name: Nutrition
+  - name: Meds
+  - name: Notifications
+  - name: Wearables
+  - name: Admin
+
+paths:
+  /health/live:
+    get:
+      tags: [Health]
+      summary: Jarayon ishlayaptimi (bazaga tegmaydi)
+      responses:
+        "200": { $ref: "#/components/responses/Health" }
+
+  /health/ready:
+    get:
+      tags: [Health]
+      summary: Trafik qabul qilishga tayyormi (bazani ham tekshiradi)
+      responses:
+        "200": { $ref: "#/components/responses/Health" }
+        "503": { $ref: "#/components/responses/Health" }
+
+  /v1/auth/otp/request:
+    post:
+      tags: [Auth]
+      summary: Telefonga OTP kod yuborish
+      description: |
+        Telefon raqami E.164 ga normallashtiriladi. Bir raqamga soatiga
+        `OTP_MAX_PER_HOUR` martadan ko'p yuborilmaydi. `devCode` faqat dev/stage'da
+        qaytariladi.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/OtpRequest" }
+      responses:
+        "201":
+          description: Kod yuborildi
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OtpChallenge" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+
+  /v1/auth/otp/verify:
+    post:
+      tags: [Auth]
+      summary: OTP kodni tekshirish va kirish
+      description: Foydalanuvchi topilmasa yangi hisob yaratiladi (`isNewUser = true`).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/OtpVerifyRequest" }
+      responses:
+        "200": { $ref: "#/components/responses/AuthSession" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /v1/auth/social:
+    post:
+      tags: [Auth]
+      summary: Apple yoki Google orqali kirish
+      description: |
+        `idToken` provayderning JWKS kalitlari bo'yicha server tomonida tekshiriladi.
+        Tasdiqlangan email mavjud hisobga ulanadi; tasdiqlanmagani ulanmaydi.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SocialSignInRequest" }
+      responses:
+        "200": { $ref: "#/components/responses/AuthSession" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /v1/auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Tokenlarni yangilash
+      description: |
+        Refresh token aylanadi: ishlatilgani bekor qilinadi va o'rniga yangisi beriladi.
+        Allaqachon ishlatilgan token qayta yuborilsa, butun oila bekor qilinadi va
+        hodisa audit log'ga yoziladi.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RefreshRequest" }
+      responses:
+        "200": { $ref: "#/components/responses/AuthSession" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /v1/auth/logout:
+    post:
+      tags: [Auth]
+      security: [{ bearerAuth: [] }]
+      summary: Chiqish
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/LogoutRequest" }
+      responses:
+        "200": { $ref: "#/components/responses/Ack" }
+
+  /v1/bootstrap:
+    get:
+      tags: [Profile]
+      security: [{ bearerAuth: [] }]
+      summary: Sovuq startda kerak bo'lgan hamma narsa
+      parameters:
+        - { name: platform, in: query, schema: { $ref: "#/components/schemas/Platform" } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Bootstrap" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /v1/me:
+    get:
+      tags: [Profile]
+      security: [{ bearerAuth: [] }]
+      summary: Profil
+      responses:
+        "200": { $ref: "#/components/responses/UserProfile" }
+    patch:
+      tags: [Profile]
+      security: [{ bearerAuth: [] }]
+      summary: Profilni qisman yangilash
+      description: "`null` maydon — o'zgarishsiz qoldirish degani."
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/UpdateProfileRequest" }
+      responses:
+        "200": { $ref: "#/components/responses/UserProfile" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+    delete:
+      tags: [Profile]
+      security: [{ bearerAuth: [] }]
+      summary: Hisobni o'chirishni boshlash
+      description: Hisob `deletion_pending` holatiga o'tadi va barcha sessiyalar bekor qilinadi.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DeleteAccountRequest" }
+      responses:
+        "200": { $ref: "#/components/responses/Ack" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+
+  /v1/me/onboarding:
+    post:
+      tags: [Profile]
+      security: [{ bearerAuth: [] }]
+      summary: Onboarding'ni yakunlash
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/OnboardingRequest" }
+      responses:
+        "200": { $ref: "#/components/responses/UserProfile" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+
+  /v1/me/consents:
+    get:
+      tags: [Profile]
+      security: [{ bearerAuth: [] }]
+      summary: Joriy roziliklar
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Consents" }
+    put:
+      tags: [Profile]
+      security: [{ bearerAuth: [] }]
+      summary: Roziliklarni yangilash
+      description: Har bir o'zgarish `consent_events` jadvaliga alohida yozuv sifatida tushadi.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ConsentGrants" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Consents" }
+
+  /v1/me/devices:
+    post:
+      tags: [Profile]
+      security: [{ bearerAuth: [] }]
+      summary: Qurilmani ro'yxatdan o'tkazish yoki push tokenni yangilash
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [device]
+              properties:
+                device: { $ref: "#/components/schemas/DeviceInfo" }
+      responses:
+        "200": { $ref: "#/components/responses/Ack" }
+
+  /v1/entitlements:
+    get:
+      tags: [Entitlements]
+      security: [{ bearerAuth: [] }]
+      summary: Funksiyalar, limitlar va sarflangan miqdor
+      description: |
+        Kunlik va oylik hisob foydalanuvchining o'z vaqt mintaqasida yuritiladi,
+        shuning uchun limit uning yarim tunida yangilanadi.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Entitlements" }
+
+  /v1/subscription:
+    get:
+      tags: [Entitlements]
+      security: [{ bearerAuth: [] }]
+      summary: Obuna holati
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SubscriptionStatus" }
+
+  /v1/feature-flags:
+    get:
+      tags: [Entitlements]
+      security: [{ bearerAuth: [] }]
+      summary: Foydalanuvchi uchun hisoblangan bayroqlar
+      parameters:
+        - { name: platform, in: query, schema: { $ref: "#/components/schemas/Platform" } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FeatureFlags" }
+
+  /v1/cycle/status:
+    get:
+      tags: [Cycle]
+      security: [{ bearerAuth: [] }]
+      summary: Bugungi holat — sikl kuni, faza, keyingi hayz
+      description: |
+        Sikl kuni va faza bitta manbadan hisoblanadi: qayd etilgan hayz o'z siklini
+        belgilaydi, undan keyin prognoz panjarasi ishlatiladi. `phaseIsPredicted` — bu
+        qiymat qayd etilgan fakt emas, xulosa ekanini bildiradi.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CycleStatus" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /v1/cycle/calendar:
+    get:
+      tags: [Cycle]
+      security: [{ bearerAuth: [] }]
+      summary: Kalendar — kun bo'yicha faza, oqim va simptomlar soni
+      description: |
+        `isPredicted` alohida maydon: qayd etilgan kunlar to'ldirilgan, bashorat
+        qilinganlari konturli chiziladi — rang hech qachon yagona indikator emas.
+      parameters:
+        - { name: from, in: query, schema: { type: string, format: date } }
+        - { name: to, in: query, schema: { type: string, format: date } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CycleCalendar" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+
+  /v1/cycle/history:
+    get:
+      tags: [Cycle]
+      security: [{ bearerAuth: [] }]
+      summary: Tugagan sikllar va statistika
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CycleHistory" }
+
+  /v1/cycle/periods:
+    get:
+      tags: [Cycle]
+      security: [{ bearerAuth: [] }]
+      summary: Qayd etilgan hayzlar
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/PeriodEntry" }
+    post:
+      tags: [Cycle]
+      security: [{ bearerAuth: [] }]
+      summary: Hayzni qayd etish
+      description: "`store_health` roziligi shart, aks holda `consent_required`."
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [startedOn]
+              properties:
+                startedOn: { type: string, format: date }
+                endedOn: { type: string, format: date, nullable: true }
+      responses:
+        "201":
+          description: Yaratildi
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PeriodEntry" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/ConsentRequired" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /v1/cycle/periods/{id}:
+    patch:
+      tags: [Cycle]
+      security: [{ bearerAuth: [] }]
+      summary: Hayz yozuvini tahrirlash
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                startedOn: { type: string, format: date, nullable: true }
+                endedOn: { type: string, format: date, nullable: true }
+                clearEnd:
+                  type: boolean
+                  default: false
+                  description: "Xato bilan yopilgan hayzni qayta ochish"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PeriodEntry" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [Cycle]
+      security: [{ bearerAuth: [] }]
+      summary: Hayz yozuvini o'chirish
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200": { $ref: "#/components/responses/Ack" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /v1/days:
+    get:
+      tags: [Cycle]
+      security: [{ bearerAuth: [] }]
+      summary: Oraliqdagi kunlik yozuvlar
+      parameters:
+        - { name: from, in: query, required: true, schema: { type: string, format: date } }
+        - { name: to, in: query, schema: { type: string, format: date } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DailyLogRange" }
+
+  /v1/days/{date}:
+    get:
+      tags: [Cycle]
+      security: [{ bearerAuth: [] }]
+      summary: Bir kunlik yozuv
+      parameters: [{ $ref: "#/components/parameters/LogDate" }]
+      responses:
+        "200":
+          description: "Yozuv yo'q bo'lsa ham bo'sh obyekt qaytadi"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DailyLog" }
+    put:
+      tags: [Cycle]
+      security: [{ bearerAuth: [] }]
+      summary: Kunlik yozuvni saqlash
+      description: |
+        Kunni butunlay almashtiradi — yuborilmagan maydon tozalanadi. Butunlay bo'sh
+        so'rov kunni o'chiradi. `store_health` roziligi shart.
+      parameters: [{ $ref: "#/components/parameters/LogDate" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SaveDailyLogRequest" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DailyLog" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/ConsentRequired" }
+    delete:
+      tags: [Cycle]
+      security: [{ bearerAuth: [] }]
+      summary: Kunlik yozuvni o'chirish
+      parameters: [{ $ref: "#/components/parameters/LogDate" }]
+      responses:
+        "200": { $ref: "#/components/responses/Ack" }
+
+  /v1/symptoms:
+    get:
+      tags: [Cycle]
+      security: [{ bearerAuth: [] }]
+      summary: Simptom katalogi
+      description: |
+        Bosqichga qarab filtrlanadi — issiqlik to'lqini menopauzada bor, siklda yo'q.
+        Ro'yxat backend'da, shuning uchun uni ilovani yangilamasdan kengaytirish mumkin.
+      parameters:
+        - { name: lifeStage, in: query, schema: { $ref: "#/components/schemas/LifeStage" } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/SymptomDefinition" }
+
+  /v1/mind/today:
+    get:
+      tags: [Mind]
+      security: [{ bearerAuth: [] }]
+      summary: Mind tab — check-in, kundalik, mashqlar va 14 kunlik o'rtachalar
+      description: |
+        O'rtachalar oddiy arifmetik o'rtacha, boshqa hech narsa emas — ekran
+        "ko'pincha birga kuzatilgan" deydi, "sabab bo'lgan" demaydi.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MindSummary" }
+
+  /v1/mind/check-in:
+    put:
+      tags: [Mind]
+      security: [{ bearerAuth: [] }]
+      summary: Bugungi kayfiyat, energiya va stress
+      description: |
+        Kunlik yozuvning uch maydonini almashtiradi, qolganiga tegmaydi — o'sha kuni
+        sikl kundaligidan yozilgan simptom yoki izoh o'chib ketmaydi.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/MindCheckIn" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MindCheckIn" }
+        "403": { $ref: "#/components/responses/ConsentRequired" }
+
+  /v1/mind/journal:
+    get:
+      tags: [Mind]
+      security: [{ bearerAuth: [] }]
+      summary: Kundalik yozuvlari
+      parameters:
+        - { name: from, in: query, schema: { type: string, format: date } }
+        - { name: to, in: query, schema: { type: string, format: date } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/JournalEntry" }
+    post:
+      tags: [Mind]
+      security: [{ bearerAuth: [] }]
+      summary: Yangi kundalik yozuvi
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [date, body]
+              properties:
+                date: { type: string, format: date }
+                body: { type: string, minLength: 1, maxLength: 5000 }
+      responses:
+        "201":
+          description: Yaratildi
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/JournalEntry" }
+        "403": { $ref: "#/components/responses/ConsentRequired" }
+
+  /v1/mind/journal/{id}:
+    patch:
+      tags: [Mind]
+      security: [{ bearerAuth: [] }]
+      summary: Yozuvni tahrirlash
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [body]
+              properties: { body: { type: string } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/JournalEntry" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [Mind]
+      security: [{ bearerAuth: [] }]
+      summary: Yozuvni o'chirish
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200": { $ref: "#/components/responses/Ack" }
+
+  /v1/mind/practices:
+    post:
+      tags: [Mind]
+      security: [{ bearerAuth: [] }]
+      summary: Nafas mashqini qayd etish
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [durationSeconds]
+              properties:
+                kind: { type: string, enum: [breathing, meditation, grounding] }
+                durationSeconds: { type: integer, minimum: 1, maximum: 7200 }
+      responses:
+        "201":
+          description: Yaratildi
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MindPractice" }
+
+  /v1/nutrition/today:
+    get:
+      tags: [Nutrition]
+      security: [{ bearerAuth: [] }]
+      summary: Bugungi ovqatlanish
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/NutritionDay" }
+
+  /v1/nutrition/days/{date}:
+    get:
+      tags: [Nutrition]
+      security: [{ bearerAuth: [] }]
+      summary: Bir kunlik ovqatlanish
+      parameters: [{ $ref: "#/components/parameters/LogDate" }]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/NutritionDay" }
+
+  /v1/nutrition/meals:
+    post:
+      tags: [Nutrition]
+      security: [{ bearerAuth: [] }]
+      summary: Ovqat qo'shish
+      description: |
+        Makrolar yeyilgan holicha saqlanadi, katalogdan qayta hisoblanmaydi — katalog
+        tuzatilsa, o'tgan martda nima yeganini jimgina o'zgartirib qo'ymasligi kerak.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/LogMealRequest" }
+      responses:
+        "201":
+          description: Yaratildi
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Meal" }
+        "403": { $ref: "#/components/responses/ConsentRequired" }
+
+  /v1/nutrition/meals/{id}:
+    delete:
+      tags: [Nutrition]
+      security: [{ bearerAuth: [] }]
+      summary: Ovqatni o'chirish
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200": { $ref: "#/components/responses/Ack" }
+
+  /v1/nutrition/water:
+    post:
+      tags: [Nutrition]
+      security: [{ bearerAuth: [] }]
+      summary: Suv qo'shish yoki qaytarish
+      description: "`ml` manfiy bo'lishi mumkin — ilovadagi «Qaytarish» shu yo'l bilan ishlaydi."
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ml]
+              properties: { ml: { type: integer, example: 250 } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/WaterState" }
+
+  /v1/nutrition/goals:
+    get:
+      tags: [Nutrition]
+      security: [{ bearerAuth: [] }]
+      summary: Kunlik maqsadlar
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/NutritionGoals" }
+    put:
+      tags: [Nutrition]
+      security: [{ bearerAuth: [] }]
+      summary: Maqsadlarni o'zgartirish
+      description: |
+        Chegaralar bor, lekin maqsad tanadan hisoblanmaydi — bu mahsulot bermaydigan
+        parhez maslahati bo'lardi.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/NutritionGoals" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/NutritionGoals" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+
+  /v1/nutrition/foods:
+    get:
+      tags: [Nutrition]
+      security: [{ bearerAuth: [] }]
+      summary: Taom katalogi bo'yicha qidiruv
+      parameters:
+        - { name: q, in: query, schema: { type: string }, example: somsa }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/FoodItem" }
+
+  /v1/meds:
+    get:
+      tags: [Meds]
+      security: [{ bearerAuth: [] }]
+      summary: Dorilar ro'yxati
+      parameters:
+        - { name: includeArchived, in: query, schema: { type: boolean, default: false } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Medication" }
+    post:
+      tags: [Meds]
+      security: [{ bearerAuth: [] }]
+      summary: Dori qo'shish
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SaveMedicationRequest" }
+      responses:
+        "201":
+          description: Yaratildi
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Medication" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/ConsentRequired" }
+
+  /v1/meds/today:
+    get:
+      tags: [Meds]
+      security: [{ bearerAuth: [] }]
+      summary: Bugungi qabullar
+      description: |
+        Qabullar jadvaldan hisoblanadi, oldindan yozilmaydi — kursni o'zgartirish
+        kelajakdagi qator qoldiqlarini qoldirmaydi. Faqat foydalanuvchi qilgan ish
+        saqlanadi; yozuvi yo'q qabul — `pending`.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MedicationDay" }
+
+  /v1/meds/days/{date}:
+    get:
+      tags: [Meds]
+      security: [{ bearerAuth: [] }]
+      summary: Bir kunlik qabullar
+      parameters: [{ $ref: "#/components/parameters/LogDate" }]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MedicationDay" }
+
+  /v1/meds/{id}:
+    put:
+      tags: [Meds]
+      security: [{ bearerAuth: [] }]
+      summary: Dorini tahrirlash
+      parameters: [{ $ref: "#/components/parameters/MedicationId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SaveMedicationRequest" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Medication" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [Meds]
+      security: [{ bearerAuth: [] }]
+      summary: Dorini arxivlash
+      description: |
+        O'chirmaydi — `active: false` qilib, `endedOn` ni bugunga qo'yadi. Qabul tarixi
+        saqlanib qoladi: «martda ichganmidim» degan savol javobsiz qolmasligi kerak.
+      parameters: [{ $ref: "#/components/parameters/MedicationId" }]
+      responses:
+        "200": { $ref: "#/components/responses/Ack" }
+
+  /v1/meds/{id}/doses:
+    post:
+      tags: [Meds]
+      security: [{ bearerAuth: [] }]
+      summary: Qabulni belgilash
+      description: |
+        `taken` yoki `skipped`. `pending` yuborilsa yozuv o'chiriladi — xato bosishni
+        qaytarish shu. Zaxira faqat `taken` ga kirish va undan chiqishda o'zgaradi,
+        shuning uchun ikki marta bosish ikki dozani yechib olmaydi.
+      parameters: [{ $ref: "#/components/parameters/MedicationId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [dueOn, dueAt, status]
+              properties:
+                dueOn: { type: string, format: date }
+                dueAt: { type: string, example: "08:00" }
+                status: { type: string, enum: [pending, taken, skipped] }
+      responses:
+        "200":
+          description: Yangilangan kun
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MedicationDay" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+
+  /v1/meds/{id}/stock:
+    post:
+      tags: [Meds]
+      security: [{ bearerAuth: [] }]
+      summary: Zaxirani to'ldirish
+      parameters: [{ $ref: "#/components/parameters/MedicationId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [units]
+              properties:
+                units: { type: integer, description: "Manfiy qiymat ortiqcha hisobni tuzatadi" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Medication" }
+
+  /v1/meds/{id}/history:
+    get:
+      tags: [Meds]
+      security: [{ bearerAuth: [] }]
+      summary: Qabul tarixi
+      description: |
+        Faqat sanoq: nechta qabul qilingan, o'tkazilgan, kutilmoqda. Ataylab ball ham,
+        maslahat ham yo'q — ilova o'tkazib yuborilgan qabul haqida ko'rsatma bermaydi,
+        retsept yoki farmatsevtga yo'naltiradi.
+      parameters:
+        - { $ref: "#/components/parameters/MedicationId" }
+        - { name: days, in: query, schema: { type: integer, default: 14, maximum: 180 } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MedicationHistory" }
+
+  /v1/notifications/settings:
+    get:
+      tags: [Notifications]
+      security: [{ bearerAuth: [] }]
+      summary: Bildirishnoma sozlamalari
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/NotificationSettings" }
+    put:
+      tags: [Notifications]
+      security: [{ bearerAuth: [] }]
+      summary: Sozlamalarni o'zgartirish
+      description: |
+        Sokin oynaning ikkala chegarasi birga beriladi — yarmi qolsa, oyna yo hech
+        narsani, yo hamma narsani o'chirib qo'yardi. `clearQuietHours` oynani olib
+        tashlaydi.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                enabled: { type: boolean, nullable: true }
+                categories:
+                  type: object
+                  nullable: true
+                  additionalProperties: { type: boolean }
+                quietFrom: { type: string, nullable: true, example: "22:00" }
+                quietUntil: { type: string, nullable: true, example: "07:00" }
+                clearQuietHours: { type: boolean, default: false }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/NotificationSettings" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+
+  /v1/notifications/history:
+    get:
+      tags: [Notifications]
+      security: [{ bearerAuth: [] }]
+      summary: Yuborilgan va to'xtatilgan bildirishnomalar
+      description: |
+        To'xtatilganlari ham sababi bilan ko'rinadi — «nega eslatma kelmadi» degan
+        savolga javob beradigan yagona narsa shu.
+      parameters:
+        - { name: limit, in: query, schema: { type: integer, default: 50, maximum: 200 } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/NotificationMessage" }
+
+  /v1/admin/notifications/templates:
+    get:
+      tags: [Admin]
+      security: [{ bearerAuth: [] }]
+      summary: Bildirishnoma shablonlari
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/NotificationTemplate" }
+    put:
+      tags: [Admin]
+      security: [{ bearerAuth: [] }]
+      summary: Shablonni saqlash
+      description: "Matn backend'da — so'zlashni tuzatish yoki tarjima qo'shish reliz talab qilmaydi."
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/NotificationTemplate" }
+      responses:
+        "200": { $ref: "#/components/responses/Ack" }
+
+  /v1/admin/notifications/caps:
+    get:
+      tags: [Admin]
+      security: [{ bearerAuth: [] }]
+      summary: Chastota chegaralari
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FrequencyCaps" }
+    put:
+      tags: [Admin]
+      security: [{ bearerAuth: [] }]
+      summary: Chegaralarni o'zgartirish
+      description: |
+        Dori eslatmalari va tizim xabarlari chegaraga bo'ysunmaydi — o'z vaqtida
+        qo'yilgan eslatmani byudjet uchun ushlab qolish ilovaning asosiy vazifasini
+        bajarmasligi bo'lardi.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/FrequencyCaps" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FrequencyCaps" }
+
+  /v1/health-data/samples:
+    post:
+      tags: [Wearables]
+      security: [{ bearerAuth: [] }]
+      summary: Qurilmadan namunalarni yuborish
+      description: |
+        HealthKit va Health Connect qurilmada o'qiladi — ular platformaga xos API'lar va
+        native qoladi — natija esa shu yerga to'plam bo'lib yuboriladi.
+        `externalId` bo'yicha takrorlanmaydi: bir xil namuna ikkinchi marta kelsa,
+        qator yangilanadi, qadamlar ikkilanmaydi.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/IngestSamplesRequest" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/IngestResult" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/ConsentRequired" }
+
+  /v1/health-data/today:
+    get:
+      tags: [Wearables]
+      security: [{ bearerAuth: [] }]
+      summary: Bugungi jamlanma
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DailyHealth" }
+
+  /v1/health-data/daily:
+    get:
+      tags: [Wearables]
+      security: [{ bearerAuth: [] }]
+      summary: Kunlik jamlanmalar oralig'i
+      parameters:
+        - { name: from, in: query, schema: { type: string, format: date } }
+        - { name: to, in: query, schema: { type: string, format: date } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DailyHealthRange" }
+
+  /v1/health-data/sources:
+    get:
+      tags: [Wearables]
+      security: [{ bearerAuth: [] }]
+      summary: Data Sources ekrani — ulangan manbalar
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/ProviderStatus" }
+
+  /v1/admin/wearables/providers:
+    get:
+      tags: [Admin]
+      security: [{ bearerAuth: [] }]
+      summary: Provayderlar holati (11-sahifa)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    provider: { $ref: "#/components/schemas/HealthProvider" }
+                    sampleCount: { type: integer, format: int64 }
+                    lastSampleAt: { type: string, nullable: true }
+
+  /v1/admin/wearables/mappings:
+    get:
+      tags: [Admin]
+      security: [{ bearerAuth: [] }]
+      summary: Ma'lumot moslashtirish jadvali (12-sahifa)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/MetricMapping" }
+    put:
+      tags: [Admin]
+      security: [{ bearerAuth: [] }]
+      summary: Moslikni saqlash
+      description: |
+        Yangi provayder qo'shish yoki maydon nomini o'zgartirgan provayderga ergashish —
+        shu yerdagi bitta qator. Migratsiya ham, reliz ham kerak emas.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/MetricMapping" }
+      responses:
+        "200": { $ref: "#/components/responses/Ack" }
+
+  /v1/admin/auth/login:
+    post:
+      tags: [Admin]
+      summary: Admin panelga kirish (email + parol + 2FA)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string, format: password }
+                totpCode: { type: string, description: "2FA yoqilgan bo'lsa majburiy" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AdminSession" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /v1/admin/users:
+    get:
+      tags: [Admin]
+      security: [{ bearerAuth: [] }]
+      summary: Foydalanuvchilar ro'yxati
+      description: |
+        Rollar: Owner, Admin, Support, Analyst. Javobda sog'liq ma'lumotlari yo'q —
+        faqat hisob va texnik metadata (TZ 17-bo'lim).
+      parameters:
+        - { name: q, in: query, schema: { type: string }, description: "email / telefon / ism" }
+        - { name: status, in: query, schema: { $ref: "#/components/schemas/AccountStatus" } }
+        - { name: language, in: query, schema: { $ref: "#/components/schemas/Language" } }
+        - { name: lifeStage, in: query, schema: { $ref: "#/components/schemas/LifeStage" } }
+        - { name: limit, in: query, schema: { type: integer, default: 50, maximum: 200 } }
+        - { name: offset, in: query, schema: { type: integer, default: 0 } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/AdminUserSummary" }
+                  total: { type: integer, format: int64 }
+                  limit: { type: integer }
+                  offset: { type: integer }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /v1/admin/users/{id}:
+    get:
+      tags: [Admin]
+      security: [{ bearerAuth: [] }]
+      summary: Foydalanuvchi kartochkasi (Umumiy / Obuna / Texnik)
+      parameters: [{ $ref: "#/components/parameters/UserId" }]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AdminUserCard" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /v1/admin/users/{id}/block:
+    post:
+      tags: [Admin]
+      security: [{ bearerAuth: [] }]
+      summary: Hisobni bloklash yoki blokdan chiqarish
+      description: Sabab majburiy va audit log'ga tushadi. Bloklashda barcha sessiyalar bekor qilinadi.
+      parameters: [{ $ref: "#/components/parameters/UserId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [blocked, reason]
+              properties:
+                blocked: { type: boolean }
+                reason: { type: string, minLength: 1 }
+      responses:
+        "200": { $ref: "#/components/responses/Ack" }
+
+  /v1/admin/users/{id}/premium:
+    post:
+      tags: [Admin]
+      security: [{ bearerAuth: [] }]
+      summary: Qo'lda Premium berish
+      description: Firibgarlikdan himoya sifatida sabab majburiy va audit yozuvi yaratiladi.
+      parameters: [{ $ref: "#/components/parameters/UserId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                expiresAt: { type: string, format: date-time, nullable: true }
+                reason: { type: string, minLength: 1 }
+      responses:
+        "200": { $ref: "#/components/responses/Ack" }
+
+  /v1/admin/features:
+    get:
+      tags: [Admin]
+      security: [{ bearerAuth: [] }]
+      summary: Entitlements va limitlar jadvali
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/FeatureDefinition" }
+
+  /v1/admin/features/{key}:
+    put:
+      tags: [Admin]
+      security: [{ bearerAuth: [] }]
+      summary: Funksiya limitlarini o'zgartirish
+      description: O'zgarish ilovani yangilamasdan kuchga kiradi.
+      parameters: [{ $ref: "#/components/parameters/FeatureKey" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/UpdateFeatureDefinitionRequest" }
+      responses:
+        "200": { $ref: "#/components/responses/Ack" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /v1/admin/users/{id}/features/{key}:
+    put:
+      tags: [Admin]
+      security: [{ bearerAuth: [] }]
+      summary: Foydalanuvchi uchun alohida override o'rnatish
+      parameters:
+        - { $ref: "#/components/parameters/UserId" }
+        - { $ref: "#/components/parameters/FeatureKey" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                enabled: { type: boolean, nullable: true }
+                dailyLimit: { type: integer, nullable: true }
+                monthlyLimit: { type: integer, nullable: true }
+                reason: { type: string, minLength: 1 }
+                expiresAt: { type: string, format: date-time, nullable: true }
+      responses:
+        "200": { $ref: "#/components/responses/Ack" }
+    delete:
+      tags: [Admin]
+      security: [{ bearerAuth: [] }]
+      summary: Override'ni olib tashlash
+      parameters:
+        - { $ref: "#/components/parameters/UserId" }
+        - { $ref: "#/components/parameters/FeatureKey" }
+      responses:
+        "200": { $ref: "#/components/responses/Ack" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /v1/admin/flags:
+    get:
+      tags: [Admin]
+      security: [{ bearerAuth: [] }]
+      summary: Feature flags va ularning qoidalari
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/AdminFlag" }
+
+  /v1/admin/flags/{key}:
+    put:
+      tags: [Admin]
+      security: [{ bearerAuth: [] }]
+      summary: Bayroqni yoqish/o'chirish (kill switch)
+      parameters: [{ $ref: "#/components/parameters/FlagKey" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [enabled, defaultValue]
+              properties:
+                enabled: { type: boolean }
+                defaultValue: { type: boolean }
+      responses:
+        "200": { $ref: "#/components/responses/Ack" }
+
+  /v1/admin/flags/{key}/rules:
+    post:
+      tags: [Admin]
+      security: [{ bearerAuth: [] }]
+      summary: Targeting qoidasi qo'shish
+      description: |
+        `rolloutPercentage` foydalanuvchi id va bayroq kalitidan olingan barqaror hash
+        bo'yicha bo'linadi — 5% dan 20% ga kengaytirish faqat yangi foydalanuvchi qo'shadi.
+      parameters: [{ $ref: "#/components/parameters/FlagKey" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateFlagRuleRequest" }
+      responses:
+        "201":
+          description: Yaratildi
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { id: { type: string, format: uuid } }
+
+  /v1/admin/flags/{key}/rules/{ruleId}:
+    delete:
+      tags: [Admin]
+      security: [{ bearerAuth: [] }]
+      summary: Qoidani o'chirish
+      parameters:
+        - { $ref: "#/components/parameters/FlagKey" }
+        - { name: ruleId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200": { $ref: "#/components/responses/Ack" }
+
+  /v1/admin/audit:
+    get:
+      tags: [Admin]
+      security: [{ bearerAuth: [] }]
+      summary: Audit log (faqat Owner)
+      parameters:
+        - { name: action, in: query, schema: { type: string } }
+        - { name: entityType, in: query, schema: { type: string } }
+        - { name: entityId, in: query, schema: { type: string } }
+        - { name: limit, in: query, schema: { type: integer, default: 50, maximum: 200 } }
+        - { name: offset, in: query, schema: { type: integer, default: 0 } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/AuditEntry" }
+                  total: { type: integer, format: int64 }
+                  limit: { type: integer }
+                  offset: { type: integer }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    UserId:
+      name: id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    FeatureKey:
+      name: key
+      in: path
+      required: true
+      schema: { type: string, example: ai_chat }
+    FlagKey:
+      name: key
+      in: path
+      required: true
+      schema: { type: string, example: ai_chat_enabled }
+    LogDate:
+      name: date
+      in: path
+      required: true
+      schema: { type: string, format: date }
+    MedicationId:
+      name: id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+
+  responses:
+    Health:
+      description: Holat
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              status: { type: string }
+              environment: { type: string }
+              version: { type: string }
+    Ack:
+      description: Bajarildi
+      content:
+        application/json:
+          schema:
+            type: object
+            properties: { ok: { type: boolean } }
+    AuthSession:
+      description: Sessiya
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/AuthSession" }
+    UserProfile:
+      description: Profil
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/UserProfile" }
+    BadRequest:
+      description: So'rov noto'g'ri
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ApiErrorResponse" }
+    Unauthorized:
+      description: Avtorizatsiya talab qilinadi
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ApiErrorResponse" }
+    Forbidden:
+      description: Ruxsat yo'q
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ApiErrorResponse" }
+    NotFound:
+      description: Topilmadi
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ApiErrorResponse" }
+    Conflict:
+      description: Ziddiyat
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ApiErrorResponse" }
+    ConsentRequired:
+      description: "Sog'liq ma'lumotlarini saqlash roziligi berilmagan"
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ApiErrorResponse" }
+    RateLimited:
+      description: Juda ko'p so'rov
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ApiErrorResponse" }
+
+  schemas:
+    Language:
+      type: string
+      enum: [uz, ru, en]
+    LifeStage:
+      type: string
+      enum: [cycle, trying_to_conceive, pregnancy, postpartum, perimenopause, menopause]
+    Goal:
+      type: string
+      enum:
+        [understand_cycle, sleep_better, more_energy, less_stress, eat_balanced,
+         drink_water, be_active, remember_meds]
+    Platform:
+      type: string
+      enum: [ios, android, web]
+    AccountStatus:
+      type: string
+      enum: [active, blocked, deletion_pending]
+    SubscriptionTier:
+      type: string
+      enum: [free, premium]
+    SubscriptionSource:
+      type: string
+      enum: [app_store, google_play, payme, click, manual]
+    AuthProvider:
+      type: string
+      enum: [phone, apple, google]
+
+    ApiErrorResponse:
+      type: object
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+              enum:
+                [validation_failed, unauthorized, forbidden, not_found, conflict,
+                 rate_limited, otp_invalid, otp_expired, otp_too_many_attempts,
+                 token_expired, token_revoked, social_token_invalid, account_blocked,
+                 entitlement_required, consent_required, limit_reached, feature_disabled,
+                 internal_error]
+            message: { type: string }
+            details:
+              type: object
+              additionalProperties: { type: string }
+            requestId: { type: string, nullable: true }
+
+    DeviceInfo:
+      type: object
+      required: [deviceId, platform]
+      properties:
+        deviceId: { type: string }
+        platform: { $ref: "#/components/schemas/Platform" }
+        osVersion: { type: string, nullable: true }
+        appVersion: { type: string, nullable: true }
+        model: { type: string, nullable: true }
+        pushToken: { type: string, nullable: true }
+        timezone: { type: string, nullable: true, example: Asia/Tashkent }
+
+    OtpRequest:
+      type: object
+      required: [phone]
+      properties:
+        phone: { type: string, example: "+998901234567" }
+        language: { $ref: "#/components/schemas/Language" }
+
+    OtpChallenge:
+      type: object
+      properties:
+        challengeId: { type: string, format: uuid }
+        expiresAt: { type: string, format: date-time }
+        resendAfterSeconds: { type: integer }
+        attemptsLeft: { type: integer }
+        devCode: { type: string, nullable: true, description: "Faqat dev/stage" }
+
+    OtpVerifyRequest:
+      type: object
+      required: [challengeId, code, device]
+      properties:
+        challengeId: { type: string, format: uuid }
+        code: { type: string, example: "123456" }
+        device: { $ref: "#/components/schemas/DeviceInfo" }
+
+    SocialSignInRequest:
+      type: object
+      required: [provider, idToken, device]
+      properties:
+        provider: { type: string, enum: [apple, google] }
+        idToken: { type: string }
+        fullName: { type: string, nullable: true, description: "Apple ismni faqat bir marta beradi" }
+        device: { $ref: "#/components/schemas/DeviceInfo" }
+
+    RefreshRequest:
+      type: object
+      required: [refreshToken]
+      properties:
+        refreshToken: { type: string }
+
+    LogoutRequest:
+      type: object
+      properties:
+        refreshToken: { type: string, nullable: true }
+        allDevices: { type: boolean, default: false }
+
+    TokenPair:
+      type: object
+      properties:
+        accessToken: { type: string }
+        refreshToken: { type: string }
+        accessExpiresAt: { type: string, format: date-time }
+        refreshExpiresAt: { type: string, format: date-time }
+        tokenType: { type: string, example: Bearer }
+
+    AuthSession:
+      type: object
+      properties:
+        tokens: { $ref: "#/components/schemas/TokenPair" }
+        user: { $ref: "#/components/schemas/UserProfile" }
+        entitlements: { $ref: "#/components/schemas/Entitlements" }
+        isNewUser: { type: boolean }
+
+    UserProfile:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        phone: { type: string, nullable: true }
+        email: { type: string, nullable: true }
+        name: { type: string }
+        language: { $ref: "#/components/schemas/Language" }
+        timezone: { type: string }
+        lifeStage: { $ref: "#/components/schemas/LifeStage" }
+        birthDate: { type: string, format: date, nullable: true }
+        heightCm: { type: integer, nullable: true }
+        weightKg: { type: integer, nullable: true }
+        goals:
+          type: array
+          items: { $ref: "#/components/schemas/Goal" }
+        avatarUrl: { type: string, nullable: true }
+        onboardingCompleted: { type: boolean }
+        status: { $ref: "#/components/schemas/AccountStatus" }
+        createdAt: { type: string, format: date-time }
+
+    UpdateProfileRequest:
+      type: object
+      properties:
+        name: { type: string, nullable: true }
+        language: { $ref: "#/components/schemas/Language" }
+        timezone: { type: string, nullable: true }
+        lifeStage: { $ref: "#/components/schemas/LifeStage" }
+        birthDate: { type: string, format: date, nullable: true }
+        heightCm: { type: integer, nullable: true, minimum: 80, maximum: 250 }
+        weightKg: { type: integer, nullable: true, minimum: 25, maximum: 300 }
+        goals:
+          type: array
+          nullable: true
+          items: { $ref: "#/components/schemas/Goal" }
+
+    CycleBaseline:
+      type: object
+      properties:
+        lastPeriodStart: { type: string, format: date, nullable: true }
+        averageCycleLength: { type: integer, default: 28, minimum: 15, maximum: 60 }
+        averagePeriodLength: { type: integer, default: 5, minimum: 1, maximum: 15 }
+        cycleIsRegular: { type: boolean, default: true }
+
+    StageBaseline:
+      type: object
+      properties:
+        dueDate: { type: string, format: date, nullable: true }
+        birthDate: { type: string, format: date, nullable: true }
+        lastPeriodStart: { type: string, format: date, nullable: true }
+
+    PermissionGrants:
+      type: object
+      properties:
+        notifications: { type: boolean, default: false }
+        healthData: { type: boolean, default: false }
+        camera: { type: boolean, default: false }
+
+    ConsentGrants:
+      type: object
+      properties:
+        storeHealth: { type: boolean, default: false }
+        aiInsights: { type: boolean, default: false }
+        analytics: { type: boolean, default: false }
+        marketing: { type: boolean, default: false }
+        policyVersion: { type: string, nullable: true }
+
+    Consents:
+      type: object
+      properties:
+        storeHealth: { type: boolean }
+        aiInsights: { type: boolean }
+        analytics: { type: boolean }
+        marketing: { type: boolean }
+        policyVersion: { type: string }
+        updatedAt: { type: string, format: date-time }
+
+    OnboardingRequest:
+      type: object
+      required: [name, language, timezone, lifeStage]
+      properties:
+        name: { type: string }
+        language: { $ref: "#/components/schemas/Language" }
+        timezone: { type: string, example: Asia/Tashkent }
+        lifeStage: { $ref: "#/components/schemas/LifeStage" }
+        birthDate: { type: string, format: date, nullable: true }
+        heightCm: { type: integer, nullable: true }
+        weightKg: { type: integer, nullable: true }
+        goals:
+          type: array
+          items: { $ref: "#/components/schemas/Goal" }
+        cycle: { $ref: "#/components/schemas/CycleBaseline" }
+        stage: { $ref: "#/components/schemas/StageBaseline" }
+        permissions: { $ref: "#/components/schemas/PermissionGrants" }
+        consents: { $ref: "#/components/schemas/ConsentGrants" }
+
+    DeleteAccountRequest:
+      type: object
+      required: [confirmation]
+      properties:
+        reason: { type: string, nullable: true }
+        confirmation: { type: string, enum: [DELETE] }
+
+    FeatureEntitlement:
+      type: object
+      properties:
+        key: { type: string, example: ai_chat }
+        enabled: { type: boolean }
+        dailyLimit: { type: integer, nullable: true, description: "null — limitsiz" }
+        monthlyLimit: { type: integer, nullable: true }
+        usedToday: { type: integer }
+        usedThisMonth: { type: integer }
+
+    Entitlements:
+      type: object
+      properties:
+        tier: { $ref: "#/components/schemas/SubscriptionTier" }
+        features:
+          type: array
+          items: { $ref: "#/components/schemas/FeatureEntitlement" }
+        source: { $ref: "#/components/schemas/SubscriptionSource" }
+        expiresAt: { type: string, format: date-time, nullable: true }
+        inGracePeriod: { type: boolean }
+        evaluatedAt: { type: string, format: date-time }
+
+    SubscriptionStatus:
+      type: object
+      properties:
+        tier: { $ref: "#/components/schemas/SubscriptionTier" }
+        source: { $ref: "#/components/schemas/SubscriptionSource" }
+        productId: { type: string, nullable: true }
+        startedAt: { type: string, format: date-time, nullable: true }
+        expiresAt: { type: string, format: date-time, nullable: true }
+        autoRenewing: { type: boolean }
+        inGracePeriod: { type: boolean }
+
+    FeatureFlags:
+      type: object
+      properties:
+        flags:
+          type: object
+          additionalProperties: { type: boolean }
+        evaluatedAt: { type: string, format: date-time }
+        ttlSeconds: { type: integer, default: 300 }
+
+    Bootstrap:
+      type: object
+      properties:
+        user: { $ref: "#/components/schemas/UserProfile" }
+        entitlements: { $ref: "#/components/schemas/Entitlements" }
+        flags: { $ref: "#/components/schemas/FeatureFlags" }
+        consents: { $ref: "#/components/schemas/Consents" }
+        serverTime: { type: string, format: date-time }
+        minimumAppVersion: { type: string, nullable: true }
+
+    CyclePhase:
+      type: string
+      enum: [period, follicular, fertile, luteal]
+    FlowLevel:
+      type: string
+      enum: [spotting, light, medium, heavy]
+    MoodLevel:
+      type: string
+      enum: [bad, low, ok, good, great]
+    SymptomSeverity:
+      type: string
+      enum: [mild, moderate, severe]
+    SymptomCategory:
+      type: string
+      enum: [bleeding, pain, digestion, skin, mood, sleep, energy, other]
+
+    CyclePrediction:
+      type: object
+      description: |
+        Har bir sana — taxmin. `confidence: none` to'liq javob: ma'lumot yetarli
+        bo'lmasa tizim 28 kunni o'ylab topmaydi, buni ochiq aytadi.
+      properties:
+        confidence: { type: string, enum: [none, low, medium, high] }
+        reason:
+          type: string
+          enum:
+            [stage_does_not_predict, no_data, only_baseline, few_cycles, irregular, sufficient]
+        nextPeriodStart: { type: string, format: date, nullable: true }
+        nextPeriodEnd: { type: string, format: date, nullable: true }
+        ovulationOn: { type: string, format: date, nullable: true }
+        fertileFrom: { type: string, format: date, nullable: true }
+        fertileUntil: { type: string, format: date, nullable: true }
+        averageCycleLength: { type: integer, nullable: true }
+        averagePeriodLength: { type: integer, nullable: true }
+        variationDays: { type: integer, nullable: true, description: "Sikllar tarqalishi" }
+        basedOnCycles: { type: integer }
+
+    PeriodEntry:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        startedOn: { type: string, format: date }
+        endedOn: { type: string, format: date, nullable: true }
+        createdAt: { type: string, format: date-time }
+
+    CycleStatus:
+      type: object
+      properties:
+        cycleDay: { type: integer, nullable: true }
+        phase: { $ref: "#/components/schemas/CyclePhase" }
+        phaseIsPredicted: { type: boolean }
+        currentPeriod: { $ref: "#/components/schemas/PeriodEntry" }
+        lastPeriodStart: { type: string, format: date, nullable: true }
+        daysUntilNextPeriod: { type: integer, nullable: true }
+        prediction: { $ref: "#/components/schemas/CyclePrediction" }
+        today: { type: string, format: date }
+
+    CycleDay:
+      type: object
+      properties:
+        date: { type: string, format: date }
+        phase: { $ref: "#/components/schemas/CyclePhase" }
+        isPredicted:
+          type: boolean
+          description: "Qayd etilgan kunlar to'ldirilgan, bashoratlar konturli chiziladi"
+        flow: { $ref: "#/components/schemas/FlowLevel" }
+        hasNote: { type: boolean }
+        symptomCount: { type: integer }
+
+    CycleCalendar:
+      type: object
+      properties:
+        from: { type: string, format: date }
+        to: { type: string, format: date }
+        days:
+          type: array
+          items: { $ref: "#/components/schemas/CycleDay" }
+        prediction: { $ref: "#/components/schemas/CyclePrediction" }
+
+    CycleHistory:
+      type: object
+      properties:
+        cycles:
+          type: array
+          items:
+            type: object
+            properties:
+              startedOn: { type: string, format: date }
+              endedOn: { type: string, format: date }
+              cycleLength: { type: integer }
+              periodLength: { type: integer, nullable: true }
+        averageCycleLength: { type: integer, nullable: true }
+        averagePeriodLength: { type: integer, nullable: true }
+        shortestCycle: { type: integer, nullable: true }
+        longestCycle: { type: integer, nullable: true }
+        prediction: { $ref: "#/components/schemas/CyclePrediction" }
+
+    SymptomDefinition:
+      type: object
+      properties:
+        key: { type: string, example: hot_flush }
+        label: { type: string }
+        category: { $ref: "#/components/schemas/SymptomCategory" }
+        lifeStages:
+          type: array
+          description: "Bo'sh bo'lsa — barcha bosqichlarda ko'rinadi"
+          items: { $ref: "#/components/schemas/LifeStage" }
+        sortOrder: { type: integer }
+
+    SymptomEntry:
+      type: object
+      required: [key]
+      properties:
+        key: { type: string }
+        severity: { $ref: "#/components/schemas/SymptomSeverity" }
+
+    DailyLog:
+      type: object
+      properties:
+        date: { type: string, format: date }
+        flow: { $ref: "#/components/schemas/FlowLevel" }
+        mood: { $ref: "#/components/schemas/MoodLevel" }
+        energy: { type: integer, nullable: true, minimum: 1, maximum: 5 }
+        stress: { type: integer, nullable: true, minimum: 1, maximum: 5 }
+        symptoms:
+          type: array
+          items: { $ref: "#/components/schemas/SymptomEntry" }
+        note: { type: string, nullable: true, maxLength: 1000 }
+        updatedAt: { type: string, format: date-time, nullable: true }
+
+    SaveDailyLogRequest:
+      type: object
+      description: "Kunni butunlay almashtiradi — yuborilmagan maydon tozalanadi"
+      properties:
+        flow: { $ref: "#/components/schemas/FlowLevel" }
+        mood: { $ref: "#/components/schemas/MoodLevel" }
+        energy: { type: integer, nullable: true, minimum: 1, maximum: 5 }
+        stress: { type: integer, nullable: true, minimum: 1, maximum: 5 }
+        symptoms:
+          type: array
+          items: { $ref: "#/components/schemas/SymptomEntry" }
+        note: { type: string, nullable: true }
+
+    DailyLogRange:
+      type: object
+      properties:
+        from: { type: string, format: date }
+        to: { type: string, format: date }
+        logs:
+          type: array
+          items: { $ref: "#/components/schemas/DailyLog" }
+
+    MindPracticeKind:
+      type: string
+      enum: [breathing, meditation, grounding]
+    MealSlot:
+      type: string
+      enum: [breakfast, lunch, dinner, snack]
+
+    MindCheckIn:
+      type: object
+      properties:
+        mood: { $ref: "#/components/schemas/MoodLevel" }
+        energy: { type: integer, nullable: true, minimum: 1, maximum: 5 }
+        stress:
+          type: integer
+          nullable: true
+          minimum: 1
+          maximum: 5
+          description: "5 — eng ko'p stress"
+
+    JournalEntry:
+      type: object
+      description: "Ilovada «Faqat siz ko'rasiz» deb belgilangan — admin API'ga umuman chiqmaydi"
+      properties:
+        id: { type: string, format: uuid }
+        date: { type: string, format: date }
+        body: { type: string }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    MindPractice:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        kind: { $ref: "#/components/schemas/MindPracticeKind" }
+        durationSeconds: { type: integer }
+        completedAt: { type: string, format: date-time }
+
+    MindSummary:
+      type: object
+      properties:
+        today: { type: string, format: date }
+        checkIn: { $ref: "#/components/schemas/MindCheckIn" }
+        recentEntries:
+          type: array
+          items: { $ref: "#/components/schemas/JournalEntry" }
+        recentPractices:
+          type: array
+          items: { $ref: "#/components/schemas/MindPractice" }
+        averageMood: { type: number, nullable: true }
+        averageEnergy: { type: number, nullable: true }
+        averageStress: { type: number, nullable: true }
+        daysLogged: { type: integer }
+        windowDays: { type: integer, default: 14 }
+
+    FoodItem:
+      type: object
+      description: "100 g uchun, `perPiece` belgilangan bo'lsa — bir dona uchun"
+      properties:
+        key: { type: string }
+        name: { type: string }
+        kcal: { type: integer }
+        proteinG: { type: integer }
+        fatG: { type: integer }
+        carbsG: { type: integer }
+        perPiece: { type: boolean }
+
+    Meal:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        date: { type: string, format: date }
+        slot: { $ref: "#/components/schemas/MealSlot" }
+        eatenAt: { type: string, nullable: true, example: "08:20" }
+        description: { type: string }
+        kcal: { type: integer }
+        proteinG: { type: integer }
+        fatG: { type: integer }
+        carbsG: { type: integer }
+        createdAt: { type: string, format: date-time }
+
+    LogMealRequest:
+      type: object
+      required: [date, slot, description, kcal]
+      properties:
+        date: { type: string, format: date }
+        slot: { $ref: "#/components/schemas/MealSlot" }
+        eatenAt: { type: string, nullable: true, example: "08:20" }
+        description: { type: string, maxLength: 200 }
+        kcal: { type: integer, minimum: 0, maximum: 10000 }
+        proteinG: { type: integer, default: 0 }
+        fatG: { type: integer, default: 0 }
+        carbsG: { type: integer, default: 0 }
+
+    NutritionGoals:
+      type: object
+      properties:
+        calorieGoal: { type: integer, default: 1850, minimum: 800, maximum: 6000 }
+        proteinGoalG: { type: integer, default: 85 }
+        fatGoalG: { type: integer, default: 62 }
+        carbsGoalG: { type: integer, default: 210 }
+        waterGoalMl: { type: integer, default: 2000 }
+
+    NutritionDay:
+      type: object
+      properties:
+        date: { type: string, format: date }
+        meals:
+          type: array
+          items: { $ref: "#/components/schemas/Meal" }
+        totals:
+          type: object
+          description: "Qayd etilgan ovqatlardan yig'iladi, alohida hisoblagichda saqlanmaydi"
+          properties:
+            kcal: { type: integer }
+            proteinG: { type: integer }
+            fatG: { type: integer }
+            carbsG: { type: integer }
+        goals: { $ref: "#/components/schemas/NutritionGoals" }
+        waterMl: { type: integer }
+
+    WaterState:
+      type: object
+      properties:
+        date: { type: string, format: date }
+        waterMl: { type: integer }
+        waterGoalMl: { type: integer }
+
+    Weekday:
+      type: string
+      enum: [mon, tue, wed, thu, fri, sat, sun]
+    ScheduleKind:
+      type: string
+      enum: [daily, weekdays, interval]
+    FoodRelation:
+      type: string
+      enum: [any, before, with, after]
+    DoseStatus:
+      type: string
+      enum: [pending, taken, skipped]
+
+    MedicationSchedule:
+      type: object
+      properties:
+        kind: { $ref: "#/components/schemas/ScheduleKind" }
+        times:
+          type: array
+          description: "Kundagi har bir qabul vaqti — kuniga ikki marta bitta dori, ikkita emas"
+          items: { type: string, example: "08:00" }
+        weekdays:
+          type: array
+          items: { $ref: "#/components/schemas/Weekday" }
+        intervalDays: { type: integer, nullable: true, minimum: 1, maximum: 90 }
+
+    Medication:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        emoji: { type: string, nullable: true }
+        dosage: { type: string, nullable: true }
+        unit: { type: string, nullable: true }
+        foodRelation: { $ref: "#/components/schemas/FoodRelation" }
+        note: { type: string, nullable: true }
+        schedule: { $ref: "#/components/schemas/MedicationSchedule" }
+        remindersEnabled: { type: boolean }
+        startedOn: { type: string, format: date }
+        endedOn: { type: string, format: date, nullable: true }
+        stockUnits: { type: integer, nullable: true }
+        stockDaysLeft:
+          type: integer
+          nullable: true
+          description: "Zaxira va jadvaldan hisoblanadi; zaxira kuzatilmasa — null"
+        active: { type: boolean }
+        createdAt: { type: string, format: date-time }
+
+    SaveMedicationRequest:
+      type: object
+      required: [name, schedule]
+      properties:
+        name: { type: string, maxLength: 120 }
+        emoji: { type: string, nullable: true }
+        dosage: { type: string, nullable: true }
+        unit: { type: string, nullable: true }
+        foodRelation: { $ref: "#/components/schemas/FoodRelation" }
+        note: { type: string, nullable: true }
+        schedule: { $ref: "#/components/schemas/MedicationSchedule" }
+        remindersEnabled: { type: boolean, default: true }
+        startedOn: { type: string, format: date, nullable: true }
+        endedOn: { type: string, format: date, nullable: true }
+        stockUnits: { type: integer, nullable: true }
+
+    MedicationDose:
+      type: object
+      properties:
+        medicationId: { type: string, format: uuid }
+        name: { type: string }
+        emoji: { type: string, nullable: true }
+        dosage: { type: string, nullable: true }
+        foodRelation: { $ref: "#/components/schemas/FoodRelation" }
+        dueOn: { type: string, format: date }
+        dueAt: { type: string, example: "08:00" }
+        status: { $ref: "#/components/schemas/DoseStatus" }
+        takenAt: { type: string, format: date-time, nullable: true }
+        isLate:
+          type: boolean
+          description: "Muddatidan bir soat kechroq belgilangan — faqat tarix uchun fakt"
+
+    MedicationDay:
+      type: object
+      description: "Sanoqlar yuborilmaydi — mijoz `doses` ro'yxatidan o'zi hisoblaydi"
+      properties:
+        date: { type: string, format: date }
+        doses:
+          type: array
+          items: { $ref: "#/components/schemas/MedicationDose" }
+
+    MedicationHistory:
+      type: object
+      properties:
+        medicationId: { type: string, format: uuid }
+        from: { type: string, format: date }
+        to: { type: string, format: date }
+        days:
+          type: array
+          items: { $ref: "#/components/schemas/MedicationDay" }
+        takenCount: { type: integer }
+        skippedCount: { type: integer }
+        pendingCount: { type: integer }
+
+    NotificationCategory:
+      type: string
+      enum: [med_reminder, cycle, daily_check_in, water, insight, system]
+    NotificationStatus:
+      type: string
+      enum: [queued, sent, failed, suppressed]
+
+    NotificationSettings:
+      type: object
+      properties:
+        enabled: { type: boolean }
+        categories:
+          type: object
+          description: "Ko'rsatilmagan kategoriya — yoqilgan"
+          additionalProperties: { type: boolean }
+        quietFrom: { type: string, nullable: true, example: "22:00" }
+        quietUntil:
+          type: string
+          nullable: true
+          example: "07:00"
+          description: "Oyna yarim tundan o'tishi mumkin — 22:00–07:00 odatiy holat"
+
+    NotificationMessage:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        category: { $ref: "#/components/schemas/NotificationCategory" }
+        title: { type: string }
+        body: { type: string }
+        scheduledFor: { type: string, format: date-time }
+        status: { $ref: "#/components/schemas/NotificationStatus" }
+        sentAt: { type: string, format: date-time, nullable: true }
+        suppressedReason:
+          type: string
+          nullable: true
+          enum: [notifications_off, category_off, quiet_hours, daily_cap, weekly_cap, no_device]
+
+    NotificationTemplate:
+      type: object
+      required: [key, language, category, title, body]
+      properties:
+        key: { type: string, example: med_reminder }
+        language: { type: string, enum: [uz, ru, en] }
+        category: { $ref: "#/components/schemas/NotificationCategory" }
+        title: { type: string, description: "{{name}} va {{time}} o'zgaruvchilari" }
+        body: { type: string }
+        active: { type: boolean, default: true }
+
+    FrequencyCaps:
+      type: object
+      properties:
+        maxPerDay: { type: integer, default: 6, minimum: 0, maximum: 50 }
+        maxPerWeek: { type: integer, default: 25, minimum: 0, maximum: 300 }
+
+    HealthProvider:
+      type: string
+      enum: [apple_health, health_connect, oura, garmin, whoop, fitbit, samsung_health, manual]
+    HealthMetric:
+      type: string
+      enum:
+        [steps, active_energy, distance, heart_rate, resting_heart_rate, hrv,
+         respiratory_rate, body_temperature, sleep_duration, sleep_deep, sleep_rem, weight]
+
+    HealthSampleInput:
+      type: object
+      required: [provider, externalId, metric, value, startedAt]
+      properties:
+        provider: { $ref: "#/components/schemas/HealthProvider" }
+        externalId:
+          type: string
+          description: "Provayderning o'z identifikatori — qayta sinxronlashni xavfsiz qiladi"
+        metric: { type: string, example: HKQuantityTypeIdentifierStepCount }
+        value: { type: number }
+        unit: { type: string, nullable: true }
+        startedAt: { type: string, format: date-time }
+        endedAt: { type: string, format: date-time, nullable: true }
+        sourceDevice: { type: string, nullable: true }
+
+    IngestSamplesRequest:
+      type: object
+      required: [samples]
+      properties:
+        samples:
+          type: array
+          maxItems: 2000
+          items: { $ref: "#/components/schemas/HealthSampleInput" }
+        timezone: { type: string, nullable: true, example: Asia/Tashkent }
+
+    IngestResult:
+      type: object
+      properties:
+        accepted: { type: integer }
+        updated: { type: integer }
+        unmapped:
+          type: array
+          description: "Mosligi yo'q metrikalar — ilova ularni yuborishni to'xtatishi kerak"
+          items: { type: string }
+        rejected: { type: integer }
+        daysAffected:
+          type: array
+          items: { type: string, format: date }
+
+    DailyMetric:
+      type: object
+      properties:
+        metric: { $ref: "#/components/schemas/HealthMetric" }
+        value: { type: number }
+        unit: { type: string }
+        sampleCount: { type: integer }
+        providers:
+          type: array
+          items: { $ref: "#/components/schemas/HealthProvider" }
+
+    DailyHealth:
+      type: object
+      properties:
+        date: { type: string, format: date }
+        metrics:
+          type: array
+          items: { $ref: "#/components/schemas/DailyMetric" }
+
+    DailyHealthRange:
+      type: object
+      properties:
+        from: { type: string, format: date }
+        to: { type: string, format: date }
+        days:
+          type: array
+          items: { $ref: "#/components/schemas/DailyHealth" }
+
+    ProviderStatus:
+      type: object
+      properties:
+        provider: { $ref: "#/components/schemas/HealthProvider" }
+        connected: { type: boolean }
+        lastSampleAt: { type: string, format: date-time, nullable: true }
+        sampleCount: { type: integer, format: int64 }
+        metrics:
+          type: array
+          items: { $ref: "#/components/schemas/HealthMetric" }
+
+    MetricMapping:
+      type: object
+      required: [provider, providerMetric, metric]
+      properties:
+        provider: { $ref: "#/components/schemas/HealthProvider" }
+        providerMetric: { type: string }
+        metric: { $ref: "#/components/schemas/HealthMetric" }
+        providerUnit: { type: string, nullable: true }
+        scale:
+          type: number
+          default: 1.0
+          description: "Kanonik birlikka o'tkazish ko'paytiruvchisi — kJ dan kcal ga 0.239"
+        active: { type: boolean, default: true }
+
+    AdminSession:
+      type: object
+      properties:
+        accessToken: { type: string }
+        expiresAt: { type: string, format: date-time }
+        name: { type: string }
+        email: { type: string }
+        role: { type: string, enum: [OWNER, ADMIN, SUPPORT, ANALYST] }
+
+    AdminUserSummary:
+      type: object
+      description: "Sog'liq ma'lumotlari ataylab yo'q — operator ularni ko'ra olmaydi."
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        phone: { type: string, nullable: true }
+        email: { type: string, nullable: true }
+        language: { $ref: "#/components/schemas/Language" }
+        lifeStage: { $ref: "#/components/schemas/LifeStage" }
+        tier: { $ref: "#/components/schemas/SubscriptionTier" }
+        status: { $ref: "#/components/schemas/AccountStatus" }
+        registeredAt: { type: string, format: date-time }
+        lastActiveAt: { type: string, format: date-time, nullable: true }
+
+    AdminUserCard:
+      type: object
+      properties:
+        general: { $ref: "#/components/schemas/AdminUserSummary" }
+        subscription:
+          type: object
+          properties:
+            tier: { $ref: "#/components/schemas/SubscriptionTier" }
+            source: { $ref: "#/components/schemas/SubscriptionSource" }
+            expiresAt: { type: string, format: date-time, nullable: true }
+            inGracePeriod: { type: boolean }
+            history:
+              type: array
+              items:
+                type: object
+                properties:
+                  source: { $ref: "#/components/schemas/SubscriptionSource" }
+                  productId: { type: string, nullable: true }
+                  startedAt: { type: string, format: date-time }
+                  expiresAt: { type: string, format: date-time, nullable: true }
+        technical:
+          type: object
+          properties:
+            timezone: { type: string }
+            devices:
+              type: array
+              items:
+                type: object
+                properties:
+                  deviceId: { type: string }
+                  platform: { type: string }
+                  model: { type: string, nullable: true }
+                  appVersion: { type: string, nullable: true }
+                  lastSeenAt: { type: string, format: date-time }
+            featureUsage:
+              type: array
+              items:
+                type: object
+                properties:
+                  featureKey: { type: string }
+                  usedToday: { type: integer }
+                  usedThisMonth: { type: integer }
+
+    FeatureDefinition:
+      type: object
+      properties:
+        key: { type: string }
+        description: { type: string }
+        freeEnabled: { type: boolean }
+        premiumEnabled: { type: boolean }
+        freeDailyLimit: { type: integer, nullable: true }
+        freeMonthlyLimit: { type: integer, nullable: true }
+        premiumDailyLimit: { type: integer, nullable: true }
+        premiumMonthlyLimit: { type: integer, nullable: true }
+
+    UpdateFeatureDefinitionRequest:
+      type: object
+      required: [freeEnabled, premiumEnabled]
+      properties:
+        freeEnabled: { type: boolean }
+        premiumEnabled: { type: boolean }
+        freeDailyLimit: { type: integer, nullable: true }
+        freeMonthlyLimit: { type: integer, nullable: true }
+        premiumDailyLimit: { type: integer, nullable: true }
+        premiumMonthlyLimit: { type: integer, nullable: true }
+
+    AdminFlag:
+      type: object
+      properties:
+        key: { type: string }
+        description: { type: string }
+        enabled: { type: boolean }
+        defaultValue: { type: boolean }
+        rules:
+          type: array
+          items: { $ref: "#/components/schemas/FlagRule" }
+
+    FlagRule:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        environment: { type: string, nullable: true, enum: [DEV, STAGE, PROD] }
+        country: { type: string, nullable: true }
+        language: { type: string, nullable: true }
+        lifeStage: { type: string, nullable: true }
+        platform: { type: string, nullable: true }
+        cohort: { type: string, nullable: true }
+        rolloutPercentage: { type: integer, minimum: 0, maximum: 100 }
+        value: { type: boolean }
+        priority: { type: integer }
+
+    CreateFlagRuleRequest:
+      type: object
+      properties:
+        environment: { type: string, nullable: true }
+        country: { type: string, nullable: true }
+        language: { type: string, nullable: true }
+        lifeStage: { type: string, nullable: true }
+        platform: { type: string, nullable: true }
+        cohort: { type: string, nullable: true }
+        rolloutPercentage: { type: integer, default: 100, minimum: 0, maximum: 100 }
+        value: { type: boolean, default: true }
+        priority: { type: integer, default: 100 }
+
+    AuditEntry:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        actorType: { type: string, enum: [user, admin, system] }
+        actorId: { type: string, format: uuid, nullable: true }
+        actorLabel: { type: string, nullable: true }
+        action: { type: string, example: subscription.granted }
+        entityType: { type: string, nullable: true }
+        entityId: { type: string, nullable: true }
+        reason: { type: string, nullable: true }
+        metadata:
+          type: object
+          additionalProperties: { type: string }
+        ip: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }

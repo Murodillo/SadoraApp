@@ -9,7 +9,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -18,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import org.example.project.design.Radius
@@ -42,9 +44,9 @@ fun SelectChip(
 
     Box(
         modifier = modifier
-            .clip(RoundedCornerShape(999.dp))
+            .clip(Radius.chip)
             .background(bg)
-            .border(1.dp, border, RoundedCornerShape(999.dp))
+            .border(1.dp, border, Radius.chip)
             .defaultMinSize(minHeight = 38.dp)
             .noRippleClickable(onClick = onClick)
             .padding(horizontal = 14.dp, vertical = Spacing.xs),
@@ -75,6 +77,8 @@ fun SadoraBadge(
     tone: BadgeTone = BadgeTone.Neutral,
     modifier: Modifier = Modifier,
     leading: String? = null,
+    /** Preferred over [leading]: a vector follows the tint, an emoji does not. */
+    icon: ImageVector? = null,
 ) {
     val c = Sadora.colors
     val (bg, fg) = when (tone) {
@@ -86,7 +90,7 @@ fun SadoraBadge(
     }
     Box(
         modifier = modifier
-            .clip(RoundedCornerShape(999.dp))
+            .clip(Radius.chip)
             .background(bg)
             .padding(horizontal = Spacing.xs, vertical = 4.dp),
     ) {
@@ -94,7 +98,11 @@ fun SadoraBadge(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            if (leading != null) Text(leading, style = Sadora.type.caption, color = fg)
+            if (icon != null) {
+                Icon(icon, contentDescription = null, Modifier.size(13.dp), tint = fg)
+            } else if (leading != null) {
+                Text(leading, style = Sadora.type.caption, color = fg)
+            }
             Text(text, style = Sadora.type.caption, color = fg, maxLines = 1, softWrap = false)
         }
     }
@@ -106,11 +114,11 @@ fun PremiumGradientBadge(modifier: Modifier = Modifier, text: String = "PREMIUM"
     val c = Sadora.colors
     Box(
         modifier
-            .clip(RoundedCornerShape(999.dp))
+            .clip(Radius.chip)
             .background(Brush.linearGradient(listOf(c.secondary, c.primary)))
             .padding(horizontal = Spacing.xs, vertical = 4.dp),
     ) {
-        Text(text, style = Sadora.type.caption, color = if (c.isDark) c.bg else Color.White)
+        Text(text, style = Sadora.type.caption, color = c.onPrimary)
     }
 }
 
@@ -130,7 +138,7 @@ fun SegmentedControl(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(999.dp))
+            .clip(Radius.chip)
             .background(c.surface2)
             .padding(4.dp),
         horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -141,7 +149,7 @@ fun SegmentedControl(
             Box(
                 Modifier
                     .weight(1f)
-                    .clip(RoundedCornerShape(999.dp))
+                    .clip(Radius.chip)
                     .background(if (selected) c.surface else Color.Transparent)
                     .noRippleClickable(enabled = !locked) { onSelect(index) }
                     .padding(vertical = Spacing.xs),

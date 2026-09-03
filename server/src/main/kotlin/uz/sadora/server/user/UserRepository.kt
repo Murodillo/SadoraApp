@@ -90,7 +90,6 @@ class UserRepository {
             it[Users.id] = id
             it[phone] = newUser.phone
             it[email] = newUser.email?.normalizeEmail()
-            it[passwordHash] = newUser.passwordHash
             it[name] = newUser.name
             it[language] = newUser.language.dbValue()
             it[timezone] = newUser.timezone
@@ -144,6 +143,32 @@ class UserRepository {
         heightCm: Int? = null,
         weightKg: Int? = null,
     ): Unit = dbQuery {
+        applyProfileUpdate(userId, name, language, timezone, lifeStage, birthDate, heightCm, weightKg)
+    }
+
+    suspend fun replaceGoals(userId: Uuid, goals: List<Goal>): Unit = dbQuery {
+        applyGoals(userId, goals)
+    }
+
+    suspend fun markOnboarded(userId: Uuid): Unit = dbQuery { applyOnboarded(userId) }
+
+    // ------------------------------------------------- in-transaction primitives
+    //
+    // Onboarding writes to six tables and must land as a unit — a user who is marked
+    // onboarded but has no consent row is worse than one who has to try again. These
+    // run inside a transaction the caller already opened; the suspend functions above
+    // are the same writes with a transaction of their own.
+
+    fun applyProfileUpdate(
+        userId: Uuid,
+        name: String? = null,
+        language: Language? = null,
+        timezone: String? = null,
+        lifeStage: LifeStage? = null,
+        birthDate: LocalDate? = null,
+        heightCm: Int? = null,
+        weightKg: Int? = null,
+    ) {
         Users.update({ Users.id eq userId }) { statement ->
             name?.let { statement[Users.name] = it }
             language?.let { statement[Users.language] = it.dbValue() }
@@ -156,7 +181,7 @@ class UserRepository {
         }
     }
 
-    suspend fun replaceGoals(userId: Uuid, goals: List<Goal>): Unit = dbQuery {
+    fun applyGoals(userId: Uuid, goals: List<Goal>) {
         UserGoals.deleteWhere { UserGoals.userId eq userId }
         goals.distinct().forEach { goal ->
             UserGoals.insert {
@@ -166,10 +191,67 @@ class UserRepository {
         }
     }
 
-    suspend fun markOnboarded(userId: Uuid): Unit = dbQuery {
+    fun applyOnboarded(userId: Uuid) {
         Users.update({ Users.id eq userId }) {
             it[onboardingCompleted] = true
             it[updatedAt] = now().toOffsetDateTime()
+        }
+    }
+
+    fun applyCycleBaseline(userId: Uuid, baseline: CycleBaseline) {
+        CycleBaselines.upsert(CycleBaselines.userId) {
+            it[CycleBaselines.userId] = userId
+            it[lastPeriodStart] = baseline.lastPeriodStart
+            it[averageCycleLength] = baseline.averageCycleLength
+            it[averagePeriodLength] = baseline.averagePeriodLength
+            it[isRegular] = baseline.cycleIsRegular
+            it[conceptionWindow] = baseline.conceptionWindow?.dbValue()
+            it[birthControl] = baseline.birthControl?.dbValue()
+            it[updatedAt] = now().toOffsetDateTime()
+        }
+    }
+
+    fun applyStageBaseline(userId: Uuid, baseline: StageBaseline) {
+        StageBaselines.upsert(StageBaselines.userId) {
+            it[StageBaselines.userId] = userId
+            it[dueDate] = baseline.dueDate
+            it[childBirthDate] = baseline.birthDate
+            it[lastPeriodStart] = baseline.lastPeriodStart
+            it[updatedAt] = now().toOffsetDateTime()
+        }
+    }
+
+    fun applyConsents(
+        userId: Uuid,
+        grants: ConsentGrants,
+        policyVersion: String,
+        source: String = "app",
+    ) {
+        val timestamp = now().toOffsetDateTime()
+        UserConsents.upsert(UserConsents.userId) {
+            it[UserConsents.userId] = userId
+            it[storeHealth] = grants.storeHealth
+            it[aiInsights] = grants.aiInsights
+            it[analytics] = grants.analytics
+            it[marketing] = grants.marketing
+            it[UserConsents.policyVersion] = policyVersion
+            it[updatedAt] = timestamp
+        }
+        listOf(
+            "store_health" to grants.storeHealth,
+            "ai_insights" to grants.aiInsights,
+            "analytics" to grants.analytics,
+            "marketing" to grants.marketing,
+        ).forEach { (key, granted) ->
+            ConsentEvents.insert {
+                it[id] = Uuid.random()
+                it[ConsentEvents.userId] = userId
+                it[consentKey] = key
+                it[ConsentEvents.granted] = granted
+                it[ConsentEvents.policyVersion] = policyVersion
+                it[consentSource] = source
+                it[createdAt] = timestamp
+            }
         }
     }
 
@@ -222,58 +304,15 @@ class UserRepository {
         grants: ConsentGrants,
         policyVersion: String,
         source: String = "app",
-    ): Unit = dbQuery {
-        val timestamp = now().toOffsetDateTime()
-        UserConsents.upsert(UserConsents.userId) {
-            it[UserConsents.userId] = userId
-            it[storeHealth] = grants.storeHealth
-            it[aiInsights] = grants.aiInsights
-            it[analytics] = grants.analytics
-            it[marketing] = grants.marketing
-            it[UserConsents.policyVersion] = policyVersion
-            it[updatedAt] = timestamp
-        }
-        val events = listOf(
-            "store_health" to grants.storeHealth,
-            "ai_insights" to grants.aiInsights,
-            "analytics" to grants.analytics,
-            "marketing" to grants.marketing,
-        )
-        events.forEach { (key, granted) ->
-            ConsentEvents.insert {
-                it[id] = Uuid.random()
-                it[ConsentEvents.userId] = userId
-                it[consentKey] = key
-                it[ConsentEvents.granted] = granted
-                it[ConsentEvents.policyVersion] = policyVersion
-                it[consentSource] = source
-                it[createdAt] = timestamp
-            }
-        }
-    }
+    ): Unit = dbQuery { applyConsents(userId, grants, policyVersion, source) }
 
     // ---------------------------------------------------------------- baselines
 
-    suspend fun saveCycleBaseline(userId: Uuid, baseline: CycleBaseline): Unit = dbQuery {
-        CycleBaselines.upsert(CycleBaselines.userId) {
-            it[CycleBaselines.userId] = userId
-            it[lastPeriodStart] = baseline.lastPeriodStart
-            it[averageCycleLength] = baseline.averageCycleLength
-            it[averagePeriodLength] = baseline.averagePeriodLength
-            it[isRegular] = baseline.cycleIsRegular
-            it[updatedAt] = now().toOffsetDateTime()
-        }
-    }
+    suspend fun saveCycleBaseline(userId: Uuid, baseline: CycleBaseline): Unit =
+        dbQuery { applyCycleBaseline(userId, baseline) }
 
-    suspend fun saveStageBaseline(userId: Uuid, baseline: StageBaseline): Unit = dbQuery {
-        StageBaselines.upsert(StageBaselines.userId) {
-            it[StageBaselines.userId] = userId
-            it[dueDate] = baseline.dueDate
-            it[childBirthDate] = baseline.birthDate
-            it[lastPeriodStart] = baseline.lastPeriodStart
-            it[updatedAt] = now().toOffsetDateTime()
-        }
-    }
+    suspend fun saveStageBaseline(userId: Uuid, baseline: StageBaseline): Unit =
+        dbQuery { applyStageBaseline(userId, baseline) }
 
     // ---------------------------------------------------------------- devices
 
@@ -359,7 +398,6 @@ private fun ResultRow.toUserRecord(): UserRecord = UserRecord(
     id = this[Users.id],
     phone = this[Users.phone],
     email = this[Users.email],
-    passwordHash = this[Users.passwordHash],
     name = this[Users.name],
     language = enumFromDb(this[Users.language], Language.UZ),
     timezone = this[Users.timezone],

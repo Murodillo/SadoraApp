@@ -15,7 +15,6 @@ data class UserRecord(
     val id: Uuid,
     val phone: String?,
     val email: String?,
-    val passwordHash: String?,
     val name: String,
     val language: Language,
     val timezone: String,
@@ -77,7 +76,6 @@ data class ConsentRecord(
 data class NewUser(
     val phone: String? = null,
     val email: String? = null,
-    val passwordHash: String? = null,
     val name: String = "",
     val language: Language = Language.UZ,
     val timezone: String,

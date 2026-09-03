@@ -9,7 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -21,10 +21,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import org.example.project.design.IconSize
 import org.example.project.design.Radius
 import org.example.project.design.Sadora
+import org.example.project.design.SadoraIcons
 import org.example.project.design.Spacing
 import org.example.project.model.AppState
 import org.example.project.model.Fmt
@@ -87,7 +88,7 @@ fun AiChatScreen(
                     Row(
                         Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(999.dp))
+                            .clip(Radius.chip)
                             .background(c.surface2)
                             .padding(horizontal = Spacing.sm, vertical = 6.dp),
                         horizontalArrangement = Arrangement.Center,
@@ -131,7 +132,7 @@ fun AiChatScreen(
             Box(
                 Modifier
                     .size(48.dp)
-                    .clip(RoundedCornerShape(999.dp))
+                    .clip(Radius.chip)
                     .background(
                         if (draft.isBlank()) {
                             Brush.linearGradient(listOf(c.surface2, c.surface2))
@@ -154,11 +155,12 @@ fun AiChatScreen(
                     },
                 contentAlignment = Alignment.Center,
             ) {
-                Text(
-                    "↑",
-                    style = Sadora.type.h2,
-                    color = if (draft.isBlank()) c.muted else if (c.isDark) c.bg else Color.White,
-                )
+                Icon(
+    SadoraIcons.ArrowUp,
+    contentDescription = "Yuborish",
+    Modifier.size(IconSize.lg),
+    tint = if (draft.isBlank()) c.muted else c.onPrimary,
+)
             }
         }
     }

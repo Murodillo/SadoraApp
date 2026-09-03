@@ -19,10 +19,36 @@ hozircha faqat o'zbekchasi yozilgan.
 
 iOS uchun `iosApp/iosApp.xcodeproj` faylini Xcode'da oching va ishga tushiring.
 
+Backend uchun Postgres va Redis'ni ko'taring, keyin serverni ishga tushiring —
+batafsil [server/README.md](./server/README.md):
+
+```bash
+docker compose up -d
+```
+
+```bash
+./gradlew :server:run
+```
+
+Admin panel (backend ishlab turganda) — <http://localhost:5173>, batafsil
+[admin/README.md](./admin/README.md):
+
+```bash
+npm --prefix admin install && npm --prefix admin run dev
+```
+
+Birinchi admin hisobini yaratish uchun
+`ADMIN_BOOTSTRAP_EMAIL` va `ADMIN_BOOTSTRAP_PASSWORD` bering — batafsil
+[server/README.md](./server/README.md).
+
 Testlar:
 
 ```bash
 ./gradlew :shared:iosSimulatorArm64Test
+```
+
+```bash
+./gradlew :server:test :contract:jvmTest
 ```
 
 Android SDK yo'li `local.properties` faylida ko'rsatiladi (bu fayl git'ga
@@ -34,6 +60,13 @@ sdk.dir=/Users/<siz>/Library/Android/sdk
 
 ---
 
+## CI
+
+Har bir push GitHub Actions'da tekshiriladi: backend testlari va migratsiyalarning
+haqiqiy Postgres ustida ko'tarilishi, shared modul testlari, Android APK yig'ilishi,
+admin panelning typecheck va build'i. Kotlin/Native (iOS) faqat `main` ga PR va push'da
+— macOS runner'lari o'n barobar qimmat.
+
 ## Arxitektura
 
 Butun UI `:shared` modulining `commonMain` manbasida — Android va iOS bir xil
@@ -43,6 +76,9 @@ kodni ishlatadi. Platformaga xos qism juda kichik: ikkala tomonda ham faqat
 ```
 androidApp/          MainActivity — App() ni chaqiradi
 iosApp/              SwiftUI ContentView — App() ni chaqiradi
+admin/               React + TS admin panel — admin/README.md
+contract/            Mobil va backend bo'lishadigan DTO'lar (KMP)
+server/              Ktor backend — server/README.md
 shared/src/commonMain/kotlin/org/example/project/
 ├── App.kt           Ildiz: AppState va Navigator shu yerda yashaydi
 ├── design/          Dizayn tokenlari (ranglar, tipografika, o'lchamlar, mavzu)
@@ -136,14 +172,26 @@ mavzuda matn uchun `primary` emas, quyuqroq `textAccent` ishlatiladi.
 Hozircha bu to'liq ishlaydigan UI prototipi: barcha ekranlar chizilgan, oqimlar
 bog'langan, holat real vaqtda o'zgaradi.
 
+Backend'ning 1-sprint qamrovi yozilgan va ilova **unga ulangan**: ro'yxatdan o'tish
+(telefon OTP, Apple/Google, email), kirish, profil va onboarding, roziliklar,
+entitlements va feature flags. Sessiya qurilmada saqlanadi, shuning uchun ilova qayta
+ishga tushganda foydalanuvchi kirgan holida qoladi.
+
+Ulanish `data/SadoraController` orqali: ekranlar wire tiplarini bilmaydi, controller
+esa `busy`/`error` holatini bir joyda boshqaradi. Backend bo'lmasa (`@Preview`,
+testlar) hamma amal lokal bajariladi va ilova prototip sifatida ishlayveradi.
+
 Hali yo'q:
 
-- **Backend va saqlash** — `AppState` xotirada, ilova qayta ishga tushsa nolga qaytadi
+- **Sog'liq ma'lumotlarining saqlanishi** — sikl, ovqat, kayfiyat va dorilar hozircha
+  xotirada; ularning API'si 2–3-sprintda
+- **Qolgan backend API'lari** — sikl, Mind, Nutrition, Meds, wearable va AI Gateway
+- **To'lov** — paywall tugmasi hozir faqat entitlements'ni qayta so'raydi; App Store /
+  Google Play billing SDK'si ulanmagan
+- **Apple/Google kirish** — tugmalar bor, lekin platforma SDK'si idToken bermaydi
 - **Haqiqiy AI** — javoblar namuna matn
 - **Qurilma integratsiyasi** — Apple Health / Oura ma'lumotlari namuna
 - **RU va EN tarjimalari** — matnlar hozircha kodda o'zbekcha
-- **Admin panel** — dizaynda bor (16-bo'lim), lekin u 1440px web dashboard,
-  mobil ilovaga kirmaydi
 
 ---
 

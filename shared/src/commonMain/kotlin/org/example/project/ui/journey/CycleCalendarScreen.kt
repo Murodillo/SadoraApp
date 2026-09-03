@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -20,11 +21,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import org.example.project.design.IconSize
 import org.example.project.design.Radius
 import org.example.project.design.Sadora
+import org.example.project.design.SadoraIcons
 import org.example.project.design.Spacing
 import org.example.project.model.AppState
 import org.example.project.model.CyclePhase
@@ -87,26 +89,77 @@ fun CycleCalendarScreen(
                 item { SelectedDaySummary(state, onOpen = { onOpen(Route.CycleDay("19-avgust")) }) }
 
                 item {
-                    SadoraButton("Hayzni belgilash", onClick = {}, leading = "✎")
+                    SadoraButton(
+                        "Hayzni belgilash",
+                        onClick = { onOpen(Route.CycleDay("19-avgust")) },
+                        icon = SadoraIcons.Pencil,
+                    )
                 }
             }
         }
     }
 }
 
-/** A 7-column month grid with phase colouring. */
+/** Uzbek month names, used for the header and for the day route. */
+private val MONTHS = listOf(
+    "Yanvar", "Fevral", "Mart", "Aprel", "May", "Iyun",
+    "Iyul", "Avgust", "Sentabr", "Oktabr", "Noyabr", "Dekabr",
+)
+
+private fun isLeap(year: Int) = year % 4 == 0 && (year % 100 != 0 || year % 400 == 0)
+
+private fun daysInMonth(year: Int, month: Int): Int = when (month) {
+    1, 3, 5, 7, 8, 10, 12 -> 31
+    4, 6, 9, 11 -> 30
+    else -> if (isLeap(year)) 29 else 28
+}
+
+/** Day of week for the 1st, 0 = Monday, so it lines up with [SampleData.weekDays]. */
+private fun firstWeekday(year: Int, month: Int): Int {
+    val shift = intArrayOf(0, 3, 2, 5, 0, 3, 5, 1, 4, 6, 2, 4)
+    val y = if (month < 3) year - 1 else year
+    val sunday = (y + y / 4 - y / 100 + y / 400 + shift[month - 1] + 1) % 7
+    return (sunday + 6) % 7
+}
+
+/**
+ * A 7-column month grid with phase colouring.
+ *
+ * The sample cycle covers August 2026 only. Other months are drawn as a plain
+ * calendar rather than repeating those phases, because a predicted period on a month
+ * the app knows nothing about would be exactly the kind of unmarked guess the design
+ * rules forbid.
+ */
 @Composable
 private fun MonthGrid(state: AppState, onDayClick: (String) -> Unit) {
     val c = Sadora.colors
+    var offset by remember { mutableStateOf(0) }
+
+    val reference = 2026 * 12 + 7 // August 2026, zero-based month index
+    val index = reference + offset
+    val year = index / 12
+    val month = index % 12 + 1
+    val hasData = offset == 0
+
     SadoraCard {
         Row(
             Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
-            Text("‹", style = Sadora.type.h2, color = c.muted, modifier = Modifier.noRippleClickable {})
-            Text("Avgust 2026", style = Sadora.type.h3, color = c.text)
-            Text("›", style = Sadora.type.h2, color = c.muted, modifier = Modifier.noRippleClickable {})
+            Icon(
+                SadoraIcons.ChevronLeft,
+                contentDescription = "Oldingi oy",
+                Modifier.size(IconSize.lg).noRippleClickable { offset-- },
+                tint = c.muted,
+            )
+            Text("${MONTHS[month - 1]} $year", style = Sadora.type.h3, color = c.text)
+            Icon(
+                SadoraIcons.ChevronRight,
+                contentDescription = "Keyingi oy",
+                Modifier.size(IconSize.lg).noRippleClickable { offset++ },
+                tint = c.muted,
+            )
         }
 
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -117,26 +170,36 @@ private fun MonthGrid(state: AppState, onDayClick: (String) -> Unit) {
             }
         }
 
-        // August 2026 starts on a Saturday, so the grid opens with 28–31 July.
-        val leading = listOf(28, 29, 30, 31)
+        val lead = firstWeekday(year, month)
+        val prevMonthDays = daysInMonth(if (month == 1) year - 1 else year, if (month == 1) 12 else month - 1)
         val cells: List<Pair<Int, Boolean>> =
-            leading.map { it to true } + (1..31).map { it to false }
+            (0 until lead).map { (prevMonthDays - lead + 1 + it) to true } +
+                (1..daysInMonth(year, month)).map { it to false }
 
+        val monthName = MONTHS[month - 1].lowercase()
         cells.chunked(7).forEach { week ->
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 week.forEach { (day, outside) ->
                     DayCell(
                         day = day,
                         outside = outside,
-                        phase = if (outside) null else state.phaseForDay(day),
-                        isToday = !outside && day == 19,
-                        predicted = !outside && day >= 20,
+                        phase = if (outside || !hasData) null else state.phaseForDay(day),
+                        isToday = hasData && !outside && day == 19,
+                        predicted = hasData && !outside && day >= 20,
                         modifier = Modifier.weight(1f),
-                        onClick = { onDayClick("$day-avgust") },
+                        onClick = { onDayClick("$day-$monthName") },
                     )
                 }
                 repeat(7 - week.size) { Box(Modifier.weight(1f)) }
             }
+        }
+
+        if (!hasData) {
+            Text(
+                "Bu oy uchun yozuv yo'q.",
+                style = Sadora.type.body,
+                color = c.muted,
+            )
         }
     }
 }
@@ -183,7 +246,7 @@ private fun DayCell(
             ),
             color = when {
                 outside -> c.muted2.copy(alpha = 0.5f)
-                phaseColor != null && !predicted -> if (c.isDark) c.bg else Color.White
+                phaseColor != null && !predicted -> c.onPrimary
                 else -> c.text
             },
         )
@@ -253,7 +316,12 @@ private fun SelectedDaySummary(state: AppState, onOpen: () -> Unit) {
                     color = c.muted,
                 )
             }
-            Text("›", style = Sadora.type.h3, color = c.muted2)
+            Icon(
+    SadoraIcons.ChevronRight,
+    contentDescription = null,
+    Modifier.size(IconSize.md),
+    tint = c.muted2,
+)
         }
     }
 }
@@ -327,7 +395,12 @@ private fun PreviousCyclesList() {
                     Text(range, style = Sadora.type.h3, color = c.text)
                     Text("$length · $note", style = Sadora.type.body, color = c.muted)
                 }
-                Text("›", style = Sadora.type.h3, color = c.muted2)
+                Icon(
+    SadoraIcons.ChevronRight,
+    contentDescription = null,
+    Modifier.size(IconSize.md),
+    tint = c.muted2,
+)
             }
         }
     }

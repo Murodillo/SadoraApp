@@ -5,8 +5,6 @@ import uz.sadora.contract.AccountStatus
 import uz.sadora.contract.AuthProvider
 import uz.sadora.contract.AuthSession
 import uz.sadora.contract.DeviceInfo
-import uz.sadora.contract.EmailRegisterRequest
-import uz.sadora.contract.EmailSignInRequest
 import uz.sadora.contract.ErrorCodes
 import uz.sadora.contract.Language
 import uz.sadora.contract.OtpVerifyRequest
@@ -16,7 +14,6 @@ import uz.sadora.server.audit.ActorType
 import uz.sadora.server.audit.AuditActions
 import uz.sadora.server.audit.AuditEntry
 import uz.sadora.server.audit.AuditService
-import uz.sadora.server.core.ConflictException
 import uz.sadora.server.core.DEFAULT_TIMEZONE
 import uz.sadora.server.core.ForbiddenException
 import uz.sadora.server.core.UnauthorizedException
@@ -84,40 +81,10 @@ class AuthService(
         return completeSignIn(created, request.device, true, identity.provider, context)
     }
 
-    // ---------------------------------------------------------------- email
-
-    suspend fun registerWithEmail(request: EmailRegisterRequest, context: RequestContext): AuthSession {
-        PasswordHasher.validate(request.password)
-        if (users.findByEmail(request.email) != null) {
-            throw ConflictException("Bu email allaqachon ro'yxatdan o'tgan")
-        }
-        val user = users.create(
-            NewUser(
-                email = request.email,
-                passwordHash = PasswordHasher.hash(request.password),
-                name = request.name,
-                language = request.language,
-                timezone = request.device.timezone.orDefaultTimeZone(),
-            ),
-        )
-        return completeSignIn(user, request.device, true, AuthProvider.EMAIL, context)
-    }
-
-    suspend fun signInWithEmail(request: EmailSignInRequest, context: RequestContext): AuthSession {
-        val user = users.findByEmail(request.email)
-        val hash = user?.passwordHash
-        // Verify against a dummy hash when the account is missing so the response time
-        // does not reveal whether an address is registered.
-        if (hash == null || !PasswordHasher.verify(request.password, hash)) {
-            PasswordHasher.verify(request.password, DUMMY_HASH)
-            throw UnauthorizedException(message = "Email yoki parol noto'g'ri")
-        }
-        val device = request.device ?: DeviceInfo(
-            deviceId = "unknown",
-            platform = uz.sadora.contract.Platform.WEB,
-        )
-        return completeSignIn(user, device, false, AuthProvider.EMAIL, context)
-    }
+    // Email and password are deliberately absent for users. Sign-in is the phone code
+    // exchange, so an account opened with a password could never be signed back into —
+    // and a credential path no client uses is one nobody is watching. The admin realm
+    // keeps its own, behind 2FA, in `admin_users`.
 
     // ---------------------------------------------------------------- tokens
 
@@ -230,11 +197,6 @@ class AuthService(
     private fun String?.orDefaultTimeZone(): String =
         this?.takeIf { isValidTimeZone(it) } ?: DEFAULT_TIMEZONE
 
-    private companion object {
-        /** A real bcrypt hash of a value nobody knows, used only for timing parity. */
-        const val DUMMY_HASH =
-            "\$2a\$12\$C6UzMDM.H6dfI/f/IKcEe.3Xxq0hEfLGqE.pB6oPLM2NLpQ2ZLZ0W"
-    }
 }
 
 /** Kept out of [AuthService] so `Language` stays a contract type in one place only. */

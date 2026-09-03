@@ -48,8 +48,8 @@ class AdminAuthService(
         }
 
         val adminId = row[AdminUsers.id]
-        val lockedUntil = row[AdminUsers.lockedUntil]?.toKotlinInstant()
-        if (lockedUntil != null && lockedUntil > now()) {
+        val lockExpiry = row[AdminUsers.lockedUntil]?.toKotlinInstant()
+        if (lockExpiry != null && lockExpiry > now()) {
             recordFailure(email, "locked", context)
             throw ForbiddenException(message = "Hisob vaqtincha bloklangan")
         }
@@ -81,7 +81,7 @@ class AdminAuthService(
         dbQuery {
             AdminUsers.update({ AdminUsers.id eq adminId }) {
                 it[failedAttempts] = 0
-                it[lockedUntil] = null
+                it[AdminUsers.lockedUntil] = null
                 it[lastLoginAt] = now().toOffsetDateTime()
             }
         }

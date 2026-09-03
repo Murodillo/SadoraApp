@@ -4,5 +4,14 @@
 <dict>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
+	<!-- App Transport Security blocks cleartext by default. The simulator reaches a
+	     locally running backend over http on loopback, which is not an address that
+	     exists anywhere but a developer's machine, so the exception cannot reach a
+	     real user. Everything else stays https-only. -->
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
 </dict>
 </plist>

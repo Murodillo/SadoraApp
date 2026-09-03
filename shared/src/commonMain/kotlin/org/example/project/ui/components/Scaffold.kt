@@ -15,18 +15,21 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import org.example.project.design.IconSize
 import org.example.project.design.MinTouchTarget
+import org.example.project.design.Radius
 import org.example.project.design.Sadora
+import org.example.project.design.SadoraIcons
 import org.example.project.design.Spacing
 
 /**
@@ -55,12 +58,17 @@ fun SadoraTopBar(
             Box(
                 Modifier
                     .size(MinTouchTarget)
-                    .clip(RoundedCornerShape(999.dp))
+                    .clip(Radius.chip)
                     .background(c.surface2)
                     .noRippleClickable(onClick = onBack),
                 contentAlignment = Alignment.Center,
             ) {
-                Text("‹", style = Sadora.type.h2, color = c.text)
+                Icon(
+                    SadoraIcons.ChevronLeft,
+                    contentDescription = "Ortga",
+                    Modifier.size(IconSize.lg),
+                    tint = c.text,
+                )
             }
         }
         if (step != null) {
@@ -148,7 +156,7 @@ fun GreetingHeader(
         Box(
             Modifier
                 .size(MinTouchTarget)
-                .clip(RoundedCornerShape(999.dp))
+                .clip(Radius.chip)
                 .background(c.surface2)
                 .noRippleClickable(onClick = onNotificationsClick),
             contentAlignment = Alignment.Center,
@@ -160,7 +168,7 @@ fun GreetingHeader(
                         .align(Alignment.TopEnd)
                         .padding(11.dp)
                         .size(8.dp)
-                        .clip(RoundedCornerShape(999.dp))
+                        .clip(Radius.chip)
                         .background(c.primary),
                 )
             }
@@ -180,7 +188,7 @@ fun Avatar(
     Box(
         modifier
             .size(size)
-            .clip(RoundedCornerShape(999.dp))
+            .clip(Radius.chip)
             .background(Brush.linearGradient(listOf(c.secondary, c.primary)))
             .then(if (onClick != null) Modifier.noRippleClickable(onClick = onClick) else Modifier),
         contentAlignment = Alignment.Center,
@@ -188,7 +196,7 @@ fun Avatar(
         Text(
             name.take(1).uppercase(),
             style = Sadora.type.h3.copy(fontWeight = FontWeight.Bold),
-            color = if (c.isDark) c.bg else Color.White,
+            color = c.onPrimary,
         )
     }
 }

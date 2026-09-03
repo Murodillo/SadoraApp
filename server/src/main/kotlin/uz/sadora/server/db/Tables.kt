@@ -3,6 +3,7 @@ package uz.sadora.server.db
 import kotlinx.serialization.json.Json
 import org.jetbrains.exposed.v1.core.Table
 import org.jetbrains.exposed.v1.datetime.date
+import org.jetbrains.exposed.v1.datetime.time
 import org.jetbrains.exposed.v1.datetime.timestampWithTimeZone
 import org.jetbrains.exposed.v1.json.jsonb
 
@@ -23,6 +24,11 @@ object Users : Table("users") {
     val id = uuid("id")
     val phone = text("phone").nullable()
     val email = text("email").nullable()
+    /**
+     * Unused since users sign in by phone code. Left in place rather than dropped: a
+     * migration that deletes a column deletes whatever it holds, and this one is not in
+     * the way. Admin passwords live in [AdminUsers], which is a separate realm.
+     */
     val passwordHash = text("password_hash").nullable()
     val name = text("name")
     val language = text("language")
@@ -137,6 +143,8 @@ object CycleBaselines : Table("cycle_baselines") {
     val averageCycleLength = integer("average_cycle_length")
     val averagePeriodLength = integer("average_period_length")
     val isRegular = bool("is_regular")
+    val conceptionWindow = text("conception_window").nullable()
+    val birthControl = text("birth_control").nullable()
     val updatedAt = timestampWithTimeZone("updated_at")
 
     override val primaryKey = PrimaryKey(userId)
@@ -272,6 +280,61 @@ object AuditLog : Table("audit_log") {
     val ip = text("ip").nullable()
     val userAgent = text("user_agent").nullable()
     val createdAt = timestampWithTimeZone("created_at")
+
+    override val primaryKey = PrimaryKey(id)
+}
+
+// ---------------------------------------------------------------- notifications
+//
+// Account-level, not health data: the outbox stores a rendered title and body, and the
+// admin panel's notification page reads it. Nothing here carries a symptom or a mood —
+// a medication reminder shows the name the user typed, which she chose to be reminded of.
+
+object UserNotificationSettings : Table("user_notification_settings") {
+    val userId = uuid("user_id").references(Users.id)
+    val enabled = bool("enabled")
+    /** `med_reminder:true,water:false`; an absent category means on. */
+    val categories = text("categories")
+    val quietFrom = time("quiet_from").nullable()
+    val quietUntil = time("quiet_until").nullable()
+    val updatedAt = timestampWithTimeZone("updated_at")
+
+    override val primaryKey = PrimaryKey(userId)
+}
+
+object NotificationTemplates : Table("notification_templates") {
+    val key = text("key")
+    val language = text("language")
+    val category = text("category")
+    val title = text("title")
+    val body = text("body")
+    val active = bool("active")
+    val updatedAt = timestampWithTimeZone("updated_at")
+
+    override val primaryKey = PrimaryKey(key, language)
+}
+
+object NotificationOutbox : Table("notification_outbox") {
+    val id = uuid("id")
+    val userId = uuid("user_id").references(Users.id)
+    val category = text("category")
+    val title = text("title")
+    val body = text("body")
+    val scheduledFor = timestampWithTimeZone("scheduled_for")
+    val status = text("status")
+    val sentAt = timestampWithTimeZone("sent_at").nullable()
+    val suppressedReason = text("suppressed_reason").nullable()
+    val dedupeKey = text("dedupe_key")
+    val createdAt = timestampWithTimeZone("created_at")
+
+    override val primaryKey = PrimaryKey(id)
+}
+
+object NotificationCaps : Table("notification_caps") {
+    val id = integer("id")
+    val maxPerDay = integer("max_per_day")
+    val maxPerWeek = integer("max_per_week")
+    val updatedAt = timestampWithTimeZone("updated_at")
 
     override val primaryKey = PrimaryKey(id)
 }

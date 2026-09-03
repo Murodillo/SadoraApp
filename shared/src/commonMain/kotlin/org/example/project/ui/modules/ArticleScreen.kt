@@ -9,15 +9,18 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+import org.example.project.design.IconSize
 import org.example.project.design.Radius
 import org.example.project.design.Sadora
+import org.example.project.design.SadoraIcons
 import org.example.project.design.Spacing
 import org.example.project.ui.components.BadgeTone
 import org.example.project.ui.components.DisclaimerNote
@@ -48,8 +51,8 @@ fun ArticleScreen(
             onBack = onClose,
             trailing = {
                 Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-                    RoundAction("♡")
-                    RoundAction("↗")
+                    RoundAction(SadoraIcons.Heart)
+                    RoundAction(SadoraIcons.Share)
                 }
             },
         )
@@ -154,7 +157,7 @@ private fun Byline(
         Box(
             Modifier
                 .size(36.dp)
-                .clip(RoundedCornerShape(999.dp))
+                .clip(Radius.chip)
                 .background(c.surface2),
             contentAlignment = Alignment.Center,
         ) {
@@ -168,16 +171,16 @@ private fun Byline(
 }
 
 @Composable
-private fun RoundAction(glyph: String) {
+private fun RoundAction(icon: ImageVector) {
     val c = Sadora.colors
     Box(
         Modifier
             .size(40.dp)
-            .clip(RoundedCornerShape(999.dp))
+            .clip(Radius.chip)
             .background(c.surface2)
             .noRippleClickable {},
         contentAlignment = Alignment.Center,
     ) {
-        Text(glyph, style = Sadora.type.h3, color = c.text)
+        Icon(icon, contentDescription = null, Modifier.size(IconSize.md), tint = c.text)
     }
 }
