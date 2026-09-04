@@ -51,6 +51,16 @@ Testlar:
 ./gradlew :server:test :contract:jvmTest
 ```
 
+Haqiqiy telefonda sinash uchun APK'ni shu kompyuterning nomiga qaratib yig'ing —
+emulyatordagi `10.0.2.2` telefonda mavjud emas:
+
+```bash
+./gradlew :androidApp:assembleDebug -Psadora.devHost=$(scutil --get LocalHostName).local
+```
+
+IP o'rniga nom: DHCP ijarasi yangilanganda manzil o'zgaradi va telefondagi ilova
+yo'q bo'lgan manzilga murojaat qilib, "Internetga ulanib bo'lmadi" deb yozadi.
+
 Android SDK yo'li `local.properties` faylida ko'rsatiladi (bu fayl git'ga
 qo'shilmaydi):
 

@@ -23,13 +23,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.minus
+import kotlinx.datetime.plus
 import org.example.project.design.IconSize
+import org.example.project.design.PhaseColors
 import org.example.project.design.Radius
 import org.example.project.design.Sadora
 import org.example.project.design.SadoraIcons
 import org.example.project.design.Spacing
 import org.example.project.model.AppState
 import org.example.project.model.CyclePhase
+import org.example.project.model.Fmt
 import org.example.project.model.SampleData
 import org.example.project.nav.Route
 import org.example.project.ui.components.BadgeTone
@@ -46,9 +52,9 @@ import org.example.project.ui.components.noRippleClickable
 /**
  * "Sikl · Kalendar" — the full month view.
  *
- * Past days are filled; predicted days are outlined with a dashed ring so a forecast
- * never looks like a recorded fact. Colour is never the only indicator — each state
- * also carries a label in the legend.
+ * Past days are filled; predicted days are outlined so a forecast never looks like a
+ * recorded fact. Colour is never the only indicator — each state also carries a
+ * label in the legend.
  */
 @Composable
 fun CycleCalendarScreen(
@@ -57,11 +63,10 @@ fun CycleCalendarScreen(
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val c = Sadora.colors
     var tab by remember { mutableStateOf(0) }
 
     Column(modifier) {
-        SadoraTopBar("Sikl", onBack = onClose)
+        SadoraTopBar("Kalendar", onBack = onClose, centered = true)
 
         ScreenContent {
             item {
@@ -75,23 +80,22 @@ fun CycleCalendarScreen(
             if (tab == 1) {
                 cycleHistoryItems(state)
             } else {
-                item { MonthGrid(state, onDayClick = { onOpen(Route.CycleDay(it)) }) }
+                item { MonthGrid(state, onDayClick = { onOpen(Route.CycleDay(it.toString())) }) }
 
                 item { PhaseKey() }
 
                 item {
                     DisclaimerNote(
-                        "Punktir bilan belgilangan kunlar — hisob-kitob natijasi, tibbiy " +
-                            "kafolat emas.",
+                        "Konturli kunlar — hisob-kitob natijasi, tibbiy kafolat emas.",
                     )
                 }
 
-                item { SelectedDaySummary(state, onOpen = { onOpen(Route.CycleDay("19-avgust")) }) }
+                item { SelectedDaySummary(state, onOpen = { onOpen(Route.CycleDay(state.today.toString())) }) }
 
                 item {
                     SadoraButton(
                         "Hayzni belgilash",
-                        onClick = { onOpen(Route.CycleDay("19-avgust")) },
+                        onClick = { onOpen(Route.CycleDay(state.today.toString())) },
                         icon = SadoraIcons.Pencil,
                     )
                 }
@@ -100,46 +104,25 @@ fun CycleCalendarScreen(
     }
 }
 
-/** Uzbek month names, used for the header and for the day route. */
-private val MONTHS = listOf(
-    "Yanvar", "Fevral", "Mart", "Aprel", "May", "Iyun",
-    "Iyul", "Avgust", "Sentabr", "Oktabr", "Noyabr", "Dekabr",
-)
-
-private fun isLeap(year: Int) = year % 4 == 0 && (year % 100 != 0 || year % 400 == 0)
-
-private fun daysInMonth(year: Int, month: Int): Int = when (month) {
-    1, 3, 5, 7, 8, 10, 12 -> 31
-    4, 6, 9, 11 -> 30
-    else -> if (isLeap(year)) 29 else 28
-}
-
-/** Day of week for the 1st, 0 = Monday, so it lines up with [SampleData.weekDays]. */
-private fun firstWeekday(year: Int, month: Int): Int {
-    val shift = intArrayOf(0, 3, 2, 5, 0, 3, 5, 1, 4, 6, 2, 4)
-    val y = if (month < 3) year - 1 else year
-    val sunday = (y + y / 4 - y / 100 + y / 400 + shift[month - 1] + 1) % 7
-    return (sunday + 6) % 7
-}
+/** The number of days in the month [date] falls in. */
+private fun LocalDate.daysInMonth(): Int =
+    LocalDate(year, month, 1).plus(1, DateTimeUnit.MONTH).minus(1, DateTimeUnit.DAY).day
 
 /**
  * A 7-column month grid with phase colouring.
  *
- * The sample cycle covers August 2026 only. Other months are drawn as a plain
- * calendar rather than repeating those phases, because a predicted period on a month
- * the app knows nothing about would be exactly the kind of unmarked guess the design
- * rules forbid.
+ * Phases are derived from the cycle anchor the store holds, so the grid shows the
+ * month around today rather than a fixed sample. With no anchor the month is drawn
+ * plain — a predicted period on a cycle the app knows nothing about would be exactly
+ * the kind of unmarked guess the design rules forbid.
  */
 @Composable
-private fun MonthGrid(state: AppState, onDayClick: (String) -> Unit) {
+private fun MonthGrid(state: AppState, onDayClick: (LocalDate) -> Unit) {
     val c = Sadora.colors
     var offset by remember { mutableStateOf(0) }
 
-    val reference = 2026 * 12 + 7 // August 2026, zero-based month index
-    val index = reference + offset
-    val year = index / 12
-    val month = index % 12 + 1
-    val hasData = offset == 0
+    val first = LocalDate(state.today.year, state.today.month, 1).plus(offset, DateTimeUnit.MONTH)
+    val hasData = state.cycleStartDate != null && state.hasCyclePrediction
 
     SadoraCard {
         Row(
@@ -153,7 +136,7 @@ private fun MonthGrid(state: AppState, onDayClick: (String) -> Unit) {
                 Modifier.size(IconSize.lg).noRippleClickable { offset-- },
                 tint = c.muted,
             )
-            Text("${MONTHS[month - 1]} $year", style = Sadora.type.h3, color = c.text)
+            Text(Fmt.monthYear(first.year, first.month.ordinal + 1), style = Sadora.type.h3, color = c.text)
             Icon(
                 SadoraIcons.ChevronRight,
                 contentDescription = "Keyingi oy",
@@ -170,24 +153,24 @@ private fun MonthGrid(state: AppState, onDayClick: (String) -> Unit) {
             }
         }
 
-        val lead = firstWeekday(year, month)
-        val prevMonthDays = daysInMonth(if (month == 1) year - 1 else year, if (month == 1) 12 else month - 1)
-        val cells: List<Pair<Int, Boolean>> =
-            (0 until lead).map { (prevMonthDays - lead + 1 + it) to true } +
-                (1..daysInMonth(year, month)).map { it to false }
+        // Monday-first, so the lead-in comes from the previous month's tail.
+        val lead = first.dayOfWeek.ordinal
+        val cells: List<LocalDate> =
+            (lead downTo 1).map { first.minus(it, DateTimeUnit.DAY) } +
+                (0 until first.daysInMonth()).map { first.plus(it, DateTimeUnit.DAY) }
 
-        val monthName = MONTHS[month - 1].lowercase()
         cells.chunked(7).forEach { week ->
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                week.forEach { (day, outside) ->
+                week.forEach { date ->
+                    val outside = date.month != first.month
                     DayCell(
-                        day = day,
+                        day = date.day,
                         outside = outside,
-                        phase = if (outside || !hasData) null else state.phaseForDay(day),
-                        isToday = hasData && !outside && day == 19,
-                        predicted = hasData && !outside && day >= 20,
+                        phase = if (outside || !hasData) null else state.phaseForDate(date),
+                        isToday = date == state.today,
+                        predicted = date > state.today,
                         modifier = Modifier.weight(1f),
-                        onClick = { onDayClick("$day-$monthName") },
+                        onClick = { onDayClick(date) },
                     )
                 }
                 repeat(7 - week.size) { Box(Modifier.weight(1f)) }
@@ -196,7 +179,7 @@ private fun MonthGrid(state: AppState, onDayClick: (String) -> Unit) {
 
         if (!hasData) {
             Text(
-                "Bu oy uchun yozuv yo'q.",
+                "Hayz sanalari kiritilgach, fazalar shu yerda bo'yaladi.",
                 style = Sadora.type.body,
                 color = c.muted,
             )
@@ -216,8 +199,8 @@ private fun DayCell(
 ) {
     val c = Sadora.colors
     val phaseColor = when (phase) {
-        CyclePhase.Period -> c.primary
-        CyclePhase.Fertile -> c.accent
+        CyclePhase.Period -> PhaseColors.period
+        CyclePhase.Fertile -> PhaseColors.fertile
         else -> null
     }
 
@@ -235,7 +218,7 @@ private fun DayCell(
                     else -> Modifier
                 },
             )
-            .then(if (isToday) Modifier.border(2.dp, c.text, RoundedCornerShape(Radius.sm)) else Modifier)
+            .then(if (isToday) Modifier.border(2.dp, c.primary, RoundedCornerShape(Radius.sm)) else Modifier)
             .noRippleClickable(enabled = !outside, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
@@ -258,9 +241,9 @@ private fun DayCell(
 private fun PhaseKey() {
     val c = Sadora.colors
     val entries = listOf(
-        Triple("Hayz", c.primary, false),
-        Triple("Unumdor", c.accent, false),
-        Triple("Taxminiy hayz", c.primary, true),
+        Triple("Hayz", PhaseColors.period, false),
+        Triple("Unumdor", PhaseColors.fertile, false),
+        Triple("Taxminiy", PhaseColors.period, true),
     )
     Row(
         Modifier.fillMaxWidth(),
@@ -308,20 +291,19 @@ private fun SelectedDaySummary(state: AppState, onOpen: () -> Unit) {
                     horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
                 ) {
                     Text("Bugun", style = Sadora.type.h3, color = c.text)
-                    SadoraBadge("Ovulyatsiya", BadgeTone.Estimated)
+                    SadoraBadge(state.currentPhase().label, BadgeTone.Estimated)
                 }
                 Text(
-                    "Ajralma qayd etilgan · kayfiyat yaxshi",
+                    if (state.symptoms.isEmpty()) {
+                        "Simptom qayd etilmagan · kayfiyat ${state.mood.label.lowercase()}"
+                    } else {
+                        "${state.symptoms.joinToString(", ")} · kayfiyat ${state.mood.label.lowercase()}"
+                    },
                     style = Sadora.type.body,
                     color = c.muted,
                 )
             }
-            Icon(
-    SadoraIcons.ChevronRight,
-    contentDescription = null,
-    Modifier.size(IconSize.md),
-    tint = c.muted2,
-)
+            Icon(SadoraIcons.ChevronRight, contentDescription = null, Modifier.size(IconSize.md), tint = c.muted2)
         }
     }
 }
@@ -329,11 +311,11 @@ private fun SelectedDaySummary(state: AppState, onOpen: () -> Unit) {
 /** "Tarix" tab — statistics that state how much data they rest on. */
 private fun androidx.compose.foundation.lazy.LazyListScope.cycleHistoryItems(state: AppState) {
     item { CycleStatsRow(state) }
-    item { CycleLengthChart() }
-    item { PreviousCyclesList() }
+    item { CycleLengthChart(state) }
+    item { PreviousCyclesList(state) }
     item {
         DisclaimerNote(
-            "Statistika 6 sikl asosida. Ko'proq ma'lumot yig'ilgani sari aniqlik oshadi.",
+            "Statistika kiritilgan sikllar asosida. Ko'proq ma'lumot yig'ilgani sari aniqlik oshadi.",
         )
     }
 }
@@ -348,7 +330,7 @@ private fun CycleStatsRow(state: AppState) {
         listOf(
             "O'rtacha sikl" to "${state.averageCycleLength} kun",
             "O'rtacha hayz" to "${state.averagePeriodLength} kun",
-            "Muntazamlik" to "Yaxshi",
+            "Muntazamlik" to if (state.cycleIsRegular) "Yaxshi" else "O'zgaruvchan",
         ).forEach { (label, value) ->
             SadoraCard(modifier = Modifier.weight(1f), padding = Spacing.sm) {
                 Text(label, style = Sadora.type.body, color = c.muted)
@@ -358,34 +340,47 @@ private fun CycleStatsRow(state: AppState) {
     }
 }
 
+/** The last six cycles, projected back from the anchor when no history is loaded. */
+private fun recentCycleLengths(state: AppState): List<Int> {
+    val observed = state.observedCycleLengths()
+    if (observed.isNotEmpty()) return observed.takeLast(6)
+    return List(6) { state.averageCycleLength }
+}
+
 @Composable
-private fun CycleLengthChart() {
+private fun CycleLengthChart(state: AppState) {
     val c = Sadora.colors
-    val lengths = listOf(27, 29, 26, 30, 28, 29)
+    val lengths = recentCycleLengths(state)
     SadoraCard {
         CardLabel(
             "Sikl uzunligi",
-            trailing = { Text("oxirgi 6 sikl", style = Sadora.type.body, color = c.muted) },
+            trailing = { Text("oxirgi ${lengths.size} sikl", style = Sadora.type.body, color = c.muted) },
         )
         org.example.project.ui.components.WeeklyBars(
-            values = lengths.map { (it - 24) / 8f },
+            values = lengths.map { ((it - 20) / 20f).coerceIn(0.1f, 1f) },
             labels = lengths.map { "$it" },
-            color = c.secondary,
+            color = c.primary,
         )
     }
 }
 
 @Composable
-private fun PreviousCyclesList() {
+private fun PreviousCyclesList(state: AppState) {
     val c = Sadora.colors
-    val cycles = listOf(
-        Triple("22 iyul – 19 avgust", "29 kun", "Joriy"),
-        Triple("24 iyun – 21 iyul", "28 kun", "hayz 5 kun"),
-        Triple("27 may – 23 iyun", "30 kun", "hayz 6 kun"),
-    )
+    val anchor = state.cycleStartDate ?: state.today
+    val length = state.averageCycleLength.coerceAtLeast(1)
+    val cycles = (0 until 3).map { back ->
+        val start = anchor.minus(length * back, DateTimeUnit.DAY)
+        val end = start.plus(length - 1, DateTimeUnit.DAY)
+        Triple(
+            "${Fmt.dayMonth(start)} – ${Fmt.dayMonth(end)}",
+            "$length kun",
+            if (back == 0) "Joriy" else "hayz ${state.averagePeriodLength} kun",
+        )
+    }
     SadoraCard {
         CardLabel("Oldingi sikllar")
-        cycles.forEach { (range, length, note) ->
+        cycles.forEach { (range, len, note) ->
             Row(
                 Modifier.fillMaxWidth().padding(vertical = 6.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -393,14 +388,9 @@ private fun PreviousCyclesList() {
             ) {
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Text(range, style = Sadora.type.h3, color = c.text)
-                    Text("$length · $note", style = Sadora.type.body, color = c.muted)
+                    Text("$len · $note", style = Sadora.type.body, color = c.muted)
                 }
-                Icon(
-    SadoraIcons.ChevronRight,
-    contentDescription = null,
-    Modifier.size(IconSize.md),
-    tint = c.muted2,
-)
+                Icon(SadoraIcons.ChevronRight, contentDescription = null, Modifier.size(IconSize.md), tint = c.muted2)
             }
         }
     }

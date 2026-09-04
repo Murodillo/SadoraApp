@@ -7,14 +7,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.vector.ImageVector
 import org.example.project.design.SadoraIcons
 
-/** The five root destinations. */
+/**
+ * The five root destinations, in the order the deck's tab bar draws them:
+ * home, mind, cycle, nutrition, profile.
+ */
 enum class Tab(val icon: ImageVector, val label: String) {
-    Today(SadoraIcons.Today, "Bugun"),
+    Today(SadoraIcons.Home, "Bugun"),
+    Mind(SadoraIcons.Heart, "Ong"),
     Journey(SadoraIcons.Journey, "Sikl"),
-
-    /** The raised centre button. Anonymous, which is why it is a lock and not a chat bubble. */
-    Chat(SadoraIcons.Lock, "Maxfiy"),
-    Nutrition(SadoraIcons.Nutrition, "Ovqat"),
+    Nutrition(SadoraIcons.Apple, "Ovqat"),
     Profile(SadoraIcons.Profile, "Profil"),
 }
 
@@ -32,17 +33,18 @@ sealed interface Route {
     data object StageSymptoms : Route
     data object StageSleepMood : Route
 
-    // AI
+    // AI — the chat itself is Premium; free accounts land on the preview.
     data object AiChat : Route
+    data object AiPreview : Route
 
     // Nutrition
     data object FoodSearch : Route
     data object FoodScanCamera : Route
+    data object FoodScanAnalyzing : Route
     data object FoodScan : Route
     data object Balance : Route
 
     // Modules
-    data object Mind : Route
     data object MindJournal : Route
     data object Medications : Route
     data object AddMedication : Route
@@ -53,6 +55,7 @@ sealed interface Route {
     data class Article(val title: String) : Route
     data object DataSources : Route
     data object Paywall : Route
+    data object SecretChat : Route
 
     // Settings
     data object PersonalDetails : Route
@@ -66,6 +69,21 @@ sealed interface Route {
     data object Terms : Route
     data object PrivacyPolicy : Route
 }
+
+/**
+ * Screens that take the whole display and hide the tab bar: the AI assistant is drawn
+ * on its own dark ground in the deck, and a camera viewfinder has nowhere to put a bar.
+ */
+val Route.isFullScreen: Boolean
+    get() = this == Route.AiChat || this == Route.FoodScanCamera ||
+        this == Route.FoodScanAnalyzing || this == Route.Paywall
+
+/**
+ * Where an AI entry point leads. The chat runs for Premium only; a free account sees
+ * the value proposition and a way to upgrade, never a chat that answers nothing.
+ */
+fun org.example.project.model.AppState.aiRoute(): Route =
+    if (isPremium) Route.AiChat else Route.AiPreview
 
 /** Where the app is before the main tabs take over. */
 sealed interface AppPhase {

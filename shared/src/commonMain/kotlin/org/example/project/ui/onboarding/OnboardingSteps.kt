@@ -39,6 +39,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -61,7 +62,10 @@ import org.example.project.ui.components.ButtonTone
 import org.example.project.ui.components.ChipFlowRow
 import org.example.project.ui.components.ConsentRow
 import org.example.project.ui.components.DisclaimerNote
+import org.example.project.ui.components.IconTile
 import org.example.project.ui.components.ImagePlaceholder
+import org.example.project.ui.components.SadoraCard
+import org.example.project.ui.components.SadoraMark
 import org.example.project.ui.components.OptionRow
 import org.example.project.ui.components.OtpInput
 import org.example.project.ui.components.SadoraButton
@@ -155,56 +159,101 @@ internal fun NumberPad(onDigit: (String) -> Unit, onDelete: () -> Unit) {
 
 // ---------------------------------------------------------------- ready
 
+/** What the profile now carries, as the "ready" screen lists it back. */
+@Composable
+private fun readyLines(state: AppState): List<Pair<ImageVector, String>> = buildList {
+    add(SadoraIcons.Journey to state.lifeStage.title)
+    if (state.lifeStage.predictsCycle) {
+        add(SadoraIcons.Calendar to "Sikl ${state.averageCycleLength} kun · hayz ${state.averagePeriodLength} kun")
+    }
+    if (state.goals.isNotEmpty()) {
+        add(SadoraIcons.Target to "${state.goals.size} ta maqsad belgilandi")
+    }
+    if (state.notificationsAllowed) add(SadoraIcons.Bell to "Eslatmalar yoqildi")
+    if (state.healthDataAllowed) add(SadoraIcons.Watch to "Salomatlik ma'lumotlari ulanadi")
+}
+
+/**
+ * "13. Tayyor! Profilingiz yaratildi" — the last screen of the run.
+ *
+ * It reads the profile back rather than congratulating in the abstract: every line is
+ * something she answered, so the summary doubles as the last chance to notice that an
+ * answer went in wrong.
+ */
 @Composable
 fun ReadyStep(state: AppState, controller: SadoraController, onEnter: () -> Unit) {
     val c = Sadora.colors
-    Column(
-        Modifier.fillMaxSize().padding(horizontal = Spacing.screen),
-        verticalArrangement = Arrangement.spacedBy(Spacing.md),
-    ) {
-        Spacer(Modifier.weight(1f))
-        Box(
-            Modifier
-                .size(72.dp)
-                .clip(Radius.chip)
-                .background(c.success.copy(alpha = 0.16f)),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text("✓", style = Sadora.type.display, color = c.success)
-        }
-        val greeting = state.name.trim()
-            .let { if (it.isEmpty()) "Hammasi tayyor" else "Hammasi tayyor, $it" }
-        Text(greeting, style = Sadora.type.h1, color = c.text)
-        Text(
-            "Bugun ekranini siklingiz, maqsadlaringiz va ulangan qurilmalaringiz asosida sozladik.",
-            style = Sadora.type.body,
-            color = c.muted,
-        )
-        Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-            SummaryLine("${state.lifeStage.title} yoqildi")
-            if (state.healthDataAllowed) SummaryLine("Apple Health ulandi")
-            SummaryLine("${state.goals.size} maqsad belgilandi")
-        }
-        Spacer(Modifier.weight(1f))
-        controller.error?.let { org.example.project.ui.components.ErrorStrip(it) }
-        SadoraButton(
-            if (controller.busy) "Saqlanmoqda…" else "SADORA'ga kirish",
-            onEnter,
-            enabled = !controller.busy,
-        )
-        Spacer(Modifier.height(Spacing.md))
-    }
-}
+    val entry = rememberPageEntry(1100)
 
-@Composable
-private fun SummaryLine(text: String) {
-    val c = Sadora.colors
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
-    ) {
-        Text("✓", style = Sadora.type.h3, color = c.success)
-        Text(text, style = Sadora.type.h3, color = c.text)
+    Box(Modifier.fillMaxSize()) {
+        BloomField(Modifier.fillMaxSize(), fieldAlpha = 0.35f)
+
+        Column(
+            Modifier
+                .fillMaxSize()
+                .navigationBarsPadding()
+                .padding(horizontal = Spacing.screen),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Reveal(entry.value, from = 0.02f) { SadoraMark(size = 96.dp) }
+            Spacer(Modifier.height(Spacing.md))
+            Reveal(entry.value, from = 0.14f) {
+                Text(
+                    state.name.trim().let {
+                        if (it.isEmpty()) "Tayyor! Profilingiz yaratildi" else "Tayyor, $it!"
+                    },
+                    style = Sadora.type.h1,
+                    color = c.text,
+                    textAlign = TextAlign.Center,
+                )
+            }
+            Spacer(Modifier.height(Spacing.xs))
+            Reveal(entry.value, from = 0.24f) {
+                Text(
+                    "Bugun ekranini javoblaringiz asosida sozladik. Hammasini keyin " +
+                        "Profil bo'limidan o'zgartira olasiz.",
+                    style = Sadora.type.body,
+                    color = c.muted,
+                    textAlign = TextAlign.Center,
+                )
+            }
+            Spacer(Modifier.height(Spacing.lg))
+
+            Reveal(entry.value, from = 0.36f) {
+                SadoraCard {
+                    readyLines(state).forEach { (icon, line) ->
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                        ) {
+                            IconTile(icon, size = 34.dp, iconSize = 16.dp)
+                            Text(line, style = Sadora.type.body, color = c.text, modifier = Modifier.weight(1f))
+                            Icon(
+                                SadoraIcons.Check,
+                                contentDescription = null,
+                                Modifier.size(16.dp),
+                                tint = c.success,
+                            )
+                        }
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(Spacing.lg))
+            controller.error?.let {
+                org.example.project.ui.components.ErrorStrip(it)
+                Spacer(Modifier.height(Spacing.xs))
+            }
+            Reveal(entry.value, from = 0.55f) {
+                SadoraButton(
+                    if (controller.busy) "Saqlanmoqda…" else "SADORA'ni boshlash",
+                    onEnter,
+                    enabled = !controller.busy,
+                )
+            }
+        }
     }
 }
 
@@ -301,7 +350,7 @@ fun SignInScreen(
             Modifier
                 .size(56.dp)
                 .clip(RoundedCornerShape(Radius.lg))
-                .background(Brush.linearGradient(listOf(c.secondary, c.primary))),
+                .background(c.heroGradient),
             contentAlignment = Alignment.Center,
         ) {
             Icon(

@@ -6,11 +6,14 @@ import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import kotlin.time.Clock
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.TimeZone
 import kotlinx.datetime.daysUntil
 import kotlinx.datetime.minus
 import kotlinx.datetime.plus
+import kotlinx.datetime.todayIn
 
 enum class AppLanguage(val code: String, val native: String, val english: String) {
     Uz("UZ", "O'zbekcha", "Uzbek"),
@@ -66,19 +69,43 @@ const val MaxEnteredCycles = 3
 /** Gaps outside this range are mistaps, not cycles. Mirrors the server's own filter. */
 private val PlausibleCycleDays = 15..60
 
-enum class Mood(val emoji: String, val label: String, val score: Int) {
-    Bad("😞", "Yomon", 1),
-    Low("😕", "So'lg'in", 2),
-    Ok("😐", "O'rtacha", 3),
-    Good("🙂", "Yaxshi", 4),
-    Great("😄", "Ajoyib", 5),
+/** The fertile window the app assumes when the server has not supplied one. */
+private val AssumedFertileCycleDays = 12..16
+
+/**
+ * The five moods, worst first.
+ *
+ * [caption] is the one-line reading the Mind screen shows under the big face, and
+ * [faceIndex] picks which of the deck's five coloured faces represents it.
+ */
+enum class Mood(val emoji: String, val label: String, val score: Int, val caption: String) {
+    Bad("😞", "Og'ir", 1, "Bugun o'zingizga mehribon bo'ling."),
+    Low("😕", "So'lg'in", 2, "Sekinroq kun — bu ham normal."),
+    Ok("😐", "O'rtacha", 3, "Muvozanat uchun oddiy kun."),
+    Good("🙂", "Xotirjam", 4, "Muvozanat uchun yaxshi kun."),
+    Great("😄", "Ajoyib", 5, "Energiyangiz yuqori — foydalaning!");
+
+    companion object {
+        fun forScore(score: Int): Mood = entries.firstOrNull { it.score == score } ?: Ok
+    }
+}
+
+/** Today, in the device's own zone. */
+fun deviceToday(): LocalDate = Clock.System.todayIn(TimeZone.currentSystemDefault())
+
+/** "Xayrli tong" until noon, "Xayrli kun" until six, "Xayrli kech" after. */
+fun greetingFor(hour: Int): String = when (hour) {
+    in 5..11 -> "Xayrli tong"
+    in 12..17 -> "Xayrli kun"
+    else -> "Xayrli kech"
 }
 
 /**
- * Single in-memory store for the whole prototype.
+ * Single in-memory store for the whole app.
  *
- * There is no backend in this project yet, so screens read and write here directly.
- * Everything is Compose state, so any mutation recomposes the affected screens.
+ * Screens read and write here directly; the server's answers are mirrored onto it by
+ * the data layer, and local edits leave through [sync]. Everything is Compose state,
+ * so any mutation recomposes the affected screens.
  */
 class AppState {
     // ---- account / onboarding ----
@@ -170,13 +197,45 @@ class AppState {
     // ---- appearance ----
     var darkTheme by mutableStateOf(false)
 
-    // ---- daily data ----
+    // ---- the day ----
+    /**
+     * The day every "bugun" on screen refers to.
+     *
+     * Starts as the device's date and is replaced by the server's once the cycle
+     * status loads, so the calendar and the ring agree with the backend about which
+     * day it is even across a midnight the phone crossed while offline.
+     */
+    var today by mutableStateOf(deviceToday())
+
+    // ---- cycle ----
     var cycleDay by mutableStateOf(14)
     var averageCycleLength by mutableStateOf(28)
     var averagePeriodLength by mutableStateOf(5)
     var pregnancyWeek by mutableStateOf(24)
     var postpartumWeek by mutableStateOf(7)
 
+    /**
+     * The first day of the current cycle.
+     *
+     * Kept separately from [markedPeriodDays] because those are handed to the server
+     * and cleared once onboarding finishes, and the calendar still needs an anchor to
+     * colour the days around today from.
+     */
+    var cycleStartDate by mutableStateOf<LocalDate?>(null)
+
+    /** The server's phase for today, when it has given one. */
+    var cyclePhase by mutableStateOf<CyclePhase?>(null)
+    var daysUntilNextPeriod by mutableStateOf<Int?>(null)
+    var fertileFrom by mutableStateOf<LocalDate?>(null)
+    var fertileUntil by mutableStateOf<LocalDate?>(null)
+
+    /**
+     * False when the server has said it cannot predict yet — one data point, a stage
+     * that does not cycle. The screens then say so instead of drawing a confident ring.
+     */
+    var hasCyclePrediction by mutableStateOf(true)
+
+    // ---- daily data ----
     var waterMl by mutableStateOf(1200)
     var waterGoalMl by mutableStateOf(2000)
 
@@ -196,8 +255,16 @@ class AppState {
     var isNewUser by mutableStateOf(false)
 
     var mood by mutableStateOf(Mood.Good)
+
+    /** 1–5, the Mind tab's second and third dials. Stress 5 is the most stressed. */
+    var energy by mutableStateOf(4)
+    var stress by mutableStateOf(2)
+
     var steps by mutableStateOf(6420)
     var sleepMinutes by mutableStateOf(400) // 6s 40d
+
+    /** Seconds of breathing and meditation practised today. */
+    var practiceSecondsToday by mutableStateOf(0)
 
     // Filled by the onboarding check-in, then by the symptom sheet.
     val symptoms = mutableStateListOf<String>()
@@ -315,9 +382,16 @@ class AppState {
         }
     }
 
-    /** The marked periods as start..end ranges, clearing them as they are taken. */
+    /**
+     * The marked periods as start..end ranges, clearing them as they are taken.
+     *
+     * The most recent start survives as [cycleStartDate]: the days go to the server,
+     * but the calendar on the very next screen still needs to know where the cycle
+     * began.
+     */
     fun takeMarkedPeriods(): List<ClosedRange<LocalDate>> {
         val runs = periodRuns().map { it.first()..it.last() }
+        runs.lastOrNull()?.let { cycleStartDate = it.start }
         markedPeriodDays.clear()
         return runs
     }
@@ -331,11 +405,72 @@ class AppState {
      * sync lands — and the server's answer overwrites it as soon as it arrives.
      */
     fun recomputeCycleDay(today: LocalDate) {
-        val start = lastPeriodStart ?: return
+        val start = lastPeriodStart ?: cycleStartDate ?: return
         val elapsed = start.daysUntil(today)
         if (elapsed < 0) return
+        this.today = today
+        cycleStartDate = start
         val length = averageCycleLength.coerceAtLeast(1)
         cycleDay = elapsed % length + 1
+        // The server has not spoken yet, so anything it would have said is unknown.
+        cyclePhase = null
+        daysUntilNextPeriod = null
+        fertileFrom = null
+        fertileUntil = null
+    }
+
+    // ---- cycle, derived ----
+
+    /** Which phase a given cycle day falls in, from the averages alone. */
+    fun phaseForCycleDay(day: Int): CyclePhase = when {
+        day <= averagePeriodLength -> CyclePhase.Period
+        day in AssumedFertileCycleDays -> CyclePhase.Fertile
+        day < AssumedFertileCycleDays.first -> CyclePhase.Follicular
+        else -> CyclePhase.Luteal
+    }
+
+    /** Today's phase: the server's answer, or the local estimate until it arrives. */
+    fun currentPhase(): CyclePhase = cyclePhase ?: phaseForCycleDay(cycleDay)
+
+    /**
+     * The cycle day a date would be, counting from [cycleStartDate] and wrapping every
+     * [averageCycleLength] days in both directions.
+     *
+     * Null when there is no anchor — the calendar then draws a plain month rather than
+     * a guess, which is what the design rules require of an unmarked prediction.
+     */
+    fun cycleDayFor(date: LocalDate): Int? {
+        val start = cycleStartDate ?: return null
+        val length = averageCycleLength.coerceAtLeast(1)
+        val elapsed = start.daysUntil(date)
+        return ((elapsed % length) + length) % length + 1
+    }
+
+    fun phaseForDate(date: LocalDate): CyclePhase? = cycleDayFor(date)?.let(::phaseForCycleDay)
+
+    /** The predicted first day of the next period. */
+    fun nextPeriodStart(): LocalDate? {
+        daysUntilNextPeriod?.let { return today.plus(it, DateTimeUnit.DAY) }
+        val length = averageCycleLength.coerceAtLeast(1)
+        return today.plus(length - cycleDay + 1, DateTimeUnit.DAY)
+    }
+
+    /** Days from today until [nextPeriodStart]. */
+    fun daysToNextPeriod(): Int = daysUntilNextPeriod ?: (today.daysUntil(nextPeriodStart() ?: today))
+
+    /** The fertile window as cycle days, from the server or the assumed window. */
+    fun fertileWindowDays(): IntRange {
+        val from = fertileFrom?.let(::cycleDayFor)
+        val until = fertileUntil?.let(::cycleDayFor)
+        return if (from != null && until != null && from <= until) from..until else AssumedFertileCycleDays
+    }
+
+    /** Whether a date is inside the fertile window. */
+    fun isFertile(date: LocalDate): Boolean {
+        val from = fertileFrom
+        val until = fertileUntil
+        if (from != null && until != null) return date in from..until
+        return cycleDayFor(date)?.let { it in AssumedFertileCycleDays } ?: false
     }
 
     fun toggleGoal(goal: Goal) {
@@ -353,11 +488,27 @@ class AppState {
         sync?.waterAdded(ml)
     }
 
+    /** Millilitres still to drink; never negative once the goal is passed. */
+    val waterRemainingMl: Int get() = (waterGoalMl - waterMl).coerceAtLeast(0)
+
     fun markMedicationTaken(id: String) {
-        val index = medications.indexOfFirst { it.id == id }
-        if (index >= 0) medications[index] = medications[index].copy(status = MedStatus.Taken)
+        setMedicationStatus(id, MedStatus.Taken)
         sync?.doseTaken(id)
     }
+
+    fun markMedicationSkipped(id: String) {
+        setMedicationStatus(id, MedStatus.Skipped)
+        sync?.doseSkipped(id)
+    }
+
+    private fun setMedicationStatus(id: String, status: MedStatus) {
+        val index = medications.indexOfFirst { it.id == id }
+        if (index >= 0) medications[index] = medications[index].copy(status = status)
+    }
+
+    /** "1 / 2" — doses confirmed against doses due today. */
+    val dosesTaken: Int get() = medications.count { it.status == MedStatus.Taken }
+    val dosesDue: Int get() = medications.size
 
     fun logMeal(meal: Meal) {
         meals.add(meal)
@@ -369,21 +520,20 @@ class AppState {
     }
 
     /**
-     * Which phase a day of the current month falls in.
-     *
-     * Purely derived from the averages — the calendar marks anything after today as
-     * predicted, so this never has to distinguish recorded from forecast itself.
+     * The Mind check-in. The three dials are saved as one record, so changing any of
+     * them sends all three — the server replaces the day's check-in wholesale.
      */
-    fun phaseForDay(dayOfMonth: Int): CyclePhase {
-        // Day 1 of the cycle fell on 6 August in the sample data.
-        val cycleDayForDate = ((dayOfMonth - 6) % averageCycleLength + averageCycleLength) %
-            averageCycleLength + 1
-        return when {
-            cycleDayForDate <= averagePeriodLength -> CyclePhase.Period
-            cycleDayForDate in 12..16 -> CyclePhase.Fertile
-            cycleDayForDate < 12 -> CyclePhase.Follicular
-            else -> CyclePhase.Luteal
-        }
+    fun setCheckIn(mood: Mood = this.mood, energy: Int = this.energy, stress: Int = this.stress) {
+        this.mood = mood
+        this.energy = energy.coerceIn(1, 5)
+        this.stress = stress.coerceIn(1, 5)
+        sync?.checkInChanged(this.mood, this.energy, this.stress)
+    }
+
+    fun logPractice(kind: PracticeKind, seconds: Int) {
+        if (seconds <= 0) return
+        practiceSecondsToday += seconds
+        sync?.practiceLogged(kind, seconds)
     }
 
     /** "6s 40d" — the app's sleep-duration format. */

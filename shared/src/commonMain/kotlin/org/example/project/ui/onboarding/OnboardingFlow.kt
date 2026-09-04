@@ -9,6 +9,8 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -20,6 +22,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntOffset
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -38,7 +41,11 @@ import uz.sadora.contract.OtpChallenge
  * reads off [questionSteps] rather than the ordinal.
  */
 enum class OnboardingStep {
-    /** The consent gate. It comes before everything else. */
+    /** "02. Welcome" — what the app is for, and the language switch. */
+    Welcome,
+    /** "03. Language" — the one answer needed before any other can be read. */
+    Language,
+    /** The consent gate. It comes before every question. */
     Consent,
     Name,
     BirthYear,
@@ -76,6 +83,7 @@ enum class OnboardingStep {
 
 /** The steps the progress bar measures — the questions, not the gates and pauses. */
 private val questionSteps = listOf(
+    OnboardingStep.Language,
     OnboardingStep.Name,
     OnboardingStep.BirthYear,
     OnboardingStep.Focus,
@@ -113,7 +121,7 @@ fun OnboardingFlow(
     onSignInInstead: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var step by remember { mutableStateOf(OnboardingStep.Consent) }
+    var step by remember { mutableStateOf(OnboardingStep.Welcome) }
     val scope = rememberCoroutineScope()
     // Carried from the phone step to the OTP step.
     var challenge by remember { mutableStateOf<OtpChallenge?>(null) }
@@ -202,9 +210,14 @@ fun OnboardingFlow(
     }
 
     // The system back button steps backwards through the flow rather than leaving it.
-    // The legal overlay handles its own back press, so this stands down while it is up.
+    // The legal overlay handles its own back press, so this stands down while it is up —
+    // and so does the keyboard: with the IME open, back belongs to it, or typing a name
+    // and reaching for "close the keyboard" would silently undo the step instead.
+    // `WindowInsets.ime` is the portable reading of the keyboard; the `isImeVisible`
+    // helper exists only on Android and would not compile for iOS.
+    val keyboardOpen = WindowInsets.ime.getBottom(LocalDensity.current) > 0
     SystemBackHandler(
-        enabled = legal == null && step.ordinal > 0 && step !in noWayBack,
+        enabled = legal == null && !keyboardOpen && step.ordinal > 0 && step !in noWayBack,
         onBack = ::back,
     )
 
@@ -231,6 +244,19 @@ fun OnboardingFlow(
         ) { current ->
             Column(Modifier.fillMaxSize()) {
                 when (current) {
+                    OnboardingStep.Welcome -> IntroScreen(
+                        state = state,
+                        onStart = ::advance,
+                        onSignIn = onSignInInstead,
+                    )
+
+                    OnboardingStep.Language -> LanguageQuestion(
+                        state = state,
+                        progress = progressAt(current),
+                        onBack = ::back,
+                        onNext = ::advance,
+                    )
+
                     OnboardingStep.Consent -> ConsentGateScreen(
                         state = state,
                         onContinue = ::advance,
@@ -241,7 +267,6 @@ fun OnboardingFlow(
                         state = state,
                         progress = progressAt(current),
                         onBack = ::back,
-                        onSkip = ::advance,
                         onNext = ::advance,
                     )
 

@@ -77,7 +77,7 @@ fun ProfileScreen(
                             verticalArrangement = Arrangement.spacedBy(2.dp),
                         ) {
                             Text(
-                                "${state.name} Yusupova",
+                                state.name.ifBlank { "Foydalanuvchi" },
                                 style = Sadora.type.h3,
                                 color = c.text,
                             )
@@ -100,8 +100,8 @@ fun ProfileScreen(
             item {
                 SadoraCard(padding = Spacing.xs) {
                     SettingsRow(SadoraIcons.Moon, "Uyqu") { onOpen(Route.Sleep) }
-                    SettingsRow(SadoraIcons.Bloom, "Ong") { onOpen(Route.Mind) }
                     SettingsRow(SadoraIcons.Pill, "Dorilar") { onOpen(Route.Medications) }
+                    SettingsRow(SadoraIcons.Lock, "Maxfiy chat", iconTint = c.secondary) { onOpen(Route.SecretChat) }
                     SettingsRow(SadoraIcons.Chart, "Tahlillar") { onOpen(Route.Insights) }
                     SettingsRow(SadoraIcons.Book, "Bilim") { onOpen(Route.Knowledge) }
                 }
@@ -116,7 +116,9 @@ fun ProfileScreen(
                         "Hayot bosqichi",
                         value = state.lifeStage.title,
                     ) { onOpen(Route.LifeStageSettings) }
-                    SettingsRow(SadoraIcons.Watch, "Ulangan qurilmalar", value = "2") {
+                    val connected = org.example.project.model.SampleData.dataSources
+                        .count { it.status == org.example.project.model.SourceStatus.Connected }
+                    SettingsRow(SadoraIcons.Watch, "Ulangan qurilmalar", value = "$connected") {
                         onOpen(Route.DataSources)
                     }
                     SettingsRow(SadoraIcons.Bell, "Bildirishnomalar") { onOpen(Route.Notifications) }
@@ -168,7 +170,7 @@ private fun PremiumStatusCard(state: AppState) {
         Modifier
             .fillMaxWidth()
             .clip(Radius.card)
-            .background(Brush.linearGradient(listOf(c.secondary, c.primary)))
+            .background(c.heroGradient)
             .padding(Spacing.md),
         verticalArrangement = Arrangement.spacedBy(Spacing.xs),
     ) {

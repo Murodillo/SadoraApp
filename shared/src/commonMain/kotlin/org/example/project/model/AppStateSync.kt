@@ -16,5 +16,15 @@ interface AppStateSync {
     fun symptomToggled(label: String, nowSelected: Boolean)
     fun waterAdded(ml: Int)
     fun doseTaken(doseId: String)
+    fun doseSkipped(doseId: String)
     fun mealLogged(meal: Meal)
+
+    /** The Mind check-in: mood, energy and stress go up together as one record. */
+    fun checkInChanged(mood: Mood, energy: Int, stress: Int)
+
+    /** A finished breathing or meditation session. */
+    fun practiceLogged(kind: PracticeKind, seconds: Int)
 }
+
+/** What the Mind tab can start. Mirrors the wire enum without depending on it. */
+enum class PracticeKind { Breathing, Meditation }

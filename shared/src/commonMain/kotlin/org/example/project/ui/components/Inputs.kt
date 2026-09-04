@@ -187,9 +187,9 @@ fun OtpInput(
                 Modifier
                     .weight(1f)
                     .defaultMinSize(minHeight = 56.dp)
-                    .clip(Radius.field)
+                    .clip(Radius.cardSmall)
                     .background(c.surface)
-                    .border(if (char.isNotEmpty() || active) 1.5.dp else 1.dp, border, Radius.field),
+                    .border(if (char.isNotEmpty() || active) 1.5.dp else 1.dp, border, Radius.cardSmall),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(char, style = Sadora.type.h2, color = c.text)

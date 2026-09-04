@@ -21,6 +21,7 @@ import org.example.project.design.Radius
 import org.example.project.design.Sadora
 import org.example.project.design.SadoraIcons
 import org.example.project.design.Spacing
+import org.example.project.ui.components.AiOrb
 import org.example.project.ui.components.BadgeTone
 import org.example.project.ui.components.ButtonTone
 import org.example.project.ui.components.CardLabel
@@ -66,20 +67,7 @@ fun AiFreePreviewScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(Spacing.xs),
                 ) {
-                    Box(
-                        Modifier
-                            .size(88.dp)
-                            .clip(Radius.chip)
-                            .background(Brush.linearGradient(listOf(c.secondary, c.primary))),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(
-                            SadoraIcons.Sparkle,
-                            contentDescription = null,
-                            Modifier.size(34.dp),
-                            tint = c.onPrimary,
-                        )
-                    }
+                    AiOrb(size = 132.dp)
                     Text(
                         "Sizga qanday yordam bera olaman?",
                         style = Sadora.type.h2,

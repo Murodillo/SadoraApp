@@ -174,7 +174,7 @@ class SadoraControllerTest {
     }
 
     @Test
-    fun `one tap fills a typical period, and she can then edit it day by day`() {
+    fun `one tap fills a typical period and she can then edit it day by day`() {
         val state = cycleState(periodLength = 5)
         state.togglePeriodDay(LocalDate(2026, 8, 25), far)
 

@@ -301,11 +301,11 @@ class HealthController(
         return true
     }
 
-    suspend fun logBreathing(seconds: Int): Boolean {
+    suspend fun logBreathing(seconds: Int): Boolean = logPractice(MindPracticeKind.BREATHING, seconds)
+
+    suspend fun logPractice(kind: MindPracticeKind, seconds: Int): Boolean {
         val api = mindApi ?: return true
-        calls.run {
-            api.logPractice(LogPracticeRequest(MindPracticeKind.BREATHING, seconds))
-        } ?: return false
+        calls.run { api.logPractice(LogPracticeRequest(kind, seconds)) } ?: return false
         refreshMind()
         return true
     }

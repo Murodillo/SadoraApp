@@ -39,6 +39,8 @@ import org.example.project.design.Spacing
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.minus
 import kotlinx.datetime.plus
+import androidx.compose.ui.graphics.Color
+import org.example.project.model.AppLanguage
 import org.example.project.model.AppState
 import org.example.project.model.BirthControl
 import org.example.project.model.ConceptionWindow
@@ -46,6 +48,7 @@ import org.example.project.model.MaxEnteredCycles
 import org.example.project.model.Goal
 import org.example.project.model.LifeStage
 import org.example.project.model.Mood
+import org.example.project.model.deviceToday
 import org.example.project.ui.components.DisclaimerNote
 import org.example.project.ui.components.ErrorStrip
 import org.example.project.ui.components.OtpInput
@@ -54,18 +57,70 @@ import org.example.project.ui.components.SadoraDialog
 import org.example.project.ui.components.SadoraTextField
 import org.example.project.ui.components.noRippleClickable
 
+// ---------------------------------------------------------------- language
+
+/** The flag and the native name of each language, as the deck's list shows them. */
+private fun AppLanguage.flag(): String = when (this) {
+    AppLanguage.Uz -> "\uD83C\uDDFA\uD83C\uDDFF"
+    AppLanguage.Ru -> "\uD83C\uDDF7\uD83C\uDDFA"
+    AppLanguage.En -> "\uD83C\uDDEC\uD83C\uDDE7"
+}
+
+/**
+ * "Choose your language" — the first question of the run.
+ *
+ * It comes before everything else for the obvious reason: every later screen has to
+ * be readable before it can be answered. Only Uzbek is written today, so the other
+ * two say so rather than switching to a half-translated app.
+ */
+@Composable
+fun LanguageQuestion(
+    state: AppState,
+    progress: Float,
+    onBack: (() -> Unit)?,
+    onNext: () -> Unit,
+) {
+    val entry = rememberPageEntry(900)
+
+    QuestionScaffold(
+        title = "Tilni tanlang",
+        subtitle = "Keyin sozlamalardan o'zgartira olasiz.",
+        progress = progress,
+        onBack = onBack,
+        onSkip = null,
+        entry = entry,
+        footer = { AnswerFooter(visible = true) { SadoraButton("Davom etish", onNext) } },
+    ) {
+        AppLanguage.entries.forEachIndexed { index, language ->
+            Reveal(entry.value, from = optionStart(index, base = 0.30f, step = 0.08f)) {
+                AnswerRow(
+                    label = language.native,
+                    leading = language.flag(),
+                    note = if (language == AppLanguage.Uz) null else "Tez orada — hozircha o'zbekcha ko'rsatiladi.",
+                    noteAlwaysVisible = language != AppLanguage.Uz,
+                    selected = state.language == language,
+                    onClick = { state.language = language },
+                )
+            }
+        }
+    }
+}
+
 // ---------------------------------------------------------------- name
 
 /**
  * "What should we call you?" — the first question, and the one that makes the rest
  * of the flow feel addressed to someone.
+ *
+ * The only question in the run with no skip: the profile cannot be saved without a
+ * name — the server rejects a blank one — and every screen after this addresses her
+ * by it. Offering to skip would end in a refusal twenty questions later.
  */
 @Composable
 fun NameQuestion(
     state: AppState,
     progress: Float,
     onBack: (() -> Unit)?,
-    onSkip: () -> Unit,
     onNext: () -> Unit,
 ) {
     val entry = rememberPageEntry()
@@ -75,17 +130,8 @@ fun NameQuestion(
         subtitle = "Keling, tanishamiz. Bu ismni keyin ham o'zgartira olasiz.",
         progress = progress,
         onBack = onBack,
-        onSkip = onSkip,
+        onSkip = null,
         entry = entry,
-        // Language belongs on the first page someone reads, not behind a step of its
-        // own: by the time a separate question could ask, she has already had to read
-        // her way here.
-        topEnd = {
-            LanguageSwitch(
-                selected = state.language,
-                onSelect = { state.language = it },
-            )
-        },
         footer = {
             AnswerFooter(visible = state.name.isNotBlank()) {
                 SadoraButton("Davom etish", onNext)
@@ -99,11 +145,46 @@ fun NameQuestion(
                 onValueChange = { state.name = it },
                 label = "Ism",
                 placeholder = "Ismingiz",
+                leadingIcon = SadoraIcons.Profile,
                 // The only field on the page, so Next would have nowhere to go.
                 imeAction = ImeAction.Done,
                 keyboardActions = KeyboardActions(onDone = { focus.clearFocus() }),
             )
         }
+        Reveal(entry.value, from = 0.42f) {
+            PrivacyNote(
+                "Ma'lumotlaringiz faqat SADORA ichida saqlanadi. Uchinchi shaxslarga " +
+                    "berilmaydi va istalgan vaqtda o'chirasiz.",
+            )
+        }
+    }
+}
+
+/**
+ * The lavender note the deck puts under the personal questions.
+ *
+ * It is a shield and a sentence rather than a link: what happens to the answer has to
+ * be readable at the moment it is being given, not one tap away.
+ */
+@Composable
+private fun PrivacyNote(text: String) {
+    val c = Sadora.colors
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clip(Radius.tile)
+            .background(c.primary.copy(alpha = if (c.isDark) 0.18f else 0.08f))
+            .padding(Spacing.sm),
+        verticalAlignment = Alignment.Top,
+        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+    ) {
+        androidx.compose.material3.Icon(
+            SadoraIcons.Shield,
+            contentDescription = null,
+            Modifier.size(org.example.project.design.IconSize.md),
+            tint = c.textAccent,
+        )
+        Text(text, style = Sadora.type.body, color = c.muted)
     }
 }
 
@@ -247,6 +328,25 @@ private fun LifeStage.reassurance(): String = when (this) {
     LifeStage.Menopause -> "Salomatlik maqsadlariga qaratilgan kundalik yordam beramiz."
 }
 
+/** The icon and tint the deck gives each stage in the list. */
+private fun LifeStage.icon(): ImageVector = when (this) {
+    LifeStage.Cycle -> SadoraIcons.Journey
+    LifeStage.TryingToConceive -> SadoraIcons.Sparkle
+    LifeStage.Pregnancy -> SadoraIcons.Heart
+    LifeStage.Postpartum -> SadoraIcons.Bloom
+    LifeStage.Perimenopause -> SadoraIcons.Moon
+    LifeStage.Menopause -> SadoraIcons.Target
+}
+
+private fun LifeStage.tint(): Color = when (this) {
+    LifeStage.Cycle -> Color(0xFF7B61FF)
+    LifeStage.TryingToConceive -> Color(0xFFFF6FB8)
+    LifeStage.Pregnancy -> Color(0xFFFF8E92)
+    LifeStage.Postpartum -> Color(0xFFFFB020)
+    LifeStage.Perimenopause -> Color(0xFF4FC3FF)
+    LifeStage.Menopause -> Color(0xFF2BA57A)
+}
+
 @Composable
 fun LifeStageQuestion(
     state: AppState,
@@ -274,7 +374,8 @@ fun LifeStageQuestion(
             Reveal(entry.value, from = optionStart(index, base = 0.26f, step = 0.07f)) {
                 AnswerRow(
                     label = stage.title,
-                    leading = stage.glyph,
+                    icon = stage.icon(),
+                    tint = stage.tint(),
                     note = stage.reassurance(),
                     selected = picked && state.lifeStage == stage,
                     onClick = {
@@ -566,7 +667,7 @@ fun PermissionsQuestion(
         Reveal(entry.value, from = 0.28f) {
             AnswerRow(
                 label = "Eslatmalar",
-                leading = "🔔",
+                icon = SadoraIcons.Bell,
                 note = "Hayz, dori va tekshiruv vaqtini eslatib turamiz.",
                 selected = state.notificationsAllowed,
                 noteAlwaysVisible = true,
@@ -576,7 +677,8 @@ fun PermissionsQuestion(
         Reveal(entry.value, from = 0.36f) {
             AnswerRow(
                 label = "Salomatlik ma'lumotlari",
-                leading = "❤️",
+                icon = SadoraIcons.Heart,
+                tint = Color(0xFFFF6FB8),
                 note = "Qadamlar va uyquni soatingizdan o'qiymiz.",
                 selected = state.healthDataAllowed,
                 noteAlwaysVisible = true,
@@ -586,7 +688,8 @@ fun PermissionsQuestion(
         Reveal(entry.value, from = 0.44f) {
             AnswerRow(
                 label = "Kamera",
-                leading = "📷",
+                icon = SadoraIcons.Camera,
+                tint = Color(0xFF4FC3FF),
                 note = "Ovqatni suratga olib, tarkibini aniqlash uchun.",
                 selected = state.cameraAllowed,
                 noteAlwaysVisible = true,
@@ -818,7 +921,7 @@ fun LastPeriodQuestion(
             title = "Yana belgilaysizmi?",
             body = "Hozir $marked ta hayz belgilandi. Uchtasi belgilansa, siklingiz " +
                 "uzunligini o'lchay olamiz va bashorat ancha aniq bo'ladi.",
-            confirmText = "Baribir davom etish",
+            confirmText = "Davom etish",
             onConfirm = {
                 askAboutFewer = false
                 onNext()
@@ -958,10 +1061,15 @@ fun SensitiveNoticeScreen(
     ) {
         Reveal(entry.value, from = 0.02f) {
             Box(
-                Modifier.size(64.dp).clip(Radius.chip).background(c.accent.copy(alpha = 0.18f)),
+                Modifier.size(72.dp).clip(Radius.chip).background(c.primary.copy(alpha = 0.14f)),
                 contentAlignment = Alignment.Center,
             ) {
-                Text("!", style = Sadora.type.display, color = c.accentText)
+                androidx.compose.material3.Icon(
+                    SadoraIcons.Lock,
+                    contentDescription = null,
+                    Modifier.size(32.dp),
+                    tint = c.textAccent,
+                )
             }
         }
         Spacer(Modifier.height(Spacing.md))

@@ -66,4 +66,31 @@ enum class LifeStage(
 }
 
 /** The four phases of a menstrual cycle, used to colour the calendar. */
-enum class CyclePhase { Period, Follicular, Fertile, Luteal }
+enum class CyclePhase(
+    val label: String,
+    /** The "Bugun" card's first line: how likely conception is in this phase. */
+    val fertilityNote: String,
+    /** The card's second line: what the body is usually doing. */
+    val energyNote: String,
+) {
+    Period(
+        "Hayz",
+        "Homiladorlik ehtimoli past",
+        "Tanangiz dam olmoqda — o'zingizga yumshoq bo'ling.",
+    ),
+    Follicular(
+        "Follikulyar faza",
+        "Homiladorlik ehtimoli past",
+        "Energiya oshmoqda — yangi boshlanishlar uchun ajoyib vaqt.",
+    ),
+    Fertile(
+        "Ovulyatsiya davri",
+        "Homiladorlik ehtimoli yuqori",
+        "Energiya cho'qqisida — faol kunlar uchun foydalaning.",
+    ),
+    Luteal(
+        "Lyuteal faza",
+        "Homiladorlik ehtimoli past",
+        "Energiya asta pasayadi — dam olishga vaqt ajrating.",
+    ),
+}

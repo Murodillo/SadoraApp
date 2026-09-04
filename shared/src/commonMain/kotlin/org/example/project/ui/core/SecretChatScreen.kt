@@ -85,6 +85,7 @@ fun SecretChatScreen(
      * tab bar; a sheet opened from inside the content area is drawn underneath it.
      */
     onOpenComments: (CommunityPost) -> Unit,
+    onClose: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     val share = rememberShareAction()
@@ -94,6 +95,7 @@ fun SecretChatScreen(
         Column(Modifier.fillMaxSize()) {
             SadoraTopBar(
                 title = "Maxfiy chat",
+                onBack = onClose,
                 trailing = {
                     SavedToggle(
                         active = state.communityFilter == CommunityFilter.Saved,

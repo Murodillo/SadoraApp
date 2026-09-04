@@ -9,9 +9,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -23,27 +23,28 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
+import org.example.project.design.IconSize
 import org.example.project.design.Radius
 import org.example.project.design.Sadora
 import org.example.project.design.SadoraIcons
 import org.example.project.design.Spacing
 import org.example.project.model.AppState
 import org.example.project.ui.components.ButtonTone
-import org.example.project.ui.components.CardLabel
 import org.example.project.ui.components.ImagePlaceholder
 import org.example.project.ui.components.SadoraButton
 import org.example.project.ui.components.SadoraTopBar
 import org.example.project.ui.components.noRippleClickable
 
 /**
- * "Food Scan · kamera".
+ * "Ovqat skaneri · kamera".
  *
- * Gallery, shutter and manual entry sit in one row at equal weight — the design is
- * clear that scanning is never the only way in. The monthly quota is stated up front
- * rather than surfacing as a surprise at the limit.
+ * Gallery, shutter and manual entry sit in one row — the design is clear that
+ * scanning is never the only way in. The monthly quota is stated up front rather
+ * than surfacing as a surprise at the limit.
  */
 @Composable
 fun FoodScanCameraScreen(
@@ -55,8 +56,8 @@ fun FoodScanCameraScreen(
 ) {
     val c = Sadora.colors
 
-    Column(modifier.fillMaxSize()) {
-        SadoraTopBar("", onBack = onClose)
+    Column(modifier.fillMaxSize().navigationBarsPadding()) {
+        SadoraTopBar("Ovqat skaneri", onBack = onClose, centered = true)
 
         Column(
             Modifier.weight(1f).padding(horizontal = Spacing.screen),
@@ -76,7 +77,7 @@ fun FoodScanCameraScreen(
                     .fillMaxWidth()
                     .aspectRatio(0.85f)
                     .clip(Radius.card)
-                    .background(c.surface2),
+                    .background(c.text.copy(alpha = 0.9f)),
                 contentAlignment = Alignment.Center,
             ) {
                 Box(
@@ -85,19 +86,14 @@ fun FoodScanCameraScreen(
                         .aspectRatio(1f)
                         .border(2.dp, c.primary, Radius.card),
                 )
+                Text("🍽️", style = Sadora.type.display)
             }
 
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
-            ) {
-                Text("⚡", style = Sadora.type.body, color = c.warning)
-                Text(
-                    "Yaxshi yorug'lik natijani aniqroq qiladi",
-                    style = Sadora.type.body,
-                    color = c.muted,
-                )
-            }
+            Text(
+                "Yaxshi yorug'lik natijani aniqroq qiladi",
+                style = Sadora.type.body,
+                color = c.muted,
+            )
         }
 
         Column(
@@ -110,17 +106,20 @@ fun FoodScanCameraScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                CaptureSideAction("GALEREYA", onClick = onCapture)
+                CaptureSideAction(SadoraIcons.Document, "Galereya", onClick = onCapture)
 
                 Box(
                     Modifier
-                        .size(72.dp)
+                        .size(76.dp)
                         .clip(Radius.chip)
-                        .background(c.primary)
+                        .background(c.heroGradient)
                         .noRippleClickable(onClick = onCapture),
-                )
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(SadoraIcons.Camera, contentDescription = "Suratga olish", Modifier.size(28.dp), tint = c.onPrimary)
+                }
 
-                CaptureSideAction("✎", onClick = onManualEntry)
+                CaptureSideAction(SadoraIcons.Pencil, "Qo'lda", onClick = onManualEntry)
             }
 
             Text(
@@ -133,22 +132,28 @@ fun FoodScanCameraScreen(
 }
 
 @Composable
-private fun CaptureSideAction(label: String, onClick: () -> Unit) {
+private fun CaptureSideAction(icon: ImageVector, label: String, onClick: () -> Unit) {
     val c = Sadora.colors
-    Box(
-        Modifier
-            .size(56.dp)
-            .clip(RoundedCornerShape(Radius.md))
-            .background(c.surface2)
-            .noRippleClickable(onClick = onClick),
-        contentAlignment = Alignment.Center,
+    Column(
+        Modifier.noRippleClickable(onClick = onClick),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        Text(label, style = Sadora.type.caption, color = c.text, maxLines = 1, softWrap = false)
+        Box(
+            Modifier
+                .size(52.dp)
+                .clip(Radius.chip)
+                .background(c.surface2),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(icon, contentDescription = label, Modifier.size(IconSize.md), tint = c.text)
+        }
+        Text(label, style = Sadora.type.body, color = c.muted)
     }
 }
 
 /**
- * "Food Scan · tahlil" — the analysis step.
+ * "Ovqat skaneri · tahlil" — the analysis step.
  *
  * Shows what the model is doing and states the expected wait before it starts, so
  * the delay never reads as a hang.
@@ -170,40 +175,30 @@ fun FoodScanAnalyzingScreen(
 
     LaunchedEffect(Unit) {
         repeat(steps.size) {
-            delay(1200)
+            delay(900)
             step++
         }
-        delay(400)
+        delay(300)
         onDone()
     }
 
-    Column(modifier.fillMaxSize()) {
+    Column(modifier.fillMaxSize().navigationBarsPadding()) {
         SadoraTopBar("", onBack = onCancel)
 
         Column(
             Modifier.weight(1f).padding(horizontal = Spacing.screen),
             verticalArrangement = Arrangement.spacedBy(Spacing.md),
         ) {
-            CardLabel("Suratga olingan taom")
-            ImagePlaceholder(Modifier.fillMaxWidth().aspectRatio(1.4f), shape = Radius.card)
+            ImagePlaceholder(Modifier.fillMaxWidth().aspectRatio(1.4f), emoji = sampleScan.emoji, shape = Radius.card)
 
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
             ) {
-                Icon(
-                    SadoraIcons.Sparkle,
-                    contentDescription = null,
-                    Modifier.size(22.dp),
-                    tint = c.secondary,
-                )
+                Icon(SadoraIcons.Sparkle, contentDescription = null, Modifier.size(22.dp), tint = c.primary)
                 Column {
                     Text("Tahlil qilinmoqda…", style = Sadora.type.h3, color = c.text)
-                    Text(
-                        "Bu odatda 3–5 soniya oladi",
-                        style = Sadora.type.body,
-                        color = c.muted,
-                    )
+                    Text("Bu odatda 3–5 soniya oladi", style = Sadora.type.body, color = c.muted)
                 }
             }
 
@@ -214,16 +209,13 @@ fun FoodScanAnalyzingScreen(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
                 ) {
-                    Text(
-                        if (done) "✓" else "◷",
-                        style = Sadora.type.h3,
-                        color = if (done) c.success else c.muted2,
+                    Icon(
+                        if (done) SadoraIcons.Check else SadoraIcons.Clock,
+                        contentDescription = null,
+                        Modifier.size(IconSize.md),
+                        tint = if (done) c.success else c.muted2,
                     )
-                    Text(
-                        label,
-                        style = Sadora.type.body,
-                        color = if (done) c.text else c.muted,
-                    )
+                    Text(label, style = Sadora.type.body, color = if (done) c.text else c.muted)
                 }
             }
         }

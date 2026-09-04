@@ -14,6 +14,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInVertically
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -46,10 +47,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -66,16 +71,17 @@ import org.example.project.design.Sadora
 import org.example.project.design.SadoraIcons
 import org.example.project.design.Spacing
 import org.example.project.model.AppLanguage
+import org.example.project.model.Fmt
+import org.example.project.model.deviceToday
+import org.example.project.ui.components.SadoraMark
+import org.example.project.ui.components.cardSurface
 import org.example.project.ui.components.noRippleClickable
 import kotlin.math.abs
-import kotlin.time.Clock
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
-import kotlinx.datetime.TimeZone
 import kotlinx.datetime.isoDayNumber
 import kotlinx.datetime.minus
 import kotlinx.datetime.plus
-import kotlinx.datetime.todayIn
 
 // ---------------------------------------------------------------- reveal
 
@@ -130,8 +136,64 @@ fun optionStart(index: Int, base: Float = 0.34f, step: Float = 0.07f) =
 // ---------------------------------------------------------------- scaffold
 
 /**
- * The frame every onboarding question shares: progress, back, skip, a staged
- * headline, a scrolling body, and a footer that appears once there is an answer.
+ * The brand block every registration page opens with: the mark, the wordmark, and a
+ * blossom drifting in the top-right corner.
+ *
+ * It is the deck's signature on these screens — the same three elements on every
+ * question, so a run of twenty pages reads as one flow rather than as a form.
+ */
+@Composable
+private fun QuestionBrand(modifier: Modifier = Modifier) {
+    val c = Sadora.colors
+    Box(modifier.fillMaxWidth().height(96.dp)) {
+        Canvas(Modifier.fillMaxSize()) {
+            // Two soft blooms in the corner, drawn from the same flower as the splash.
+            drawBloom(
+                center = Offset(size.width * 0.88f, size.height * 0.30f),
+                radius = 26.dp.toPx(),
+                petals = 6,
+                rotation = 12f,
+                color = c.secondary.copy(alpha = 0.30f),
+                coreColor = c.secondary.copy(alpha = 0.45f),
+                stem = 0f,
+                stemColor = Color.Transparent,
+                alpha = 1f,
+                scale = 1f,
+            )
+            drawBloom(
+                center = Offset(size.width * 0.97f, size.height * 0.62f),
+                radius = 16.dp.toPx(),
+                petals = 5,
+                rotation = -20f,
+                color = c.primary.copy(alpha = 0.22f),
+                coreColor = c.primary.copy(alpha = 0.35f),
+                stem = 0f,
+                stemColor = Color.Transparent,
+                alpha = 1f,
+                scale = 1f,
+            )
+        }
+        Column(
+            Modifier.align(Alignment.Center),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            SadoraMark(size = 56.dp)
+            Text(
+                "SADORA",
+                style = Sadora.type.caption.copy(
+                    letterSpacing = androidx.compose.ui.unit.TextUnit.Unspecified,
+                    fontWeight = FontWeight.Medium,
+                ),
+                color = c.muted,
+            )
+        }
+    }
+}
+
+/**
+ * The frame every onboarding question shares: back, progress, the brand block, a
+ * staged headline, a scrolling body, and a footer that carries the primary button
+ * with the skip link under it.
  *
  * [progress] is the position in the whole question sequence, 0..1. It animates
  * rather than jumping, which is the one piece of continuity across a page
@@ -146,7 +208,11 @@ fun QuestionScaffold(
     modifier: Modifier = Modifier,
     subtitle: String? = null,
     entry: Animatable<Float, *> = rememberPageEntry(),
-    /** Sits in the top-right corner, above the progress bar. Used for the language switch. */
+    /** The wording of the skip link under the button. */
+    skipLabel: String = "O'tkazish",
+    /** Set false on the pages that need every pixel for their own content. */
+    brand: Boolean = true,
+    /** Sits in the top-right corner, level with the progress bar. */
     topEnd: @Composable (() -> Unit)? = null,
     footer: @Composable ColumnScope.() -> Unit = {},
     content: @Composable ColumnScope.() -> Unit,
@@ -167,16 +233,6 @@ fun QuestionScaffold(
             // when they want the keyboard gone.
             .pointerInput(Unit) { detectTapGestures { focus.clearFocus() } },
     ) {
-        if (topEnd != null) {
-            Row(
-                Modifier
-                    .fillMaxWidth()
-                    .padding(start = Spacing.screen, end = Spacing.screen, top = Spacing.xs),
-                horizontalArrangement = Arrangement.End,
-            ) {
-                topEnd()
-            }
-        }
         Row(
             Modifier
                 .fillMaxWidth()
@@ -199,15 +255,7 @@ fun QuestionScaffold(
                 }
             }
             ProgressLine(progress, Modifier.weight(1f))
-            Text(
-                "O'tkazish",
-                style = Sadora.type.body,
-                color = if (onSkip != null) c.muted else Color.Transparent,
-                modifier = Modifier
-                    .defaultMinSize(minHeight = MinTouchTarget)
-                    .noRippleClickable(enabled = onSkip != null) { onSkip?.invoke() }
-                    .padding(top = 12.dp),
-            )
+            if (topEnd != null) topEnd() else Spacer(Modifier.size(Spacing.xs))
         }
 
         Column(
@@ -217,7 +265,11 @@ fun QuestionScaffold(
                 .padding(horizontal = Spacing.screen),
             verticalArrangement = Arrangement.spacedBy(Spacing.sm),
         ) {
-            Spacer(Modifier.height(Spacing.md))
+            if (brand) {
+                Reveal(e, from = 0.0f) { QuestionBrand() }
+            } else {
+                Spacer(Modifier.height(Spacing.md))
+            }
             Reveal(e, from = 0.05f) {
                 Text(
                     title,
@@ -251,9 +303,22 @@ fun QuestionScaffold(
                 .fillMaxWidth()
                 .padding(horizontal = Spacing.screen, vertical = Spacing.sm),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+            verticalArrangement = Arrangement.spacedBy(Spacing.xxs),
         ) {
             footer()
+            // The skip sits under the button, the way the deck draws it: declining is
+            // an ordinary choice, not something hidden in a corner of the header.
+            if (onSkip != null) {
+                Text(
+                    skipLabel,
+                    style = Sadora.type.body,
+                    color = c.muted,
+                    modifier = Modifier
+                        .defaultMinSize(minHeight = MinTouchTarget)
+                        .noRippleClickable(onClick = onSkip)
+                        .padding(top = Spacing.xs),
+                )
+            }
         }
     }
 }
@@ -269,16 +334,16 @@ private fun ProgressLine(progress: Float, modifier: Modifier = Modifier) {
     )
     Box(
         modifier
-            .height(3.dp)
+            .height(6.dp)
             .clip(Radius.chip)
             .background(c.line),
     ) {
         Box(
             Modifier
                 .fillMaxWidth(width)
-                .height(3.dp)
+                .height(6.dp)
                 .clip(Radius.chip)
-                .background(c.text),
+                .background(c.heroGradient),
         )
     }
 }
@@ -304,12 +369,48 @@ fun ColumnScope.AnswerFooter(visible: Boolean, content: @Composable () -> Unit) 
 // ---------------------------------------------------------------- answers
 
 /**
- * One answer in a single-choice question.
+ * The radio on the right of an answer row: a ring while unselected, a filled disc
+ * with a tick once chosen.
+ */
+@Composable
+private fun AnswerRadio(selected: Boolean) {
+    val c = Sadora.colors
+    val fill by animateColorAsState(
+        if (selected) c.primary else Color.Transparent,
+        tween(220),
+        label = "radio-fill",
+    )
+    val ring by animateColorAsState(
+        if (selected) c.primary else c.line,
+        tween(220),
+        label = "radio-ring",
+    )
+    Box(
+        Modifier
+            .size(24.dp)
+            .clip(Radius.chip)
+            .background(fill)
+            .border(2.dp, ring, Radius.chip),
+        contentAlignment = Alignment.Center,
+    ) {
+        AnimatedVisibility(selected, enter = fadeIn(tween(160)), exit = fadeOut(tween(120))) {
+            Icon(
+                SadoraIcons.Check,
+                contentDescription = null,
+                Modifier.size(14.dp),
+                tint = c.onPrimary,
+            )
+        }
+    }
+}
+
+/**
+ * One answer in a single-choice question — the deck's option card.
  *
- * Selecting fills the row and, when the answer carries a [note], expands it into
- * view. The expansion is the reason the row owns its own layout animation: the rows
- * below have to slide down around it, and doing that with a size animation keeps
- * the whole list moving as one piece rather than snapping.
+ * A white card with a tinted icon disc, the label, and a radio on the right; the
+ * purple border and the filled radio are what carry selection, so a chosen row still
+ * reads as the same object rather than flipping to a solid block. Selecting expands
+ * the answer's [note] into view, and the rows below slide down around it.
  */
 @Composable
 fun AnswerRow(
@@ -318,7 +419,11 @@ fun AnswerRow(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     note: String? = null,
+    /** An emoji shown in the leading disc. [icon] is preferred where one exists. */
     leading: String? = null,
+    icon: ImageVector? = null,
+    /** Colours the leading disc; the primary colour when not set. */
+    tint: Color? = null,
     /**
      * Keeps [note] on screen while the row is unselected.
      *
@@ -328,41 +433,66 @@ fun AnswerRow(
     noteAlwaysVisible: Boolean = false,
 ) {
     val c = Sadora.colors
-    val background by animateColorAsState(
-        if (selected) c.primary else c.surface2,
-        tween(260, easing = FastOutSlowInEasing),
-        label = "answer-bg",
+    val discColour = tint ?: c.primary
+    val border by animateColorAsState(
+        if (selected) c.primary else c.line.copy(alpha = if (c.isDark) 1f else 0.7f),
+        tween(240),
+        label = "answer-border",
     )
-    val label1 by animateColorAsState(
-        if (selected) c.onPrimary else c.text,
-        tween(260),
-        label = "answer-fg",
+    val borderWidth by animateDpAsState(
+        if (selected) 1.5.dp else 1.dp,
+        tween(240),
+        label = "answer-border-width",
     )
 
     Column(
         modifier
             .fillMaxWidth()
-            .clip(Radius.cardSmall)
-            .background(background)
+            .clip(Radius.tile)
+            .background(c.surface)
+            .border(borderWidth, border, Radius.tile)
             .noRippleClickable(onClick = onClick)
             .animateContentSize(tween(300, easing = FastOutSlowInEasing))
             .padding(horizontal = Spacing.md, vertical = Spacing.sm),
         verticalArrangement = Arrangement.spacedBy(Spacing.xs),
     ) {
         Row(
-            Modifier.defaultMinSize(minHeight = 30.dp),
+            Modifier.defaultMinSize(minHeight = 40.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
         ) {
-            if (leading != null) Text(leading, style = Sadora.type.h2, color = label1)
-            Text(label, style = Sadora.type.h3, color = label1, modifier = Modifier.weight(1f))
+            when {
+                icon != null -> Box(
+                    Modifier
+                        .size(38.dp)
+                        .clip(Radius.chip)
+                        .background(discColour.copy(alpha = if (c.isDark) 0.24f else 0.13f)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(icon, contentDescription = null, Modifier.size(IconSize.md), tint = discColour)
+                }
+
+                leading != null -> Box(
+                    Modifier
+                        .size(38.dp)
+                        .clip(Radius.chip)
+                        .background(discColour.copy(alpha = if (c.isDark) 0.24f else 0.13f)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(leading, style = Sadora.type.h3)
+                }
+            }
+            Text(
+                label,
+                style = Sadora.type.h3.copy(
+                    fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
+                ),
+                color = c.text,
+                modifier = Modifier.weight(1f),
+            )
+            AnswerRadio(selected)
         }
         if (note != null) {
-            val noteColour by animateColorAsState(
-                if (selected) c.onPrimary.copy(alpha = 0.88f) else c.muted,
-                tween(260),
-                label = "answer-note",
-            )
             AnimatedVisibility(
                 visible = selected || noteAlwaysVisible,
                 enter = expandVertically(tween(300, easing = FastOutSlowInEasing)) +
@@ -372,7 +502,7 @@ fun AnswerRow(
                 Text(
                     note,
                     style = Sadora.type.body,
-                    color = noteColour,
+                    color = c.muted,
                     modifier = Modifier.padding(bottom = Spacing.xxs),
                 )
             }
@@ -397,12 +527,12 @@ fun AnswerTile(
 ) {
     val c = Sadora.colors
     val ring by animateColorAsState(
-        if (selected) c.primary else Color.Transparent,
+        if (selected) c.primary else c.line.copy(alpha = if (c.isDark) 1f else 0.7f),
         tween(240),
         label = "tile-ring",
     )
     val disc by animateColorAsState(
-        if (selected) c.primary.copy(alpha = 0.18f) else c.surface2,
+        if (selected) c.primary.copy(alpha = if (c.isDark) 0.3f else 0.16f) else c.surface2,
         tween(240),
         label = "tile-disc",
     )
@@ -415,9 +545,9 @@ fun AnswerTile(
     Column(
         modifier
             .graphicsLayer { scaleX = scale; scaleY = scale }
-            .clip(Radius.card)
+            .clip(Radius.tile)
             .background(c.surface)
-            .border(1.5.dp, ring, Radius.card)
+            .border(if (selected) 1.5.dp else 1.dp, ring, Radius.tile)
             .noRippleClickable(onClick = onClick)
             .padding(vertical = Spacing.md, horizontal = Spacing.xs),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -428,7 +558,7 @@ fun AnswerTile(
             contentAlignment = Alignment.Center,
         ) {
             val tint by animateColorAsState(
-                if (selected) c.primary else c.secondary,
+                if (selected) c.primary else c.muted,
                 tween(240),
                 label = "tile-icon",
             )
@@ -486,8 +616,8 @@ fun WheelPicker(
             Modifier
                 .fillMaxWidth()
                 .height(rowHeight)
-                .clip(Radius.field)
-                .background(c.surface2),
+                .clip(Radius.tile)
+                .background(c.primary.copy(alpha = if (c.isDark) 0.24f else 0.1f)),
         )
         LazyColumn(
             state = listState,
@@ -513,14 +643,17 @@ fun WheelPicker(
                         Text(
                             items[index],
                             style = if (focused) Sadora.type.h1 else Sadora.type.h2,
-                            color = c.text.copy(
-                                alpha = when (distance) {
-                                    0 -> 1f
-                                    1 -> 0.45f
-                                    2 -> 0.22f
-                                    else -> 0.12f
-                                },
-                            ),
+                            color = if (focused) {
+                                c.textAccent
+                            } else {
+                                c.text.copy(
+                                    alpha = when (distance) {
+                                        1 -> 0.45f
+                                        2 -> 0.22f
+                                        else -> 0.12f
+                                    },
+                                )
+                            },
                         )
                         if (focused && suffix != null) {
                             Text(
@@ -539,23 +672,17 @@ fun WheelPicker(
 
 // ---------------------------------------------------------------- calendar
 
-private val monthNames = listOf(
-    "Yanvar", "Fevral", "Mart", "Aprel", "May", "Iyun",
-    "Iyul", "Avgust", "Sentabr", "Oktabr", "Noyabr", "Dekabr",
-)
-
-private val weekdayInitials = listOf("D", "S", "C", "P", "J", "S", "Y")
-
-/** Today, in the device's own zone. The onboarding calendar has no server date yet. */
-fun deviceToday(): LocalDate = Clock.System.todayIn(TimeZone.currentSystemDefault())
+private val weekdayInitials = listOf("Du", "Se", "Ch", "Pa", "Ju", "Sh", "Ya")
 
 /**
- * A scrolling run of month grids for picking one date.
+ * One month at a time, with arrows either side of the month's name — the deck's
+ * cycle-setup calendar.
  *
- * Months are rendered rather than paged because the answer is almost always within a
- * few weeks either side of today, and a pager would make the common case — glance,
- * tap — into a navigation exercise. Days outside [range] are drawn but not tappable,
- * so the shape of the month stays readable while the invalid half is obviously inert.
+ * Paging beats scrolling here: the answer is almost always in the current month or
+ * the one before it, and a single grid keeps the day cells large enough to hit.
+ * [monthsBack] and [monthsForward] bound where the arrows can go; days outside
+ * [range] are drawn but inert, so the shape of the month stays readable while the
+ * invalid half is obviously not tappable.
  */
 @Composable
 fun CalendarPicker(
@@ -568,51 +695,87 @@ fun CalendarPicker(
     range: ClosedRange<LocalDate> = today.minus(2, DateTimeUnit.MONTH)..today,
 ) {
     val c = Sadora.colors
-    val first = remember(today, monthsBack) {
-        LocalDate(today.year, today.month, 1).minus(monthsBack, DateTimeUnit.MONTH)
-    }
+    val thisMonth = remember(today) { LocalDate(today.year, today.month, 1) }
+    val firstMonth = remember(thisMonth, monthsBack) { thisMonth.minus(monthsBack, DateTimeUnit.MONTH) }
+    val lastMonth = remember(thisMonth, monthsForward) { thisMonth.plus(monthsForward, DateTimeUnit.MONTH) }
+    // Forward-only pickers (a due date) open on the first month they can offer.
+    var month by remember { mutableStateOf(if (monthsForward > 0 && monthsBack == 0) thisMonth else thisMonth) }
 
-    Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
+    Column(
+        modifier.fillMaxWidth().cardSurface(c).padding(Spacing.sm),
+        verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+    ) {
+        Row(
+            Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            val canGoBack = month > firstMonth
+            val canGoForward = month < lastMonth
+            Icon(
+                SadoraIcons.ChevronLeft,
+                contentDescription = "Oldingi oy",
+                Modifier
+                    .size(IconSize.lg)
+                    .noRippleClickable(enabled = canGoBack) {
+                        month = month.minus(1, DateTimeUnit.MONTH)
+                    },
+                tint = if (canGoBack) c.text else c.muted2.copy(alpha = 0.4f),
+            )
+            Text(
+                Fmt.monthYear(month.year, month.month.ordinal + 1),
+                style = Sadora.type.h3,
+                color = c.text,
+            )
+            Icon(
+                SadoraIcons.ChevronRight,
+                contentDescription = "Keyingi oy",
+                Modifier
+                    .size(IconSize.lg)
+                    .noRippleClickable(enabled = canGoForward) {
+                        month = month.plus(1, DateTimeUnit.MONTH)
+                    },
+                tint = if (canGoForward) c.text else c.muted2.copy(alpha = 0.4f),
+            )
+        }
+
         Row(Modifier.fillMaxWidth()) {
             weekdayInitials.forEach { initial ->
                 Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                    Text(initial, style = Sadora.type.caption, color = c.muted2)
+                    Text(
+                        initial,
+                        style = Sadora.type.caption.copy(
+                            letterSpacing = androidx.compose.ui.unit.TextUnit.Unspecified,
+                        ),
+                        color = c.muted2,
+                    )
                 }
             }
         }
-        repeat(monthsBack + monthsForward + 1) { offset ->
-            MonthBlock(
-                month = first.plus(offset, DateTimeUnit.MONTH),
-                today = today,
-                isSelected = isSelected,
-                range = range,
-                onSelect = onSelect,
-            )
-        }
+
+        MonthGrid(
+            month = month,
+            today = today,
+            isSelected = isSelected,
+            range = range,
+            onSelect = onSelect,
+        )
     }
 }
 
 @Composable
-private fun MonthBlock(
+private fun MonthGrid(
     month: LocalDate,
     today: LocalDate,
     isSelected: (LocalDate) -> Boolean,
     range: ClosedRange<LocalDate>,
     onSelect: (LocalDate) -> Unit,
 ) {
-    val c = Sadora.colors
     val days = month.daysInMonth()
     // Monday is column 0, matching the header above.
     val lead = month.dayOfWeek.isoDayNumber - 1
 
     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        Text(
-            "${monthNames[month.month.ordinal]} ${month.year}",
-            style = Sadora.type.h3,
-            color = c.text,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth().padding(bottom = Spacing.xxs),
-        )
         val cells = List(lead) { null } + (1..days).map { LocalDate(month.year, month.month, it) }
         cells.chunked(7).forEach { week ->
             Row(Modifier.fillMaxWidth()) {
@@ -646,15 +809,6 @@ private fun DayCell(
     modifier: Modifier = Modifier,
 ) {
     val c = Sadora.colors
-    val fill by animateColorAsState(
-        when {
-            isSelected -> c.primary
-            isToday -> c.surface2
-            else -> Color.Transparent
-        },
-        tween(220),
-        label = "day-fill",
-    )
     val label by animateColorAsState(
         when {
             isSelected -> c.onPrimary
@@ -663,6 +817,11 @@ private fun DayCell(
         },
         tween(220),
         label = "day-label",
+    )
+    val ring by animateColorAsState(
+        if (isToday && !isSelected) c.primary else Color.Transparent,
+        tween(220),
+        label = "day-ring",
     )
 
     Box(
@@ -673,7 +832,12 @@ private fun DayCell(
             Modifier
                 .size(38.dp)
                 .clip(Radius.chip)
-                .background(fill)
+                .then(
+                    // Selected days carry the brand gradient, the way the deck marks
+                    // the chosen date; today is a ring so the two never read alike.
+                    if (isSelected) Modifier.background(c.heroGradient) else Modifier,
+                )
+                .border(1.5.dp, ring, Radius.chip)
                 .noRippleClickable(enabled = enabled) { onSelect(date) },
             contentAlignment = Alignment.Center,
         ) {

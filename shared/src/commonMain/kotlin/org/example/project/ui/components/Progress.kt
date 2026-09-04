@@ -29,6 +29,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import org.example.project.design.Radius
@@ -40,6 +41,11 @@ import org.example.project.design.Spacing
  *
  * [segments] lets a ring show several coloured arcs in sequence (the cycle ring shows
  * period / follicular / fertile / luteal as four arcs of one circle).
+ *
+ * The arc sweeps up from zero the first time the ring appears and follows every later
+ * change on the same curve, so a ring always reads as a measurement being taken rather
+ * than as a picture that was already there. [animate] turns that off for the few places
+ * that redraw many rings per frame.
  */
 @Composable
 fun ProgressRing(
@@ -50,11 +56,19 @@ fun ProgressRing(
     color: Color? = null,
     trackColor: Color? = null,
     segments: List<Pair<Float, Color>>? = null,
+    animate: Boolean = true,
+    /** Staggers a row of rings so they fill one after another. */
+    delayMillis: Int = 0,
+    /** A wider, fainter copy of the arc under it, as the deck draws the score ring. */
+    glow: Boolean = false,
     content: @Composable () -> Unit = {},
 ) {
     val c = Sadora.colors
     val ringColor = color ?: c.primary
     val track = trackColor ?: c.surface2
+    // One factor drives both the plain arc and the segmented one, so a segmented ring
+    // grows as a single stroke instead of its parts appearing out of step.
+    val grow = if (animate) animatedProgress(1f, delayMillis = delayMillis) else 1f
 
     Box(modifier.size(size), contentAlignment = Alignment.Center) {
         Canvas(Modifier.fillMaxWidth().fillMaxHeight()) {
@@ -76,7 +90,7 @@ fun ProgressRing(
             if (segments != null) {
                 var start = -90f
                 segments.forEach { (fraction, segColor) ->
-                    val sweep = fraction.coerceIn(0f, 1f) * 360f
+                    val sweep = fraction.coerceIn(0f, 1f) * 360f * grow
                     drawArc(
                         color = segColor,
                         startAngle = start + 1.5f,
@@ -89,10 +103,25 @@ fun ProgressRing(
                     start += sweep
                 }
             } else {
+                val sweep = progress.coerceIn(0f, 1f) * 360f * grow
+                // The glow is a wider, fainter copy of the arc itself rather than a
+                // disc behind the ring — a disc tints everything the ring encloses,
+                // including the number in the middle.
+                if (glow) {
+                    drawArc(
+                        color = ringColor.copy(alpha = 0.18f),
+                        startAngle = -90f,
+                        sweepAngle = sweep,
+                        useCenter = false,
+                        topLeft = topLeft,
+                        size = arcSize,
+                        style = Stroke(width = stroke * 2.2f, cap = StrokeCap.Round),
+                    )
+                }
                 drawArc(
                     color = ringColor,
                     startAngle = -90f,
-                    sweepAngle = progress.coerceIn(0f, 1f) * 360f,
+                    sweepAngle = sweep,
                     useCenter = false,
                     topLeft = topLeft,
                     size = arcSize,
@@ -101,6 +130,59 @@ fun ProgressRing(
             }
         }
         content()
+    }
+}
+
+/**
+ * A small ring with a value inside and a label under it — the row of four across the
+ * top of the deck's nutrition screen ("1200 / 1600 kcal", "90 / 100 g Protein").
+ */
+@Composable
+fun MiniRing(
+    progress: Float,
+    value: String,
+    unit: String,
+    label: String,
+    modifier: Modifier = Modifier,
+    color: Color? = null,
+    size: Dp = 68.dp,
+    delayMillis: Int = 0,
+) {
+    val c = Sadora.colors
+    Column(
+        modifier,
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        ProgressRing(
+            progress = progress,
+            size = size,
+            strokeWidth = 6.dp,
+            color = color,
+            delayMillis = delayMillis,
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    value,
+                    style = Sadora.type.h3,
+                    color = c.text,
+                    maxLines = 1,
+                )
+                Text(
+                    unit,
+                    style = Sadora.type.caption.copy(letterSpacing = androidx.compose.ui.unit.TextUnit.Unspecified),
+                    color = c.muted2,
+                    maxLines = 1,
+                )
+            }
+        }
+        Text(
+            label,
+            style = Sadora.type.caption.copy(letterSpacing = androidx.compose.ui.unit.TextUnit.Unspecified),
+            color = c.muted,
+            maxLines = 1,
+            textAlign = TextAlign.Center,
+        )
     }
 }
 
@@ -123,12 +205,12 @@ fun SadoraProgressBar(
     ) {
         Box(
             Modifier
-                .fillMaxWidth(progress.coerceIn(0f, 1f))
+                .fillMaxWidth(animatedProgress(progress.coerceIn(0f, 1f)))
                 .fillMaxHeight()
                 .clip(Radius.chip)
                 .then(
                     if (gradient) {
-                        Modifier.background(Brush.horizontalGradient(listOf(c.secondary, c.primary)))
+                        Modifier.background(Brush.horizontalGradient(c.heroColors))
                     } else {
                         Modifier.background(color ?: c.primary)
                     },
@@ -183,7 +265,14 @@ fun WeeklyBars(
                 Box(
                     Modifier
                         .weight(1f)
-                        .fillMaxHeight(value.coerceIn(0.05f, 1f))
+                        // Bars grow left to right rather than all at once, which is what
+                        // makes a week read as a sequence of days.
+                        .fillMaxHeight(
+                            animatedProgress(
+                                value.coerceIn(0.05f, 1f),
+                                delayMillis = index * 40,
+                            ),
+                        )
                         .clip(RoundedCornerShape(6.dp))
                         .background(if (index == highlightIndex) c.primary else fill.copy(alpha = 0.75f)),
                 )

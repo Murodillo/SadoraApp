@@ -5,9 +5,12 @@ import kotlinx.coroutines.launch
 import kotlinx.datetime.LocalTime
 import org.example.project.model.AppStateSync
 import org.example.project.model.Meal
+import org.example.project.model.Mood
+import org.example.project.model.PracticeKind
 import uz.sadora.contract.DoseStatus
 import uz.sadora.contract.LogMealRequest
 import uz.sadora.contract.MealSlot
+import uz.sadora.contract.MindPracticeKind
 import uz.sadora.contract.SymptomEntry
 
 /**
@@ -52,12 +55,16 @@ class HealthSync(
      * The store's id packs the course and the time together, because a twice-daily
      * course is two rows on the screen and one medication on the server.
      */
-    override fun doseTaken(doseId: String) {
+    override fun doseTaken(doseId: String) = recordDose(doseId, DoseStatus.TAKEN)
+
+    override fun doseSkipped(doseId: String) = recordDose(doseId, DoseStatus.SKIPPED)
+
+    private fun recordDose(doseId: String, status: DoseStatus) {
         val date = health.doses?.date ?: health.selectedDate ?: return
         val medicationId = doseId.substringBefore('@')
         val dueAt = runCatching { LocalTime.parse(doseId.substringAfter('@', "")) }.getOrNull()
             ?: return
-        scope.launch { health.recordDose(medicationId, date, dueAt, DoseStatus.TAKEN) }
+        scope.launch { health.recordDose(medicationId, date, dueAt, status) }
     }
 
     override fun mealLogged(meal: Meal) {
@@ -76,6 +83,18 @@ class HealthSync(
                 ),
             )
         }
+    }
+
+    override fun checkInChanged(mood: Mood, energy: Int, stress: Int) {
+        scope.launch { health.saveCheckIn(mood.toWire(), energy, stress) }
+    }
+
+    override fun practiceLogged(kind: PracticeKind, seconds: Int) {
+        val wire = when (kind) {
+            PracticeKind.Breathing -> MindPracticeKind.BREATHING
+            PracticeKind.Meditation -> MindPracticeKind.MEDITATION
+        }
+        scope.launch { health.logPractice(wire, seconds) }
     }
 
     private fun String.toSlot(): MealSlot = when (this) {

@@ -494,4 +494,200 @@ object SadoraIcons {
             moveTo(8.4f, 12f); lineTo(15.6f, 12f)
         }
     }
+
+    // ---------------------------------------------------------------- deck set
+
+    /** Bugun tab — the house from the deck's tab bar. */
+    val Home: ImageVector = icon("Home") {
+        stroke {
+            moveTo(3.6f, 11.2f); lineTo(12f, 4.2f); lineTo(20.4f, 11.2f)
+        }
+        stroke {
+            moveTo(5.8f, 9.6f); lineTo(5.8f, 19.4f)
+            lineTo(18.2f, 19.4f); lineTo(18.2f, 9.6f)
+        }
+        stroke {
+            moveTo(10f, 19.4f); lineTo(10f, 14.6f); lineTo(14f, 14.6f); lineTo(14f, 19.4f)
+        }
+    }
+
+    /** Ovqatlanish tab — an apple with a leaf. */
+    val Apple: ImageVector = icon("Apple") {
+        stroke {
+            moveTo(12f, 8.6f)
+            curveToRelative(-1.7f, -1.5f, -4.7f, -1.6f, -6.4f, 0.9f)
+            curveToRelative(-2.3f, 3.3f, -0.6f, 8.4f, 1.8f, 10.4f)
+            curveToRelative(1.5f, 1.3f, 3f, 0.5f, 4.6f, 0.5f)
+            curveToRelative(1.6f, 0f, 3.1f, 0.8f, 4.6f, -0.5f)
+            curveToRelative(2.4f, -2f, 4.1f, -7.1f, 1.8f, -10.4f)
+            curveToRelative(-1.7f, -2.5f, -4.7f, -2.4f, -6.4f, -0.9f)
+            close()
+        }
+        stroke {
+            moveTo(12f, 8.6f)
+            curveToRelative(0f, -2f, 0.9f, -3.5f, 2.6f, -4.4f)
+        }
+        stroke {
+            moveTo(12.4f, 6f)
+            curveToRelative(1.6f, -1.2f, 3.4f, -1f, 4.6f, 0.2f)
+            curveToRelative(-1f, 1.4f, -2.9f, 1.7f, -4.6f, -0.2f)
+            close()
+        }
+    }
+
+    /** Kalendar. */
+    val Calendar: ImageVector = icon("Calendar") {
+        stroke {
+            moveTo(6f, 5.6f)
+            horizontalLineToRelative(12f)
+            curveToRelative(1.2f, 0f, 2f, 0.8f, 2f, 2f)
+            verticalLineToRelative(10.6f)
+            curveToRelative(0f, 1.2f, -0.8f, 2f, -2f, 2f)
+            horizontalLineToRelative(-12f)
+            curveToRelative(-1.2f, 0f, -2f, -0.8f, -2f, -2f)
+            verticalLineToRelative(-10.6f)
+            curveToRelative(0f, -1.2f, 0.8f, -2f, 2f, -2f)
+            close()
+        }
+        stroke {
+            moveTo(4f, 9.8f); lineTo(20f, 9.8f)
+            moveTo(8.4f, 3.6f); lineTo(8.4f, 7f)
+            moveTo(15.6f, 3.6f); lineTo(15.6f, 7f)
+        }
+        dot(8.6f, 13.6f, 2f)
+        dot(12f, 13.6f, 2f)
+        dot(15.4f, 13.6f, 2f)
+    }
+
+    /** Yuborish — the chat's paper plane. */
+    val Send: ImageVector = icon("Send") {
+        stroke {
+            moveTo(3.8f, 11f); lineTo(20.2f, 4f); lineTo(15.4f, 20.2f)
+            lineTo(11.8f, 13.2f); close()
+        }
+        stroke { moveTo(11.8f, 13.2f); lineTo(20.2f, 4f) }
+    }
+
+    /** Boshlash — nafas va meditatsiya. */
+    val Play: ImageVector = icon("Play") {
+        stroke {
+            moveTo(8.4f, 5.2f); lineTo(18.6f, 12f); lineTo(8.4f, 18.8f); close()
+        }
+    }
+
+    /** Ovqat skaneri. */
+    val Camera: ImageVector = icon("Camera") {
+        stroke {
+            moveTo(5.4f, 8.2f)
+            horizontalLineToRelative(2.6f)
+            lineTo(9.6f, 5.6f)
+            horizontalLineToRelative(4.8f)
+            lineTo(16f, 8.2f)
+            horizontalLineToRelative(2.6f)
+            curveToRelative(1.2f, 0f, 2f, 0.8f, 2f, 2f)
+            verticalLineToRelative(7.4f)
+            curveToRelative(0f, 1.2f, -0.8f, 2f, -2f, 2f)
+            horizontalLineToRelative(-13.2f)
+            curveToRelative(-1.2f, 0f, -2f, -0.8f, -2f, -2f)
+            verticalLineToRelative(-7.4f)
+            curveToRelative(0f, -1.2f, 0.8f, -2f, 2f, -2f)
+            close()
+        }
+        stroke {
+            moveTo(12f, 10.6f)
+            arcToRelative(3.1f, 3.1f, 0f, true, true, 0f, 6.2f)
+            arcToRelative(3.1f, 3.1f, 0f, true, true, 0f, -6.2f)
+            close()
+        }
+    }
+
+    /** Meditatsiya — a figure sitting cross-legged. */
+    val Meditation: ImageVector = icon("Meditation") {
+        stroke {
+            moveTo(12f, 3.8f)
+            arcToRelative(2.2f, 2.2f, 0f, true, true, 0f, 4.4f)
+            arcToRelative(2.2f, 2.2f, 0f, true, true, 0f, -4.4f)
+            close()
+        }
+        stroke {
+            moveTo(12f, 8.6f); lineTo(12f, 14.2f)
+        }
+        stroke {
+            // Arms resting on the knees.
+            moveTo(5.2f, 14.6f)
+            curveToRelative(2.4f, -0.4f, 4.6f, -0.2f, 6.8f, -0.4f)
+            curveToRelative(2.2f, 0.2f, 4.4f, 0f, 6.8f, 0.4f)
+        }
+        stroke {
+            // Folded legs.
+            moveTo(4.4f, 19.6f)
+            curveToRelative(1.6f, -3.6f, 4.4f, -5.4f, 7.6f, -5.4f)
+            reflectiveCurveToRelative(6f, 1.8f, 7.6f, 5.4f)
+            close()
+        }
+    }
+
+    /** Nafas mashqi — three curls of air. */
+    val Wind: ImageVector = icon("Wind") {
+        stroke {
+            moveTo(3.6f, 8.4f); lineTo(12.8f, 8.4f)
+            arcToRelative(2.1f, 2.1f, 0f, true, false, -2.1f, -2.1f)
+        }
+        stroke {
+            moveTo(3.6f, 12.4f); lineTo(17.6f, 12.4f)
+            arcToRelative(2.3f, 2.3f, 0f, true, true, -2.3f, 2.3f)
+        }
+        stroke {
+            moveTo(3.6f, 16.4f); lineTo(10.8f, 16.4f)
+            arcToRelative(1.9f, 1.9f, 0f, true, true, -1.9f, 1.9f)
+        }
+    }
+
+    /** Kayfiyat. */
+    val Smile: ImageVector = icon("Smile") {
+        stroke {
+            moveTo(12f, 3.8f)
+            arcToRelative(8.2f, 8.2f, 0f, true, true, 0f, 16.4f)
+            arcToRelative(8.2f, 8.2f, 0f, true, true, 0f, -16.4f)
+            close()
+        }
+        stroke {
+            moveTo(8.4f, 13.8f)
+            curveToRelative(1.2f, 1.9f, 6f, 1.9f, 7.2f, 0f)
+        }
+        dot(9.2f, 9.8f, 2f)
+        dot(14.8f, 9.8f, 2f)
+    }
+
+    /** Uch nuqta — "yana" menyusi. */
+    val More: ImageVector = icon("More") {
+        dot(6f, 12f, 2.6f)
+        dot(12f, 12f, 2.6f)
+        dot(18f, 12f, 2.6f)
+    }
+
+    /** Qadamlar — three rising bars. */
+    val Steps: ImageVector = icon("Steps") {
+        stroke {
+            moveTo(5.6f, 19f); lineTo(5.6f, 13.6f)
+            moveTo(12f, 19f); lineTo(12f, 9.4f)
+            moveTo(18.4f, 19f); lineTo(18.4f, 5f)
+        }
+    }
+
+    /** Xavfsiz maydon — a shield with a tick. */
+    val Shield: ImageVector = icon("Shield") {
+        stroke {
+            moveTo(12f, 3.6f)
+            lineTo(19f, 6.4f)
+            verticalLineToRelative(5.2f)
+            curveToRelative(0f, 4.4f, -3f, 7.6f, -7f, 8.8f)
+            curveToRelative(-4f, -1.2f, -7f, -4.4f, -7f, -8.8f)
+            verticalLineToRelative(-5.2f)
+            close()
+        }
+        stroke {
+            moveTo(9f, 12.2f); lineTo(11.2f, 14.4f); lineTo(15.2f, 9.8f)
+        }
+    }
 }

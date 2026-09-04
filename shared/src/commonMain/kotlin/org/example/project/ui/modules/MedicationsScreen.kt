@@ -55,6 +55,9 @@ fun MedicationsScreen(
 ) {
     val c = Sadora.colors
     var tab by remember { mutableStateOf(0) }
+    // "Keyinroq" hides the next-dose card for this visit; the dose itself stays due,
+    // because snoozing is not the same as skipping.
+    var snoozedId by remember { mutableStateOf<String?>(null) }
 
     Column(modifier) {
         SadoraTopBar(
@@ -86,7 +89,7 @@ fun MedicationsScreen(
                 )
             }
 
-            val next = state.medications.firstOrNull { it.status == MedStatus.Pending }
+            val next = state.medications.firstOrNull { it.status == MedStatus.Pending && it.id != snoozedId }
             if (next != null) {
                 item {
                     SadoraCard {
@@ -128,8 +131,8 @@ fun MedicationsScreen(
                                 { state.markMedicationTaken(next.id) },
                                 tone = ButtonTone.Primary,
                             )
-                            PillButton("Keyinroq", {})
-                            PillButton("O'tkazish", {})
+                            PillButton("Keyinroq", { snoozedId = next.id })
+                            PillButton("O'tkazish", { state.markMedicationSkipped(next.id) })
                         }
                     }
                 }

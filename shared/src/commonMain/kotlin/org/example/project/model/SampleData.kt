@@ -9,7 +9,22 @@ data class Meal(
     val protein: Int,
     val fat: Int,
     val carbs: Int,
-)
+) {
+    /**
+     * The thumbnail stand-in for a meal photo.
+     *
+     * Photos come from the scanner or, later, the server; until one exists the tile
+     * shows the slot's own dish rather than a grey box.
+     */
+    val emoji: String
+        get() = when (slot) {
+            "Nonushta" -> "🥣"
+            "Tushlik" -> "🍲"
+            "Kechki ovqat" -> "🍽️"
+            "Skanerlangan" -> "📷"
+            else -> "🍎"
+        }
+}
 
 enum class MedStatus { Taken, Pending, Skipped }
 
@@ -59,6 +74,9 @@ data class FoodItem(
     val carbs: Int,
     val perPiece: Boolean = false,
 )
+
+/** One symptom tile on the cycle screen: what it is, and how strongly it was felt (0–3). */
+data class SymptomTile(val label: String, val emoji: String, val severity: Int)
 
 /** Seed content matching the design's sample screens. */
 object SampleData {
@@ -151,23 +169,25 @@ object SampleData {
         ),
     )
 
-
     val meals = listOf(
-        Meal("m1", "Nonushta", "08:20", "Yog'urt, granola, rezavorlar", 340, 18, 11, 42),
-        Meal("m2", "Tushlik", "13:05", "Tovuqli salat, non", 520, 34, 19, 48),
+        Meal("m1", "Nonushta", "08:30", "Yog'urt, granola, rezavorlar", 450, 25, 15, 50),
+        Meal("m2", "Tushlik", "13:00", "Tovuqli salat, non", 600, 30, 20, 65),
     )
 
     val medications = listOf(
         Medication("d1", "🌿", "Folik kislota 400 mkg", "08:00", "Har kuni", "Ovqatdan keyin", MedStatus.Taken),
-        Medication("d2", "☀️", "D3 vitamini 2000 IU", "09:00", "Du, Cho, Ju", "Ovqat bilan", MedStatus.Taken),
         Medication("d3", "🩸", "Temir 30 mg", "20:00", "Har kuni", "Ovqatdan keyin", MedStatus.Pending, stockDays = 12),
     )
 
-    val suggestedQuestions = listOf(
-        "Nega o'zimni charchagan his qilyapman?",
-        "Bugun nima yeganim ma'qul?",
-        "Uyqumni tushunishga yordam bering",
+    /** The chips under the AI chat. Each opens a question in that area. */
+    val aiTopics = listOf(
+        "Energiya" to "Energiyamni qanday barqaror ushlasam bo'ladi?",
+        "Ovqatlanish" to "Bugun nima yeganim ma'qul?",
+        "Sikl" to "Nega hayzdan oldin charchoq sezaman?",
+        "Teri" to "Sikl davomida terim nega o'zgaradi?",
     )
+
+    val suggestedQuestions = aiTopics.map { it.second }
 
     val recentConversations = listOf(
         Conversation("Uyqu sifatini qanday yaxshilash mumkin", "Kecha"),
@@ -181,6 +201,14 @@ object SampleData {
         FoodItem("Oshqovoqli somsa", 276, 7, 14, 30, perPiece = true),
         FoodItem("Tovuqli salat", 145, 12, 7, 8),
         FoodItem("Non (patir)", 270, 8, 4, 51),
+    )
+
+    /** The four tiles the cycle screen shows under "Simptomlar". */
+    val cycleSymptomTiles = listOf(
+        SymptomTile("Ajralma", "💧", 2),
+        SymptomTile("Shish", "🎈", 1),
+        SymptomTile("Bosh og'rig'i", "🤕", 3),
+        SymptomTile("Akne", "✨", 1),
     )
 
     val cycleSymptoms = listOf("Ajralma", "Og'riq", "Ko'ngil aynishi", "Bosh og'rig'i")
@@ -207,11 +235,16 @@ object SampleData {
 
     val knowledgeCategories = listOf("Barchasi", "Sikl", "Gormonlar", "Ovqatlanish", "Uyqu")
 
+    /** The eight platforms the deck lists as sources. Order matches the deck. */
     val dataSources = listOf(
         DataSource("Apple Health", "Apple Watch Series 9", "12:40", SourceStatus.Connected, listOf("Qadamlar", "Puls", "Mashqlar", "Energiya")),
-        DataSource("Oura", "Oura Ring Gen3", "07:05", SourceStatus.Connected),
-        DataSource("Garmin", null, null, SourceStatus.Expired),
+        DataSource("Health Connect", null, null, SourceStatus.Disconnected),
         DataSource("Samsung Health", null, null, SourceStatus.Disconnected),
+        DataSource("Huawei Health", null, null, SourceStatus.Disconnected),
+        DataSource("Garmin", null, null, SourceStatus.Expired),
+        DataSource("Oura", "Oura Ring Gen3", "07:05", SourceStatus.Connected, listOf("Uyqu", "HRV", "Tiklanish")),
+        DataSource("WHOOP", null, null, SourceStatus.Disconnected),
+        DataSource("Fitbit", null, null, SourceStatus.Disconnected),
     )
 
     val weekDays = listOf("Du", "Se", "Ch", "Pa", "Ju", "Sh", "Ya")

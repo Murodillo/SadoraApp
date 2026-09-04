@@ -1,12 +1,18 @@
 package org.example.project
 
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -22,14 +28,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import org.example.project.data.SadoraController
-import kotlinx.coroutines.launch
 import org.example.project.data.HealthController
 import org.example.project.data.HealthSync
+import org.example.project.data.SadoraController
 import org.example.project.data.SadoraGraph
 import org.example.project.data.SessionState
 import org.example.project.data.applyServerProfile
+import org.example.project.design.SadoraDarkSurface
 import org.example.project.design.SadoraTheme
 import org.example.project.design.Spacing
 import org.example.project.model.AppState
@@ -38,15 +45,20 @@ import org.example.project.nav.AppPhase
 import org.example.project.nav.Navigator
 import org.example.project.nav.Route
 import org.example.project.nav.Tab
+import org.example.project.nav.aiRoute
+import org.example.project.nav.isFullScreen
 import org.example.project.ui.components.ButtonTone
+import org.example.project.ui.components.Motion
 import org.example.project.ui.components.PillButton
 import org.example.project.ui.components.SadoraBottomNav
 import org.example.project.ui.components.SadoraBottomSheet
 import org.example.project.ui.components.SadoraToast
+import org.example.project.ui.components.SystemBackHandler
 import org.example.project.ui.core.AiChatScreen
+import org.example.project.ui.core.AiFreePreviewScreen
+import org.example.project.ui.core.CommentsSheetContent
 import org.example.project.ui.core.NutritionScreen
 import org.example.project.ui.core.ProfileScreen
-import org.example.project.ui.core.CommentsSheetContent
 import org.example.project.ui.core.SecretChatScreen
 import org.example.project.ui.core.TodayScreen
 import org.example.project.ui.journey.CycleCalendarScreen
@@ -67,8 +79,8 @@ import org.example.project.ui.modules.FoodScanScreen
 import org.example.project.ui.modules.FoodSearchScreen
 import org.example.project.ui.modules.InsightsScreen
 import org.example.project.ui.modules.KnowledgeScreen
-import org.example.project.ui.modules.MedicationsScreen
 import org.example.project.ui.modules.MedicationHistoryScreen
+import org.example.project.ui.modules.MedicationsScreen
 import org.example.project.ui.modules.MindJournalScreen
 import org.example.project.ui.modules.MindScreen
 import org.example.project.ui.modules.PaywallScreen
@@ -77,9 +89,8 @@ import org.example.project.ui.onboarding.LegalDocument
 import org.example.project.ui.onboarding.LegalScreen
 import org.example.project.ui.onboarding.OnboardingFlow
 import org.example.project.ui.onboarding.SignInScreen
-import org.example.project.ui.onboarding.WelcomeScreen
+import org.example.project.ui.onboarding.SplashScreen
 import org.example.project.ui.settings.SettingsDetailScreen
-import org.example.project.ui.components.SystemBackHandler
 
 /**
  * SADORA — root composable.
@@ -137,8 +148,8 @@ fun App(graph: SadoraGraph? = null) {
 }
 
 /**
- * The welcome screen, holding until two things are true: the animation has had its
- * moment, and the stored session has been resolved.
+ * The splash, holding until two things are true: the animation has had its moment,
+ * and the stored session has been resolved.
  *
  * Waiting for both is what stops the app flashing the sign-in screen at a user who is
  * already signed in — resolving a session takes a network round trip, and routing on the
@@ -173,7 +184,7 @@ private fun SplashGate(
         }
     }
 
-    WelcomeScreen(onReady = { animationDone = true })
+    SplashScreen(onReady = { animationDone = true })
 }
 
 /**
@@ -231,36 +242,73 @@ private fun MainShell(
         showWaterSheet = false
     }
 
+    val route = navigator.current
+    val fullScreen = route?.isFullScreen == true
+
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {
             Box(Modifier.weight(1f)) {
-                val route = navigator.current
-                if (route != null) {
-                    PushedScreen(
-                        route,
-                        state,
-                        navigator,
-                        controller,
-                        onSymptomSheet = { showSymptomSheet = true },
-                    )
-                } else {
-                    RootTab(
-                        navigator.tab,
-                        state,
-                        navigator,
-                        controller,
-                        onAddWater = { showWaterSheet = true },
-                        onOpenComments = { commentsFor = it },
-                    )
+                // A pushed screen slides in over the tab it was opened from and slides
+                // back out when it is popped, so the stack reads as having a direction.
+                // Switching tabs is a cross-fade instead: tabs are siblings, and sliding
+                // between them would imply one sits behind another.
+                AnimatedContent(
+                    targetState = route,
+                    transitionSpec = {
+                        val opening = targetState != null
+                        val slide = tween<IntOffset>(Motion.Standard, easing = Motion.Emphasized)
+                        if (opening) {
+                            (slideInHorizontally(slide) { it / 4 } + fadeIn(tween(Motion.Standard)))
+                                .togetherWith(fadeOut(tween(Motion.Quick)))
+                        } else {
+                            fadeIn(tween(Motion.Standard)).togetherWith(
+                                slideOutHorizontally(slide) { it / 4 } + fadeOut(tween(Motion.Standard)),
+                            )
+                        } using SizeTransform(clip = false)
+                    },
+                    modifier = Modifier.fillMaxSize(),
+                    label = "route",
+                ) { pushed ->
+                    if (pushed != null) {
+                        PushedScreen(
+                            pushed,
+                            state,
+                            navigator,
+                            controller,
+                            onSymptomSheet = { showSymptomSheet = true },
+                            onOpenComments = { commentsFor = it },
+                        )
+                    } else {
+                        AnimatedContent(
+                            targetState = navigator.tab,
+                            transitionSpec = {
+                                (fadeIn(tween(Motion.Standard)) + scaleIn(tween(Motion.Standard, easing = Motion.Emphasized), initialScale = 0.97f))
+                                    .togetherWith(fadeOut(tween(Motion.Quick))) using SizeTransform(clip = false)
+                            },
+                            modifier = Modifier.fillMaxSize(),
+                            label = "tab",
+                        ) { tab ->
+                            RootTab(
+                                tab,
+                                state,
+                                navigator,
+                                controller,
+                                onAddWater = { showWaterSheet = true },
+                            )
+                        }
+                    }
                 }
             }
 
-            // The tab bar stays put while a module screen is open on top of a tab.
-            SadoraBottomNav(
-                selected = navigator.tab,
-                onSelect = navigator::select,
-                journeyLabel = state.lifeStage.tabLabel,
-            )
+            // The tab bar stays put while a module screen is open on top of a tab, and
+            // steps aside only for the screens that take the whole display.
+            if (!fullScreen) {
+                SadoraBottomNav(
+                    selected = navigator.tab,
+                    onSelect = navigator::select,
+                    journeyLabel = state.lifeStage.tabLabel,
+                )
+            }
         }
 
         Box(
@@ -303,7 +351,7 @@ private fun MainShell(
             title = "Suv qo'shish",
             onDismiss = { showWaterSheet = false },
         ) {
-            androidx.compose.foundation.layout.Row(
+            Row(
                 Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
             ) {
@@ -327,18 +375,23 @@ private fun RootTab(
     navigator: Navigator,
     controller: SadoraController,
     onAddWater: () -> Unit,
-    onOpenComments: (CommunityPost) -> Unit,
 ) {
     when (tab) {
         Tab.Today -> TodayScreen(
             state = state,
             onOpen = navigator::push,
+            onSelectTab = navigator::select,
             onAddWater = onAddWater,
         )
 
-        Tab.Journey -> JourneyScreen(state = state, onOpen = navigator::push)
+        Tab.Mind -> MindScreen(
+            state = state,
+            onClose = null,
+            onOpenAi = { navigator.push(state.aiRoute()) },
+            onOpenJournal = { navigator.push(Route.MindJournal) },
+        )
 
-        Tab.Chat -> SecretChatScreen(state, onOpenComments = onOpenComments)
+        Tab.Journey -> JourneyScreen(state = state, onOpen = navigator::push)
 
         Tab.Nutrition -> NutritionScreen(
             state = state,
@@ -362,6 +415,7 @@ private fun PushedScreen(
     navigator: Navigator,
     controller: SadoraController,
     onSymptomSheet: () -> Unit,
+    onOpenComments: (CommunityPost) -> Unit,
 ) {
     val close = navigator::pop
     val upgrade = { navigator.push(Route.Paywall) }
@@ -379,21 +433,26 @@ private fun PushedScreen(
         Route.StageSymptoms -> StageSymptomsScreen(state, close)
         Route.StageSleepMood -> StageSleepMoodScreen(state, close)
 
-        // AI
-        Route.AiChat -> AiChatScreen(state, close)
+        // AI — the chat is drawn on the deck's navy whatever the app theme is.
+        Route.AiChat -> SadoraDarkSurface { AiChatScreen(state, close) }
+        Route.AiPreview -> AiFreePreviewScreen(onUpgrade = upgrade, onDismiss = close)
 
-        // Nutrition
-        Route.FoodSearch -> FoodSearchScreen(state, "Kechki ovqat", close)
+        // Nutrition: camera -> analysing -> result is one linear flow, so each step
+        // replaces the last rather than stacking on it.
+        Route.FoodSearch -> FoodSearchScreen(state, close)
         Route.FoodScanCamera -> FoodScanCameraScreen(
             state = state,
-            onCapture = { navigator.replaceTop(Route.FoodScan) },
+            onCapture = { navigator.replaceTop(Route.FoodScanAnalyzing) },
             onManualEntry = { navigator.replaceTop(Route.FoodSearch) },
             onClose = close,
+        )
+        Route.FoodScanAnalyzing -> FoodScanAnalyzingScreen(
+            onDone = { navigator.replaceTop(Route.FoodScan) },
+            onCancel = close,
         )
         Route.FoodScan -> FoodScanScreen(state, close)
         Route.Balance -> BalanceScreen(state, close)
 
-        Route.Mind -> MindScreen(state, close, upgrade, onOpenJournal = { navigator.push(Route.MindJournal) })
         Route.MindJournal -> MindJournalScreen(close)
         Route.Medications -> MedicationsScreen(state, close, navigator::push)
         Route.AddMedication -> AddMedicationScreen(state, close)
@@ -403,6 +462,7 @@ private fun PushedScreen(
         Route.Knowledge -> KnowledgeScreen(state, close, navigator::push)
         is Route.Article -> ArticleScreen(route.title, close)
         Route.DataSources -> DataSourcesScreen(close)
+        Route.SecretChat -> SecretChatScreen(state, onOpenComments = onOpenComments, onClose = close)
 
         // The same documents onboarding shows, reachable again from settings.
         Route.Terms -> LegalScreen(LegalDocument.Terms, close)

@@ -115,10 +115,12 @@ fun PremiumGradientBadge(modifier: Modifier = Modifier, text: String = "PREMIUM"
     Box(
         modifier
             .clip(Radius.chip)
-            .background(Brush.linearGradient(listOf(c.secondary, c.primary)))
+            .background(c.heroGradient)
             .padding(horizontal = Spacing.xs, vertical = 4.dp),
     ) {
-        Text(text, style = Sadora.type.caption, color = c.onPrimary)
+        // A badge is sized to its word; wrapping it is always a layout bug at the call
+        // site, so it never wraps here.
+        Text(text, style = Sadora.type.caption, color = c.onPrimary, maxLines = 1, softWrap = false)
     }
 }
 

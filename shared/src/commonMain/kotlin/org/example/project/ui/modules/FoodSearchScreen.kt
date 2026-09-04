@@ -27,6 +27,9 @@ import org.example.project.model.AppState
 import org.example.project.model.FoodItem
 import org.example.project.model.Meal
 import org.example.project.model.SampleData
+import org.example.project.model.deviceNow
+import org.example.project.model.mealSlotForHour
+import org.example.project.model.nowTimeLabel
 import org.example.project.ui.components.CardLabel
 import org.example.project.ui.components.ChipFlowRow
 import org.example.project.ui.components.SadoraButton
@@ -48,9 +51,10 @@ import org.example.project.ui.components.noRippleClickable
 @Composable
 fun FoodSearchScreen(
     state: AppState,
-    slot: String,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
+    /** Which meal the entry belongs to; by default the one this hour falls in. */
+    slot: String = mealSlotForHour(deviceNow().hour),
 ) {
     val c = Sadora.colors
     var query by remember { mutableStateOf("osh") }
@@ -170,7 +174,7 @@ fun FoodSearchScreen(
                             Meal(
                                 id = "search-${state.meals.size}",
                                 slot = slot,
-                                time = "hozir",
+                                time = nowTimeLabel(),
                                 description = chosen.name,
                                 calories = (chosen.kcal * factor).roundToInt(),
                                 protein = (chosen.protein * factor).roundToInt(),

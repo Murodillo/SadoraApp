@@ -6,10 +6,13 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 
 /**
- * SADORA colour tokens — section "01 · POYDEVOR" of the design.
+ * SADORA colour tokens — the "SADORA PRODUCTS" deck palette.
  *
+ * Lavender ground, white cards, a purple primary and the purple→pink brand gradient.
  * Every token exists in both themes and keeps the same semantic role, so a screen
  * built against these names renders correctly in light and dark without branching.
+ * The dark set is also what the AI assistant screen is painted in regardless of the
+ * app theme — the deck draws that one screen on navy.
  */
 @Immutable
 data class SadoraColors(
@@ -19,11 +22,11 @@ data class SadoraColors(
     val surface: Color,
     /** Icon backgrounds, progress tracks. */
     val surface2: Color,
-    /** Primary button, active tab. */
+    /** Primary button, active tab, progress. Purple. */
     val primary: Color,
     /** Primary as *text* — darkened on light so it clears AA. */
     val textAccent: Color,
-    /** Icons, second data series, Learn. */
+    /** The gradient's other end, and the period colour. Pink. */
     val secondary: Color,
     /** Water, sleep, fertile window. */
     val accent: Color,
@@ -37,55 +40,72 @@ data class SadoraColors(
     val success: Color,
     val warning: Color,
     val danger: Color,
-    /** Content colour for filled primary buttons. */
+    /** Content colour for filled primary buttons and gradient surfaces. */
     val onPrimary: Color,
+    /** Card shadow tint. Lavender on light so the lift reads soft, not grey. */
+    val shadow: Color,
     val isDark: Boolean,
 ) {
+    /** The two brand colours in gradient order: purple first, pink second. */
+    val heroColors: List<Color>
+        get() = listOf(primary, secondary)
+
     /**
-     * The hero gradient. The design restricts it to exactly four places:
-     * hero, AI, Premium CTA and the FAB.
+     * The hero gradient. The design restricts it to a handful of places: hero
+     * surfaces, the AI entry points, the primary CTA and the active tab.
      */
     val heroGradient: Brush
-        get() = Brush.linearGradient(listOf(secondary, primary))
+        get() = Brush.linearGradient(heroColors)
+
+    /** The macro legend: protein, fat, carbohydrate. Same order everywhere. */
+    val protein: Color get() = accent
+    val fat: Color get() = secondary
+    val carbs: Color get() = warningSoft
+
+    /** A warm amber for carbohydrate and the calorie ring; [warning] is too dark for it. */
+    val warningSoft: Color
+        get() = if (isDark) Color(0xFFFFC46B) else Color(0xFFFFB13D)
 }
 
 val SadoraLightColors = SadoraColors(
-    bg = Color(0xFFFBF8FF),
+    bg = Color(0xFFF7F5FF),
     surface = Color(0xFFFFFFFF),
-    surface2 = Color(0xFFF2ECFF),
-    primary = Color(0xFFFF5A7D),
-    textAccent = Color(0xFFD62F52),
-    secondary = Color(0xFF7B61FF),
-    accent = Color(0xFF4FD1FF),
-    accentText = Color(0xFF1D7FA6),
-    text = Color(0xFF1E1A2E),
-    muted = Color(0xFF736C8C),
-    muted2 = Color(0xFF8E86A8),
-    line = Color(0xFFE9E2F8),
-    success = Color(0xFF1B8A66),
-    warning = Color(0xFF8A5A00),
-    danger = Color(0xFFC42B30),
+    surface2 = Color(0xFFF1EDFF),
+    primary = Color(0xFF7B61FF),
+    textAccent = Color(0xFF6247E0),
+    secondary = Color(0xFFFF6FB8),
+    accent = Color(0xFF4FC3FF),
+    accentText = Color(0xFF1B7FB0),
+    text = Color(0xFF1A1630),
+    muted = Color(0xFF6F6A8A),
+    muted2 = Color(0xFF9590AD),
+    line = Color(0xFFEAE6FA),
+    success = Color(0xFF2BA57A),
+    warning = Color(0xFF9A6200),
+    danger = Color(0xFFD8404A),
     onPrimary = Color(0xFFFFFFFF),
+    shadow = Color(0xFF7B61FF),
     isDark = false,
 )
 
 val SadoraDarkColors = SadoraColors(
-    bg = Color(0xFF131020),
-    surface = Color(0xFF1C1730),
-    surface2 = Color(0xFF272040),
-    primary = Color(0xFFFF6E8C),
-    textAccent = Color(0xFFFF6E8C),
-    secondary = Color(0xFF9B85FF),
+    bg = Color(0xFF0F0D24),
+    surface = Color(0xFF1B1838),
+    surface2 = Color(0xFF272348),
+    primary = Color(0xFF8E7BFF),
+    textAccent = Color(0xFFB2A6FF),
+    secondary = Color(0xFFFF7EC4),
     accent = Color(0xFF63D8FF),
     accentText = Color(0xFF63D8FF),
     text = Color(0xFFF3F0FA),
-    muted = Color(0xFF9A93B4),
-    muted2 = Color(0xFFA9A2BE),
-    line = Color(0xFF322B4D),
-    success = Color(0xFF2FBF8F),
+    muted = Color(0xFFA39DBF),
+    muted2 = Color(0xFF7E789A),
+    line = Color(0xFF2E2A52),
+    success = Color(0xFF3FCF98),
     warning = Color(0xFFFFB020),
-    danger = Color(0xFFE5484D),
-    onPrimary = Color(0xFF131020),
+    danger = Color(0xFFFF5C64),
+    onPrimary = Color(0xFFFFFFFF),
+    shadow = Color(0xFF000000),
     isDark = true,
 )
 
@@ -105,9 +125,22 @@ object StagePalettes {
      */
     val warmInk = Color(0xFF2A1145)
 
-    val cycle = StagePalette(Color(0xFF9B85FF), Color(0xFFFF6E8C), Color(0xFFFF6E8C))
+    val cycle = StagePalette(Color(0xFF7B61FF), Color(0xFFFF6FB8), Color(0xFF7B61FF))
     val pregnancy = StagePalette(Color(0xFFFFB020), Color(0xFFFF8E92), Color(0xFFFF8E92))
     val postpartum = StagePalette(Color(0xFFFF8AA3), Color(0xFFFFB020), Color(0xFFFF8AA3))
     val perimenopause = StagePalette(Color(0xFF7B61FF), Color(0xFF63D8FF), Color(0xFF9B85FF))
     val menopause = StagePalette(Color(0xFF63D8FF), Color(0xFF2FBF8F), Color(0xFF63D8FF))
+}
+
+/**
+ * The four cycle phases as the deck draws them on the dial: period pink, follicular
+ * blue, ovulation magenta, luteal purple. Fixed rather than themed — the legend under
+ * the dial names them, and the same four colours have to mean the same thing on every
+ * screen that shows the cycle.
+ */
+object PhaseColors {
+    val period = Color(0xFFFF4F9A)
+    val follicular = Color(0xFF4FB8FF)
+    val fertile = Color(0xFFFF63C8)
+    val luteal = Color(0xFF8E7BFF)
 }

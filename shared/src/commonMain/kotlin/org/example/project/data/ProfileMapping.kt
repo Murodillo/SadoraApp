@@ -36,7 +36,9 @@ import uz.sadora.contract.LifeStage as WireLifeStage
 fun AppState.applyServerProfile(profile: UserProfile, entitlements: Entitlements) {
     name = profile.name
     email = profile.email.orEmpty()
-    phone = profile.phone.orEmpty()
+    // The field shows the local part behind a fixed "+998"; the wire carries the whole
+    // number, so the prefix comes off here or the screen would show it twice.
+    phone = profile.phone.orEmpty().toLocalPhone()
     profile.birthDate?.let { birthDate = it.toDisplayDate() }
     profile.heightCm?.let { heightCm = it.toString() }
     profile.weightKg?.let { weightKg = it.toString() }
@@ -96,6 +98,13 @@ private fun kotlinx.datetime.LocalDate.toDisplayDate(): String =
     "${day.pad()}.${monthNumber.pad()}.$year"
 
 private fun Int.pad(): String = toString().padStart(2, '0')
+
+/** `+998901234567` -> `90 123 45 67`, the way the phone field is typed. */
+internal fun String.toLocalPhone(): String {
+    val digits = filter { it.isDigit() }.removePrefix("998")
+    if (digits.length != 9) return digits
+    return "${digits.take(2)} ${digits.substring(2, 5)} ${digits.substring(5, 7)} ${digits.substring(7)}"
+}
 
 // ---------------------------------------------------------------- app -> wire
 

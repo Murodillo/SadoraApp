@@ -95,7 +95,7 @@ fun PaywallScreen(
                         Modifier
                             .size(64.dp)
                             .clip(RoundedCornerShape(Radius.lg))
-                            .background(Brush.linearGradient(listOf(c.secondary, c.primary))),
+                            .background(c.heroGradient),
                         contentAlignment = Alignment.Center,
                     ) {
                         Icon(

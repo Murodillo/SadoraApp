@@ -1,6 +1,9 @@
 package org.example.project.data
 
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.minus
 import org.example.project.model.AppState
+import org.example.project.model.CyclePhase
 import org.example.project.model.MedStatus
 import org.example.project.model.Mood
 import uz.sadora.contract.CycleStatus
@@ -13,9 +16,11 @@ import uz.sadora.contract.Medication
 import uz.sadora.contract.MedicationDay
 import uz.sadora.contract.MoodLevel
 import uz.sadora.contract.NutritionDay
+import uz.sadora.contract.PredictionConfidence
 import uz.sadora.contract.SymptomDefinition
 import org.example.project.model.Meal as AppMeal
 import org.example.project.model.Medication as AppMedication
+import uz.sadora.contract.CyclePhase as WirePhase
 
 /**
  * Copies server data onto the in-memory store the screens already read.
@@ -26,14 +31,26 @@ import org.example.project.model.Medication as AppMedication
  * app goes live at once rather than tab by tab.
  *
  * The projection is deliberately lossy. `AppState` holds what the screens draw; anything
- * richer than that — a prediction's confidence, a dose's lateness — is read from the
+ * richer than that — a dose's lateness, a prediction's spread — is read from the
  * controller by the screens that actually show it.
  */
 
 fun AppState.applyCycle(status: CycleStatus) {
+    today = status.today
     status.cycleDay?.let { cycleDay = it }
     status.prediction.averageCycleLength?.let { averageCycleLength = it }
     status.prediction.averagePeriodLength?.let { averagePeriodLength = it }
+    // The anchor is derived from the server's own day count rather than taken from a
+    // period record: an unended period from an earlier cycle can still be "current" on
+    // the server, and counting from it would put every phase on the dial a cycle out.
+    cycleStartDate = status.cycleDay?.let { status.today.minus(it - 1, DateTimeUnit.DAY) }
+        ?: status.lastPeriodStart
+        ?: cycleStartDate
+    cyclePhase = status.phase?.toAppPhase()
+    daysUntilNextPeriod = status.daysUntilNextPeriod
+    fertileFrom = status.prediction.fertileFrom
+    fertileUntil = status.prediction.fertileUntil
+    hasCyclePrediction = status.prediction.confidence != PredictionConfidence.NONE
 }
 
 /**
@@ -42,6 +59,8 @@ fun AppState.applyCycle(status: CycleStatus) {
  */
 fun AppState.applyDay(log: DailyLog, catalogue: List<SymptomDefinition>) {
     mood = log.mood?.toAppMood() ?: mood
+    log.energy?.let { energy = it.coerceIn(1, 5) }
+    log.stress?.let { stress = it.coerceIn(1, 5) }
     val labels = catalogue.associate { it.key to it.label }
     symptoms.clear()
     symptoms.addAll(log.symptoms.mapNotNull { labels[it.key] })
@@ -106,6 +125,13 @@ fun AppState.applyMedications(day: MedicationDay, courses: List<Medication>) {
 fun AppState.applyWearables(daily: DailyHealth) {
     daily.value(HealthMetric.STEPS)?.let { steps = it.toInt() }
     daily.value(HealthMetric.SLEEP_DURATION)?.let { sleepMinutes = it.toInt() }
+}
+
+private fun WirePhase.toAppPhase(): CyclePhase = when (this) {
+    WirePhase.PERIOD -> CyclePhase.Period
+    WirePhase.FOLLICULAR -> CyclePhase.Follicular
+    WirePhase.FERTILE -> CyclePhase.Fertile
+    WirePhase.LUTEAL -> CyclePhase.Luteal
 }
 
 private fun MoodLevel.toAppMood(): Mood = when (this) {

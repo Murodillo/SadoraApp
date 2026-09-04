@@ -37,6 +37,7 @@ import org.example.project.design.Spacing
 import org.example.project.model.AppState
 import org.example.project.model.Fmt
 import org.example.project.model.SampleData
+import org.example.project.ui.components.AiOrb
 import org.example.project.ui.components.CardLabel
 import org.example.project.ui.components.PremiumGradientBadge
 import org.example.project.ui.components.SadoraCard
@@ -76,7 +77,7 @@ fun AiScreen(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(Spacing.sm),
                     ) {
-                        AiOrb()
+                        AiOrb(size = 132.dp)
                         Text(
                             "Sizga qanday yordam bera olaman?",
                             style = Sadora.type.h2,
@@ -155,7 +156,7 @@ fun AiScreen(
                             if (draft.isBlank()) {
                                 Brush.linearGradient(listOf(c.surface2, c.surface2))
                             } else {
-                                Brush.linearGradient(listOf(c.secondary, c.primary))
+                                c.heroGradient
                             },
                         )
                         .noRippleClickable(enabled = draft.isNotBlank()) {
@@ -180,33 +181,6 @@ fun AiScreen(
                 modifier = Modifier.fillMaxWidth(),
             )
         }
-    }
-}
-
-/** The breathing gradient orb — the single strongest colour source on this screen. */
-@Composable
-private fun AiOrb(modifier: Modifier = Modifier) {
-    val c = Sadora.colors
-    val transition = rememberInfiniteTransition()
-    val pulse by transition.animateFloat(
-        initialValue = 1f,
-        targetValue = 1.06f,
-        animationSpec = infiniteRepeatable(tween(2200), RepeatMode.Reverse),
-    )
-    Box(
-        modifier
-            .size(96.dp)
-            .scale(pulse)
-            .clip(Radius.chip)
-            .background(Brush.linearGradient(listOf(c.secondary, c.primary))),
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(
-            SadoraIcons.Sparkle,
-            contentDescription = null,
-            Modifier.size(34.dp),
-            tint = c.onPrimary,
-        )
     }
 }
 

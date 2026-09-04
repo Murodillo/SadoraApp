@@ -22,10 +22,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import org.example.project.design.IconSize
@@ -35,24 +38,53 @@ import org.example.project.design.Sadora
 import org.example.project.design.SadoraIcons
 import org.example.project.design.Spacing
 
-/** The standard surface: 22dp radius, hairline border, no drop shadow in dark. */
+/**
+ * The soft lavender lift under every card in the deck.
+ *
+ * Dark surfaces skip it — a shadow on navy is invisible and only costs a layer — and
+ * keep the hairline border instead, which is what separates a card from the ground
+ * there.
+ */
+fun Modifier.cardSurface(
+    colors: org.example.project.design.SadoraColors,
+    shape: Shape = Radius.card,
+    elevation: Dp = 10.dp,
+): Modifier = this
+    .then(
+        if (colors.isDark) {
+            Modifier
+        } else {
+            Modifier.shadow(
+                elevation = elevation,
+                shape = shape,
+                ambientColor = colors.shadow.copy(alpha = 0.08f),
+                spotColor = colors.shadow.copy(alpha = 0.12f),
+            )
+        },
+    )
+    .clip(shape)
+    .background(colors.surface)
+    .border(1.dp, colors.line.copy(alpha = if (colors.isDark) 1f else 0.7f), shape)
+
+/** The standard surface: 24dp radius, soft shadow, hairline border. */
 @Composable
 fun SadoraCard(
     modifier: Modifier = Modifier,
-    padding: androidx.compose.ui.unit.Dp = Spacing.md,
+    padding: Dp = Spacing.md,
     onClick: (() -> Unit)? = null,
+    verticalGap: Dp = Spacing.sm,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val c = Sadora.colors
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .clip(Radius.card)
-            .background(c.surface)
-            .border(1.dp, c.line, Radius.card)
-            .then(if (onClick != null) Modifier.noRippleClickable(onClick = onClick) else Modifier)
+            // A tappable card dips under the finger; a static one must not, or every
+            // surface on the screen would look interactive.
+            .then(if (onClick != null) Modifier.pressable(onClick = onClick) else Modifier)
+            .cardSurface(c)
             .padding(padding),
-        verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+        verticalArrangement = Arrangement.spacedBy(verticalGap),
         content = content,
     )
 }
@@ -63,6 +95,8 @@ fun CardLabel(
     text: String,
     modifier: Modifier = Modifier,
     color: Color? = null,
+    /** The deck writes card labels in sentence case; the caption style upper-cases by default. */
+    uppercase: Boolean = false,
     trailing: @Composable (() -> Unit)? = null,
 ) {
     val c = Sadora.colors
@@ -71,7 +105,11 @@ fun CardLabel(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        Text(text.uppercase(), style = Sadora.type.caption, color = color ?: c.muted)
+        if (uppercase) {
+            Text(text.uppercase(), style = Sadora.type.caption, color = color ?: c.muted)
+        } else {
+            Text(text, style = Sadora.type.body, color = color ?: c.muted)
+        }
         trailing?.invoke()
     }
 }
@@ -83,6 +121,7 @@ fun SectionHeader(
     modifier: Modifier = Modifier,
     action: String? = null,
     onAction: (() -> Unit)? = null,
+    trailing: @Composable (() -> Unit)? = null,
 ) {
     val c = Sadora.colors
     Row(
@@ -91,14 +130,100 @@ fun SectionHeader(
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
         Text(title, style = Sadora.type.h2, color = c.text)
-        if (action != null) {
-            Text(
+        when {
+            trailing != null -> trailing()
+            action != null -> Text(
                 action,
                 style = Sadora.type.body.copy(fontWeight = FontWeight.SemiBold),
                 color = c.textAccent,
                 modifier = Modifier.noRippleClickable { onAction?.invoke() },
             )
         }
+    }
+}
+
+/**
+ * A round pastel tile with an icon in it — the deck's way of leading a card row.
+ * [tint] colours the icon; the disc is the same colour washed out.
+ */
+@Composable
+fun IconTile(
+    icon: ImageVector,
+    modifier: Modifier = Modifier,
+    tint: Color? = null,
+    size: Dp = 44.dp,
+    iconSize: Dp = IconSize.md,
+    shape: Shape = Radius.chip,
+) {
+    val c = Sadora.colors
+    val colour = tint ?: c.primary
+    Box(
+        modifier
+            .size(size)
+            .clip(shape)
+            .background(colour.copy(alpha = if (c.isDark) 0.22f else 0.13f)),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(icon, contentDescription = null, Modifier.size(iconSize), tint = colour)
+    }
+}
+
+/** The same disc with an emoji instead of a vector. */
+@Composable
+fun EmojiTile(
+    emoji: String,
+    modifier: Modifier = Modifier,
+    tint: Color? = null,
+    size: Dp = 44.dp,
+    shape: Shape = Radius.chip,
+) {
+    val c = Sadora.colors
+    val colour = tint ?: c.primary
+    Box(
+        modifier
+            .size(size)
+            .clip(shape)
+            .background(colour.copy(alpha = if (c.isDark) 0.22f else 0.13f)),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(emoji, style = Sadora.type.h3)
+    }
+}
+
+/**
+ * The deck's small stat card: a label, a value, a caption, and an icon on the right.
+ * Used for the 2×2 grid on Today.
+ */
+@Composable
+fun StatTile(
+    label: String,
+    value: String,
+    modifier: Modifier = Modifier,
+    caption: String? = null,
+    icon: ImageVector? = null,
+    emoji: String? = null,
+    tint: Color? = null,
+    onClick: (() -> Unit)? = null,
+    footer: @Composable (ColumnScope.() -> Unit)? = null,
+) {
+    val c = Sadora.colors
+    SadoraCard(modifier = modifier, padding = Spacing.sm, onClick = onClick, verticalGap = Spacing.xs) {
+        Text(label, style = Sadora.type.body, color = c.muted)
+        Row(
+            Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+        ) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(value, style = Sadora.type.h2, color = c.text, maxLines = 1)
+                if (caption != null) Text(caption, style = Sadora.type.body, color = c.muted2)
+            }
+            when {
+                icon != null -> IconTile(icon, tint = tint, size = 40.dp)
+                emoji != null -> EmojiTile(emoji, tint = tint, size = 40.dp)
+            }
+        }
+        footer?.invoke(this)
     }
 }
 
@@ -120,22 +245,12 @@ fun SettingsRow(
         modifier = modifier
             .fillMaxWidth()
             .defaultMinSize(minHeight = MinTouchTarget)
-            .then(if (onClick != null) Modifier.noRippleClickable(onClick = onClick) else Modifier)
+            .then(if (onClick != null) Modifier.pressable(onClick = onClick) else Modifier)
             .padding(vertical = Spacing.xs),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
     ) {
-        Box(
-            Modifier.size(34.dp).clip(RoundedCornerShape(Radius.sm)).background(c.surface2),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                icon,
-                contentDescription = null,
-                Modifier.size(IconSize.md),
-                tint = iconTint ?: c.secondary,
-            )
-        }
+        IconTile(icon, tint = iconTint, size = 36.dp, iconSize = IconSize.md, shape = RoundedCornerShape(Radius.sm))
         Text(title, style = Sadora.type.h3, color = c.text, modifier = Modifier.weight(1f))
         if (value != null) Text(value, style = Sadora.type.body, color = c.muted)
         if (showChevron) {
@@ -191,14 +306,18 @@ fun TileRow(
 )
 
 /**
- * Image stand-in. The design ships gradient placeholders instead of photography,
- * so this renders the same treatment with the "RASM" label.
+ * Image stand-in.
+ *
+ * Photography arrives from the scanner or the server; until then a tile shows a soft
+ * lavender-to-pink wash with an optional [emoji] on it, which reads as the subject
+ * rather than as a missing asset.
  */
 @Composable
 fun ImagePlaceholder(
     modifier: Modifier = Modifier,
-    label: String = "RASM",
-    shape: androidx.compose.ui.graphics.Shape = Radius.cardSmall,
+    label: String? = null,
+    emoji: String? = null,
+    shape: Shape = Radius.cardSmall,
     colors: List<Color>? = null,
 ) {
     val c = Sadora.colors
@@ -208,70 +327,85 @@ fun ImagePlaceholder(
             .background(
                 Brush.linearGradient(
                     colors ?: listOf(
-                        c.secondary.copy(alpha = 0.55f),
-                        c.primary.copy(alpha = 0.45f),
+                        c.primary.copy(alpha = if (c.isDark) 0.45f else 0.22f),
+                        c.secondary.copy(alpha = if (c.isDark) 0.4f else 0.22f),
                     ),
                 ),
             ),
         contentAlignment = Alignment.Center,
     ) {
-        Text(label, style = Sadora.type.caption, color = c.onPrimary.copy(alpha = 0.85f))
+        when {
+            emoji != null -> Text(emoji, style = Sadora.type.display)
+            label != null -> Text(label, style = Sadora.type.caption, color = c.textAccent)
+        }
     }
 }
 
 /**
- * The AI summary card. One of the four sanctioned gradient surfaces.
+ * The AI summary card on Today: the deck's lavender card with the brand mark on the
+ * right. Free accounts get the same card as the invitation to Premium.
  */
 @Composable
 fun AiSummaryCard(
     body: String,
     modifier: Modifier = Modifier,
-    label: String = "SADORA AI · KUNLIK XULOSA",
-    footnote: String = "Ma'lumotlaringiz asosida · AI tomonidan yaratilgan",
-    showPremiumBadge: Boolean = true,
-    /** Opens the full AI chat. This card is the way in now that AI has no tab. */
+    label: String = "SADORA AI",
+    footnote: String? = null,
+    showPremiumBadge: Boolean = false,
     onClick: (() -> Unit)? = null,
 ) {
     val c = Sadora.colors
-    val onGradient = c.onPrimary
-    Column(
+    Row(
         modifier = modifier
             .fillMaxWidth()
-            .clip(Radius.card)
             .then(
-                if (onClick != null) Modifier.noRippleClickable(onClick = onClick) else Modifier,
+                if (c.isDark) Modifier else Modifier.shadow(
+                    10.dp, Radius.card,
+                    ambientColor = c.shadow.copy(alpha = 0.10f),
+                    spotColor = c.shadow.copy(alpha = 0.16f),
+                ),
             )
-            .background(Brush.linearGradient(listOf(c.secondary, c.primary)))
-            .padding(Spacing.md),
-        verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+            .clip(Radius.card)
+            .background(
+                Brush.linearGradient(
+                    listOf(
+                        c.primary.copy(alpha = if (c.isDark) 0.35f else 0.14f),
+                        c.secondary.copy(alpha = if (c.isDark) 0.35f else 0.18f),
+                    ),
+                ),
+            )
+            .then(if (onClick != null) Modifier.pressable(onClick = onClick) else Modifier)
+            .padding(start = Spacing.md, top = Spacing.md, bottom = Spacing.md, end = Spacing.sm),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Box(
-                Modifier.size(18.dp).clip(RoundedCornerShape(6.dp))
-                    .background(onGradient.copy(alpha = 0.22f)),
-            )
-            Text(label, style = Sadora.type.caption, color = onGradient)
-            Spacer(Modifier.weight(1f))
-            if (showPremiumBadge) {
-                Box(
-                    Modifier.clip(Radius.chip)
-                        .background(onGradient.copy(alpha = 0.2f))
-                        .padding(horizontal = Spacing.xs, vertical = 3.dp),
-                ) {
-                    Text("PREMIUM", style = Sadora.type.caption, color = onGradient)
-                }
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Spacing.xxs)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+            ) {
+                // The badge keeps its width and the title gives way, rather than the
+                // title pushing "PREMIUM" onto a second line.
+                Text(
+                    label,
+                    style = Sadora.type.h3,
+                    color = c.text,
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false),
+                )
+                if (showPremiumBadge) PremiumGradientBadge()
+            }
+            Text(body, style = Sadora.type.body, color = c.muted)
+            if (footnote != null) {
+                Text(
+                    footnote,
+                    style = Sadora.type.caption.copy(letterSpacing = 0.02.em),
+                    color = c.muted2,
+                )
             }
         }
-        Text(body, style = Sadora.type.body, color = onGradient)
-        Text(
-            footnote,
-            style = Sadora.type.caption.copy(letterSpacing = 0.02.em),
-            color = onGradient.copy(alpha = 0.75f),
-        )
+        SadoraMark(size = 64.dp)
     }
 }
 
@@ -317,7 +451,7 @@ fun LockedBlock(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(Spacing.xs),
     ) {
-        Text("🔒", style = Sadora.type.h2)
+        Icon(SadoraIcons.Lock, contentDescription = null, Modifier.size(IconSize.lg), tint = c.primary)
         Text(title, style = Sadora.type.h3, color = c.text)
         Spacer(Modifier.height(Spacing.xxs))
         SadoraButton(action, onUnlock, fillWidth = false)
@@ -326,4 +460,4 @@ fun LockedBlock(
 
 /** Full-width horizontal spacer on the grid. */
 @Composable
-fun GapH(width: androidx.compose.ui.unit.Dp = Spacing.xs) = Spacer(Modifier.width(width))
+fun GapH(width: Dp = Spacing.xs) = Spacer(Modifier.width(width))
