@@ -398,13 +398,14 @@ fun LifeStageQuestion(
  */
 @Composable
 fun ReferralQuestion(
+    state: AppState,
     progress: Float,
     onBack: () -> Unit,
     onSkip: () -> Unit,
     onAnswered: () -> Unit,
 ) {
     val entry = rememberPageEntry(800)
-    var answer by remember { mutableStateOf<Boolean?>(null) }
+    val answer = state.referredByDoctor
 
     QuestionScaffold(
         title = "SADORA'ni sizga shifokor tavsiya qildimi?",
@@ -423,7 +424,7 @@ fun ReferralQuestion(
                 AnswerRow(
                     label = label,
                     selected = answer == value,
-                    onClick = { answer = value },
+                    onClick = { state.referredByDoctor = value },
                 )
             }
         }
@@ -563,6 +564,7 @@ fun FeelingQuestion(
                     onClick = {
                         chosen = index
                         state.mood = moodForScore(score)
+                        state.moodAnswered = true
                     },
                 )
             }

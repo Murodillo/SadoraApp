@@ -30,6 +30,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import org.example.project.data.AiController
+import org.example.project.data.CommunityController
+import org.example.project.data.CommunitySyncBridge
 import org.example.project.data.HealthController
 import org.example.project.data.HealthSync
 import org.example.project.data.SadoraController
@@ -57,6 +60,8 @@ import org.example.project.ui.components.SystemBackHandler
 import org.example.project.ui.core.AiChatScreen
 import org.example.project.ui.core.AiFreePreviewScreen
 import org.example.project.ui.core.CommentsSheetContent
+import org.example.project.ui.core.ComposePostSheetContent
+import org.example.project.ui.core.PostMenuSheetContent
 import org.example.project.ui.core.NutritionScreen
 import org.example.project.ui.core.ProfileScreen
 import org.example.project.ui.core.SecretChatScreen
@@ -111,6 +116,8 @@ fun App(graph: SadoraGraph? = null) {
     val health = remember(graph, state) {
         graph?.healthController(state) ?: HealthController(null, null, null, null)
     }
+    val community = remember(graph, state) { graph?.communityController(state) ?: CommunityController(null, state) }
+    val ai = remember(graph, state) { graph?.aiController(state) ?: AiController(null, state) }
 
     SadoraTheme(darkTheme = state.darkTheme) {
         AnimatedContent(
@@ -141,7 +148,7 @@ fun App(graph: SadoraGraph? = null) {
                     )
                 }
 
-                AppPhase.Main -> MainShell(state, navigator, controller, health)
+                AppPhase.Main -> MainShell(state, navigator, controller, health, community, ai)
             }
         }
     }
@@ -197,6 +204,8 @@ private fun MainShell(
     navigator: Navigator,
     controller: SadoraController,
     health: HealthController,
+    community: CommunityController,
+    ai: AiController,
 ) {
     val scope = rememberCoroutineScope()
 
@@ -206,6 +215,9 @@ private fun MainShell(
         // Every screen already edits the store; the sink is what carries those edits on
         // to the server, so none of them had to learn about it.
         state.sync = HealthSync(health, scope)
+        state.communitySync = CommunitySyncBridge(community, scope)
+        // The sections the server can close, before any of them is opened.
+        controller.refreshFlags()
         // Anything the onboarding calendar collected goes up before the first read, so
         // Today opens on a prediction built from her own cycles rather than on the
         // baseline's assumed one.
@@ -214,8 +226,10 @@ private fun MainShell(
     }
 
     var showWaterSheet by remember { mutableStateOf(false) }
-    // Owned here rather than by the chat screen so the sheet covers the tab bar.
+    // Owned here rather than by the chat screen so the sheets cover the tab bar.
     var commentsFor by remember { mutableStateOf<CommunityPost?>(null) }
+    var menuFor by remember { mutableStateOf<CommunityPost?>(null) }
+    var showCompose by remember { mutableStateOf(false) }
     var showSymptomSheet by remember { mutableStateOf(false) }
     var toast by remember { mutableStateOf<String?>(null) }
     var lastWaterAdded by remember { mutableStateOf(0) }
@@ -223,13 +237,15 @@ private fun MainShell(
     // The system back button closes an open sheet, then pops the pushed screen, then
     // returns to Today; only from Today with nothing open does it leave the app.
     SystemBackHandler(
-        enabled = showWaterSheet || showSymptomSheet || commentsFor != null ||
-            navigator.canGoBack || navigator.tab != Tab.Today,
+        enabled = showWaterSheet || showSymptomSheet || commentsFor != null || menuFor != null ||
+            showCompose || navigator.canGoBack || navigator.tab != Tab.Today,
     ) {
         when {
             showWaterSheet -> showWaterSheet = false
             showSymptomSheet -> showSymptomSheet = false
             commentsFor != null -> commentsFor = null
+            menuFor != null -> menuFor = null
+            showCompose -> showCompose = false
             navigator.canGoBack -> navigator.pop()
             else -> navigator.select(Tab.Today)
         }
@@ -275,8 +291,12 @@ private fun MainShell(
                             state,
                             navigator,
                             controller,
+                            community = community,
+                            ai = ai,
                             onSymptomSheet = { showSymptomSheet = true },
                             onOpenComments = { commentsFor = it },
+                            onOpenPostMenu = { menuFor = it },
+                            onCompose = { showCompose = true },
                         )
                     } else {
                         AnimatedContent(
@@ -338,12 +358,51 @@ private fun MainShell(
         // Kept mounted through the exit animation so the sheet does not blank as it closes.
         val lastComments = remember { mutableStateOf<CommunityPost?>(null) }
         commentsFor?.let { lastComments.value = it }
+        // The comments come from the server when the sheet opens, not with the feed.
+        LaunchedEffect(commentsFor?.id) { commentsFor?.let { community.loadComments(it.id) } }
         SadoraBottomSheet(
             visible = commentsFor != null,
             title = "Izohlar",
             onDismiss = { commentsFor = null },
         ) {
-            lastComments.value?.let { CommentsSheetContent(state, it) }
+            lastComments.value?.let { post ->
+                // Read back from the store so the loaded comments replace the stale copy.
+                val current = state.communityPosts.firstOrNull { it.id == post.id } ?: post
+                CommentsSheetContent(state, current)
+            }
+        }
+
+        val lastMenu = remember { mutableStateOf<CommunityPost?>(null) }
+        menuFor?.let { lastMenu.value = it }
+        SadoraBottomSheet(
+            visible = menuFor != null,
+            title = if (lastMenu.value?.isMine == true) "Sizning postingiz" else "Shikoyat qilish",
+            onDismiss = { menuFor = null },
+        ) {
+            lastMenu.value?.let { post ->
+                PostMenuSheetContent(
+                    state = state,
+                    post = post,
+                    onDone = { message ->
+                        menuFor = null
+                        message?.let { toast = it }
+                    },
+                )
+            }
+        }
+
+        SadoraBottomSheet(
+            visible = showCompose,
+            title = "Yangi post",
+            onDismiss = { showCompose = false },
+        ) {
+            ComposePostSheetContent(
+                state = state,
+                onPosted = {
+                    showCompose = false
+                    toast = "Post yuborildi"
+                },
+            )
         }
 
         SadoraBottomSheet(
@@ -414,8 +473,12 @@ private fun PushedScreen(
     state: AppState,
     navigator: Navigator,
     controller: SadoraController,
+    community: CommunityController,
+    ai: AiController,
     onSymptomSheet: () -> Unit,
     onOpenComments: (CommunityPost) -> Unit,
+    onOpenPostMenu: (CommunityPost) -> Unit,
+    onCompose: () -> Unit,
 ) {
     val close = navigator::pop
     val upgrade = { navigator.push(Route.Paywall) }
@@ -434,7 +497,7 @@ private fun PushedScreen(
         Route.StageSleepMood -> StageSleepMoodScreen(state, close)
 
         // AI — the chat is drawn on the deck's navy whatever the app theme is.
-        Route.AiChat -> SadoraDarkSurface { AiChatScreen(state, close) }
+        Route.AiChat -> SadoraDarkSurface { AiChatScreen(state, ai, close) }
         Route.AiPreview -> AiFreePreviewScreen(onUpgrade = upgrade, onDismiss = close)
 
         // Nutrition: camera -> analysing -> result is one linear flow, so each step
@@ -462,7 +525,14 @@ private fun PushedScreen(
         Route.Knowledge -> KnowledgeScreen(state, close, navigator::push)
         is Route.Article -> ArticleScreen(route.title, close)
         Route.DataSources -> DataSourcesScreen(close)
-        Route.SecretChat -> SecretChatScreen(state, onOpenComments = onOpenComments, onClose = close)
+        Route.SecretChat -> SecretChatScreen(
+            state = state,
+            community = community,
+            onOpenComments = onOpenComments,
+            onOpenMenu = onOpenPostMenu,
+            onCompose = onCompose,
+            onClose = close,
+        )
 
         // The same documents onboarding shows, reachable again from settings.
         Route.Terms -> LegalScreen(LegalDocument.Terms, close)

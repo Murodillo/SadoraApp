@@ -31,6 +31,8 @@ tags:
   - name: Meds
   - name: Notifications
   - name: Wearables
+  - name: Community
+  - name: AI
   - name: Admin
 
 paths:
@@ -1121,6 +1123,485 @@ paths:
       responses:
         "200": { $ref: "#/components/responses/Ack" }
 
+  /v1/community/me:
+    get:
+      tags: [Community]
+      security: [{ bearerAuth: [] }]
+      summary: Maxfiy chatdagi taxallus
+      description: |
+        Birinchi murojaatda beriladi va hech qachon o'zgarmaydi. Serverdan tashqarida
+        taxallusni hisobga bog'laydigan hech narsa yo'q — admin API ham buni qaytarmaydi.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CommunityIdentity" }
+        "403": { $ref: "#/components/responses/FeatureDisabled" }
+
+  /v1/community/posts:
+    get:
+      tags: [Community]
+      security: [{ bearerAuth: [] }]
+      summary: Lenta — ko'rinadigan postlar, yangisi birinchi
+      parameters:
+        - in: query
+          name: topic
+          schema: { $ref: "#/components/schemas/CommunityTopic" }
+        - in: query
+          name: saved
+          schema: { type: boolean }
+          description: Faqat o'zi saqlagan postlar
+        - in: query
+          name: limit
+          schema: { type: integer, default: 50, maximum: 100 }
+        - in: query
+          name: offset
+          schema: { type: integer, default: 0 }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Page"
+                  - type: object
+                    properties:
+                      items:
+                        type: array
+                        items: { $ref: "#/components/schemas/CommunityPost" }
+        "403": { $ref: "#/components/responses/FeatureDisabled" }
+    post:
+      tags: [Community]
+      security: [{ bearerAuth: [] }]
+      summary: Yangi post
+      description: |
+        Kuniga 10 tagacha. Moderator cheklagan muallif `403 forbidden` oladi; yopiq
+        bo'lim `403 feature_disabled`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreatePostRequest" }
+      responses:
+        "201":
+          description: Yaratildi
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CommunityPost" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+
+  /v1/community/posts/{id}:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema: { type: string, format: uuid }
+    get:
+      tags: [Community]
+      security: [{ bearerAuth: [] }]
+      summary: Bitta post
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CommunityPost" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [Community]
+      security: [{ bearerAuth: [] }]
+      summary: O'z postini o'chirish
+      responses:
+        "200": { $ref: "#/components/responses/Ack" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /v1/community/posts/{id}/comments:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema: { type: string, format: uuid }
+    get:
+      tags: [Community]
+      security: [{ bearerAuth: [] }]
+      summary: Postning izohlari, eskisi birinchi
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/CommunityComment" }
+    post:
+      tags: [Community]
+      security: [{ bearerAuth: [] }]
+      summary: Izoh qoldirish (kuniga 60 tagacha)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [body]
+              properties:
+                body: { type: string, minLength: 2, maxLength: 1000 }
+      responses:
+        "201":
+          description: Yaratildi
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CommunityComment" }
+
+  /v1/community/posts/{id}/like:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema: { type: string, format: uuid }
+    put:
+      tags: [Community]
+      security: [{ bearerAuth: [] }]
+      summary: Yoqdi (idempotent)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/LikeState" }
+    delete:
+      tags: [Community]
+      security: [{ bearerAuth: [] }]
+      summary: Yoqdi'ni olib tashlash
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/LikeState" }
+
+  /v1/community/posts/{id}/save:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema: { type: string, format: uuid }
+    put:
+      tags: [Community]
+      security: [{ bearerAuth: [] }]
+      summary: Saqlash
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  saved: { type: boolean }
+    delete:
+      tags: [Community]
+      security: [{ bearerAuth: [] }]
+      summary: Saqlanganlardan olib tashlash
+      responses:
+        "200":
+          description: OK
+
+  /v1/community/posts/{id}/report:
+    post:
+      tags: [Community]
+      security: [{ bearerAuth: [] }]
+      summary: Postga shikoyat
+      description: |
+        Har o'quvchi bir postga bir marta; o'z postiga shikoyat qilib bo'lmaydi. Beshta
+        ochiq shikoyat postni o'zi yashiradi — moderator uni qaytarishi mumkin.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ReportRequest" }
+      responses:
+        "200": { $ref: "#/components/responses/Ack" }
+        "409":
+          description: Allaqachon shikoyat qilingan
+
+  /v1/community/comments/{id}:
+    delete:
+      tags: [Community]
+      security: [{ bearerAuth: [] }]
+      summary: O'z izohini o'chirish
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200": { $ref: "#/components/responses/Ack" }
+
+  /v1/community/comments/{id}/report:
+    post:
+      tags: [Community]
+      security: [{ bearerAuth: [] }]
+      summary: Izohga shikoyat
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ReportRequest" }
+      responses:
+        "200": { $ref: "#/components/responses/Ack" }
+
+  /v1/ai/chat/quota:
+    get:
+      tags: [AI]
+      security: [{ bearerAuth: [] }]
+      summary: Bugun va shu oyda nechta savol qolgani
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AiChatQuota" }
+
+  /v1/ai/chat:
+    post:
+      tags: [AI]
+      security: [{ bearerAuth: [] }]
+      summary: SADORA AI'ga savol
+      description: |
+        Javobdan oldin `ai_chat` limiti sarflanadi (`429 limit_reached`, `402
+        entitlement_required`). `ai_chat_enabled` bayrog'i o'chiq bo'lsa `403
+        feature_disabled`. Foydalanuvchi ma'lumotlari faqat `ai_insights` roziligi bilan
+        o'qiladi; roziliksiz javob umumiy bo'ladi va `basedOn` bo'sh qaytadi. Suhbat
+        saqlanmaydi.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [question]
+              properties:
+                question: { type: string, maxLength: 1000 }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AiChatReply" }
+        "402": { $ref: "#/components/responses/EntitlementRequired" }
+        "403": { $ref: "#/components/responses/FeatureDisabled" }
+        "429": { $ref: "#/components/responses/LimitReached" }
+
+  /v1/admin/community/stats:
+    get:
+      tags: [Admin]
+      security: [{ adminAuth: [] }]
+      summary: Maxfiy chat ko'rsatkichlari
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  postsTotal: { type: integer }
+                  postsToday: { type: integer }
+                  hiddenPosts: { type: integer }
+                  openReports: { type: integer }
+
+  /v1/admin/community/posts:
+    get:
+      tags: [Admin]
+      security: [{ adminAuth: [] }]
+      summary: Moderatsiya navbati — faqat taxallus va matn
+      description: |
+        Hech bir moderatsiya javobida foydalanuvchi ID'si yo'q. Muallifga ta'sir
+        qiladigan yagona amal — `restrict-author` — post orqali qo'llanadi.
+      parameters:
+        - in: query
+          name: hidden
+          schema: { type: boolean }
+        - in: query
+          name: topic
+          schema: { $ref: "#/components/schemas/CommunityTopic" }
+        - in: query
+          name: reported
+          schema: { type: boolean }
+          description: Faqat ochiq shikoyati borlar
+        - in: query
+          name: limit
+          schema: { type: integer, default: 50, maximum: 200 }
+        - in: query
+          name: offset
+          schema: { type: integer, default: 0 }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Page"
+                  - type: object
+                    properties:
+                      items:
+                        type: array
+                        items: { $ref: "#/components/schemas/ModerationPost" }
+
+  /v1/admin/community/posts/{id}/comments:
+    get:
+      tags: [Admin]
+      security: [{ adminAuth: [] }]
+      summary: Postning izohlari, yashirilganlari bilan
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: OK
+
+  /v1/admin/community/posts/{id}/hide:
+    post:
+      tags: [Admin]
+      security: [{ adminAuth: [] }]
+      summary: Postni yashirish yoki qaytarish (Owner, Admin)
+      description: Yashirish undagi ochiq shikoyatlarni ham yopadi. Sabab audit log'ga yoziladi.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [hidden]
+              properties:
+                hidden: { type: boolean }
+                reason: { type: string, description: "Yashirishda majburiy" }
+      responses:
+        "200": { $ref: "#/components/responses/Ack" }
+
+  /v1/admin/community/posts/{id}/restrict-author:
+    post:
+      tags: [Admin]
+      security: [{ adminAuth: [] }]
+      summary: Post muallifini yozishdan cheklash (Owner, Admin)
+      description: |
+        Muallif post orqali topiladi; javobda ham, audit yozuvida ham uning ID'si yo'q.
+        `days` bo'sh bo'lsa — moderator ochguncha.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: { type: string }
+                days: { type: integer, minimum: 1, maximum: 365, nullable: true }
+      responses:
+        "200": { $ref: "#/components/responses/Ack" }
+
+  /v1/admin/community/comments/{id}/hide:
+    post:
+      tags: [Admin]
+      security: [{ adminAuth: [] }]
+      summary: Izohni yashirish yoki qaytarish (Owner, Admin)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [hidden]
+              properties:
+                hidden: { type: boolean }
+                reason: { type: string }
+      responses:
+        "200": { $ref: "#/components/responses/Ack" }
+
+  /v1/admin/community/reports:
+    get:
+      tags: [Admin]
+      security: [{ adminAuth: [] }]
+      summary: Shikoyatlar
+      parameters:
+        - in: query
+          name: open
+          schema: { type: boolean, default: true }
+        - in: query
+          name: limit
+          schema: { type: integer, default: 50, maximum: 200 }
+        - in: query
+          name: offset
+          schema: { type: integer, default: 0 }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Page"
+                  - type: object
+                    properties:
+                      items:
+                        type: array
+                        items: { $ref: "#/components/schemas/ModerationReport" }
+
+  /v1/admin/community/reports/{id}/resolve:
+    post:
+      tags: [Admin]
+      security: [{ adminAuth: [] }]
+      summary: Shikoyatni ko'rib chiqish (Owner, Admin)
+      description: "`dismiss` — matn qoladi; `hide` — matn yashiriladi. Ikkalasi ham shu matnga tegishli barcha ochiq shikoyatlarni yopadi."
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [action]
+              properties:
+                action: { type: string, enum: [dismiss, hide] }
+                reason: { type: string }
+      responses:
+        "200": { $ref: "#/components/responses/Ack" }
+
   /v1/admin/auth/login:
     post:
       tags: [Admin]
@@ -1477,6 +1958,21 @@ components:
           schema: { $ref: "#/components/schemas/ApiErrorResponse" }
     ConsentRequired:
       description: "Sog'liq ma'lumotlarini saqlash roziligi berilmagan"
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ApiErrorResponse" }
+    FeatureDisabled:
+      description: Operator bu bo'limni bayroq bilan yopgan (`feature_disabled`); obuna yordam bermaydi
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ApiErrorResponse" }
+    EntitlementRequired:
+      description: Funksiya bu tarifda yo'q (`entitlement_required`)
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ApiErrorResponse" }
+    LimitReached:
+      description: Kunlik yoki oylik limit tugagan (`limit_reached`, `details.period`)
       content:
         application/json:
           schema: { $ref: "#/components/schemas/ApiErrorResponse" }
@@ -1969,6 +2465,116 @@ components:
         averageStress: { type: number, nullable: true }
         daysLogged: { type: integer }
         windowDays: { type: integer, default: 14 }
+
+    CommunityTopic:
+      type: string
+      enum: [cycle, pregnancy, wellbeing, body]
+
+    ReportReason:
+      type: string
+      enum: [spam, abuse, misinformation, personal_data, other]
+
+    CommunityIdentity:
+      type: object
+      properties:
+        alias: { type: string, example: "Sokin Bulut" }
+        tint: { type: integer, minimum: 0, maximum: 3 }
+
+    CommunityPost:
+      type: object
+      description: "`liked`, `saved`, `isMine` — chaqiruvchining o'z munosabati, serverda hisoblanadi"
+      properties:
+        id: { type: string, format: uuid }
+        topic: { $ref: "#/components/schemas/CommunityTopic" }
+        alias: { type: string }
+        tint: { type: integer }
+        body: { type: string }
+        createdAt: { type: string, format: date-time }
+        likeCount: { type: integer }
+        commentCount: { type: integer }
+        liked: { type: boolean }
+        saved: { type: boolean }
+        isMine: { type: boolean }
+
+    CommunityComment:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        postId: { type: string, format: uuid }
+        alias: { type: string }
+        tint: { type: integer }
+        body: { type: string }
+        createdAt: { type: string, format: date-time }
+        isMine: { type: boolean }
+
+    CreatePostRequest:
+      type: object
+      required: [topic, body]
+      properties:
+        topic: { $ref: "#/components/schemas/CommunityTopic" }
+        body: { type: string, minLength: 2, maxLength: 2000 }
+
+    ReportRequest:
+      type: object
+      required: [reason]
+      properties:
+        reason: { $ref: "#/components/schemas/ReportReason" }
+        note: { type: string, maxLength: 500 }
+
+    LikeState:
+      type: object
+      properties:
+        liked: { type: boolean }
+        likeCount: { type: integer }
+
+    ModerationPost:
+      type: object
+      description: Taxallus, matn, sanoqlar — foydalanuvchi ID'si yo'q va bo'lmaydi
+      properties:
+        id: { type: string, format: uuid }
+        alias: { type: string }
+        tint: { type: integer }
+        topic: { $ref: "#/components/schemas/CommunityTopic" }
+        body: { type: string }
+        hidden: { type: boolean }
+        hiddenReason: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+        likeCount: { type: integer }
+        commentCount: { type: integer }
+        openReports: { type: integer }
+
+    ModerationReport:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        postId: { type: string, format: uuid, nullable: true }
+        commentId: { type: string, format: uuid, nullable: true }
+        reason: { $ref: "#/components/schemas/ReportReason" }
+        note: { type: string, nullable: true }
+        excerpt: { type: string }
+        targetHidden: { type: boolean }
+        createdAt: { type: string, format: date-time }
+        resolvedAt: { type: string, format: date-time, nullable: true }
+        resolution: { type: string, enum: [dismissed, hidden], nullable: true }
+
+    AiChatQuota:
+      type: object
+      properties:
+        enabled: { type: boolean }
+        dailyLimit: { type: integer, nullable: true }
+        monthlyLimit: { type: integer, nullable: true }
+        usedToday: { type: integer }
+        usedThisMonth: { type: integer }
+
+    AiChatReply:
+      type: object
+      properties:
+        answer: { type: string }
+        basedOn:
+          type: string
+          description: "Javob tayangan ma'lumotlar; roziliksiz bo'sh"
+        remainingToday: { type: integer, nullable: true }
+        remainingThisMonth: { type: integer, nullable: true }
 
     FoodItem:
       type: object

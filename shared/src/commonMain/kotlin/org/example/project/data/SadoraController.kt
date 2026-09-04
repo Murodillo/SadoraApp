@@ -105,6 +105,18 @@ class SadoraController(
         }
     }
 
+    /**
+     * The server's switches for the sections it can close. Silent, and the store's
+     * defaults are "open", so a failed read leaves the app whole rather than empty.
+     */
+    suspend fun refreshFlags() {
+        val repo = repository ?: return
+        call(silent = true) { repo.featureFlags() }?.let { flags ->
+            state.communityEnabled = flags.isEnabled(COMMUNITY_FLAG)
+            state.aiChatEnabled = flags.isEnabled(AI_CHAT_FLAG)
+        }
+    }
+
     // ---------------------------------------------------------------- account
 
     suspend fun signOut() {
@@ -139,6 +151,11 @@ class SadoraController(
 
     private fun SessionState.entitlementsOrNull(): uz.sadora.contract.Entitlements? =
         (this as? SessionState.SignedIn)?.entitlements
+
+    private companion object {
+        const val COMMUNITY_FLAG = "community"
+        const val AI_CHAT_FLAG = "ai_chat_enabled"
+    }
 }
 
 /**
@@ -159,6 +176,8 @@ fun ApiFailure.readable(): String = when (this) {
         retryAfterSeconds?.let { "Juda ko'p urinish. $it soniyadan keyin qayta urining." }
             ?: "Juda ko'p urinish. Birozdan keyin qayta urining."
     is ApiFailure.Otp -> message.ifBlank { "Kod noto'g'ri yoki muddati tugagan." }
+    is ApiFailure.FeatureDisabled -> "Bu bo'lim hozircha yopiq."
+    is ApiFailure.ConsentRequired -> "Buning uchun Maxfiylik bo'limida rozilik bering."
     is ApiFailure.Unexpected -> "Nimadir noto'g'ri ketdi. Qayta urinib ko'ring."
 }
 

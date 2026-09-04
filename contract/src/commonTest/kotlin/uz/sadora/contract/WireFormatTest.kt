@@ -61,6 +61,40 @@ class WireFormatTest {
         assertEquals(ErrorCodes.LIMIT_REACHED, error.code)
     }
 
+    /** The secret chat's rooms and report reasons are filters the admin panel sends back. */
+    @Test
+    fun `the community enums keep their snake_case spellings`() {
+        assertEquals("\"wellbeing\"", json.encodeToString(CommunityTopic.WELLBEING))
+        assertEquals("\"personal_data\"", json.encodeToString(ReportReason.PERSONAL_DATA))
+        assertEquals("\"misinformation\"", json.encodeToString(ReportReason.MISINFORMATION))
+    }
+
+    /**
+     * An app built before the two onboarding answers existed sends neither, and the
+     * server must read that as "skipped", not as an error.
+     */
+    @Test
+    fun `an onboarding request without the new answers still decodes`() {
+        val payload = """
+            {"name":"Malika","language":"uz","timezone":"Asia/Tashkent","lifeStage":"cycle"}
+        """.trimIndent()
+        val request = json.decodeFromString<OnboardingRequest>(payload)
+        assertEquals(null, request.referredByDoctor)
+        assertEquals(null, request.firstCheckIn)
+
+        val encoded = json.encodeToString(request)
+        assertTrue("referredByDoctor" !in encoded, encoded)
+        assertTrue("firstCheckIn" !in encoded, encoded)
+    }
+
+    @Test
+    fun `the AI quota derives what is left from what was used`() {
+        val quota = AiChatQuota(enabled = true, dailyLimit = 3, monthlyLimit = 30, usedToday = 3, usedThisMonth = 4)
+        assertEquals(0, quota.remainingToday)
+        assertEquals(26, quota.remainingThisMonth)
+        assertEquals(null, AiChatQuota(enabled = true).remainingToday)
+    }
+
     /** Optional fields stay out of the payload rather than appearing as `null`. */
     @Test
     fun `absent optionals are omitted`() {

@@ -61,6 +61,34 @@ class OnboardingRequestTest {
     }
 
     /**
+     * The two answers that used to be lost between the question and the server: the
+     * referral, and the check-in taken before she had an account. The symptom tiles are
+     * labels on screen and catalogue keys on the wire.
+     */
+    @Test
+    fun `the referral and the first check-in reach the wire`() {
+        val request = answered().apply {
+            referredByDoctor = true
+            mood = org.example.project.model.Mood.Low
+            moodAnswered = true
+            symptoms.addAll(listOf("Charchoq", "Bosh og'rig'i", "Noma'lum belgi"))
+        }.toOnboardingRequest("Asia/Tashkent")
+
+        assertEquals(true, request.referredByDoctor)
+        val checkIn = assertNotNull(request.firstCheckIn)
+        assertEquals(uz.sadora.contract.MoodLevel.LOW, checkIn.mood)
+        assertEquals(listOf("fatigue", "headache"), checkIn.symptomKeys, "unknown labels are left out, not guessed")
+    }
+
+    /** A skipped feeling question must not send the store's default mood as if she had answered. */
+    @Test
+    fun `an unanswered check-in sends nothing`() {
+        val request = answered().toOnboardingRequest("Asia/Tashkent")
+        assertNull(request.referredByDoctor)
+        assertNull(request.firstCheckIn)
+    }
+
+    /**
      * The name question has no skip precisely because of this: the server refuses a
      * blank name, and the refusal would only arrive at the last screen of the run.
      */

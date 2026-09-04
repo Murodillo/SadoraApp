@@ -6,8 +6,16 @@ import type {
   AdminUserCard,
   AdminUserSummary,
   AuditEntry,
+  CommunityStats,
   FeatureDefinition,
+  FrequencyCaps,
+  MetricMapping,
+  ModerationComment,
+  ModerationPost,
+  ModerationReport,
+  NotificationTemplate,
   Page,
+  ProviderHealth,
   SignUpPoint,
 } from './types'
 
@@ -146,5 +154,139 @@ export const useRemoveFlagRule = () => {
     mutationFn: ({ key, ruleId }: { key: string; ruleId: string }) =>
       request(`/v1/admin/flags/${key}/rules/${ruleId}`, { method: 'DELETE' }),
     onSuccess: () => void client.invalidateQueries({ queryKey: ['flags'] }),
+  })
+}
+
+// ---------------------------------------------------------------- secret chat
+
+export interface ModerationFilters {
+  hidden?: boolean
+  topic?: string
+  reported?: boolean
+  limit: number
+  offset: number
+}
+
+export const useCommunityStats = () =>
+  useQuery({
+    queryKey: ['community', 'stats'],
+    queryFn: () => request<CommunityStats>('/v1/admin/community/stats'),
+    refetchInterval: 30_000,
+  })
+
+export const useModerationPosts = (filters: ModerationFilters) =>
+  useQuery({
+    queryKey: ['community', 'posts', filters],
+    queryFn: () =>
+      request<Page<ModerationPost>>(
+        `/v1/admin/community/posts${query({
+          hidden: filters.hidden === undefined ? undefined : String(filters.hidden),
+          topic: filters.topic,
+          reported: filters.reported ? 'true' : undefined,
+          limit: filters.limit,
+          offset: filters.offset,
+        })}`,
+      ),
+    placeholderData: (previous) => previous,
+  })
+
+export const useModerationComments = (postId: string | null) =>
+  useQuery({
+    queryKey: ['community', 'comments', postId],
+    queryFn: () => request<ModerationComment[]>(`/v1/admin/community/posts/${postId}/comments`),
+    enabled: Boolean(postId),
+  })
+
+export const useModerationReports = (open: boolean, limit: number, offset: number) =>
+  useQuery({
+    queryKey: ['community', 'reports', open, limit, offset],
+    queryFn: () =>
+      request<Page<ModerationReport>>(`/v1/admin/community/reports${query({ open: String(open), limit, offset })}`),
+    placeholderData: (previous) => previous,
+  })
+
+/** Every moderation write invalidates the whole community cache: a hide moves counts everywhere. */
+function useCommunityMutation<T>(mutationFn: (input: T) => Promise<unknown>) {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn,
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: ['community'] })
+      void client.invalidateQueries({ queryKey: ['stats'] })
+    },
+  })
+}
+
+export const useHidePost = () =>
+  useCommunityMutation(({ id, hidden, reason }: { id: string; hidden: boolean; reason?: string }) =>
+    request(`/v1/admin/community/posts/${id}/hide`, { method: 'POST', body: { hidden, reason } }),
+  )
+
+export const useHideComment = () =>
+  useCommunityMutation(({ id, hidden, reason }: { id: string; hidden: boolean; reason?: string }) =>
+    request(`/v1/admin/community/comments/${id}/hide`, { method: 'POST', body: { hidden, reason } }),
+  )
+
+export const useResolveReport = () =>
+  useCommunityMutation(({ id, action, reason }: { id: string; action: 'dismiss' | 'hide'; reason?: string }) =>
+    request(`/v1/admin/community/reports/${id}/resolve`, { method: 'POST', body: { action, reason } }),
+  )
+
+export const useRestrictAuthor = () =>
+  useCommunityMutation(({ postId, reason, days }: { postId: string; reason: string; days?: number | null }) =>
+    request(`/v1/admin/community/posts/${postId}/restrict-author`, { method: 'POST', body: { reason, days } }),
+  )
+
+// ---------------------------------------------------------------- notifications
+
+export const useTemplates = () =>
+  useQuery({
+    queryKey: ['notifications', 'templates'],
+    queryFn: () => request<NotificationTemplate[]>('/v1/admin/notifications/templates'),
+  })
+
+export const useSaveTemplate = () => {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (template: NotificationTemplate) =>
+      request('/v1/admin/notifications/templates', { method: 'PUT', body: template }),
+    onSuccess: () => void client.invalidateQueries({ queryKey: ['notifications', 'templates'] }),
+  })
+}
+
+export const useCaps = () =>
+  useQuery({
+    queryKey: ['notifications', 'caps'],
+    queryFn: () => request<FrequencyCaps>('/v1/admin/notifications/caps'),
+  })
+
+export const useUpdateCaps = () => {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (caps: FrequencyCaps) => request<FrequencyCaps>('/v1/admin/notifications/caps', { method: 'PUT', body: caps }),
+    onSuccess: () => void client.invalidateQueries({ queryKey: ['notifications', 'caps'] }),
+  })
+}
+
+// ---------------------------------------------------------------- wearables
+
+export const useProviders = () =>
+  useQuery({
+    queryKey: ['wearables', 'providers'],
+    queryFn: () => request<ProviderHealth[]>('/v1/admin/wearables/providers'),
+    refetchInterval: 60_000,
+  })
+
+export const useMappings = () =>
+  useQuery({
+    queryKey: ['wearables', 'mappings'],
+    queryFn: () => request<MetricMapping[]>('/v1/admin/wearables/mappings'),
+  })
+
+export const useSaveMapping = () => {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (mapping: MetricMapping) => request('/v1/admin/wearables/mappings', { method: 'PUT', body: mapping }),
+    onSuccess: () => void client.invalidateQueries({ queryKey: ['wearables', 'mappings'] }),
   })
 }

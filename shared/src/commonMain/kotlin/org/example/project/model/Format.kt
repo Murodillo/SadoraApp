@@ -1,6 +1,7 @@
 package org.example.project.model
 
 import kotlin.time.Clock
+import kotlin.time.Instant
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone
@@ -53,6 +54,22 @@ object Fmt {
     /** "08:35" */
     fun time(dateTime: LocalDateTime): String =
         "${dateTime.hour.toString().padStart(2, '0')}:${dateTime.minute.toString().padStart(2, '0')}"
+
+    /**
+     * "hozir", "20 daqiqa oldin", "3 soat oldin", "kecha", "5 kun oldin" — how old a post
+     * is, the way the feed reads it. Anything older than a month says the date.
+     */
+    fun ago(at: Instant, now: Instant): String {
+        val seconds = (now - at).inWholeSeconds
+        return when {
+            seconds < 60 -> "hozir"
+            seconds < 3600 -> "${seconds / 60} daqiqa oldin"
+            seconds < 86_400 -> "${seconds / 3600} soat oldin"
+            seconds < 2 * 86_400 -> "kecha"
+            seconds < 30 * 86_400 -> "${seconds / 86_400} kun oldin"
+            else -> dayMonth(at.toLocalDateTime(TimeZone.currentSystemDefault()).date)
+        }
+    }
 }
 
 /** The device's wall clock, in its own zone. */

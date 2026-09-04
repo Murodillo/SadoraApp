@@ -15,10 +15,12 @@ import uz.sadora.contract.DailyLog
 import uz.sadora.contract.DailyLogRange
 import uz.sadora.contract.FeatureKeys
 import uz.sadora.contract.LifeStage
+import uz.sadora.contract.OnboardingCheckIn
 import uz.sadora.contract.LogPeriodRequest
 import uz.sadora.contract.PeriodEntry
 import uz.sadora.contract.SaveDailyLogRequest
 import uz.sadora.contract.SymptomDefinition
+import uz.sadora.contract.SymptomEntry
 import uz.sadora.contract.UpdatePeriodRequest
 import uz.sadora.server.core.NotFoundException
 import uz.sadora.server.core.ValidationException
@@ -135,6 +137,41 @@ class HealthService(
             throw ValidationException("to", "Eng ko'pi $MAX_CALENDAR_DAYS kunlik oraliq")
         }
         return DailyLogRange(from, to, repository.logsBetween(userId, from, to))
+    }
+
+    /**
+     * The day's first log, taken by the onboarding flow before she had an account.
+     *
+     * Best-effort by design: without `store_health` it is dropped rather than failing
+     * the onboarding that carried it, unknown symptom keys are dropped rather than
+     * rejected, and whatever is already on today's row is kept. Returns true only when
+     * something was actually written.
+     */
+    suspend fun recordOnboardingCheckIn(userId: Uuid, checkIn: OnboardingCheckIn): Boolean {
+        if (checkIn.mood == null && checkIn.symptomKeys.isEmpty()) return false
+        val user = access.requireUser(userId)
+        if (!access.hasStorageConsent(userId)) return false
+
+        val known = repository.knownSymptomKeys()
+        val keys = checkIn.symptomKeys.filter { it in known }.distinct()
+        if (checkIn.mood == null && keys.isEmpty()) return false
+
+        val today = now().dayIn(user.timezone)
+        val existing = repository.logOn(userId, today)
+        val symptoms = (existing?.symptoms.orEmpty() + keys.map { SymptomEntry(it) }).distinctBy { it.key }
+        repository.saveLog(
+            userId = userId,
+            date = today,
+            request = SaveDailyLogRequest(
+                flow = existing?.flow,
+                mood = checkIn.mood ?: existing?.mood,
+                energy = existing?.energy,
+                stress = existing?.stress,
+                symptoms = symptoms,
+                note = existing?.note,
+            ),
+        )
+        return true
     }
 
     suspend fun symptomCatalogue(userId: Uuid, lifeStage: LifeStage?): List<SymptomDefinition> {

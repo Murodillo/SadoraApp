@@ -170,6 +170,9 @@ class AppState {
     var dueDate by mutableStateOf<LocalDate?>(null)
     var babyBirthDate by mutableStateOf<LocalDate?>(null)
 
+    /** "Did a doctor recommend SADORA?" — null until answered, and null when skipped. */
+    var referredByDoctor by mutableStateOf<Boolean?>(null)
+
     var notificationsAllowed by mutableStateOf(true)
     var healthDataAllowed by mutableStateOf(true)
     var cameraAllowed by mutableStateOf(false)
@@ -196,6 +199,12 @@ class AppState {
 
     // ---- appearance ----
     var darkTheme by mutableStateOf(false)
+
+    // ---- what the server has switched on ----
+    // Both default to open: a phone that has not heard from the server yet shows the
+    // app whole, and the server's flags close a section rather than open one.
+    var communityEnabled by mutableStateOf(true)
+    var aiChatEnabled by mutableStateOf(true)
 
     // ---- the day ----
     /**
@@ -256,6 +265,12 @@ class AppState {
 
     var mood by mutableStateOf(Mood.Good)
 
+    /**
+     * True once she has answered the onboarding "how do you feel" question. [mood] has
+     * a default, so without this the request could not tell an answer from the default.
+     */
+    var moodAnswered by mutableStateOf(false)
+
     /** 1–5, the Mind tab's second and third dials. Stress 5 is the most stressed. */
     var energy by mutableStateOf(4)
     var stress by mutableStateOf(2)
@@ -287,6 +302,13 @@ class AppState {
     var communityTopic by mutableStateOf(CommunityTopic.All)
     var communityFilter by mutableStateOf(CommunityFilter.Feed)
 
+    /** The alias she posts under, once the server has assigned one. */
+    var communityAlias by mutableStateOf<String?>(null)
+    var communityTint by mutableStateOf(0)
+
+    /** Set once there is a backend; every community edit below reports through it. */
+    var communitySync: CommunitySync? = null
+
     /** Everyone else's likes plus hers, so the count moves the instant she taps. */
     fun likeCount(post: CommunityPost): Int =
         post.likes + if (post.id in likedPosts) 1 else 0
@@ -294,19 +316,88 @@ class AppState {
     fun commentsOf(post: CommunityPost): List<CommunityComment> =
         post.comments + ownComments[post.id].orEmpty()
 
+    /** What the card shows: the server's count until the sheet has loaded the comments. */
+    fun commentCountOf(post: CommunityPost): Int =
+        maxOf(post.commentCount, post.comments.size) + ownComments[post.id].orEmpty().size
+
     fun toggleLike(postId: String) {
-        if (!likedPosts.remove(postId)) likedPosts.add(postId)
+        val liked = !likedPosts.remove(postId)
+        if (liked) likedPosts.add(postId)
+        communitySync?.postLiked(postId, liked)
     }
 
     fun toggleSaved(postId: String) {
-        if (!savedPosts.remove(postId)) savedPosts.add(postId)
+        val saved = !savedPosts.remove(postId)
+        if (saved) savedPosts.add(postId)
+        communitySync?.postSaved(postId, saved)
     }
 
     fun addComment(postId: String, body: String) {
         val text = body.trim()
         if (text.isEmpty()) return
         ownComments.getOrPut(postId) { mutableStateListOf() }
-            .add(CommunityComment(alias = "Siz", tint = 0, ago = "hozir", body = text))
+            .add(CommunityComment(alias = communityAlias ?: "Siz", tint = communityTint, ago = "hozir", body = text, isMine = true))
+        communitySync?.commentAdded(postId, text)
+    }
+
+    /**
+     * A new post. With a backend the feed is refreshed from the server's answer; without
+     * one it goes straight to the top of the sample feed so the prototype still works.
+     */
+    fun createPost(topic: CommunityTopic, body: String) {
+        val text = body.trim()
+        if (text.isEmpty()) return
+        val sync = communitySync
+        if (sync != null) {
+            sync.postCreated(topic, text)
+            return
+        }
+        communityPosts.add(
+            0,
+            CommunityPost(
+                id = "local-${communityPosts.size + 1}",
+                alias = communityAlias ?: "Siz",
+                tint = communityTint,
+                topic = topic,
+                ago = "hozir",
+                body = text,
+                likes = 0,
+                isMine = true,
+            ),
+        )
+    }
+
+    fun deletePost(postId: String) {
+        communityPosts.removeAll { it.id == postId }
+        likedPosts.remove(postId)
+        savedPosts.remove(postId)
+        ownComments.remove(postId)
+        communitySync?.postDeleted(postId)
+    }
+
+    fun reportPost(postId: String, reason: ReportReason, note: String?) {
+        communitySync?.postReported(postId, reason, note)
+    }
+
+    /** The server's feed, replacing the samples and whatever she tapped before it arrived. */
+    fun replaceCommunityFeed(posts: List<CommunityPost>, liked: Set<String>, saved: Set<String>) {
+        // Comments loaded for a post survive the refresh, or the sheet would blank on every like.
+        val keptComments = communityPosts.associate { it.id to it.comments }
+        communityPosts.clear()
+        communityPosts.addAll(posts.map { post -> post.copy(comments = keptComments[post.id].orEmpty()) })
+        likedPosts.clear()
+        likedPosts.addAll(liked)
+        savedPosts.clear()
+        savedPosts.addAll(saved)
+    }
+
+    /** The server's comments for one post; her optimistic ones are now among them. */
+    fun replaceComments(postId: String, comments: List<CommunityComment>) {
+        val index = communityPosts.indexOfFirst { it.id == postId }
+        if (index >= 0) {
+            communityPosts[index] = communityPosts[index].copy(comments = comments, commentCount = comments.size)
+        }
+        ownComments.remove(postId)
     }
 
     /** The posts the feed should show, given the room and the saved filter. */

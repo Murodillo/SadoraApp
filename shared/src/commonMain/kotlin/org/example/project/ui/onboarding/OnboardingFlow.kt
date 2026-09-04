@@ -293,6 +293,7 @@ fun OnboardingFlow(
                     )
 
                     OnboardingStep.Referral -> ReferralQuestion(
+                        state = state,
                         progress = progressAt(current),
                         onBack = ::back,
                         onSkip = ::advance,

@@ -27,6 +27,14 @@ const groups: NavGroup[] = [
     entries: [{ to: '/users', label: "Ro'yxat", glyph: '◎', roles: ALL }],
   },
   {
+    title: 'Kontent',
+    entries: [
+      { to: '/community', label: 'Maxfiy chat', glyph: '◉', roles: ALL },
+      { to: '/notifications', label: 'Bildirishnomalar', glyph: '◔', roles: ['OWNER', 'ADMIN', 'ANALYST'] },
+      { to: '/wearables', label: 'Wearable providerlar', glyph: '◐', roles: ['OWNER', 'ADMIN', 'ANALYST'] },
+    ],
+  },
+  {
     title: 'Sozlamalar',
     entries: [
       { to: '/features', label: 'Entitlements va limitlar', glyph: '◈', roles: ['OWNER', 'ADMIN', 'ANALYST'] },
@@ -44,19 +52,14 @@ const groups: NavGroup[] = [
  * disabled rather than hidden: the team can see the shape of the finished panel, and
  * nobody files a bug asking where the AI cost page went.
  */
-const pending = [
-  'Obunalar',
-  'AI xarajat va kill switch',
-  'Kontent (Learn)',
-  'Bildirishnomalar',
-  'Wearable providerlar',
-  "Ma'lumot moslashtirish",
-  "Qo'llab-quvvatlash",
-]
+const pending = ['Obunalar', 'AI xarajat', 'Kontent (Learn)', "Qo'llab-quvvatlash"]
 
 const titles: Record<string, string> = {
   '/': 'Dashboard',
   '/users': 'Foydalanuvchilar',
+  '/community': 'Maxfiy chat — moderatsiya',
+  '/notifications': 'Bildirishnomalar',
+  '/wearables': 'Wearable providerlar',
   '/features': 'Entitlements va limitlar',
   '/flags': 'Feature flags',
   '/audit': 'Audit log va xavfsizlik',

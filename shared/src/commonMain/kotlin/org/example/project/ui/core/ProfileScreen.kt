@@ -101,7 +101,9 @@ fun ProfileScreen(
                 SadoraCard(padding = Spacing.xs) {
                     SettingsRow(SadoraIcons.Moon, "Uyqu") { onOpen(Route.Sleep) }
                     SettingsRow(SadoraIcons.Pill, "Dorilar") { onOpen(Route.Medications) }
-                    SettingsRow(SadoraIcons.Lock, "Maxfiy chat", iconTint = c.secondary) { onOpen(Route.SecretChat) }
+                    if (state.communityEnabled) {
+                        SettingsRow(SadoraIcons.Lock, "Maxfiy chat", iconTint = c.secondary) { onOpen(Route.SecretChat) }
+                    }
                     SettingsRow(SadoraIcons.Chart, "Tahlillar") { onOpen(Route.Insights) }
                     SettingsRow(SadoraIcons.Book, "Bilim") { onOpen(Route.Knowledge) }
                 }

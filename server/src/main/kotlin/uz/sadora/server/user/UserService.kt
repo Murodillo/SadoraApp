@@ -170,7 +170,7 @@ class UserService(
             cycleBaseline?.let { users.applyCycleBaseline(userId, it) }
             request.stage?.let { users.applyStageBaseline(userId, it) }
             users.applyConsents(userId, request.consents, config.policyVersion)
-            users.applyOnboarded(userId)
+            users.applyOnboarded(userId, request.referredByDoctor)
         }
 
         audit.record(
@@ -184,6 +184,7 @@ class UserService(
                     "lifeStage" to request.lifeStage.name.lowercase(),
                     "notifications" to request.permissions.notifications.toString(),
                     "healthData" to request.permissions.healthData.toString(),
+                    "referredByDoctor" to (request.referredByDoctor?.toString() ?: "skipped"),
                 ),
                 ip = context.ip,
                 userAgent = context.userAgent,

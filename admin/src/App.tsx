@@ -5,11 +5,14 @@ import { AuthProvider, useAuth } from './auth/AuthContext'
 import { LoginPage } from './auth/LoginPage'
 import { Shell } from './layout/Shell'
 import { AuditPage } from './pages/AuditPage'
+import { CommunityPage } from './pages/CommunityPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { FeaturesPage } from './pages/FeaturesPage'
 import { FlagsPage } from './pages/FlagsPage'
+import { NotificationsPage } from './pages/NotificationsPage'
 import { UserCardPage } from './pages/UserCardPage'
 import { UsersPage } from './pages/UsersPage'
+import { WearablesPage } from './pages/WearablesPage'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -49,6 +52,15 @@ function AppRoutes() {
         <Route index element={<DashboardPage />} />
         <Route path="users" element={<UsersPage />} />
         <Route path="users/:id" element={<UserCardPage />} />
+        <Route path="community" element={<CommunityPage />} />
+        <Route
+          path="notifications"
+          element={can(['OWNER', 'ADMIN', 'ANALYST']) ? <NotificationsPage /> : <Navigate to="/" replace />}
+        />
+        <Route
+          path="wearables"
+          element={can(['OWNER', 'ADMIN', 'ANALYST']) ? <WearablesPage /> : <Navigate to="/" replace />}
+        />
         <Route path="features" element={<FeaturesPage />} />
         <Route path="flags" element={<FlagsPage />} />
         <Route path="audit" element={can(['OWNER']) ? <AuditPage /> : <Navigate to="/" replace />} />

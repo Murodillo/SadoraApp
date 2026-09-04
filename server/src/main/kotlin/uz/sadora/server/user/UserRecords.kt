@@ -30,6 +30,7 @@ data class UserRecord(
     val updatedAt: Instant,
     val lastActiveAt: Instant?,
     val deletionRequestedAt: Instant?,
+    val referredByDoctor: Boolean? = null,
 ) {
     /**
      * Goals live in their own table, so the caller supplies them. Note what is absent:

@@ -45,6 +45,8 @@ object Users : Table("users") {
     val updatedAt = timestampWithTimeZone("updated_at")
     val lastActiveAt = timestampWithTimeZone("last_active_at").nullable()
     val deletionRequestedAt = timestampWithTimeZone("deletion_requested_at").nullable()
+    /** Null when the onboarding question was skipped. */
+    val referredByDoctor = bool("referred_by_doctor").nullable()
 
     override val primaryKey = PrimaryKey(id)
 }

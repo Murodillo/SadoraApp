@@ -25,6 +25,10 @@ class HealthAccess(
     suspend fun requireUser(userId: Uuid): UserRecord =
         users.findById(userId) ?: throw NotFoundException("Foydalanuvchi topilmadi")
 
+    /** True when storing health data is permitted. For writes that skip rather than fail without it. */
+    suspend fun hasStorageConsent(userId: Uuid): Boolean =
+        users.consentsOf(userId)?.storeHealth == true
+
     suspend fun requireWritable(userId: Uuid, featureKey: String): UserRecord {
         val user = requireUser(userId)
         val consents = users.consentsOf(userId)

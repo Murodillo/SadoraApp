@@ -49,6 +49,20 @@ export function DashboardPage() {
         <Stat label="O'chirish so'rovi" value={data.deletionPending} />
       </div>
 
+      <div className="grid stat-row">
+        <Stat label="Maxfiy chat — 24 soatda post" value={data.communityPostsToday} />
+        <Stat
+          label="Ochiq shikoyatlar"
+          value={data.communityOpenReports}
+          hint={data.communityOpenReports > 0 ? 'Moderatsiya sahifasida' : 'Navbat bo‘sh'}
+        />
+        <Stat
+          label="Shifokor tavsiyasi bilan"
+          value={data.referredByDoctor}
+          hint={data.totalUsers ? `${Math.round((data.referredByDoctor / data.totalUsers) * 100)}% foydalanuvchi` : undefined}
+        />
+      </div>
+
       <div className="grid" style={{ gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1fr)', gap: 16 }}>
         <Card title="Ro'yxatdan o'tish — 14 kun">
           {signUps.isLoading ? (
@@ -80,8 +94,8 @@ export function DashboardPage() {
         <Card title="Bugungi AI foydalanish">
           {Object.keys(data.aiUsageToday).length === 0 ? (
             <p className="faint" style={{ margin: 0 }}>
-              Bugun AI so'rovlari bo'lmagan. Xarajat hisobi AI Gateway bilan birga 3-sprintda
-              qo'shiladi.
+              Bugun AI so'rovlari bo'lmagan. Har bir chat savoli <span className="mono">ai_chat</span>{' '}
+              hisoblagichini oshiradi; xarajat hisobi AI Gateway bilan birga keladi.
             </p>
           ) : (
             <table>

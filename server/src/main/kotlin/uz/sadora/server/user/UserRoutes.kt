@@ -23,6 +23,7 @@ import uz.sadora.server.api.requireUserId
 import uz.sadora.server.entitlement.EntitlementService
 import uz.sadora.server.flags.FeatureFlagService
 import uz.sadora.server.flags.FlagContext
+import uz.sadora.server.health.HealthService
 import uz.sadora.server.config.AppConfig
 import uz.sadora.server.plugins.USER_AUTH
 
@@ -30,6 +31,7 @@ fun Route.userRoutes(
     userService: UserService,
     entitlementService: EntitlementService,
     flagService: FeatureFlagService,
+    healthService: HealthService,
     config: AppConfig,
 ) {
     authenticate(USER_AUTH) {
@@ -53,14 +55,13 @@ fun Route.userRoutes(
             }
 
             post("/onboarding") {
+                val userId = call.requireUserId()
                 val request = call.receive<OnboardingRequest>()
-                call.respond(
-                    userService.completeOnboarding(
-                        call.requireUserId(),
-                        request,
-                        call.requestContext(),
-                    ),
-                )
+                val profile = userService.completeOnboarding(userId, request, call.requestContext())
+                // The check-in is health data and lands after the profile, through the
+                // health service's own consent gate — the account service stays health-free.
+                request.firstCheckIn?.let { healthService.recordOnboardingCheckIn(userId, it) }
+                call.respond(profile)
             }
 
             get("/consents") {

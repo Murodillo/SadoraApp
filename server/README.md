@@ -1,8 +1,8 @@
 # SADORA backend
 
-Ktor (Netty) + PostgreSQL + Exposed + Flyway. Tijorat taklifining **1-sprint** backend
-qamrovi: autentifikatsiya, profil va onboarding, entitlements/limitlar servisi, feature
-flags va admin panel API'si.
+Ktor (Netty) + PostgreSQL + Exposed + Flyway. Autentifikatsiya, profil va onboarding,
+sikl/Mind/ovqatlanish/dorilar, bildirishnomalar, wearable'lar, maxfiy chat, AI chat,
+entitlements/limitlar, feature flags va admin panel API'si.
 
 ## Modullar
 
@@ -152,7 +152,41 @@ qiymatni joyida o'zgartiradi — oshirib boriladigan jami esa namunalardan uzoql
 ketardi va buni hech narsa sezmasdi. Ikki manba bir metrikani bersa, biri tanlanadi:
 telefon va soat qadamlarini qo'shish kunni ikkilantiradi.
 
+**Maxfiy chat taxallus ostida, va admin tomonida ham shunday.** Har hisobga bir marta
+ikki so'zli taxallus beriladi (`community_identities`) — postdan hisobga qaytadigan
+yagona bog'lanish shu jadval, va admin API uni o'qimaydi. Moderatsiya javoblarida
+foydalanuvchi ID'si yo'q; muallifni cheklash post orqali qo'llanadi, moderator kimligini
+bilmaydi. Shikoyat — har o'quvchidan bir marta, o'z matniga emas; beshta ochiq shikoyat
+matnni o'zi yashiradi, moderator qaytarishi mumkin. Bo'lim `community` bayrog'i ortida.
+
+**AI chat limitni javobdan oldin sarflaydi.** `POST /v1/ai/chat` avval `ai_chat`
+entitlement'ini `consume` qiladi — `429 limit_reached` yoki `402 entitlement_required` —
+keyin javob beradi, shuning uchun javob olgan har bir so'rov hisoblangan. Foydalanuvchi
+ma'lumotlari faqat `ai_insights` roziligi bilan o'qiladi; roziliksiz javob umumiy va
+`basedOn` bo'sh. Suhbat saqlanmaydi. Hozircha javob qoidalar asosida (`RuleBasedAnswerer`);
+model `AiAnswerer` interfeysi orqali ulanadi.
+
+**Onboarding'dagi birinchi check-in health-gate ortida.** `firstCheckIn` profil bilan
+birga keladi, lekin `HealthService` orqali, `store_health` roziligi bo'lgandagina
+yoziladi — roziliksiz jimgina tashlab yuboriladi, so'rov muvaffaqiyatsiz bo'lmaydi.
+`UserService` sog'liq ma'lumotiga tegmaydi.
+
+## Integratsiya testi
+
+`ApiIntegrationTest` butun API'ni haqiqiy Postgres ustida yuritadi — OTP → onboarding →
+maxfiy chat → moderatsiya → AI limiti. `TEST_DB_URL` berilmasa o'tkazib yuboriladi:
+
+```bash
+docker exec sadora-postgres psql -U sadora -d sadora -c "CREATE DATABASE sadora_test"
+```
+
+```bash
+TEST_DB_URL=jdbc:postgresql://localhost:5433/sadora_test ./gradlew :server:test
+```
+
+CI'da u job'ning o'z Postgres'iga qarshi ishlaydi.
+
 ## Nima hali yo'q (3-sprint)
-bildirishnoma scheduler'i · AI Gateway va uning xarajat logi · App Store / Google Play va
-Payme/Click webhook'lari · hisobni haqiqiy o'chirish job'i · SMS provayderi
-(`OtpSender` interfeysi tayyor, hozircha log'ga yozadi) · admin 2FA enrolment ekrani.
+AI Gateway (model) va uning xarajat logi · App Store / Google Play va Payme/Click
+webhook'lari · hisobni haqiqiy o'chirish job'i · SMS provayderi (`OtpSender` interfeysi
+tayyor, hozircha log'ga yozadi) · admin 2FA enrolment ekrani · Learn kontenti.

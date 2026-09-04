@@ -28,3 +28,17 @@ interface AppStateSync {
 
 /** What the Mind tab can start. Mirrors the wire enum without depending on it. */
 enum class PracticeKind { Breathing, Meditation }
+
+/**
+ * Where the secret chat's edits go. Its own sink rather than more methods on
+ * [AppStateSync] because the feed has its own controller and its own lifetime — it is
+ * loaded when the room is opened, not with the health tabs.
+ */
+interface CommunitySync {
+    fun postLiked(postId: String, liked: Boolean)
+    fun postSaved(postId: String, saved: Boolean)
+    fun commentAdded(postId: String, body: String)
+    fun postCreated(topic: CommunityTopic, body: String)
+    fun postDeleted(postId: String)
+    fun postReported(postId: String, reason: ReportReason, note: String?)
+}

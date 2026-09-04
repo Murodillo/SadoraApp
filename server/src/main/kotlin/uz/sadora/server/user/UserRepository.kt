@@ -191,9 +191,12 @@ class UserRepository {
         }
     }
 
-    fun applyOnboarded(userId: Uuid) {
+    fun applyOnboarded(userId: Uuid, referredByDoctor: Boolean? = null) {
         Users.update({ Users.id eq userId }) {
             it[onboardingCompleted] = true
+            // Only ever set from the flow, and a skipped question leaves the earlier
+            // answer alone rather than erasing it.
+            referredByDoctor?.let { answer -> it[Users.referredByDoctor] = answer }
             it[updatedAt] = now().toOffsetDateTime()
         }
     }
@@ -413,4 +416,5 @@ private fun ResultRow.toUserRecord(): UserRecord = UserRecord(
     updatedAt = this[Users.updatedAt].toKotlinInstant(),
     lastActiveAt = this[Users.lastActiveAt]?.toKotlinInstant(),
     deletionRequestedAt = this[Users.deletionRequestedAt]?.toKotlinInstant(),
+    referredByDoctor = this[Users.referredByDoctor],
 )

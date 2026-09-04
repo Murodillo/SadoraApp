@@ -19,7 +19,11 @@ data class CommunityPost(
     val body: String,
     /** Likes from everyone else. Her own like is counted on top of this. */
     val likes: Int,
+    /** Loaded when the sheet opens; until then [commentCount] is what the card shows. */
     val comments: List<CommunityComment> = emptyList(),
+    val commentCount: Int = comments.size,
+    /** Her own post. The only thing that ever ties a post to her, and only on her phone. */
+    val isMine: Boolean = false,
 )
 
 data class CommunityComment(
@@ -27,7 +31,17 @@ data class CommunityComment(
     val tint: Int,
     val ago: String,
     val body: String,
+    val isMine: Boolean = false,
 )
+
+/** Why a post is being reported. Mirrors the wire enum without depending on it. */
+enum class ReportReason(val label: String) {
+    Spam("Spam yoki reklama"),
+    Abuse("Haqorat yoki tahdid"),
+    Misinformation("Xavfli tibbiy maslahat"),
+    PersonalData("Shaxsiy ma'lumot oshkor qilingan"),
+    Other("Boshqa sabab"),
+}
 
 /** The rooms the feed is divided into. */
 enum class CommunityTopic(val label: String) {

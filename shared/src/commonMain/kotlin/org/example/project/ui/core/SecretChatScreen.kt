@@ -23,11 +23,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -48,16 +49,20 @@ import org.example.project.design.Radius
 import org.example.project.design.Sadora
 import org.example.project.design.SadoraIcons
 import org.example.project.design.Spacing
+import org.example.project.data.CommunityController
 import org.example.project.model.AppState
 import org.example.project.model.CommunityComment
 import org.example.project.model.CommunityFilter
 import org.example.project.model.CommunityPost
 import org.example.project.model.CommunityTopic
+import org.example.project.ui.components.RoundIconButton
 import org.example.project.ui.components.SadoraBottomSheet
+import org.example.project.ui.components.SadoraButton
 import org.example.project.ui.components.SadoraCard
 import org.example.project.ui.components.SadoraTextField
 import org.example.project.ui.components.SadoraTopBar
 import org.example.project.ui.components.SelectChip
+import org.example.project.ui.components.appearFromBelow
 import org.example.project.ui.components.noRippleClickable
 import org.example.project.ui.components.rememberShareAction
 
@@ -78,18 +83,27 @@ private fun avatarTints(): List<Color> {
 @Composable
 fun SecretChatScreen(
     state: AppState,
+    community: CommunityController,
     /**
      * Raises the comments sheet.
      *
      * The sheet is owned by the shell rather than by this screen so that it covers the
-     * tab bar; a sheet opened from inside the content area is drawn underneath it.
+     * tab bar; a sheet opened from inside the content area is drawn underneath it. The
+     * composer and the post menu are raised the same way for the same reason.
      */
     onOpenComments: (CommunityPost) -> Unit,
+    onOpenMenu: (CommunityPost) -> Unit,
+    onCompose: () -> Unit,
     onClose: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
+    val c = Sadora.colors
     val share = rememberShareAction()
     val posts = state.visiblePosts()
+
+    // The server's feed replaces the samples on open; the samples are what a build
+    // with no backend keeps showing.
+    LaunchedEffect(community) { community.load() }
 
     Box(modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {
@@ -97,18 +111,24 @@ fun SecretChatScreen(
                 title = "Maxfiy chat",
                 onBack = onClose,
                 trailing = {
-                    SavedToggle(
-                        active = state.communityFilter == CommunityFilter.Saved,
-                        count = state.savedPosts.size,
-                        onClick = {
-                            state.communityFilter =
-                                if (state.communityFilter == CommunityFilter.Saved) {
-                                    CommunityFilter.Feed
-                                } else {
-                                    CommunityFilter.Saved
-                                }
-                        },
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.xxs),
+                    ) {
+                        SavedToggle(
+                            active = state.communityFilter == CommunityFilter.Saved,
+                            count = state.savedPosts.size,
+                            onClick = {
+                                state.communityFilter =
+                                    if (state.communityFilter == CommunityFilter.Saved) {
+                                        CommunityFilter.Feed
+                                    } else {
+                                        CommunityFilter.Saved
+                                    }
+                            },
+                        )
+                        RoundIconButton(SadoraIcons.Pencil, onClick = onCompose, contentDescription = "Yozish")
+                    }
                 },
             )
 
@@ -128,8 +148,17 @@ fun SecretChatScreen(
                 }
             }
 
+            if (community.error != null) {
+                Text(
+                    community.error.orEmpty(),
+                    style = Sadora.type.body,
+                    color = c.danger,
+                    modifier = Modifier.padding(horizontal = Spacing.screen, vertical = Spacing.xs),
+                )
+            }
+
             if (posts.isEmpty()) {
-                EmptyFeed(saved = state.communityFilter == CommunityFilter.Saved)
+                EmptyFeed(saved = state.communityFilter == CommunityFilter.Saved, onCompose = onCompose)
             } else {
                 LazyColumn(
                     Modifier.fillMaxSize(),
@@ -142,18 +171,21 @@ fun SecretChatScreen(
                     ),
                     verticalArrangement = Arrangement.spacedBy(Spacing.sm),
                 ) {
-                    items(posts, key = { it.id }) { post ->
-                        PostCard(
-                            post = post,
-                            liked = post.id in state.likedPosts,
-                            saved = post.id in state.savedPosts,
-                            likes = state.likeCount(post),
-                            comments = state.commentsOf(post).size,
-                            onLike = { state.toggleLike(post.id) },
-                            onSave = { state.toggleSaved(post.id) },
-                            onComment = { onOpenComments(post) },
-                            onShare = { share("${post.body}\n\nSADORA — Maxfiy chat") },
-                        )
+                    itemsIndexed(posts, key = { _, post -> post.id }) { index, post ->
+                        Box(Modifier.appearFromBelow(index.coerceAtMost(6))) {
+                            PostCard(
+                                post = post,
+                                liked = post.id in state.likedPosts,
+                                saved = post.id in state.savedPosts,
+                                likes = state.likeCount(post),
+                                comments = state.commentCountOf(post),
+                                onLike = { state.toggleLike(post.id) },
+                                onSave = { state.toggleSaved(post.id) },
+                                onComment = { onOpenComments(post) },
+                                onShare = { share("${post.body}\n\nSADORA — Maxfiy chat") },
+                                onMore = { onOpenMenu(post) },
+                            )
+                        }
                     }
                 }
             }
@@ -196,7 +228,7 @@ private fun SavedToggle(active: Boolean, count: Int, onClick: () -> Unit) {
 }
 
 @Composable
-private fun EmptyFeed(saved: Boolean) {
+private fun EmptyFeed(saved: Boolean, onCompose: () -> Unit) {
     val c = Sadora.colors
     Column(
         Modifier.fillMaxSize().padding(Spacing.xl),
@@ -226,12 +258,16 @@ private fun EmptyFeed(saved: Boolean) {
             if (saved) {
                 "Yoqqan postni belgilab qo'ying — u shu yerda turadi."
             } else {
-                "Boshqa bo'limlarni ko'ring yoki keyinroq qaytib keling."
+                "Birinchi bo'lib yozing — savolingiz taxallus ostida chiqadi."
             },
             style = Sadora.type.body,
             color = c.muted,
             textAlign = TextAlign.Center,
         )
+        if (!saved) {
+            Spacer(Modifier.height(Spacing.md))
+            SadoraButton("Yozish", onClick = onCompose, fillWidth = false)
+        }
     }
 }
 
@@ -248,6 +284,7 @@ private fun PostCard(
     onSave: () -> Unit,
     onComment: () -> Unit,
     onShare: () -> Unit,
+    onMore: () -> Unit,
 ) {
     val c = Sadora.colors
     SadoraCard {
@@ -258,13 +295,27 @@ private fun PostCard(
         ) {
             AliasAvatar(post.alias, post.tint)
             Column(Modifier.weight(1f)) {
-                Text(post.alias, style = Sadora.type.h3, color = c.text)
+                Text(
+                    if (post.isMine) "${post.alias} · siz" else post.alias,
+                    style = Sadora.type.h3,
+                    color = c.text,
+                )
                 Text(
                     "${post.topic.label} · ${post.ago}",
                     style = Sadora.type.body,
                     color = c.muted2,
                 )
             }
+            Icon(
+                SadoraIcons.More,
+                contentDescription = "Yana",
+                Modifier
+                    .size(MinTouchTarget)
+                    .clip(Radius.chip)
+                    .noRippleClickable(onClick = onMore)
+                    .padding(12.dp),
+                tint = c.muted2,
+            )
         }
         Text(post.body, style = Sadora.type.body, color = c.text)
         Row(
@@ -381,7 +432,7 @@ private fun CommentsSheet(comments: List<CommunityComment>, onSend: (String) -> 
                     AliasAvatar(comment.alias, comment.tint, size = 30.dp)
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         Text(
-                            "${comment.alias} · ${comment.ago}",
+                            (if (comment.isMine) "${comment.alias} (siz)" else comment.alias) + " · ${comment.ago}",
                             style = Sadora.type.caption.copy(letterSpacing = TextUnit.Unspecified),
                             color = c.muted2,
                         )

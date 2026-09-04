@@ -46,7 +46,13 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
+      # `ApiIntegrationTest` drives the whole API against this Postgres; without the
+      # variable it skips itself, which is what a laptop without Docker gets.
       - name: Test the contract and the server
+        env:
+          TEST_DB_URL: jdbc:postgresql://localhost:5432/sadora
+          TEST_DB_USER: sadora
+          TEST_DB_PASSWORD: sadora
         run: ./gradlew :contract:jvmTest :server:test --stacktrace
 
       # Flyway either applies cleanly onto an empty database or it does not, and a unit

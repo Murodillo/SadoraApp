@@ -11,6 +11,9 @@ import kotlinx.coroutines.runBlocking
 import org.slf4j.LoggerFactory
 import uz.sadora.contract.API_VERSION
 import uz.sadora.server.admin.AdminBootstrap
+import uz.sadora.server.ai.aiRoutes
+import uz.sadora.server.community.adminCommunityRoutes
+import uz.sadora.server.community.communityRoutes
 import uz.sadora.server.admin.adminRoutes
 import uz.sadora.server.api.healthCheckRoutes
 import uz.sadora.server.auth.authRoutes
@@ -89,6 +92,7 @@ fun Application.apiModule(component: AppComponent) {
                 userService = component.userService,
                 entitlementService = component.entitlementService,
                 flagService = component.flagService,
+                healthService = component.healthService,
                 config = config,
             )
             healthRoutes(component.healthService)
@@ -99,6 +103,9 @@ fun Application.apiModule(component: AppComponent) {
             adminNotificationRoutes(component.notificationService, component.auditService)
             wearableRoutes(component.wearableService)
             adminWearableRoutes(component.wearableService, component.wearableRepository, component.auditService)
+            communityRoutes(component.communityService)
+            adminCommunityRoutes(component.communityModerationService)
+            aiRoutes(component.aiService)
             adminRoutes(
                 adminAuth = component.adminAuthService,
                 adminService = component.adminService,

@@ -9,14 +9,19 @@ import org.jetbrains.exposed.v1.core.count
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.greaterEq
 import org.jetbrains.exposed.v1.core.isNotNull
+import org.jetbrains.exposed.v1.core.isNull
 import org.jetbrains.exposed.v1.core.less
 import org.jetbrains.exposed.v1.core.sum
 import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
+import uz.sadora.server.core.DEFAULT_TIMEZONE
+import uz.sadora.server.core.dayIn
 import uz.sadora.server.core.now
 import uz.sadora.server.core.toKotlinInstant
 import uz.sadora.server.core.toOffsetDateTime
 import uz.sadora.server.db.AuditLog
+import uz.sadora.server.db.CommunityPosts
+import uz.sadora.server.db.CommunityReports
 import uz.sadora.server.db.FeatureUsageDaily
 import uz.sadora.server.db.Subscriptions
 import uz.sadora.server.db.Users
@@ -45,6 +50,10 @@ data class AdminStats(
     val byLanguage: Map<String, Long>,
     /** Per AI feature, how many calls were spent across all users today. */
     val aiUsageToday: Map<String, Long>,
+    /** Accounts that answered "yes" to "did a doctor recommend SADORA". */
+    val referredByDoctor: Long = 0,
+    val communityPostsToday: Long = 0,
+    val communityOpenReports: Long = 0,
     val generatedAt: Instant,
 )
 
@@ -91,6 +100,13 @@ class AdminStatsRepository {
             byLifeStage = groupCount(Users.lifeStage),
             byLanguage = groupCount(Users.language),
             aiUsageToday = aiUsageToday(),
+            referredByDoctor = countWhere { Users.referredByDoctor eq true },
+            communityPostsToday = CommunityPosts.selectAll()
+                .where { CommunityPosts.createdAt greaterEq dayAgo }
+                .count(),
+            communityOpenReports = CommunityReports.selectAll()
+                .where { CommunityReports.resolvedAt.isNull() }
+                .count(),
             generatedAt = currentTime,
         )
     }
@@ -131,9 +147,10 @@ class AdminStatsRepository {
 
     private fun aiUsageToday(): Map<String, Long> {
         val usedSum = FeatureUsageDaily.used.sum()
-        // Counted in UTC rather than per user's timezone: this is an operational total,
-        // not a limit, and a stable server-day is what makes the numbers comparable.
-        val today = now().toString().take(10).let { kotlinx.datetime.LocalDate.parse(it) }
+        // Usage rows are dated in each user's own timezone, and the product's users are
+        // on Tashkent time — so "today" here is the Tashkent day. Counting the UTC day
+        // instead left the column empty for the five hours after Tashkent midnight.
+        val today = now().dayIn(DEFAULT_TIMEZONE)
         return FeatureUsageDaily
             .select(FeatureUsageDaily.featureKey, usedSum)
             .where { FeatureUsageDaily.usageDate eq today }

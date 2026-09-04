@@ -34,13 +34,14 @@ Birinchi Owner hisobi backend birinchi marta ko'tarilganda yaratiladi —
 | Kartochka | Owner/Admin/Support | Umumiy · Obuna · Texnik. Bloklash, Premium berish |
 | Entitlements va limitlar | Owner/Admin (Analyst o'qiydi) | Jadvalni joyida tahrirlash |
 | Feature flags | Owner/Admin (Analyst o'qiydi) | Kill switch, standart qiymat, foizli yoyish qoidalari |
+| Maxfiy chat | hamma (Owner/Admin amal qiladi) | Moderatsiya navbati: postlar, izohlar, shikoyatlar. Yashirish, qaytarish, muallifni cheklash — hammasi taxallus ostida, foydalanuvchi ID'si ko'rinmaydi |
+| Bildirishnomalar | Owner/Admin (Analyst o'qiydi) | Chastota chegaralari va shablonlar |
+| Wearable providerlar | Owner/Admin (Analyst o'qiydi) | Provayderlar holati, metrika moslashtirish jadvali |
 | Audit log | faqat Owner | Filtr va sahifalash |
 
-Chap navigatsiyadagi o'chirilgan punktlar — taklifning 5-bo'limidagi qolgan sahifalar
-(obunalar, AI xarajat, kontent, bildirishnomalar, wearable providerlar, ma'lumot
-moslashtirish, qo'llab-quvvatlash). Ularning backend'i 2–3-sprintda yoziladi;
-yashirish o'rniga o'chirilgan holda ko'rsatilgan, chunki jamoa yakuniy panel qanday
-bo'lishini ko'rib turishi kerak.
+Chap navigatsiyadagi o'chirilgan punktlar — hali backend'i yo'q sahifalar (obunalar,
+AI xarajat, Learn kontenti, qo'llab-quvvatlash). Yashirish o'rniga o'chirilgan holda
+ko'rsatilgan, chunki jamoa yakuniy panel qanday bo'lishini ko'rib turishi kerak.
 
 ## Qarorlar
 
@@ -56,6 +57,10 @@ ataylab: token tugasa 2FA kodi bilan qaytadan kirasiz.
 **CSV eksporti — ekrandagi sahifa.** Butun filtrlangan to'plamni yuklab olish — hisob
 ma'lumotlarining ommaviy chiqarilishi va u o'zining alohida audit qilinadigan
 endpoint'i ortida turishi kerak, tugmadek ko'rinadigan qulaylik ortida emas.
+
+**Moderatsiya sahifasi foydalanuvchiga olib bormaydi.** Postdan hisob kartochkasiga
+havola yo'q va API uni bera olmaydi. "Muallifni cheklash" post orqali qo'llanadi —
+moderator kimligini bilmaydi. Bu maxfiy chatning butun mazmuni.
 
 **Dashboard'da DAU/MAU va AI xarajat grafigi yo'q.** Ular hodisalar jadvali va AI
 Gateway'ning xarajat logini talab qiladi — ikkalasi ham 3-sprintda. O'lchanmagan

@@ -1,5 +1,10 @@
 package org.example.project.ui.core
 
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -28,6 +33,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -42,23 +48,24 @@ import org.example.project.design.Radius
 import org.example.project.design.Sadora
 import org.example.project.design.SadoraIcons
 import org.example.project.design.Spacing
+import kotlinx.coroutines.launch
+import org.example.project.data.AiController
 import org.example.project.model.AppState
-import org.example.project.model.CyclePhase
 import org.example.project.model.Fmt
 import org.example.project.model.SampleData
 import org.example.project.model.nowTimeLabel
 import org.example.project.ui.components.AiMarkHeader
 import org.example.project.ui.components.CircleIconButton
+import org.example.project.ui.components.appearFromBelow
 import org.example.project.ui.components.noRippleClickable
 
 private data class ChatMessage(
     val fromUser: Boolean,
     val text: String,
     val time: String,
+    /** A refusal — out of questions, section closed — drawn quieter than an answer. */
+    val isNotice: Boolean = false,
 )
-
-/** How many questions a Premium account may ask per day. Mirrors the paywall table. */
-private const val DailyQuestions = 20
 
 /**
  * "SADORA AI" — the conversation view, drawn on the deck's navy ground.
@@ -70,26 +77,38 @@ private const val DailyQuestions = 20
 @Composable
 fun AiChatScreen(
     state: AppState,
+    ai: AiController,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val c = Sadora.colors
+    val scope = rememberCoroutineScope()
     var draft by remember { mutableStateOf("") }
-    var used by remember { mutableStateOf(0) }
     val messages = remember { mutableStateListOf<ChatMessage>() }
     val listState = rememberLazyListState()
 
+    // The allowance is the server's; the header shows it as soon as it is known.
+    LaunchedEffect(ai) { ai.loadQuota() }
+
     fun ask(question: String) {
         val text = question.trim()
-        if (text.isEmpty() || used >= DailyQuestions) return
+        if (text.isEmpty() || ai.busy || !ai.canAsk) return
         messages += ChatMessage(true, text, nowTimeLabel())
-        messages += ChatMessage(false, answerFor(text, state), nowTimeLabel())
-        used++
         draft = ""
+        scope.launch {
+            val answer = ai.ask(text)
+            messages += if (answer != null) {
+                ChatMessage(false, answer.text, nowTimeLabel())
+            } else {
+                // The refusal reads as a reply rather than a banner: it is what the
+                // assistant has to say about this question.
+                ChatMessage(false, ai.error ?: "Javob berib bo'lmadi. Qayta urinib ko'ring.", nowTimeLabel(), isNotice = true)
+            }
+        }
     }
 
-    LaunchedEffect(messages.size) {
-        if (messages.isNotEmpty()) listState.animateScrollToItem(messages.size - 1)
+    LaunchedEffect(messages.size, ai.busy) {
+        if (messages.isNotEmpty()) listState.animateScrollToItem(messages.size)
     }
 
     Column(modifier.fillMaxSize().statusBarsPadding()) {
@@ -122,7 +141,7 @@ fun AiChatScreen(
             item {
                 Text(
                     "Sikl ${state.cycleDay}-kun · Uyqu ${state.sleepLabel()} · " +
-                        "Suv ${Fmt.litres(state.waterMl)} l asosida · $used/$DailyQuestions savol",
+                        "Suv ${Fmt.litres(state.waterMl)} l asosida" + quotaLabel(ai),
                     style = Sadora.type.caption.copy(letterSpacing = 0.02.em),
                     color = c.muted2,
                     textAlign = TextAlign.Center,
@@ -144,6 +163,10 @@ fun AiChatScreen(
             }
 
             items(messages.size) { index -> ChatBubble(messages[index]) }
+
+            if (ai.busy) {
+                item { TypingBubble() }
+            }
 
             item {
                 Text(
@@ -206,7 +229,7 @@ fun AiChatScreen(
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
-            val canSend = draft.isNotBlank() && used < DailyQuestions
+            val canSend = draft.isNotBlank() && ai.canAsk && !ai.busy
             Box(
                 Modifier
                     .size(48.dp)
@@ -226,6 +249,43 @@ fun AiChatScreen(
     }
 }
 
+/** " · 3/20 savol qoldi", or nothing while the allowance is unknown or unmetered. */
+private fun quotaLabel(ai: AiController): String {
+    val quota = ai.quota ?: return ""
+    val limit = quota.dailyLimit ?: return ""
+    val left = quota.remainingToday ?: return ""
+    return " · $left/$limit savol qoldi"
+}
+
+/** Three dots that breathe while the answer is on its way. */
+@Composable
+private fun TypingBubble() {
+    val c = Sadora.colors
+    val transition = rememberInfiniteTransition()
+    val phase by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 3f,
+        animationSpec = infiniteRepeatable(tween(900, easing = LinearEasing)),
+    )
+    Row(
+        Modifier
+            .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp, bottomStart = 6.dp, bottomEnd = 20.dp))
+            .background(c.surface2)
+            .padding(horizontal = Spacing.md, vertical = 14.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        repeat(3) { index ->
+            val on = phase.toInt() % 3 == index
+            Box(
+                Modifier
+                    .size(8.dp)
+                    .clip(Radius.chip)
+                    .background(if (on) c.primary else c.muted2.copy(alpha = 0.5f)),
+            )
+        }
+    }
+}
+
 @Composable
 private fun ChatBubble(message: ChatMessage) {
     val c = Sadora.colors
@@ -235,14 +295,20 @@ private fun ChatBubble(message: ChatMessage) {
         RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp, bottomStart = 6.dp, bottomEnd = 20.dp)
     }
     Row(
-        Modifier.fillMaxWidth(),
+        Modifier.fillMaxWidth().appearFromBelow(distance = 10.dp),
         horizontalArrangement = if (message.fromUser) Arrangement.End else Arrangement.Start,
     ) {
         Column(
             Modifier
                 .fillMaxWidth(0.82f)
                 .clip(shape)
-                .background(if (message.fromUser) c.primary else c.surface2)
+                .background(
+                    when {
+                        message.fromUser -> c.primary
+                        message.isNotice -> c.warningSoft.copy(alpha = if (c.isDark) 0.18f else 0.14f)
+                        else -> c.surface2
+                    },
+                )
                 .padding(horizontal = Spacing.md, vertical = Spacing.sm),
             verticalArrangement = Arrangement.spacedBy(Spacing.xxs),
         ) {
@@ -259,46 +325,4 @@ private fun ChatBubble(message: ChatMessage) {
             )
         }
     }
-}
-
-/**
- * The answer to a question, until a model sits behind the screen.
- *
- * Rule-based on purpose: it reads the same numbers the tiles show, names which of them
- * it used, and never diagnoses. Each topic keys on the words a question in that area
- * actually contains.
- */
-internal fun answerFor(question: String, state: AppState): String {
-    val q = question.lowercase()
-    val phase = state.currentPhase()
-    val context = "Sikl ${state.cycleDay}-kun (${phase.label.lowercase()}), " +
-        "uyqu ${state.sleepLabel()}, suv ${Fmt.litres(state.waterMl)} l asosida."
-    val body = when {
-        "charch" in q || "energiya" in q || "toliq" in q -> when (phase) {
-            CyclePhase.Luteal, CyclePhase.Period ->
-                "Hayzdan oldin va hayz davrida progesteron o'zgarishi uyqu va energiyaga ta'sir qilishi mumkin. " +
-                    "Magniyga boy ovqatlar, yengil yurish va nafas mashqlarini sinab ko'ring."
-            else ->
-                "Bu fazada energiya odatda o'sadi. Suv iste'moli va uyqu davomiyligi pastroq bo'lsa, " +
-                    "charchoq shundan bo'lishi mumkin — bugun ${state.waterRemainingMl} ml suv qoldi."
-        }
-        "ye" in q || "ovqat" in q || "taom" in q ->
-            "Barqaror energiya uchun oqsil va murakkab uglevodlarni birga oling: tuxum, " +
-                "yog'urt, don mahsulotlari, sabzavot. Bugun ${Fmt.int(state.caloriesEaten)} / " +
-                "${Fmt.int(state.calorieGoal)} kkal qayd etilgan. Ovqatlanish rejasini tuzib beraymi?"
-        "teri" in q || "akne" in q ->
-            "Sikl davomida gormonlar terining yog' ishlab chiqarishini o'zgartiradi: hayz oldidan " +
-                "toshmalar ko'payishi odatiy. Yumshoq tozalash, yetarli suv va uyqu yordam beradi. " +
-                "Uzoq davom etsa, dermatologga ko'rsating."
-        "uyqu" in q || "uxla" in q ->
-            "Kecha ${state.sleepLabel()} uxlagansiz. Kechqurun ekranni kamaytirish va bir xil " +
-                "vaqtda yotish uyqu sifatini yaxshilaydi. Uyqu ma'lumotlarini kuzatishda davom eting."
-        "sikl" in q || "hayz" in q || "ovulyats" in q ->
-            "Hozir siklning ${state.cycleDay}-kuni — ${phase.label.lowercase()}. " +
-                "${phase.energyNote} Keyingi hayz taxminan ${state.daysToNextPeriod()} kundan keyin."
-        else ->
-            "Savolingizni tushundim. Sikl, ovqatlanish, kayfiyat va dorilaringiz bo'yicha " +
-                "ma'lumotlaringizga tayanib javob bera olaman — aniqroq so'rasangiz, batafsil tushuntiraman."
-    }
-    return "$body\n\n$context Bu umumiy ma'lumot — tashxis emas."
 }

@@ -1,6 +1,10 @@
 package uz.sadora.server
 
 import uz.sadora.server.admin.AdminAuthService
+import uz.sadora.server.ai.AiService
+import uz.sadora.server.community.CommunityModerationService
+import uz.sadora.server.community.CommunityRepository
+import uz.sadora.server.community.CommunityService
 import uz.sadora.server.admin.AdminService
 import uz.sadora.server.admin.AdminStatsRepository
 import uz.sadora.server.audit.AuditRepository
@@ -105,6 +109,25 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
         medications = medicationRepository,
         users = userRepository,
         sender = LoggingPushSender(),
+    )
+
+    val communityRepository = CommunityRepository()
+    val communityService = CommunityService(
+        repository = communityRepository,
+        users = userRepository,
+        flags = flagService,
+        environment = config.environment,
+    )
+    val communityModerationService = CommunityModerationService(communityRepository, auditService)
+
+    val aiService = AiService(
+        users = userRepository,
+        entitlements = entitlementService,
+        flags = flagService,
+        environment = config.environment,
+        health = healthService,
+        nutrition = nutritionService,
+        wearables = wearableService,
     )
 
     val adminAuthService = AdminAuthService(jwtService, auditService)

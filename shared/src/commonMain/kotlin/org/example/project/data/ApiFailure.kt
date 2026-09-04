@@ -47,6 +47,12 @@ sealed class ApiFailure(open val message: String) {
     /** A wrong or expired OTP code. Carries the server's specific code. */
     data class Otp(val code: String, override val message: String) : ApiFailure(message)
 
+    /** An operator has closed this section. An upgrade would not help, so no paywall. */
+    data class FeatureDisabled(val flag: String, override val message: String) : ApiFailure(message)
+
+    /** Health data was sent without the consent that permits storing it. */
+    data class ConsentRequired(val consent: String, override val message: String) : ApiFailure(message)
+
     /** Anything else, including 5xx. [requestId] is what support needs to trace it. */
     data class Unexpected(override val message: String, val requestId: String? = null) :
         ApiFailure(message)
@@ -79,6 +85,9 @@ sealed class ApiFailure(open val message: String) {
 
             ErrorCodes.RATE_LIMITED ->
                 RateLimited(error.message, error.details["retryAfterSeconds"]?.toIntOrNull())
+
+            ErrorCodes.FEATURE_DISABLED -> FeatureDisabled(error.details["flag"].orEmpty(), error.message)
+            ErrorCodes.CONSENT_REQUIRED -> ConsentRequired(error.details["consent"].orEmpty(), error.message)
 
             ErrorCodes.OTP_INVALID,
             ErrorCodes.OTP_EXPIRED,

@@ -64,6 +64,19 @@ class LimitReachedException(
     mapOf("feature" to featureKey, "period" to period),
 )
 
+/**
+ * Raised when an operator has switched a feature off with its flag.
+ *
+ * Distinct from [EntitlementRequiredException]: an upgrade would not help, so the client
+ * must not show a paywall for it.
+ */
+class FeatureDisabledException(flagKey: String) : ApiException(
+    HttpStatusCode.Forbidden,
+    ErrorCodes.FEATURE_DISABLED,
+    "Bu bo'lim hozircha yopiq",
+    mapOf("flag" to flagKey),
+)
+
 class EntitlementRequiredException(featureKey: String) : ApiException(
     HttpStatusCode.PaymentRequired,
     ErrorCodes.ENTITLEMENT_REQUIRED,

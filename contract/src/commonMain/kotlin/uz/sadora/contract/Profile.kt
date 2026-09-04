@@ -116,6 +116,22 @@ data class OnboardingRequest(
     val stage: StageBaseline? = null,
     val permissions: PermissionGrants = PermissionGrants(),
     val consents: ConsentGrants = ConsentGrants(),
+    /** "Did a doctor recommend SADORA?" — null when the question was skipped. */
+    val referredByDoctor: Boolean? = null,
+    /**
+     * The check-in the flow takes before sign-up. It is health data and is stored only
+     * with [ConsentGrants.storeHealth]; without it the server drops it silently rather
+     * than failing the whole request over an answer she cannot see anymore.
+     */
+    val firstCheckIn: OnboardingCheckIn? = null,
+)
+
+/** How she felt and what she noticed on the day she joined, as the day's first log. */
+@Serializable
+data class OnboardingCheckIn(
+    val mood: MoodLevel? = null,
+    /** Keys from the symptom catalogue; unknown keys are dropped, not rejected. */
+    val symptomKeys: List<String> = emptyList(),
 )
 
 /** OS-level permissions the client reports after asking for them. */

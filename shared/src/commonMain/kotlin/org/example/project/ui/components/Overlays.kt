@@ -6,6 +6,9 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -122,7 +125,11 @@ fun SadoraBottomSheet(
                         .background(c.surface)
                         // Same as the dialog: the sheet body must not dismiss itself.
                         .noRippleClickable {}
+                        // A sheet with a text field rises above the keyboard and scrolls,
+                        // so the button under the field is never left beneath it.
+                        .imePadding()
                         .navigationBarsPadding()
+                        .verticalScroll(rememberScrollState())
                         .padding(Spacing.lg),
                     verticalArrangement = Arrangement.spacedBy(Spacing.md),
                 ) {
