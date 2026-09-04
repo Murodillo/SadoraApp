@@ -12,12 +12,14 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -49,15 +51,18 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import org.example.project.design.IconSize
+import org.example.project.design.PhaseColors
 import org.example.project.design.Radius
 import org.example.project.design.Sadora
 import org.example.project.design.SadoraIcons
 import org.example.project.design.Spacing
 import org.example.project.model.AppState
+import org.example.project.ui.components.AiOrb
+import org.example.project.ui.components.IconTile
 import org.example.project.ui.components.SadoraButton
 import org.example.project.ui.components.SadoraMark
 import org.example.project.ui.components.SadoraWordmark
-import org.example.project.ui.components.WelcomeIllustration
+import org.example.project.ui.components.cardSurface
 import org.example.project.ui.components.noRippleClickable
 import kotlin.math.PI
 import kotlin.math.sin
@@ -309,21 +314,35 @@ fun WelcomeScreen(onReady: () -> Unit, modifier: Modifier = Modifier) = SplashSc
 // ---------------------------------------------------------------- welcome
 
 /** One of the six things the welcome screen says the app does. */
-private data class Feature(val icon: ImageVector, val label: String)
+private data class Feature(val icon: ImageVector, val label: String, val tint: Color)
 
-private val features = listOf(
-    Feature(SadoraIcons.Bloom, "Sikl"),
-    Feature(SadoraIcons.Nutrition, "Ovqatlanish"),
-    Feature(SadoraIcons.Smile, "Kayfiyat"),
-    Feature(SadoraIcons.Pill, "Vitaminlar va dorilar"),
-    Feature(SadoraIcons.Sparkle, "SADORA AI"),
-    Feature(SadoraIcons.Chart, "Tahlil va tavsiyalar"),
-)
+/**
+ * The six, ordered so no two neighbours in the two-column grid carry adjacent hues —
+ * the tiles are the only colour on the screen and they should read as six things,
+ * not as one gradient.
+ */
+@Composable
+private fun features(): List<Feature> {
+    val c = Sadora.colors
+    return listOf(
+        Feature(SadoraIcons.Bloom, "Sikl", PhaseColors.period),
+        Feature(SadoraIcons.Smile, "Kayfiyat", c.warningSoft),
+        Feature(SadoraIcons.Nutrition, "Ovqatlanish", c.success),
+        Feature(SadoraIcons.Pill, "Vitamin va dorilar", c.accent),
+        Feature(SadoraIcons.Sparkle, "SADORA AI", c.primary),
+        Feature(SadoraIcons.Chart, "Tahlil va tavsiyalar", PhaseColors.fertile),
+    )
+}
 
 /**
  * "02. Welcome" — the first interactive screen: what the app is for, in six tiles,
  * with the language switch in the corner because language is the one answer she
  * needs before she can read anything else.
+ *
+ * It is built from the same pieces as the rest of the app rather than from its own
+ * shapes: the AI orb it will meet again on the assistant screen, cards with the
+ * standard surface, and the splash's flower field carried through behind them so the
+ * two screens read as one opening.
  */
 @Composable
 fun IntroScreen(
@@ -333,104 +352,139 @@ fun IntroScreen(
     modifier: Modifier = Modifier,
 ) {
     val c = Sadora.colors
-    val entry = rememberPageEntry(1200)
+    val entry = rememberPageEntry(1300)
+    val tiles = features()
 
-    Column(modifier.fillMaxSize().navigationBarsPadding()) {
-        Row(
-            Modifier.fillMaxWidth().padding(horizontal = Spacing.screen, vertical = Spacing.xs),
-            horizontalArrangement = Arrangement.End,
-        ) {
-            LanguageSwitch(selected = state.language, onSelect = { state.language = it })
-        }
+    Box(modifier.fillMaxSize()) {
+        // The splash's blooms keep drifting under this screen, faint enough to stay
+        // behind the copy.
+        BloomField(Modifier.fillMaxSize(), entryDelayMillis = 150, fieldAlpha = 0.22f)
 
-        Column(
-            Modifier
-                .weight(1f)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = Spacing.screen),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Reveal(entry.value, from = 0.05f) {
-                Text(
-                    "SADORA'ga xush kelibsiz ✦",
-                    style = Sadora.type.h1,
-                    color = c.text,
-                    textAlign = TextAlign.Center,
-                )
+        Column(Modifier.fillMaxSize().navigationBarsPadding()) {
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = Spacing.screen, vertical = Spacing.xs),
+                horizontalArrangement = Arrangement.End,
+            ) {
+                LanguageSwitch(selected = state.language, onSelect = { state.language = it })
             }
-            Spacer(Modifier.height(Spacing.xs))
-            Reveal(entry.value, from = 0.15f) {
-                Text(
-                    "Salomatlik, sikl, ovqatlanish va kayfiyat uchun shaxsiy yordamchingiz.",
-                    style = Sadora.type.body,
-                    color = c.muted,
-                    textAlign = TextAlign.Center,
-                )
-            }
-            Spacer(Modifier.height(Spacing.md))
-            Reveal(entry.value, from = 0.25f) {
-                WelcomeIllustration(Modifier.fillMaxWidth(0.72f).size(220.dp))
-            }
-            Spacer(Modifier.height(Spacing.md))
 
-            features.chunked(3).forEachIndexed { rowIndex, row ->
-                Reveal(entry.value, from = optionStart(rowIndex, base = 0.45f, step = 0.12f)) {
+            // The block is centred in whatever is left between the language switch
+            // and the button, and scrolls only once it outgrows that: a short screen
+            // scrolls, a tall one does not leave the copy stranded at the top.
+            BoxWithConstraints(Modifier.weight(1f)) {
+                val viewport = maxHeight
+                Column(
+                    Modifier
+                        .verticalScroll(rememberScrollState())
+                        .heightIn(min = viewport)
+                        .padding(horizontal = Spacing.screen),
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                Reveal(entry.value, from = 0.02f) { AiOrb(size = 150.dp) }
+                Spacer(Modifier.height(Spacing.sm))
+                Reveal(entry.value, from = 0.14f) {
+                    Text(
+                        "SADORA'ga xush kelibsiz",
+                        style = Sadora.type.h1,
+                        color = c.text,
+                        textAlign = TextAlign.Center,
+                    )
+                }
+                Spacer(Modifier.height(Spacing.xs))
+                Reveal(entry.value, from = 0.22f) {
+                    Text(
+                        "Salomatlik, sikl, ovqatlanish va kayfiyat uchun shaxsiy yordamchingiz.",
+                        style = Sadora.type.body,
+                        color = c.muted,
+                        textAlign = TextAlign.Center,
+                    )
+                }
+                Spacer(Modifier.height(Spacing.lg))
+
+                tiles.chunked(2).forEachIndexed { rowIndex, row ->
                     Row(
                         Modifier.fillMaxWidth().padding(bottom = Spacing.sm),
                         horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                     ) {
-                        row.forEach { feature ->
-                            FeatureTile(feature, Modifier.weight(1f))
+                        row.forEachIndexed { columnIndex, feature ->
+                            Reveal(
+                                entry.value,
+                                from = optionStart(rowIndex * 2 + columnIndex, base = 0.36f, step = 0.06f),
+                                modifier = Modifier.weight(1f),
+                            ) {
+                                FeatureTile(feature)
+                            }
                         }
                     }
                 }
-            }
-            Spacer(Modifier.height(Spacing.xs))
-        }
+                Spacer(Modifier.height(Spacing.xs))
 
-        Reveal(entry.value, from = 0.75f) {
-            Column(
-                Modifier.padding(horizontal = Spacing.screen, vertical = Spacing.sm),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(Spacing.sm),
-            ) {
-                SadoraButton("Boshlash", onStart)
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text("Hisobim bor →", style = Sadora.type.body, color = c.muted)
-                    Text(
-                        "Kirish",
-                        style = Sadora.type.body.copy(fontWeight = FontWeight.SemiBold),
-                        color = c.textAccent,
-                        modifier = Modifier.noRippleClickable(onClick = onSignIn),
-                    )
+                // The promise the consent gate will make in full, said once here so
+                // the first screen is not only a list of features.
+                Reveal(entry.value, from = 0.7f) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        Icon(
+                            SadoraIcons.Lock,
+                            contentDescription = null,
+                            Modifier.size(IconSize.sm),
+                            tint = c.muted2,
+                        )
+                        Text(
+                            "Ma'lumotlaringiz sizniki — istalgan vaqtda o'chirasiz",
+                            style = Sadora.type.body,
+                            color = c.muted2,
+                            textAlign = TextAlign.Center,
+                        )
+                    }
+                }
+                Spacer(Modifier.height(Spacing.sm))
+                }
+            }
+
+            Reveal(entry.value, from = 0.78f) {
+                Column(
+                    Modifier.padding(horizontal = Spacing.screen, vertical = Spacing.sm),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+                ) {
+                    SadoraButton("Boshlash", onStart)
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text("Hisobim bor →", style = Sadora.type.body, color = c.muted)
+                        Text(
+                            "Kirish",
+                            style = Sadora.type.body.copy(fontWeight = FontWeight.SemiBold),
+                            color = c.textAccent,
+                            modifier = Modifier.noRippleClickable(onClick = onSignIn),
+                        )
+                    }
                 }
             }
         }
     }
 }
 
+/** One feature, on the app's own card surface with its domain's colour on the icon. */
 @Composable
 private fun FeatureTile(feature: Feature, modifier: Modifier = Modifier) {
     val c = Sadora.colors
-    Column(
-        modifier,
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(6.dp),
+    Row(
+        modifier
+            .fillMaxWidth()
+            .height(72.dp)
+            .cardSurface(c, shape = Radius.tile)
+            .padding(horizontal = Spacing.sm),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
     ) {
-        Box(
-            Modifier
-                .size(64.dp)
-                .clip(Radius.tile)
-                .background(c.primary.copy(alpha = if (c.isDark) 0.22f else 0.1f)),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(feature.icon, contentDescription = null, Modifier.size(26.dp), tint = c.primary)
-        }
+        IconTile(feature.icon, tint = feature.tint, size = 38.dp, iconSize = 20.dp)
         Text(
             feature.label,
-            style = Sadora.type.caption.copy(letterSpacing = androidx.compose.ui.unit.TextUnit.Unspecified),
+            style = Sadora.type.body.copy(fontWeight = FontWeight.SemiBold),
             color = c.text,
-            textAlign = TextAlign.Center,
             maxLines = 2,
         )
     }
