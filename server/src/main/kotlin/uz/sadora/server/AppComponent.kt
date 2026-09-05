@@ -1,7 +1,15 @@
 package uz.sadora.server
 
 import uz.sadora.server.admin.AdminAuthService
+import io.ktor.client.HttpClient
+import io.ktor.client.engine.cio.CIO
+import io.ktor.client.plugins.contentnegotiation.ContentNegotiation as ClientContentNegotiation
+import io.ktor.serialization.kotlinx.json.json
+import kotlinx.serialization.json.Json
+import uz.sadora.server.ai.AiGateway
 import uz.sadora.server.ai.AiService
+import uz.sadora.server.ai.AiUsageRepository
+import uz.sadora.server.ai.GeminiAnswerer
 import uz.sadora.server.community.CommunityModerationService
 import uz.sadora.server.community.CommunityRepository
 import uz.sadora.server.community.CommunityService
@@ -53,6 +61,16 @@ import uz.sadora.server.user.UserService
  * than at startup.
  */
 class AppComponent(val config: AppConfig) : AutoCloseable {
+
+    /**
+     * The one client for calls that leave the server. JSON is negotiated here so a
+     * provider client is a request and a data class, not another client to configure.
+     */
+    val outboundHttpClient: HttpClient = HttpClient(CIO) {
+        install(ClientContentNegotiation) {
+            json(Json { ignoreUnknownKeys = true })
+        }
+    }
 
     val databaseFactory: DatabaseFactory = DatabaseFactory.connect(config.database)
     val cache: Cache = Caches.create(config.redis)
@@ -138,6 +156,15 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
         entitlements = entitlementService,
     )
 
+    val aiUsageRepository = AiUsageRepository()
+    val aiGateway = AiGateway(
+        config = config.ai,
+        usage = aiUsageRepository,
+        // No key means no model object at all, so the gateway cannot try and fail on
+        // every question — it answers from the rules and says so in the log once.
+        model = config.ai.apiKey?.let { GeminiAnswerer(outboundHttpClient, config.ai) },
+    )
+
     val aiService = AiService(
         users = userRepository,
         entitlements = entitlementService,
@@ -146,6 +173,8 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
         health = healthService,
         nutrition = nutritionService,
         wearables = wearableService,
+        gateway = aiGateway,
+        usage = aiUsageRepository,
     )
 
     val adminAuthService = AdminAuthService(jwtService, auditService)
@@ -162,6 +191,7 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
 
     override fun close() {
         notificationScheduler.stop()
+        outboundHttpClient.close()
         cache.close()
         databaseFactory.close()
     }

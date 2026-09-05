@@ -11,6 +11,7 @@ import kotlinx.coroutines.runBlocking
 import org.slf4j.LoggerFactory
 import uz.sadora.contract.API_VERSION
 import uz.sadora.server.admin.AdminBootstrap
+import uz.sadora.server.ai.adminAiRoutes
 import uz.sadora.server.ai.aiRoutes
 import uz.sadora.server.community.adminCommunityRoutes
 import uz.sadora.server.community.communityRoutes
@@ -109,6 +110,7 @@ fun Application.apiModule(component: AppComponent) {
             communityRoutes(component.communityService)
             adminCommunityRoutes(component.communityModerationService)
             aiRoutes(component.aiService)
+            adminAiRoutes(component.aiService, component.adminService)
             insightsRoutes(component.insightsService)
             contentRoutes(component.contentService)
             adminContentRoutes(component.contentService)

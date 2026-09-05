@@ -320,3 +320,36 @@ export interface SaveArticleBody {
   disclaimer?: string | null
   readMinutes?: number | null
 }
+
+// ---------------------------------------------------------------- ai
+
+export interface AiUsageDay {
+  date: string
+  calls: number
+  modelCalls: number
+  fallbacks: number
+  promptTokens: number
+  completionTokens: number
+  costMicros: number
+}
+
+/**
+ * What the AI cost. There is deliberately nothing here about what was asked or
+ * answered — the server's log has no column for it.
+ */
+export interface AiUsageReport {
+  days: number
+  calls: number
+  modelCalls: number
+  fallbacks: number
+  ruleCalls: number
+  costMicros: number
+  promptTokens: number
+  completionTokens: number
+  averageLatencyMs: number | null
+  perDay: AiUsageDay[]
+  failures: { code: string; count: number }[]
+  modelConfigured: boolean
+  modelEnabled: boolean
+  model: string | null
+}

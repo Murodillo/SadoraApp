@@ -22,6 +22,7 @@ data class AppConfig(
     val jwt: JwtConfig,
     val otp: OtpConfig,
     val social: SocialConfig,
+    val ai: AiConfig,
     val policyVersion: String,
     val minimumAppVersion: String?,
 ) {
@@ -67,6 +68,15 @@ data class AppConfig(
                         .split(",").map { it.trim() }.filter { it.isNotEmpty() },
                     googleClientIds = envOrNull("GOOGLE_CLIENT_IDS")
                         ?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() }.orEmpty(),
+                ),
+                ai = AiConfig(
+                    apiKey = envOrNull("GEMINI_API_KEY"),
+                    model = env("AI_MODEL", "gemini-3.6-flash"),
+                    endpoint = env("AI_ENDPOINT", "https://generativelanguage.googleapis.com"),
+                    timeout = env("AI_TIMEOUT_SECONDS", "20").toInt().seconds,
+                    maxOutputTokens = env("AI_MAX_OUTPUT_TOKENS", "800").toInt(),
+                    inputCostPerMillionMicros = env("AI_INPUT_COST_MICROS", "100000").toLong(),
+                    outputCostPerMillionMicros = env("AI_OUTPUT_COST_MICROS", "400000").toLong(),
                 ),
                 policyVersion = env("POLICY_VERSION", "2026-08-01"),
                 minimumAppVersion = envOrNull("MINIMUM_APP_VERSION"),
@@ -141,3 +151,25 @@ data class SocialConfig(
     val appleBundleIds: List<String>,
     val googleClientIds: List<String>,
 )
+
+/**
+ * The AI gateway's settings.
+ *
+ * Costs are in USD micros per million tokens, so a price change is an environment
+ * variable rather than a deploy, and the arithmetic stays in integers — money in a
+ * double is a bug waiting for a big enough number.
+ */
+data class AiConfig(
+    val apiKey: String?,
+    val model: String,
+    val endpoint: String,
+    val timeout: kotlin.time.Duration,
+    val maxOutputTokens: Int,
+    val inputCostPerMillionMicros: Long,
+    val outputCostPerMillionMicros: Long,
+) {
+    /** Null token counts cost nothing rather than guessing — an unknown is not an estimate. */
+    fun costMicros(promptTokens: Int?, completionTokens: Int?): Long =
+        (promptTokens ?: 0).toLong() * inputCostPerMillionMicros / 1_000_000 +
+            (completionTokens ?: 0).toLong() * outputCostPerMillionMicros / 1_000_000
+}

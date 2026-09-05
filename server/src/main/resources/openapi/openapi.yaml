@@ -1466,6 +1466,10 @@ paths:
         feature_disabled`. Foydalanuvchi ma'lumotlari faqat `ai_insights` roziligi bilan
         o'qiladi; roziliksiz javob umumiy bo'ladi va `basedOn` bo'sh qaytadi. Suhbat
         saqlanmaydi.
+
+        Javobni model yozadi. Kalit bo'lmasa, `ai_model_enabled` o'chirilgan bo'lsa yoki
+        model qoqilsa — o'sha savolga qoidalar javob beradi va so'rov baribir `200`
+        qaytaradi: bu xato emas, javobdir. Farq `ai_usage_log` da qoladi (matnsiz).
       requestBody:
         required: true
         content:

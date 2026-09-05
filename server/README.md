@@ -181,8 +181,20 @@ matnni o'zi yashiradi, moderator qaytarishi mumkin. Bo'lim `community` bayrog'i 
 entitlement'ini `consume` qiladi — `429 limit_reached` yoki `402 entitlement_required` —
 keyin javob beradi, shuning uchun javob olgan har bir so'rov hisoblangan. Foydalanuvchi
 ma'lumotlari faqat `ai_insights` roziligi bilan o'qiladi; roziliksiz javob umumiy va
-`basedOn` bo'sh. Suhbat saqlanmaydi. Hozircha javob qoidalar asosida (`RuleBasedAnswerer`);
-model `AiAnswerer` interfeysi orqali ulanadi.
+`basedOn` bo'sh.
+
+**Javobni model yozadi, lekin savol javobsiz qolmaydi.** `AiGateway` Gemini'ga murojaat
+qiladi; kalit bo'lmasa, `ai_model_enabled` bayrog'i o'chirilgan bo'lsa yoki model
+qoqilsa (timeout, kvota, bloklangan javob) — o'sha savolga qoidalar javob beradi. Uchala
+holat ham xato emas, javobdir; farqni faqat log biladi, va o'rni ham aynan shu.
+`thinkingLevel: minimal` bilan yuboriladi: o'ylash tokenlari `maxOutputTokens` ichidan
+yeyiladi va bitta javobni 3 soniyadan 16 soniyaga cho'zgan edi.
+
+**Suhbat saqlanmaydi, xarajat esa saqlanadi.** `ai_usage_log` — model, tokenlar, narx
+(USD mikro), kechikish, natija. Savol ham, javob ham yo'q, va jadvalda ularni qo'yadigan
+ustun ham yo'q: "xarajat logi" — bu va'da sezdirmay buziladigan eng ehtimolli joy.
+Admin paneldagi "AI xarajati" sahifasi shu jadvalni o'qiydi va modelni o'sha yerdan
+o'chirish mumkin.
 
 **Onboarding'dagi birinchi check-in health-gate ortida.** `firstCheckIn` profil bilan
 birga keladi, lekin `HealthService` orqali, `store_health` roziligi bo'lgandagina
@@ -205,7 +217,7 @@ TEST_DB_URL=jdbc:postgresql://localhost:5433/sadora_test ./gradlew :server:test
 CI'da u job'ning o'z Postgres'iga qarshi ishlaydi.
 
 ## Nima hali yo'q (3-sprint)
-AI Gateway (model) va uning xarajat logi · App Store / Google Play va Payme/Click
+App Store / Google Play va Payme/Click
 webhook'lari · hisobni haqiqiy o'chirish job'i · SMS provayderi (`OtpSender` interfeysi
 tayyor, hozircha log'ga yozadi) · admin 2FA enrolment ekrani · Health Connect /
 HealthKit o'qish qatlami (server tomon `POST /v1/health-data/samples` tayyor, ilovada

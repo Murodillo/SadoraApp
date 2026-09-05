@@ -85,6 +85,7 @@ import uz.sadora.server.community.ModerationPostView
 import uz.sadora.server.community.ModerationReportView
 import uz.sadora.server.community.ResolveReportRequest
 import uz.sadora.server.community.RestrictAuthorRequest
+import uz.sadora.server.config.AiConfig
 import uz.sadora.server.config.AppConfig
 import uz.sadora.server.config.DatabaseConfig
 import uz.sadora.server.config.Environment
@@ -595,6 +596,17 @@ class ApiIntegrationTest {
             exposeCode = true,
         ),
         social = SocialConfig(appleBundleIds = listOf("uz.sadora.app"), googleClientIds = emptyList()),
+        // No API key, so the test never reaches a network: the gateway answers from the
+        // rules, which is also what a deployment without a key does.
+        ai = AiConfig(
+            apiKey = null,
+            model = "test-model",
+            endpoint = "http://localhost",
+            timeout = 5.seconds,
+            maxOutputTokens = 800,
+            inputCostPerMillionMicros = 100_000,
+            outputCostPerMillionMicros = 400_000,
+        ),
         policyVersion = "2026-08-01",
         minimumAppVersion = null,
     )

@@ -8,6 +8,7 @@ import type {
   AdminUserSummary,
   ArticleCategory,
   AuditEntry,
+  AiUsageReport,
   CommunityStats,
   FeatureDefinition,
   FrequencyCaps,
@@ -335,3 +336,10 @@ export const useDeleteArticle = () =>
   useContentMutation((slug: string) =>
     request(`/v1/admin/content/articles/${slug}`, { method: 'DELETE' }),
   )
+
+export const useAiUsage = (days: number) =>
+  useQuery({
+    queryKey: ['ai', 'usage', days],
+    queryFn: () => request<AiUsageReport>(`/v1/admin/ai/usage${query({ days: String(days) })}`),
+    refetchInterval: 60_000,
+  })

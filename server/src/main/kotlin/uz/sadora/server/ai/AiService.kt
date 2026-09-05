@@ -35,7 +35,8 @@ class AiService(
     private val health: HealthService,
     private val nutrition: NutritionService,
     private val wearables: WearableService,
-    private val answerer: AiAnswerer = RuleBasedAnswerer,
+    private val gateway: AiGateway,
+    private val usage: AiUsageRepository,
 ) {
 
     suspend fun quota(userId: Uuid): AiChatQuota {
@@ -66,7 +67,14 @@ class AiService(
         // Her data reaches the answer only with the consent the privacy screen collects.
         val consented = users.consentsOf(userId)?.aiInsights == true
         val context = if (consented) contextFor(userId) else null
-        val answer = answerer.answer(question, context)
+
+        // The operator's second switch: with the model off the chat stays open and the
+        // rule engine answers, which is a different decision from closing the chat.
+        val modelAllowed = flags.isEnabled(
+            MODEL_FLAG,
+            FlagContext(userId = userId, environment = environment, language = user.language, lifeStage = user.lifeStage),
+        )
+        val answer = gateway.answer(userId, question, context, modelAllowed).text
 
         val feature = entitlements.resolve(userId, user.timezone).feature(FeatureKeys.AI_CHAT)
         return AiChatReply(
@@ -104,8 +112,22 @@ class AiService(
             FlagContext(userId = userId, environment = environment, language = user.language, lifeStage = user.lifeStage),
         )
 
+    /**
+     * The AI cost page's numbers, with the configuration folded in.
+     *
+     * [modelEnabled] is passed rather than evaluated here because the flag is per-user
+     * and this is an operator-level question: the route resolves it once for the panel.
+     */
+    suspend fun usageReport(days: Int, modelEnabled: Boolean): AiUsageReport =
+        usage.report(days).copy(
+            modelConfigured = gateway.modelConfigured,
+            modelEnabled = modelEnabled,
+            model = gateway.modelName,
+        )
+
     companion object {
         const val CHAT_FLAG = "ai_chat_enabled"
+        const val MODEL_FLAG = "ai_model_enabled"
         const val MAX_QUESTION_LENGTH = 1000
     }
 }
