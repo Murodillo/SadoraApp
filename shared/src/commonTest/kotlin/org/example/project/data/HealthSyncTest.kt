@@ -120,7 +120,7 @@ class HealthSyncTest {
     }
 
     @Test
-    fun `skipping a dose records it as skipped, not taken`() = runTest {
+    fun `skipping a dose records it as skipped not taken`() = runTest {
         var sent: String? = null
         val day = MedicationDay(
             date = today,

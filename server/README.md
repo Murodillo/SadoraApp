@@ -152,6 +152,14 @@ qiymatni joyida o'zgartiradi — oshirib boriladigan jami esa namunalardan uzoql
 ketardi va buni hech narsa sezmasdi. Ikki manba bir metrikani bersa, biri tanlanadi:
 telefon va soat qadamlarini qo'shish kunni ikkilantiradi.
 
+**Tahlillar o'lchanmagan raqamni qaytarmaydi.** `GET /v1/insights` bo'sh kunni `null`
+qilib qaytaradi, nol qilib emas — aks holda dam olingan hafta qulagandek ko'rinadi — va
+hech narsadan o'rtacha hisoblamaydi. Oldingi oyna xuddi shu uzunlikda, shuning uchun
+"+12 daqiqa" doim bir xil sonli kunga nisbatan. Bog'liqlik kamida sakkiz kunlik yozuvdan
+va median bo'yicha ikki yarimning sezilarli farqidan chiqadi; server nima o'lchaganini
+aytadi, gapni mijoz yozadi. Chuqurlik `insights_history`, hikoya `ai_insights` ortida —
+ilovadagi qulf endi chizma emas, serverning qarori (V13).
+
 **Maxfiy chat taxallus ostida, va admin tomonida ham shunday.** Har hisobga bir marta
 ikki so'zli taxallus beriladi (`community_identities`) — postdan hisobga qaytadigan
 yagona bog'lanish shu jadval, va admin API uni o'qimaydi. Moderatsiya javoblarida

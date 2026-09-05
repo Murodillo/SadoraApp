@@ -289,6 +289,75 @@ fun WeeklyBars(
 }
 
 /**
+ * A measured series, drawn as bars with the gaps left as gaps.
+ *
+ * The difference from [WeeklyBars] is the whole point: a day with nothing recorded is
+ * null, not zero, and is drawn as an empty track. A week off then looks like a week off
+ * rather than like a week of zeroes.
+ *
+ * Bars are scaled against the largest value in the window, so the shape is comparable
+ * within a window and never implies a goal the series does not have.
+ */
+@Composable
+fun TrendBars(
+    values: List<Float?>,
+    modifier: Modifier = Modifier,
+    labels: List<String> = emptyList(),
+    color: Color? = null,
+    highlightLast: Boolean = false,
+    barHeight: Dp = 72.dp,
+) {
+    val c = Sadora.colors
+    val fill = color ?: c.primary
+    val peak = values.filterNotNull().maxOrNull()?.takeIf { it > 0f } ?: 1f
+
+    Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+        Row(
+            Modifier.fillMaxWidth().height(barHeight),
+            horizontalArrangement = Arrangement.spacedBy(if (values.size > 14) 2.dp else 6.dp),
+            verticalAlignment = Alignment.Bottom,
+        ) {
+            values.forEachIndexed { index, value ->
+                val last = highlightLast && index == values.lastIndex
+                if (value == null) {
+                    // The track alone: something is drawn in the slot, but nothing that
+                    // reads as a measurement.
+                    Box(
+                        Modifier
+                            .weight(1f)
+                            .fillMaxHeight(0.06f)
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(c.surface2),
+                    )
+                } else {
+                    Box(
+                        Modifier
+                            .weight(1f)
+                            .fillMaxHeight(
+                                animatedProgress(
+                                    (value / peak).coerceIn(0.06f, 1f),
+                                    delayMillis = (index * 30).coerceAtMost(400),
+                                ),
+                            )
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(if (last) c.primary else fill.copy(alpha = 0.75f)),
+                    )
+                }
+            }
+        }
+        if (labels.isNotEmpty()) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                labels.forEach { label ->
+                    Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                        Text(label, style = Sadora.type.caption, color = c.muted2, maxLines = 1)
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
  * Stacked proportional bar — sleep stages, free-vs-premium ranges.
  */
 @Composable

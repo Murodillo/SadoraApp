@@ -216,7 +216,7 @@ class AppStateTest {
 
 class CycleAnchorTest {
     @Test
-    fun `the anchor follows the server's day count, not a stale open period`() {
+    fun `the anchor follows the server's day count not a stale open period`() {
         val today = LocalDate.parse("2026-09-04")
         val s = AppState()
         s.applyCycle(

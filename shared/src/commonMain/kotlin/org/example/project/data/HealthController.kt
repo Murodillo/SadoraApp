@@ -14,6 +14,7 @@ import org.example.project.data.api.MindApi
 import org.example.project.data.api.NutritionApi
 import uz.sadora.contract.CycleCalendar
 import uz.sadora.contract.CycleStatus
+import uz.sadora.contract.DailyHealth
 import uz.sadora.contract.DailyLog
 import uz.sadora.contract.DoseStatus
 import uz.sadora.contract.FlowLevel
@@ -28,6 +29,7 @@ import uz.sadora.contract.MindPracticeKind
 import uz.sadora.contract.MindSummary
 import uz.sadora.contract.MoodLevel
 import uz.sadora.contract.NutritionDay
+import uz.sadora.contract.ProviderStatus
 import uz.sadora.contract.RecordDoseRequest
 import uz.sadora.contract.SaveDailyLogRequest
 import uz.sadora.contract.SaveJournalEntryRequest
@@ -85,6 +87,14 @@ class HealthController(
     var doses by mutableStateOf<MedicationDay?>(null)
         private set
 
+    /** Today's wearable metrics — sleep stages, resting heart rate, and which device sent them. */
+    var wearableToday by mutableStateOf<DailyHealth?>(null)
+        private set
+
+    /** What the Data Sources screen lists: which providers have sent anything, and when. */
+    var sources by mutableStateOf<List<ProviderStatus>>(emptyList())
+        private set
+
     /** The day the screens are looking at. Defaults to the server's idea of today. */
     var selectedDate by mutableStateOf<LocalDate?>(null)
         private set
@@ -118,7 +128,19 @@ class HealthController(
 
     suspend fun refreshWearables() {
         val api = wearableApi ?: return
-        calls.run(silent = true) { api.today() }?.let { state?.applyWearables(it) }
+        calls.run(silent = true) { api.today() }?.let {
+            wearableToday = it
+            state?.applyWearables(it)
+        }
+    }
+
+    /**
+     * The connected providers. Loaded on demand rather than with the tabs: only two
+     * screens show it, and both of them are a tap away from Profile.
+     */
+    suspend fun loadSources() {
+        val api = wearableApi ?: return
+        calls.run(silent = true) { api.sources() }?.let { sources = it }
     }
 
     suspend fun refreshCycle() {

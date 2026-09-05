@@ -22,6 +22,7 @@ import uz.sadora.server.health.healthRoutes
 import uz.sadora.server.health.medicationRoutes
 import uz.sadora.server.health.mindRoutes
 import uz.sadora.server.health.nutritionRoutes
+import uz.sadora.server.insights.insightsRoutes
 import uz.sadora.server.notify.adminNotificationRoutes
 import uz.sadora.server.notify.notificationRoutes
 import uz.sadora.server.wearable.adminWearableRoutes
@@ -106,6 +107,7 @@ fun Application.apiModule(component: AppComponent) {
             communityRoutes(component.communityService)
             adminCommunityRoutes(component.communityModerationService)
             aiRoutes(component.aiService)
+            insightsRoutes(component.insightsService)
             adminRoutes(
                 adminAuth = component.adminAuthService,
                 adminService = component.adminService,

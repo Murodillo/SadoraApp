@@ -18,6 +18,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
+import org.example.project.data.HealthController
 import org.example.project.data.SadoraController
 import org.example.project.design.IconSize
 import org.example.project.design.Radius
@@ -49,6 +50,7 @@ import org.example.project.ui.components.noRippleClickable
 fun ProfileScreen(
     state: AppState,
     controller: SadoraController,
+    health: HealthController,
     onOpen: (Route) -> Unit,
     onSignedOut: () -> Unit,
     modifier: Modifier = Modifier,
@@ -58,7 +60,10 @@ fun ProfileScreen(
 
     // The tier can change outside the app — a purchase on another device, a lapsed
     // subscription — so re-check it whenever Profile is opened.
-    LaunchedEffect(Unit) { controller.refreshEntitlements() }
+    LaunchedEffect(Unit) {
+        controller.refreshEntitlements()
+        health.loadSources()
+    }
 
     Column(modifier) {
         SadoraTopBar("Profil")
@@ -118,9 +123,14 @@ fun ProfileScreen(
                         "Hayot bosqichi",
                         value = state.lifeStage.title,
                     ) { onOpen(Route.LifeStageSettings) }
-                    val connected = org.example.project.model.SampleData.dataSources
-                        .count { it.status == org.example.project.model.SourceStatus.Connected }
-                    SettingsRow(SadoraIcons.Watch, "Ulangan qurilmalar", value = "$connected") {
+                    // Blank until the providers have loaded: a "2" that was never true
+                    // is worse than nothing next to a row you are about to open.
+                    val connected = health.sources.count { it.connected }
+                    SettingsRow(
+                        SadoraIcons.Watch,
+                        "Ulangan qurilmalar",
+                        value = if (health.sources.isEmpty()) null else "$connected",
+                    ) {
                         onOpen(Route.DataSources)
                     }
                     SettingsRow(SadoraIcons.Bell, "Bildirishnomalar") { onOpen(Route.Notifications) }

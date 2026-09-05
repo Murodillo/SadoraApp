@@ -182,20 +182,20 @@ mavzuda matn uchun `primary` emas, quyuqroq `textAccent` ishlatiladi.
 Hozircha bu to'liq ishlaydigan UI prototipi: barcha ekranlar chizilgan, oqimlar
 bog'langan, holat real vaqtda o'zgaradi.
 
-Backend'ning 1-sprint qamrovi yozilgan va ilova **unga ulangan**: ro'yxatdan o'tish
-(telefon OTP, Apple/Google, email), kirish, profil va onboarding, roziliklar,
-entitlements va feature flags. Sessiya qurilmada saqlanadi, shuning uchun ilova qayta
-ishga tushganda foydalanuvchi kirgan holida qoladi.
+Backend yozilgan va ilova **unga ulangan**: ro'yxatdan o'tish (telefon OTP,
+Apple/Google, email), kirish, profil va onboarding, roziliklar, entitlements va feature
+flags; ustiga sikl, Mind, Nutrition, Meds, wearable, maxfiy chat, AI Gateway va
+tahlillar (`GET /v1/insights`). Sog'liq yozuvlari endi serverda saqlanadi — sikl,
+ovqat, suv, kayfiyat va dorilar qurilmani almashtirsa ham qoladi. Sessiya qurilmada
+saqlanadi, shuning uchun ilova qayta ishga tushganda foydalanuvchi kirgan holida qoladi.
 
-Ulanish `data/SadoraController` orqali: ekranlar wire tiplarini bilmaydi, controller
-esa `busy`/`error` holatini bir joyda boshqaradi. Backend bo'lmasa (`@Preview`,
-testlar) hamma amal lokal bajariladi va ilova prototip sifatida ishlayveradi.
+Ulanish `data/SadoraController` va `data/HealthController` orqali: ekranlar wire
+tiplarini bilmaydi, controller esa `busy`/`error` holatini bir joyda boshqaradi. Backend
+bo'lmasa (`@Preview`, testlar) hamma amal lokal bajariladi va ilova prototip sifatida
+ishlayveradi.
 
 Hali yo'q:
 
-- **Sog'liq ma'lumotlarining saqlanishi** — sikl, ovqat, kayfiyat va dorilar hozircha
-  xotirada; ularning API'si 2–3-sprintda
-- **Qolgan backend API'lari** — sikl, Mind, Nutrition, Meds, wearable va AI Gateway
 - **To'lov** — paywall tugmasi hozir faqat entitlements'ni qayta so'raydi; App Store /
   Google Play billing SDK'si ulanmagan
 - **Apple/Google kirish** — tugmalar bor, lekin platforma SDK'si idToken bermaydi

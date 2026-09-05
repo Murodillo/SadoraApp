@@ -5,6 +5,7 @@ import io.ktor.client.engine.HttpClientEngine
 import org.example.project.data.api.AiApi
 import org.example.project.data.api.CommunityApi
 import org.example.project.data.api.CycleApi
+import org.example.project.data.api.InsightsApi
 import org.example.project.data.api.MedicationApi
 import org.example.project.data.api.MindApi
 import org.example.project.data.api.NotificationApi
@@ -42,6 +43,7 @@ class SadoraGraph(
     val wearableApi: WearableApi = WearableApi(caller)
     val communityApi: CommunityApi = CommunityApi(caller)
     val aiApi: AiApi = AiApi(caller)
+    val insightsApi: InsightsApi = InsightsApi(caller)
     val repository: SadoraRepository = SadoraRepository(api, session, device, appVersion)
 
     /**
@@ -56,6 +58,8 @@ class SadoraGraph(
 
     fun aiController(state: org.example.project.model.AppState): AiController =
         AiController(aiApi, state)
+
+    fun insightsController(): InsightsController = InsightsController(insightsApi)
 
     fun close() = client.close()
 }

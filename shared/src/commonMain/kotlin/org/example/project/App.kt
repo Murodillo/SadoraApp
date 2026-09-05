@@ -35,6 +35,7 @@ import org.example.project.data.CommunityController
 import org.example.project.data.CommunitySyncBridge
 import org.example.project.data.HealthController
 import org.example.project.data.HealthSync
+import org.example.project.data.InsightsController
 import org.example.project.data.SadoraController
 import org.example.project.data.SadoraGraph
 import org.example.project.data.SessionState
@@ -118,6 +119,7 @@ fun App(graph: SadoraGraph? = null) {
     }
     val community = remember(graph, state) { graph?.communityController(state) ?: CommunityController(null, state) }
     val ai = remember(graph, state) { graph?.aiController(state) ?: AiController(null, state) }
+    val insights = remember(graph) { graph?.insightsController() ?: InsightsController(null) }
 
     SadoraTheme(darkTheme = state.darkTheme) {
         AnimatedContent(
@@ -148,7 +150,7 @@ fun App(graph: SadoraGraph? = null) {
                     )
                 }
 
-                AppPhase.Main -> MainShell(state, navigator, controller, health, community, ai)
+                AppPhase.Main -> MainShell(state, navigator, controller, health, community, ai, insights)
             }
         }
     }
@@ -206,6 +208,7 @@ private fun MainShell(
     health: HealthController,
     community: CommunityController,
     ai: AiController,
+    insights: InsightsController,
 ) {
     val scope = rememberCoroutineScope()
 
@@ -291,8 +294,10 @@ private fun MainShell(
                             state,
                             navigator,
                             controller,
+                            health = health,
                             community = community,
                             ai = ai,
+                            insights = insights,
                             onSymptomSheet = { showSymptomSheet = true },
                             onOpenComments = { commentsFor = it },
                             onOpenPostMenu = { menuFor = it },
@@ -314,6 +319,8 @@ private fun MainShell(
                                 navigator,
                                 controller,
                                 onAddWater = { showWaterSheet = true },
+                                insights = insights,
+                                health = health,
                             )
                         }
                     }
@@ -434,6 +441,8 @@ private fun RootTab(
     navigator: Navigator,
     controller: SadoraController,
     onAddWater: () -> Unit,
+    insights: InsightsController,
+    health: HealthController,
 ) {
     when (tab) {
         Tab.Today -> TodayScreen(
@@ -445,6 +454,7 @@ private fun RootTab(
 
         Tab.Mind -> MindScreen(
             state = state,
+            insights = insights,
             onClose = null,
             onOpenAi = { navigator.push(state.aiRoute()) },
             onOpenJournal = { navigator.push(Route.MindJournal) },
@@ -461,6 +471,7 @@ private fun RootTab(
         Tab.Profile -> ProfileScreen(
             state = state,
             controller = controller,
+            health = health,
             onOpen = navigator::push,
             onSignedOut = { navigator.goTo(AppPhase.SignIn) },
         )
@@ -473,8 +484,10 @@ private fun PushedScreen(
     state: AppState,
     navigator: Navigator,
     controller: SadoraController,
+    health: HealthController,
     community: CommunityController,
     ai: AiController,
+    insights: InsightsController,
     onSymptomSheet: () -> Unit,
     onOpenComments: (CommunityPost) -> Unit,
     onOpenPostMenu: (CommunityPost) -> Unit,
@@ -502,7 +515,7 @@ private fun PushedScreen(
 
         // Nutrition: camera -> analysing -> result is one linear flow, so each step
         // replaces the last rather than stacking on it.
-        Route.FoodSearch -> FoodSearchScreen(state, close)
+        Route.FoodSearch -> FoodSearchScreen(state, health, close)
         Route.FoodScanCamera -> FoodScanCameraScreen(
             state = state,
             onCapture = { navigator.replaceTop(Route.FoodScanAnalyzing) },
@@ -520,11 +533,11 @@ private fun PushedScreen(
         Route.Medications -> MedicationsScreen(state, close, navigator::push)
         Route.AddMedication -> AddMedicationScreen(state, close)
         Route.MedicationHistory -> MedicationHistoryScreen(close)
-        Route.Sleep -> SleepScreen(state, close)
-        Route.Insights -> InsightsScreen(state, close, upgrade)
+        Route.Sleep -> SleepScreen(state, health, insights, close)
+        Route.Insights -> InsightsScreen(state, insights, close, upgrade)
         Route.Knowledge -> KnowledgeScreen(state, close, navigator::push)
         is Route.Article -> ArticleScreen(route.title, close)
-        Route.DataSources -> DataSourcesScreen(close)
+        Route.DataSources -> DataSourcesScreen(health, close)
         Route.SecretChat -> SecretChatScreen(
             state = state,
             community = community,

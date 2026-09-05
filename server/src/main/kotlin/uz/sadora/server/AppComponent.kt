@@ -23,6 +23,7 @@ import uz.sadora.server.entitlement.EntitlementRepository
 import uz.sadora.server.entitlement.EntitlementService
 import uz.sadora.server.entitlement.SubscriptionRepository
 import uz.sadora.server.flags.FeatureFlagRepository
+import uz.sadora.server.flags.FeatureFlagService
 import uz.sadora.server.health.HealthAccess
 import uz.sadora.server.health.HealthRepository
 import uz.sadora.server.health.HealthService
@@ -32,7 +33,7 @@ import uz.sadora.server.health.MindRepository
 import uz.sadora.server.health.MindService
 import uz.sadora.server.health.NutritionRepository
 import uz.sadora.server.health.NutritionService
-import uz.sadora.server.flags.FeatureFlagService
+import uz.sadora.server.insights.InsightsService
 import uz.sadora.server.notify.LoggingPushSender
 import uz.sadora.server.notify.NotificationRepository
 import uz.sadora.server.notify.NotificationScheduler
@@ -119,6 +120,14 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
         environment = config.environment,
     )
     val communityModerationService = CommunityModerationService(communityRepository, auditService)
+
+    val insightsService = InsightsService(
+        access = healthAccess,
+        health = healthRepository,
+        nutrition = nutritionRepository,
+        wearables = wearableRepository,
+        entitlements = entitlementService,
+    )
 
     val aiService = AiService(
         users = userRepository,

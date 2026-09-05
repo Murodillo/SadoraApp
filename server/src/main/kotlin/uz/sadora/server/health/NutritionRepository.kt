@@ -6,11 +6,15 @@ import kotlinx.datetime.LocalTime
 import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.greaterEq
+import org.jetbrains.exposed.v1.core.lessEq
 import org.jetbrains.exposed.v1.core.like
 import org.jetbrains.exposed.v1.core.lowerCase
+import org.jetbrains.exposed.v1.core.sum
 import org.jetbrains.exposed.v1.jdbc.andWhere
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insert
+import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.upsert
 import uz.sadora.contract.FoodItem
@@ -116,6 +120,38 @@ class NutritionRepository {
             it[updatedAt] = timestamp
         }
         updated
+    }
+
+    /**
+     * Water per day across a range, in one query.
+     *
+     * The insights window is up to ninety days; asking [waterOn] per day would be ninety
+     * round trips for one chart. Days with no row are simply absent — the caller draws a
+     * gap, not a zero.
+     */
+    suspend fun waterBetween(userId: Uuid, from: LocalDate, to: LocalDate): Map<LocalDate, Int> = dbQuery {
+        DailyLogs.selectAll()
+            .where {
+                (DailyLogs.userId eq userId) and
+                    (DailyLogs.logDate greaterEq from) and
+                    (DailyLogs.logDate lessEq to)
+            }
+            .filter { it[DailyLogs.waterMl] > 0 }
+            .associate { it[DailyLogs.logDate] to it[DailyLogs.waterMl] }
+    }
+
+    /** Calories per day across a range, summed by the database rather than in memory. */
+    suspend fun kcalBetween(userId: Uuid, from: LocalDate, to: LocalDate): Map<LocalDate, Int> = dbQuery {
+        val total = Meals.kcal.sum()
+        Meals.select(Meals.logDate, total)
+            .where {
+                (Meals.userId eq userId) and
+                    (Meals.logDate greaterEq from) and
+                    (Meals.logDate lessEq to)
+            }
+            .groupBy(Meals.logDate)
+            .mapNotNull { row -> row[total]?.let { row[Meals.logDate] to it } }
+            .toMap()
     }
 
     // ---------------------------------------------------------------- goals

@@ -158,7 +158,7 @@ class CommunityAndAiControllerTest {
     }
 
     @Test
-    fun `an exhausted allowance reads as the daily limit, not as an error code`() = runTest {
+    fun `an exhausted allowance reads as the daily limit not as an error code`() = runTest {
         val recording = RecordingEngine { request ->
             if (request.url.encodedPath.endsWith("/chat/quota")) {
                 json(encode(AiChatQuota(enabled = true, dailyLimit = 3, usedToday = 3)))

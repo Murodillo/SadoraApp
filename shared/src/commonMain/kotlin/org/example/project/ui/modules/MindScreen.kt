@@ -33,11 +33,11 @@ import org.example.project.design.Radius
 import org.example.project.design.Sadora
 import org.example.project.design.SadoraIcons
 import org.example.project.design.Spacing
+import org.example.project.data.InsightsController
 import org.example.project.model.AppState
 import org.example.project.model.Fmt
 import org.example.project.model.Mood
 import org.example.project.model.PracticeKind
-import org.example.project.model.SampleData
 import org.example.project.ui.components.AiSummaryCard
 import org.example.project.ui.components.ButtonTone
 import org.example.project.ui.components.CardLabel
@@ -50,7 +50,8 @@ import org.example.project.ui.components.SadoraCard
 import org.example.project.ui.components.SadoraProgressBar
 import org.example.project.ui.components.SadoraTopBar
 import org.example.project.ui.components.ScreenContent
-import org.example.project.ui.components.WeeklyBars
+import uz.sadora.contract.TrendMetric
+import org.example.project.ui.components.TrendBars
 import org.example.project.ui.components.noRippleClickable
 import org.example.project.ui.components.pressable
 
@@ -77,6 +78,7 @@ private val meditation = Practice(PracticeKind.Meditation, "Meditatsiya", "Xotir
 @Composable
 fun MindScreen(
     state: AppState,
+    insights: InsightsController,
     onClose: (() -> Unit)?,
     onOpenAi: () -> Unit,
     onOpenJournal: () -> Unit,
@@ -84,6 +86,9 @@ fun MindScreen(
 ) {
     val c = Sadora.colors
     var running by remember { mutableStateOf<Practice?>(null) }
+    val moodWeek = insights.summary(7)?.trend(TrendMetric.MOOD)
+
+    LaunchedEffect(Unit) { insights.load(7) }
 
     Box(modifier) {
         Column {
@@ -144,18 +149,26 @@ fun MindScreen(
 
                 item { PracticeCard(meditation, onStart = { running = meditation }) }
 
-                item {
-                    SadoraCard {
-                        CardLabel(
-                            "7 kunlik kayfiyat",
-                            trailing = { Text("O'rtacha 3,6", style = Sadora.type.body, color = c.muted) },
-                        )
-                        WeeklyBars(
-                            values = listOf(0.5f, 0.7f, 0.6f, 0.9f, 0.75f, 0.55f, state.mood.score / 5f),
-                            labels = SampleData.weekDays,
-                            color = c.primary,
-                            highlightIndex = 6,
-                        )
+                // Only drawn once something has been checked in: a week of constants
+                // dressed up as her own week was the version this replaces.
+                if (moodWeek != null && moodWeek.hasData) {
+                    item {
+                        SadoraCard {
+                            CardLabel(
+                                "7 kunlik kayfiyat",
+                                trailing = {
+                                    moodWeek.averageLabel()?.let {
+                                        Text("O'rtacha $it", style = Sadora.type.body, color = c.muted)
+                                    }
+                                },
+                            )
+                            TrendBars(
+                                values = moodWeek.barValues(),
+                                labels = moodWeek.barLabels(),
+                                color = c.primary,
+                                highlightLast = true,
+                            )
+                        }
                     }
                 }
 

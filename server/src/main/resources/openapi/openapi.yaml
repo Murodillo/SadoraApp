@@ -31,6 +31,7 @@ tags:
   - name: Meds
   - name: Notifications
   - name: Wearables
+  - name: Insights
   - name: Community
   - name: AI
   - name: Admin
@@ -1122,6 +1123,37 @@ paths:
             schema: { $ref: "#/components/schemas/MetricMapping" }
       responses:
         "200": { $ref: "#/components/responses/Ack" }
+
+  /v1/insights:
+    get:
+      tags: [Insights]
+      security: [{ bearerAuth: [] }]
+      summary: Trendlar va kuzatilgan bog'liqliklar
+      description: |
+        Har bir raqam o'lchangan. Yozuv bo'lmagan kun `null` bo'lib qaytadi — nol emas,
+        aks holda dam olingan hafta qulagandek ko'rinadi; o'rtacha ham hech narsadan
+        hisoblanmaydi.
+
+        `previousAverage` — xuddi shu uzunlikdagi oldingi oyna, shuning uchun mijoz
+        "+12 daqiqa" ni o'zi hisoblamaydi.
+
+        Chuqurlik va hikoya alohida entitlement: 7 kun hammaga, 30 va 90 kun
+        `insights_history` bilan (`402 entitlement_required`), bog'liqliklar esa
+        `ai_insights` bilan — usiz `findings` bo'sh va `findingsAvailable: false`.
+        Bog'liqlik kamida sakkiz kunlik yozuvdan va sezilarli farqdan chiqadi; aks holda
+        hech narsa qaytmaydi.
+      parameters:
+        - in: query
+          name: days
+          schema: { type: integer, enum: [7, 30, 90], default: 7 }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/InsightsSummary" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "402": { $ref: "#/components/responses/EntitlementRequired" }
 
   /v1/community/me:
     get:
@@ -2465,6 +2497,60 @@ components:
         averageStress: { type: number, nullable: true }
         daysLogged: { type: integer }
         windowDays: { type: integer, default: 14 }
+
+    TrendMetric:
+      type: string
+      enum: [sleep_minutes, steps, water_ml, kcal, mood, energy, stress]
+
+    TrendPoint:
+      type: object
+      properties:
+        date: { type: string, format: date }
+        value:
+          type: number
+          nullable: true
+          description: "Yozuv bo'lmagan kun uchun null — nol emas"
+
+    MetricTrend:
+      type: object
+      properties:
+        metric: { $ref: "#/components/schemas/TrendMetric" }
+        points:
+          type: array
+          items: { $ref: "#/components/schemas/TrendPoint" }
+        average: { type: number, nullable: true }
+        previousAverage:
+          type: number
+          nullable: true
+          description: "Xuddi shu uzunlikdagi oldingi oyna; solishtirish uchun ma'lumot bo'lmasa null"
+        daysWithData: { type: integer }
+
+    InsightFinding:
+      type: object
+      description: "Ikki yarim oynadagi bir xil o'lchov. Sabab emas — birga kuzatilgan"
+      properties:
+        key:
+          type: string
+          enum: [sleep_and_energy, steps_and_mood, water_and_headache]
+        daysConsidered: { type: integer }
+        high: { type: number }
+        low: { type: number }
+        unit: { type: string }
+
+    InsightsSummary:
+      type: object
+      properties:
+        from: { type: string, format: date }
+        to: { type: string, format: date }
+        days: { type: integer }
+        trends:
+          type: array
+          items: { $ref: "#/components/schemas/MetricTrend" }
+        findings:
+          type: array
+          items: { $ref: "#/components/schemas/InsightFinding" }
+        findingsAvailable: { type: boolean }
+        daysLogged: { type: integer }
 
     CommunityTopic:
       type: string

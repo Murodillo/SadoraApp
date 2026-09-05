@@ -20,6 +20,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.minutes
@@ -52,7 +53,9 @@ import uz.sadora.contract.DeviceInfo
 import uz.sadora.contract.ErrorCodes
 import uz.sadora.contract.Language
 import uz.sadora.contract.LifeStage
+import uz.sadora.contract.InsightsSummary
 import uz.sadora.contract.LikeState
+import uz.sadora.contract.MindCheckIn
 import uz.sadora.contract.MoodLevel
 import uz.sadora.contract.OnboardingCheckIn
 import uz.sadora.contract.OnboardingRequest
@@ -63,6 +66,7 @@ import uz.sadora.contract.Page
 import uz.sadora.contract.Platform
 import uz.sadora.contract.ReportReason
 import uz.sadora.contract.ReportRequest
+import uz.sadora.contract.TrendMetric
 import uz.sadora.contract.UserProfile
 import uz.sadora.server.admin.AdminSession
 import uz.sadora.server.admin.AdminSignInRequest
@@ -247,6 +251,64 @@ class ApiIntegrationTest {
         }
     }
 
+    // ---------------------------------------------------------------- insights
+
+    @Test
+    fun `insights report what was logged, and nothing at all when nothing was`() = api {
+        val user = signUp().also { onboard(it, storeHealth = true) }
+
+        val empty = get<InsightsSummary>("/v1/insights?days=7", user.token)
+        assertEquals(7, empty.days)
+        assertEquals(0, empty.daysLogged)
+        assertTrue(empty.isEmpty)
+        assertTrue(
+            empty.trends.all { it.average == null && it.daysWithData == 0 },
+            "an average over nothing is null, never zero: ${empty.trends}",
+        )
+        assertTrue(empty.trends.all { it.points.size == 7 }, "every day is a point, gaps included")
+        assertFalse(empty.findingsAvailable, "the narrative is Premium")
+        assertTrue(empty.findings.isEmpty())
+
+        // Log something and the same window reports it — and only it.
+        postAck("/v1/nutrition/water", user.token, uz.sadora.contract.AddWaterRequest(700))
+        put<uz.sadora.contract.MindCheckIn>("/v1/mind/check-in", user.token, MindCheckIn(MoodLevel.GOOD, energy = 4, stress = 2))
+
+        val logged = get<InsightsSummary>("/v1/insights?days=7", user.token)
+        assertEquals(1, logged.daysLogged)
+        val water = assertNotNull(logged.trend(TrendMetric.WATER_ML))
+        assertEquals(700.0, water.average)
+        assertEquals(1, water.daysWithData)
+        assertEquals(6, water.points.count { it.value == null }, "the other six days stay gaps")
+        assertEquals(4.0, logged.trend(TrendMetric.MOOD)?.average, "GOOD is 4 on the five-step scale")
+        assertNull(water.previousAverage, "nothing was logged in the window before, so there is nothing to compare")
+        assertNull(water.change)
+        assertTrue(logged.findings.isEmpty(), "one day is never a finding")
+    }
+
+    @Test
+    fun `a longer window is refused without the subscription and served with it`() = api {
+        val user = signUp().also { onboard(it) }
+        val admin = adminToken()
+
+        val refused = raw { client.get("/v1/insights?days=30") { auth(user.token) } }
+        assertEquals(HttpStatusCode.PaymentRequired, refused.status)
+        assertEquals(ErrorCodes.ENTITLEMENT_REQUIRED, refused.body<ApiErrorResponse>().error.code)
+
+        val invalid = raw { client.get("/v1/insights?days=14") { auth(user.token) } }
+        assertEquals(HttpStatusCode.BadRequest, invalid.status, "only 7, 30 and 90 are windows")
+
+        postAck(
+            "/v1/admin/users/${user.userId}/premium",
+            admin,
+            uz.sadora.server.admin.GrantPremiumRequest(reason = "integration test"),
+        )
+
+        val granted = get<InsightsSummary>("/v1/insights?days=30", user.token)
+        assertEquals(30, granted.days)
+        assertEquals(30, granted.trends.first().points.size)
+        assertTrue(granted.findingsAvailable, "Premium carries the narrative")
+    }
+
     // ---------------------------------------------------------------- AI
 
     @Test
@@ -381,8 +443,11 @@ class ApiIntegrationTest {
         return response.body()
     }
 
-    private suspend inline fun <reified T> Api.put(path: String, token: String): T {
-        val response = client.put(path) { auth(token) }
+    private suspend inline fun <reified T> Api.put(path: String, token: String, body: Any? = null): T {
+        val response = client.put(path) {
+            auth(token)
+            body?.let { json(it) }
+        }
         assertEquals(HttpStatusCode.OK, response.status, "PUT $path: ${response.bodyAsTextSafe()}")
         return response.body()
     }
