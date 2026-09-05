@@ -44,15 +44,6 @@ data class Appointment(val day: String, val month: String, val title: String, va
 
 data class SleepStage(val label: String, val duration: String, val fraction: Float)
 
-data class KnowledgeItem(
-    val kind: String,
-    val category: String,
-    val duration: String,
-    val title: String,
-    val reviewedBy: String? = null,
-    val premium: Boolean = false,
-)
-
 enum class SourceStatus { Connected, Expired, Disconnected }
 
 data class DataSource(
@@ -226,14 +217,6 @@ object SampleData {
         SleepStage("REM", "1s 28d", 0.22f),
         SleepStage("Uyg'oq", "48d", 0.12f),
     )
-
-    val knowledge = listOf(
-        KnowledgeItem("KURS", "SIKL", "5 dars", "Siklni tushunish: gormonlar va kayfiyat", "Dr. N. Karimova tomonidan ko'rib chiqilgan", premium = true),
-        KnowledgeItem("MAQOLA", "OVQATLANISH", "6 daqiqa", "Temirga boy taomlar ro'yxati"),
-        KnowledgeItem("VIDEO", "UYQU", "9 daqiqa", "Kechki tartib: 30 daqiqalik amal"),
-    )
-
-    val knowledgeCategories = listOf("Barchasi", "Sikl", "Gormonlar", "Ovqatlanish", "Uyqu")
 
     /** The eight platforms the deck lists as sources. Order matches the deck. */
     val dataSources = listOf(

@@ -706,14 +706,15 @@ private fun PostpartumJourney(state: AppState, onOpen: (Route) -> Unit) {
         item { SectionHeader("Bilim — tug'ruqdan keyin") }
 
         item {
-            SadoraCard(onClick = { onOpen(Route.Article("Tiklanish davrida jismoniy faollik")) }) {
+            // The library is the server's, so this opens it rather than naming an
+            // article that may not be published.
+            SadoraCard(onClick = { onOpen(Route.Knowledge) }) {
                 ImagePlaceholder(Modifier.fillMaxWidth().aspectRatio(2.4f), emoji = "🧘‍♀️")
                 Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-                    SadoraBadge("MAQOLA", BadgeTone.Neutral)
-                    SadoraBadge("6 daqiqa", BadgeTone.Neutral)
+                    SadoraBadge("KUTUBXONA", BadgeTone.Neutral)
                 }
                 Text(
-                    "Tiklanish davrida jismoniy faollik",
+                    "Tug'ruqdan keyingi materiallar",
                     style = Sadora.type.h3,
                     color = c.text,
                 )

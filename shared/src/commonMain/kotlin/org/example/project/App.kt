@@ -36,6 +36,7 @@ import org.example.project.data.CommunitySyncBridge
 import org.example.project.data.HealthController
 import org.example.project.data.HealthSync
 import org.example.project.data.InsightsController
+import org.example.project.data.LearnController
 import org.example.project.data.SadoraController
 import org.example.project.data.SadoraGraph
 import org.example.project.data.SessionState
@@ -120,6 +121,7 @@ fun App(graph: SadoraGraph? = null) {
     val community = remember(graph, state) { graph?.communityController(state) ?: CommunityController(null, state) }
     val ai = remember(graph, state) { graph?.aiController(state) ?: AiController(null, state) }
     val insights = remember(graph) { graph?.insightsController() ?: InsightsController(null) }
+    val learn = remember(graph) { graph?.learnController() ?: LearnController(null) }
 
     SadoraTheme(darkTheme = state.darkTheme) {
         AnimatedContent(
@@ -150,7 +152,7 @@ fun App(graph: SadoraGraph? = null) {
                     )
                 }
 
-                AppPhase.Main -> MainShell(state, navigator, controller, health, community, ai, insights)
+                AppPhase.Main -> MainShell(state, navigator, controller, health, community, ai, insights, learn)
             }
         }
     }
@@ -209,6 +211,7 @@ private fun MainShell(
     community: CommunityController,
     ai: AiController,
     insights: InsightsController,
+    learn: LearnController,
 ) {
     val scope = rememberCoroutineScope()
 
@@ -298,6 +301,7 @@ private fun MainShell(
                             community = community,
                             ai = ai,
                             insights = insights,
+                            learn = learn,
                             onSymptomSheet = { showSymptomSheet = true },
                             onOpenComments = { commentsFor = it },
                             onOpenPostMenu = { menuFor = it },
@@ -488,6 +492,7 @@ private fun PushedScreen(
     community: CommunityController,
     ai: AiController,
     insights: InsightsController,
+    learn: LearnController,
     onSymptomSheet: () -> Unit,
     onOpenComments: (CommunityPost) -> Unit,
     onOpenPostMenu: (CommunityPost) -> Unit,
@@ -535,8 +540,8 @@ private fun PushedScreen(
         Route.MedicationHistory -> MedicationHistoryScreen(close)
         Route.Sleep -> SleepScreen(state, health, insights, close)
         Route.Insights -> InsightsScreen(state, insights, close, upgrade)
-        Route.Knowledge -> KnowledgeScreen(state, close, navigator::push)
-        is Route.Article -> ArticleScreen(route.title, close)
+        Route.Knowledge -> KnowledgeScreen(state, learn, close, navigator::push)
+        is Route.Article -> ArticleScreen(route.slug, learn, close, upgrade)
         Route.DataSources -> DataSourcesScreen(health, close)
         Route.SecretChat -> SecretChatScreen(
             state = state,

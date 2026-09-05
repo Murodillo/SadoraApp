@@ -32,6 +32,7 @@ tags:
   - name: Notifications
   - name: Wearables
   - name: Insights
+  - name: Learn
   - name: Community
   - name: AI
   - name: Admin
@@ -1154,6 +1155,53 @@ paths:
               schema: { $ref: "#/components/schemas/InsightsSummary" }
         "400": { $ref: "#/components/responses/BadRequest" }
         "402": { $ref: "#/components/responses/EntitlementRequired" }
+
+  /v1/articles:
+    get:
+      tags: [Learn]
+      security: [{ bearerAuth: [] }]
+      summary: Bilim kutubxonasi — kategoriyalar va kartochkalar
+      description: |
+        Kutubxona to'liq qaytadi: chiplar (`categories`) va ular ortidagi kartochkalar bir
+        so'rovda, chunki filtr har safar sahifa yuklanishiga o'xshamasligi kerak.
+
+        Qoralama hech qachon chiqmaydi. Premium maqola esa hammaga ko'rinadi va
+        `locked: true` bilan belgilanadi — yopiladigan narsa ro'yxat emas, tanasi.
+      parameters:
+        - in: query
+          name: category
+          schema: { type: string }
+          description: Kategoriya kaliti; berilmasa butun kutubxona.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ArticleFeed" }
+
+  /v1/articles/{slug}:
+    get:
+      tags: [Learn]
+      security: [{ bearerAuth: [] }]
+      summary: Bitta maqola
+      description: |
+        Yopiq maqola ham 200 bilan qaytadi: birinchi xatboshi va `truncated: true`. Bo'sh
+        sahifa ustidagi paywall nima sotilayotganini ko'rsatmaydi, shuning uchun ochiq
+        qismi beriladi va qolgani berilmaydi.
+
+        Chop etilmagan maqola — `404`, xuddi mavjud bo'lmagani kabi.
+      parameters:
+        - in: path
+          name: slug
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Article" }
+        "404": { $ref: "#/components/responses/NotFound" }
 
   /v1/community/me:
     get:
@@ -2551,6 +2599,69 @@ components:
           items: { $ref: "#/components/schemas/InsightFinding" }
         findingsAvailable: { type: boolean }
         daysLogged: { type: integer }
+
+    ArticleKind:
+      type: string
+      enum: [article, course, video]
+
+    ArticleBlock:
+      type: object
+      description: |
+        Maqola tanasining bir bo'lagi. `type` — diskriminator; o'quvchi (Compose) har bir
+        turni o'zi joylashtiradi, shuning uchun ro'yxat yopiq.
+      required: [type]
+      properties:
+        type: { type: string, enum: [heading, paragraph, bullets, note] }
+        text: { type: string, description: "heading, paragraph va note uchun" }
+        items:
+          type: array
+          items: { type: string }
+          description: "bullets uchun"
+
+    ArticleCategory:
+      type: object
+      properties:
+        key: { type: string }
+        label: { type: string }
+        count: { type: integer, description: "Chop etilgan maqolalar soni" }
+
+    ArticleSummary:
+      type: object
+      properties:
+        slug: { type: string }
+        kind: { $ref: "#/components/schemas/ArticleKind" }
+        categoryKey: { type: string }
+        categoryLabel: { type: string }
+        title: { type: string }
+        excerpt: { type: string }
+        readMinutes: { type: integer }
+        premium: { type: boolean }
+        locked: { type: boolean, description: "Server qarori; ilova buni faqat chizadi" }
+        reviewedBy: { type: string, nullable: true }
+        publishedAt: { type: string, format: date-time, nullable: true }
+
+    Article:
+      type: object
+      properties:
+        summary: { $ref: "#/components/schemas/ArticleSummary" }
+        author: { type: string, nullable: true }
+        authorRole: { type: string, nullable: true }
+        blocks:
+          type: array
+          items: { $ref: "#/components/schemas/ArticleBlock" }
+        truncated: { type: boolean, description: "Tanasi qisqartirilgan — paywall shu yerda" }
+        disclaimer: { type: string, nullable: true }
+        updatedAt: { type: string, format: date-time, nullable: true }
+
+    ArticleFeed:
+      type: object
+      properties:
+        categories:
+          type: array
+          items: { $ref: "#/components/schemas/ArticleCategory" }
+        articles:
+          type: array
+          items: { $ref: "#/components/schemas/ArticleSummary" }
 
     CommunityTopic:
       type: string

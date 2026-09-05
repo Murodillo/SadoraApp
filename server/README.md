@@ -160,6 +160,16 @@ va median bo'yicha ikki yarimning sezilarli farqidan chiqadi; server nima o'lcha
 aytadi, gapni mijoz yozadi. Chuqurlik `insights_history`, hikoya `ai_insights` ortida —
 ilovadagi qulf endi chizma emas, serverning qarori (V13).
 
+**Bilim kutubxonasi ilovada emas, bazada.** Maqolalar admin panelida yoziladi
+(`content_articles`), ilova o'zining birorta maqolasini olib yurmaydi. Tanasi — tipli
+bloklar ro'yxati (`heading`, `paragraph`, `bullets`, `note`), HTML emas: o'quvchi ikki
+platformadagi Compose, va yopiq ro'yxat unga har bir blokni to'g'ri joylashtirish imkonini
+beradi. Chop etish saqlashdan alohida amal — qoralama ilovada umuman ko'rinmaydi (`404`),
+muharrir esa yarim yozilgan matnni bemalol qoldiradi. Premium maqola hammaga ro'yxatda
+turadi va faqat tanasi yopiladi: `truncated: true` bilan birinchi xatboshi beriladi,
+chunki bo'sh sahifa ustidagi paywall nima sotilayotganini ko'rsatmaydi. Qulfni
+`learn_premium` hal qiladi, ilova esa faqat kelgan `locked` bayrog'ini chizadi.
+
 **Maxfiy chat taxallus ostida, va admin tomonida ham shunday.** Har hisobga bir marta
 ikki so'zli taxallus beriladi (`community_identities`) — postdan hisobga qaytadigan
 yagona bog'lanish shu jadval, va admin API uni o'qimaydi. Moderatsiya javoblarida
@@ -197,4 +207,7 @@ CI'da u job'ning o'z Postgres'iga qarshi ishlaydi.
 ## Nima hali yo'q (3-sprint)
 AI Gateway (model) va uning xarajat logi · App Store / Google Play va Payme/Click
 webhook'lari · hisobni haqiqiy o'chirish job'i · SMS provayderi (`OtpSender` interfeysi
-tayyor, hozircha log'ga yozadi) · admin 2FA enrolment ekrani · Learn kontenti.
+tayyor, hozircha log'ga yozadi) · admin 2FA enrolment ekrani · Health Connect /
+HealthKit o'qish qatlami (server tomon `POST /v1/health-data/samples` tayyor, ilovada
+namuna yig'uvchi hali yo'q, shuning uchun uyqu va qadam ekranlari bo'sh holatini
+ko'rsatadi).

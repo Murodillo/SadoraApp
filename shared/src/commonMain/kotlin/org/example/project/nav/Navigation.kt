@@ -52,7 +52,8 @@ sealed interface Route {
     data object Sleep : Route
     data object Insights : Route
     data object Knowledge : Route
-    data class Article(val title: String) : Route
+    /** The article's slug: its identity on the server and in every link. */
+    data class Article(val slug: String) : Route
     data object DataSources : Route
     data object Paywall : Route
     data object SecretChat : Route

@@ -33,6 +33,8 @@ import uz.sadora.server.health.MindRepository
 import uz.sadora.server.health.MindService
 import uz.sadora.server.health.NutritionRepository
 import uz.sadora.server.health.NutritionService
+import uz.sadora.server.content.ContentRepository
+import uz.sadora.server.content.ContentService
 import uz.sadora.server.insights.InsightsService
 import uz.sadora.server.notify.LoggingPushSender
 import uz.sadora.server.notify.NotificationRepository
@@ -120,6 +122,13 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
         environment = config.environment,
     )
     val communityModerationService = CommunityModerationService(communityRepository, auditService)
+
+    val contentRepository = ContentRepository()
+    val contentService = ContentService(
+        repository = contentRepository,
+        users = userRepository,
+        entitlements = entitlementService,
+    )
 
     val insightsService = InsightsService(
         access = healthAccess,

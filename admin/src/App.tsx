@@ -6,6 +6,7 @@ import { LoginPage } from './auth/LoginPage'
 import { Shell } from './layout/Shell'
 import { AuditPage } from './pages/AuditPage'
 import { CommunityPage } from './pages/CommunityPage'
+import { ContentPage } from './pages/ContentPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { FeaturesPage } from './pages/FeaturesPage'
 import { FlagsPage } from './pages/FlagsPage'
@@ -53,6 +54,7 @@ function AppRoutes() {
         <Route path="users" element={<UsersPage />} />
         <Route path="users/:id" element={<UserCardPage />} />
         <Route path="community" element={<CommunityPage />} />
+        <Route path="content" element={<ContentPage />} />
         <Route
           path="notifications"
           element={can(['OWNER', 'ADMIN', 'ANALYST']) ? <NotificationsPage /> : <Navigate to="/" replace />}

@@ -34,16 +34,22 @@ import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Assumptions.assumeTrue
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.TestInstance
+import uz.sadora.contract.AdminArticle
 import uz.sadora.contract.AiChatQuota
 import uz.sadora.contract.AiChatReply
 import uz.sadora.contract.AiChatRequest
 import uz.sadora.contract.ApiErrorResponse
+import uz.sadora.contract.Article
+import uz.sadora.contract.ArticleBlock
+import uz.sadora.contract.ArticleFeed
+import uz.sadora.contract.ArticleKind
 import uz.sadora.contract.AuthSession
 import uz.sadora.contract.CommunityComment
 import uz.sadora.contract.CommunityIdentity
 import uz.sadora.contract.CommunityPost
 import uz.sadora.contract.CommunityTopic
 import uz.sadora.contract.ConsentGrants
+import uz.sadora.contract.CreateArticleRequest
 import uz.sadora.contract.CreateCommentRequest
 import uz.sadora.contract.CreatePostRequest
 import uz.sadora.contract.CycleBaseline
@@ -64,8 +70,10 @@ import uz.sadora.contract.OtpRequest
 import uz.sadora.contract.OtpVerifyRequest
 import uz.sadora.contract.Page
 import uz.sadora.contract.Platform
+import uz.sadora.contract.PublishArticleRequest
 import uz.sadora.contract.ReportReason
 import uz.sadora.contract.ReportRequest
+import uz.sadora.contract.SaveArticleRequest
 import uz.sadora.contract.TrendMetric
 import uz.sadora.contract.UserProfile
 import uz.sadora.server.admin.AdminSession
@@ -307,6 +315,93 @@ class ApiIntegrationTest {
         assertEquals(30, granted.days)
         assertEquals(30, granted.trends.first().points.size)
         assertTrue(granted.findingsAvailable, "Premium carries the narrative")
+    }
+
+    // ---------------------------------------------------------------- Bilim
+
+    @Test
+    fun `a draft is invisible to the app until it is published`() = api {
+        val user = signUp().also { onboard(it) }
+        val admin = adminToken()
+        val slug = "qoralama-${Random.nextInt(100_000)}"
+
+        post<AdminArticle>(
+            "/v1/admin/content/articles",
+            admin,
+            CreateArticleRequest(
+                slug = slug,
+                article = SaveArticleRequest(
+                    kind = ArticleKind.ARTICLE,
+                    categoryKey = "sleep",
+                    title = "Qoralama sarlavha",
+                    excerpt = "Hali chop etilmagan.",
+                    blocks = listOf(ArticleBlock.Paragraph("Matn.")),
+                ),
+            ),
+        )
+
+        val hidden = get<ArticleFeed>("/v1/articles", user.token)
+        assertTrue(hidden.articles.none { it.slug == slug }, "a draft is not in the library")
+        assertEquals(
+            HttpStatusCode.NotFound,
+            raw { client.get("/v1/articles/$slug") { auth(user.token) } }.status,
+            "asking for a draft by name must not reveal that it exists as anything else",
+        )
+
+        put<AdminArticle>("/v1/admin/content/articles/$slug/published", admin, PublishArticleRequest(true))
+
+        val published = get<ArticleFeed>("/v1/articles", user.token)
+        val card = assertNotNull(published.articles.firstOrNull { it.slug == slug })
+        assertFalse(card.locked, "a free article is never locked")
+        assertEquals(1, card.readMinutes, "a short body still reads as a minute")
+    }
+
+    @Test
+    fun `a premium article is listed for everyone and opens only with the subscription`() = api {
+        val user = signUp().also { onboard(it) }
+        val admin = adminToken()
+        val slug = "premium-${Random.nextInt(100_000)}"
+
+        post<AdminArticle>(
+            "/v1/admin/content/articles",
+            admin,
+            CreateArticleRequest(
+                slug = slug,
+                article = SaveArticleRequest(
+                    kind = ArticleKind.COURSE,
+                    categoryKey = "cycle",
+                    title = "Premium kurs",
+                    excerpt = "Faqat obunachilarga.",
+                    blocks = listOf(
+                        ArticleBlock.Paragraph("Ochiq xatboshi."),
+                        ArticleBlock.Heading("Ichkarida"),
+                        ArticleBlock.Paragraph("Yopiq xatboshi."),
+                    ),
+                    premium = true,
+                ),
+            ),
+        )
+        put<AdminArticle>("/v1/admin/content/articles/$slug/published", admin, PublishArticleRequest(true))
+
+        // Listed, so she can see what Premium holds — but the body stops after the opening.
+        val feed = get<ArticleFeed>("/v1/articles", user.token)
+        val card = assertNotNull(feed.articles.firstOrNull { it.slug == slug })
+        assertTrue(card.premium && card.locked)
+
+        val locked = get<Article>("/v1/articles/$slug", user.token)
+        assertTrue(locked.truncated)
+        assertEquals(listOf(ArticleBlock.Paragraph("Ochiq xatboshi.")), locked.blocks)
+
+        postAck(
+            "/v1/admin/users/${user.userId}/premium",
+            admin,
+            uz.sadora.server.admin.GrantPremiumRequest(reason = "integration test"),
+        )
+
+        val opened = get<Article>("/v1/articles/$slug", user.token)
+        assertFalse(opened.truncated)
+        assertEquals(3, opened.blocks.size)
+        assertFalse(opened.summary.locked)
     }
 
     // ---------------------------------------------------------------- AI

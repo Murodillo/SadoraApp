@@ -5,141 +5,166 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
-import org.example.project.design.IconSize
+import org.example.project.data.LearnController
 import org.example.project.design.Radius
 import org.example.project.design.Sadora
-import org.example.project.design.SadoraIcons
 import org.example.project.design.Spacing
 import org.example.project.ui.components.BadgeTone
 import org.example.project.ui.components.DisclaimerNote
-import org.example.project.ui.components.ImagePlaceholder
+import org.example.project.ui.components.EmptyState
+import org.example.project.ui.components.LockedBlock
 import org.example.project.ui.components.SadoraBadge
 import org.example.project.ui.components.SadoraCard
 import org.example.project.ui.components.SadoraTopBar
 import org.example.project.ui.components.ScreenContent
-import org.example.project.ui.components.noRippleClickable
+import org.example.project.ui.components.Skeleton
+import uz.sadora.contract.Article
+import uz.sadora.contract.ArticleBlock
 
 /**
  * "Maqola" — the reader.
  *
- * Author and reviewing clinician are shown side by side at the top, and every
- * article closes with a boundary note about what the content is not.
+ * The screen used to be one article typed into the source; it now renders whatever the
+ * server sends for this slug, block by block. A premium piece arrives with its opening
+ * paragraph and nothing else, and the paywall sits where the rest of the body would have
+ * been — so what is being sold is visible, but no part of it is drawn that she has not
+ * bought.
  */
 @Composable
 fun ArticleScreen(
-    title: String,
+    slug: String,
+    learn: LearnController,
     onClose: () -> Unit,
+    onUpgrade: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val c = Sadora.colors
+    val article = learn.article(slug)
+
+    LaunchedEffect(slug) { learn.loadArticle(slug) }
 
     Column(modifier) {
-        SadoraTopBar(
-            "",
-            onBack = onClose,
-            trailing = {
-                Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-                    RoundAction(SadoraIcons.Heart)
-                    RoundAction(SadoraIcons.Share)
-                }
-            },
-        )
+        SadoraTopBar("", onBack = onClose)
 
         ScreenContent {
-            item {
-                ImagePlaceholder(
-                    Modifier.fillMaxWidth().aspectRatio(1.9f),
-                    shape = Radius.card,
-                )
-            }
+            when {
+                article == null && learn.busy -> item { ArticleSkeleton() }
 
-            item {
-                Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xxs)) {
-                    SadoraBadge("OVQATLANISH", BadgeTone.Neutral)
-                    SadoraBadge("6 DAQIQA", BadgeTone.Neutral)
+                article == null -> item {
+                    EmptyState(
+                        title = "Maqola ochilmadi",
+                        body = learn.error
+                            ?: "Ma'lumot yuklanmadi. Internetni tekshirib, qayta urinib ko'ring.",
+                        actionText = null,
+                        onAction = {},
+                    )
                 }
-            }
 
-            item {
-                Text(
-                    "Temirga boy taomlar: nima yeyish va nima bilan qo'shish",
-                    style = Sadora.type.h1,
-                    color = c.text,
-                )
+                else -> articleBody(article, onUpgrade)
             }
+        }
+    }
+}
 
-            item {
-                // Author and reviewer carry equal visual weight.
-                SadoraCard(padding = Spacing.sm) {
-                    Row(
-                        Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-                    ) {
+private fun androidx.compose.foundation.lazy.LazyListScope.articleBody(
+    article: Article,
+    onUpgrade: () -> Unit,
+) {
+    val summary = article.summary
+
+    item {
+        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xxs)) {
+            SadoraBadge(summary.categoryLabel.uppercase(), BadgeTone.Neutral)
+            SadoraBadge("${summary.readMinutes} DAQIQA", BadgeTone.Neutral)
+            if (summary.premium) SadoraBadge("PREMIUM", BadgeTone.Premium)
+        }
+    }
+
+    item {
+        Text(summary.title, style = Sadora.type.h1, color = Sadora.colors.text)
+    }
+
+    // Author and reviewer carry equal visual weight, and the card is skipped entirely
+    // when the piece names neither rather than drawing two empty slots.
+    if (article.author != null || summary.reviewedBy != null) {
+        item {
+            SadoraCard(padding = Spacing.sm) {
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                ) {
+                    article.author?.let {
                         Byline(
-                            initials = "NK",
-                            name = "Nilufar Karimova",
-                            role = "Muallif · nutritsiolog",
+                            initials = it.initials(),
+                            name = it,
+                            role = article.authorRole ?: "Muallif",
                             modifier = Modifier.weight(1f),
                         )
+                    }
+                    summary.reviewedBy?.let {
                         Byline(
-                            initials = "SA",
-                            name = "Dr. S. Aliyeva",
+                            initials = it.initials(),
+                            name = it,
                             role = "✓ Ko'rib chiqqan",
                             modifier = Modifier.weight(1f),
                         )
                     }
                 }
             }
+        }
+    }
 
-            item {
-                Text(
-                    "Temir qonda kislorod tashuvchi gemoglobin uchun kerak. Hayz davrida " +
-                        "yo'qotilgan temirni ovqat bilan qoplash odatiy amaliyot.",
-                    style = Sadora.type.body,
-                    color = c.text,
-                )
-            }
+    items(article.blocks.size) { index -> BlockView(article.blocks[index]) }
 
-            item {
-                Text("Nimalarda ko'p", style = Sadora.type.h2, color = c.text)
-            }
+    if (article.truncated) {
+        item {
+            LockedBlock("Maqolaning davomi Premium bilan ochiladi", onUnlock = onUpgrade)
+        }
+    }
 
-            item {
-                Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-                    listOf(
-                        "Qora jigar, mol go'shti, tovuq jigari",
-                        "Yasmiq, no'xat, loviya",
-                        "Ismaloq, ko'kat, quruq o'rik",
-                    ).forEach { line ->
-                        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-                            Text("•", style = Sadora.type.body, color = c.textAccent)
-                            Text(line, style = Sadora.type.body, color = c.text)
-                        }
-                    }
+    article.disclaimer?.let { item { DisclaimerNote(it) } }
+}
+
+@Composable
+private fun BlockView(block: ArticleBlock) {
+    val c = Sadora.colors
+    when (block) {
+        is ArticleBlock.Heading -> Text(block.text, style = Sadora.type.h2, color = c.text)
+
+        is ArticleBlock.Paragraph -> Text(block.text, style = Sadora.type.body, color = c.text)
+
+        is ArticleBlock.Bullets -> Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+            block.items.forEach { line ->
+                Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                    Text("•", style = Sadora.type.body, color = c.textAccent)
+                    Text(line, style = Sadora.type.body, color = c.text)
                 }
             }
+        }
 
-            item {
-                DisclaimerNote(
-                    "Ushbu material umumiy salomatlik ma'lumoti. Temir preparatlarini " +
-                        "shifokor tavsiyasisiz boshlash tavsiya etilmaydi.",
-                )
-            }
+        is ArticleBlock.Note -> SadoraCard(padding = Spacing.sm) {
+            Text(block.text, style = Sadora.type.body, color = c.text)
         }
     }
 }
+
+/** "Nilufar Karimova" → "NK". A single-word name keeps one letter rather than repeating it. */
+private fun String.initials(): String =
+    split(' ')
+        .filter { it.isNotBlank() }
+        .take(2)
+        .map { it.first().uppercaseChar() }
+        .joinToString("")
 
 @Composable
 private fun Byline(
@@ -171,16 +196,10 @@ private fun Byline(
 }
 
 @Composable
-private fun RoundAction(icon: ImageVector) {
-    val c = Sadora.colors
-    Box(
-        Modifier
-            .size(40.dp)
-            .clip(Radius.chip)
-            .background(c.surface2)
-            .noRippleClickable {},
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(icon, contentDescription = null, Modifier.size(IconSize.md), tint = c.text)
+private fun ArticleSkeleton() {
+    Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+        Skeleton(Modifier.fillMaxWidth().height(40.dp))
+        Skeleton(Modifier.fillMaxWidth().height(96.dp))
+        Skeleton(Modifier.fillMaxWidth().height(160.dp))
     }
 }

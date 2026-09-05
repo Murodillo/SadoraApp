@@ -73,10 +73,13 @@ export function Modal({
   title,
   onClose,
   children,
+  wide = false,
 }: {
   title: string
   onClose: () => void
   children: ReactNode
+  /** For forms that need a second column or a body textarea. */
+  wide?: boolean
 }) {
   return (
     <div
@@ -85,7 +88,12 @@ export function Modal({
       onKeyDown={(event) => event.key === 'Escape' && onClose()}
       role="presentation"
     >
-      <div className="modal" onClick={(event) => event.stopPropagation()} role="dialog" aria-label={title}>
+      <div
+        className={`modal${wide ? ' wide' : ''}`}
+        onClick={(event) => event.stopPropagation()}
+        role="dialog"
+        aria-label={title}
+      >
         <h3>{title}</h3>
         {children}
       </div>

@@ -6,6 +6,7 @@ import org.example.project.data.api.AiApi
 import org.example.project.data.api.CommunityApi
 import org.example.project.data.api.CycleApi
 import org.example.project.data.api.InsightsApi
+import org.example.project.data.api.LearnApi
 import org.example.project.data.api.MedicationApi
 import org.example.project.data.api.MindApi
 import org.example.project.data.api.NotificationApi
@@ -44,6 +45,7 @@ class SadoraGraph(
     val communityApi: CommunityApi = CommunityApi(caller)
     val aiApi: AiApi = AiApi(caller)
     val insightsApi: InsightsApi = InsightsApi(caller)
+    val learnApi: LearnApi = LearnApi(caller)
     val repository: SadoraRepository = SadoraRepository(api, session, device, appVersion)
 
     /**
@@ -60,6 +62,8 @@ class SadoraGraph(
         AiController(aiApi, state)
 
     fun insightsController(): InsightsController = InsightsController(insightsApi)
+
+    fun learnController(): LearnController = LearnController(learnApi)
 
     fun close() = client.close()
 }

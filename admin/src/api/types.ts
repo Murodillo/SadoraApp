@@ -266,3 +266,57 @@ export interface SignUpPoint {
   date: string
   signUps: number
 }
+
+// ---------------------------------------------------------------- content
+
+export type ArticleKind = 'article' | 'course' | 'video'
+
+/**
+ * One block of an article body. The shape mirrors `ArticleBlock` in the contract, and
+ * the discriminator is `type` because that is kotlinx-serialization's default — a
+ * rename on either side is a compile error there and a parse failure here, so it is
+ * pinned in both.
+ */
+export type ArticleBlock =
+  | { type: 'heading'; text: string }
+  | { type: 'paragraph'; text: string }
+  | { type: 'bullets'; items: string[] }
+  | { type: 'note'; text: string }
+
+export interface ArticleCategory {
+  key: string
+  label: string
+  count: number
+}
+
+export interface AdminArticle {
+  slug: string
+  kind: ArticleKind
+  categoryKey: string
+  title: string
+  excerpt: string
+  readMinutes: number
+  premium: boolean
+  published: boolean
+  reviewedBy?: string | null
+  author?: string | null
+  authorRole?: string | null
+  disclaimer?: string | null
+  blocks: ArticleBlock[]
+  publishedAt?: string | null
+  updatedAt?: string | null
+}
+
+export interface SaveArticleBody {
+  kind: ArticleKind
+  categoryKey: string
+  title: string
+  excerpt: string
+  blocks: ArticleBlock[]
+  premium: boolean
+  reviewedBy?: string | null
+  author?: string | null
+  authorRole?: string | null
+  disclaimer?: string | null
+  readMinutes?: number | null
+}

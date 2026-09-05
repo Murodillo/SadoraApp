@@ -1,10 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { query, request } from './client'
 import type {
+  AdminArticle,
   AdminFlag,
   AdminStats,
   AdminUserCard,
   AdminUserSummary,
+  ArticleCategory,
   AuditEntry,
   CommunityStats,
   FeatureDefinition,
@@ -16,6 +18,7 @@ import type {
   NotificationTemplate,
   Page,
   ProviderHealth,
+  SaveArticleBody,
   SignUpPoint,
 } from './types'
 
@@ -290,3 +293,45 @@ export const useSaveMapping = () => {
     onSuccess: () => void client.invalidateQueries({ queryKey: ['wearables', 'mappings'] }),
   })
 }
+
+// ---------------------------------------------------------------- content
+
+const useContentMutation = <T>(fn: (input: T) => Promise<unknown>) => {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: fn,
+    onSuccess: () => client.invalidateQueries({ queryKey: ['content'] }),
+  })
+}
+
+export const useArticles = () =>
+  useQuery({
+    queryKey: ['content', 'articles'],
+    queryFn: () => request<AdminArticle[]>('/v1/admin/content/articles'),
+  })
+
+export const useArticleCategories = () =>
+  useQuery({
+    queryKey: ['content', 'categories'],
+    queryFn: () => request<ArticleCategory[]>('/v1/admin/content/categories'),
+  })
+
+export const useCreateArticle = () =>
+  useContentMutation(({ slug, article }: { slug: string; article: SaveArticleBody }) =>
+    request('/v1/admin/content/articles', { method: 'POST', body: { slug, article } }),
+  )
+
+export const useUpdateArticle = () =>
+  useContentMutation(({ slug, article }: { slug: string; article: SaveArticleBody }) =>
+    request(`/v1/admin/content/articles/${slug}`, { method: 'PUT', body: article }),
+  )
+
+export const usePublishArticle = () =>
+  useContentMutation(({ slug, published }: { slug: string; published: boolean }) =>
+    request(`/v1/admin/content/articles/${slug}/published`, { method: 'PUT', body: { published } }),
+  )
+
+export const useDeleteArticle = () =>
+  useContentMutation((slug: string) =>
+    request(`/v1/admin/content/articles/${slug}`, { method: 'DELETE' }),
+  )
