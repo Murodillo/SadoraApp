@@ -35,6 +35,7 @@ import org.example.project.data.CommunityController
 import org.example.project.data.CommunitySyncBridge
 import org.example.project.data.HealthController
 import org.example.project.data.HealthSync
+import org.example.project.data.BillingController
 import org.example.project.data.InsightsController
 import org.example.project.data.LearnController
 import org.example.project.data.SadoraController
@@ -122,6 +123,7 @@ fun App(graph: SadoraGraph? = null) {
     val ai = remember(graph, state) { graph?.aiController(state) ?: AiController(null, state) }
     val insights = remember(graph) { graph?.insightsController() ?: InsightsController(null) }
     val learn = remember(graph) { graph?.learnController() ?: LearnController(null) }
+    val billing = remember(graph) { graph?.billingController() ?: BillingController(null) }
 
     SadoraTheme(darkTheme = state.darkTheme) {
         AnimatedContent(
@@ -152,7 +154,7 @@ fun App(graph: SadoraGraph? = null) {
                     )
                 }
 
-                AppPhase.Main -> MainShell(state, navigator, controller, health, community, ai, insights, learn)
+                AppPhase.Main -> MainShell(state, navigator, controller, health, community, ai, insights, learn, billing)
             }
         }
     }
@@ -212,6 +214,7 @@ private fun MainShell(
     ai: AiController,
     insights: InsightsController,
     learn: LearnController,
+    billing: BillingController,
 ) {
     val scope = rememberCoroutineScope()
 
@@ -302,6 +305,7 @@ private fun MainShell(
                             ai = ai,
                             insights = insights,
                             learn = learn,
+                            billing = billing,
                             onSymptomSheet = { showSymptomSheet = true },
                             onOpenComments = { commentsFor = it },
                             onOpenPostMenu = { menuFor = it },
@@ -493,6 +497,7 @@ private fun PushedScreen(
     ai: AiController,
     insights: InsightsController,
     learn: LearnController,
+    billing: BillingController,
     onSymptomSheet: () -> Unit,
     onOpenComments: (CommunityPost) -> Unit,
     onOpenPostMenu: (CommunityPost) -> Unit,
@@ -555,7 +560,7 @@ private fun PushedScreen(
         // The same documents onboarding shows, reachable again from settings.
         Route.Terms -> LegalScreen(LegalDocument.Terms, close)
         Route.PrivacyPolicy -> LegalScreen(LegalDocument.Privacy, close)
-        Route.Paywall -> PaywallScreen(state, controller, close)
+        Route.Paywall -> PaywallScreen(state, controller, billing, close)
 
         // Settings detail screens reuse the existing surfaces they configure.
         Route.PersonalDetails,

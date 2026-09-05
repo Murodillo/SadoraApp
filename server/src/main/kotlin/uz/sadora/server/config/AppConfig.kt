@@ -23,6 +23,7 @@ data class AppConfig(
     val otp: OtpConfig,
     val social: SocialConfig,
     val ai: AiConfig,
+    val billing: BillingConfig,
     val policyVersion: String,
     val minimumAppVersion: String?,
 ) {
@@ -77,6 +78,21 @@ data class AppConfig(
                     maxOutputTokens = env("AI_MAX_OUTPUT_TOKENS", "800").toInt(),
                     inputCostPerMillionMicros = env("AI_INPUT_COST_MICROS", "100000").toLong(),
                     outputCostPerMillionMicros = env("AI_OUTPUT_COST_MICROS", "400000").toLong(),
+                ),
+                billing = BillingConfig(
+                    payme = PaymeConfig(
+                        merchantId = envOrNull("PAYME_MERCHANT_ID"),
+                        key = envOrNull("PAYME_KEY"),
+                        login = env("PAYME_LOGIN", "Paycom"),
+                        accountField = env("PAYME_ACCOUNT_FIELD", "order_id"),
+                        checkoutUrl = env("PAYME_CHECKOUT_URL", "https://checkout.paycom.uz"),
+                    ),
+                    click = ClickConfig(
+                        serviceId = envOrNull("CLICK_SERVICE_ID"),
+                        merchantId = envOrNull("CLICK_MERCHANT_ID"),
+                        secretKey = envOrNull("CLICK_SECRET_KEY"),
+                        checkoutUrl = env("CLICK_CHECKOUT_URL", "https://my.click.uz/services/pay"),
+                    ),
                 ),
                 policyVersion = env("POLICY_VERSION", "2026-08-01"),
                 minimumAppVersion = envOrNull("MINIMUM_APP_VERSION"),
@@ -172,4 +188,33 @@ data class AiConfig(
     fun costMicros(promptTokens: Int?, completionTokens: Int?): Long =
         (promptTokens ?: 0).toLong() * inputCostPerMillionMicros / 1_000_000 +
             (completionTokens ?: 0).toLong() * outputCostPerMillionMicros / 1_000_000
+}
+
+/**
+ * The payment providers' credentials.
+ *
+ * Every one is nullable, and an unconfigured provider is not offered at checkout rather
+ * than failing at it: the catalogue asks [PaymeConfig.isConfigured] before listing a
+ * button that would produce a link nobody can pay.
+ */
+data class BillingConfig(val payme: PaymeConfig, val click: ClickConfig)
+
+data class PaymeConfig(
+    val merchantId: String?,
+    val key: String?,
+    val login: String,
+    /** The field name Payme sends the order id in; agreed with them per merchant. */
+    val accountField: String,
+    val checkoutUrl: String,
+) {
+    val isConfigured: Boolean get() = merchantId != null && key != null
+}
+
+data class ClickConfig(
+    val serviceId: String?,
+    val merchantId: String?,
+    val secretKey: String?,
+    val checkoutUrl: String,
+) {
+    val isConfigured: Boolean get() = serviceId != null && merchantId != null && secretKey != null
 }

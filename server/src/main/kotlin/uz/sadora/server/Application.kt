@@ -12,6 +12,10 @@ import org.slf4j.LoggerFactory
 import uz.sadora.contract.API_VERSION
 import uz.sadora.server.admin.AdminBootstrap
 import uz.sadora.server.ai.adminAiRoutes
+import uz.sadora.server.billing.adminBillingRoutes
+import uz.sadora.server.billing.billingRoutes
+import uz.sadora.server.billing.clickWebhook
+import uz.sadora.server.billing.paymeWebhook
 import uz.sadora.server.ai.aiRoutes
 import uz.sadora.server.community.adminCommunityRoutes
 import uz.sadora.server.community.communityRoutes
@@ -114,6 +118,11 @@ fun Application.apiModule(component: AppComponent) {
             insightsRoutes(component.insightsService)
             contentRoutes(component.contentService)
             adminContentRoutes(component.contentService)
+            billingRoutes(component.billingService, component.storePurchaseService)
+            adminBillingRoutes(component.billingService, component.billingRepository)
+            // The providers' own protocols; not behind the app's auth or its error envelope.
+            paymeWebhook(component.paymeGateway, component.billingRepository)
+            clickWebhook(component.clickGateway, component.billingRepository)
             adminRoutes(
                 adminAuth = component.adminAuthService,
                 adminService = component.adminService,

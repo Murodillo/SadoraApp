@@ -196,6 +196,23 @@ ustun ham yo'q: "xarajat logi" — bu va'da sezdirmay buziladigan eng ehtimolli 
 Admin paneldagi "AI xarajati" sahifasi shu jadvalni o'qiydi va modelni o'sha yerdan
 o'chirish mumkin.
 
+**Narx bazada, obuna esa faqat provayder tasdig'idan keyin.** `billing_plans` narxni
+tiyinda saqlaydi va ilova uni `GET /v1/billing/plans` orqali o'qiydi — narxni o'zgartirish
+uchun yangi ilova versiyasi kerak emas. `POST /v1/billing/checkout` faqat `pending` yozuv
+va havola yaratadi; obunani hech kim so'rab ololmaydi. Uni `activate` beradi, va unga
+faqat tekshirilgan callback yetadi: Payme — Basic `Paycom:<key>` bilan, Click — MD5
+imzosi bilan (imzo doimiy vaqtda solishtiriladi). To'lov — jurnal yozuvi: har ikkala
+provayder ham qayta so'raydi, shuning uchun `PerformTransaction` va `Complete` ikkinchi
+marta kelganda yangi obuna emas, o'sha javob qaytadi (`payment_transactions.state` shu
+uchun bor). Bekor qilish callback'i to'langan obunani olib qo'ymaydi — bu operator
+qarori, va provayderning xabari bilan jimgina qaytarib olish odam sotib olgan narsani
+yo'qotishi demakdir.
+
+**Store cheki mijozdan emas, store'dan tasdiqlanadi.** `POST /v1/billing/store/verify`
+`StoreVerifier` orqali o'tadi; kalitlar hali yo'q, shuning uchun standart implementatsiya
+rad etadi (`UnconfiguredStoreVerifier`). Bu ataylab: hammaga "ha" deydigan zaglushka
+testda ishlaydi va productionda paywall'ni butunlay ochib yuboradi.
+
 **Onboarding'dagi birinchi check-in health-gate ortida.** `firstCheckIn` profil bilan
 birga keladi, lekin `HealthService` orqali, `store_health` roziligi bo'lgandagina
 yoziladi — roziliksiz jimgina tashlab yuboriladi, so'rov muvaffaqiyatsiz bo'lmaydi.
@@ -216,9 +233,9 @@ TEST_DB_URL=jdbc:postgresql://localhost:5433/sadora_test ./gradlew :server:test
 
 CI'da u job'ning o'z Postgres'iga qarshi ishlaydi.
 
-## Nima hali yo'q (3-sprint)
-App Store / Google Play va Payme/Click
-webhook'lari · hisobni haqiqiy o'chirish job'i · SMS provayderi (`OtpSender` interfeysi
+## Nima hali yo'q
+App Store / Google Play cheklarini haqiqiy tekshirish (`StoreVerifier` interfeysi va
+grant yo'li tayyor, kalitlar yo'q) va ilovadagi billing SDK · hisobni haqiqiy o'chirish job'i · SMS provayderi (`OtpSender` interfeysi
 tayyor, hozircha log'ga yozadi) · admin 2FA enrolment ekrani · Health Connect /
 HealthKit o'qish qatlami (server tomon `POST /v1/health-data/samples` tayyor, ilovada
 namuna yig'uvchi hali yo'q, shuning uchun uyqu va qadam ekranlari bo'sh holatini

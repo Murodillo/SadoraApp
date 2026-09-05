@@ -3,11 +3,14 @@ import { query, request } from './client'
 import type {
   AdminArticle,
   AdminFlag,
+  AdminPayment,
   AdminStats,
   AdminUserCard,
   AdminUserSummary,
   ArticleCategory,
   AuditEntry,
+  BillingPlan,
+  BillingSummary,
   AiUsageReport,
   CommunityStats,
   FeatureDefinition,
@@ -342,4 +345,23 @@ export const useAiUsage = (days: number) =>
     queryKey: ['ai', 'usage', days],
     queryFn: () => request<AiUsageReport>(`/v1/admin/ai/usage${query({ days: String(days) })}`),
     refetchInterval: 60_000,
+  })
+
+export const useBillingSummary = (days: number) =>
+  useQuery({
+    queryKey: ['billing', 'summary', days],
+    queryFn: () => request<BillingSummary>(`/v1/admin/billing/summary${query({ days: String(days) })}`),
+    refetchInterval: 60_000,
+  })
+
+export const useBillingPlans = () =>
+  useQuery({
+    queryKey: ['billing', 'plans'],
+    queryFn: () => request<BillingPlan[]>('/v1/admin/billing/plans'),
+  })
+
+export const usePayments = (state?: string) =>
+  useQuery({
+    queryKey: ['billing', 'payments', state ?? 'all'],
+    queryFn: () => request<AdminPayment[]>(`/v1/admin/billing/payments${query({ state, limit: '100' })}`),
   })

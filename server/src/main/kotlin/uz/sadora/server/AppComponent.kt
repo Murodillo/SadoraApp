@@ -7,6 +7,12 @@ import io.ktor.client.plugins.contentnegotiation.ContentNegotiation as ClientCon
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
 import uz.sadora.server.ai.AiGateway
+import uz.sadora.server.billing.BillingRepository
+import uz.sadora.server.billing.BillingService
+import uz.sadora.server.billing.ClickGateway
+import uz.sadora.server.billing.PaymeGateway
+import uz.sadora.server.billing.StorePurchaseService
+import uz.sadora.server.billing.UnconfiguredStoreVerifier
 import uz.sadora.server.ai.AiService
 import uz.sadora.server.ai.AiUsageRepository
 import uz.sadora.server.ai.GeminiAnswerer
@@ -175,6 +181,27 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
         wearables = wearableService,
         gateway = aiGateway,
         usage = aiUsageRepository,
+    )
+
+    val billingRepository = BillingRepository()
+    val billingService = BillingService(
+        repository = billingRepository,
+        subscriptions = subscriptionRepository,
+        entitlements = entitlementService,
+        users = userRepository,
+        flags = flagService,
+        config = config.billing,
+        environment = config.environment,
+    )
+    val paymeGateway = PaymeGateway(billingRepository, billingService, config.billing.payme)
+    val clickGateway = ClickGateway(billingRepository, billingService, config.billing.click)
+    val storePurchaseService = StorePurchaseService(
+        repository = billingRepository,
+        subscriptions = subscriptionRepository,
+        entitlements = entitlementService,
+        // No App Store key and no Play service account yet, so receipts are refused
+        // rather than believed.
+        verifier = UnconfiguredStoreVerifier,
     )
 
     val adminAuthService = AdminAuthService(jwtService, auditService)

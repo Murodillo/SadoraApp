@@ -33,6 +33,7 @@ tags:
   - name: Wearables
   - name: Insights
   - name: Learn
+  - name: Billing
   - name: Community
   - name: AI
   - name: Admin
@@ -1202,6 +1203,128 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/Article" }
         "404": { $ref: "#/components/responses/NotFound" }
+
+  /v1/billing/plans:
+    get:
+      tags: [Billing]
+      security: [{ bearerAuth: [] }]
+      summary: Tariflar va ochiq to'lov usullari
+      description: |
+        Narx `priceMinor` — tiyinda, butun son. Ilova uni faqat formatlaydi; hisob-kitob
+        hech qachon formatlangan matn ustida bo'lmaydi.
+
+        `providers` — hozir haqiqatan ochiq usullar. Sozlanmagan provayder ro'yxatga
+        tushmaydi: havola yasay olmaydigan tugma umuman yo'q tugmadan yomonroq.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/BillingCatalogue" }
+
+  /v1/billing/checkout:
+    post:
+      tags: [Billing]
+      security: [{ bearerAuth: [] }]
+      summary: To'lov havolasini olish
+      description: |
+        Faqat `pending` yozuv va provayderning havolasini yaratadi. Bu yerda hech kimga
+        hech narsa berilmaydi — obuna provayder to'lovni tasdiqlaganidan keyin paydo
+        bo'ladi.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CheckoutRequest" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CheckoutSession" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/FeatureDisabled" }
+
+  /v1/billing/payments/{id}:
+    get:
+      tags: [Billing]
+      security: [{ bearerAuth: [] }]
+      summary: To'lov holati
+      description: |
+        Provayder sahifasidan qaytgach so'raladi. Boshqa hisobning to'lovi `404` — uning
+        mavjudligi ham so'ragan odamning ishi emas.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PaymentStatus" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /v1/billing/store/verify:
+    post:
+      tags: [Billing]
+      security: [{ bearerAuth: [] }]
+      summary: App Store / Google Play chekini tasdiqlash
+      description: |
+        Chek store'dan tasdiqlanadi, mijozning so'zidan emas. Kalitlar sozlanmagan
+        bo'lsa — `400`, chunki tasdiqlab bo'lmagan chek hech narsa bermaydi.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/StorePurchaseRequest" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SubscriptionStatus" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+
+  /v1/payments/payme:
+    post:
+      tags: [Billing]
+      summary: Payme Merchant API (provayder chaqiradi)
+      description: |
+        Payme'ning JSON-RPC protokoli: `CheckPerformTransaction`, `CreateTransaction`,
+        `PerformTransaction`, `CancelTransaction`, `CheckTransaction`, `GetStatement`.
+        Autentifikatsiya — Basic `Paycom:<key>`, va javob har doim `200`: Payme status
+        kodini emas, konvertni o'qiydi, xato ham `error` obyekti sifatida qaytadi.
+
+        Har bir metod idempotent: Payme qayta so'raydi, va ikkinchi `PerformTransaction`
+        yangi obuna emas, o'sha javobni beradi.
+      responses:
+        "200":
+          description: Payme JSON-RPC konverti (natija yoki xato)
+
+  /v1/payments/click/prepare:
+    post:
+      tags: [Billing]
+      summary: Click Prepare (provayder chaqiradi)
+      description: |
+        Form-encoded so'rov, MD5 imzo bilan. Imzo noto'g'ri bo'lsa — `200` va
+        `error: -1`; buyurtma umuman qimirlamaydi.
+      responses:
+        "200":
+          description: Click javob konverti
+
+  /v1/payments/click/complete:
+    post:
+      tags: [Billing]
+      summary: Click Complete (provayder chaqiradi)
+      description: |
+        Imzoga `merchant_prepare_id` ham qo'shiladi. Takroriy Complete yangi obuna
+        bermaydi. Click o'z xatosini manfiy `error` bilan yuboradi — bunda buyurtma
+        to'lanmagan holatiga qaytadi.
+      responses:
+        "200":
+          description: Click javob konverti
 
   /v1/community/me:
     get:
@@ -2666,6 +2789,80 @@ components:
         articles:
           type: array
           items: { $ref: "#/components/schemas/ArticleSummary" }
+
+    BillingPeriod:
+      type: string
+      enum: [month, year]
+
+    PaymentProvider:
+      type: string
+      enum: [payme, click, app_store, google_play]
+
+    PaymentState:
+      type: string
+      enum: [pending, paid, cancelled, failed]
+
+    BillingPlan:
+      type: object
+      properties:
+        id: { type: string }
+        title: { type: string }
+        period: { $ref: "#/components/schemas/BillingPeriod" }
+        priceMinor: { type: integer, format: int64, description: "Tiyinda" }
+        currency: { type: string }
+        monthlyEquivalentMinor: { type: integer, format: int64, nullable: true }
+        trialDays: { type: integer }
+        highlighted: { type: boolean }
+        appStoreProductId: { type: string, nullable: true }
+        googlePlayProductId: { type: string, nullable: true }
+
+    BillingCatalogue:
+      type: object
+      properties:
+        plans:
+          type: array
+          items: { $ref: "#/components/schemas/BillingPlan" }
+        providers:
+          type: array
+          items: { $ref: "#/components/schemas/PaymentProvider" }
+
+    CheckoutRequest:
+      type: object
+      required: [planId, provider]
+      properties:
+        planId: { type: string }
+        provider: { $ref: "#/components/schemas/PaymentProvider" }
+
+    CheckoutSession:
+      type: object
+      properties:
+        transactionId: { type: string, format: uuid }
+        provider: { $ref: "#/components/schemas/PaymentProvider" }
+        url: { type: string, description: "Provayderning o'z sahifasi" }
+        amountMinor: { type: integer, format: int64 }
+        currency: { type: string }
+        expiresAt: { type: string, format: date-time, nullable: true }
+
+    PaymentStatus:
+      type: object
+      properties:
+        transactionId: { type: string, format: uuid }
+        state: { $ref: "#/components/schemas/PaymentState" }
+        provider: { $ref: "#/components/schemas/PaymentProvider" }
+        planId: { type: string }
+        amountMinor: { type: integer, format: int64 }
+        paidAt: { type: string, format: date-time, nullable: true }
+        subscription:
+          allOf: [{ $ref: "#/components/schemas/SubscriptionStatus" }]
+          nullable: true
+
+    StorePurchaseRequest:
+      type: object
+      required: [provider, productId, token]
+      properties:
+        provider: { $ref: "#/components/schemas/PaymentProvider" }
+        productId: { type: string }
+        token: { type: string, description: "iOS signedTransactionInfo yoki Android purchaseToken" }
 
     CommunityTopic:
       type: string

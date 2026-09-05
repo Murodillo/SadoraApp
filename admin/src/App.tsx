@@ -7,6 +7,7 @@ import { Shell } from './layout/Shell'
 import { AuditPage } from './pages/AuditPage'
 import { CommunityPage } from './pages/CommunityPage'
 import { AiPage } from './pages/AiPage'
+import { BillingPage } from './pages/BillingPage'
 import { ContentPage } from './pages/ContentPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { FeaturesPage } from './pages/FeaturesPage'
@@ -56,6 +57,7 @@ function AppRoutes() {
         <Route path="users/:id" element={<UserCardPage />} />
         <Route path="community" element={<CommunityPage />} />
         <Route path="content" element={<ContentPage />} />
+        <Route path="billing" element={<BillingPage />} />
         <Route
           path="ai"
           element={can(['OWNER', 'ADMIN', 'ANALYST']) ? <AiPage /> : <Navigate to="/" replace />}

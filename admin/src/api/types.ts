@@ -353,3 +353,44 @@ export interface AiUsageReport {
   modelEnabled: boolean
   model: string | null
 }
+
+// ---------------------------------------------------------------- billing
+
+export type PaymentProvider = 'payme' | 'click' | 'app_store' | 'google_play'
+export type PaymentState = 'pending' | 'paid' | 'cancelled' | 'failed'
+
+export interface BillingPlan {
+  id: string
+  title: string
+  period: 'month' | 'year'
+  priceMinor: number
+  currency: string
+  monthlyEquivalentMinor?: number | null
+  trialDays: number
+  highlighted: boolean
+  appStoreProductId?: string | null
+  googlePlayProductId?: string | null
+}
+
+export interface AdminPayment {
+  id: string
+  userId: string
+  planId: string
+  provider: PaymentProvider
+  amountMinor: number
+  currency: string
+  state: PaymentState
+  externalId?: string | null
+  paidAt?: string | null
+  createdAt: string
+}
+
+export interface BillingSummary {
+  days: number
+  paidCount: number
+  pendingCount: number
+  failedCount: number
+  revenueMinor: number
+  byProvider: { provider: PaymentProvider; paidCount: number; revenueMinor: number }[]
+  activeSubscriptions: number
+}

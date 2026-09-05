@@ -5,13 +5,17 @@ import io.ktor.client.call.body
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.request.bearerAuth
 import io.ktor.client.request.delete
+import io.ktor.client.request.forms.submitForm
 import io.ktor.client.request.get
+import io.ktor.client.request.header
 import io.ktor.client.request.post
 import io.ktor.client.request.put
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.HttpResponse
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
+import io.ktor.http.HttpHeaders
+import io.ktor.http.parameters
 import io.ktor.http.HttpStatusCode
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.testing.testApplication
@@ -28,6 +32,10 @@ import kotlin.time.Duration.Companion.seconds
 import kotlin.uuid.Uuid
 import io.ktor.http.content.TextContent
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.int
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.serializer
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.junit.jupiter.api.AfterAll
@@ -44,6 +52,9 @@ import uz.sadora.contract.ArticleBlock
 import uz.sadora.contract.ArticleFeed
 import uz.sadora.contract.ArticleKind
 import uz.sadora.contract.AuthSession
+import uz.sadora.contract.BillingCatalogue
+import uz.sadora.contract.CheckoutRequest
+import uz.sadora.contract.CheckoutSession
 import uz.sadora.contract.CommunityComment
 import uz.sadora.contract.CommunityIdentity
 import uz.sadora.contract.CommunityPost
@@ -56,6 +67,7 @@ import uz.sadora.contract.CycleBaseline
 import uz.sadora.contract.CycleStatus
 import uz.sadora.contract.DailyLog
 import uz.sadora.contract.DeviceInfo
+import uz.sadora.contract.Entitlements
 import uz.sadora.contract.ErrorCodes
 import uz.sadora.contract.Language
 import uz.sadora.contract.LifeStage
@@ -69,10 +81,16 @@ import uz.sadora.contract.OtpChallenge
 import uz.sadora.contract.OtpRequest
 import uz.sadora.contract.OtpVerifyRequest
 import uz.sadora.contract.Page
+import uz.sadora.contract.PaymentProvider
+import uz.sadora.contract.PaymentState
+import uz.sadora.contract.PaymentStatus
 import uz.sadora.contract.Platform
 import uz.sadora.contract.PublishArticleRequest
 import uz.sadora.contract.ReportReason
 import uz.sadora.contract.ReportRequest
+import uz.sadora.contract.StorePurchaseRequest
+import uz.sadora.contract.SubscriptionSource
+import uz.sadora.contract.SubscriptionTier
 import uz.sadora.contract.SaveArticleRequest
 import uz.sadora.contract.TrendMetric
 import uz.sadora.contract.UserProfile
@@ -80,12 +98,16 @@ import uz.sadora.server.admin.AdminSession
 import uz.sadora.server.admin.AdminSignInRequest
 import uz.sadora.server.admin.AdminStats
 import uz.sadora.server.auth.PasswordHasher
+import uz.sadora.server.billing.BillingService
 import uz.sadora.server.community.HideRequest
 import uz.sadora.server.community.ModerationPostView
 import uz.sadora.server.community.ModerationReportView
 import uz.sadora.server.community.ResolveReportRequest
 import uz.sadora.server.community.RestrictAuthorRequest
 import uz.sadora.server.config.AiConfig
+import uz.sadora.server.config.BillingConfig
+import uz.sadora.server.config.ClickConfig
+import uz.sadora.server.config.PaymeConfig
 import uz.sadora.server.config.AppConfig
 import uz.sadora.server.config.DatabaseConfig
 import uz.sadora.server.config.Environment
@@ -316,6 +338,175 @@ class ApiIntegrationTest {
         assertEquals(30, granted.days)
         assertEquals(30, granted.trends.first().points.size)
         assertTrue(granted.findingsAvailable, "Premium carries the narrative")
+    }
+
+    // ---------------------------------------------------------------- billing
+
+    @Test
+    fun `a Payme payment grants exactly one subscription, however many times it is delivered`() = api {
+        val user = signUp().also { onboard(it) }
+        val admin = adminToken()
+        setFlag(admin, BillingService.PAYME_FLAG, enabled = true)
+
+        val catalogue = get<BillingCatalogue>("/v1/billing/plans", user.token)
+        val plan = assertNotNull(catalogue.plans.firstOrNull { it.id == "premium_year" })
+
+        val session = post<CheckoutSession>(
+            "/v1/billing/checkout",
+            user.token,
+            CheckoutRequest(plan.id, PaymentProvider.PAYME),
+        )
+        assertTrue(session.url.startsWith("https://checkout.paycom.uz/"), session.url)
+        assertEquals(plan.priceMinor, session.amountMinor)
+
+        val order = session.transactionId
+        val paymeId = "pm-${Random.nextInt(1_000_000)}"
+
+        // Unauthorised callers get Payme's own envelope, not the app's.
+        val refused = payme("""{"id":1,"method":"CheckPerformTransaction"}""", auth = false)
+        assertEquals(-32504, refused.errorCode())
+
+        // The amount is checked to the tiyin.
+        assertEquals(
+            -31001,
+            payme(
+                """{"id":1,"method":"CheckPerformTransaction","params":{"amount":1,"account":{"order_id":"$order"}}}""",
+            ).errorCode(),
+        )
+
+        payme(
+            """{"id":2,"method":"CreateTransaction","params":{"id":"$paymeId","time":1788600000000,""" +
+                """"amount":${plan.priceMinor},"account":{"order_id":"$order"}}}""",
+        )
+        // Payme asks twice; the second must describe the same transaction, not make one.
+        payme(
+            """{"id":3,"method":"CreateTransaction","params":{"id":"$paymeId","time":1788600000000,""" +
+                """"amount":${plan.priceMinor},"account":{"order_id":"$order"}}}""",
+        )
+
+        repeat(3) { payme("""{"id":4,"method":"PerformTransaction","params":{"id":"$paymeId"}}""") }
+
+        val status = get<PaymentStatus>("/v1/billing/payments/$order", user.token)
+        assertEquals(PaymentState.PAID, status.state)
+        assertEquals(SubscriptionTier.PREMIUM, assertNotNull(status.subscription).tier)
+
+        // Three deliveries of "performed", one subscription.
+        val entitlements = get<Entitlements>("/v1/entitlements", user.token)
+        assertEquals(SubscriptionTier.PREMIUM, entitlements.tier)
+        assertEquals(SubscriptionSource.PAYME, entitlements.source)
+    }
+
+    @Test
+    fun `a Click callback without the right signature changes nothing`() = api {
+        val user = signUp().also { onboard(it) }
+        val admin = adminToken()
+        setFlag(admin, BillingService.CLICK_FLAG, enabled = true)
+
+        val session = post<CheckoutSession>(
+            "/v1/billing/checkout",
+            user.token,
+            CheckoutRequest("premium_month", PaymentProvider.CLICK),
+        )
+        val order = session.transactionId
+        val clickId = Random.nextInt(1_000_000).toString()
+        val signTime = "2026-09-05 10:00:00"
+
+        val forged = click(
+            "prepare",
+            mapOf(
+                "click_trans_id" to clickId,
+                "service_id" to "12345",
+                "merchant_trans_id" to order,
+                "amount" to "39900.00",
+                "action" to "0",
+                "error" to "0",
+                "sign_time" to signTime,
+                "sign_string" to "0000000000000000000000000000dead",
+            ),
+        )
+        assertEquals(-1, forged["error"]?.jsonPrimitive?.int)
+        assertEquals(
+            PaymentState.PENDING,
+            get<PaymentStatus>("/v1/billing/payments/$order", user.token).state,
+            "a bad signature must not move the order at all",
+        )
+
+        // The same call, signed, is accepted.
+        val prepareSign = clickSignature(
+            clickId + "12345" + "test_click_secret" + order + "39900.00" + "0" + signTime,
+        )
+        val prepared = click(
+            "prepare",
+            mapOf(
+                "click_trans_id" to clickId,
+                "service_id" to "12345",
+                "merchant_trans_id" to order,
+                "amount" to "39900.00",
+                "action" to "0",
+                "error" to "0",
+                "sign_time" to signTime,
+                "sign_string" to prepareSign,
+            ),
+        )
+        assertEquals(0, prepared["error"]?.jsonPrimitive?.int)
+
+        val completeSign = clickSignature(
+            clickId + "12345" + "test_click_secret" + order + order + "39900.00" + "1" + signTime,
+        )
+        val completeForm = mapOf(
+            "click_trans_id" to clickId,
+            "service_id" to "12345",
+            "merchant_trans_id" to order,
+            "merchant_prepare_id" to order,
+            "amount" to "39900.00",
+            "action" to "1",
+            "error" to "0",
+            "sign_time" to signTime,
+            "sign_string" to completeSign,
+        )
+        assertEquals(0, click("complete", completeForm)["error"]?.jsonPrimitive?.int)
+        // Click retries; the retry must not buy a second month.
+        assertEquals(0, click("complete", completeForm)["error"]?.jsonPrimitive?.int)
+
+        val status = get<PaymentStatus>("/v1/billing/payments/$order", user.token)
+        assertEquals(PaymentState.PAID, status.state)
+        assertEquals(SubscriptionSource.CLICK, assertNotNull(status.subscription).source)
+    }
+
+    @Test
+    fun `a store receipt is refused while there is nothing to verify it with`() = api {
+        val user = signUp().also { onboard(it) }
+
+        val response = raw {
+            client.post("/v1/billing/store/verify") {
+                auth(user.token)
+                json(StorePurchaseRequest(PaymentProvider.GOOGLE_PLAY, "premium_year", "made-up-token"))
+            }
+        }
+
+        assertEquals(HttpStatusCode.BadRequest, response.status)
+        assertEquals(
+            SubscriptionTier.FREE,
+            get<Entitlements>("/v1/entitlements", user.token).tier,
+            "an unverifiable receipt must never grant anything",
+        )
+    }
+
+    @Test
+    fun `another account cannot read a payment it did not make`() = api {
+        val user = signUp().also { onboard(it) }
+        val stranger = signUp().also { onboard(it) }
+        val admin = adminToken()
+        setFlag(admin, BillingService.PAYME_FLAG, enabled = true)
+
+        val session = post<CheckoutSession>(
+            "/v1/billing/checkout",
+            user.token,
+            CheckoutRequest("premium_year", PaymentProvider.PAYME),
+        )
+
+        val response = raw { client.get("/v1/billing/payments/${session.transactionId}") { auth(stranger.token) } }
+        assertEquals(HttpStatusCode.NotFound, response.status, "not a 403: its existence is not their business")
     }
 
     // ---------------------------------------------------------------- Bilim
@@ -553,6 +744,38 @@ class ApiIntegrationTest {
         assertEquals(HttpStatusCode.OK, response.status, "POST $path: ${response.bodyAsTextSafe()}")
     }
 
+
+    /** Posts to Payme's endpoint in their envelope, with or without their Basic auth. */
+    private suspend fun Api.payme(body: String, auth: Boolean = true): JsonObject {
+        val response = client.post("/v1/payments/payme") {
+            if (auth) {
+                val encoded = java.util.Base64.getEncoder()
+                    .encodeToString("Paycom:test_payme_key".toByteArray())
+                header(HttpHeaders.Authorization, "Basic $encoded")
+            }
+            setBody(TextContent(body, ContentType.Application.Json))
+        }
+        assertEquals(HttpStatusCode.OK, response.status, "Payme reads the envelope, not the status")
+        return Json.parseToJsonElement(response.bodyAsText()).jsonObject
+    }
+
+    private fun JsonObject.errorCode(): Int? =
+        this["error"]?.jsonObject?.get("code")?.jsonPrimitive?.int
+
+    private suspend fun Api.click(step: String, form: Map<String, String>): JsonObject {
+        val response = client.submitForm(
+            url = "/v1/payments/click/$step",
+            formParameters = parameters { form.forEach { (key, value) -> append(key, value) } },
+        )
+        assertEquals(HttpStatusCode.OK, response.status)
+        return Json.parseToJsonElement(response.bodyAsText()).jsonObject
+    }
+
+    private fun clickSignature(source: String): String =
+        java.security.MessageDigest.getInstance("MD5")
+            .digest(source.toByteArray())
+            .joinToString("") { "%02x".format(it) }
+
     private suspend fun Api.raw(block: suspend () -> HttpResponse): HttpResponse = block()
 
     private fun io.ktor.client.request.HttpRequestBuilder.auth(token: String) = bearerAuth(token)
@@ -606,6 +829,23 @@ class ApiIntegrationTest {
             maxOutputTokens = 800,
             inputCostPerMillionMicros = 100_000,
             outputCostPerMillionMicros = 400_000,
+        ),
+        // Provider credentials the tests sign with; a real deployment reads them from
+        // the environment and refuses checkout when they are absent.
+        billing = BillingConfig(
+            payme = PaymeConfig(
+                merchantId = "test_merchant",
+                key = "test_payme_key",
+                login = "Paycom",
+                accountField = "order_id",
+                checkoutUrl = "https://checkout.paycom.uz",
+            ),
+            click = ClickConfig(
+                serviceId = "12345",
+                merchantId = "54321",
+                secretKey = "test_click_secret",
+                checkoutUrl = "https://my.click.uz/services/pay",
+            ),
         ),
         policyVersion = "2026-08-01",
         minimumAppVersion = null,
