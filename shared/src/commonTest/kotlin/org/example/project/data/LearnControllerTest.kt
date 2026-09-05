@@ -51,7 +51,7 @@ class LearnControllerTest {
     )
 
     @Test
-    fun `the library is fetched once and kept, so a category chip does not reload it`() = runTest {
+    fun `the library is fetched once and kept so a category chip does not reload it`() = runTest {
         val recording = RecordingEngine { json(encode(feed(summary("kechki-tartib")))) }
         val learn = graph(recording).learnController()
 
@@ -64,7 +64,7 @@ class LearnControllerTest {
     }
 
     @Test
-    fun `an article is kept by slug, and asked for again only when forced`() = runTest {
+    fun `an article is kept by slug and asked for again only when forced`() = runTest {
         val article = Article(
             summary = summary("kechki-tartib"),
             blocks = listOf(ArticleBlock.Paragraph("Matn.")),
@@ -82,7 +82,7 @@ class LearnControllerTest {
     }
 
     @Test
-    fun `a locked article arrives as content with a paywall, not as an error`() = runTest {
+    fun `a locked article arrives as content with a paywall not as an error`() = runTest {
         val locked = Article(
             summary = summary("siklni-tushunish", premium = true, locked = true),
             blocks = listOf(ArticleBlock.Paragraph("Ochiq xatboshi.")),

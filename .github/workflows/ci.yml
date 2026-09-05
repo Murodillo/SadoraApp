@@ -102,6 +102,16 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
+      # Kotlin/Native refuses a comma inside a backticked name, and the iOS job that
+      # would catch it only runs on the way into main. One grep here keeps a test name
+      # from breaking that job days after it was written.
+      - name: Reject a comma in a test name
+        run: |
+          if grep -rn 'fun `[^`]*,' shared/src/commonTest; then
+            echo "Kotlin/Native rejects a comma in a backticked name — use an em dash."
+            exit 1
+          fi
+
       - name: Test the shared module
         run: ./gradlew :shared:testAndroidHostTest --stacktrace
 

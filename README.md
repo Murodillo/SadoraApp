@@ -179,15 +179,18 @@ mavzuda matn uchun `primary` emas, quyuqroq `textAccent` ishlatiladi.
 
 ## Holat va keyingi qadamlar
 
-Hozircha bu to'liq ishlaydigan UI prototipi: barcha ekranlar chizilgan, oqimlar
-bog'langan, holat real vaqtda o'zgaradi.
+Barcha ekranlar chizilgan, oqimlar bog'langan, va ekranlarning ortida endi haqiqiy
+backend turadi.
 
-Backend yozilgan va ilova **unga ulangan**: ro'yxatdan o'tish (telefon OTP,
-Apple/Google, email), kirish, profil va onboarding, roziliklar, entitlements va feature
-flags; ustiga sikl, Mind, Nutrition, Meds, wearable, maxfiy chat, AI Gateway va
-tahlillar (`GET /v1/insights`). Sog'liq yozuvlari endi serverda saqlanadi — sikl,
-ovqat, suv, kayfiyat va dorilar qurilmani almashtirsa ham qoladi. Sessiya qurilmada
-saqlanadi, shuning uchun ilova qayta ishga tushganda foydalanuvchi kirgan holida qoladi.
+Ilova **unga ulangan**: ro'yxatdan o'tish (telefon OTP, Apple/Google, email), kirish,
+profil va onboarding, roziliklar, entitlements va feature flags; ustiga sikl, Mind,
+Nutrition, Meds, wearable, maxfiy chat, tahlillar (`GET /v1/insights`), Premium to'lovi
+(Payme va Click) va AI Gateway — javobni haqiqiy model (Gemini) yozadi, kalit bo'lmasa
+yoki `ai_model_enabled` o'chirilgan bo'lsa qoidalar javob beradi.
+
+Sog'liq yozuvlari serverda saqlanadi: sikl, ovqat, suv, kayfiyat va dorilar qurilma
+almashsa ham qoladi. Sessiya qurilmada saqlanadi, shuning uchun ilova qayta ishga
+tushganda foydalanuvchi kirgan holida qoladi.
 
 Ulanish `data/SadoraController` va `data/HealthController` orqali: ekranlar wire
 tiplarini bilmaydi, controller esa `busy`/`error` holatini bir joyda boshqaradi. Backend
@@ -196,10 +199,11 @@ ishlayveradi.
 
 Hali yo'q:
 
-- **To'lov** — paywall tugmasi hozir faqat entitlements'ni qayta so'raydi; App Store /
-  Google Play billing SDK'si ulanmagan
-- **Apple/Google kirish** — tugmalar bor, lekin platforma SDK'si idToken bermaydi
-- **Haqiqiy AI** — javoblar namuna matn
+- **App Store / Google Play billing** — Payme va Click ulangan (narxlar serverda,
+  to'lovni server tasdiqlaydi), do'kon ichidagi xarid esa hali yo'q: `StoreVerifier`
+  sozlanmagan holda har qanday chekni rad etadi
+- **Apple/Google kirish** — tugmalar bor va server `idToken`ni tekshiradi, lekin
+  platforma SDK'si hali o'sha tokenni bermaydi
 - **Qurilma integratsiyasi** — Apple Health / Oura ma'lumotlari namuna
 - **RU va EN tarjimalari** — matnlar hozircha kodda o'zbekcha
 

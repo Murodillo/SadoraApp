@@ -97,7 +97,7 @@ class BillingControllerTest {
     }
 
     @Test
-    fun `waiting ends when the server says the payment landed, and only then`() = runTest {
+    fun `waiting ends when the server says the payment landed and only then`() = runTest {
         var polls = 0
         val recording = RecordingEngine { request ->
             if (request.url.encodedPath.endsWith("/checkout")) {
@@ -140,7 +140,7 @@ class BillingControllerTest {
     }
 
     @Test
-    fun `with no backend there are no prices, and so no offer`() = runTest {
+    fun `with no backend there are no prices and so no offer`() = runTest {
         val billing = BillingController(null)
         billing.loadCatalogue()
 
