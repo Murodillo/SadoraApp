@@ -14,6 +14,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import org.example.project.data.LearnController
 import org.example.project.design.Radius
@@ -189,8 +190,22 @@ private fun Byline(
             Text(initials, style = Sadora.type.caption, color = c.secondary)
         }
         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(name, style = Sadora.type.body, color = c.text, maxLines = 1)
-            Text(role, style = Sadora.type.caption, color = c.muted, maxLines = 1)
+            // Both are clipped rather than wrapped — two bylines share the row — so they
+            // end in an ellipsis instead of a half-word or a dangling separator.
+            Text(
+                name,
+                style = Sadora.type.body,
+                color = c.text,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                role,
+                style = Sadora.type.caption,
+                color = c.muted,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
     }
 }
