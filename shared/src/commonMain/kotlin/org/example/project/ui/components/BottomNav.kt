@@ -41,6 +41,7 @@ import org.example.project.design.IconSize
 import org.example.project.design.Radius
 import org.example.project.design.Sadora
 import org.example.project.design.Spacing
+import org.example.project.i18n.strings
 import org.example.project.nav.Tab
 
 private val BarHeight = 66.dp
@@ -65,10 +66,11 @@ fun SadoraBottomNav(
     selected: Tab,
     onSelect: (Tab) -> Unit,
     modifier: Modifier = Modifier,
-    /** Overrides the second tab's accessibility label — it changes with the life stage. */
-    journeyLabel: String = Tab.Journey.label,
+    /** The second tab's label — it is named after the life stage, so the caller says it. */
+    journeyLabel: String,
 ) {
     val c = Sadora.colors
+    val t = strings
     val tabs = Tab.entries
 
     Box(
@@ -114,7 +116,13 @@ fun SadoraBottomNav(
                 tabs.forEach { tab ->
                     NavItem(
                         icon = tab.icon,
-                        label = if (tab == Tab.Journey) journeyLabel else tab.label,
+                        label = when (tab) {
+                            Tab.Today -> t.tabs.today
+                            Tab.Mind -> t.tabs.mind
+                            Tab.Journey -> journeyLabel
+                            Tab.Nutrition -> t.tabs.nutrition
+                            Tab.Profile -> t.tabs.profile
+                        },
                         selected = selected == tab,
                         onClick = { onSelect(tab) },
                         modifier = Modifier.width(slot).fillMaxHeight(),

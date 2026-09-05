@@ -45,6 +45,8 @@ import org.example.project.data.applyServerProfile
 import org.example.project.design.SadoraDarkSurface
 import org.example.project.design.SadoraTheme
 import org.example.project.design.Spacing
+import org.example.project.i18n.ProvideStrings
+import org.example.project.i18n.strings
 import org.example.project.model.AppState
 import org.example.project.model.CommunityPost
 import org.example.project.nav.AppPhase
@@ -126,35 +128,39 @@ fun App(graph: SadoraGraph? = null) {
     val billing = remember(graph) { graph?.billingController() ?: BillingController(null) }
 
     SadoraTheme(darkTheme = state.darkTheme) {
-        AnimatedContent(
-            targetState = navigator.phase,
-            transitionSpec = { fadeIn() togetherWith fadeOut() },
-            modifier = Modifier.fillMaxSize(),
-        ) { phase ->
-            when (phase) {
-                AppPhase.Splash -> SplashGate(
-                    graph = graph,
-                    state = state,
-                    onResolved = navigator::goTo,
-                )
+        // One language for the whole tree: a change to it recomposes every screen at
+        // once, which is what changing language is.
+        ProvideStrings(state.language) {
+            AnimatedContent(
+                targetState = navigator.phase,
+                transitionSpec = { fadeIn() togetherWith fadeOut() },
+                modifier = Modifier.fillMaxSize(),
+            ) { phase ->
+                when (phase) {
+                    AppPhase.Splash -> SplashGate(
+                        graph = graph,
+                        state = state,
+                        onResolved = navigator::goTo,
+                    )
 
-                AppPhase.Onboarding -> OnboardingFlow(
-                    state = state,
-                    controller = controller,
-                    onFinished = { navigator.goTo(AppPhase.Main) },
-                    onSignInInstead = { navigator.goTo(AppPhase.SignIn) },
-                )
-
-                AppPhase.SignIn -> Box(Modifier.fillMaxSize().statusBarsPadding()) {
-                    SignInScreen(
+                    AppPhase.Onboarding -> OnboardingFlow(
                         state = state,
                         controller = controller,
-                        onSignedIn = { navigator.goTo(it) },
-                        onRegisterInstead = { navigator.goTo(AppPhase.Onboarding) },
+                        onFinished = { navigator.goTo(AppPhase.Main) },
+                        onSignInInstead = { navigator.goTo(AppPhase.SignIn) },
                     )
-                }
 
-                AppPhase.Main -> MainShell(state, navigator, controller, health, community, ai, insights, learn, billing)
+                    AppPhase.SignIn -> Box(Modifier.fillMaxSize().statusBarsPadding()) {
+                        SignInScreen(
+                            state = state,
+                            controller = controller,
+                            onSignedIn = { navigator.goTo(it) },
+                            onRegisterInstead = { navigator.goTo(AppPhase.Onboarding) },
+                        )
+                    }
+
+                    AppPhase.Main -> MainShell(state, navigator, controller, health, community, ai, insights, learn, billing)
+                }
             }
         }
     }
@@ -341,7 +347,7 @@ private fun MainShell(
                 SadoraBottomNav(
                     selected = navigator.tab,
                     onSelect = navigator::select,
-                    journeyLabel = state.lifeStage.tabLabel,
+                    journeyLabel = strings.tabs.journey(state.lifeStage),
                 )
             }
         }
@@ -568,6 +574,7 @@ private fun PushedScreen(
         Route.LifeStageSettings,
         Route.Notifications,
         Route.PrivacySecurity,
+        Route.LanguageSettings,
         Route.About,
         -> SettingsDetailScreen(
             route = route,

@@ -56,6 +56,7 @@ import org.example.project.design.Radius
 import org.example.project.design.Sadora
 import org.example.project.design.SadoraIcons
 import org.example.project.design.Spacing
+import org.example.project.i18n.strings
 import org.example.project.model.AppState
 import org.example.project.ui.components.AiOrb
 import org.example.project.ui.components.IconTile
@@ -324,13 +325,14 @@ private data class Feature(val icon: ImageVector, val label: String, val tint: C
 @Composable
 private fun features(): List<Feature> {
     val c = Sadora.colors
+    val t = strings.welcome
     return listOf(
-        Feature(SadoraIcons.Bloom, "Sikl", PhaseColors.period),
-        Feature(SadoraIcons.Smile, "Kayfiyat", c.warningSoft),
-        Feature(SadoraIcons.Nutrition, "Ovqatlanish", c.success),
-        Feature(SadoraIcons.Pill, "Vitamin va dorilar", c.accent),
-        Feature(SadoraIcons.Sparkle, "SADORA AI", c.primary),
-        Feature(SadoraIcons.Chart, "Tahlil va tavsiyalar", PhaseColors.fertile),
+        Feature(SadoraIcons.Bloom, t.featureCycle, PhaseColors.period),
+        Feature(SadoraIcons.Smile, t.featureMood, c.warningSoft),
+        Feature(SadoraIcons.Nutrition, t.featureNutrition, c.success),
+        Feature(SadoraIcons.Pill, t.featureMeds, c.accent),
+        Feature(SadoraIcons.Sparkle, t.featureAi, c.primary),
+        Feature(SadoraIcons.Chart, t.featureInsights, PhaseColors.fertile),
     )
 }
 
@@ -352,6 +354,7 @@ fun IntroScreen(
     modifier: Modifier = Modifier,
 ) {
     val c = Sadora.colors
+    val t = strings.welcome
     val entry = rememberPageEntry(1300)
     val tiles = features()
 
@@ -385,7 +388,7 @@ fun IntroScreen(
                 Spacer(Modifier.height(Spacing.sm))
                 Reveal(entry.value, from = 0.14f) {
                     Text(
-                        "SADORA'ga xush kelibsiz",
+                        t.title,
                         style = Sadora.type.h1,
                         color = c.text,
                         textAlign = TextAlign.Center,
@@ -394,7 +397,7 @@ fun IntroScreen(
                 Spacer(Modifier.height(Spacing.xs))
                 Reveal(entry.value, from = 0.22f) {
                     Text(
-                        "Salomatlik, sikl, ovqatlanish va kayfiyat uchun shaxsiy yordamchingiz.",
+                        t.subtitle,
                         style = Sadora.type.body,
                         color = c.muted,
                         textAlign = TextAlign.Center,
@@ -434,7 +437,7 @@ fun IntroScreen(
                             tint = c.muted2,
                         )
                         Text(
-                            "Ma'lumotlaringiz sizniki — istalgan vaqtda o'chirasiz",
+                            t.privacyPromise,
                             style = Sadora.type.body,
                             color = c.muted2,
                             textAlign = TextAlign.Center,
@@ -451,11 +454,11 @@ fun IntroScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(Spacing.sm),
                 ) {
-                    SadoraButton("Boshlash", onStart)
+                    SadoraButton(t.start, onStart)
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text("Hisobim bor →", style = Sadora.type.body, color = c.muted)
+                        Text(t.haveAccount, style = Sadora.type.body, color = c.muted)
                         Text(
-                            "Kirish",
+                            t.signIn,
                             style = Sadora.type.body.copy(fontWeight = FontWeight.SemiBold),
                             color = c.textAccent,
                             modifier = Modifier.noRippleClickable(onClick = onSignIn),

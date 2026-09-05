@@ -11,12 +11,12 @@ import org.example.project.design.SadoraIcons
  * The five root destinations, in the order the deck's tab bar draws them:
  * home, mind, cycle, nutrition, profile.
  */
-enum class Tab(val icon: ImageVector, val label: String) {
-    Today(SadoraIcons.Home, "Bugun"),
-    Mind(SadoraIcons.Heart, "Ong"),
-    Journey(SadoraIcons.Journey, "Sikl"),
-    Nutrition(SadoraIcons.Apple, "Ovqat"),
-    Profile(SadoraIcons.Profile, "Profil"),
+enum class Tab(val icon: ImageVector) {
+    Today(SadoraIcons.Home),
+    Mind(SadoraIcons.Heart),
+    Journey(SadoraIcons.Journey),
+    Nutrition(SadoraIcons.Apple),
+    Profile(SadoraIcons.Profile),
 }
 
 /** Screens pushed on top of a tab. */
@@ -64,6 +64,7 @@ sealed interface Route {
     data object LifeStageSettings : Route
     data object Notifications : Route
     data object PrivacySecurity : Route
+    data object LanguageSettings : Route
     data object About : Route
 
     // Legal

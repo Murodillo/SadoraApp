@@ -92,6 +92,7 @@ server/              Ktor backend — server/README.md
 shared/src/commonMain/kotlin/org/example/project/
 ├── App.kt           Ildiz: AppState va Navigator shu yerda yashaydi
 ├── design/          Dizayn tokenlari (ranglar, tipografika, o'lchamlar, mavzu)
+├── i18n/            Uch tildagi matnlar (UZ — asl, RU, EN)
 ├── model/           Domen modeli va namuna ma'lumotlar
 ├── nav/             Navigatsiya holati (Tab, Route, Navigator)
 └── ui/
@@ -115,9 +116,16 @@ uchun ham *barcha* tokenlarni belgilaydi, shuning uchun ekranlar `if (dark)` yoz
 ular `Sadora.colors.primary` deb yozadi va mavzu o'zi hal qiladi. Tipografika ettita
 qadamdan iborat, radius va masofalar 8pt panjarasiga bog'langan.
 
-**`model/`** — `AppState` butun ilova uchun bitta xotiradagi do'kon. Backend hali
-yo'q, shuning uchun ekranlar to'g'ridan-to'g'ri shu yerdan o'qiydi va yozadi.
-Hammasi Compose state, ya'ni har qanday o'zgarish tegishli ekranni qayta chizadi.
+**`i18n/`** — matnlarning yagona manbasi. `Strings` — interfeys, ya'ni yangi qator
+qo'shilsa, unga javob bermagan til kompilyatsiya xatosi bo'ladi: bo'sh joy ekranga
+chiqmaydi. Ekran tilni bilmaydi, `val t = strings` deb yozadi va `App` butun daraxtni
+bitta `ProvideStrings` ichiga oladi. Til `Profil → Til` da tanlanadi, darhol qo'llanadi
+va serverga yoziladi.
+
+**`model/`** — `AppState` butun ilova uchun bitta xotiradagi do'kon. Ekranlar
+to'g'ridan-to'g'ri shu yerdan o'qiydi va yozadi; controller'lar uni server javobi bilan
+to'ldiradi. Hammasi Compose state, ya'ni har qanday o'zgarish tegishli ekranni qayta
+chizadi.
 
 **`nav/`** — navigatsiya kutubxonasi qo'shilmagan. `Navigator` joriy fazani
 (splash / onboarding / kirish / asosiy), joriy tabni va route'lar stekini saqlaydi.
@@ -205,7 +213,11 @@ Hali yo'q:
 - **Apple/Google kirish** — tugmalar bor va server `idToken`ni tekshiradi, lekin
   platforma SDK'si hali o'sha tokenni bermaydi
 - **Qurilma integratsiyasi** — Apple Health / Oura ma'lumotlari namuna
-- **RU va EN tarjimalari** — matnlar hozircha kodda o'zbekcha
+- **RU va EN tarjimalari** — `i18n/` qatlami qo'yildi va til
+  sozlamasi ishlaydi, lekin hozircha faqat birinchi bo'lak ko'chirilgan: tab yorliqlari,
+  xush kelibsiz ekrani, Profil va sozlamalar. Qolgan ekranlar hali kodda o'zbekcha
+- **AI javoblari faqat o'zbekcha** — prompt til so'ramaydi, shuning uchun rus yoki
+  ingliz tilini tanlagan foydalanuvchi ham o'zbekcha javob oladi
 
 ---
 

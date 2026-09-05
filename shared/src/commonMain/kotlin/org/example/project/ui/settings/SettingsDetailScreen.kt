@@ -18,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import org.example.project.design.Sadora
 import org.example.project.design.Spacing
+import org.example.project.i18n.strings
 import org.example.project.data.SadoraController
 import org.example.project.model.AppLanguage
 import org.example.project.model.AppState
@@ -64,6 +65,7 @@ fun SettingsDetailScreen(
             Route.LifeStageSettings -> LifeStageSettings(state, controller, onClose)
             Route.Notifications -> NotificationSettings(state, onClose)
             Route.PrivacySecurity -> PrivacySettings(state, controller, onClose, onOpen, onSignedOut)
+            Route.LanguageSettings -> LanguageSettings(state, controller, onClose)
             Route.About -> About(onClose)
             else -> About(onClose)
         }
@@ -316,28 +318,59 @@ private fun PrivacySettings(
     )
 }
 
+/**
+ * The language picker.
+ *
+ * The choice takes effect the moment it is tapped — every screen behind this one is
+ * already redrawn by the time she goes back — and only then is it sent to the server,
+ * where it decides the language of an email or a push. A save that fails says so and
+ * keeps her choice: the app is already in that language, and undoing it under her
+ * would be the surprising thing.
+ */
+@Composable
+private fun LanguageSettings(state: AppState, controller: SadoraController, onClose: () -> Unit) {
+    val c = Sadora.colors
+    val t = strings.settings
+    val scope = rememberCoroutineScope()
+    var failed by remember { mutableStateOf(false) }
+
+    SadoraTopBar(t.languageTitle, onBack = onClose)
+    ScreenContent {
+        item {
+            SadoraCard {
+                Text(t.languageNote, style = Sadora.type.body, color = c.muted)
+            }
+        }
+        item {
+            if (failed) ErrorStrip(t.languageSaveFailed)
+            Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                AppLanguage.entries.forEach { language ->
+                    OptionRow(
+                        title = language.native,
+                        subtitle = language.english,
+                        leading = language.code,
+                        selected = state.language == language,
+                        onClick = {
+                            state.language = language
+                            scope.launch { failed = !controller.saveProfile() }
+                        },
+                    )
+                }
+            }
+        }
+    }
+}
+
 @Composable
 private fun About(onClose: () -> Unit) {
     val c = Sadora.colors
-    SadoraTopBar("SADORA haqida", onBack = onClose)
+    SadoraTopBar(strings.settings.aboutTitle, onBack = onClose)
     ScreenContent {
         item {
             SadoraCard {
                 Text("SADORA", style = Sadora.type.h1, color = c.text)
-                Text("Versiya 1.0.0", style = Sadora.type.body, color = c.muted)
+                Text(strings.settings.version("1.0.0"), style = Sadora.type.body, color = c.muted)
                 Text(SampleData.medicalDisclaimer, style = Sadora.type.body, color = c.muted)
-            }
-        }
-        item {
-            SadoraCard {
-                CardLabel("Til")
-                AppLanguage.entries.forEach { language ->
-                    Text(
-                        "${language.code} · ${language.native}",
-                        style = Sadora.type.body,
-                        color = c.muted,
-                    )
-                }
             }
         }
     }
