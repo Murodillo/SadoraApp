@@ -132,8 +132,9 @@ doimiy SMS kodi yoqilgan, shuning uchun tugagach yopib qo'ying.
 
 Har bir push GitHub Actions'da tekshiriladi: backend testlari va migratsiyalarning
 haqiqiy Postgres ustida ko'tarilishi, shared modul testlari, Android APK yig'ilishi,
-admin panelning typecheck va build'i. Kotlin/Native (iOS) faqat `main` ga PR va push'da
-— macOS runner'lari o'n barobar qimmat.
+admin panelning typecheck va build'i. Kotlin/Native (iOS) faqat `dev` va `main` da hamda
+PR'larda — macOS runner'lari o'n barobar qimmat, lekin ish `dev` ga tushgani uchun
+Kotlin/Native xatosini merge kunigacha qoldirib bo'lmaydi.
 
 ## Arxitektura
 

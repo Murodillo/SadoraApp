@@ -129,8 +129,10 @@ jobs:
   ios:
     name: iOS shared
     # macOS minutes bill at ten times the Linux rate, so the Kotlin/Native side is
-    # checked where it matters — on the way into main — rather than on every branch push.
-    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
+    # checked on the two branches that matter rather than on every feature branch. dev is
+    # one of them: it is where the work actually lands, and a Kotlin/Native break found
+    # only at the release merge is found on the worst possible day.
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev'
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
