@@ -221,6 +221,27 @@ Hali yo'q:
 
 ---
 
+## Logotip va harakat
+
+Logotip brend faylidan olingan va kodda chiziladi — bitmap yo'q, shuning uchun u har
+qanday o'lchamda tiniq. `ui/components/Brand.kt` ichida to'rt narsa bor: belgi (S),
+so'z belgisi, AI orbi va yuklagich.
+
+Harakat ham brend faylining o'zi: S bitta qalam zarbida 1,5 soniyada chiziladi, nuqta
+chiziq to'xtamasdan oldin "sakraydi" (1,25 s), harflar 80 ms oralab ko'tariladi
+(1,2 s dan), shior oxirida chiqadi (1,9 s). Splash aynan shu tugaguncha turadi, kirish
+ekrani ham xuddi shu ochilishni o'ynatadi.
+
+Yuklanish holati — o'sha orbning kichigi, aylanuvchi halqa bilan: skaner tahlil
+qilayotganda va splash sessiyani kutib qolganda ko'rinadi.
+
+Ikonkalar `design/logo/*.svg` dan yig'iladi: Android uchun adaptiv vektor (fon, old
+plan va Android 13 temali qatlam) hamda eski telefonlar uchun PNG'lar, iOS uchun
+1024 px yorug', qorong'i va tinted variantlari. Ilova ichida belgi gradientni ikkala
+mavzuda ham saqlaydi, so'z belgisi va shior esa mavzuning matn ranglarini oladi.
+
+---
+
 ## Dizayn manbasi
 
 Dizayn Claude Design'da, bir nechta faylga bo'lingan: poydevor va palitra,

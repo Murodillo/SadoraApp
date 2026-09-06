@@ -65,6 +65,7 @@ import org.example.project.ui.components.DisclaimerNote
 import org.example.project.ui.components.IconTile
 import org.example.project.ui.components.ImagePlaceholder
 import org.example.project.ui.components.SadoraCard
+import org.example.project.ui.components.SadoraLogoReveal
 import org.example.project.ui.components.SadoraMark
 import org.example.project.ui.components.OptionRow
 import org.example.project.ui.components.OtpInput
@@ -345,22 +346,20 @@ fun SignInScreen(
             .padding(horizontal = Spacing.screen),
         verticalArrangement = Arrangement.spacedBy(Spacing.md),
     ) {
-        Spacer(Modifier.height(Spacing.xl))
-        Box(
-            Modifier
-                .size(56.dp)
-                .clip(RoundedCornerShape(Radius.lg))
-                .background(c.heroGradient),
-            contentAlignment = Alignment.Center,
+        Spacer(Modifier.height(Spacing.lg))
+        // Signing in opens with the logo writing itself, the same reveal the splash
+        // plays: whoever is coming back sees the app introduce itself again, and
+        // whoever mistyped a number is looking at something rather than at a spinner.
+        SadoraLogoReveal(
+            modifier = Modifier.align(Alignment.CenterHorizontally),
+            size = 104.dp,
+            tagline = false,
+        )
+        Column(
+            Modifier.align(Alignment.CenterHorizontally),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Icon(
-                SadoraIcons.Sparkle,
-                contentDescription = null,
-                Modifier.size(28.dp),
-                tint = c.onPrimary,
-            )
-        }
-        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text("Xush kelibsiz", style = Sadora.type.h1, color = c.text)
             Text("Raqamingizga kod yuboramiz", style = Sadora.type.body, color = c.muted)
         }

@@ -36,6 +36,7 @@ import org.example.project.model.AppState
 import org.example.project.ui.components.ButtonTone
 import org.example.project.ui.components.ImagePlaceholder
 import org.example.project.ui.components.SadoraButton
+import org.example.project.ui.components.SadoraLoader
 import org.example.project.ui.components.SadoraTopBar
 import org.example.project.ui.components.noRippleClickable
 
@@ -195,7 +196,7 @@ fun FoodScanAnalyzingScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
             ) {
-                Icon(SadoraIcons.Sparkle, contentDescription = null, Modifier.size(22.dp), tint = c.primary)
+                SadoraLoader(size = 34.dp)
                 Column {
                     Text("Tahlil qilinmoqda…", style = Sadora.type.h3, color = c.text)
                     Text("Bu odatda 3–5 soniya oladi", style = Sadora.type.body, color = c.muted)

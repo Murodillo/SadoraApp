@@ -1,5 +1,6 @@
 package org.example.project.ui.onboarding
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
@@ -8,6 +9,7 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -31,7 +33,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -60,9 +64,10 @@ import org.example.project.i18n.strings
 import org.example.project.model.AppState
 import org.example.project.ui.components.AiOrb
 import org.example.project.ui.components.IconTile
+import org.example.project.ui.components.LogoRevealMillis
 import org.example.project.ui.components.SadoraButton
-import org.example.project.ui.components.SadoraMark
-import org.example.project.ui.components.SadoraWordmark
+import org.example.project.ui.components.SadoraLoader
+import org.example.project.ui.components.SadoraLogoReveal
 import org.example.project.ui.components.cardSurface
 import org.example.project.ui.components.noRippleClickable
 import kotlin.math.PI
@@ -276,8 +281,10 @@ private val SplashWash = listOf(Color(0xFFF7E7FF), Color(0xFFEDE9FF))
 fun SplashScreen(onReady: () -> Unit, modifier: Modifier = Modifier) {
     val c = Sadora.colors
 
+    // Hold until the reveal has finished rather than for a round number: the app should
+    // never cut its own logo off mid-word.
     LaunchedEffect(Unit) {
-        delay(2200)
+        delay(LogoRevealMillis + 350L)
         onReady()
     }
 
@@ -293,16 +300,23 @@ fun SplashScreen(onReady: () -> Unit, modifier: Modifier = Modifier) {
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            RevealLine(delayMillis = 150) { SadoraMark(size = 148.dp) }
-            Spacer(Modifier.height(Spacing.md))
-            RevealLine(delayMillis = 500) { SadoraWordmark() }
+            // The brand's own reveal, to the deck's timing: the S is written in one
+            // stroke, the dot pops before the line has settled, the letters rise, and
+            // the promise arrives last.
+            SadoraLogoReveal(size = 148.dp)
+
+            // A slow session would otherwise leave the finished logo sitting still. The
+            // loader arrives a beat after the hand-off would normally have happened, so
+            // it is seen only when the app really is waiting — never as a flash on a
+            // launch that went well.
+            var waiting by remember { mutableStateOf(false) }
+            LaunchedEffect(Unit) {
+                delay(LogoRevealMillis + 700L)
+                waiting = true
+            }
             Spacer(Modifier.height(Spacing.lg))
-            RevealLine(delayMillis = 900) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-                    Box(Modifier.size(width = 40.dp, height = 1.dp).background(c.primary.copy(alpha = 0.5f)))
-                    Icon(SadoraIcons.Sparkle, contentDescription = null, Modifier.size(IconSize.sm), tint = c.primary)
-                    Box(Modifier.size(width = 40.dp, height = 1.dp).background(c.primary.copy(alpha = 0.5f)))
-                }
+            AnimatedVisibility(waiting, enter = fadeIn(tween(400))) {
+                SadoraLoader(size = 40.dp)
             }
         }
     }
