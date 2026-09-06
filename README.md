@@ -11,23 +11,39 @@ hozircha faqat o'zbekchasi yozilgan.
 
 ---
 
-## Ishga tushirish
+## Muhitlar
 
-```bash
-./gradlew :androidApp:assembleDebug
-```
+Ikkita muhit bor va ular alohida sozlamalar fayllaridan yashaydi:
 
-iOS uchun `iosApp/iosApp.xcodeproj` faylini Xcode'da oching va ishga tushiring.
+| | **dev** | **prod** |
+|---|---|---|
+| Sozlamalar | `server/.env.dev` — git'da, ichida sir yo'q | `server/.env.prod` — git'ga qo'shilmaydi, `.env.prod.example` dan nusxa |
+| Baza | `docker compose` ko'targan lokal Postgres | boshqariladigan alohida instansiya |
+| SMS kodi | har doim `123456` (`OTP_FIXED_CODE`) | haqiqiy SMS provayder (hali ulanmagan) |
+| JWT kaliti | ochiq, repozitoriyda | generatsiya qilingan, kamida 32 belgi |
+| Swagger `/docs` | ochiq | yopiq |
+| Limitlar | 20 barobar yumshoq — seed va demo bir IP'dan keladi | to'liq qattiq |
+| Ilova | debug build | release build |
 
-Backend uchun Postgres va Redis'ni ko'taring, keyin serverni ishga tushiring —
-batafsil [server/README.md](./server/README.md):
+`AppConfig.verifyProductionSafety()` prod'ni himoya qiladi: dev JWT kaliti, javobda
+qaytariladigan OTP yoki doimiy OTP kodi bilan server **ko'tarilmaydi**. Ya'ni dev
+sozlamalari bilan prod'ni tasodifan ishga tushirib bo'lmaydi.
+
+Hozircha faqat **dev** ishlaydi. Prod Play Market'ga chiqishdan oldin ko'tariladi.
+
+---
+
+## Ishga tushirish (dev)
+
+Postgres va Redis'ni ko'taring, so'ng serverni — sozlamalar `server/.env.dev` dan
+o'qiladi:
 
 ```bash
 docker compose up -d
 ```
 
 ```bash
-./gradlew :server:run
+./tools/server_run.sh dev
 ```
 
 Admin panel (backend ishlab turganda) — <http://localhost:5173>, batafsil
@@ -37,19 +53,19 @@ Admin panel (backend ishlab turganda) — <http://localhost:5173>, batafsil
 npm --prefix admin install && npm --prefix admin run dev
 ```
 
-Birinchi admin hisobini yaratish uchun
-`ADMIN_BOOTSTRAP_EMAIL` va `ADMIN_BOOTSTRAP_PASSWORD` bering — batafsil
-[server/README.md](./server/README.md).
-
-Testlar:
+Test ma'lumotlari — 4 ta demo hisob, 10 ta fon hisobi va Bilim kutubxonasi:
 
 ```bash
-./gradlew :shared:iosSimulatorArm64Test
+python3 tools/seed_demo.py
 ```
 
+Android ilovasi:
+
 ```bash
-./gradlew :server:test :contract:jvmTest
+./gradlew :androidApp:assembleDebug
 ```
+
+iOS uchun `iosApp/iosApp.xcodeproj` faylini Xcode'da oching va ishga tushiring.
 
 Haqiqiy telefonda sinash uchun APK'ni shu kompyuterning nomiga qaratib yig'ing —
 emulyatordagi `10.0.2.2` telefonda mavjud emas:
@@ -60,6 +76,8 @@ emulyatordagi `10.0.2.2` telefonda mavjud emas:
 
 IP o'rniga nom: DHCP ijarasi yangilanganda manzil o'zgaradi va telefondagi ilova
 yo'q bo'lgan manzilga murojaat qilib, "Internetga ulanib bo'lmadi" deb yozadi.
+`-Psadora.devHost` to'liq URL ham qabul qiladi (`https://...`), bu tunnel orqali
+ishlaganda kerak bo'ladi.
 
 Android SDK yo'li `local.properties` faylida ko'rsatiladi (bu fayl git'ga
 qo'shilmaydi):
@@ -67,6 +85,46 @@ qo'shilmaydi):
 ```
 sdk.dir=/Users/<siz>/Library/Android/sdk
 ```
+
+Testlar:
+
+```bash
+./gradlew :server:test :contract:jvmTest
+```
+
+```bash
+./gradlew :shared:testAndroidHostTest
+```
+
+---
+
+## Mijozga ko'rsatish
+
+Butun demoni internetga chiqaradi: Postgres, backend, admin panel, ikkita Cloudflare
+tunnel va o'sha tunnelga qaratilgan yangi APK.
+
+```bash
+./tools/demo_up.sh
+```
+
+Ikkala havolani chop etadi va `build/demo/urls.txt` ga yozadi. Yopish:
+
+```bash
+./tools/demo_down.sh
+```
+
+Tunnel manzillari har safar yangilanadi, shuning uchun skript APK'ni ham qayta yig'adi —
+mijozga havola va APK birga beriladi. Demo davomida server internetdan ochiq turadi va
+doimiy SMS kodi yoqilgan, shuning uchun tugagach yopib qo'ying.
+
+---
+
+## Shoxlar
+
+| Shox | Nima uchun |
+|---|---|
+| `dev` | Kundalik ish shu yerda. Barcha o'zgarishlar shu shoxga tushadi |
+| `main` | Prod. Play Market'ga chiqqanda `dev` shu yerga merge qilinadi |
 
 ---
 

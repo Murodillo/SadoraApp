@@ -11,40 +11,67 @@ entitlements/limitlar, feature flags va admin panel API'si.
 | `:contract` | Mobil va backend bo'lishadigan DTO'lar (KMP: jvm + android + ios). Backend maydon nomini o'zgartirsa, mobil build sinadi — runtime'da emas |
 | `:server` | Ktor ilovasi. `uz.sadora.server` |
 
-## Ishga tushirish
+## Muhitlar
+
+Sozlamalar muhit fayllarida, har biri bitta muhitni to'liq ta'riflaydi:
+
+| Fayl | Git'da | Nima uchun |
+|---|---|---|
+| `.env.dev` | ha | Dev. Ichida sir yo'q — hammasi ochiq standart qiymat yoki ataylab qo'yilgan qulaylik |
+| `.env.prod.example` | ha | Prod shabloni. Bo'sh qoldirilgan har bir qator — sir |
+| `.env.prod` | **yo'q** | Shablondan nusxa, prod hostida to'ldiriladi |
+
+Ikkalasini bitta skript yuklaydi, shuning uchun muhitni adashtirib ishga tushirib
+bo'lmaydi:
+
+```bash
+./tools/server_run.sh dev
+```
+
+```bash
+./tools/server_run.sh prod
+```
+
+`dev` Gradle orqali ishga tushadi, `prod` esa `installDist` yasagan distributivni
+ishlatadi — prod start Gradle demoniga ham, manba daraxtiga ham bog'liq bo'lmasligi
+kerak.
+
+**Prod o'zini himoya qiladi.** `SADORA_ENV=PROD` bo'lganda `AppConfig` uchta narsani
+rad etadi va server umuman ko'tarilmaydi: dev JWT kaliti (yoki 32 belgidan qisqasi),
+`OTP_EXPOSE_CODE=true`, va `OTP_FIXED_CODE` ning o'rnatilgani. Ya'ni dev sozlamalari
+bilan prod ishga tushmaydi — buni eslab qolish shart emas.
+
+Farqlar shu bilan tugamaydi: limitlar dev'da 20 barobar yumshoq (`configureRateLimit`),
+chunki seed ham, demo ham bitta IP'dan keladi; `/docs` faqat prod'dan tashqarida
+ochiladi.
+
+## Ishga tushirish (dev)
 
 ```bash
 docker compose up -d
 ```
 
 ```bash
-./gradlew :server:run
+./tools/server_run.sh dev
 ```
 
-Boshqa loyihaning Postgres'i 5432 ni band qilgan bo'lsa:
+`.env.dev` bazani 5433-portda kutadi (`SADORA_DB_PORT`), chunki asosiy ishchi
+kompyuterda 5432 ni boshqa loyiha egallagan. docker-compose ham shu o'zgaruvchini
+o'qiydi, shuning uchun ikkalasi bir xil portda kelishadi.
+
+Birinchi Owner hisobi jadval bo'sh bo'lganda `ADMIN_BOOTSTRAP_EMAIL` va
+`ADMIN_BOOTSTRAP_PASSWORD` dan yaratiladi — `.env.dev` da ular allaqachon bor.
+
+Test ma'lumotlari:
 
 ```bash
-SADORA_DB_PORT=5433 docker compose up -d
-```
-
-```bash
-DB_URL=jdbc:postgresql://localhost:5433/sadora ./gradlew :server:run
-```
-
-Birinchi admin hisobini yaratish (jadval bo'sh bo'lgandagina ishlaydi):
-
-```bash
-ADMIN_BOOTSTRAP_EMAIL=owner@sadora.uz ADMIN_BOOTSTRAP_PASSWORD=changeme123 ./gradlew :server:run
+python3 ../tools/seed_demo.py
 ```
 
 Server JVM 21 ga kompilyatsiya qilinadi. Gradle o'z toolchain'ini yuklab oladi, lekin
 `./gradlew :server:installDist` yasagan skript `PATH` dagi `java` ni ishlatadi — eskiroq
 JDK bo'lsa `UnsupportedClassVersionError` beradi. Shuning uchun distributivni
-ko'tarishdan oldin `JAVA_HOME` ni 21 ga qo'ying (Docker образи buni o'zi hal qiladi).
-
-Sozlamalar — `.env.example`. Hammasida dev qiymati bor, shuning uchun hech narsa
-bermasdan ham ko'tariladi. `AppConfig` prod'da ikki narsani rad etadi: dev JWT kaliti va
-`OTP_EXPOSE_CODE=true`.
+ko'tarishdan oldin `JAVA_HOME` ni 21 ga qo'ying (Docker obrazi buni o'zi hal qiladi).
 
 ## Hujjatlar va tekshirish
 

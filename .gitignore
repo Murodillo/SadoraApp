@@ -17,5 +17,10 @@ captures
 !*.xcworkspace/contents.xcworkspacedata
 **/xcshareddata/WorkspaceSettings.xcsettings
 node_modules/
+
+# Secrets. `server/.env.dev` is committed on purpose — it holds only public development
+# defaults — but anything holding real credentials stays out.
 .env
 server/.env
+server/.env.prod
+server/.env.stage

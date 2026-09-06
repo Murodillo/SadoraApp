@@ -20,6 +20,27 @@ npm run dev
 SADORA_API=http://localhost:9000 npm run dev
 ```
 
+Yig'ilgan bundle'ni ko'rish uchun (mijozga ko'rsatish va tunnel uchun shu ishlatiladi —
+HMR soketi tunnel ustida ishonchsiz):
+
+```bash
+npm run build && npm run preview
+```
+
+<http://localhost:4173> ochiladi.
+
+**Panel API'ni proksi orqali chaqiradi**, to'g'ridan-to'g'ri emas: `/v1` so'rovlari Vite
+tomonidan backendga uzatiladi, shuning uchun brauzer uchun bitta origin bo'ladi va CORS
+umuman qatnashmaydi. `server` ham, `preview` ham `allowedHosts: true` bilan ishlaydi —
+tunnel panelni oldindan bilib bo'lmaydigan nom ostida ochadi, aks holda Vite so'rovni
+rad etardi.
+
+## Muhitlar
+
+Panelning o'z sozlamasi yo'q — u qaysi backend'ga ulansa, o'sha muhitda ishlaydi
+(`SADORA_API`). Dev backend uchun [server/README.md](../server/README.md) ga qarang;
+prod panel `https://admin.sadora.uz` da turadi va faqat prod backend'ga ulanadi.
+
 Birinchi Owner hisobi backend birinchi marta ko'tarilganda yaratiladi —
 `ADMIN_BOOTSTRAP_EMAIL` va `ADMIN_BOOTSTRAP_PASSWORD` ga qarang
 ([server/README.md](../server/README.md)).

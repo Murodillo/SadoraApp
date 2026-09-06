@@ -83,7 +83,7 @@ fun Application.apiModule(component: AppComponent) {
     configureMonitoring()
     configureHttp(config)
     configureStatusPages()
-    configureRateLimit()
+    configureRateLimit(config)
     configureSecurity(component.jwtService)
 
     routing {
