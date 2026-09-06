@@ -88,7 +88,7 @@ fun TodayScreen(
 
         // The deck reads top to bottom as: what the assistant makes of today, how today
         // is going, and what is still to do. The cards arrive in that order too.
-        ScreenContent {
+        ScreenContent(stagger = false) {
             item {
                 Box(Modifier.appearFromBelow(0)) {
                     if (state.isPremium) {

@@ -1,14 +1,13 @@
 package org.example.project.ui.modules
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.Text
 import androidx.compose.foundation.lazy.LazyListScope
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -32,7 +31,6 @@ import org.example.project.ui.components.ScreenContent
 import org.example.project.ui.components.SegmentedControl
 import org.example.project.ui.components.Skeleton
 import org.example.project.ui.components.TrendBars
-import org.example.project.ui.components.appearFromBelow
 import uz.sadora.contract.InsightsSummary
 import uz.sadora.contract.MetricTrend
 import uz.sadora.contract.TrendMetric
@@ -127,9 +125,7 @@ private fun LazyListScope.insightsContent(
         summary.trend(metric)?.takeIf { it.hasData }?.let { title to it }
     }
 
-    itemsIndexed(charted) { index, (title, trend) ->
-        Box(Modifier.appearFromBelow(index)) { TrendCard(title, trend) }
-    }
+    items(charted) { (title, trend) -> TrendCard(title, trend) }
 
     if (charted.isEmpty()) {
         item {

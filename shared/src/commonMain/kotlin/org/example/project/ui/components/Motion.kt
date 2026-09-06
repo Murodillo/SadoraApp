@@ -157,10 +157,12 @@ fun Modifier.appearFromBelow(
     index: Int = 0,
     distance: Dp = 16.dp,
     durationMillis: Int = Motion.Standard,
+    /** Overrides the stagger [index] implies — for an item that arrives on its own. */
+    delayMillis: Int = index * Motion.Stagger,
 ): Modifier = composed {
     var started by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { started = true }
-    val spec = tween<Float>(durationMillis, index * Motion.Stagger, Motion.Emphasized)
+    val spec = tween<Float>(durationMillis, delayMillis, Motion.Emphasized)
     val progress by animateFloatAsState(if (started) 1f else 0f, spec, label = "appear")
     graphicsLayer {
         alpha = progress

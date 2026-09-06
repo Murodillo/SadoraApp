@@ -20,9 +20,19 @@ data class SadoraEnvironment(
          * A physical phone cannot resolve [developmentBaseUrl] — 10.0.2.2 exists only
          * inside the emulator — so a build meant for a real device is pointed at the
          * development machine's address on the local network instead.
+         *
+         * [host] may also be a whole URL. A tunnel that publishes the development
+         * machine to the internet answers on 443 under its own name, so a build aimed
+         * at one has no port to append and no say in the scheme.
          */
-        fun development(host: String): SadoraEnvironment =
-            SadoraEnvironment(baseUrl = "http://$host:8080", verboseLogging = true)
+        fun development(host: String): SadoraEnvironment {
+            val url = if (host.startsWith("http://") || host.startsWith("https://")) {
+                host.trimEnd('/')
+            } else {
+                "http://$host:8080"
+            }
+            return SadoraEnvironment(baseUrl = url, verboseLogging = true)
+        }
 
         val Stage: SadoraEnvironment = SadoraEnvironment("https://api.stage.sadora.uz")
         val Production: SadoraEnvironment = SadoraEnvironment("https://api.sadora.uz")

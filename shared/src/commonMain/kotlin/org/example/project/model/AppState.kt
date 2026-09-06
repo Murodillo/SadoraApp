@@ -114,7 +114,7 @@ class AppState {
     // for her, and the onboarding greets people by it.
     var name by mutableStateOf("")
     var email by mutableStateOf("malika@example.com")
-    var phone by mutableStateOf("90 123 45 67")
+    var phone by mutableStateOf("")
     var birthDate by mutableStateOf("14.03.1994")
     var heightCm by mutableStateOf("164")
     var weightKg by mutableStateOf("58")

@@ -15,9 +15,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyItemScope
+import androidx.compose.foundation.lazy.LazyListScope
+import kotlin.time.TimeSource
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -112,6 +116,10 @@ fun CircleIconButton(
 /**
  * Standard scrollable screen body: 20dp side padding, 12dp rhythm, and bottom
  * padding that clears the tab bar.
+ *
+ * Every entry arrives with the app's rise-and-fade, staggered in reading order, so a
+ * screen opens the way Today does rather than snapping into place. [stagger] is off for
+ * the few screens that time their own cards.
  */
 @Composable
 fun ScreenContent(
@@ -123,13 +131,63 @@ fun ScreenContent(
         bottom = 120.dp,
     ),
     verticalGap: androidx.compose.ui.unit.Dp = Spacing.sm,
+    stagger: Boolean = true,
     content: LazyListScopeContent,
 ) {
+    // The screen's birth, so an item scrolled into view a minute later rises at once
+    // instead of waiting out a stagger that was meant for the first screenful.
+    val born = remember { TimeSource.Monotonic.markNow() }
     LazyColumn(
         modifier = modifier.fillMaxSize(),
         contentPadding = contentPadding,
         verticalArrangement = Arrangement.spacedBy(verticalGap),
-    ) { content() }
+    ) {
+        if (stagger) StaggeredListScope(this, born).content() else content()
+    }
+}
+
+/** Entries past this one all arrive together; a longer queue would read as lag. */
+private const val MaxStaggered = 6
+
+/** How long after a screen opens its entries still count as the opening. */
+private const val OpeningMillis = 900L
+
+/**
+ * A [LazyListScope] that wraps each entry in [appearFromBelow], numbering them as they
+ * are declared. Delegation keeps every extension — `items(list)`, `itemsIndexed` — working
+ * unchanged, since they all end in the two members overridden here.
+ */
+private class StaggeredListScope(
+    private val inner: LazyListScope,
+    private val born: TimeSource.Monotonic.ValueTimeMark,
+) : LazyListScope by inner {
+    private var declared = 0
+
+    private fun delayFor(position: Int): Int =
+        if (born.elapsedNow().inWholeMilliseconds > OpeningMillis) 0
+        else position.coerceAtMost(MaxStaggered) * Motion.Stagger
+
+    override fun item(key: Any?, contentType: Any?, content: @Composable LazyItemScope.() -> Unit) {
+        val position = declared++
+        inner.item(key, contentType) {
+            Box(Modifier.appearFromBelow(delayMillis = this@StaggeredListScope.delayFor(position))) { content() }
+        }
+    }
+
+    override fun items(
+        count: Int,
+        key: ((index: Int) -> Any)?,
+        contentType: (index: Int) -> Any?,
+        itemContent: @Composable LazyItemScope.(index: Int) -> Unit,
+    ) {
+        val first = declared
+        declared += count
+        inner.items(count, key, contentType) { index ->
+            Box(Modifier.appearFromBelow(delayMillis = this@StaggeredListScope.delayFor(first + index))) {
+                itemContent(index)
+            }
+        }
+    }
 }
 
 typealias LazyListScopeContent = androidx.compose.foundation.lazy.LazyListScope.() -> Unit

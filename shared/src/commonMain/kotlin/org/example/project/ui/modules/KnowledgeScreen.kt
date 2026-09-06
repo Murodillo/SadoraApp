@@ -1,7 +1,6 @@
 package org.example.project.ui.modules
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -31,7 +30,6 @@ import org.example.project.ui.components.SadoraTopBar
 import org.example.project.ui.components.ScreenContent
 import org.example.project.ui.components.SelectChip
 import org.example.project.ui.components.Skeleton
-import org.example.project.ui.components.appearFromBelow
 import uz.sadora.contract.ArticleKind
 import uz.sadora.contract.ArticleSummary
 
@@ -132,9 +130,7 @@ fun KnowledgeScreen(
 
                 else -> items(visible.size) { index ->
                     val article = visible[index]
-                    Box(Modifier.appearFromBelow(index)) {
-                        KnowledgeCard(article, onClick = { onOpen(Route.Article(article.slug)) })
-                    }
+                    KnowledgeCard(article, onClick = { onOpen(Route.Article(article.slug)) })
                 }
             }
         }
