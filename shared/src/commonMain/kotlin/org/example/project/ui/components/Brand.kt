@@ -395,7 +395,12 @@ fun SadoraLogoReveal(
  * dark ones, which is what makes it the app's one recognisable image.
  */
 @Composable
-fun AiOrb(modifier: Modifier = Modifier, size: Dp = 132.dp) {
+fun AiOrb(
+    modifier: Modifier = Modifier,
+    size: Dp = 132.dp,
+    /** The mark inside it. Off for the tab bar, where the sphere alone is the icon. */
+    mark: Boolean = true,
+) {
     val transition = rememberInfiniteTransition()
     val breath by transition.animateFloat(
         initialValue = 1f,
@@ -413,8 +418,13 @@ fun AiOrb(modifier: Modifier = Modifier, size: Dp = 132.dp) {
         animationSpec = infiniteRepeatable(tween(8000, easing = LinearEasing)),
     )
 
-    Canvas(modifier.size(size)) {
-        drawOrb(breath, halo, spin)
+    Box(modifier.size(size), contentAlignment = Alignment.Center) {
+        Canvas(Modifier.fillMaxSize()) {
+            drawOrb(breath, halo, spin)
+        }
+        // The sphere on its own is a glow, not a logo. The mark in white is what makes
+        // the welcome screen and the assistant recognisably SADORA.
+        if (mark) SadoraMark(size = size * 0.46f, tone = MarkTone.White)
     }
 }
 

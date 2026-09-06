@@ -53,6 +53,12 @@ object StringsRu : Strings {
         override val signIn = "Войти"
     }
 
+    override val onboarding = object : OnboardingStrings {
+        override val languageTitle = "Выберите язык"
+        override val languageSubtitle = "Позже это можно изменить в настройках."
+        override val continueLabel = "Продолжить"
+    }
+
     override val profile = object : ProfileStrings {
         override val title = "Профиль"
         override val unnamed = "Пользователь"

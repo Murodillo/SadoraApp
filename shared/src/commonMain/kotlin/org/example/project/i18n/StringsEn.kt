@@ -50,6 +50,12 @@ object StringsEn : Strings {
         override val signIn = "Sign in"
     }
 
+    override val onboarding = object : OnboardingStrings {
+        override val languageTitle = "Choose your language"
+        override val languageSubtitle = "You can change this later in settings."
+        override val continueLabel = "Continue"
+    }
+
     override val profile = object : ProfileStrings {
         override val title = "Profile"
         override val unnamed = "User"

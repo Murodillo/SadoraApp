@@ -21,6 +21,7 @@ interface Strings {
     val tabs: TabStrings
     val stages: LifeStageStrings
     val welcome: WelcomeStrings
+    val onboarding: OnboardingStrings
     val profile: ProfileStrings
     val settings: SettingsStrings
 }
@@ -67,6 +68,16 @@ interface WelcomeStrings {
     val start: String
     val haveAccount: String
     val signIn: String
+}
+
+/**
+ * The parts of the question flow that must answer in the language being picked: the
+ * language question itself changes under her hand as she taps.
+ */
+interface OnboardingStrings {
+    val languageTitle: String
+    val languageSubtitle: String
+    val continueLabel: String
 }
 
 interface ProfileStrings {

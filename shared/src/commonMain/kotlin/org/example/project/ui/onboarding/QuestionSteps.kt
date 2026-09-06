@@ -40,6 +40,7 @@ import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.minus
 import kotlinx.datetime.plus
 import androidx.compose.ui.graphics.Color
+import org.example.project.i18n.strings
 import org.example.project.model.AppLanguage
 import org.example.project.model.AppState
 import org.example.project.model.BirthControl
@@ -81,23 +82,27 @@ fun LanguageQuestion(
     onNext: () -> Unit,
 ) {
     val entry = rememberPageEntry(900)
+    val t = strings.onboarding
 
     QuestionScaffold(
-        title = "Tilni tanlang",
-        subtitle = "Keyin sozlamalardan o'zgartira olasiz.",
+        title = t.languageTitle,
+        subtitle = t.languageSubtitle,
         progress = progress,
         onBack = onBack,
         onSkip = null,
         entry = entry,
-        footer = { AnswerFooter(visible = true) { SadoraButton("Davom etish", onNext) } },
+        footer = { AnswerFooter(visible = true) { SadoraButton(t.continueLabel, onNext) } },
     ) {
+        // Tapping a language changes the app under her hand — the tab bar and the
+        // profile are already in it by the time she reaches the next question — so the
+        // row says what it is rather than promising it for later.
         AppLanguage.entries.forEachIndexed { index, language ->
             Reveal(entry.value, from = optionStart(index, base = 0.30f, step = 0.08f)) {
                 AnswerRow(
                     label = language.native,
                     leading = language.flag(),
-                    note = if (language == AppLanguage.Uz) null else "Tez orada — hozircha o'zbekcha ko'rsatiladi.",
-                    noteAlwaysVisible = language != AppLanguage.Uz,
+                    note = language.english,
+                    noteAlwaysVisible = true,
                     selected = state.language == language,
                     onClick = { state.language = language },
                 )

@@ -37,6 +37,9 @@ class StringsTest {
                 ),
             )
         }
+        with(t.onboarding) {
+            addAll(listOf(languageTitle, languageSubtitle, continueLabel))
+        }
         with(t.profile) {
             addAll(
                 listOf(
@@ -95,6 +98,7 @@ class StringsTest {
             assertNotEquals(StringsUz.welcome.privacyPromise, t.welcome.privacyPromise)
             assertNotEquals(StringsUz.profile.signOut, t.profile.signOut)
             assertNotEquals(StringsUz.settings.languageNote, t.settings.languageNote)
+            assertNotEquals(StringsUz.onboarding.languageTitle, t.onboarding.languageTitle)
             assertNotEquals(StringsUz.stages.title(LifeStage.Cycle), t.stages.title(LifeStage.Cycle))
         }
     }

@@ -50,6 +50,12 @@ object StringsUz : Strings {
         override val signIn = "Kirish"
     }
 
+    override val onboarding = object : OnboardingStrings {
+        override val languageTitle = "Tilni tanlang"
+        override val languageSubtitle = "Keyin sozlamalardan o'zgartira olasiz."
+        override val continueLabel = "Davom etish"
+    }
+
     override val profile = object : ProfileStrings {
         override val title = "Profil"
         override val unnamed = "Foydalanuvchi"
