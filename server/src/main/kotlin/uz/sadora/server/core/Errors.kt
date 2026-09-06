@@ -64,9 +64,35 @@ class LimitReachedException(
     mapOf("feature" to featureKey, "period" to period),
 )
 
+/**
+ * Raised when an operator has switched a feature off with its flag.
+ *
+ * Distinct from [EntitlementRequiredException]: an upgrade would not help, so the client
+ * must not show a paywall for it.
+ */
+class FeatureDisabledException(flagKey: String) : ApiException(
+    HttpStatusCode.Forbidden,
+    ErrorCodes.FEATURE_DISABLED,
+    "Bu bo'lim hozircha yopiq",
+    mapOf("flag" to flagKey),
+)
+
 class EntitlementRequiredException(featureKey: String) : ApiException(
     HttpStatusCode.PaymentRequired,
     ErrorCodes.ENTITLEMENT_REQUIRED,
     "Bu funksiya Premium obunada mavjud",
     mapOf("feature" to featureKey),
+)
+
+/**
+ * Raised when health data arrives without the consent that permits storing it.
+ *
+ * Separate from [ForbiddenException] so the client can route to the privacy screen and
+ * offer to grant it, rather than showing a dead end.
+ */
+class ConsentRequiredException(consentKey: String) : ApiException(
+    HttpStatusCode.Forbidden,
+    ErrorCodes.CONSENT_REQUIRED,
+    "Sog'liq ma'lumotlarini saqlash uchun rozilik kerak",
+    mapOf("consent" to consentKey),
 )

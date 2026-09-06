@@ -96,6 +96,9 @@ object ErrorCodes {
     const val SOCIAL_TOKEN_INVALID = "social_token_invalid"
     const val ACCOUNT_BLOCKED = "account_blocked"
     const val ENTITLEMENT_REQUIRED = "entitlement_required"
+
+    /** Health data was sent without the consent that permits storing it. */
+    const val CONSENT_REQUIRED = "consent_required"
     const val LIMIT_REACHED = "limit_reached"
     const val FEATURE_DISABLED = "feature_disabled"
     const val INTERNAL_ERROR = "internal_error"

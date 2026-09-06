@@ -1,114 +1,201 @@
 package org.example.project.ui.core
 
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
+import org.example.project.design.IconSize
 import org.example.project.design.Radius
 import org.example.project.design.Sadora
+import org.example.project.design.SadoraIcons
 import org.example.project.design.Spacing
+import kotlinx.coroutines.launch
+import org.example.project.data.AiController
 import org.example.project.model.AppState
 import org.example.project.model.Fmt
 import org.example.project.model.SampleData
-import org.example.project.ui.components.BadgeTone
-import org.example.project.ui.components.ChipFlowRow
-import org.example.project.ui.components.SadoraBadge
-import org.example.project.ui.components.SadoraTextField
-import org.example.project.ui.components.SadoraTopBar
-import org.example.project.ui.components.ScreenContent
+import org.example.project.model.nowTimeLabel
+import org.example.project.ui.components.AiMarkHeader
+import org.example.project.ui.components.CircleIconButton
+import org.example.project.ui.components.appearFromBelow
 import org.example.project.ui.components.noRippleClickable
 
 private data class ChatMessage(
     val fromUser: Boolean,
     val text: String,
-    /** Which of the user's metrics the answer drew on. */
-    val sources: List<String> = emptyList(),
+    val time: String,
+    /** A refusal — out of questions, section closed — drawn quieter than an answer. */
+    val isNotice: Boolean = false,
 )
 
 /**
- * "AI chat · Premium" — the conversation view.
+ * "SADORA AI" — the conversation view, drawn on the deck's navy ground.
  *
- * Two Premium-specific affordances the design calls for: a running count of the
- * daily question allowance, and per-answer source tags naming the data used.
+ * The caller wraps it in `SadoraDarkSurface`, so everything here reads the dark
+ * palette through the ordinary tokens. Two safety rails stay on screen: the note that
+ * SADORA is not a diagnostic tool, and the daily question allowance.
  */
 @Composable
 fun AiChatScreen(
     state: AppState,
+    ai: AiController,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val c = Sadora.colors
+    val scope = rememberCoroutineScope()
     var draft by remember { mutableStateOf("") }
-    var used by remember { mutableStateOf(3) }
-    val messages = remember {
-        mutableStateListOf(
-            ChatMessage(true, "Nega o'zimni charchagan his qilyapman?"),
-            ChatMessage(
-                false,
-                "Oxirgi uch kunda uyqu odatdagidan qisqa bo'lgan va suv iste'moli " +
-                    "pasaygan. Shu kunlarda energiya ham past qayd etilgan.\n\n" +
-                    "Bugun ikki qadam: tushga qadar 700 ml suv va 23:00 gacha yotish.",
-                sources = listOf("Uyqu", "Suv", "Energiya"),
-            ),
-        )
+    val messages = remember { mutableStateListOf<ChatMessage>() }
+    val listState = rememberLazyListState()
+
+    // The allowance is the server's; the header shows it as soon as it is known.
+    LaunchedEffect(ai) { ai.loadQuota() }
+
+    fun ask(question: String) {
+        val text = question.trim()
+        if (text.isEmpty() || ai.busy || !ai.canAsk) return
+        messages += ChatMessage(true, text, nowTimeLabel())
+        draft = ""
+        scope.launch {
+            val answer = ai.ask(text)
+            messages += if (answer != null) {
+                ChatMessage(false, answer.text, nowTimeLabel())
+            } else {
+                // The refusal reads as a reply rather than a banner: it is what the
+                // assistant has to say about this question.
+                ChatMessage(false, ai.error ?: "Javob berib bo'lmadi. Qayta urinib ko'ring.", nowTimeLabel(), isNotice = true)
+            }
+        }
     }
 
-    Column(modifier) {
-        SadoraTopBar(
-            "SADORA AI",
-            onBack = onClose,
-            trailing = {
-                SadoraBadge("$used/20 bugun", BadgeTone.Premium)
-            },
-        )
+    LaunchedEffect(messages.size, ai.busy) {
+        if (messages.isNotEmpty()) listState.animateScrollToItem(messages.size)
+    }
 
-        Box(Modifier.weight(1f)) {
-            ScreenContent {
-                item {
-                    Row(
-                        Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(999.dp))
-                            .background(c.surface2)
-                            .padding(horizontal = Spacing.sm, vertical = 6.dp),
-                        horizontalArrangement = Arrangement.Center,
-                    ) {
-                        Text(
-                            "Sikl ${state.cycleDay}-kun · Uyqu ${state.sleepLabel()} · " +
-                                "Suv ${Fmt.litres(state.waterMl)} L asosida",
-                            style = Sadora.type.body,
-                            color = c.muted,
-                        )
-                    }
-                }
+    Column(modifier.fillMaxSize().statusBarsPadding()) {
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = Spacing.screen, vertical = Spacing.sm),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            CircleIconButton(SadoraIcons.ChevronLeft, contentDescription = "Ortga", onClick = onClose)
+            Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    "SADORA AI",
+                    style = Sadora.type.h3.copy(letterSpacing = 0.22.em, fontWeight = FontWeight.SemiBold),
+                    color = c.text,
+                )
+                Text("Shaxsiy yordamchingiz", style = Sadora.type.body, color = c.muted)
+            }
+            CircleIconButton(SadoraIcons.More, contentDescription = "Yana", onClick = {})
+        }
 
-                items(messages.size) { index -> ChatBubble(messages[index]) }
+        LazyColumn(
+            state = listState,
+            modifier = Modifier.weight(1f).fillMaxWidth(),
+            contentPadding = PaddingValues(horizontal = Spacing.screen, vertical = Spacing.xs),
+            verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+        ) {
+            item { AiMarkHeader(Modifier.fillMaxWidth().height(150.dp)) }
 
+            item {
+                Text(
+                    "Sikl ${state.cycleDay}-kun · Uyqu ${state.sleepLabel()} · " +
+                        "Suv ${Fmt.litres(state.waterMl)} l asosida" + quotaLabel(ai),
+                    style = Sadora.type.caption.copy(letterSpacing = 0.02.em),
+                    color = c.muted2,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+
+            if (messages.isEmpty()) {
                 item {
                     Text(
-                        SampleData.medicalDisclaimer,
+                        "Sikl, ovqatlanish, kayfiyat yoki dorilaringiz haqida so'rang — " +
+                            "javob sizning ma'lumotlaringiz asosida bo'ladi.",
                         style = Sadora.type.body,
-                        color = c.muted2,
+                        color = c.muted,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.md),
                     )
+                }
+            }
+
+            items(messages.size) { index -> ChatBubble(messages[index]) }
+
+            if (ai.busy) {
+                item { TypingBubble() }
+            }
+
+            item {
+                Text(
+                    SampleData.medicalDisclaimer,
+                    style = Sadora.type.caption.copy(letterSpacing = 0.02.em),
+                    color = c.muted2,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth().padding(top = Spacing.xs),
+                )
+            }
+        }
+
+        // Topic chips — one tap asks a ready question in that area.
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState())
+                .padding(horizontal = Spacing.screen, vertical = Spacing.xs),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+        ) {
+            SampleData.aiTopics.forEach { (label, question) ->
+                Box(
+                    Modifier
+                        .clip(Radius.chip)
+                        .background(c.surface2)
+                        .noRippleClickable { ask(question) }
+                        .padding(horizontal = 14.dp, vertical = Spacing.xs),
+                ) {
+                    Text(label, style = Sadora.type.body.copy(fontWeight = FontWeight.Medium), color = c.text)
                 }
             }
         }
@@ -116,50 +203,85 @@ fun AiChatScreen(
         Row(
             Modifier
                 .fillMaxWidth()
-                .background(c.surface)
                 .imePadding()
+                .navigationBarsPadding()
                 .padding(horizontal = Spacing.screen, vertical = Spacing.sm),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
         ) {
-            SadoraTextField(
-                value = draft,
-                onValueChange = { draft = it },
-                placeholder = "SADORA AI'dan so'rang…",
-                modifier = Modifier.weight(1f),
-            )
+            Box(
+                Modifier
+                    .weight(1f)
+                    .clip(Radius.chip)
+                    .background(c.surface2)
+                    .padding(horizontal = Spacing.md, vertical = 14.dp),
+                contentAlignment = Alignment.CenterStart,
+            ) {
+                if (draft.isEmpty()) {
+                    Text("Istalgan savolni bering…", style = Sadora.type.body, color = c.muted2)
+                }
+                BasicTextField(
+                    value = draft,
+                    onValueChange = { draft = it },
+                    singleLine = true,
+                    textStyle = Sadora.type.body.copy(color = c.text),
+                    cursorBrush = SolidColor(c.primary),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+            val canSend = draft.isNotBlank() && ai.canAsk && !ai.busy
             Box(
                 Modifier
                     .size(48.dp)
-                    .clip(RoundedCornerShape(999.dp))
-                    .background(
-                        if (draft.isBlank()) {
-                            Brush.linearGradient(listOf(c.surface2, c.surface2))
-                        } else {
-                            Brush.linearGradient(listOf(c.secondary, c.primary))
-                        },
-                    )
-                    .noRippleClickable(enabled = draft.isNotBlank()) {
-                        messages.add(ChatMessage(true, draft))
-                        messages.add(
-                            ChatMessage(
-                                false,
-                                "Ma'lumotlaringizni ko'rib chiqdim. Bu umumiy salomatlik " +
-                                    "ma'lumoti — tashxis emas.",
-                                sources = listOf("Sikl", "Uyqu"),
-                            ),
-                        )
-                        draft = ""
-                        used++
-                    },
+                    .clip(Radius.chip)
+                    .background(if (canSend) c.heroGradient else androidx.compose.ui.graphics.Brush.linearGradient(listOf(c.surface2, c.surface2)))
+                    .noRippleClickable(enabled = canSend) { ask(draft) },
                 contentAlignment = Alignment.Center,
             ) {
-                Text(
-                    "↑",
-                    style = Sadora.type.h2,
-                    color = if (draft.isBlank()) c.muted else if (c.isDark) c.bg else Color.White,
+                Icon(
+                    SadoraIcons.Send,
+                    contentDescription = "Yuborish",
+                    Modifier.size(IconSize.md),
+                    tint = if (canSend) c.onPrimary else c.muted2,
                 )
             }
+        }
+    }
+}
+
+/** " · 3/20 savol qoldi", or nothing while the allowance is unknown or unmetered. */
+private fun quotaLabel(ai: AiController): String {
+    val quota = ai.quota ?: return ""
+    val limit = quota.dailyLimit ?: return ""
+    val left = quota.remainingToday ?: return ""
+    return " · $left/$limit savol qoldi"
+}
+
+/** Three dots that breathe while the answer is on its way. */
+@Composable
+private fun TypingBubble() {
+    val c = Sadora.colors
+    val transition = rememberInfiniteTransition()
+    val phase by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 3f,
+        animationSpec = infiniteRepeatable(tween(900, easing = LinearEasing)),
+    )
+    Row(
+        Modifier
+            .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp, bottomStart = 6.dp, bottomEnd = 20.dp))
+            .background(c.surface2)
+            .padding(horizontal = Spacing.md, vertical = 14.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        repeat(3) { index ->
+            val on = phase.toInt() % 3 == index
+            Box(
+                Modifier
+                    .size(8.dp)
+                    .clip(Radius.chip)
+                    .background(if (on) c.primary else c.muted2.copy(alpha = 0.5f)),
+            )
         }
     }
 }
@@ -167,27 +289,40 @@ fun AiChatScreen(
 @Composable
 private fun ChatBubble(message: ChatMessage) {
     val c = Sadora.colors
+    val shape = if (message.fromUser) {
+        RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp, bottomStart = 20.dp, bottomEnd = 6.dp)
+    } else {
+        RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp, bottomStart = 6.dp, bottomEnd = 20.dp)
+    }
     Row(
-        Modifier.fillMaxWidth(),
+        Modifier.fillMaxWidth().appearFromBelow(distance = 10.dp),
         horizontalArrangement = if (message.fromUser) Arrangement.End else Arrangement.Start,
     ) {
         Column(
             Modifier
-                .fillMaxWidth(0.88f)
-                .clip(Radius.card)
-                .background(if (message.fromUser) c.surface2 else c.surface)
-                .padding(Spacing.sm),
-            verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+                .fillMaxWidth(0.82f)
+                .clip(shape)
+                .background(
+                    when {
+                        message.fromUser -> c.primary
+                        message.isNotice -> c.warningSoft.copy(alpha = if (c.isDark) 0.18f else 0.14f)
+                        else -> c.surface2
+                    },
+                )
+                .padding(horizontal = Spacing.md, vertical = Spacing.sm),
+            verticalArrangement = Arrangement.spacedBy(Spacing.xxs),
         ) {
-            Text(message.text, style = Sadora.type.body, color = c.text)
-            if (message.sources.isNotEmpty()) {
-                // Source tags make the basis of every answer inspectable.
-                ChipFlowRow(horizontalGap = Spacing.xxs, verticalGap = Spacing.xxs) {
-                    message.sources.forEach { source ->
-                        SadoraBadge(source, BadgeTone.Neutral)
-                    }
-                }
-            }
+            Text(
+                message.text,
+                style = Sadora.type.body,
+                color = if (message.fromUser) c.onPrimary else c.text,
+            )
+            Text(
+                message.time,
+                style = Sadora.type.caption.copy(letterSpacing = 0.02.em),
+                color = if (message.fromUser) c.onPrimary.copy(alpha = 0.7f) else c.muted2,
+                modifier = Modifier.align(Alignment.End),
+            )
         }
     }
 }

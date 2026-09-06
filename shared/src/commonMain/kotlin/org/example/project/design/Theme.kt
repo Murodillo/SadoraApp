@@ -9,9 +9,7 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.ProvidableCompositionLocal
 import androidx.compose.runtime.ReadOnlyComposable
-import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 
 /** Shorthand accessors so screens read `Sadora.colors.primary`. */
@@ -30,7 +28,7 @@ object Sadora {
  */
 @Composable
 fun SadoraTheme(
-    darkTheme: Boolean = true,
+    darkTheme: Boolean = false,
     content: @Composable () -> Unit,
 ) {
     val colors = if (darkTheme) SadoraDarkColors else SadoraLightColors
@@ -64,5 +62,22 @@ fun SadoraTheme(
         MaterialTheme(colorScheme = material) {
             Box(Modifier.fillMaxSize().background(colors.bg)) { content() }
         }
+    }
+}
+
+/**
+ * Paints [content] on the dark palette whatever the app theme is.
+ *
+ * The deck draws exactly one screen on navy — the AI assistant — and it stays navy in
+ * the light theme too. Nothing but the colour locals changes, so every component
+ * inside keeps reading `Sadora.colors` as usual.
+ */
+@Composable
+fun SadoraDarkSurface(content: @Composable () -> Unit) {
+    CompositionLocalProvider(
+        LocalSadoraColors provides SadoraDarkColors,
+        LocalContentColor provides SadoraDarkColors.text,
+    ) {
+        Box(Modifier.fillMaxSize().background(SadoraDarkColors.bg)) { content() }
     }
 }

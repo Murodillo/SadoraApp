@@ -15,7 +15,6 @@ data class UserRecord(
     val id: Uuid,
     val phone: String?,
     val email: String?,
-    val passwordHash: String?,
     val name: String,
     val language: Language,
     val timezone: String,
@@ -31,6 +30,7 @@ data class UserRecord(
     val updatedAt: Instant,
     val lastActiveAt: Instant?,
     val deletionRequestedAt: Instant?,
+    val referredByDoctor: Boolean? = null,
 ) {
     /**
      * Goals live in their own table, so the caller supplies them. Note what is absent:
@@ -77,7 +77,6 @@ data class ConsentRecord(
 data class NewUser(
     val phone: String? = null,
     val email: String? = null,
-    val passwordHash: String? = null,
     val name: String = "",
     val language: Language = Language.UZ,
     val timezone: String,

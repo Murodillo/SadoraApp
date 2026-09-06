@@ -30,6 +30,7 @@ import org.example.project.ui.components.BadgeTone
 import org.example.project.ui.components.ButtonTone
 import org.example.project.ui.components.CardLabel
 import org.example.project.ui.components.DisclaimerNote
+import org.example.project.ui.components.EmptyState
 import org.example.project.ui.components.PillButton
 import org.example.project.ui.components.SadoraBadge
 import org.example.project.ui.components.SadoraCard
@@ -54,6 +55,9 @@ fun MedicationsScreen(
 ) {
     val c = Sadora.colors
     var tab by remember { mutableStateOf(0) }
+    // "Keyinroq" hides the next-dose card for this visit; the dose itself stays due,
+    // because snoozing is not the same as skipping.
+    var snoozedId by remember { mutableStateOf<String?>(null) }
 
     Column(modifier) {
         SadoraTopBar(
@@ -63,7 +67,7 @@ fun MedicationsScreen(
                 Box(
                     Modifier
                         .size(40.dp)
-                        .clip(RoundedCornerShape(999.dp))
+                        .clip(Radius.chip)
                         .background(c.surface2)
                         .noRippleClickable { onOpen(Route.AddMedication) },
                     contentAlignment = Alignment.Center,
@@ -85,7 +89,7 @@ fun MedicationsScreen(
                 )
             }
 
-            val next = state.medications.firstOrNull { it.status == MedStatus.Pending }
+            val next = state.medications.firstOrNull { it.status == MedStatus.Pending && it.id != snoozedId }
             if (next != null) {
                 item {
                     SadoraCard {
@@ -127,15 +131,27 @@ fun MedicationsScreen(
                                 { state.markMedicationTaken(next.id) },
                                 tone = ButtonTone.Primary,
                             )
-                            PillButton("Keyinroq", {})
-                            PillButton("O'tkazish", {})
+                            PillButton("Keyinroq", { snoozedId = next.id })
+                            PillButton("O'tkazish", { state.markMedicationSkipped(next.id) })
                         }
                     }
                 }
             }
 
-            items(state.medications.size) { index ->
-                MedicationRow(state.medications[index])
+            if (state.medications.isEmpty()) {
+                item {
+                    EmptyState(
+                        title = "Hali dori qo'shilmagan",
+                        body = "Dori qo'shsangiz, qabul vaqtlari va zaxirasi shu yerda ko'rinadi.",
+                        actionText = "Dori qo'shish",
+                        onAction = { onOpen(Route.AddMedication) },
+                        glyph = "💊",
+                    )
+                }
+            } else {
+                items(state.medications.size) { index ->
+                    MedicationRow(state.medications[index])
+                }
             }
 
             item {
@@ -183,7 +199,7 @@ private fun MedicationRow(medication: Medication) {
             Box(
                 Modifier
                     .size(40.dp)
-                    .clip(RoundedCornerShape(14.dp))
+                    .clip(RoundedCornerShape(Radius.sm))
                     .background(c.surface2),
                 contentAlignment = Alignment.Center,
             ) {

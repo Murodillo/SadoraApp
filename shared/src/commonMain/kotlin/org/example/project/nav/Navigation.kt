@@ -4,14 +4,19 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.vector.ImageVector
+import org.example.project.design.SadoraIcons
 
-/** The five root destinations. */
-enum class Tab(val glyph: String, val label: String) {
-    Today("◆", "Bugun"),
-    Journey("◔", "Sikl"),
-    Ai("✦", "AI"),
-    Nutrition("◍", "Ovqat"),
-    Profile("◯", "Profil"),
+/**
+ * The five root destinations, in the order the deck's tab bar draws them:
+ * home, mind, cycle, nutrition, profile.
+ */
+enum class Tab(val icon: ImageVector) {
+    Today(SadoraIcons.Home),
+    Mind(SadoraIcons.Heart),
+    Journey(SadoraIcons.Journey),
+    Nutrition(SadoraIcons.Apple),
+    Profile(SadoraIcons.Profile),
 }
 
 /** Screens pushed on top of a tab. */
@@ -28,17 +33,18 @@ sealed interface Route {
     data object StageSymptoms : Route
     data object StageSleepMood : Route
 
-    // AI
+    // AI — the chat itself is Premium; free accounts land on the preview.
     data object AiChat : Route
+    data object AiPreview : Route
 
     // Nutrition
     data object FoodSearch : Route
     data object FoodScanCamera : Route
+    data object FoodScanAnalyzing : Route
     data object FoodScan : Route
     data object Balance : Route
 
     // Modules
-    data object Mind : Route
     data object MindJournal : Route
     data object Medications : Route
     data object AddMedication : Route
@@ -46,9 +52,11 @@ sealed interface Route {
     data object Sleep : Route
     data object Insights : Route
     data object Knowledge : Route
-    data class Article(val title: String) : Route
+    /** The article's slug: its identity on the server and in every link. */
+    data class Article(val slug: String) : Route
     data object DataSources : Route
     data object Paywall : Route
+    data object SecretChat : Route
 
     // Settings
     data object PersonalDetails : Route
@@ -56,8 +64,28 @@ sealed interface Route {
     data object LifeStageSettings : Route
     data object Notifications : Route
     data object PrivacySecurity : Route
+    data object LanguageSettings : Route
     data object About : Route
+
+    // Legal
+    data object Terms : Route
+    data object PrivacyPolicy : Route
 }
+
+/**
+ * Screens that take the whole display and hide the tab bar: the AI assistant is drawn
+ * on its own dark ground in the deck, and a camera viewfinder has nowhere to put a bar.
+ */
+val Route.isFullScreen: Boolean
+    get() = this == Route.AiChat || this == Route.FoodScanCamera ||
+        this == Route.FoodScanAnalyzing || this == Route.Paywall
+
+/**
+ * Where an AI entry point leads. The chat runs for Premium only; a free account sees
+ * the value proposition and a way to upgrade, never a chat that answers nothing.
+ */
+fun org.example.project.model.AppState.aiRoute(): Route =
+    if (isPremium) Route.AiChat else Route.AiPreview
 
 /** Where the app is before the main tabs take over. */
 sealed interface AppPhase {

@@ -15,7 +15,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -27,15 +27,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import org.example.project.design.IconSize
 import org.example.project.design.Radius
 import org.example.project.design.Sadora
+import org.example.project.design.SadoraIcons
 import org.example.project.design.Spacing
 import org.example.project.model.AppState
 import org.example.project.model.Fmt
 import org.example.project.model.SampleData
+import org.example.project.ui.components.AiOrb
 import org.example.project.ui.components.CardLabel
 import org.example.project.ui.components.PremiumGradientBadge
 import org.example.project.ui.components.SadoraCard
@@ -75,7 +77,7 @@ fun AiScreen(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(Spacing.sm),
                     ) {
-                        AiOrb()
+                        AiOrb(size = 132.dp)
                         Text(
                             "Sizga qanday yordam bera olaman?",
                             style = Sadora.type.h2,
@@ -105,7 +107,12 @@ fun AiScreen(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
                         ) {
-                            Text("◷", style = Sadora.type.h3, color = c.muted)
+                            Icon(
+                                SadoraIcons.Clock,
+                                contentDescription = null,
+                                Modifier.size(IconSize.md),
+                                tint = c.muted,
+                            )
                             Text(
                                 conversation.title,
                                 style = Sadora.type.body,
@@ -144,12 +151,12 @@ fun AiScreen(
                 Box(
                     Modifier
                         .size(48.dp)
-                        .clip(RoundedCornerShape(999.dp))
+                        .clip(Radius.chip)
                         .background(
                             if (draft.isBlank()) {
                                 Brush.linearGradient(listOf(c.surface2, c.surface2))
                             } else {
-                                Brush.linearGradient(listOf(c.secondary, c.primary))
+                                c.heroGradient
                             },
                         )
                         .noRippleClickable(enabled = draft.isNotBlank()) {
@@ -158,11 +165,12 @@ fun AiScreen(
                         },
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text(
-                        "↑",
-                        style = Sadora.type.h2,
-                        color = if (draft.isBlank()) c.muted else if (c.isDark) c.bg else Color.White,
-                    )
+                    Icon(
+    SadoraIcons.ArrowUp,
+    contentDescription = "Yuborish",
+    Modifier.size(IconSize.lg),
+    tint = if (draft.isBlank()) c.muted else c.onPrimary,
+)
                 }
             }
             Text(
@@ -176,35 +184,13 @@ fun AiScreen(
     }
 }
 
-/** The breathing gradient orb — the single strongest colour source on this screen. */
-@Composable
-private fun AiOrb(modifier: Modifier = Modifier) {
-    val c = Sadora.colors
-    val transition = rememberInfiniteTransition()
-    val pulse by transition.animateFloat(
-        initialValue = 1f,
-        targetValue = 1.06f,
-        animationSpec = infiniteRepeatable(tween(2200), RepeatMode.Reverse),
-    )
-    Box(
-        modifier
-            .size(96.dp)
-            .scale(pulse)
-            .clip(RoundedCornerShape(999.dp))
-            .background(Brush.linearGradient(listOf(c.secondary, c.primary))),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text("✦", style = Sadora.type.display, color = if (c.isDark) c.bg else Color.White)
-    }
-}
-
 /** "Sikl 14-kun · Uyqu 6s 40d · Suv 1,2 L asosida" */
 @Composable
 private fun ContextStrip(state: AppState) {
     val c = Sadora.colors
     Row(
         Modifier
-            .clip(RoundedCornerShape(999.dp))
+            .clip(Radius.chip)
             .background(c.surface2)
             .padding(horizontal = Spacing.sm, vertical = 6.dp),
     ) {

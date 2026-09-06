@@ -7,7 +7,6 @@ import kotlinx.serialization.Serializable
 @Serializable
 enum class AuthProvider {
     @SerialName("phone") PHONE,
-    @SerialName("email") EMAIL,
     @SerialName("apple") APPLE,
     @SerialName("google") GOOGLE,
 }
@@ -74,23 +73,10 @@ data class SocialSignInRequest(
     val device: DeviceInfo,
 )
 
-// ---- email + password (admin panel, and optional for users) ----
-
-@Serializable
-data class EmailSignInRequest(
-    val email: String,
-    val password: String,
-    val device: DeviceInfo? = null,
-)
-
-@Serializable
-data class EmailRegisterRequest(
-    val email: String,
-    val password: String,
-    val name: String,
-    val language: Language = Language.UZ,
-    val device: DeviceInfo,
-)
+// Users have no password. Signing in is the phone code exchange, which returns the
+// existing account or creates one — so there is no separate registration request, and
+// nothing for someone who signed up by phone to have forgotten. The admin panel's own
+// credentials live in its own request type.
 
 // ---- tokens ----
 

@@ -18,7 +18,7 @@ data class HealthStatus(val status: String, val environment: String, val version
  * database blip does not get the container killed. `/health/ready` answers "can it serve
  * traffic" and does.
  */
-fun Route.healthRoutes(environment: String, version: String) {
+fun Route.healthCheckRoutes(environment: String, version: String) {
     route("/health") {
         get("/live") {
             call.respond(HealthStatus("ok", environment, version))

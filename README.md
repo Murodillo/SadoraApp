@@ -19,11 +19,47 @@ hozircha faqat o'zbekchasi yozilgan.
 
 iOS uchun `iosApp/iosApp.xcodeproj` faylini Xcode'da oching va ishga tushiring.
 
+Backend uchun Postgres va Redis'ni ko'taring, keyin serverni ishga tushiring —
+batafsil [server/README.md](./server/README.md):
+
+```bash
+docker compose up -d
+```
+
+```bash
+./gradlew :server:run
+```
+
+Admin panel (backend ishlab turganda) — <http://localhost:5173>, batafsil
+[admin/README.md](./admin/README.md):
+
+```bash
+npm --prefix admin install && npm --prefix admin run dev
+```
+
+Birinchi admin hisobini yaratish uchun
+`ADMIN_BOOTSTRAP_EMAIL` va `ADMIN_BOOTSTRAP_PASSWORD` bering — batafsil
+[server/README.md](./server/README.md).
+
 Testlar:
 
 ```bash
 ./gradlew :shared:iosSimulatorArm64Test
 ```
+
+```bash
+./gradlew :server:test :contract:jvmTest
+```
+
+Haqiqiy telefonda sinash uchun APK'ni shu kompyuterning nomiga qaratib yig'ing —
+emulyatordagi `10.0.2.2` telefonda mavjud emas:
+
+```bash
+./gradlew :androidApp:assembleDebug -Psadora.devHost=$(scutil --get LocalHostName).local
+```
+
+IP o'rniga nom: DHCP ijarasi yangilanganda manzil o'zgaradi va telefondagi ilova
+yo'q bo'lgan manzilga murojaat qilib, "Internetga ulanib bo'lmadi" deb yozadi.
 
 Android SDK yo'li `local.properties` faylida ko'rsatiladi (bu fayl git'ga
 qo'shilmaydi):
@@ -34,6 +70,13 @@ sdk.dir=/Users/<siz>/Library/Android/sdk
 
 ---
 
+## CI
+
+Har bir push GitHub Actions'da tekshiriladi: backend testlari va migratsiyalarning
+haqiqiy Postgres ustida ko'tarilishi, shared modul testlari, Android APK yig'ilishi,
+admin panelning typecheck va build'i. Kotlin/Native (iOS) faqat `main` ga PR va push'da
+— macOS runner'lari o'n barobar qimmat.
+
 ## Arxitektura
 
 Butun UI `:shared` modulining `commonMain` manbasida — Android va iOS bir xil
@@ -43,9 +86,13 @@ kodni ishlatadi. Platformaga xos qism juda kichik: ikkala tomonda ham faqat
 ```
 androidApp/          MainActivity — App() ni chaqiradi
 iosApp/              SwiftUI ContentView — App() ni chaqiradi
+admin/               React + TS admin panel — admin/README.md
+contract/            Mobil va backend bo'lishadigan DTO'lar (KMP)
+server/              Ktor backend — server/README.md
 shared/src/commonMain/kotlin/org/example/project/
 ├── App.kt           Ildiz: AppState va Navigator shu yerda yashaydi
 ├── design/          Dizayn tokenlari (ranglar, tipografika, o'lchamlar, mavzu)
+├── i18n/            Uch tildagi matnlar (UZ — asl, RU, EN)
 ├── model/           Domen modeli va namuna ma'lumotlar
 ├── nav/             Navigatsiya holati (Tab, Route, Navigator)
 └── ui/
@@ -69,9 +116,16 @@ uchun ham *barcha* tokenlarni belgilaydi, shuning uchun ekranlar `if (dark)` yoz
 ular `Sadora.colors.primary` deb yozadi va mavzu o'zi hal qiladi. Tipografika ettita
 qadamdan iborat, radius va masofalar 8pt panjarasiga bog'langan.
 
-**`model/`** — `AppState` butun ilova uchun bitta xotiradagi do'kon. Backend hali
-yo'q, shuning uchun ekranlar to'g'ridan-to'g'ri shu yerdan o'qiydi va yozadi.
-Hammasi Compose state, ya'ni har qanday o'zgarish tegishli ekranni qayta chizadi.
+**`i18n/`** — matnlarning yagona manbasi. `Strings` — interfeys, ya'ni yangi qator
+qo'shilsa, unga javob bermagan til kompilyatsiya xatosi bo'ladi: bo'sh joy ekranga
+chiqmaydi. Ekran tilni bilmaydi, `val t = strings` deb yozadi va `App` butun daraxtni
+bitta `ProvideStrings` ichiga oladi. Til `Profil → Til` da tanlanadi, darhol qo'llanadi
+va serverga yoziladi.
+
+**`model/`** — `AppState` butun ilova uchun bitta xotiradagi do'kon. Ekranlar
+to'g'ridan-to'g'ri shu yerdan o'qiydi va yozadi; controller'lar uni server javobi bilan
+to'ldiradi. Hammasi Compose state, ya'ni har qanday o'zgarish tegishli ekranni qayta
+chizadi.
 
 **`nav/`** — navigatsiya kutubxonasi qo'shilmagan. `Navigator` joriy fazani
 (splash / onboarding / kirish / asosiy), joriy tabni va route'lar stekini saqlaydi.
@@ -133,17 +187,58 @@ mavzuda matn uchun `primary` emas, quyuqroq `textAccent` ishlatiladi.
 
 ## Holat va keyingi qadamlar
 
-Hozircha bu to'liq ishlaydigan UI prototipi: barcha ekranlar chizilgan, oqimlar
-bog'langan, holat real vaqtda o'zgaradi.
+Barcha ekranlar chizilgan, oqimlar bog'langan, va ekranlarning ortida endi haqiqiy
+backend turadi.
+
+Ilova **unga ulangan**: ro'yxatdan o'tish (telefon OTP, Apple/Google, email), kirish,
+profil va onboarding, roziliklar, entitlements va feature flags; ustiga sikl, Mind,
+Nutrition, Meds, wearable, maxfiy chat, tahlillar (`GET /v1/insights`), Premium to'lovi
+(Payme va Click) va AI Gateway — javobni haqiqiy model (Gemini) yozadi, kalit bo'lmasa
+yoki `ai_model_enabled` o'chirilgan bo'lsa qoidalar javob beradi.
+
+Sog'liq yozuvlari serverda saqlanadi: sikl, ovqat, suv, kayfiyat va dorilar qurilma
+almashsa ham qoladi. Sessiya qurilmada saqlanadi, shuning uchun ilova qayta ishga
+tushganda foydalanuvchi kirgan holida qoladi.
+
+Ulanish `data/SadoraController` va `data/HealthController` orqali: ekranlar wire
+tiplarini bilmaydi, controller esa `busy`/`error` holatini bir joyda boshqaradi. Backend
+bo'lmasa (`@Preview`, testlar) hamma amal lokal bajariladi va ilova prototip sifatida
+ishlayveradi.
 
 Hali yo'q:
 
-- **Backend va saqlash** — `AppState` xotirada, ilova qayta ishga tushsa nolga qaytadi
-- **Haqiqiy AI** — javoblar namuna matn
+- **App Store / Google Play billing** — Payme va Click ulangan (narxlar serverda,
+  to'lovni server tasdiqlaydi), do'kon ichidagi xarid esa hali yo'q: `StoreVerifier`
+  sozlanmagan holda har qanday chekni rad etadi
+- **Apple/Google kirish** — tugmalar bor va server `idToken`ni tekshiradi, lekin
+  platforma SDK'si hali o'sha tokenni bermaydi
 - **Qurilma integratsiyasi** — Apple Health / Oura ma'lumotlari namuna
-- **RU va EN tarjimalari** — matnlar hozircha kodda o'zbekcha
-- **Admin panel** — dizaynda bor (16-bo'lim), lekin u 1440px web dashboard,
-  mobil ilovaga kirmaydi
+- **RU va EN tarjimalari** — `i18n/` qatlami qo'yildi va til
+  sozlamasi ishlaydi, lekin hozircha faqat birinchi bo'lak ko'chirilgan: tab yorliqlari,
+  xush kelibsiz ekrani, Profil va sozlamalar. Qolgan ekranlar hali kodda o'zbekcha
+- **AI javoblari faqat o'zbekcha** — prompt til so'ramaydi, shuning uchun rus yoki
+  ingliz tilini tanlagan foydalanuvchi ham o'zbekcha javob oladi
+
+---
+
+## Logotip va harakat
+
+Logotip brend faylidan olingan va kodda chiziladi — bitmap yo'q, shuning uchun u har
+qanday o'lchamda tiniq. `ui/components/Brand.kt` ichida to'rt narsa bor: belgi (S),
+so'z belgisi, AI orbi va yuklagich.
+
+Harakat ham brend faylining o'zi: S bitta qalam zarbida 1,5 soniyada chiziladi, nuqta
+chiziq to'xtamasdan oldin "sakraydi" (1,25 s), harflar 80 ms oralab ko'tariladi
+(1,2 s dan), shior oxirida chiqadi (1,9 s). Splash aynan shu tugaguncha turadi, kirish
+ekrani ham xuddi shu ochilishni o'ynatadi.
+
+Yuklanish holati — o'sha orbning kichigi, aylanuvchi halqa bilan: skaner tahlil
+qilayotganda va splash sessiyani kutib qolganda ko'rinadi.
+
+Ikonkalar `design/logo/*.svg` dan yig'iladi: Android uchun adaptiv vektor (fon, old
+plan va Android 13 temali qatlam) hamda eski telefonlar uchun PNG'lar, iOS uchun
+1024 px yorug', qorong'i va tinted variantlari. Ilova ichida belgi gradientni ikkala
+mavzuda ham saqlaydi, so'z belgisi va shior esa mavzuning matn ranglarini oladi.
 
 ---
 

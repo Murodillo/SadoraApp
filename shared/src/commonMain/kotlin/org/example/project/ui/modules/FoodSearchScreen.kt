@@ -8,9 +8,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -24,10 +24,14 @@ import kotlin.math.roundToInt
 import org.example.project.design.Radius
 import org.example.project.design.Sadora
 import org.example.project.design.Spacing
+import kotlinx.coroutines.delay
+import org.example.project.data.HealthController
 import org.example.project.model.AppState
 import org.example.project.model.FoodItem
 import org.example.project.model.Meal
-import org.example.project.model.SampleData
+import org.example.project.model.deviceNow
+import org.example.project.model.mealSlotForHour
+import org.example.project.model.nowTimeLabel
 import org.example.project.ui.components.CardLabel
 import org.example.project.ui.components.ChipFlowRow
 import org.example.project.ui.components.SadoraButton
@@ -39,6 +43,19 @@ import org.example.project.ui.components.SegmentedControl
 import org.example.project.ui.components.SelectChip
 import org.example.project.ui.components.noRippleClickable
 
+/** Long enough that a fast typist sends one request, short enough to feel immediate. */
+private const val SearchDebounceMillis = 250L
+
+/** The wire item as the screen's own type; the two differ only in the field names. */
+private fun uz.sadora.contract.FoodItem.toAppFood(): FoodItem = FoodItem(
+    name = name,
+    kcal = kcal,
+    protein = proteinG,
+    fat = fatG,
+    carbs = carbsG,
+    perPiece = perPiece,
+)
+
 /**
  * "Taom qidirish va porsiya".
  *
@@ -49,18 +66,27 @@ import org.example.project.ui.components.noRippleClickable
 @Composable
 fun FoodSearchScreen(
     state: AppState,
-    slot: String,
+    health: HealthController,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
+    /** Which meal the entry belongs to; by default the one this hour falls in. */
+    slot: String = mealSlotForHour(deviceNow().hour),
 ) {
     val c = Sadora.colors
-    var query by remember { mutableStateOf("osh") }
+    var query by remember { mutableStateOf("") }
     var tab by remember { mutableStateOf(0) }
-    var selected by remember { mutableStateOf<FoodItem?>(SampleData.foods.first()) }
+    var selected by remember { mutableStateOf<FoodItem?>(null) }
     var grams by remember { mutableStateOf(250) }
+    var results by remember { mutableStateOf<List<FoodItem>>(emptyList()) }
 
-    val results = SampleData.foods.filter {
-        query.isBlank() || it.name.contains(query, ignoreCase = true)
+    // The catalogue is the server's, and a keystroke does not send a request: the
+    // search waits for a pause, so typing "somsa" is one call rather than five.
+    LaunchedEffect(query) {
+        if (query.isNotBlank()) delay(SearchDebounceMillis)
+        results = health.searchFoods(query).map { it.toAppFood() }
+        // A result list that no longer holds the selection would leave the totals card
+        // describing a dish that is not on screen.
+        if (results.none { it == selected }) selected = null
     }
 
     val chosen = selected
@@ -80,6 +106,23 @@ fun FoodSearchScreen(
                     selectedIndex = tab,
                     onSelect = { tab = it },
                 )
+            }
+
+            if (results.isEmpty()) {
+                item {
+                    SadoraCard {
+                        Text(
+                            if (query.isBlank()) "Taom nomini yozing" else "\"$query\" bo'yicha topilmadi",
+                            style = Sadora.type.h3,
+                            color = c.text,
+                        )
+                        Text(
+                            "Katalog serverdan keladi — o'zbek taomlari birinchi o'rinda.",
+                            style = Sadora.type.body,
+                            color = c.muted,
+                        )
+                    }
+                }
             }
 
             items(results.size) { index ->
@@ -171,7 +214,7 @@ fun FoodSearchScreen(
                             Meal(
                                 id = "search-${state.meals.size}",
                                 slot = slot,
-                                time = "hozir",
+                                time = nowTimeLabel(),
                                 description = chosen.name,
                                 calories = (chosen.kcal * factor).roundToInt(),
                                 protein = (chosen.protein * factor).roundToInt(),
@@ -222,7 +265,7 @@ private fun Stepper(glyph: String, onClick: () -> Unit) {
     Box(
         Modifier
             .size(44.dp)
-            .clip(RoundedCornerShape(999.dp))
+            .clip(Radius.chip)
             .background(c.surface2)
             .noRippleClickable(onClick = onClick),
         contentAlignment = Alignment.Center,

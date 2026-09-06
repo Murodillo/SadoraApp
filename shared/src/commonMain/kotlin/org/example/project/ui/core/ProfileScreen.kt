@@ -6,24 +6,34 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
+import org.example.project.data.HealthController
+import org.example.project.data.SadoraController
+import org.example.project.design.IconSize
 import org.example.project.design.Radius
 import org.example.project.design.Sadora
+import org.example.project.design.SadoraIcons
 import org.example.project.design.Spacing
+import org.example.project.i18n.strings
 import org.example.project.model.AppState
 import org.example.project.nav.Route
 import org.example.project.ui.components.Avatar
 import org.example.project.ui.components.BadgeTone
+import org.example.project.ui.components.ButtonTone
 import org.example.project.ui.components.ChipFlowRow
 import org.example.project.ui.components.SadoraBadge
+import org.example.project.ui.components.SadoraButton
 import org.example.project.ui.components.SadoraCard
 import org.example.project.ui.components.SadoraTopBar
 import org.example.project.ui.components.ScreenContent
@@ -40,13 +50,25 @@ import org.example.project.ui.components.noRippleClickable
 @Composable
 fun ProfileScreen(
     state: AppState,
+    controller: SadoraController,
+    health: HealthController,
     onOpen: (Route) -> Unit,
+    onSignedOut: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val c = Sadora.colors
+    val t = strings.profile
+    val scope = rememberCoroutineScope()
+
+    // The tier can change outside the app — a purchase on another device, a lapsed
+    // subscription — so re-check it whenever Profile is opened.
+    LaunchedEffect(Unit) {
+        controller.refreshEntitlements()
+        health.loadSources()
+    }
 
     Column(modifier) {
-        SadoraTopBar("Profil")
+        SadoraTopBar(t.title)
 
         ScreenContent {
             item {
@@ -62,13 +84,18 @@ fun ProfileScreen(
                             verticalArrangement = Arrangement.spacedBy(2.dp),
                         ) {
                             Text(
-                                "${state.name} Yusupova",
+                                state.name.ifBlank { t.unnamed },
                                 style = Sadora.type.h3,
                                 color = c.text,
                             )
                             Text(state.email, style = Sadora.type.body, color = c.muted)
                         }
-                        Text("›", style = Sadora.type.h3, color = c.muted2)
+                        Icon(
+    SadoraIcons.ChevronRight,
+    contentDescription = null,
+    Modifier.size(IconSize.md),
+    tint = c.muted2,
+)
                     }
                 }
             }
@@ -79,41 +106,68 @@ fun ProfileScreen(
 
             item {
                 SadoraCard(padding = Spacing.xs) {
-                    SettingsRow("◷", "Uyqu") { onOpen(Route.Sleep) }
-                    SettingsRow("☺", "Ong") { onOpen(Route.Mind) }
-                    SettingsRow("💊", "Dorilar") { onOpen(Route.Medications) }
-                    SettingsRow("◫", "Tahlillar") { onOpen(Route.Insights) }
-                    SettingsRow("✎", "Bilim") { onOpen(Route.Knowledge) }
+                    SettingsRow(SadoraIcons.Moon, t.sleep) { onOpen(Route.Sleep) }
+                    SettingsRow(SadoraIcons.Pill, t.medications) { onOpen(Route.Medications) }
+                    if (state.communityEnabled) {
+                        SettingsRow(SadoraIcons.Lock, t.secretChat, iconTint = c.secondary) { onOpen(Route.SecretChat) }
+                    }
+                    SettingsRow(SadoraIcons.Chart, t.insights) { onOpen(Route.Insights) }
+                    SettingsRow(SadoraIcons.Book, t.knowledge) { onOpen(Route.Knowledge) }
                 }
             }
 
             item {
                 SadoraCard(padding = Spacing.xs) {
-                    SettingsRow("◉", "Shaxsiy ma'lumotlar") { onOpen(Route.PersonalDetails) }
-                    SettingsRow("◎", "Maqsadlar") { onOpen(Route.GoalsSettings) }
+                    SettingsRow(SadoraIcons.Profile, t.personalDetails) { onOpen(Route.PersonalDetails) }
+                    SettingsRow(SadoraIcons.Target, t.goals) { onOpen(Route.GoalsSettings) }
                     SettingsRow(
-                        "◔",
-                        "Hayot bosqichi",
-                        value = state.lifeStage.title,
+                        SadoraIcons.Journey,
+                        t.lifeStage,
+                        value = strings.stages.title(state.lifeStage),
                     ) { onOpen(Route.LifeStageSettings) }
-                    SettingsRow("⌚", "Ulangan qurilmalar", value = "2") {
+                    // Blank until the providers have loaded: a "2" that was never true
+                    // is worse than nothing next to a row you are about to open.
+                    val connected = health.sources.count { it.connected }
+                    SettingsRow(
+                        SadoraIcons.Watch,
+                        t.connectedDevices,
+                        value = if (health.sources.isEmpty()) null else "$connected",
+                    ) {
                         onOpen(Route.DataSources)
                     }
-                    SettingsRow("🔔", "Bildirishnomalar") { onOpen(Route.Notifications) }
-                    SettingsRow("🔒", "Maxfiylik va xavfsizlik") { onOpen(Route.PrivacySecurity) }
+                    SettingsRow(SadoraIcons.Bell, t.notifications) { onOpen(Route.Notifications) }
+                    SettingsRow(SadoraIcons.Lock, t.privacyAndSecurity) { onOpen(Route.PrivacySecurity) }
                 }
             }
 
             item {
                 SadoraCard(padding = Spacing.xs) {
-                    SettingsRow("🌐", "Til", value = state.language.native) {}
                     SettingsRow(
-                        if (state.darkTheme) "🌙" else "☀️",
-                        "Mavzu",
-                        value = if (state.darkTheme) "Qorong'i" else "Yorug'",
+                        SadoraIcons.Globe,
+                        t.language,
+                        value = state.language.native,
+                    ) { onOpen(Route.LanguageSettings) }
+                    SettingsRow(
+                        if (state.darkTheme) SadoraIcons.Moon else SadoraIcons.Today,
+                        t.theme,
+                        value = if (state.darkTheme) t.themeDark else t.themeLight,
                     ) { state.darkTheme = !state.darkTheme }
-                    SettingsRow("ℹ", "SADORA haqida") { onOpen(Route.About) }
+                    SettingsRow(SadoraIcons.Info, t.about) { onOpen(Route.About) }
                 }
+            }
+
+            item {
+                SadoraButton(
+                    if (controller.busy) t.signingOut else t.signOut,
+                    tone = ButtonTone.Secondary,
+                    enabled = !controller.busy,
+                    onClick = {
+                        scope.launch {
+                            controller.signOut()
+                            onSignedOut()
+                        }
+                    },
+                )
             }
         }
     }
@@ -123,12 +177,13 @@ fun ProfileScreen(
 @Composable
 private fun PremiumStatusCard(state: AppState) {
     val c = Sadora.colors
-    val onGradient = if (c.isDark) c.bg else Color.White
+    val t = strings.profile
+    val onGradient = c.onPrimary
     Column(
         Modifier
             .fillMaxWidth()
             .clip(Radius.card)
-            .background(Brush.linearGradient(listOf(c.secondary, c.primary)))
+            .background(c.heroGradient)
             .padding(Spacing.md),
         verticalArrangement = Arrangement.spacedBy(Spacing.xs),
     ) {
@@ -137,24 +192,24 @@ private fun PremiumStatusCard(state: AppState) {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
-            Text("SADORA PREMIUM", style = Sadora.type.caption, color = onGradient)
+            Text(t.premiumBadge, style = Sadora.type.caption, color = onGradient)
             androidx.compose.foundation.layout.Box(
                 Modifier
-                    .clip(RoundedCornerShape(999.dp))
+                    .clip(Radius.chip)
                     .background(onGradient.copy(alpha = 0.22f))
                     .padding(horizontal = Spacing.xs, vertical = 3.dp),
             ) {
-                Text("Faol", style = Sadora.type.caption, color = onGradient)
+                Text(t.premiumActive, style = Sadora.type.caption, color = onGradient)
             }
         }
-        Text("Yillik obuna", style = Sadora.type.h2, color = onGradient)
+        Text(t.premiumYearly, style = Sadora.type.h2, color = onGradient)
         Text(state.premiumRenewal, style = Sadora.type.body, color = onGradient.copy(alpha = 0.85f))
         // Flow, not a fixed row — the longest feature name would otherwise wrap mid-chip.
         ChipFlowRow(horizontalGap = Spacing.xs, verticalGap = Spacing.xs) {
-            listOf("AI chat", "Ovqat skaneri", "Kengaytirilgan tahlil").forEach { feature ->
+            listOf(t.premiumFeatureAi, t.premiumFeatureScanner, t.premiumFeatureInsights).forEach { feature ->
                 androidx.compose.foundation.layout.Box(
                     Modifier
-                        .clip(RoundedCornerShape(999.dp))
+                        .clip(Radius.chip)
                         .background(onGradient.copy(alpha = 0.18f))
                         .padding(horizontal = Spacing.xs, vertical = 4.dp),
                 ) {
@@ -174,22 +229,33 @@ private fun PremiumStatusCard(state: AppState) {
 @Composable
 private fun UpgradeCard(onUpgrade: () -> Unit) {
     val c = Sadora.colors
+    val t = strings.profile
     SadoraCard(onClick = onUpgrade) {
         Row(
             Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
         ) {
-            Text("✦", style = Sadora.type.h1, color = c.secondary)
+            Icon(
+                SadoraIcons.Sparkle,
+                contentDescription = null,
+                Modifier.size(28.dp),
+                tint = c.secondary,
+            )
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text("SADORA Premium", style = Sadora.type.h3, color = c.text)
+                Text(t.upgradeTitle, style = Sadora.type.h3, color = c.text)
                 Text(
-                    "AI suhbat, ovqat skaneri va kengaytirilgan tahlillar",
+                    t.upgradeSubtitle,
                     style = Sadora.type.body,
                     color = c.muted,
                 )
             }
-            Text("›", style = Sadora.type.h3, color = c.muted2)
+            Icon(
+    SadoraIcons.ChevronRight,
+    contentDescription = null,
+    Modifier.size(IconSize.md),
+    tint = c.muted2,
+)
         }
     }
 }

@@ -1,0 +1,1140 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SADORA</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300..900&family=Instrument+Sans:wght@400;500;600;700&display=swap">
+<style>
+/* ============================================================
+   SADORA landing — tokenlar to'g'ridan-to'g'ri ilovaning
+   design/Colors.kt, Typography.kt, Dimens.kt fayllaridan.
+   ============================================================ */
+
+@property --stage-a   { syntax: '<color>'; inherits: true; initial-value: #9B85FF; }
+@property --stage-b   { syntax: '<color>'; inherits: true; initial-value: #FF6E8C; }
+@property --stage-ink { syntax: '<color>'; inherits: true; initial-value: #D62F52; }
+
+:root {
+  /* Light — SadoraLightColors */
+  --bg:        #FBF8FF;
+  --surface:   #FFFFFF;
+  --surface-2: #F2ECFF;
+  --primary:   #FF5A7D;
+  --ink-accent:#D62F52;
+  --secondary: #7B61FF;
+  --ink-violet:#5A41D6;
+  --accent:    #4FD1FF;
+  --ink-cyan:  #1D7FA6;
+  --text:      #1E1A2E;
+  --muted:     #736C8C;
+  --muted-2:   #8E86A8;
+  --line:      #E9E2F8;
+  --success:   #1B8A66;
+  --warning:   #8A5A00;
+  --danger:    #C42B30;
+  --on-primary:#FFFFFF;
+
+  --shade:     rgba(30,26,46,.06);
+  --shade-2:   rgba(30,26,46,.10);
+  --aurora:    .26;
+  --glass:     rgba(255,255,255,.72);
+
+  /* Geometriya — 8pt panjara, Dimens.kt */
+  --r-xs: 8px;  --r-sm: 12px; --r-md: 16px; --r-lg: 22px; --r-xl: 26px;
+  --gut: clamp(20px, 4vw, 40px);
+  --wide: 1140px;
+
+  --sans: 'Instrument Sans', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --serif: 'Fraunces', ui-serif, Georgia, 'Times New Roman', serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg:        #131020;
+    --surface:   #1C1730;
+    --surface-2: #272040;
+    --primary:   #FF6E8C;
+    --ink-accent:#FF6E8C;
+    --secondary: #9B85FF;
+    --ink-violet:#9B85FF;
+    --accent:    #63D8FF;
+    --ink-cyan:  #63D8FF;
+    --text:      #F3F0FA;
+    --muted:     #9A93B4;
+    --muted-2:   #A9A2BE;
+    --line:      #322B4D;
+    --success:   #2FBF8F;
+    --warning:   #FFB020;
+    --danger:    #E5484D;
+    --on-primary:#131020;
+    --shade:     rgba(0,0,0,.34);
+    --shade-2:   rgba(0,0,0,.46);
+    --aurora:    .36;
+    --glass:     rgba(28,23,48,.72);
+  }
+}
+:root[data-theme="dark"] {
+  --bg:        #131020;
+  --surface:   #1C1730;
+  --surface-2: #272040;
+  --primary:   #FF6E8C;
+  --ink-accent:#FF6E8C;
+  --secondary: #9B85FF;
+  --ink-violet:#9B85FF;
+  --accent:    #63D8FF;
+  --ink-cyan:  #63D8FF;
+  --text:      #F3F0FA;
+  --muted:     #9A93B4;
+  --muted-2:   #A9A2BE;
+  --line:      #322B4D;
+  --success:   #2FBF8F;
+  --warning:   #FFB020;
+  --danger:    #E5484D;
+  --on-primary:#131020;
+  --shade:     rgba(0,0,0,.34);
+  --shade-2:   rgba(0,0,0,.46);
+  --aurora:    .36;
+  --glass:     rgba(28,23,48,.72);
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+:where(a) { color: inherit; text-decoration: none; }
+:where(button) { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+:where(h1,h2,h3,h4,p,ul,ol,figure) { margin: 0; }
+:where(ul,ol) { padding: 0; list-style: none; }
+:where(svg) { display: block; }
+
+:focus-visible {
+  outline: 2px solid var(--ink-violet);
+  outline-offset: 3px;
+  border-radius: var(--r-xs);
+}
+
+/* ---------- Tipografika — Typography.kt dagi yetti qadam ---------- */
+
+.eyebrow {
+  font-size: 11px; font-weight: 600; line-height: 1.3;
+  letter-spacing: .14em; text-transform: uppercase;
+  color: var(--muted-2);
+}
+.display {
+  font-family: var(--serif);
+  font-optical-sizing: auto;
+  font-weight: 600;
+  font-size: clamp(40px, 7.4vw, 78px);
+  line-height: 1.02;
+  letter-spacing: -.028em;
+  text-wrap: balance;
+}
+.h1 {
+  font-family: var(--serif);
+  font-weight: 600;
+  font-size: clamp(28px, 4vw, 42px);
+  line-height: 1.1;
+  letter-spacing: -.024em;
+  text-wrap: balance;
+}
+.h3 { font-size: 17px; font-weight: 600; line-height: 1.35; letter-spacing: -.01em; }
+.lede { font-size: clamp(16px, 1.6vw, 19px); line-height: 1.62; color: var(--muted); max-width: 58ch; text-wrap: pretty; }
+.small { font-size: 13.5px; line-height: 1.55; color: var(--muted); }
+.tnum { font-variant-numeric: tabular-nums; }
+
+/* ---------- Karkas ---------- */
+
+.wrap { width: 100%; max-width: var(--wide); margin-inline: auto; padding-inline: var(--gut); }
+
+.sec { padding-block: clamp(72px, 9vw, 128px); position: relative; }
+.sec + .sec, .stagescope + .sec { border-top: 1px solid var(--line); }
+
+.sec-head { display: flex; flex-direction: column; gap: 14px; margin-bottom: 48px; max-width: 62ch; }
+
+/* ---------- Navigatsiya ---------- */
+
+.nav {
+  position: sticky; top: 0; z-index: 60;
+  background: var(--glass);
+  backdrop-filter: blur(18px) saturate(1.4);
+  -webkit-backdrop-filter: blur(18px) saturate(1.4);
+  border-bottom: 1px solid transparent;
+  transition: border-color .3s ease;
+}
+.nav.stuck { border-bottom-color: var(--line); }
+.nav-in { display: flex; align-items: center; gap: 28px; height: 66px; }
+
+.mark { display: flex; align-items: center; gap: 10px; margin-right: auto; }
+.mark-dot {
+  width: 22px; height: 22px; border-radius: 999px;
+  background: linear-gradient(135deg, var(--secondary), var(--primary));
+  position: relative; flex: none;
+}
+.mark-dot::after {
+  content: ''; position: absolute; inset: 6px 6px auto auto;
+  width: 7px; height: 7px; border-radius: 999px;
+  background: var(--surface);
+}
+.mark-name {
+  font-family: var(--serif); font-weight: 700; font-size: 19px;
+  letter-spacing: .06em; text-transform: uppercase;
+}
+.nav-links { display: flex; gap: 26px; }
+.nav-links a { font-size: 14px; color: var(--muted); transition: color .2s ease; }
+.nav-links a:hover { color: var(--text); }
+@media (max-width: 760px) { .nav-links { display: none; } }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 44px; padding: 0 20px; border-radius: 999px;
+  font-size: 14.5px; font-weight: 600; letter-spacing: -.005em;
+  transition: transform .22s cubic-bezier(.2,.7,.3,1), box-shadow .22s ease, background-color .22s ease, border-color .22s ease;
+}
+.btn-fill {
+  color: #fff;
+  background: linear-gradient(120deg, var(--secondary), var(--primary));
+  box-shadow: 0 8px 22px -10px var(--primary);
+}
+.btn-fill:hover { transform: translateY(-2px); box-shadow: 0 16px 30px -12px var(--primary); }
+.btn-ghost { border: 1px solid var(--line); background: var(--surface); }
+.btn-ghost:hover { transform: translateY(-2px); border-color: var(--muted-2); }
+.btn-sm { min-height: 38px; padding: 0 16px; font-size: 13.5px; }
+
+/* ---------- Hero + bosqich mintaqasi (yagona morflanuvchi blok) ---------- */
+
+.stagescope { position: relative; isolation: isolate; }
+
+.aurora {
+  position: absolute; inset: -180px 0 auto 20%; height: 830px;
+  z-index: -1; pointer-events: none; overflow: hidden;
+  /* Konteyner qirrasi ko'rinmasin — chetlari to'liq so'niydi */
+  --fade: radial-gradient(78% 62% at 62% 34%, #000 0%, rgba(0,0,0,.9) 26%, transparent 72%);
+  -webkit-mask-image: var(--fade);
+          mask-image: var(--fade);
+}
+@media (max-width: 780px) {
+  .aurora { inset: -140px 0 auto 0; height: 700px; }
+}
+.aurora i {
+  position: absolute; display: block; border-radius: 999px;
+  filter: blur(104px); opacity: var(--aurora);
+  transition: background-color .9s ease;
+}
+.aurora i:nth-child(1) { width: 620px; height: 620px; top: -120px; right: -60px; background: var(--stage-b); animation: drift1 26s ease-in-out infinite; }
+.aurora i:nth-child(2) { width: 520px; height: 520px; top: 120px; right: 340px; background: var(--stage-a); animation: drift2 32s ease-in-out infinite; }
+.aurora i:nth-child(3) { width: 420px; height: 420px; top: 430px; left: 30px; background: var(--accent); opacity: calc(var(--aurora) * .6); animation: drift1 38s ease-in-out infinite reverse; }
+
+@keyframes drift1 { 0%,100% { transform: translate3d(0,0,0) scale(1); } 50% { transform: translate3d(-46px, 40px, 0) scale(1.1); } }
+@keyframes drift2 { 0%,100% { transform: translate3d(0,0,0) scale(1.06); } 50% { transform: translate3d(56px, -34px, 0) scale(.94); } }
+
+.hero { padding-top: clamp(56px, 8vw, 104px); padding-bottom: clamp(40px, 5vw, 64px); }
+.hero-grid {
+  display: grid; gap: clamp(40px, 6vw, 72px);
+  grid-template-columns: minmax(0, 1.02fr) minmax(0, .98fr);
+  align-items: center;
+}
+@media (max-width: 940px) { .hero-grid { grid-template-columns: minmax(0,1fr); } }
+
+.hero-copy { display: flex; flex-direction: column; gap: 22px; }
+.hero-copy .display em {
+  font-style: normal;
+  background: linear-gradient(100deg, var(--stage-a), var(--stage-b));
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.hero-cta { display: flex; flex-wrap: wrap; gap: 12px; padding-top: 4px; }
+.hero-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; padding-top: 6px; }
+.dotsep { width: 4px; height: 4px; border-radius: 999px; background: var(--line); flex: none; }
+@media (max-width: 560px) {
+  .hero-foot { flex-direction: column; align-items: flex-start; gap: 4px; }
+  .hero-foot .dotsep { display: none; }
+}
+
+/* ---------- Telefon maketi ---------- */
+
+.phone-stage { display: flex; justify-content: center; perspective: 1400px; }
+.phone {
+  width: 320px; max-width: 100%; flex: none;
+  border-radius: 46px;
+  padding: 11px;
+  background: linear-gradient(160deg, var(--surface), var(--surface-2));
+  border: 1px solid var(--line);
+  box-shadow: 0 2px 4px var(--shade), 0 40px 90px -34px var(--shade-2), 0 90px 120px -70px var(--stage-b);
+  transition: box-shadow .9s ease;
+}
+.screen {
+  border-radius: 36px; overflow: hidden;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  display: flex; flex-direction: column;
+  min-height: 618px;
+}
+.sbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 20px 4px; font-size: 11.5px; font-weight: 600; color: var(--muted);
+}
+.sbar span:last-child { display: flex; gap: 4px; align-items: center; }
+.sbar b { display: block; width: 16px; height: 8px; border-radius: 2px; background: var(--muted-2); }
+
+.scr-body { flex: 1; display: flex; flex-direction: column; gap: 12px; padding: 8px 16px 12px; }
+
+.scr-hd { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.scr-hd h4 { font-family: var(--serif); font-size: 21px; font-weight: 600; letter-spacing: -.02em; }
+.scr-hd span { font-size: 11px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--muted-2); }
+
+/* AI xulosa — gradient ruxsat etilgan to'rt joydan biri */
+.ai-card {
+  border-radius: var(--r-md); padding: 12px 14px;
+  background: linear-gradient(115deg, var(--stage-a), var(--stage-b));
+  color: #fff;
+  transition: background .7s ease;
+}
+.ai-card p { font-size: 12px; line-height: 1.5; opacity: .95; }
+.ai-card .eyebrow { color: rgba(255,255,255,.86); margin-bottom: 5px; }
+
+.metric {
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--r-lg); padding: 16px 14px 14px;
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  position: relative;
+}
+.pill-pred {
+  position: absolute; top: 12px; right: 12px;
+  font-size: 9.5px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
+  padding: 4px 9px; border-radius: 999px;
+  color: var(--stage-ink);
+  border: 1px solid color-mix(in srgb, var(--stage-ink) 34%, transparent);
+  background: color-mix(in srgb, var(--stage-ink) 9%, transparent);
+  transition: opacity .3s ease;
+}
+.pill-pred[hidden] { display: none; }
+
+.gauge { position: relative; width: 172px; height: 172px; }
+.gauge svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.gauge .track { stroke: var(--surface-2); }
+.gauge .arc { stroke: url(#gaugeGrad); stroke-linecap: round; transition: stroke-dashoffset .9s cubic-bezier(.32,.72,.28,1); }
+.gauge-mid {
+  position: absolute; inset: 0; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 2px; text-align: center;
+}
+.gauge-mid .eyebrow { font-size: 10px; }
+.gauge-num {
+  font-family: var(--serif); font-weight: 700;
+  font-size: 52px; line-height: 1; letter-spacing: -.035em;
+  font-variant-numeric: tabular-nums;
+}
+.gauge-sub { font-size: 11px; color: var(--muted); }
+
+/* Perimenopauza — halqa emas, muntazamlik grafigi */
+.bars[hidden], .gauge[hidden] { display: none; }
+.bars { width: 172px; height: 172px; display: flex; align-items: flex-end; gap: 7px; padding: 18px 0 6px; }
+.bars i {
+  flex: 1; display: block; border-radius: 5px 5px 3px 3px;
+  background: linear-gradient(180deg, var(--stage-a), var(--stage-b));
+  transform-origin: bottom;
+  transition: height .7s cubic-bezier(.32,.72,.28,1);
+}
+
+.metric-note { font-size: 11.5px; color: var(--muted); text-align: center; line-height: 1.45; }
+
+.chips { display: flex; gap: 7px; flex-wrap: wrap; }
+.chip {
+  font-size: 11px; font-weight: 500; padding: 6px 11px; border-radius: 999px;
+  background: var(--surface); border: 1px solid var(--line); color: var(--muted);
+}
+
+.mini {
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--r-md); padding: 11px 13px;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.mini-row { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; font-size: 12px; }
+.mini-row b { font-size: 13.5px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.mini-row span { color: var(--muted); font-size: 11px; }
+.bar { height: 7px; border-radius: 999px; background: var(--surface-2); overflow: hidden; }
+.bar i { display: block; height: 100%; border-radius: 999px; background: var(--accent); width: 0; transition: width 1.1s cubic-bezier(.32,.72,.28,1); }
+
+.tabbar {
+  display: grid; grid-template-columns: repeat(5, 1fr); align-items: end;
+  padding: 10px 12px 16px; border-top: 1px solid var(--line);
+  background: var(--surface);
+}
+.tabbar button { display: flex; flex-direction: column; align-items: center; gap: 5px; color: var(--muted-2); }
+.tabbar button span { font-size: 9.5px; font-weight: 600; letter-spacing: .02em; }
+.tabbar button[aria-current="true"] { color: var(--stage-ink); }
+.fab {
+  width: 46px; height: 46px; border-radius: 999px; margin-bottom: 2px;
+  display: grid; place-items: center; color: #fff;
+  background: linear-gradient(135deg, var(--stage-a), var(--stage-b));
+  box-shadow: 0 8px 18px -8px var(--stage-b);
+  transition: background .7s ease;
+}
+
+/* ---------- Bosqichlar chizig'i ---------- */
+
+.stages { padding-block: clamp(40px, 5vw, 64px) clamp(72px, 9vw, 118px); }
+
+.timeline { position: relative; margin-bottom: 40px; }
+.timeline::before {
+  content: ''; position: absolute; left: 0; right: 0; top: 13px; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--line) 8%, var(--line) 92%, transparent);
+}
+.tl-list { display: grid; grid-template-columns: repeat(5, minmax(0,1fr)); gap: 8px; }
+@media (max-width: 780px) {
+  .timeline::before { display: none; }
+  .tl-list { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
+}
+.tl-item { position: relative; }
+.tl-btn {
+  width: 100%; display: flex; flex-direction: column; align-items: flex-start; gap: 12px;
+  padding: 0 0 4px; text-align: left; min-height: 44px;
+}
+.tl-node {
+  width: 27px; height: 27px; border-radius: 999px; flex: none;
+  display: grid; place-items: center;
+  background: var(--bg); border: 1px solid var(--line);
+  transition: border-color .3s ease, background .3s ease, transform .3s cubic-bezier(.2,.7,.3,1);
+}
+.tl-node i {
+  width: 9px; height: 9px; border-radius: 999px; display: block;
+  background: var(--line); transition: background .3s ease, transform .3s ease;
+}
+.tl-btn:hover .tl-node { transform: scale(1.1); border-color: var(--muted-2); }
+.tl-btn[aria-pressed="true"] .tl-node { border-color: transparent; background: color-mix(in srgb, var(--stage-b) 16%, transparent); transform: scale(1.14); }
+.tl-btn[aria-pressed="true"] .tl-node i { background: linear-gradient(135deg, var(--stage-a), var(--stage-b)); transform: scale(1.25); }
+.tl-name { font-size: 14.5px; font-weight: 600; letter-spacing: -.01em; color: var(--muted); transition: color .3s ease; }
+.tl-btn[aria-pressed="true"] .tl-name { color: var(--text); }
+.tl-metric { font-size: 11.5px; color: var(--muted-2); }
+
+.stage-panel {
+  display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, .85fr);
+  gap: clamp(24px, 4vw, 56px); align-items: start;
+  border: 1px solid var(--line); border-radius: var(--r-xl);
+  background: var(--surface); padding: clamp(24px, 3.4vw, 38px);
+  box-shadow: 0 1px 2px var(--shade), 0 24px 50px -40px var(--shade-2);
+}
+@media (max-width: 780px) { .stage-panel { grid-template-columns: minmax(0,1fr); } }
+.stage-panel h3 { font-family: var(--serif); font-size: clamp(24px, 3vw, 32px); font-weight: 600; letter-spacing: -.02em; margin-bottom: 12px; }
+.stage-panel p { color: var(--muted); font-size: 15.5px; line-height: 1.62; max-width: 52ch; }
+
+.facts { display: flex; flex-direction: column; gap: 0; }
+.fact { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; padding: 13px 0; border-bottom: 1px solid var(--line); }
+.fact:last-child { border-bottom: 0; }
+.fact dt { font-size: 12.5px; color: var(--muted-2); }
+.fact dd { margin: 0; font-size: 14px; font-weight: 600; text-align: right; }
+.yes { color: var(--ink-accent); }
+.no  { color: var(--muted); font-weight: 500; }
+
+/* ---------- Kartalar ---------- */
+
+.grid { display: grid; gap: 16px; }
+.g-tabs { grid-template-columns: repeat(auto-fit, minmax(232px, 1fr)); }
+@media (min-width: 900px) {
+  .g-tabs { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .g-tabs > :nth-child(2) { grid-column: span 2; }
+}
+.g-mods { grid-template-columns: repeat(auto-fit, minmax(178px, 1fr)); }
+@media (min-width: 900px) { .g-mods { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+
+.card {
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--r-lg); padding: 22px;
+  display: flex; flex-direction: column; gap: 10px;
+  transition: transform .28s cubic-bezier(.2,.7,.3,1), border-color .28s ease, box-shadow .28s ease;
+}
+.card:hover { transform: translateY(-3px); border-color: color-mix(in srgb, var(--secondary) 34%, var(--line)); box-shadow: 0 18px 40px -30px var(--shade-2); }
+.card p { font-size: 14px; line-height: 1.58; color: var(--muted); }
+.card-ico {
+  width: 38px; height: 38px; border-radius: var(--r-sm); flex: none;
+  display: grid; place-items: center;
+  background: var(--surface-2); color: var(--ink-violet);
+  margin-bottom: 4px;
+}
+.card-tag {
+  align-self: flex-start; margin-top: auto; padding-top: 12px;
+  font-size: 11px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--muted-2);
+}
+
+.mod {
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--r-md); padding: 16px 16px 18px;
+  display: flex; flex-direction: column; gap: 6px;
+  transition: transform .28s cubic-bezier(.2,.7,.3,1), border-color .28s ease;
+}
+.mod:hover { transform: translateY(-3px); border-color: color-mix(in srgb, var(--accent) 46%, var(--line)); }
+.mod b { font-size: 14.5px; font-weight: 600; letter-spacing: -.01em; }
+.mod span { font-size: 12.5px; color: var(--muted); line-height: 1.5; }
+
+/* ---------- Dizayn qoidalari — qoida ko'rsatiladi, yozilmaydi ---------- */
+
+.rules { display: grid; grid-template-columns: repeat(auto-fit, minmax(272px, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: var(--r-xl); overflow: hidden; }
+.rule { background: var(--surface); padding: 26px 24px 24px; display: flex; flex-direction: column; gap: 14px; }
+.rule h3 { font-family: var(--serif); font-size: 20px; font-weight: 600; letter-spacing: -.018em; line-height: 1.24; text-wrap: balance; }
+.rule p { font-size: 13.5px; line-height: 1.56; color: var(--muted); }
+.demo {
+  margin-top: auto; border-top: 1px dashed var(--line); padding-top: 16px;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-height: 74px;
+}
+
+.sw { width: 38px; height: 27px; border-radius: var(--r-xs); background: linear-gradient(120deg, var(--secondary), var(--primary)); }
+.sw-flat { width: 38px; height: 27px; border-radius: var(--r-xs); background: var(--surface-2); border: 1px solid var(--line); }
+.demo-lbl { font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; font-weight: 600; color: var(--muted-2); width: 100%; }
+
+.legend { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--muted); }
+.dot-fill { width: 15px; height: 15px; border-radius: 999px; background: var(--primary); flex: none; }
+.dot-out  { width: 15px; height: 15px; border-radius: 999px; border: 1.5px dashed var(--primary); flex: none; }
+
+.pill-demo {
+  font-size: 10px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
+  padding: 5px 11px; border-radius: 999px; color: var(--ink-accent);
+  border: 1px solid color-mix(in srgb, var(--ink-accent) 34%, transparent);
+  background: color-mix(in srgb, var(--ink-accent) 9%, transparent);
+}
+
+.claim { font-size: 13.5px; display: flex; align-items: center; gap: 9px; width: 100%; }
+.claim.bad { color: var(--muted-2); text-decoration: line-through; text-decoration-color: var(--danger); }
+.claim.good { color: var(--text); font-weight: 500; }
+.claim i { width: 5px; height: 5px; border-radius: 999px; flex: none; background: currentColor; }
+
+.locked {
+  position: relative; width: 100%; border-radius: var(--r-sm);
+  border: 1px solid var(--line); background: var(--surface-2);
+  padding: 12px 14px; overflow: hidden;
+}
+.locked .blurred { filter: blur(3.4px); opacity: .62; font-size: 12.5px; line-height: 1.5; }
+.locked .lock-tag {
+  position: absolute; inset: auto 10px 10px auto;
+  font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--ink-violet);
+}
+
+.target {
+  width: 44px; height: 44px; border-radius: var(--r-sm);
+  border: 1.5px dashed color-mix(in srgb, var(--accent) 62%, transparent);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  display: grid; place-items: center;
+  font-size: 9.5px; font-weight: 700; color: var(--ink-cyan); letter-spacing: .02em;
+}
+
+/* ---------- Yo'l xaritasi ---------- */
+
+.road { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: clamp(24px, 4vw, 48px); }
+.road-col h3 { display: flex; align-items: center; gap: 10px; font-size: 13px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; margin-bottom: 18px; }
+.road-col h3 i { width: 8px; height: 8px; border-radius: 999px; flex: none; }
+.road-col:first-child h3 { color: var(--success); }
+.road-col:first-child h3 i { background: var(--success); }
+.road-col:last-child h3 { color: var(--warning); }
+.road-col:last-child h3 i { background: var(--warning); }
+.road-list li { padding: 12px 0; border-bottom: 1px solid var(--line); font-size: 14.5px; line-height: 1.5; }
+.road-list li:last-child { border-bottom: 0; }
+.road-list li span { display: block; font-size: 12.5px; color: var(--muted); margin-top: 3px; }
+
+/* ---------- Yakuniy blok ---------- */
+
+.close-card {
+  border-radius: var(--r-xl); overflow: hidden; position: relative;
+  background: linear-gradient(125deg, var(--secondary), var(--primary));
+  color: #fff; padding: clamp(38px, 6vw, 72px) clamp(26px, 5vw, 60px);
+  display: flex; flex-direction: column; gap: 22px; align-items: flex-start;
+}
+.close-card .h1 { color: #fff; }
+.close-card p { color: rgba(255,255,255,.9); font-size: 16.5px; line-height: 1.6; max-width: 48ch; }
+.close-card .eyebrow { color: rgba(255,255,255,.78); }
+.close-card .btn-fill { background: #fff; color: #1E1A2E; box-shadow: 0 10px 30px -14px rgba(0,0,0,.5); }
+.close-card .btn-ghost { background: rgba(255,255,255,.12); border-color: rgba(255,255,255,.34); color: #fff; }
+.close-ring { position: absolute; inset: auto -90px -160px auto; width: 380px; height: 380px; border-radius: 999px; border: 46px solid rgba(255,255,255,.1); pointer-events: none; }
+
+.foot { padding-block: 44px 56px; border-top: 1px solid var(--line); }
+.foot-in { display: flex; flex-wrap: wrap; gap: 20px 32px; align-items: center; justify-content: space-between; }
+.foot p { font-size: 13px; color: var(--muted-2); max-width: 56ch; line-height: 1.55; }
+
+/* ---------- Animatsiya ---------- */
+
+.js .r { opacity: 0; transform: translateY(20px); transition: opacity .8s cubic-bezier(.22,.68,.3,1), transform .8s cubic-bezier(.22,.68,.3,1); transition-delay: var(--d, 0ms); }
+.js .r.in { opacity: 1; transform: none; }
+
+.js .lift { opacity: 0; transform: translateY(34px) scale(.985); animation: lift 1.1s cubic-bezier(.2,.7,.25,1) forwards; animation-delay: var(--d, 0ms); }
+@keyframes lift { to { opacity: 1; transform: none; } }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+  .js .r, .js .lift { opacity: 1; transform: none; }
+}
+</style>
+</head>
+<body>
+<script>document.documentElement.className += ' js';</script>
+
+<header class="nav" id="nav">
+  <div class="wrap nav-in">
+    <a class="mark" href="#top" aria-label="SADORA — bosh sahifa">
+      <span class="mark-dot" aria-hidden="true"></span>
+      <span class="mark-name">Sadora</span>
+    </a>
+    <nav class="nav-links" aria-label="Bo'limlar">
+      <a href="#bosqichlar">Bosqichlar</a>
+      <a href="#ilova">Ilova</a>
+      <a href="#qoidalar">Qoidalar</a>
+      <a href="#yol-xaritasi">Yo'l xaritasi</a>
+    </nav>
+    <a class="btn btn-ghost btn-sm" href="#yakun">Sinovga yozilish</a>
+  </div>
+</header>
+
+<main id="top">
+
+<!-- ==================== HERO + BOSQICHLAR ==================== -->
+<div class="stagescope" id="scope">
+  <div class="aurora" aria-hidden="true"><i></i><i></i><i></i></div>
+
+  <section class="hero">
+    <div class="wrap hero-grid">
+      <div class="hero-copy">
+        <p class="eyebrow lift" style="--d:60ms">Ayollar salomatligi &middot; Android va iOS</p>
+        <h1 class="display lift" style="--d:140ms">Har bir ayol.<br><em>Har bir lahza.</em></h1>
+        <p class="lede lift" style="--d:220ms">
+          Sikl, homiladorlik, tug'ruqdan keyingi davr va menopauza &mdash; uyqu, ovqatlanish
+          va kayfiyat bilan bir joyda. Har bir hayot bosqichi o'z ekraniga, o'z asosiy
+          ko'rsatkichiga va o'z tiliga ega.
+        </p>
+        <div class="hero-cta lift" style="--d:300ms">
+          <a class="btn btn-fill" href="#yakun">Sinovga yozilish</a>
+          <a class="btn btn-ghost" href="#qoidalar">Dizayn qoidalari</a>
+        </div>
+        <div class="hero-foot lift" style="--d:380ms">
+          <span class="small">Interfeys tili &mdash; o'zbekcha</span>
+          <span class="dotsep" aria-hidden="true"></span>
+          <span class="small">Bitta umumiy UI, ikkita platforma</span>
+        </div>
+      </div>
+
+      <div class="phone-stage lift" style="--d:340ms">
+        <div class="phone">
+          <div class="screen">
+            <div class="sbar" aria-hidden="true">
+              <span class="tnum">9:41</span>
+              <span><b></b><b></b><b style="width:22px"></b></span>
+            </div>
+
+            <div class="scr-body">
+              <div class="scr-hd">
+                <h4>Xayrli tong</h4>
+                <span id="scrTab">Bugun</span>
+              </div>
+
+              <div class="ai-card">
+                <p class="eyebrow">Bugungi xulosa</p>
+                <p id="aiText">Kecha 6 soat 40 daqiqa uxlagansiz va energiyangiz odatdagidan pastroq. Bugun suvni ko'proq iching.</p>
+              </div>
+
+              <div class="metric">
+                <span class="pill-pred" id="predPill">Taxminiy</span>
+
+                <div class="gauge" id="gauge">
+                  <svg viewBox="0 0 180 180" aria-hidden="true">
+                    <defs>
+                      <linearGradient id="gaugeGrad" x1="0" y1="0" x2="1" y2="1">
+                        <stop offset="0%"  stop-color="var(--stage-a)"></stop>
+                        <stop offset="100%" stop-color="var(--stage-b)"></stop>
+                      </linearGradient>
+                    </defs>
+                    <circle class="track" cx="90" cy="90" r="76" fill="none" stroke-width="11"></circle>
+                    <circle class="arc" id="arc" cx="90" cy="90" r="76" fill="none" stroke-width="11"
+                            stroke-dasharray="477.5" stroke-dashoffset="477.5"></circle>
+                  </svg>
+                  <div class="gauge-mid">
+                    <p class="eyebrow" id="mLabel">Sikl kuni</p>
+                    <p class="gauge-num" id="mValue">14</p>
+                    <p class="gauge-sub" id="mSub">Ovulyatsiya davri</p>
+                  </div>
+                </div>
+
+                <div class="bars" id="bars" hidden aria-hidden="true">
+                  <i style="height:38%"></i><i style="height:64%"></i><i style="height:47%"></i>
+                  <i style="height:82%"></i><i style="height:55%"></i><i style="height:71%"></i>
+                  <i style="height:44%"></i>
+                </div>
+
+                <p class="metric-note" id="mNote">Unumdor kunlar &middot; 12&ndash;16-kun</p>
+              </div>
+
+              <div class="chips" id="chips">
+                <span class="chip">Stress past</span>
+                <span class="chip">Energiya 3/5</span>
+              </div>
+
+              <div class="mini">
+                <div class="mini-row">
+                  <span>Suv</span>
+                  <b class="tnum">1,2 <span>/ 2,0 L</span></b>
+                </div>
+                <div class="bar"><i data-fill="60%"></i></div>
+                <div class="mini-row">
+                  <span>Ovqatlanish</span>
+                  <b class="tnum">1 240 <span>/ 1 900 kkal</span></b>
+                </div>
+                <div class="bar"><i data-fill="65%"></i></div>
+              </div>
+            </div>
+
+            <nav class="tabbar" aria-label="Ilova tablari">
+              <button type="button" aria-current="true">
+                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5.5 9.5V20h13V9.5"/></svg>
+                <span>Bugun</span>
+              </button>
+              <button type="button">
+                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 20c0-6 6-4 6-9S6 6 6 4"/><circle cx="17.5" cy="7" r="2.5"/><circle cx="6" cy="19.5" r="1.6"/></svg>
+                <span id="tabJourney">Sikl</span>
+              </button>
+              <button type="button" class="fab" aria-label="AI">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 13.7 9l5.5 1.7-5.5 1.7L12 18l-1.7-5.6L4.8 10.7 10.3 9z"/></svg>
+              </button>
+              <button type="button">
+                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 5c0 7-4.5 11-9.5 11H6c0-7 4.5-11 9.5-11z"/><path d="M5 21c1.5-4 3.5-6.5 6-8"/></svg>
+                <span>Ovqat</span>
+              </button>
+              <button type="button">
+                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8.5" r="3.6"/><path d="M4.5 20c1.4-3.6 4.2-5.4 7.5-5.4S18.1 16.4 19.5 20"/></svg>
+                <span>Profil</span>
+              </button>
+            </nav>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="stages" id="bosqichlar">
+    <div class="wrap">
+      <div class="sec-head r">
+        <p class="eyebrow">Hayot bosqichlari</p>
+        <h2 class="h1">Homiladorlik &mdash; bu &laquo;o'chirilgan Sikl ekrani&raquo; emas.</h2>
+        <p class="lede">
+          Bosqich ilovadagi eng katta tarmoqlanish. U butun bir tabni almashtiradi,
+          tab yorlig'ini o'zgartiradi va asosiy ko'rsatkichni boshqasiga aylantiradi.
+          Bosqichni tanlang &mdash; yuqoridagi ekran o'zgaradi.
+        </p>
+      </div>
+
+      <div class="timeline r" style="--d:80ms">
+        <ul class="tl-list" id="tlList" aria-label="Hayot bosqichi"></ul>
+      </div>
+
+      <div class="stage-panel r" style="--d:140ms">
+        <div>
+          <h3 id="spTitle">Sikl va rejalashtirish</h3>
+          <p id="spBody">Sikl kuni, unumdor oyna va keyingi hayz bashorati. Bashorat ko'rsatilgan har bir joyda &laquo;Taxminiy&raquo; nishoni turadi &mdash; ilova hech qachon taxminni fakt qilib ko'rsatmaydi.</p>
+        </div>
+        <dl class="facts">
+          <div class="fact"><dt>Asosiy ko'rsatkich</dt><dd id="spMetric">Sikl kuni</dd></div>
+          <div class="fact"><dt>Sikl bashorati</dt><dd id="spPred" class="yes">Bor &mdash; &laquo;Taxminiy&raquo; bilan</dd></div>
+          <div class="fact"><dt>Yo'l tabi yorlig'i</dt><dd id="spTab">Sikl</dd></div>
+        </dl>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- ==================== ILOVA ==================== -->
+<section class="sec" id="ilova">
+  <div class="wrap">
+    <div class="sec-head r">
+      <p class="eyebrow">Beshta tab</p>
+      <h2 class="h1">Kunlik ritm &mdash; besh ekranga sig'adi.</h2>
+      <p class="lede">Hech bir ekran boshqasini to'g'ridan-to'g'ri chaqirmaydi. Ular faqat marshrut orqali gaplashadi, shuning uchun har biri o'zicha to'liq va tushunarli.</p>
+    </div>
+
+    <div class="grid g-tabs">
+      <article class="card r" style="--d:0ms">
+        <span class="card-ico" aria-hidden="true"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5.5 9.5V20h13V9.5"/></svg></span>
+        <h3 class="h3">Bugun</h3>
+        <p>Xulosa, asosiy ko'rsatkich, suv, ovqat, faollik va uyqu &mdash; bitta ekranda, aylantirmasdan.</p>
+        <p class="card-tag">Kunning boshlanishi</p>
+      </article>
+
+      <article class="card r" style="--d:70ms">
+        <span class="card-ico" aria-hidden="true"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 20c0-6 6-4 6-9S6 6 6 4"/><circle cx="17.5" cy="7" r="2.5"/><circle cx="6" cy="19.5" r="1.6"/></svg></span>
+        <h3 class="h3">Yo'l</h3>
+        <p>Hayot bosqichingizga qarab butunlay almashadigan tab. Homilador foydalanuvchi bu yerda &laquo;Sikl&raquo; emas, &laquo;Homilador&raquo; deb ko'radi.</p>
+        <p class="card-tag">Eng katta shox</p>
+      </article>
+
+      <article class="card r" style="--d:140ms">
+        <span class="card-ico" aria-hidden="true"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 13.7 9l5.5 1.7-5.5 1.7L12 18l-1.7-5.6L4.8 10.7 10.3 9z"/></svg></span>
+        <h3 class="h3">AI</h3>
+        <p>Savol bering, xulosa oling. Javob &laquo;ko'pincha birga kuzatilgan&raquo; deb yozadi &mdash; &laquo;sabab bo'lgan&raquo; demaydi.</p>
+        <p class="card-tag">Gradient ruxsat etilgan</p>
+      </article>
+
+      <article class="card r" style="--d:210ms">
+        <span class="card-ico" aria-hidden="true"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 5c0 7-4.5 11-9.5 11H6c0-7 4.5-11 9.5-11z"/><path d="M5 21c1.5-4 3.5-6.5 6-8"/></svg></span>
+        <h3 class="h3">Ovqat</h3>
+        <p>Kamera bilan skanerlash, qidiruv, kaloriya va makrolar. Skaner &rarr; tahlil &rarr; natija bir chiziqli oqim.</p>
+        <p class="card-tag">Kamera oqimi</p>
+      </article>
+
+      <article class="card r" style="--d:280ms">
+        <span class="card-ico" aria-hidden="true"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8.5" r="3.6"/><path d="M4.5 20c1.4-3.6 4.2-5.4 7.5-5.4S18.1 16.4 19.5 20"/></svg></span>
+        <h3 class="h3">Profil</h3>
+        <p>Ma'lumot manbalari, dorilar, roziliklar, til va obuna. Nimaga rozilik berganingiz bir joyda ko'rinadi.</p>
+        <p class="card-tag">Nazorat sizda</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== MODULLAR ==================== -->
+<section class="sec">
+  <div class="wrap">
+    <div class="sec-head r">
+      <p class="eyebrow">Modullar</p>
+      <h2 class="h1">Kerak bo'lganda ochiladi, kerak bo'lmaganda ko'rinmaydi.</h2>
+    </div>
+
+    <div class="grid g-mods">
+      <div class="mod r" style="--d:0ms"><b>Ovqat skaneri</b><span>Kamera, tahlil va tuzatish &mdash; uch qadam.</span></div>
+      <div class="mod r" style="--d:50ms"><b>Ong</b><span>Kayfiyat kundaligi, nafas va tinchlantiruvchi mashqlar.</span></div>
+      <div class="mod r" style="--d:100ms"><b>Dorilar</b><span>Qabul panjarasi. O'tkazib yuborilgan qabul haqida maslahat bermaydi.</span></div>
+      <div class="mod r" style="--d:150ms"><b>Uyqu</b><span>Bosqichlar, davomiylik va uyg'onishlar.</span></div>
+      <div class="mod r" style="--d:200ms"><b>Tahlillar</b><span>Ko'rsatkichlar dinamikasi, sabab-natijasiz.</span></div>
+      <div class="mod r" style="--d:250ms"><b>Bilim</b><span>Qisqa maqolalar, bosqichingizga moslangan.</span></div>
+      <div class="mod r" style="--d:300ms"><b>Balans</b><span>Menopauzaning asosiy ko'rsatkichi.</span></div>
+      <div class="mod r" style="--d:350ms"><b>Manbalar</b><span>Apple Health, Oura &mdash; qaysi raqam qayerdan kelgani ko'rinadi.</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== DIZAYN QOIDALARI ==================== -->
+<section class="sec" id="qoidalar">
+  <div class="wrap">
+    <div class="sec-head r">
+      <p class="eyebrow">Dizayn qoidalari</p>
+      <h2 class="h1">Bular uslub emas &mdash; kodda ataylab saqlangan qarorlar.</h2>
+      <p class="lede">Sog'liq ilovasida dizayn qarori ishonch qarori hamdir. Quyidagi oltitasi tekstda emas, ekranning o'zida ko'rinadi.</p>
+    </div>
+
+    <div class="rules r" style="--d:80ms">
+      <article class="rule">
+        <h3>Gradient faqat to'rt joyda.</h3>
+        <p>Hero, AI, Premium CTA va markaziy tugma. Boshqa hech qayerda &mdash; shuning uchun oddiy karta gradientni umuman bilmaydi.</p>
+        <div class="demo">
+          <span class="demo-lbl">Ruxsat &middot; taqiq</span>
+          <span class="sw" aria-hidden="true"></span>
+          <span class="sw" aria-hidden="true"></span>
+          <span class="sw" aria-hidden="true"></span>
+          <span class="sw" aria-hidden="true"></span>
+          <span class="sw-flat" aria-hidden="true"></span>
+          <span class="sw-flat" aria-hidden="true"></span>
+        </div>
+      </article>
+
+      <article class="rule">
+        <h3>Rang hech qachon yagona indikator emas.</h3>
+        <p>Kalendarda qayd etilgan kunlar to'ldirilgan, bashorat qilinganlari konturli. Afsona ikkalasini so'z bilan ham yozadi.</p>
+        <div class="demo">
+          <span class="legend"><i class="dot-fill" aria-hidden="true"></i>Qayd etilgan</span>
+          <span class="legend"><i class="dot-out" aria-hidden="true"></i>Taxminiy</span>
+        </div>
+      </article>
+
+      <article class="rule">
+        <h3>Har bir bashorat belgilanadi.</h3>
+        <p>Bashorat ko'rsatilgan joyda bu nishon albatta turadi. Homiladorlik, tug'ruqdan keyingi davr va menopauzada esa bashorat umuman chizilmaydi.</p>
+        <div class="demo"><span class="pill-demo">Taxminiy</span></div>
+      </article>
+
+      <article class="rule">
+        <h3>Sabab-natija da'vo qilinmaydi.</h3>
+        <p>Tahlillar bog'liqlikni ko'rsatadi, sababni emas. Bu farq bitta so'zda, lekin ma'nosi butunlay boshqa.</p>
+        <div class="demo">
+          <span class="claim good"><i aria-hidden="true"></i>&laquo;Ko'pincha birga kuzatilgan&raquo;</span>
+          <span class="claim bad"><i aria-hidden="true"></i>&laquo;Sabab bo'lgan&raquo;</span>
+        </div>
+      </article>
+
+      <article class="rule">
+        <h3>Premium bloklovchi emas.</h3>
+        <p>Bepul rejadagi hamma narsa qoladi. Qulflangan blok yashirilmaydi &mdash; xiralashgan holda ko'rinadi, foydalanuvchi nima qo'shilishini biladi.</p>
+        <div class="demo">
+          <div class="locked">
+            <p class="blurred">Shu oyda uyqu davomiyligi va kayfiyat balli ko'pincha birga o'zgargan.</p>
+            <span class="lock-tag">Premium</span>
+          </div>
+        </div>
+      </article>
+
+      <article class="rule">
+        <h3>Teginish maydoni 44&times;44 dan kichik emas.</h3>
+        <p>Kontrast AA darajasida. Shuning uchun yorug' mavzuda pushti matn uchun tugma rangi emas, quyuqroq varianti ishlatiladi.</p>
+        <div class="demo"><span class="target" aria-hidden="true">44</span><span class="small">Har bir tugma, har bir belgi.</span></div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== YO'L XARITASI ==================== -->
+<section class="sec" id="yol-xaritasi">
+  <div class="wrap">
+    <div class="sec-head r">
+      <p class="eyebrow">Holat</p>
+      <h2 class="h1">Nima tayyor, nima hali yo'q.</h2>
+      <p class="lede">Sog'liq ilovasi haqida noaniq gapirish yaramaydi. Shuning uchun ro'yxat ochiq.</p>
+    </div>
+
+    <div class="road r" style="--d:80ms">
+      <div class="road-col">
+        <h3><i aria-hidden="true"></i>Tayyor</h3>
+        <ul class="road-list">
+          <li>Butun interfeys<span>Barcha ekranlar chizilgan, oqimlar bog'langan, holat real vaqtda o'zgaradi.</span></li>
+          <li>Besh tab va hayot bosqichlari<span>Har bir bosqich o'z maketi, ko'rsatkichi va tili bilan.</span></li>
+          <li>Backend, 1-sprint<span>Telefon OTP, Apple/Google, email; profil, onboarding, roziliklar va entitlements.</span></li>
+          <li>Sessiya qurilmada saqlanadi<span>Ilova qayta ishga tushganda foydalanuvchi kirgan holida qoladi.</span></li>
+        </ul>
+      </div>
+      <div class="road-col">
+        <h3><i aria-hidden="true"></i>Keyingi sprintlarda</h3>
+        <ul class="road-list">
+          <li>Sog'liq ma'lumotlarining saqlanishi<span>Sikl, ovqat, kayfiyat va dorilar hozircha xotirada &mdash; API 2&ndash;3-sprintda.</span></li>
+          <li>To'lov<span>App Store va Google Play billing SDK'si hali ulanmagan.</span></li>
+          <li>Haqiqiy AI va qurilma integratsiyasi<span>Hozircha javoblar ham, Apple Health / Oura ma'lumotlari ham namuna.</span></li>
+          <li>RU va EN tarjimalari<span>Matnlar hozircha kodda o'zbekcha.</span></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== YAKUN ==================== -->
+<section class="sec" id="yakun">
+  <div class="wrap">
+    <div class="close-card r">
+      <span class="close-ring" aria-hidden="true"></span>
+      <p class="eyebrow">Yopiq sinov</p>
+      <h2 class="h1">Sadora'ni birinchilardan bo'lib sinab ko'ring.</h2>
+      <p>Android va iOS uchun bitta umumiy interfeys. Sinovga qo'shilsangiz, qaysi bosqichda ekanligingizni tanlaysiz &mdash; ilova qolganini o'zi moslashtiradi.</p>
+      <div class="hero-cta">
+        <a class="btn btn-fill" href="mailto:salom@sadora.uz?subject=Sadora%20yopiq%20sinovi">Sinovga yozilish</a>
+        <a class="btn btn-ghost" href="#bosqichlar">Yana bir bor ko'rish</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer class="foot">
+  <div class="wrap foot-in">
+    <div class="mark">
+      <span class="mark-dot" aria-hidden="true"></span>
+      <span class="mark-name">Sadora</span>
+    </div>
+    <p>Sadora tibbiy ko'rsatma bermaydi va shifokor o'rnini bosmaydi. Bashoratlar taxminiy &mdash; tashxis va davolash uchun mutaxassisga murojaat qiling.</p>
+  </div>
+</footer>
+
+<script>
+(function () {
+  'use strict';
+
+  var CIRC = 2 * Math.PI * 76;
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* Bosqichlar — StagePalettes.kt dagi ranglar va README dagi jadval. */
+  var STAGES = [
+    {
+      id: 'cycle', name: "Sikl", metric: "Sikl kuni", tab: "Sikl",
+      a: '#9B85FF', b: '#FF6E8C', inkLight: '#D62F52', inkDark: '#FF6E8C',
+      chart: 'ring', pct: .46,
+      label: "Sikl kuni", value: "14", sub: "Ovulyatsiya davri",
+      note: "Unumdor kunlar · 12–16-kun · keyingi hayz 14 kundan keyin",
+      pred: true, predText: "Bor — «Taxminiy» bilan",
+      chips: ["Stress past", "Energiya 3/5"],
+      ai: "Kecha 6 soat 40 daqiqa uxlagansiz va energiyangiz odatdagidan pastroq. Bugun suvni ko'proq iching.",
+      title: "Sikl va rejalashtirish",
+      body: "Sikl kuni, unumdor oyna va keyingi hayz bashorati. Bashorat ko'rsatilgan har bir joyda «Taxminiy» nishoni turadi — ilova taxminni hech qachon fakt qilib ko'rsatmaydi."
+    },
+    {
+      id: 'pregnancy', name: "Homiladorlik", metric: "Hafta", tab: "Homilador",
+      a: '#FFB020', b: '#FF8E92', inkLight: '#A85C2E', inkDark: '#FFB020',
+      chart: 'ring', pct: .6,
+      label: "Hafta", value: "24", sub: "Ikkinchi trimestr",
+      note: "Bola harakati sezilarli kamaysa — kechiktirmasdan shifokorga",
+      pred: false, predText: "Yo'q",
+      chips: ["Harakat qayd etildi", "Bel og'rig'i"],
+      ai: "24-haftada uyqu holati o'zgarishi odatiy. Yon tomonda yotish va kechqurun suyuqlikni kamaytirish yordam beradi.",
+      title: "Homiladorlik",
+      body: "Sikl bashorati umuman ko'rsatilmaydi. Ekran haftalar bo'yicha quriladi, matn boshqacha yoziladi va yagona tibbiy ko'rsatma shu yerda: bola harakati kamaysa, ilova darhol shifokorga murojaat qilishni aytadi."
+    },
+    {
+      id: 'postpartum', name: "Tug'ruqdan keyin", metric: "Tiklanish haftasi", tab: "Tiklanish",
+      a: '#FF8AA3', b: '#FFB020', inkLight: '#B23A5C', inkDark: '#FF8AA3',
+      chart: 'ring', pct: .34,
+      label: "Tiklanish haftasi", value: "6", sub: "Emizish davri",
+      note: "Uyqu bo'lakli — bu bosqichda kutilgan holat",
+      pred: false, predText: "Yo'q",
+      chips: ["Kayfiyat 3/5", "Emizish 7 marta"],
+      ai: "Bu hafta uyqu bo'laklarga bo'lingan. Kunduzgi qisqa uyqu umumiy dam olishni sezilarli oshirgan.",
+      title: "Tug'ruqdan keyingi davr",
+      body: "Emizish, bo'lakli uyqu va kayfiyat bir joyda. Ilova tiklanishni haftalar bilan o'lchaydi va kayfiyat pasayishini alohida kuzatadi — lekin tashxis qo'ymaydi."
+    },
+    {
+      id: 'perimenopause', name: "Perimenopauza", metric: "Muntazamlik grafigi", tab: "Perimenopauza",
+      a: '#7B61FF', b: '#63D8FF', inkLight: '#5A41D6', inkDark: '#9B85FF',
+      chart: 'bars', bars: [38, 64, 47, 82, 55, 71, 44],
+      label: "Muntazamlik", value: "", sub: "",
+      note: "Oxirgi 7 sikl uzunligi · bashorat emas, tarqalish",
+      pred: false, predText: "Yo'q",
+      chips: ["Issiq to'lqin 2", "Uyqu 6s 10d"],
+      ai: "Oxirgi olti oyda sikl uzunligi ko'proq tarqalgan. Bu bosqich uchun kutilgan o'zgarish.",
+      title: "Perimenopauza",
+      body: "Halqa o'rnini grafik egallaydi. Bashorat qilinadigan sana yo'q, shuning uchun ilova sana ko'rsatmaydi — u sikl uzunligining qanday tarqalayotganini ko'rsatadi."
+    },
+    {
+      id: 'menopause', name: "Menopauza", metric: "Balans balli", tab: "Balans",
+      a: '#63D8FF', b: '#2FBF8F', inkLight: '#12786B', inkDark: '#63D8FF',
+      chart: 'ring', pct: .78,
+      label: "Balans balli", value: "78", sub: "Yaxshi",
+      note: "Issiq to'lqin, uyqu va kayfiyat asosida",
+      pred: false, predText: "Yo'q",
+      chips: ["Issiq to'lqin 1", "Kayfiyat 4/5"],
+      ai: "Bu hafta issiq to'lqinlar kamaygan va uyqu barqarorroq bo'lgan. Balans balli 6 punktga ko'tarilgan.",
+      title: "Menopauza",
+      body: "Asosiy ko'rsatkich — balans balli: issiq to'lqin, uyqu va kayfiyat birgalikda. Bu tibbiy ball emas, shuning uchun ilova uni norma bilan taqqoslamaydi."
+    }
+  ];
+
+  var $ = function (id) { return document.getElementById(id); };
+  var scope = $('scope');
+  var arc = $('arc'), gauge = $('gauge'), bars = $('bars');
+  var current = -1;
+
+  function isDark() {
+    var stamp = document.documentElement.getAttribute('data-theme');
+    if (stamp === 'dark') return true;
+    if (stamp === 'light') return false;
+    return window.matchMedia('(prefers-color-scheme: dark)').matches;
+  }
+
+  /* ---- Bosqich tugmalari ---- */
+  var list = $('tlList');
+  STAGES.forEach(function (s, i) {
+    var li = document.createElement('li');
+    li.className = 'tl-item';
+    li.innerHTML =
+      '<button class="tl-btn" type="button" aria-pressed="false" id="tl-' + s.id + '">' +
+        '<span class="tl-node" aria-hidden="true"><i></i></span>' +
+        '<span><span class="tl-name">' + s.name + '</span>' +
+        '<span class="tl-metric" style="display:block">' + s.metric + '</span></span>' +
+      '</button>';
+    li.firstChild.addEventListener('click', function () { select(i); });
+    list.appendChild(li);
+  });
+
+  function select(i) {
+    if (i === current) return;
+    var s = STAGES[i];
+    current = i;
+
+    scope.style.setProperty('--stage-a', s.a);
+    scope.style.setProperty('--stage-b', s.b);
+    scope.style.setProperty('--stage-ink', isDark() ? s.inkDark : s.inkLight);
+
+    var btns = list.querySelectorAll('.tl-btn');
+    for (var k = 0; k < btns.length; k++) {
+      btns[k].setAttribute('aria-pressed', k === i ? 'true' : 'false');
+    }
+
+    /* Telefon ekrani */
+    $('aiText').textContent = s.ai;
+    $('mLabel').textContent = s.label;
+    $('mValue').textContent = s.value;
+    $('mSub').textContent = s.sub;
+    $('mNote').textContent = s.note;
+    $('predPill').hidden = !s.pred;
+    $('tabJourney').textContent = s.tab;
+
+    var ring = s.chart === 'ring';
+    gauge.hidden = !ring;
+    bars.hidden = ring;
+    if (ring) {
+      arc.style.strokeDashoffset = CIRC * (1 - s.pct);
+    } else {
+      var bi = bars.children;
+      for (var j = 0; j < bi.length; j++) bi[j].style.height = s.bars[j] + '%';
+    }
+
+    var chips = $('chips');
+    chips.innerHTML = '';
+    s.chips.forEach(function (c) {
+      var el = document.createElement('span');
+      el.className = 'chip';
+      el.textContent = c;
+      chips.appendChild(el);
+    });
+
+    /* Bosqich paneli */
+    $('spTitle').textContent = s.title;
+    $('spBody').textContent = s.body;
+    $('spMetric').textContent = s.metric;
+    $('spTab').textContent = s.tab;
+    var pred = $('spPred');
+    pred.textContent = s.predText;
+    pred.className = s.pred ? 'yes' : 'no';
+  }
+
+  /* Halqani nolga qo'yib, keyin to'ldirish — sahifa ochilishidagi harakat */
+  arc.style.strokeDashoffset = CIRC;
+  select(0);
+  if (!reduce) {
+    arc.style.strokeDashoffset = CIRC;
+    requestAnimationFrame(function () {
+      setTimeout(function () { arc.style.strokeDashoffset = CIRC * (1 - STAGES[0].pct); }, 620);
+    });
+  }
+
+  /* Mavzu almashsa, matn rangi ham AA da qolsin */
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function () {
+    var s = STAGES[current];
+    scope.style.setProperty('--stage-ink', isDark() ? s.inkDark : s.inkLight);
+  });
+
+  /* ---- Skroll bilan paydo bo'lish ---- */
+  var revealables = document.querySelectorAll('.r');
+  if (!('IntersectionObserver' in window) || reduce) {
+    for (var n = 0; n < revealables.length; n++) revealables[n].classList.add('in');
+  } else {
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
+      });
+    }, { threshold: .14, rootMargin: '0px 0px -8% 0px' });
+    for (var m = 0; m < revealables.length; m++) io.observe(revealables[m]);
+  }
+
+  /* ---- Telefon ichidagi progress chiziqlari ---- */
+  var fills = document.querySelectorAll('.bar i');
+  function runFills() {
+    for (var f = 0; f < fills.length; f++) fills[f].style.width = fills[f].getAttribute('data-fill');
+  }
+  if (reduce) runFills(); else setTimeout(runFills, 900);
+
+  /* ---- Navigatsiya chegarasi ---- */
+  var nav = $('nav');
+  var onScroll = function () { nav.classList.toggle('stuck', window.scrollY > 8); };
+  onScroll();
+  window.addEventListener('scroll', onScroll, { passive: true });
+})();
+</script>
+</body>
+</html>

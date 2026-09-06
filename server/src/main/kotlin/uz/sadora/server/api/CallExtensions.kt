@@ -3,7 +3,7 @@ package uz.sadora.server.api
 import io.ktor.server.application.ApplicationCall
 import io.ktor.server.auth.principal
 import io.ktor.server.request.header
-import io.ktor.server.request.origin
+import io.ktor.server.plugins.origin
 import io.ktor.server.request.userAgent
 import kotlin.uuid.Uuid
 import uz.sadora.server.auth.RequestContext

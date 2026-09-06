@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -18,18 +19,19 @@ import androidx.compose.ui.unit.dp
 import org.example.project.design.Radius
 import org.example.project.design.Sadora
 import org.example.project.design.Spacing
-import org.example.project.model.DataSource
-import org.example.project.model.SampleData
-import org.example.project.model.SourceStatus
+import kotlin.time.Clock
+import org.example.project.data.HealthController
+import org.example.project.model.Fmt
 import org.example.project.ui.components.BadgeTone
-import org.example.project.ui.components.ButtonTone
 import org.example.project.ui.components.ChipFlowRow
 import org.example.project.ui.components.DisclaimerNote
-import org.example.project.ui.components.PillButton
+import org.example.project.ui.components.EmptyState
 import org.example.project.ui.components.SadoraBadge
 import org.example.project.ui.components.SadoraCard
 import org.example.project.ui.components.SadoraTopBar
 import org.example.project.ui.components.ScreenContent
+import uz.sadora.contract.HealthMetric
+import uz.sadora.contract.ProviderStatus
 
 /**
  * "Ma'lumot manbalari" — connected devices and services.
@@ -39,11 +41,16 @@ import org.example.project.ui.components.ScreenContent
  */
 @Composable
 fun DataSourcesScreen(
+    health: HealthController,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val c = Sadora.colors
-    val connected = SampleData.dataSources.count { it.status == SourceStatus.Connected }
+    val sources = health.sources
+    val connected = sources.count { it.connected }
+    val lastSync = sources.mapNotNull { it.lastSampleAt }.maxOrNull()
+
+    LaunchedEffect(Unit) { health.loadSources() }
 
     Column(modifier) {
         SadoraTopBar("Ma'lumot manbalari", onBack = onClose)
@@ -67,7 +74,10 @@ fun DataSourcesScreen(
                             color = c.success,
                         )
                         Text(
-                            "Oxirgi sinxronlash 12:40",
+                            // The real age of the newest sample, or nothing — a fixed
+                            // "12:40" told everyone their watch had just synced.
+                            lastSync?.let { "Oxirgi namuna ${Fmt.ago(it, Clock.System.now())}" }
+                                ?: "Hali namuna kelmagan",
                             style = Sadora.type.body,
                             color = c.muted,
                         )
@@ -75,8 +85,21 @@ fun DataSourcesScreen(
                 }
             }
 
-            items(SampleData.dataSources.size) { index ->
-                SourceCard(SampleData.dataSources[index])
+            if (sources.isEmpty()) {
+                item {
+                    EmptyState(
+                        title = "Ulangan manba yo'q",
+                        body = "HealthKit yoki Health Connect ruxsat bergach, kelgan namunalar " +
+                            "va ularning vaqti shu yerda ko'rinadi.",
+                        actionText = null,
+                        onAction = {},
+                        glyph = "⌚",
+                    )
+                }
+            }
+
+            items(sources.size) { index ->
+                SourceCard(sources[index])
             }
 
             item {
@@ -90,8 +113,11 @@ fun DataSourcesScreen(
 }
 
 @Composable
-private fun SourceCard(source: DataSource) {
+private fun SourceCard(source: ProviderStatus) {
     val c = Sadora.colors
+    val name = source.provider.name.lowercase().split('_').joinToString(" ") { part ->
+        part.replaceFirstChar { it.uppercase() }
+    }
     SadoraCard(padding = Spacing.sm) {
         Row(
             Modifier.fillMaxWidth(),
@@ -105,43 +131,48 @@ private fun SourceCard(source: DataSource) {
                     .background(c.surface2),
                 contentAlignment = Alignment.Center,
             ) {
-                Text(
-                    source.name.take(1),
-                    style = Sadora.type.h3,
-                    color = c.secondary,
-                )
+                Text(name.take(1), style = Sadora.type.h3, color = c.secondary)
             }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(source.name, style = Sadora.type.h3, color = c.text)
-                val detail = listOfNotNull(source.device, source.syncedAt).joinToString(" · ")
-                if (detail.isNotEmpty()) {
-                    Text(detail, style = Sadora.type.body, color = c.muted)
-                }
+                Text(name, style = Sadora.type.h3, color = c.text)
+                Text(
+                    listOfNotNull(
+                        "${Fmt.int(source.sampleCount.toInt())} namuna",
+                        source.lastSampleAt?.let { Fmt.ago(it, Clock.System.now()) },
+                    ).joinToString(" · "),
+                    style = Sadora.type.body,
+                    color = c.muted,
+                )
             }
-            when (source.status) {
-                SourceStatus.Connected -> SadoraBadge("Ulangan", BadgeTone.Connected)
-                SourceStatus.Expired -> SadoraBadge("Muddati tugagan", BadgeTone.Warning)
-                SourceStatus.Disconnected -> SadoraBadge("Ulanmagan", BadgeTone.Neutral)
+            if (source.connected) {
+                SadoraBadge("Ulangan", BadgeTone.Connected)
+            } else {
+                SadoraBadge("Ulanmagan", BadgeTone.Neutral)
             }
         }
 
         if (source.metrics.isNotEmpty()) {
             ChipFlowRow(horizontalGap = Spacing.xxs, verticalGap = Spacing.xxs) {
                 source.metrics.forEach { metric ->
-                    SadoraBadge(metric, BadgeTone.Neutral)
+                    SadoraBadge(metric.label(), BadgeTone.Neutral)
                 }
-            }
-        }
-
-        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-            when (source.status) {
-                SourceStatus.Connected -> {
-                    PillButton("Ruxsatlar", {})
-                    PillButton("Uzish", {})
-                }
-                SourceStatus.Expired -> PillButton("Qayta ulash", {}, tone = ButtonTone.Primary)
-                SourceStatus.Disconnected -> PillButton("Ulash", {}, tone = ButtonTone.Primary)
             }
         }
     }
+}
+
+/** The metric names as the app words them, not as the wire spells them. */
+private fun HealthMetric.label(): String = when (this) {
+    HealthMetric.STEPS -> "Qadamlar"
+    HealthMetric.ACTIVE_ENERGY -> "Faol kaloriya"
+    HealthMetric.DISTANCE -> "Masofa"
+    HealthMetric.HEART_RATE -> "Puls"
+    HealthMetric.RESTING_HEART_RATE -> "Tinch puls"
+    HealthMetric.HRV -> "HRV"
+    HealthMetric.RESPIRATORY_RATE -> "Nafas"
+    HealthMetric.BODY_TEMPERATURE -> "Harorat"
+    HealthMetric.SLEEP_DURATION -> "Uyqu"
+    HealthMetric.SLEEP_DEEP -> "Chuqur uyqu"
+    HealthMetric.SLEEP_REM -> "REM"
+    HealthMetric.WEIGHT -> "Vazn"
 }

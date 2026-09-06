@@ -6,6 +6,9 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,7 +19,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -29,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import org.example.project.design.Radius
 import org.example.project.design.Sadora
+import org.example.project.design.SadoraIcons
 import org.example.project.design.Spacing
 
 /**
@@ -62,6 +66,8 @@ fun SadoraDialog(
                     .padding(Spacing.xl)
                     .clip(Radius.card)
                     .background(c.surface)
+                    // Swallows the tap so it never reaches the scrim behind, which
+                    // would dismiss the dialog the user is reading.
                     .noRippleClickable {}
                     .padding(Spacing.lg),
                 verticalArrangement = Arrangement.spacedBy(Spacing.sm),
@@ -117,8 +123,13 @@ fun SadoraBottomSheet(
                         .fillMaxWidth()
                         .clip(Radius.sheet)
                         .background(c.surface)
+                        // Same as the dialog: the sheet body must not dismiss itself.
                         .noRippleClickable {}
+                        // A sheet with a text field rises above the keyboard and scrolls,
+                        // so the button under the field is never left beneath it.
+                        .imePadding()
                         .navigationBarsPadding()
+                        .verticalScroll(rememberScrollState())
                         .padding(Spacing.lg),
                     verticalArrangement = Arrangement.spacedBy(Spacing.md),
                 ) {
@@ -126,7 +137,7 @@ fun SadoraBottomSheet(
                         Modifier
                             .align(Alignment.CenterHorizontally)
                             .size(width = 40.dp, height = 4.dp)
-                            .clip(RoundedCornerShape(999.dp))
+                            .clip(Radius.chip)
                             .background(c.line),
                     )
                     Text(title, style = Sadora.type.h2, color = c.text)
@@ -201,7 +212,8 @@ fun EmptyState(
     actionText: String?,
     onAction: () -> Unit,
     modifier: Modifier = Modifier,
-    glyph: String = "◌",
+    /** Set only when a specific emoji says more than the default outline — "💊". */
+    glyph: String? = null,
 ) {
     val c = Sadora.colors
     Column(
@@ -209,7 +221,16 @@ fun EmptyState(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(Spacing.xs),
     ) {
-        Text(glyph, style = Sadora.type.display, color = c.muted2)
+        if (glyph != null) {
+            Text(glyph, style = Sadora.type.display, color = c.muted2)
+        } else {
+            Icon(
+                SadoraIcons.Empty,
+                contentDescription = null,
+                Modifier.size(40.dp),
+                tint = c.muted2,
+            )
+        }
         Text(title, style = Sadora.type.h3, color = c.text)
         Text(
             body,

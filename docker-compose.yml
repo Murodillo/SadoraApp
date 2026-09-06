@@ -1,0 +1,40 @@
+# Local dependencies for the SADORA backend.
+#
+# The server itself runs from Gradle during development (`./gradlew :server:run`) so a
+# code change does not need an image rebuild; this file provides only what it talks to.
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: sadora-postgres
+    environment:
+      POSTGRES_DB: sadora
+      POSTGRES_USER: sadora
+      POSTGRES_PASSWORD: sadora
+      # Flyway and the app both work in UTC; the container should not disagree.
+      TZ: UTC
+      PGTZ: UTC
+    ports:
+      # Override SADORA_DB_PORT when another Postgres already holds 5432 locally.
+      - "${SADORA_DB_PORT:-5432}:5432"
+    volumes:
+      - sadora-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sadora -d sadora"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: sadora-redis
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    ports:
+      - "${SADORA_REDIS_PORT:-6379}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  sadora-postgres:

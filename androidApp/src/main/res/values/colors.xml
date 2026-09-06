@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The window's own colours, so the system's splash and the app's own splash are one
+  screen rather than a white flash followed by lavender.
+-->
+<resources>
+    <color name="splash_background">#F7E7FF</color>
+</resources>

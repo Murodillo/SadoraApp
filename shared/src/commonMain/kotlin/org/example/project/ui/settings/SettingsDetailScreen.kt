@@ -6,6 +6,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -15,6 +18,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import org.example.project.design.Sadora
 import org.example.project.design.Spacing
+import org.example.project.i18n.strings
+import org.example.project.data.SadoraController
 import org.example.project.model.AppLanguage
 import org.example.project.model.AppState
 import org.example.project.model.Goal
@@ -26,6 +31,7 @@ import org.example.project.ui.components.CardLabel
 import org.example.project.ui.components.ChipFlowRow
 import org.example.project.ui.components.ConsentRow
 import org.example.project.ui.components.DisclaimerNote
+import org.example.project.ui.components.ErrorStrip
 import org.example.project.ui.components.OptionRow
 import org.example.project.ui.components.SadoraButton
 import org.example.project.ui.components.SadoraCard
@@ -46,24 +52,48 @@ import org.example.project.ui.components.SelectChip
 fun SettingsDetailScreen(
     route: Route,
     state: AppState,
+    controller: SadoraController,
     onClose: () -> Unit,
+    onOpen: (Route) -> Unit,
+    onSignedOut: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier) {
         when (route) {
-            Route.PersonalDetails -> PersonalDetails(state, onClose)
-            Route.GoalsSettings -> GoalsSettings(state, onClose)
-            Route.LifeStageSettings -> LifeStageSettings(state, onClose)
+            Route.PersonalDetails -> PersonalDetails(state, controller, onClose)
+            Route.GoalsSettings -> GoalsSettings(state, controller, onClose)
+            Route.LifeStageSettings -> LifeStageSettings(state, controller, onClose)
             Route.Notifications -> NotificationSettings(state, onClose)
-            Route.PrivacySecurity -> PrivacySettings(state, onClose)
+            Route.PrivacySecurity -> PrivacySettings(state, controller, onClose, onOpen, onSignedOut)
+            Route.LanguageSettings -> LanguageSettings(state, controller, onClose)
             Route.About -> About(onClose)
             else -> About(onClose)
         }
     }
 }
 
+/**
+ * Saves through the controller and closes only when the save lands.
+ *
+ * Closing regardless would leave the screen showing an edit the server never took.
+ */
 @Composable
-private fun PersonalDetails(state: AppState, onClose: () -> Unit) {
+private fun SaveButton(
+    controller: SadoraController,
+    onSaved: () -> Unit,
+    label: String = "Saqlash",
+) {
+    val scope = rememberCoroutineScope()
+    controller.error?.let { ErrorStrip(it) }
+    SadoraButton(
+        if (controller.busy) "Saqlanmoqda…" else label,
+        enabled = !controller.busy,
+        onClick = { scope.launch { if (controller.saveProfile()) onSaved() } },
+    )
+}
+
+@Composable
+private fun PersonalDetails(state: AppState, controller: SadoraController, onClose: () -> Unit) {
     val c = Sadora.colors
     SadoraTopBar("Shaxsiy ma'lumotlar", onBack = onClose)
     ScreenContent {
@@ -99,12 +129,12 @@ private fun PersonalDetails(state: AppState, onClose: () -> Unit) {
         item {
             DisclaimerNote("Vazn ixtiyoriy va hech qachon boshqalarga ko'rsatilmaydi.")
         }
-        item { SadoraButton("Saqlash", onClose) }
+        item { SaveButton(controller, onClose) }
     }
 }
 
 @Composable
-private fun GoalsSettings(state: AppState, onClose: () -> Unit) {
+private fun GoalsSettings(state: AppState, controller: SadoraController, onClose: () -> Unit) {
     SadoraTopBar("Maqsadlar", onBack = onClose)
     ScreenContent {
         item {
@@ -121,12 +151,12 @@ private fun GoalsSettings(state: AppState, onClose: () -> Unit) {
                 }
             }
         }
-        item { SadoraButton("Saqlash", onClose) }
+        item { SaveButton(controller, onClose) }
     }
 }
 
 @Composable
-private fun LifeStageSettings(state: AppState, onClose: () -> Unit) {
+private fun LifeStageSettings(state: AppState, controller: SadoraController, onClose: () -> Unit) {
     SadoraTopBar("Hayot bosqichi", onBack = onClose)
     ScreenContent {
         items(LifeStage.entries.size) { index ->
@@ -145,7 +175,7 @@ private fun LifeStageSettings(state: AppState, onClose: () -> Unit) {
                     "butunlay yangilanadi. Yozilgan ma'lumotlaringiz saqlanadi.",
             )
         }
-        item { SadoraButton("Saqlash", onClose) }
+        item { SaveButton(controller, onClose) }
     }
 }
 
@@ -195,9 +225,19 @@ private fun ToggleRow(
 }
 
 @Composable
-private fun PrivacySettings(state: AppState, onClose: () -> Unit) {
+private fun PrivacySettings(
+    state: AppState,
+    controller: SadoraController,
+    onClose: () -> Unit,
+    onOpen: (Route) -> Unit,
+    onSignedOut: () -> Unit,
+) {
     val c = Sadora.colors
+    val scope = rememberCoroutineScope()
     var confirmDelete by remember { mutableStateOf(false) }
+
+    // Show what the server actually has, not what this device last set.
+    LaunchedEffect(Unit) { controller.loadConsents() }
 
     SadoraTopBar("Maxfiylik va xavfsizlik", onBack = onClose)
     ScreenContent {
@@ -225,6 +265,31 @@ private fun PrivacySettings(state: AppState, onClose: () -> Unit) {
             }
         }
         item {
+            controller.error?.let { ErrorStrip(it) }
+            SadoraButton(
+                if (controller.busy) "Saqlanmoqda…" else "Roziliklarni saqlash",
+                enabled = !controller.busy,
+                onClick = { scope.launch { controller.saveConsents() } },
+            )
+        }
+
+        item {
+            SadoraCard {
+                CardLabel("Huquqiy hujjatlar")
+                SadoraButton(
+                    "Foydalanish shartlari",
+                    { onOpen(Route.Terms) },
+                    tone = ButtonTone.Secondary,
+                )
+                SadoraButton(
+                    "Maxfiylik siyosati",
+                    { onOpen(Route.PrivacyPolicy) },
+                    tone = ButtonTone.Secondary,
+                )
+            }
+        }
+
+        item {
             SadoraCard {
                 CardLabel("Ma'lumotlaringiz")
                 SadoraButton("Ma'lumotlarni eksport qilish", {}, tone = ButtonTone.Secondary)
@@ -242,33 +307,70 @@ private fun PrivacySettings(state: AppState, onClose: () -> Unit) {
         title = "Hisobni o'chirish?",
         body = "Ma'lumotlaringiz butunlay o'chiriladi. Avval eksport qilishni tavsiya qilamiz.",
         confirmText = "O'chirish",
-        onConfirm = { confirmDelete = false },
+        onConfirm = {
+            confirmDelete = false
+            scope.launch {
+                // The server clears the session on success, so the app must leave too.
+                if (controller.deleteAccount(reason = null)) onSignedOut()
+            }
+        },
         onDismiss = { confirmDelete = false },
     )
+}
+
+/**
+ * The language picker.
+ *
+ * The choice takes effect the moment it is tapped — every screen behind this one is
+ * already redrawn by the time she goes back — and only then is it sent to the server,
+ * where it decides the language of an email or a push. A save that fails says so and
+ * keeps her choice: the app is already in that language, and undoing it under her
+ * would be the surprising thing.
+ */
+@Composable
+private fun LanguageSettings(state: AppState, controller: SadoraController, onClose: () -> Unit) {
+    val c = Sadora.colors
+    val t = strings.settings
+    val scope = rememberCoroutineScope()
+    var failed by remember { mutableStateOf(false) }
+
+    SadoraTopBar(t.languageTitle, onBack = onClose)
+    ScreenContent {
+        item {
+            SadoraCard {
+                Text(t.languageNote, style = Sadora.type.body, color = c.muted)
+            }
+        }
+        item {
+            if (failed) ErrorStrip(t.languageSaveFailed)
+            Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                AppLanguage.entries.forEach { language ->
+                    OptionRow(
+                        title = language.native,
+                        subtitle = language.english,
+                        leading = language.code,
+                        selected = state.language == language,
+                        onClick = {
+                            state.language = language
+                            scope.launch { failed = !controller.saveProfile() }
+                        },
+                    )
+                }
+            }
+        }
+    }
 }
 
 @Composable
 private fun About(onClose: () -> Unit) {
     val c = Sadora.colors
-    SadoraTopBar("SADORA haqida", onBack = onClose)
+    SadoraTopBar(strings.settings.aboutTitle, onBack = onClose)
     ScreenContent {
         item {
             SadoraCard {
                 Text("SADORA", style = Sadora.type.h1, color = c.text)
-                Text("Versiya 1.0.0", style = Sadora.type.body, color = c.muted)
+                Text(strings.settings.version("1.0.0"), style = Sadora.type.body, color = c.muted)
                 Text(SampleData.medicalDisclaimer, style = Sadora.type.body, color = c.muted)
-            }
-        }
-        item {
-            SadoraCard {
-                CardLabel("Til")
-                AppLanguage.entries.forEach { language ->
-                    Text(
-                        "${language.code} · ${language.native}",
-                        style = Sadora.type.body,
-                        color = c.muted,
-                    )
-                }
             }
         }
     }

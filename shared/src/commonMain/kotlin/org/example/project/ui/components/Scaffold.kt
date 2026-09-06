@@ -15,23 +15,29 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import org.example.project.design.IconSize
 import org.example.project.design.MinTouchTarget
+import org.example.project.design.Radius
 import org.example.project.design.Sadora
+import org.example.project.design.SadoraIcons
 import org.example.project.design.Spacing
 
 /**
  * Screen top bar. Supports the two shapes in the design: a plain title with an
  * optional back chevron, and a title with a trailing action.
+ *
+ * [centered] draws the title in the middle of the bar, which is how the deck's inner
+ * screens ("Mening siklim", "Ovqatlanish", "Skan natijasi") read.
  */
 @Composable
 fun SadoraTopBar(
@@ -40,6 +46,8 @@ fun SadoraTopBar(
     onBack: (() -> Unit)? = null,
     /** Step indicator such as "3/9" shown next to the back chevron. */
     step: String? = null,
+    centered: Boolean = false,
+    subtitle: String? = null,
     trailing: @Composable (() -> Unit)? = null,
 ) {
     val c = Sadora.colors
@@ -52,27 +60,27 @@ fun SadoraTopBar(
         horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
     ) {
         if (onBack != null) {
-            Box(
-                Modifier
-                    .size(MinTouchTarget)
-                    .clip(RoundedCornerShape(999.dp))
-                    .background(c.surface2)
-                    .noRippleClickable(onClick = onBack),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text("‹", style = Sadora.type.h2, color = c.text)
-            }
+            CircleIconButton(SadoraIcons.ChevronLeft, contentDescription = "Ortga", onClick = onBack)
         }
         if (step != null) {
             Text(step, style = Sadora.type.body, color = c.muted)
         }
         if (title.isNotEmpty()) {
-            Text(
-                title,
-                style = Sadora.type.h1,
-                color = c.text,
-                modifier = Modifier.weight(1f),
-            )
+            Column(
+                Modifier.weight(1f),
+                horizontalAlignment = if (centered) Alignment.CenterHorizontally else Alignment.Start,
+            ) {
+                Text(
+                    title,
+                    style = if (centered) Sadora.type.h2 else Sadora.type.h1,
+                    color = c.text,
+                    textAlign = if (centered) TextAlign.Center else TextAlign.Start,
+                    maxLines = 1,
+                )
+                if (subtitle != null) {
+                    Text(subtitle, style = Sadora.type.body, color = c.muted, textAlign = if (centered) TextAlign.Center else TextAlign.Start)
+                }
+            }
         } else {
             Spacer(Modifier.weight(1f))
         }
@@ -80,8 +88,29 @@ fun SadoraTopBar(
     }
 }
 
+/** A round pale button with an icon — back, calendar, info, more. */
+@Composable
+fun CircleIconButton(
+    icon: ImageVector,
+    modifier: Modifier = Modifier,
+    contentDescription: String? = null,
+    onClick: () -> Unit,
+) {
+    val c = Sadora.colors
+    Box(
+        modifier
+            .size(MinTouchTarget)
+            .clip(Radius.chip)
+            .background(c.surface2)
+            .pressable(pressedScale = 0.9f, onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(icon, contentDescription = contentDescription, Modifier.size(IconSize.md), tint = c.text)
+    }
+}
+
 /**
- * Standard scrollable screen body: 20dp side padding, 16dp rhythm, and bottom
+ * Standard scrollable screen body: 20dp side padding, 12dp rhythm, and bottom
  * padding that clears the tab bar.
  */
 @Composable
@@ -120,7 +149,8 @@ fun StaticScreenContent(
 )
 
 /**
- * Greeting header on the Today screen: avatar, "Xayrli tong · Malika", bell.
+ * Greeting header on the Today screen — the deck's "Salom, Alina!" with a line of
+ * encouragement under it and the bell on the right.
  */
 @Composable
 fun GreetingHeader(
@@ -137,31 +167,33 @@ fun GreetingHeader(
             .fillMaxWidth()
             .statusBarsPadding()
             .padding(horizontal = Spacing.screen, vertical = Spacing.sm),
-        verticalAlignment = Alignment.CenterVertically,
+        verticalAlignment = Alignment.Top,
         horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
     ) {
-        Avatar(name, onClick = onAvatarClick)
-        Column(Modifier.weight(1f)) {
-            Text(greeting, style = Sadora.type.body, color = c.muted)
-            Text(name, style = Sadora.type.h1, color = c.text)
-        }
-        Box(
-            Modifier
-                .size(MinTouchTarget)
-                .clip(RoundedCornerShape(999.dp))
-                .background(c.surface2)
-                .noRippleClickable(onClick = onNotificationsClick),
-            contentAlignment = Alignment.Center,
+        Column(
+            Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(Spacing.xxs),
         ) {
-            Text("🔔", style = Sadora.type.h3)
+            Text(
+                if (name.isBlank()) "Salom!" else "Salom, $name!",
+                style = Sadora.type.h1,
+                color = c.text,
+            )
+            Text(greeting, style = Sadora.type.body, color = c.muted)
+        }
+        // The deck puts the face next to the bell: the avatar is the way into the
+        // profile, so the greeting itself is left as plain text.
+        Avatar(name, size = MinTouchTarget, onClick = onAvatarClick)
+        Box {
+            CircleIconButton(SadoraIcons.Bell, contentDescription = "Bildirishnomalar", onClick = onNotificationsClick)
             if (hasUnread) {
                 Box(
                     Modifier
                         .align(Alignment.TopEnd)
-                        .padding(11.dp)
+                        .padding(10.dp)
                         .size(8.dp)
-                        .clip(RoundedCornerShape(999.dp))
-                        .background(c.primary),
+                        .clip(Radius.chip)
+                        .background(c.secondary),
                 )
             }
         }
@@ -180,15 +212,15 @@ fun Avatar(
     Box(
         modifier
             .size(size)
-            .clip(RoundedCornerShape(999.dp))
-            .background(Brush.linearGradient(listOf(c.secondary, c.primary)))
-            .then(if (onClick != null) Modifier.noRippleClickable(onClick = onClick) else Modifier),
+            .clip(Radius.chip)
+            .background(c.heroGradient)
+            .then(if (onClick != null) Modifier.pressable(pressedScale = 0.9f, onClick = onClick) else Modifier),
         contentAlignment = Alignment.Center,
     ) {
         Text(
             name.take(1).uppercase(),
             style = Sadora.type.h3.copy(fontWeight = FontWeight.Bold),
-            color = if (c.isDark) c.bg else Color.White,
+            color = c.onPrimary,
         )
     }
 }

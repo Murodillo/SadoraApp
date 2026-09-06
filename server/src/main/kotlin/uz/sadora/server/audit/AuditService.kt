@@ -36,6 +36,12 @@ object AuditActions {
     const val FEATURE_FLAG_UPDATED = "flag.updated"
     const val FEATURE_FLAG_RULE_ADDED = "flag.rule_added"
     const val FEATURE_FLAG_RULE_REMOVED = "flag.rule_removed"
+    const val COMMUNITY_POST_HIDDEN = "community.post_hidden"
+    const val COMMUNITY_POST_RESTORED = "community.post_restored"
+    const val COMMUNITY_COMMENT_HIDDEN = "community.comment_hidden"
+    const val COMMUNITY_COMMENT_RESTORED = "community.comment_restored"
+    const val COMMUNITY_REPORT_RESOLVED = "community.report_resolved"
+    const val COMMUNITY_AUTHOR_RESTRICTED = "community.author_restricted"
 }
 
 data class AuditEntry(

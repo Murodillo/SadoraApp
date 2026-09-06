@@ -22,6 +22,8 @@ data class AppConfig(
     val jwt: JwtConfig,
     val otp: OtpConfig,
     val social: SocialConfig,
+    val ai: AiConfig,
+    val billing: BillingConfig,
     val policyVersion: String,
     val minimumAppVersion: String?,
 ) {
@@ -60,12 +62,37 @@ data class AppConfig(
                     resendAfter = env("OTP_RESEND_SECONDS", "60").toInt().seconds,
                     maxPerPhonePerHour = env("OTP_MAX_PER_HOUR", "5").toInt(),
                     exposeCode = env("OTP_EXPOSE_CODE", "true").toBoolean(),
+                    fixedCode = envOrNull("OTP_FIXED_CODE"),
                 ),
                 social = SocialConfig(
                     appleBundleIds = env("APPLE_BUNDLE_IDS", "uz.sadora.app")
                         .split(",").map { it.trim() }.filter { it.isNotEmpty() },
                     googleClientIds = envOrNull("GOOGLE_CLIENT_IDS")
                         ?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() }.orEmpty(),
+                ),
+                ai = AiConfig(
+                    apiKey = envOrNull("GEMINI_API_KEY"),
+                    model = env("AI_MODEL", "gemini-3.6-flash"),
+                    endpoint = env("AI_ENDPOINT", "https://generativelanguage.googleapis.com"),
+                    timeout = env("AI_TIMEOUT_SECONDS", "20").toInt().seconds,
+                    maxOutputTokens = env("AI_MAX_OUTPUT_TOKENS", "800").toInt(),
+                    inputCostPerMillionMicros = env("AI_INPUT_COST_MICROS", "100000").toLong(),
+                    outputCostPerMillionMicros = env("AI_OUTPUT_COST_MICROS", "400000").toLong(),
+                ),
+                billing = BillingConfig(
+                    payme = PaymeConfig(
+                        merchantId = envOrNull("PAYME_MERCHANT_ID"),
+                        key = envOrNull("PAYME_KEY"),
+                        login = env("PAYME_LOGIN", "Paycom"),
+                        accountField = env("PAYME_ACCOUNT_FIELD", "order_id"),
+                        checkoutUrl = env("PAYME_CHECKOUT_URL", "https://checkout.paycom.uz"),
+                    ),
+                    click = ClickConfig(
+                        serviceId = envOrNull("CLICK_SERVICE_ID"),
+                        merchantId = envOrNull("CLICK_MERCHANT_ID"),
+                        secretKey = envOrNull("CLICK_SECRET_KEY"),
+                        checkoutUrl = env("CLICK_CHECKOUT_URL", "https://my.click.uz/services/pay"),
+                    ),
                 ),
                 policyVersion = env("POLICY_VERSION", "2026-08-01"),
                 minimumAppVersion = envOrNull("MINIMUM_APP_VERSION"),
@@ -76,7 +103,8 @@ data class AppConfig(
 
         /**
          * Guards the settings that are convenient in dev and dangerous in production:
-         * a shipped-by-default signing key, and OTP codes returned in the response body.
+         * a shipped-by-default signing key, OTP codes returned in the response body, and
+         * a fixed OTP code.
          */
         private fun AppConfig.verifyProductionSafety() {
             if (!environment.isProduction) return
@@ -85,6 +113,7 @@ data class AppConfig(
             }
             require(jwt.secret.length >= 32) { "JWT_SECRET must be at least 32 characters." }
             require(!otp.exposeCode) { "OTP_EXPOSE_CODE must be false in production." }
+            require(otp.fixedCode == null) { "OTP_FIXED_CODE must not be set in production." }
         }
 
         private const val DEV_JWT_SECRET = "dev-only-secret-change-me-0123456789abcdef"
@@ -126,9 +155,66 @@ data class OtpConfig(
     val maxPerPhonePerHour: Int,
     /** Returns the code in the API response. Refused in production by [AppConfig]. */
     val exposeCode: Boolean,
+    /**
+     * Issues this code instead of a random one, so a tester on a real phone does not
+     * have to read the response body or the server log. Refused in production by
+     * [AppConfig]; [codeLength] is ignored while it is set.
+     */
+    val fixedCode: String? = null,
 )
 
 data class SocialConfig(
     val appleBundleIds: List<String>,
     val googleClientIds: List<String>,
 )
+
+/**
+ * The AI gateway's settings.
+ *
+ * Costs are in USD micros per million tokens, so a price change is an environment
+ * variable rather than a deploy, and the arithmetic stays in integers — money in a
+ * double is a bug waiting for a big enough number.
+ */
+data class AiConfig(
+    val apiKey: String?,
+    val model: String,
+    val endpoint: String,
+    val timeout: kotlin.time.Duration,
+    val maxOutputTokens: Int,
+    val inputCostPerMillionMicros: Long,
+    val outputCostPerMillionMicros: Long,
+) {
+    /** Null token counts cost nothing rather than guessing — an unknown is not an estimate. */
+    fun costMicros(promptTokens: Int?, completionTokens: Int?): Long =
+        (promptTokens ?: 0).toLong() * inputCostPerMillionMicros / 1_000_000 +
+            (completionTokens ?: 0).toLong() * outputCostPerMillionMicros / 1_000_000
+}
+
+/**
+ * The payment providers' credentials.
+ *
+ * Every one is nullable, and an unconfigured provider is not offered at checkout rather
+ * than failing at it: the catalogue asks [PaymeConfig.isConfigured] before listing a
+ * button that would produce a link nobody can pay.
+ */
+data class BillingConfig(val payme: PaymeConfig, val click: ClickConfig)
+
+data class PaymeConfig(
+    val merchantId: String?,
+    val key: String?,
+    val login: String,
+    /** The field name Payme sends the order id in; agreed with them per merchant. */
+    val accountField: String,
+    val checkoutUrl: String,
+) {
+    val isConfigured: Boolean get() = merchantId != null && key != null
+}
+
+data class ClickConfig(
+    val serviceId: String?,
+    val merchantId: String?,
+    val secretKey: String?,
+    val checkoutUrl: String,
+) {
+    val isConfigured: Boolean get() = serviceId != null && merchantId != null && secretKey != null
+}

@@ -1,6 +1,6 @@
 TEAM_ID=
 
-PRODUCT_NAME=KotlinProject
+PRODUCT_NAME=Sadora
 PRODUCT_BUNDLE_IDENTIFIER=org.example.project.KotlinProject$(TEAM_ID)
 
 CURRENT_PROJECT_VERSION=1

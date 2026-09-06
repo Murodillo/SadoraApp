@@ -3,6 +3,7 @@ package uz.sadora.server.entitlement
 import kotlin.time.Instant
 import kotlin.uuid.Uuid
 import kotlinx.datetime.LocalDate
+import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.greater
@@ -76,8 +77,10 @@ data class UsageCounters(val today: Int, val thisMonth: Int)
 
 class EntitlementRepository {
 
+    // Ordered by key: without it Postgres returns heap order, so editing one row moves
+    // it to the bottom of the admin panel's table and the operator loses their place.
     suspend fun definitions(): List<FeatureDefinition> = dbQuery {
-        FeatureDefinitions.selectAll().map { row ->
+        FeatureDefinitions.selectAll().orderBy(FeatureDefinitions.key to SortOrder.ASC).map { row ->
             FeatureDefinition(
                 key = row[FeatureDefinitions.key],
                 description = row[FeatureDefinitions.description],

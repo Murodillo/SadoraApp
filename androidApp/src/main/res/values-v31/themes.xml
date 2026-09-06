@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      Android 12 draws its own splash from the launcher icon before the app draws
+      anything. Giving it the brand's ground and the mark means the first frame is
+      already SADORA, and the app's own reveal continues from it.
+    -->
+    <style name="Theme.Sadora" parent="@android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/splash_background</item>
+        <item name="android:windowSplashScreenBackground">@color/splash_background</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
+    </style>
+</resources>

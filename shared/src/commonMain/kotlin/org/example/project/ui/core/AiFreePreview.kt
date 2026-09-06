@@ -8,19 +8,20 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import org.example.project.design.Radius
 import org.example.project.design.Sadora
+import org.example.project.design.SadoraIcons
 import org.example.project.design.Spacing
+import org.example.project.ui.components.AiOrb
 import org.example.project.ui.components.BadgeTone
 import org.example.project.ui.components.ButtonTone
 import org.example.project.ui.components.CardLabel
@@ -66,19 +67,7 @@ fun AiFreePreviewScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(Spacing.xs),
                 ) {
-                    Box(
-                        Modifier
-                            .size(88.dp)
-                            .clip(RoundedCornerShape(999.dp))
-                            .background(Brush.linearGradient(listOf(c.secondary, c.primary))),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(
-                            "✦",
-                            style = Sadora.type.display,
-                            color = if (c.isDark) c.bg else Color.White,
-                        )
-                    }
+                    AiOrb(size = 132.dp)
                     Text(
                         "Sizga qanday yordam bera olaman?",
                         style = Sadora.type.h2,

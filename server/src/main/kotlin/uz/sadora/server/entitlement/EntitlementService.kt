@@ -84,6 +84,20 @@ class EntitlementService(
     }
 
     /**
+     * Checks a feature without recording a use.
+     *
+     * For unmetered reads — a calendar has no per-call cost — where the only question is
+     * whether an operator has switched the feature off.
+     */
+    suspend fun requireAvailable(userId: Uuid, featureKey: String, timezone: String) {
+        val feature = resolve(userId, timezone).feature(featureKey)
+            ?: throw EntitlementRequiredException(featureKey)
+        if (!feature.enabled) throw EntitlementRequiredException(featureKey)
+        if (feature.remainingToday == 0) throw LimitReachedException(featureKey, "day")
+        if (feature.remainingThisMonth == 0) throw LimitReachedException(featureKey, "month")
+    }
+
+    /**
      * Checks a metered feature and records the use in one step.
      *
      * Kept as a single call on purpose: a separate `check` then `record` invites a caller

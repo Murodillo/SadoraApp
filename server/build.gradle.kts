@@ -58,6 +58,7 @@ dependencies {
 
     testImplementation(libs.kotlin.test)
     testImplementation(libs.ktor.server.testHost)
+    testImplementation(libs.ktor.client.mock)
     testImplementation(libs.kotlinx.coroutines.test)
     testRuntimeOnly(libs.logback)
 }
