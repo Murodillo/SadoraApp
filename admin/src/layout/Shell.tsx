@@ -2,6 +2,7 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { useAuth } from '../auth/AuthContext'
 import type { AdminRole } from '../api/types'
+import { SadoraTile } from '../components/Logo'
 
 interface NavEntry {
   to: string
@@ -87,7 +88,7 @@ export function Shell() {
     <div className="shell">
       <nav className="nav">
         <div className="brand">
-          <div className="brand-mark">✦</div>
+          <SadoraTile size={34} />
           <div>
             <div className="brand-name">SADORA</div>
             <div className="brand-sub">Admin</div>
@@ -126,7 +127,7 @@ export function Shell() {
 
       <div className="main">
         <header className="header">
-          <h1>{title}</h1>
+          <h1 key={title} className="page-title">{title}</h1>
           <div className="spacer" />
           <button
             className="btn ghost small"
@@ -144,7 +145,10 @@ export function Shell() {
         </header>
 
         <main className="content">
-          <Outlet />
+          {/* Keyed on the path so every page plays its entrance, not only the first. */}
+          <div className="page" key={location.pathname}>
+            <Outlet />
+          </div>
         </main>
       </div>
     </div>

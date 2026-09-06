@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { ApiFailure } from '../api/client'
 import { Field } from '../components/ui'
+import { SadoraMark, SadoraWordmark } from '../components/Logo'
 import { useAuth } from './AuthContext'
 
 export function LoginPage() {
@@ -35,12 +36,18 @@ export function LoginPage() {
 
   return (
     <div className="login">
-      <form className="card" onSubmit={submit}>
-        <div className="brand" style={{ padding: 0 }}>
-          <div className="brand-mark">✦</div>
-          <div>
-            <div className="brand-name">SADORA</div>
-            <div className="brand-sub">Admin panel</div>
+      <div className="login-bloom" aria-hidden="true">
+        <span />
+        <span />
+        <span />
+      </div>
+
+      <form className="card login-card" onSubmit={submit}>
+        <div className="login-brand">
+          <SadoraMark size={84} animated />
+          <div className="login-word">
+            <SadoraWordmark width={150} animated />
+            <div className="login-tagline">ADMIN PANEL</div>
           </div>
         </div>
 

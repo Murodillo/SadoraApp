@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import type { AccountStatus, SubscriptionTier } from '../api/types'
 
@@ -15,11 +16,43 @@ export function Card({ title, children, action }: { title?: string; children: Re
   )
 }
 
+/**
+ * A number that counts up to its value the first time it is shown, and again whenever
+ * it changes. A figure that simply appears reads as decoration; one that is counted
+ * reads as a measurement, which is what a stat tile is for.
+ */
+export function useCountUp(target: number, durationMs = 720): number {
+  const [value, setValue] = useState(0)
+  const from = useRef(0)
+  useEffect(() => {
+    const start = performance.now()
+    const begin = from.current
+    let frame = 0
+    const tick = (now: number) => {
+      const t = Math.min(1, (now - start) / durationMs)
+      // The app's Emphasized curve: quick to leave, slow to settle.
+      const eased = 1 - Math.pow(1 - t, 3)
+      const next = Math.round(begin + (target - begin) * eased)
+      setValue(next)
+      if (t < 1) frame = requestAnimationFrame(tick)
+      else from.current = target
+    }
+    frame = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(frame)
+  }, [target, durationMs])
+  return value
+}
+
+function CountedValue({ value }: { value: number }) {
+  const shown = useCountUp(value)
+  return <>{shown.toLocaleString('uz-UZ')}</>
+}
+
 export function Stat({ label, value, hint }: { label: string; value: ReactNode; hint?: string }) {
   return (
     <div className="card stat">
       <div className="label">{label}</div>
-      <div className="value">{value}</div>
+      <div className="value">{typeof value === 'number' ? <CountedValue value={value} /> : value}</div>
       {hint && <div className="hint">{hint}</div>}
     </div>
   )
