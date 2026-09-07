@@ -25,10 +25,6 @@ import androidx.compose.ui.unit.dp
 import org.example.project.design.Radius
 import org.example.project.design.Sadora
 import org.example.project.design.Spacing
-import org.example.project.model.AppState
-import org.example.project.model.MedStatus
-import org.example.project.model.Medication
-import org.example.project.model.SampleData
 import org.example.project.ui.components.BadgeTone
 import org.example.project.ui.components.CardLabel
 import org.example.project.ui.components.ChipFlowRow
@@ -38,43 +34,67 @@ import org.example.project.ui.components.SadoraCard
 import org.example.project.ui.components.SadoraTextField
 import org.example.project.ui.components.SadoraTopBar
 import org.example.project.ui.components.ScreenContent
-import org.example.project.ui.components.SegmentedControl
 import org.example.project.ui.components.SelectChip
 import org.example.project.ui.components.noRippleClickable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+import kotlinx.datetime.LocalTime
+import org.example.project.data.HealthController
+import org.example.project.i18n.strings
+import org.example.project.model.Fmt
+import org.example.project.ui.components.EmptyState
+import org.example.project.ui.components.ErrorStrip
+import uz.sadora.contract.DoseStatus
+import uz.sadora.contract.FoodRelation
+import uz.sadora.contract.MedicationSchedule
+import uz.sadora.contract.SaveMedicationRequest
+import uz.sadora.contract.ScheduleKind
+import uz.sadora.contract.Weekday
 
 /**
  * "Dori qo'shish" — the add-medication form.
+ *
+ * It saves to the server. It used to append a row to the in-memory store and close,
+ * so the course she had just entered was gone the next time the app started — and the
+ * reminders she was promised had nothing to fire from.
  *
  * Stock and end date are optional; the app tracks supply only if the user opts in
  * by filling them.
  */
 @Composable
 fun AddMedicationScreen(
-    state: AppState,
+    health: HealthController,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val c = Sadora.colors
+    val t = strings.modules
+    val scope = rememberCoroutineScope()
+
     var name by remember { mutableStateOf("") }
     var dose by remember { mutableStateOf("") }
     var unit by remember { mutableStateOf("mg") }
     var time by remember { mutableStateOf("20:00") }
-    val days = remember { mutableStateListOf(*SampleData.weekDays.toTypedArray()) }
-    var withFood by remember { mutableStateOf("Keyin") }
+    val weekdays = remember { mutableStateListOf(*Weekday.entries.toTypedArray()) }
+    var withFood by remember { mutableStateOf(FoodRelation.AFTER) }
     var stock by remember { mutableStateOf("") }
+    var saving by remember { mutableStateOf(false) }
+
+    val at = remember(time) { runCatching { LocalTime.parse(time) }.getOrNull() }
 
     Column(modifier) {
-        SadoraTopBar("Dori qo'shish", onBack = onClose)
+        SadoraTopBar(t.addMedTitle, onBack = onClose)
 
         ScreenContent {
             item {
                 SadoraCard {
-                    SadoraTextField(name, { name = it }, label = "Nomi", placeholder = "Temir")
+                    SadoraTextField(name, { name = it }, label = t.medName, placeholder = t.medNameHint)
                     Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                         SadoraTextField(
                             dose,
                             { dose = it },
-                            label = "Doza",
+                            label = t.medDose,
                             placeholder = "30",
                             keyboardType = KeyboardType.Number,
                             modifier = Modifier.weight(1f),
@@ -82,8 +102,7 @@ fun AddMedicationScreen(
                         SadoraTextField(
                             unit,
                             { unit = it },
-                            label = "Birlik",
-                            trailing = "▾",
+                            label = t.medUnit,
                             modifier = Modifier.weight(1f),
                         )
                     }
@@ -92,50 +111,39 @@ fun AddMedicationScreen(
 
             item {
                 SadoraCard {
-                    CardLabel("Qabul vaqti")
-                    Row(
-                        Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-                    ) {
-                        Box(
-                            Modifier
-                                .clip(Radius.field)
-                                .background(c.surface2)
-                                .padding(horizontal = Spacing.md, vertical = Spacing.sm),
-                        ) {
-                            Text(time, style = Sadora.type.h2, color = c.text)
-                        }
-                        Text(
-                            "+ Vaqt",
-                            style = Sadora.type.body,
-                            color = c.textAccent,
-                            modifier = Modifier.noRippleClickable {},
-                        )
-                    }
+                    CardLabel(t.medTime)
+                    SadoraTextField(
+                        time,
+                        { time = it },
+                        label = t.medTime,
+                        placeholder = "20:00",
+                        error = if (at == null) t.medTimeInvalid else null,
+                    )
                 }
             }
 
             item {
                 SadoraCard {
-                    CardLabel("Kunlar")
+                    CardLabel(t.medDays)
                     Row(
                         Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(4.dp),
                     ) {
-                        SampleData.weekDays.forEach { day ->
-                            val on = day in days
+                        Weekday.entries.forEachIndexed { index, weekday ->
+                            val on = weekday in weekdays
                             Box(
                                 Modifier
                                     .weight(1f)
                                     .aspectRatio(1f)
                                     .clip(Radius.chip)
                                     .background(if (on) c.primary else c.surface2)
-                                    .noRippleClickable { if (!days.remove(day)) days.add(day) },
+                                    .noRippleClickable {
+                                        if (!weekdays.remove(weekday)) weekdays.add(weekday)
+                                    },
                                 contentAlignment = Alignment.Center,
                             ) {
                                 Text(
-                                    day,
+                                    strings.dates.weekdaysShort[index],
                                     style = Sadora.type.caption,
                                     color = if (on) c.onPrimary else c.muted,
                                 )
@@ -147,11 +155,11 @@ fun AddMedicationScreen(
 
             item {
                 SadoraCard {
-                    CardLabel("Ovqatga nisbatan")
+                    CardLabel(t.medFoodRelation)
                     ChipFlowRow {
-                        listOf("Oldin", "Bilan", "Keyin").forEach { option ->
+                        FoodRelation.entries.forEach { option ->
                             SelectChip(
-                                label = option,
+                                label = t.foodRelation(option),
                                 selected = withFood == option,
                                 onClick = { withFood = option },
                             )
@@ -165,33 +173,48 @@ fun AddMedicationScreen(
                     SadoraTextField(
                         stock,
                         { stock = it },
-                        label = "Zaxira",
+                        label = t.medStock,
                         placeholder = "30",
-                        suffix = "dona",
+                        suffix = t.medStockUnit,
                         keyboardType = KeyboardType.Number,
                     )
-                    SadoraTextField("Yo'q", {}, label = "Tugash sanasi", trailing = "▾")
                 }
             }
 
             item {
+                health.error?.let { ErrorStrip(it) }
                 SadoraButton(
-                    "Saqlash",
-                    enabled = name.isNotBlank(),
+                    if (saving) strings.common.saving else strings.common.save,
+                    enabled = !saving && name.isNotBlank() && at != null && weekdays.isNotEmpty(),
                     onClick = {
-                        state.medications.add(
-                            Medication(
-                                id = "user-${state.medications.size}",
-                                emoji = "💊",
-                                name = "$name $dose $unit".trim(),
-                                time = time,
-                                schedule = if (days.size == 7) "Har kuni" else days.joinToString(", "),
-                                note = "Ovqatdan $withFood".lowercase(),
-                                status = MedStatus.Pending,
-                                stockDays = stock.toIntOrNull(),
-                            ),
-                        )
-                        onClose()
+                        val chosen = at ?: return@SadoraButton
+                        saving = true
+                        scope.launch {
+                            val saved = health.addMedication(
+                                SaveMedicationRequest(
+                                    name = name.trim(),
+                                    emoji = "💊",
+                                    dosage = dose.trim().takeIf { it.isNotEmpty() },
+                                    unit = unit.trim().takeIf { it.isNotEmpty() },
+                                    foodRelation = withFood,
+                                    schedule = MedicationSchedule(
+                                        // Every day is "daily" rather than seven weekdays:
+                                        // the server derives the doses from the kind, and
+                                        // the two are not the same rule to it.
+                                        kind = if (weekdays.size == Weekday.entries.size) {
+                                            ScheduleKind.DAILY
+                                        } else {
+                                            ScheduleKind.WEEKDAYS
+                                        },
+                                        times = listOf(chosen),
+                                        weekdays = weekdays.sortedBy { it.ordinal },
+                                    ),
+                                    stockUnits = stock.toIntOrNull(),
+                                ),
+                            )
+                            saving = false
+                            if (saved) onClose()
+                        }
                     },
                 )
             }
@@ -199,55 +222,67 @@ fun AddMedicationScreen(
     }
 }
 
-private data class DoseRecord(val name: String, val whenLabel: String, val status: MedStatus)
-
 /**
- * "Qabul tarixi" — adherence at a glance.
+ * "Qabul tarixi" — adherence at a glance, from the doses that were actually recorded.
  *
- * The 14-day grid pairs colour with a written key, so the pattern is readable
- * without relying on colour perception.
+ * It used to draw a fourteen-square grid, "24 taken / 3 skipped / 89%", and three named
+ * doses, all written into the file: the same numbers on every phone, including one that
+ * had never recorded a dose. The grid pairs colour with a written key, so the pattern is
+ * readable without relying on colour perception.
  */
 @Composable
 fun MedicationHistoryScreen(
+    health: HealthController,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val c = Sadora.colors
+    val t = strings.modules
 
-    val grid = listOf(
-        MedStatus.Taken, MedStatus.Taken, MedStatus.Skipped, MedStatus.Taken,
-        MedStatus.Taken, MedStatus.Taken, MedStatus.Taken, MedStatus.Pending,
-        MedStatus.Taken, MedStatus.Taken, MedStatus.Taken, MedStatus.Skipped,
-        MedStatus.Taken, MedStatus.Taken,
-    )
-    val records = listOf(
-        DoseRecord("Temir 30 mg", "Bugun 20:04", MedStatus.Taken),
-        DoseRecord("Folik kislota", "Bugun 08:12", MedStatus.Taken),
-        DoseRecord("Temir 30 mg", "17-avgust", MedStatus.Skipped),
-    )
+    LaunchedEffect(Unit) { health.loadDoseHistory(HistoryDays) }
 
-    fun colorFor(status: MedStatus) = when (status) {
-        MedStatus.Taken -> c.success
-        MedStatus.Pending -> c.warning
-        MedStatus.Skipped -> c.danger
+    val days = health.doseHistory
+    val doses = days.flatMap { it.doses }
+    val taken = doses.count { it.status == DoseStatus.TAKEN }
+    val skipped = doses.count { it.status == DoseStatus.SKIPPED }
+    val adherence = if (doses.isEmpty()) null else taken * 100 / doses.size
+
+    fun colorFor(status: DoseStatus) = when (status) {
+        DoseStatus.TAKEN -> c.success
+        DoseStatus.PENDING -> c.warning
+        DoseStatus.SKIPPED -> c.danger
     }
 
-    fun labelFor(status: MedStatus) = when (status) {
-        MedStatus.Taken -> "Qabul qilingan"
-        MedStatus.Pending -> "Kechiktirilgan"
-        MedStatus.Skipped -> "O'tkazilgan"
+    /** A day is as good as its worst dose: one skipped marks the square. */
+    fun statusOf(day: uz.sadora.contract.MedicationDay): DoseStatus = when {
+        day.doses.any { it.status == DoseStatus.SKIPPED } -> DoseStatus.SKIPPED
+        day.doses.any { it.status == DoseStatus.PENDING } -> DoseStatus.PENDING
+        else -> DoseStatus.TAKEN
     }
 
     Column(modifier) {
-        SadoraTopBar("Qabul tarixi", onBack = onClose)
+        SadoraTopBar(t.doseHistoryTitle, onBack = onClose)
 
         ScreenContent {
+            if (doses.isEmpty()) {
+                item {
+                    EmptyState(
+                        title = t.noDoseHistory,
+                        body = t.noDoseHistoryBody,
+                        actionText = null,
+                        onAction = {},
+                        glyph = "💊",
+                    )
+                }
+                return@ScreenContent
+            }
+
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                    listOf(
-                        "Qabul qilingan" to "24",
-                        "O'tkazilgan" to "3",
-                        "30 kun" to "89%",
+                    listOfNotNull(
+                        t.takenCount to "$taken",
+                        t.skippedCount to "$skipped",
+                        adherence?.let { t.adherenceOver(HistoryDays) to "$it%" },
                     ).forEach { (label, value) ->
                         SadoraCard(modifier = Modifier.weight(1f), padding = Spacing.sm) {
                             Text(label, style = Sadora.type.body, color = c.muted)
@@ -259,62 +294,51 @@ fun MedicationHistoryScreen(
 
             item {
                 SadoraCard {
-                    CardLabel("Oxirgi 14 kun")
-                    Row(
-                        Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    ) {
-                        grid.take(7).forEach { status ->
-                            Box(
-                                Modifier
-                                    .weight(1f)
-                                    .aspectRatio(1f)
-                                    .clip(RoundedCornerShape(Radius.xs))
-                                    .background(colorFor(status).copy(alpha = 0.85f)),
-                            )
-                        }
-                    }
-                    Row(
-                        Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    ) {
-                        grid.drop(7).forEach { status ->
-                            Box(
-                                Modifier
-                                    .weight(1f)
-                                    .aspectRatio(1f)
-                                    .clip(RoundedCornerShape(Radius.xs))
-                                    .background(colorFor(status).copy(alpha = 0.85f)),
-                            )
+                    CardLabel(t.lastDays(HistoryDays))
+                    val squares = days.takeLast(HistoryDays).map { statusOf(it) }
+                    squares.chunked(7).forEach { week ->
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        ) {
+                            week.forEach { status ->
+                                Box(
+                                    Modifier
+                                        .weight(1f)
+                                        .aspectRatio(1f)
+                                        .clip(RoundedCornerShape(Radius.xs))
+                                        .background(colorFor(status).copy(alpha = 0.85f)),
+                                )
+                            }
+                            repeat(7 - week.size) { Box(Modifier.weight(1f)) }
                         }
                     }
                     // Colour alone is never the indicator — the key spells it out.
                     ChipFlowRow(horizontalGap = Spacing.xs, verticalGap = Spacing.xxs) {
-                        listOf(MedStatus.Taken, MedStatus.Pending, MedStatus.Skipped)
-                            .forEach { status ->
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                                ) {
-                                    Box(
-                                        Modifier
-                                            .size(10.dp)
-                                            .clip(RoundedCornerShape(4.dp))
-                                            .background(colorFor(status)),
-                                    )
-                                    Text(
-                                        labelFor(status),
-                                        style = Sadora.type.body,
-                                        color = c.muted,
-                                    )
-                                }
+                        DoseStatus.entries.forEach { status ->
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            ) {
+                                Box(
+                                    Modifier
+                                        .size(10.dp)
+                                        .clip(RoundedCornerShape(4.dp))
+                                        .background(colorFor(status)),
+                                )
+                                Text(t.doseStatus(status), style = Sadora.type.body, color = c.muted)
                             }
+                        }
                     }
                 }
             }
 
-            items(records.size) { index ->
-                val record = records[index]
+            val recorded = doses
+                .filter { it.status != DoseStatus.PENDING }
+                .sortedByDescending { it.dueOn }
+                .take(RecentDoses)
+            items(recorded.size) { index ->
+                val dose = recorded[index]
                 SadoraCard(padding = Spacing.sm) {
                     Row(
                         Modifier.fillMaxWidth(),
@@ -322,16 +346,17 @@ fun MedicationHistoryScreen(
                         horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                     ) {
                         Column(Modifier.weight(1f)) {
-                            Text(record.name, style = Sadora.type.h3, color = c.text)
-                            Text(record.whenLabel, style = Sadora.type.body, color = c.muted)
+                            Text(dose.name, style = Sadora.type.h3, color = c.text)
+                            Text(
+                                strings.dates.relativeDay(dose.dueOn, days.last().date) +
+                                    " " + Fmt.clock(dose.dueAt),
+                                style = Sadora.type.body,
+                                color = c.muted,
+                            )
                         }
                         SadoraBadge(
-                            labelFor(record.status),
-                            if (record.status == MedStatus.Taken) {
-                                BadgeTone.Success
-                            } else {
-                                BadgeTone.Danger
-                            },
+                            t.doseStatus(dose.status),
+                            if (dose.status == DoseStatus.TAKEN) BadgeTone.Success else BadgeTone.Danger,
                         )
                     }
                 }
@@ -339,3 +364,7 @@ fun MedicationHistoryScreen(
         }
     }
 }
+
+/** The window the screen reports on, and how many recorded doses it lists under it. */
+private const val HistoryDays = 14
+private const val RecentDoses = 20

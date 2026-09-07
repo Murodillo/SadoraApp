@@ -8,7 +8,9 @@ import kotlin.test.assertTrue
 import kotlinx.datetime.LocalDate
 import org.example.project.data.applyCycle
 import org.example.project.i18n.StringsUz
+import uz.sadora.contract.FoodRelation
 import uz.sadora.contract.MealSlot
+import uz.sadora.contract.ScheduleKind
 
 /**
  * The store's derived cycle logic is what every screen draws from, so it is pinned
@@ -131,8 +133,14 @@ class AppStateTest {
     private fun withMedications() = AppState().apply {
         medications.addAll(
             listOf(
-                Medication("d1", "🌿", "Folik kislota", "08:00", "Har kuni", "", MedStatus.Taken),
-                Medication("d2", "💊", "D vitamini", "20:00", "Har kuni", "", MedStatus.Pending),
+                Medication(
+                    "d1", "🌿", "Folik kislota", "08:00",
+                    ScheduleKind.DAILY, null, FoodRelation.AFTER, MedStatus.Taken,
+                ),
+                Medication(
+                    "d2", "💊", "D vitamini", "20:00",
+                    ScheduleKind.DAILY, null, FoodRelation.ANY, MedStatus.Pending,
+                ),
             ),
         )
     }

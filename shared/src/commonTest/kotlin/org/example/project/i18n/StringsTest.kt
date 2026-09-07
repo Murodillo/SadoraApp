@@ -11,7 +11,10 @@ import org.example.project.model.CyclePhase
 import org.example.project.model.Goal
 import org.example.project.model.LifeStage
 import org.example.project.model.Mood
+import uz.sadora.contract.DoseStatus
 import uz.sadora.contract.FetalMovement
+import uz.sadora.contract.FoodRelation
+import uz.sadora.contract.ScheduleKind
 import uz.sadora.contract.HealthMetric
 import uz.sadora.contract.MealSlot
 import uz.sadora.contract.SymptomCategory
@@ -121,6 +124,10 @@ class StringsTest {
                     balanceTitle, fourDirections, balanceDisclaimer, balanced, someRoomIn("x"),
                     fallingBehind("x"), food, water, activity, sleep, ofKcal("1", "2"),
                     ofLitres("1", "2"), ofSteps("1", "2"), ofSleep("6s"),
+                    addMedTitle, medName, medNameHint, medDose, medUnit, medTime, medTimeInvalid,
+                    addTime, medDays, medFoodRelation, medStock, medStockUnit, medEndDate,
+                    medNone, doseHistoryTitle, takenCount, skippedCount, adherenceOver(14),
+                    lastDays(14), noDoseHistory, noDoseHistoryBody, correlationDisclaimer,
                     scannerTitle, scannerFrameHint, scannerLightHint, scannerGallery,
                     scannerShutter, scannerManual, scannerPremium, scannerUnavailable,
                     scannerUnavailableBody, analysing, analysingWait, scanFailed,
@@ -134,6 +141,10 @@ class StringsTest {
                 ),
             )
             HealthMetric.entries.forEach { add(t.modules.metric(it)) }
+            FoodRelation.entries.forEach { add(foodRelation(it)); add(doseCaption(null, it)) }
+            ScheduleKind.entries.forEach { add(scheduleKind(it)) }
+            DoseStatus.entries.forEach { add(doseStatus(it)) }
+            add(doseCaption("her own note", FoodRelation.ANY))
         }
         with(t.journey) {
             addAll(
@@ -203,6 +214,19 @@ class StringsTest {
                 ),
             )
             MealSlot.entries.forEach { add(mealSlot(it)) }
+        }
+        with(t.ai) {
+            addAll(
+                listOf(
+                    title, subtitle, menu, back, send, inputHint, emptyPrompt,
+                    basis(12, "6s 40d", "1,2"), questionsLeft(3, 20), answerFailed,
+                    sessionOnly, clearChat, medicalDisclaimer, freeBadge, howCanIHelp,
+                    readsYourData, sampleAnswer, sampleAnswerBody, sampleAnswerAdvice,
+                    freeKeeps, seePremium, notNow,
+                ),
+            )
+            addAll(freeFeatures)
+            topics.forEach { (label, question) -> add(label); add(question) }
         }
         with(t.today) {
             addAll(
@@ -294,6 +318,11 @@ class StringsTest {
             assertNotEquals(StringsUz.modules.sourcesNote, t.modules.sourcesNote)
             assertNotEquals(StringsUz.modules.portionHint, t.modules.portionHint)
             assertNotEquals(StringsUz.modules.scanFailedBody, t.modules.scanFailedBody)
+            assertNotEquals(StringsUz.modules.noDoseHistoryBody, t.modules.noDoseHistoryBody)
+            assertNotEquals(StringsUz.modules.correlationDisclaimer, t.modules.correlationDisclaimer)
+            assertNotEquals(StringsUz.ai.emptyPrompt, t.ai.emptyPrompt)
+            assertNotEquals(StringsUz.ai.medicalDisclaimer, t.ai.medicalDisclaimer)
+            assertNotEquals(StringsUz.ai.sampleAnswerAdvice, t.ai.sampleAnswerAdvice)
             assertNotEquals(StringsUz.dates.months.first(), t.dates.months.first())
             assertNotEquals(StringsUz.dates.weekdays.first(), t.dates.weekdays.first())
             assertNotEquals(StringsUz.dates.hoursAgo(3), t.dates.hoursAgo(3))
@@ -331,6 +360,19 @@ class StringsTest {
         languages.forEach { t ->
             t.mind.levels.forEach { assertTrue(it.length <= 16, "too long for the dial: $it") }
             assertEquals(5, t.mind.levels.size)
+        }
+    }
+
+    /**
+     * The chat offers four ready questions; a chip that asks nothing is a dead tap.
+     */
+    @Test
+    fun `every AI topic chip carries a question`() {
+        languages.forEach { t ->
+            assertEquals(4, t.ai.topics.size)
+            t.ai.topics.forEach { (label, question) ->
+                assertTrue(label.isNotBlank() && question.endsWith("?"), "not a question: $label")
+            }
         }
     }
 

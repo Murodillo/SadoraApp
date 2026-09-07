@@ -6,9 +6,12 @@ import org.example.project.model.CyclePhase
 import org.example.project.model.Goal
 import org.example.project.model.LifeStage
 import org.example.project.model.Mood
+import uz.sadora.contract.DoseStatus
 import uz.sadora.contract.FetalMovement
+import uz.sadora.contract.FoodRelation
 import uz.sadora.contract.HealthMetric
 import uz.sadora.contract.MealSlot
+import uz.sadora.contract.ScheduleKind
 import uz.sadora.contract.SymptomCategory
 
 /**
@@ -286,6 +289,52 @@ object StringsRu : Strings {
         override fun minutesAgo(minutes: Int) = "$minutes мин. назад"
         override fun hoursAgo(hours: Int) = "$hours ч. назад"
         override fun daysAgo(days: Int) = "$days дн. назад"
+    }
+
+    override val ai = object : AiStrings {
+        override val title = "SADORA AI"
+        override val subtitle = "Ваш личный помощник"
+        override val menu = "Ещё"
+        override val back = "Назад"
+        override val send = "Отправить"
+        override val inputHint = "Задайте любой вопрос…"
+        override val emptyPrompt = "Спросите о цикле, питании, настроении или препаратах — " +
+            "ответ будет по вашим данным."
+        override fun basis(cycleDay: Int, sleep: String, water: String) =
+            "По данным: $cycleDay-й день цикла · сон $sleep · вода $water л"
+        override fun questionsLeft(left: Int, limit: Int) = " · осталось вопросов: $left/$limit"
+        override val answerFailed = "Не удалось ответить. Попробуйте ещё раз."
+        override val sessionOnly = "Переписка хранится только в этом сеансе и на сервер не " +
+            "записывается. При выходе из приложения она исчезнет."
+        override val clearChat = "Очистить переписку"
+        override val medicalDisclaimer =
+            "SADORA — помощник по здоровью. Не ставит диагнозов и не назначает лечение."
+
+        override val topics = listOf(
+            "Энергия" to "Как удержать энергию на ровном уровне?",
+            "Питание" to "Что мне лучше съесть сегодня?",
+            "Цикл" to "Почему перед месячными я чувствую усталость?",
+            "Кожа" to "Почему кожа меняется в течение цикла?",
+        )
+
+        override val freeBadge = "БЕСПЛАТНЫЙ ПЛАН"
+        override val howCanIHelp = "Чем я могу помочь?"
+        override val readsYourData = "Читает ваши данные и отвечает лично вам"
+        override val sampleAnswer = "Пример ответа"
+        override val sampleAnswerBody = "Последние три дня сон был короче обычного, а воды " +
+            "стало меньше."
+        override val sampleAnswerAdvice = "В эти же дни отмечалась низкая энергия. Два шага " +
+            "на сегодня: 700 мл воды до обеда и лечь до 23:00."
+        override val freeFeatures = listOf(
+            "20 вопросов в день, с учётом ваших данных",
+            "Ежедневная персональная сводка ИИ",
+            "Сканер еды",
+            "Анализ за 30 и 90 дней",
+        )
+        override val freeKeeps = "Всё из бесплатного плана остаётся: цикл, настроение, вода, " +
+            "дневник питания, препараты, анализ за 7 дней."
+        override val seePremium = "Посмотреть Premium"
+        override val notNow = "Не сейчас"
     }
 
     override val today = object : TodayStrings {
@@ -691,6 +740,8 @@ object StringsRu : Strings {
             "Нужно минимум восемь дней записей, и разница должна быть заметной — иначе " +
                 "мы ничего не пишем."
         override val averagePrefix = "В среднем — "
+        override val correlationDisclaimer =
+            "Связь — это не причина. Она означает «часто встречалось вместе»."
 
         override val all = "Все"
         override val knowledgeTitle = "Знания"
@@ -746,6 +797,55 @@ object StringsRu : Strings {
         override val payWithClick = "Оплатить через Click"
         override val payWithAppStore = "Через App Store"
         override val payWithGooglePlay = "Через Google Play"
+
+        override val addMedTitle = "Добавить препарат"
+        override val medName = "Название"
+        override val medNameHint = "Железо"
+        override val medDose = "Доза"
+        override val medUnit = "Единица"
+        override val medTime = "Время приёма"
+        override val medTimeInvalid = "Время в виде 20:00"
+        override val addTime = "+ Время"
+        override val medDays = "Дни"
+        override val medFoodRelation = "Относительно еды"
+        override fun foodRelation(relation: FoodRelation) = when (relation) {
+            FoodRelation.ANY -> "Неважно"
+            FoodRelation.BEFORE -> "До"
+            FoodRelation.WITH -> "Во время"
+            FoodRelation.AFTER -> "После"
+        }
+        override fun scheduleKind(kind: ScheduleKind) = when (kind) {
+            ScheduleKind.DAILY -> "Каждый день"
+            ScheduleKind.WEEKDAYS -> "По выбранным дням"
+            ScheduleKind.INTERVAL -> "Через несколько дней"
+        }
+
+        override fun doseCaption(note: String?, relation: FoodRelation) =
+            note?.takeIf { it.isNotBlank() } ?: when (relation) {
+                FoodRelation.ANY -> "В любое время"
+                FoodRelation.BEFORE -> "До еды"
+                FoodRelation.WITH -> "Во время еды"
+                FoodRelation.AFTER -> "После еды"
+            }
+
+        override val medStock = "Запас"
+        override val medStockUnit = "шт."
+        override val medEndDate = "Дата окончания"
+        override val medNone = "Нет"
+
+        override val doseHistoryTitle = "История приёма"
+        override val takenCount = "Принято"
+        override val skippedCount = "Пропущено"
+        override fun adherenceOver(days: Int) = "$days дн."
+        override fun lastDays(days: Int) = "Последние $days дн."
+        override val noDoseHistory = "История пока пуста"
+        override val noDoseHistoryBody = "Добавьте препарат и начните отмечать приём — " +
+            "здесь будет видно, сколько раз всё было вовремя."
+        override fun doseStatus(status: DoseStatus) = when (status) {
+            DoseStatus.TAKEN -> "Принято"
+            DoseStatus.PENDING -> "Отложено"
+            DoseStatus.SKIPPED -> "Пропущено"
+        }
 
         override val scannerTitle = "Сканер еды"
         override val scannerFrameHint = "Поместите блюдо в рамку"

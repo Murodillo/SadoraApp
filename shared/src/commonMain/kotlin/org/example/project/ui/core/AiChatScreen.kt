@@ -53,7 +53,6 @@ import org.example.project.data.AiController
 import org.example.project.i18n.strings
 import org.example.project.model.AppState
 import org.example.project.model.Fmt
-import org.example.project.model.SampleData
 import org.example.project.model.nowTimeLabel
 import org.example.project.ui.components.AiMarkHeader
 import org.example.project.ui.components.SadoraBottomSheet
@@ -86,6 +85,7 @@ fun AiChatScreen(
     modifier: Modifier = Modifier,
 ) {
     val c = Sadora.colors
+    val t = strings.ai
     val scope = rememberCoroutineScope()
     var draft by remember { mutableStateOf("") }
     var showMenu by remember { mutableStateOf(false) }
@@ -107,7 +107,7 @@ fun AiChatScreen(
             } else {
                 // The refusal reads as a reply rather than a banner: it is what the
                 // assistant has to say about this question.
-                ChatMessage(false, ai.error ?: "Javob berib bo'lmadi. Qayta urinib ko'ring.", nowTimeLabel(), isNotice = true)
+                ChatMessage(false, ai.error ?: t.answerFailed, nowTimeLabel(), isNotice = true)
             }
         }
     }
@@ -123,16 +123,16 @@ fun AiChatScreen(
                 .padding(horizontal = Spacing.screen, vertical = Spacing.sm),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            CircleIconButton(SadoraIcons.ChevronLeft, contentDescription = "Ortga", onClick = onClose)
+            CircleIconButton(SadoraIcons.ChevronLeft, contentDescription = t.back, onClick = onClose)
             Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
-                    "SADORA AI",
+                    t.title,
                     style = Sadora.type.h3.copy(letterSpacing = 0.22.em, fontWeight = FontWeight.SemiBold),
                     color = c.text,
                 )
-                Text("Shaxsiy yordamchingiz", style = Sadora.type.body, color = c.muted)
+                Text(t.subtitle, style = Sadora.type.body, color = c.muted)
             }
-            CircleIconButton(SadoraIcons.More, contentDescription = "Yana", onClick = { showMenu = true })
+            CircleIconButton(SadoraIcons.More, contentDescription = t.menu, onClick = { showMenu = true })
         }
 
         LazyColumn(
@@ -145,8 +145,11 @@ fun AiChatScreen(
 
             item {
                 Text(
-                    "Sikl ${state.cycleDay}-kun · Uyqu ${state.sleepLabel(format = strings.common::hoursMinutes)} · " +
-                        "Suv ${Fmt.litres(state.waterMl)} l asosida" + quotaLabel(ai),
+                    t.basis(
+                        state.cycleDay,
+                        state.sleepLabel(format = strings.common::hoursMinutes),
+                        Fmt.litres(state.waterMl),
+                    ) + quotaLabel(ai, t),
                     style = Sadora.type.caption.copy(letterSpacing = 0.02.em),
                     color = c.muted2,
                     textAlign = TextAlign.Center,
@@ -157,8 +160,7 @@ fun AiChatScreen(
             if (messages.isEmpty()) {
                 item {
                     Text(
-                        "Sikl, ovqatlanish, kayfiyat yoki dorilaringiz haqida so'rang — " +
-                            "javob sizning ma'lumotlaringiz asosida bo'ladi.",
+                        t.emptyPrompt,
                         style = Sadora.type.body,
                         color = c.muted,
                         textAlign = TextAlign.Center,
@@ -175,7 +177,7 @@ fun AiChatScreen(
 
             item {
                 Text(
-                    SampleData.medicalDisclaimer,
+                    t.medicalDisclaimer,
                     style = Sadora.type.caption.copy(letterSpacing = 0.02.em),
                     color = c.muted2,
                     textAlign = TextAlign.Center,
@@ -192,7 +194,7 @@ fun AiChatScreen(
                 .padding(horizontal = Spacing.screen, vertical = Spacing.xs),
             horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
         ) {
-            SampleData.aiTopics.forEach { (label, question) ->
+            t.topics.forEach { (label, question) ->
                 Box(
                     Modifier
                         .clip(Radius.chip)
@@ -223,7 +225,7 @@ fun AiChatScreen(
                 contentAlignment = Alignment.CenterStart,
             ) {
                 if (draft.isEmpty()) {
-                    Text("Istalgan savolni bering…", style = Sadora.type.body, color = c.muted2)
+                    Text(t.inputHint, style = Sadora.type.body, color = c.muted2)
                 }
                 BasicTextField(
                     value = draft,
@@ -245,7 +247,7 @@ fun AiChatScreen(
             ) {
                 Icon(
                     SadoraIcons.Send,
-                    contentDescription = "Yuborish",
+                    contentDescription = t.send,
                     Modifier.size(IconSize.md),
                     tint = if (canSend) c.onPrimary else c.muted2,
                 )
@@ -253,16 +255,15 @@ fun AiChatScreen(
         }
     }
 
-    SadoraBottomSheet(visible = showMenu, title = "SADORA AI", onDismiss = { showMenu = false }) {
+    SadoraBottomSheet(visible = showMenu, title = t.title, onDismiss = { showMenu = false }) {
         Text(
-            "Suhbat faqat shu seansda saqlanadi va serverga yozilmaydi. Ilovadan " +
-                "chiqsangiz u o'chadi.",
+            t.sessionOnly,
             style = Sadora.type.body,
             color = c.muted,
         )
-        Text(SampleData.medicalDisclaimer, style = Sadora.type.caption, color = c.muted2)
+        Text(strings.ai.medicalDisclaimer, style = Sadora.type.caption, color = c.muted2)
         SadoraButton(
-            "Suhbatni tozalash",
+            t.clearChat,
             onClick = {
                 messages.clear()
                 showMenu = false
@@ -274,11 +275,11 @@ fun AiChatScreen(
 }
 
 /** " · 3/20 savol qoldi", or nothing while the allowance is unknown or unmetered. */
-private fun quotaLabel(ai: AiController): String {
+private fun quotaLabel(ai: AiController, t: org.example.project.i18n.AiStrings): String {
     val quota = ai.quota ?: return ""
     val limit = quota.dailyLimit ?: return ""
     val left = quota.remainingToday ?: return ""
-    return " · $left/$limit savol qoldi"
+    return t.questionsLeft(left, limit)
 }
 
 /** Three dots that breathe while the answer is on its way. */

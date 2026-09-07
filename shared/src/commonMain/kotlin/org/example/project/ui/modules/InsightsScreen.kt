@@ -22,7 +22,6 @@ import org.example.project.design.Spacing
 import org.example.project.i18n.ModuleStrings
 import org.example.project.i18n.strings
 import org.example.project.model.AppState
-import org.example.project.model.SampleData
 import org.example.project.ui.components.CardLabel
 import org.example.project.ui.components.DisclaimerNote
 import org.example.project.ui.components.EmptyState
@@ -184,7 +183,7 @@ private fun LazyListScope.insightsContent(
         }
     }
 
-    item { DisclaimerNote(SampleData.correlationDisclaimer) }
+    item { DisclaimerNote(strings.modules.correlationDisclaimer) }
 }
 
 @Composable

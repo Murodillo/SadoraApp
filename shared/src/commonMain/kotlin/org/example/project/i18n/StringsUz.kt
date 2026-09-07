@@ -6,9 +6,12 @@ import org.example.project.model.CyclePhase
 import org.example.project.model.Goal
 import org.example.project.model.LifeStage
 import org.example.project.model.Mood
+import uz.sadora.contract.DoseStatus
 import uz.sadora.contract.FetalMovement
+import uz.sadora.contract.FoodRelation
 import uz.sadora.contract.HealthMetric
 import uz.sadora.contract.MealSlot
+import uz.sadora.contract.ScheduleKind
 import uz.sadora.contract.SymptomCategory
 
 /**
@@ -278,6 +281,52 @@ object StringsUz : Strings {
         override fun minutesAgo(minutes: Int) = "$minutes daqiqa oldin"
         override fun hoursAgo(hours: Int) = "$hours soat oldin"
         override fun daysAgo(days: Int) = "$days kun oldin"
+    }
+
+    override val ai = object : AiStrings {
+        override val title = "SADORA AI"
+        override val subtitle = "Shaxsiy yordamchingiz"
+        override val menu = "Yana"
+        override val back = "Ortga"
+        override val send = "Yuborish"
+        override val inputHint = "Istalgan savolni bering…"
+        override val emptyPrompt = "Sikl, ovqatlanish, kayfiyat yoki dorilaringiz haqida " +
+            "so'rang — javob sizning ma'lumotlaringiz asosida bo'ladi."
+        override fun basis(cycleDay: Int, sleep: String, water: String) =
+            "Sikl $cycleDay-kun · Uyqu $sleep · Suv $water l asosida"
+        override fun questionsLeft(left: Int, limit: Int) = " · $left/$limit savol qoldi"
+        override val answerFailed = "Javob berib bo'lmadi. Qayta urinib ko'ring."
+        override val sessionOnly = "Suhbat faqat shu seansda saqlanadi va serverga " +
+            "yozilmaydi. Ilovadan chiqsangiz u o'chadi."
+        override val clearChat = "Suhbatni tozalash"
+        override val medicalDisclaimer =
+            "SADORA — salomatlik yordamchisi. Tashxis qo'ymaydi va dori tayinlamaydi."
+
+        override val topics = listOf(
+            "Energiya" to "Energiyamni qanday barqaror ushlasam bo'ladi?",
+            "Ovqatlanish" to "Bugun nima yeganim ma'qul?",
+            "Sikl" to "Nega hayzdan oldin charchoq sezaman?",
+            "Teri" to "Sikl davomida terim nega o'zgaradi?",
+        )
+
+        override val freeBadge = "BEPUL REJA"
+        override val howCanIHelp = "Sizga qanday yordam bera olaman?"
+        override val readsYourData = "Ma'lumotlaringizni o'qib shaxsiy javob beradi"
+        override val sampleAnswer = "Namuna javob"
+        override val sampleAnswerBody = "Oxirgi uch kunda uyqu odatdagidan qisqa bo'lgan va " +
+            "suv iste'moli pasaygan."
+        override val sampleAnswerAdvice = "Shu kunlarda energiya ham past qayd etilgan. " +
+            "Bugun ikki qadam: tushga qadar 700 ml suv va 23:00 gacha yotish."
+        override val freeFeatures = listOf(
+            "Kuniga 20 savol, ma'lumotlar kontekstida",
+            "Har kunlik shaxsiy AI xulosa",
+            "Ovqat skaneri",
+            "30 va 90 kunlik tahlillar",
+        )
+        override val freeKeeps = "Bepul rejadagi hamma narsa qoladi: sikl, kayfiyat, suv, " +
+            "ovqat kundaligi, dorilar, 7 kunlik tahlil."
+        override val seePremium = "Premium'ni ko'rish"
+        override val notNow = "Hozir emas"
     }
 
     override val today = object : TodayStrings {
@@ -684,6 +733,8 @@ object StringsUz : Strings {
             "Kamida sakkiz kunlik yozuv kerak, va farq sezilarli bo'lishi shart — aks " +
                 "holda hech narsa yozmaymiz."
         override val averagePrefix = "O'rtacha — "
+        override val correlationDisclaimer =
+            "Bog'liqliklar sabab-natija emas. \"Ko'pincha birga kuzatilgan\" degan ma'noni bildiradi."
 
         override val all = "Barchasi"
         override val knowledgeTitle = "Bilim"
@@ -739,6 +790,55 @@ object StringsUz : Strings {
         override val payWithClick = "Click orqali to'lash"
         override val payWithAppStore = "App Store orqali"
         override val payWithGooglePlay = "Google Play orqali"
+
+        override val addMedTitle = "Dori qo'shish"
+        override val medName = "Nomi"
+        override val medNameHint = "Temir"
+        override val medDose = "Doza"
+        override val medUnit = "Birlik"
+        override val medTime = "Qabul vaqti"
+        override val medTimeInvalid = "Vaqt 20:00 ko'rinishida"
+        override val addTime = "+ Vaqt"
+        override val medDays = "Kunlar"
+        override val medFoodRelation = "Ovqatga nisbatan"
+        override fun foodRelation(relation: FoodRelation) = when (relation) {
+            FoodRelation.ANY -> "Farqi yo'q"
+            FoodRelation.BEFORE -> "Oldin"
+            FoodRelation.WITH -> "Bilan"
+            FoodRelation.AFTER -> "Keyin"
+        }
+        override fun scheduleKind(kind: ScheduleKind) = when (kind) {
+            ScheduleKind.DAILY -> "Har kuni"
+            ScheduleKind.WEEKDAYS -> "Tanlangan kunlar"
+            ScheduleKind.INTERVAL -> "Bir necha kunda"
+        }
+
+        override fun doseCaption(note: String?, relation: FoodRelation) =
+            note?.takeIf { it.isNotBlank() } ?: when (relation) {
+                FoodRelation.ANY -> "Vaqtidan qat'i nazar"
+                FoodRelation.BEFORE -> "Ovqatdan oldin"
+                FoodRelation.WITH -> "Ovqat bilan"
+                FoodRelation.AFTER -> "Ovqatdan keyin"
+            }
+
+        override val medStock = "Zaxira"
+        override val medStockUnit = "dona"
+        override val medEndDate = "Tugash sanasi"
+        override val medNone = "Yo'q"
+
+        override val doseHistoryTitle = "Qabul tarixi"
+        override val takenCount = "Qabul qilingan"
+        override val skippedCount = "O'tkazilgan"
+        override fun adherenceOver(days: Int) = "$days kun"
+        override fun lastDays(days: Int) = "Oxirgi $days kun"
+        override val noDoseHistory = "Tarix hali bo'sh"
+        override val noDoseHistoryBody = "Dori qo'shib, qabulni belgilay boshlaganingizda " +
+            "shu yerda qanchasi o'z vaqtida bo'lgani ko'rinadi."
+        override fun doseStatus(status: DoseStatus) = when (status) {
+            DoseStatus.TAKEN -> "Qabul qilingan"
+            DoseStatus.PENDING -> "Kechiktirilgan"
+            DoseStatus.SKIPPED -> "O'tkazilgan"
+        }
 
         override val scannerTitle = "Ovqat skaneri"
         override val scannerFrameHint = "Taomni ramka ichiga joylashtiring"

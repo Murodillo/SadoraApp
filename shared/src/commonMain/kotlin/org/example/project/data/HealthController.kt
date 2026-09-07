@@ -109,6 +109,15 @@ class HealthController(
     /** Her appointments, in the order they fall. Loaded by the screens that show them. */
     var appointments by mutableStateOf<List<uz.sadora.contract.Appointment>>(emptyList())
 
+    /**
+     * The dose history behind the adherence screen, newest day last.
+     *
+     * Merged across every medication she takes, because the screen asks "how have I
+     * been doing", not "how have I been doing with the iron".
+     */
+    var doseHistory by mutableStateOf<List<uz.sadora.contract.MedicationDay>>(emptyList())
+        private set
+
     /** Completed cycles, oldest first. The regularity view is built from their lengths. */
     var history by mutableStateOf<uz.sadora.contract.CycleHistory?>(null)
         private set
@@ -221,6 +230,27 @@ class HealthController(
             ?: Clock.System.todayIn(TimeZone.currentSystemDefault())
         val from = to.minus(days - 1, DateTimeUnit.DAY)
         calls.run(silent = true) { api.days(from, to) }?.let { recentLogs = it.logs }
+    }
+
+    /**
+     * Every medication's history for [days], merged by day.
+     *
+     * One request per course rather than one for everything: the API is per-medication,
+     * and a woman on two courses is the common case, not twenty.
+     */
+    suspend fun loadDoseHistory(days: Int) {
+        val api = medicationApi ?: return
+        if (medications.isEmpty()) refreshMedications()
+        val merged = mutableMapOf<LocalDate, MutableList<uz.sadora.contract.MedicationDose>>()
+        medications.forEach { medication ->
+            val history = calls.run(silent = true) { api.history(medication.id, days) } ?: return@forEach
+            history.days.forEach { day ->
+                merged.getOrPut(day.date) { mutableListOf() }.addAll(day.doses)
+            }
+        }
+        doseHistory = merged.entries
+            .sortedBy { it.key }
+            .map { (date, doses) -> uz.sadora.contract.MedicationDay(date, doses) }
     }
 
     suspend fun loadHistory() {

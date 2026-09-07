@@ -345,7 +345,7 @@ private fun TodayPlanCard(
                 PlanRow(
                     emoji = med.emoji,
                     title = med.name,
-                    caption = med.note,
+                    caption = strings.modules.doseCaption(med.note, med.foodRelation),
                     time = med.time,
                     tint = c.secondary,
                     actionText = t.taken,

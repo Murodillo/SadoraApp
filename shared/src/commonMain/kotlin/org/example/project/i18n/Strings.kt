@@ -10,9 +10,12 @@ import org.example.project.model.CyclePhase
 import org.example.project.model.Goal
 import org.example.project.model.LifeStage
 import org.example.project.model.Mood
+import uz.sadora.contract.DoseStatus
 import uz.sadora.contract.FetalMovement
+import uz.sadora.contract.FoodRelation
 import uz.sadora.contract.HealthMetric
 import uz.sadora.contract.MealSlot
+import uz.sadora.contract.ScheduleKind
 import uz.sadora.contract.SymptomCategory
 
 /**
@@ -44,6 +47,7 @@ interface Strings {
     val nutrition: NutritionStrings
     val journey: JourneyStrings
     val modules: ModuleStrings
+    val ai: AiStrings
 }
 
 /**
@@ -154,6 +158,38 @@ interface DateStrings {
         -1 -> tomorrow
         else -> dayMonth(date)
     }
+}
+
+/** The AI chat, its free-plan preview, and the one line that must be on every answer. */
+interface AiStrings {
+    val title: String
+    val subtitle: String
+    val menu: String
+    val back: String
+    val send: String
+    val inputHint: String
+    val emptyPrompt: String
+    fun basis(cycleDay: Int, sleep: String, water: String): String
+    fun questionsLeft(left: Int, limit: Int): String
+    val answerFailed: String
+    val sessionOnly: String
+    val clearChat: String
+    val medicalDisclaimer: String
+
+    /** The chips under the chat. Each opens a question in that area. */
+    val topics: List<Pair<String, String>>
+
+    // ---- the free-plan preview
+    val freeBadge: String
+    val howCanIHelp: String
+    val readsYourData: String
+    val sampleAnswer: String
+    val sampleAnswerBody: String
+    val sampleAnswerAdvice: String
+    val freeFeatures: List<String>
+    val freeKeeps: String
+    val seePremium: String
+    val notNow: String
 }
 
 interface TodayStrings {
@@ -671,6 +707,8 @@ interface ModuleStrings {
     val noCorrelation: String
     val noCorrelationBody: String
     val averagePrefix: String
+    /** The app never states causation — only co-occurrence. */
+    val correlationDisclaimer: String
 
     // ---- knowledge
     val all: String
@@ -724,6 +762,36 @@ interface ModuleStrings {
     val payWithClick: String
     val payWithAppStore: String
     val payWithGooglePlay: String
+
+    // ---- add a medication
+    val addMedTitle: String
+    val medName: String
+    val medNameHint: String
+    val medDose: String
+    val medUnit: String
+    val medTime: String
+    val medTimeInvalid: String
+    val addTime: String
+    val medDays: String
+    val medFoodRelation: String
+    fun foodRelation(relation: FoodRelation): String
+    fun scheduleKind(kind: ScheduleKind): String
+    /** The caption under a dose: her own note, or how it sits with food. */
+    fun doseCaption(note: String?, relation: FoodRelation): String
+    val medStock: String
+    val medStockUnit: String
+    val medEndDate: String
+    val medNone: String
+
+    // ---- dose history
+    val doseHistoryTitle: String
+    val takenCount: String
+    val skippedCount: String
+    fun adherenceOver(days: Int): String
+    fun lastDays(days: Int): String
+    val noDoseHistory: String
+    val noDoseHistoryBody: String
+    fun doseStatus(status: DoseStatus): String
 
     // ---- food scanner
     val scannerTitle: String

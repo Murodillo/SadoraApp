@@ -6,9 +6,12 @@ import org.example.project.model.CyclePhase
 import org.example.project.model.Goal
 import org.example.project.model.LifeStage
 import org.example.project.model.Mood
+import uz.sadora.contract.DoseStatus
 import uz.sadora.contract.FetalMovement
+import uz.sadora.contract.FoodRelation
 import uz.sadora.contract.HealthMetric
 import uz.sadora.contract.MealSlot
+import uz.sadora.contract.ScheduleKind
 import uz.sadora.contract.SymptomCategory
 
 /**
@@ -277,6 +280,52 @@ object StringsEn : Strings {
         override fun minutesAgo(minutes: Int) = "$minutes min ago"
         override fun hoursAgo(hours: Int) = "$hours h ago"
         override fun daysAgo(days: Int) = "$days d ago"
+    }
+
+    override val ai = object : AiStrings {
+        override val title = "SADORA AI"
+        override val subtitle = "Your own assistant"
+        override val menu = "More"
+        override val back = "Back"
+        override val send = "Send"
+        override val inputHint = "Ask anything…"
+        override val emptyPrompt = "Ask about your cycle, food, mood or medication — the " +
+            "answer is built from your own data."
+        override fun basis(cycleDay: Int, sleep: String, water: String) =
+            "Based on: cycle day $cycleDay · slept $sleep · water $water l"
+        override fun questionsLeft(left: Int, limit: Int) = " · $left/$limit questions left"
+        override val answerFailed = "That could not be answered. Try again."
+        override val sessionOnly = "The conversation lives in this session only and is never " +
+            "written to the server. It is gone when you leave the app."
+        override val clearChat = "Clear the conversation"
+        override val medicalDisclaimer =
+            "SADORA is a health companion. It does not diagnose or prescribe."
+
+        override val topics = listOf(
+            "Energy" to "How do I keep my energy steady?",
+            "Food" to "What would be good to eat today?",
+            "Cycle" to "Why do I feel tired before my period?",
+            "Skin" to "Why does my skin change through the cycle?",
+        )
+
+        override val freeBadge = "FREE PLAN"
+        override val howCanIHelp = "How can I help?"
+        override val readsYourData = "It reads your data and answers you personally"
+        override val sampleAnswer = "A sample answer"
+        override val sampleAnswerBody = "Over the last three days sleep has been shorter than " +
+            "usual and you have been drinking less."
+        override val sampleAnswerAdvice = "Energy was logged low on the same days. Two steps " +
+            "for today: 700 ml of water before lunch, and lights out by 23:00."
+        override val freeFeatures = listOf(
+            "20 questions a day, with your data in mind",
+            "A personal AI summary every day",
+            "The food scanner",
+            "30- and 90-day insights",
+        )
+        override val freeKeeps = "Everything on the free plan stays: cycle, mood, water, the " +
+            "food diary, medication, and 7-day insights."
+        override val seePremium = "See Premium"
+        override val notNow = "Not now"
     }
 
     override val today = object : TodayStrings {
@@ -681,6 +730,8 @@ object StringsEn : Strings {
             "At least eight days of records are needed, and the difference has to be " +
                 "clear — otherwise we write nothing."
         override val averagePrefix = "Average — "
+        override val correlationDisclaimer =
+            "A link is not a cause. It means \"often seen together\"."
 
         override val all = "All"
         override val knowledgeTitle = "Knowledge"
@@ -736,6 +787,55 @@ object StringsEn : Strings {
         override val payWithClick = "Pay with Click"
         override val payWithAppStore = "Through the App Store"
         override val payWithGooglePlay = "Through Google Play"
+
+        override val addMedTitle = "Add a medication"
+        override val medName = "Name"
+        override val medNameHint = "Iron"
+        override val medDose = "Dose"
+        override val medUnit = "Unit"
+        override val medTime = "Time"
+        override val medTimeInvalid = "Time as 20:00"
+        override val addTime = "+ Time"
+        override val medDays = "Days"
+        override val medFoodRelation = "With food"
+        override fun foodRelation(relation: FoodRelation) = when (relation) {
+            FoodRelation.ANY -> "Any time"
+            FoodRelation.BEFORE -> "Before"
+            FoodRelation.WITH -> "With"
+            FoodRelation.AFTER -> "After"
+        }
+        override fun scheduleKind(kind: ScheduleKind) = when (kind) {
+            ScheduleKind.DAILY -> "Every day"
+            ScheduleKind.WEEKDAYS -> "On chosen days"
+            ScheduleKind.INTERVAL -> "Every few days"
+        }
+
+        override fun doseCaption(note: String?, relation: FoodRelation) =
+            note?.takeIf { it.isNotBlank() } ?: when (relation) {
+                FoodRelation.ANY -> "Any time"
+                FoodRelation.BEFORE -> "Before food"
+                FoodRelation.WITH -> "With food"
+                FoodRelation.AFTER -> "After food"
+            }
+
+        override val medStock = "Stock"
+        override val medStockUnit = "units"
+        override val medEndDate = "End date"
+        override val medNone = "None"
+
+        override val doseHistoryTitle = "Dose history"
+        override val takenCount = "Taken"
+        override val skippedCount = "Skipped"
+        override fun adherenceOver(days: Int) = "$days days"
+        override fun lastDays(days: Int) = "Last $days days"
+        override val noDoseHistory = "No history yet"
+        override val noDoseHistoryBody = "Add a medication and start marking doses — this is " +
+            "where you will see how many were on time."
+        override fun doseStatus(status: DoseStatus) = when (status) {
+            DoseStatus.TAKEN -> "Taken"
+            DoseStatus.PENDING -> "Postponed"
+            DoseStatus.SKIPPED -> "Skipped"
+        }
 
         override val scannerTitle = "Food scanner"
         override val scannerFrameHint = "Put the dish inside the frame"

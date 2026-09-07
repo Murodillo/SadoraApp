@@ -31,13 +31,7 @@ import org.example.project.ui.components.SadoraButton
 import org.example.project.ui.components.SadoraCard
 import org.example.project.ui.components.SadoraTopBar
 import org.example.project.ui.components.ScreenContent
-
-private val premiumFeatures = listOf(
-    "Kuniga 20 savol, ma'lumotlar kontekstida",
-    "Har kunlik shaxsiy AI xulosa",
-    "Ovqat skaneri — oyda 30 marta",
-    "30 va 90 kunlik tahlillar",
-)
+import org.example.project.i18n.strings
 
 /**
  * The free-plan AI screen.
@@ -53,11 +47,12 @@ fun AiFreePreviewScreen(
     modifier: Modifier = Modifier,
 ) {
     val c = Sadora.colors
+    val t = strings.ai
 
     Column(modifier) {
         SadoraTopBar(
-            "SADORA AI",
-            trailing = { SadoraBadge("BEPUL REJA", BadgeTone.Neutral) },
+            t.title,
+            trailing = { SadoraBadge(t.freeBadge, BadgeTone.Neutral) },
         )
 
         ScreenContent {
@@ -69,13 +64,13 @@ fun AiFreePreviewScreen(
                 ) {
                     AiOrb(size = 132.dp)
                     Text(
-                        "Sizga qanday yordam bera olaman?",
+                        t.howCanIHelp,
                         style = Sadora.type.h2,
                         color = c.text,
                         textAlign = TextAlign.Center,
                     )
                     Text(
-                        "Ma'lumotlaringizni o'qib shaxsiy javob beradi",
+                        t.readsYourData,
                         style = Sadora.type.body,
                         color = c.muted,
                         textAlign = TextAlign.Center,
@@ -85,18 +80,16 @@ fun AiFreePreviewScreen(
 
             item {
                 SadoraCard {
-                    CardLabel("Namuna javob")
+                    CardLabel(t.sampleAnswer)
                     Text(
-                        "Oxirgi uch kunda uyqu odatdagidan qisqa bo'lgan va suv iste'moli " +
-                            "pasaygan.",
+                        t.sampleAnswerBody,
                         style = Sadora.type.body,
                         color = c.text,
                     )
                     // The second half fades out — the preview stops mid-answer.
                     Box {
                         Text(
-                            "Shu kunlarda energiya ham past qayd etilgan. Bugun ikki qadam: " +
-                                "tushga qadar 700 ml suv va 23:00 gacha yotish.",
+                            t.sampleAnswerAdvice,
                             style = Sadora.type.body,
                             color = c.text.copy(alpha = 0.25f),
                         )
@@ -106,7 +99,7 @@ fun AiFreePreviewScreen(
 
             item {
                 SadoraCard {
-                    premiumFeatures.forEach { feature ->
+                    t.freeFeatures.forEach { feature ->
                         Row(
                             Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically,
@@ -121,8 +114,7 @@ fun AiFreePreviewScreen(
 
             item {
                 DisclaimerNote(
-                    "Bepul rejadagi hamma narsa qoladi: sikl, kayfiyat, suv, ovqat " +
-                        "kundaligi, dorilar, 7 kunlik tahlil.",
+                    t.freeKeeps,
                 )
             }
 
@@ -130,12 +122,12 @@ fun AiFreePreviewScreen(
                 // Equal weight, by design — declining is not a lesser choice.
                 Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
                     SadoraButton(
-                        "Premium'ni ko'rish",
+                        t.seePremium,
                         onUpgrade,
                         modifier = Modifier.weight(1f),
                     )
                     SadoraButton(
-                        "Hozir emas",
+                        t.notNow,
                         onDismiss,
                         tone = ButtonTone.Secondary,
                         modifier = Modifier.weight(1f),

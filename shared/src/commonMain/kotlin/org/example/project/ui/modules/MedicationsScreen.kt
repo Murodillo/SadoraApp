@@ -63,7 +63,7 @@ fun MedicationsScreen(
 
     Column(modifier) {
         SadoraTopBar(
-            "Dorilar",
+            t.medsTitle,
             onBack = onClose,
             trailing = {
                 Box(
@@ -82,7 +82,7 @@ fun MedicationsScreen(
         ScreenContent {
             item {
                 SegmentedControl(
-                    options = listOf("Bugun", "Barchasi", "Tarix"),
+                    options = listOf(t.today, strings.journey.filterAll, t.history),
                     selectedIndex = tab,
                     onSelect = {
                         tab = it
@@ -121,7 +121,7 @@ fun MedicationsScreen(
                             ) {
                                 Text(next.name, style = Sadora.type.h3, color = c.text)
                                 Text(
-                                    t.oneTabletWith(next.note),
+                                    t.oneTabletWith(t.doseCaption(next.note, next.foodRelation)),
                                     style = Sadora.type.body,
                                     color = c.muted,
                                 )
@@ -176,8 +176,7 @@ fun MedicationsScreen(
                     ) {
                         Text("📦", style = Sadora.type.h3)
                         Text(
-                            "${lowStock.name.substringBefore(' ')} zaxirasi " +
-                                "${lowStock.stockDays} kunga qoldi",
+                            t.stockLeft(lowStock.name.substringBefore(' '), lowStock.stockDays ?: 0),
                             style = Sadora.type.body,
                             color = c.warning,
                         )
@@ -210,7 +209,11 @@ private fun MedicationRow(medication: Medication) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(medication.name, style = Sadora.type.h3, color = c.text)
                 Text(
-                    "${medication.time} · ${medication.schedule} · ${medication.note}",
+                    listOf(
+                        medication.time,
+                        t.scheduleKind(medication.schedule),
+                        t.doseCaption(medication.note, medication.foodRelation),
+                    ).joinToString(" · "),
                     style = Sadora.type.body,
                     color = c.muted,
                 )

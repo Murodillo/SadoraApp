@@ -17,6 +17,7 @@ import uz.sadora.contract.DoseStatus
 import uz.sadora.contract.HealthMetric
 import uz.sadora.contract.Medication
 import uz.sadora.contract.MedicationDay
+import uz.sadora.contract.ScheduleKind
 import uz.sadora.contract.MindSummary
 import uz.sadora.contract.MoodLevel
 import uz.sadora.contract.NutritionDay
@@ -116,8 +117,9 @@ fun AppState.applyMedications(day: MedicationDay, courses: List<Medication>) {
                     .joinToString(" ")
                     .trim(),
                 time = dose.dueAt.toString().take(5),
-                schedule = course?.schedule?.kind?.label() ?: "Har kuni",
-                note = course?.note ?: dose.foodRelation.label(),
+                schedule = course?.schedule?.kind ?: ScheduleKind.DAILY,
+                note = course?.note,
+                foodRelation = dose.foodRelation,
                 status = dose.status.toAppStatus(),
                 stockDays = course?.stockDaysLeft,
             )
@@ -158,19 +160,6 @@ private fun DoseStatus.toAppStatus(): MedStatus = when (this) {
     DoseStatus.TAKEN -> MedStatus.Taken
     DoseStatus.SKIPPED -> MedStatus.Skipped
     DoseStatus.PENDING -> MedStatus.Pending
-}
-
-private fun uz.sadora.contract.ScheduleKind.label(): String = when (this) {
-    uz.sadora.contract.ScheduleKind.DAILY -> "Har kuni"
-    uz.sadora.contract.ScheduleKind.WEEKDAYS -> "Tanlangan kunlar"
-    uz.sadora.contract.ScheduleKind.INTERVAL -> "Bir necha kunda"
-}
-
-private fun uz.sadora.contract.FoodRelation.label(): String = when (this) {
-    uz.sadora.contract.FoodRelation.BEFORE -> "Ovqatdan oldin"
-    uz.sadora.contract.FoodRelation.WITH -> "Ovqat bilan"
-    uz.sadora.contract.FoodRelation.AFTER -> "Ovqatdan keyin"
-    uz.sadora.contract.FoodRelation.ANY -> ""
 }
 
 /**
