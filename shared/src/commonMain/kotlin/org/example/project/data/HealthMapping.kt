@@ -138,7 +138,7 @@ private fun WirePhase.toAppPhase(): CyclePhase = when (this) {
     WirePhase.LUTEAL -> CyclePhase.Luteal
 }
 
-private fun MoodLevel.toAppMood(): Mood = when (this) {
+fun MoodLevel.toAppMood(): Mood = when (this) {
     MoodLevel.BAD -> Mood.Bad
     MoodLevel.LOW -> Mood.Low
     MoodLevel.OK -> Mood.Ok

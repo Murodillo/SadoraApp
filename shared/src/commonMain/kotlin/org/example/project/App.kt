@@ -515,8 +515,8 @@ private fun PushedScreen(
 
     when (route) {
         // Cycle
-        Route.CycleCalendar -> CycleCalendarScreen(state, navigator::push, close)
-        is Route.CycleDay -> CycleDayScreen(state, route.date, onSymptomSheet, close)
+        Route.CycleCalendar -> CycleCalendarScreen(state, health, navigator::push, close)
+        is Route.CycleDay -> CycleDayScreen(state, health, route.date, onSymptomSheet, close)
 
         // Pregnancy
         Route.PregnancyAppointments -> PregnancyAppointmentsScreen(health, close)

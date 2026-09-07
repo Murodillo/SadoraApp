@@ -13,6 +13,7 @@ import org.example.project.model.LifeStage
 import org.example.project.model.Mood
 import uz.sadora.contract.HealthMetric
 import uz.sadora.contract.MealSlot
+import uz.sadora.contract.SymptomCategory
 
 /**
  * The interface already guarantees that every language answers every string — that is
@@ -143,8 +144,19 @@ class StringsTest {
                     regularitySpread(24, 38), regularitySteady(27, 29), energy, observation,
                     observationBody, seeSymptoms, menopauseTitle, scoreNote, activity,
                     weeklyGoals, strengthTraining, calciumAndD,
+                    calendarTitle, history, predictedNote, markPeriodDay, phaseNotColouredYet,
+                    previousMonth, nextMonth, keyPeriod, keyFertile, keyPredicted, dayCaps,
+                    symptomsAndMood("x", "y"), noSymptomsAndMood("y"), statsNote, regularity,
+                    regularSteady, regularVaries, cycleLength, lastNCycles(6), previousCycles,
+                    noHistoryYet, noHistoryYetBody, periodOfDays(5), currentCycle,
+                    cycleDayOrdinal(11), cycleDayCaps, loggedToday, logged, noSymptomsLogged,
+                    nothingLoggedForDay, moodLine("x"), energyLine(3), sleepAndSteps("6s", "1 000"),
+                    fromDevice, editEntry, symptomSheetTitle, catalogueLoading, severity,
+                    notePlaceholder,
                 ),
             )
+            addAll(severityWords)
+            SymptomCategory.entries.forEach { add(categoryName(it)) }
         }
         with(t.mind) {
             addAll(
@@ -240,6 +252,9 @@ class StringsTest {
             assertNotEquals(StringsUz.journey.noPredictionBody, t.journey.noPredictionBody)
             assertNotEquals(StringsUz.journey.recoveryNote, t.journey.recoveryNote)
             assertNotEquals(StringsUz.journey.moodWatchBody, t.journey.moodWatchBody)
+            assertNotEquals(StringsUz.journey.predictedNote, t.journey.predictedNote)
+            assertNotEquals(StringsUz.journey.noHistoryYetBody, t.journey.noHistoryYetBody)
+            assertNotEquals(StringsUz.journey.severityWords[2], t.journey.severityWords[2])
             assertNotEquals(StringsUz.modules.medsDisclaimer, t.modules.medsDisclaimer)
             assertNotEquals(StringsUz.modules.noCorrelationBody, t.modules.noCorrelationBody)
             assertNotEquals(StringsUz.modules.balanced, t.modules.balanced)
@@ -271,6 +286,15 @@ class StringsTest {
         languages.forEach { t ->
             assertEquals(12, t.dates.months.size)
             assertEquals(7, t.dates.weekdays.size)
+        }
+    }
+
+    /** The severity scale is always read as words, so all five rungs must exist. */
+    @Test
+    fun `the severity scale is worded on every rung`() {
+        languages.forEach { t ->
+            assertEquals(5, t.journey.severityWords.size)
+            assertTrue(t.journey.severityWords.none { it.isBlank() })
         }
     }
 

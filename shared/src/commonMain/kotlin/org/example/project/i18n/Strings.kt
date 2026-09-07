@@ -12,6 +12,7 @@ import org.example.project.model.LifeStage
 import org.example.project.model.Mood
 import uz.sadora.contract.HealthMetric
 import uz.sadora.contract.MealSlot
+import uz.sadora.contract.SymptomCategory
 
 /**
  * Every string the app shows, grouped by the screen that shows it.
@@ -109,6 +110,9 @@ interface DateStrings {
 
     /** Weekday names, Monday first, as they read in the middle of a sentence. */
     val weekdays: List<String>
+
+    /** The same seven, short enough to head a calendar column. */
+    val weekdaysShort: List<String>
 
     /** "4-sentabr" — the day inside its month. */
     fun dayMonth(date: LocalDate): String
@@ -455,6 +459,53 @@ interface JourneyStrings {
     val averagePeriod: String
     val day: String
     fun daysValue(days: Int): String
+
+    // ---- calendar
+    val calendarTitle: String
+    val history: String
+    val predictedNote: String
+    val markPeriodDay: String
+    val phaseNotColouredYet: String
+    val previousMonth: String
+    val nextMonth: String
+    val keyPeriod: String
+    val keyFertile: String
+    val keyPredicted: String
+    val dayCaps: String
+    fun symptomsAndMood(symptoms: String, mood: String): String
+    fun noSymptomsAndMood(mood: String): String
+    val statsNote: String
+    val regularity: String
+    val regularSteady: String
+    val regularVaries: String
+    val cycleLength: String
+    fun lastNCycles(count: Int): String
+    val previousCycles: String
+    val noHistoryYet: String
+    val noHistoryYetBody: String
+    fun periodOfDays(days: Int): String
+    val currentCycle: String
+
+    // ---- one day
+    fun cycleDayOrdinal(day: Int): String
+    val cycleDayCaps: String
+    val loggedToday: String
+    val logged: String
+    val noSymptomsLogged: String
+    val nothingLoggedForDay: String
+    fun moodLine(mood: String): String
+    fun energyLine(level: Int): String
+    fun sleepAndSteps(sleep: String, steps: String): String
+    val fromDevice: String
+    val editEntry: String
+
+    // ---- symptom sheet
+    val symptomSheetTitle: String
+    val catalogueLoading: String
+    val severity: String
+    val severityWords: List<String>
+    val notePlaceholder: String
+    fun categoryName(category: SymptomCategory): String
 
     // ---- pregnancy
     val pregnancyTitle: String

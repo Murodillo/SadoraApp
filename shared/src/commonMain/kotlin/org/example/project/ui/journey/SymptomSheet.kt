@@ -25,8 +25,8 @@ import org.example.project.data.HealthController
 import org.example.project.design.Radius
 import org.example.project.design.Sadora
 import org.example.project.design.Spacing
+import org.example.project.i18n.strings
 import org.example.project.model.AppState
-import org.example.project.model.Fmt
 import org.example.project.ui.components.ButtonTone
 import org.example.project.ui.components.CardLabel
 import org.example.project.ui.components.ChipFlowRow
@@ -40,15 +40,6 @@ import uz.sadora.contract.SymptomDefinition
 import uz.sadora.contract.SymptomEntry
 import uz.sadora.contract.SymptomSeverity
 import org.example.project.i18n.strings
-
-/** Severity 1–5, each step explained in words rather than left as a bare number. */
-private val severityWords = listOf(
-    "Sezilmaydi",
-    "Yengil — kunlik ishlarga to'sqinlik qilmaydi",
-    "O'rtacha — ba'zan chalg'itadi",
-    "Kuchli — ishni qiyinlashtiradi",
-    "Juda kuchli — odatdagi ishni bajara olmayman",
-)
 
 /** The five-step scale collapses onto the wire's three; the wording carries the rest. */
 private fun Int.toSeverity(): SymptomSeverity = when (this) {
@@ -65,14 +56,14 @@ private fun SymptomSeverity.toStep(): Int = when (this) {
 
 /** The order the sheet reads in; anything outside it falls under "Boshqa". */
 private val categoryOrder = listOf(
-    SymptomCategory.PAIN to "Og'riq",
-    SymptomCategory.BLEEDING to "Ajralma",
-    SymptomCategory.MOOD to "Kayfiyat",
-    SymptomCategory.SLEEP to "Uyqu",
-    SymptomCategory.ENERGY to "Energiya",
-    SymptomCategory.DIGESTION to "Hazm",
-    SymptomCategory.SKIN to "Teri",
-    SymptomCategory.OTHER to "Boshqa",
+    SymptomCategory.PAIN,
+    SymptomCategory.BLEEDING,
+    SymptomCategory.MOOD,
+    SymptomCategory.SLEEP,
+    SymptomCategory.ENERGY,
+    SymptomCategory.DIGESTION,
+    SymptomCategory.SKIN,
+    SymptomCategory.OTHER,
 )
 
 /**
@@ -94,6 +85,7 @@ fun SymptomSheet(
     onDismiss: () -> Unit,
 ) {
     val c = Sadora.colors
+    val t = strings.journey
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(visible) {
@@ -115,21 +107,17 @@ fun SymptomSheet(
     var note by remember(visible, today) { mutableStateOf(today?.note.orEmpty()) }
     var saving by remember { mutableStateOf(false) }
 
-    SadoraBottomSheet(visible = visible, title = "Simptom qo'shish", onDismiss = onDismiss) {
+    SadoraBottomSheet(visible = visible, title = t.symptomSheetTitle, onDismiss = onDismiss) {
         Text(strings.dates.dayMonth(state.today), style = Sadora.type.body, color = c.muted)
 
         if (catalogue.isEmpty()) {
-            Text(
-                "Belgilar ro'yxati yuklanmoqda…",
-                style = Sadora.type.body,
-                color = c.muted2,
-            )
+            Text(t.catalogueLoading, style = Sadora.type.body, color = c.muted2)
         }
 
-        categoryOrder.forEach { (category, label) ->
+        categoryOrder.forEach { category ->
             val group = catalogue.filter { it.category == category }
             if (group.isEmpty()) return@forEach
-            CardLabel(label)
+            CardLabel(t.categoryName(category))
             ChipFlowRow {
                 group.forEach { definition ->
                     SelectChip(
@@ -144,7 +132,7 @@ fun SymptomSheet(
         }
 
         if (selected.isNotEmpty()) {
-            CardLabel("Og'riq darajasi")
+            CardLabel(t.severity)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
                 (1..5).forEach { level ->
                     val isSelected = level == severity
@@ -165,20 +153,20 @@ fun SymptomSheet(
                     }
                 }
             }
-            Text(severityWords[severity - 1], style = Sadora.type.body, color = c.muted)
+            Text(t.severityWords[severity - 1], style = Sadora.type.body, color = c.muted)
         }
 
-        SadoraTextField(note, { note = it }, placeholder = "Izoh qo'shish…", singleLine = false)
+        SadoraTextField(note, { note = it }, placeholder = t.notePlaceholder, singleLine = false)
 
         Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
             SadoraButton(
-                "Bekor",
+                strings.common.cancel,
                 onClick = onDismiss,
                 tone = ButtonTone.Secondary,
                 modifier = Modifier.weight(1f),
             )
             SadoraButton(
-                if (saving) "Saqlanmoqda…" else "Saqlash",
+                if (saving) strings.common.saving else strings.common.save,
                 onClick = {
                     saving = true
                     scope.launch {

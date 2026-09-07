@@ -174,6 +174,18 @@ class HealthController(
         calls.run(silent = true) { api.calendar(from, to) }?.let { calendar = it }
     }
 
+    /**
+     * One day's log, read without touching the store.
+     *
+     * [loadDay] applies what it reads to [state], which is right for today and wrong
+     * for any other day: opening last Tuesday in the calendar would otherwise replace
+     * today's symptoms on every screen with that Tuesday's.
+     */
+    suspend fun dayAt(date: LocalDate): DailyLog? {
+        val api = cycleApi ?: return null
+        return calls.run(silent = true) { api.day(date) }
+    }
+
     suspend fun loadDay(date: LocalDate) {
         val api = cycleApi ?: return
         selectedDate = date

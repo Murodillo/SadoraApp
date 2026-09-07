@@ -27,6 +27,8 @@ import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.minus
 import kotlinx.datetime.plus
+import androidx.compose.runtime.LaunchedEffect
+import org.example.project.data.HealthController
 import org.example.project.design.IconSize
 import org.example.project.design.PhaseColors
 import org.example.project.design.Radius
@@ -36,8 +38,6 @@ import org.example.project.design.Spacing
 import org.example.project.i18n.strings
 import org.example.project.model.AppState
 import org.example.project.model.CyclePhase
-import org.example.project.model.Fmt
-import org.example.project.model.SampleData
 import org.example.project.nav.Route
 import org.example.project.ui.components.BadgeTone
 import org.example.project.ui.components.CardLabel
@@ -60,42 +60,43 @@ import org.example.project.ui.components.noRippleClickable
 @Composable
 fun CycleCalendarScreen(
     state: AppState,
+    health: HealthController,
     onOpen: (Route) -> Unit,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val t = strings.journey
     var tab by remember { mutableStateOf(0) }
 
+    // The History tab is the server's cycles, not a projection, so it is asked for.
+    LaunchedEffect(Unit) { health.loadHistory() }
+
     Column(modifier) {
-        SadoraTopBar("Kalendar", onBack = onClose, centered = true)
+        SadoraTopBar(t.calendarTitle, onBack = onClose, centered = true)
 
         ScreenContent {
             item {
                 SegmentedControl(
-                    options = listOf("Kalendar", "Tarix"),
+                    options = listOf(t.calendarTitle, t.history),
                     selectedIndex = tab,
                     onSelect = { tab = it },
                 )
             }
 
             if (tab == 1) {
-                cycleHistoryItems(state)
+                cycleHistoryItems(state, health)
             } else {
                 item { MonthGrid(state, onDayClick = { onOpen(Route.CycleDay(it.toString())) }) }
 
                 item { PhaseKey() }
 
-                item {
-                    DisclaimerNote(
-                        "Konturli kunlar — hisob-kitob natijasi, tibbiy kafolat emas.",
-                    )
-                }
+                item { DisclaimerNote(t.predictedNote) }
 
                 item { SelectedDaySummary(state, onOpen = { onOpen(Route.CycleDay(state.today.toString())) }) }
 
                 item {
                     SadoraButton(
-                        "Hayzni belgilash",
+                        t.markPeriodDay,
                         onClick = { onOpen(Route.CycleDay(state.today.toString())) },
                         icon = SadoraIcons.Pencil,
                     )
@@ -120,6 +121,7 @@ private fun LocalDate.daysInMonth(): Int =
 @Composable
 private fun MonthGrid(state: AppState, onDayClick: (LocalDate) -> Unit) {
     val c = Sadora.colors
+    val t = strings.journey
     var offset by remember { mutableStateOf(0) }
 
     val first = LocalDate(state.today.year, state.today.month, 1).plus(offset, DateTimeUnit.MONTH)
@@ -133,21 +135,21 @@ private fun MonthGrid(state: AppState, onDayClick: (LocalDate) -> Unit) {
         ) {
             Icon(
                 SadoraIcons.ChevronLeft,
-                contentDescription = "Oldingi oy",
+                contentDescription = t.previousMonth,
                 Modifier.size(IconSize.lg).noRippleClickable { offset-- },
                 tint = c.muted,
             )
             Text(strings.dates.monthYear(first.year, first.month.ordinal + 1), style = Sadora.type.h3, color = c.text)
             Icon(
                 SadoraIcons.ChevronRight,
-                contentDescription = "Keyingi oy",
+                contentDescription = t.nextMonth,
                 Modifier.size(IconSize.lg).noRippleClickable { offset++ },
                 tint = c.muted,
             )
         }
 
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            SampleData.weekDays.forEach { day ->
+            strings.dates.weekdaysShort.forEach { day ->
                 Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
                     Text(day, style = Sadora.type.caption, color = c.muted2)
                 }
@@ -179,11 +181,7 @@ private fun MonthGrid(state: AppState, onDayClick: (LocalDate) -> Unit) {
         }
 
         if (!hasData) {
-            Text(
-                "Hayz sanalari kiritilgach, fazalar shu yerda bo'yaladi.",
-                style = Sadora.type.body,
-                color = c.muted,
-            )
+            Text(t.phaseNotColouredYet, style = Sadora.type.body, color = c.muted)
         }
     }
 }
@@ -241,10 +239,11 @@ private fun DayCell(
 @Composable
 private fun PhaseKey() {
     val c = Sadora.colors
+    val t = strings.journey
     val entries = listOf(
-        Triple("Hayz", PhaseColors.period, false),
-        Triple("Unumdor", PhaseColors.fertile, false),
-        Triple("Taxminiy", PhaseColors.period, true),
+        Triple(t.keyPeriod, PhaseColors.period, false),
+        Triple(t.keyFertile, PhaseColors.fertile, false),
+        Triple(t.keyPredicted, PhaseColors.period, true),
     )
     Row(
         Modifier.fillMaxWidth(),
@@ -276,6 +275,7 @@ private fun PhaseKey() {
 @Composable
 private fun SelectedDaySummary(state: AppState, onOpen: () -> Unit) {
     val c = Sadora.colors
+    val t = strings.journey
     SadoraCard(onClick = onOpen) {
         Row(
             Modifier.fillMaxWidth(),
@@ -284,21 +284,24 @@ private fun SelectedDaySummary(state: AppState, onOpen: () -> Unit) {
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text("${state.cycleDay}", style = Sadora.type.h1, color = c.text)
-                Text("KUN", style = Sadora.type.caption, color = c.muted)
+                Text(t.dayCaps, style = Sadora.type.caption, color = c.muted)
             }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
                 ) {
-                    Text("Bugun", style = Sadora.type.h3, color = c.text)
+                    Text(t.today, style = Sadora.type.h3, color = c.text)
                     SadoraBadge(strings.common.phase(state.currentPhase()), BadgeTone.Estimated)
                 }
                 Text(
                     if (state.symptoms.isEmpty()) {
-                        "Simptom qayd etilmagan · kayfiyat ${strings.common.mood(state.mood).lowercase()}"
+                        t.noSymptomsAndMood(strings.common.mood(state.mood).lowercase())
                     } else {
-                        "${state.symptoms.joinToString(", ")} · kayfiyat ${strings.common.mood(state.mood).lowercase()}"
+                        t.symptomsAndMood(
+                            state.symptoms.joinToString(", "),
+                            strings.common.mood(state.mood).lowercase(),
+                        )
                     },
                     style = Sadora.type.body,
                     color = c.muted,
@@ -309,29 +312,34 @@ private fun SelectedDaySummary(state: AppState, onOpen: () -> Unit) {
     }
 }
 
-/** "Tarix" tab — statistics that state how much data they rest on. */
-private fun androidx.compose.foundation.lazy.LazyListScope.cycleHistoryItems(state: AppState) {
+/**
+ * "Tarix" tab — the cycles the server actually recorded.
+ *
+ * Nothing here is projected. The previous version drew six identical bars from the
+ * average and listed three "previous cycles" counted backwards from the anchor, which
+ * is a picture of arithmetic rather than of anything that happened.
+ */
+private fun androidx.compose.foundation.lazy.LazyListScope.cycleHistoryItems(
+    state: AppState,
+    health: HealthController,
+) {
     item { CycleStatsRow(state) }
-    item { CycleLengthChart(state) }
-    item { PreviousCyclesList(state) }
-    item {
-        DisclaimerNote(
-            "Statistika kiritilgan sikllar asosida. Ko'proq ma'lumot yig'ilgani sari aniqlik oshadi.",
-        )
-    }
+    item { CycleHistoryCards(health) }
+    item { DisclaimerNote(strings.journey.statsNote) }
 }
 
 @Composable
 private fun CycleStatsRow(state: AppState) {
     val c = Sadora.colors
+    val t = strings.journey
     Row(
         Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
     ) {
         listOf(
-            "O'rtacha sikl" to "${state.averageCycleLength} kun",
-            "O'rtacha hayz" to "${state.averagePeriodLength} kun",
-            "Muntazamlik" to if (state.cycleIsRegular) "Yaxshi" else "O'zgaruvchan",
+            t.averageCycle to t.daysValue(state.averageCycleLength),
+            t.averagePeriod to t.daysValue(state.averagePeriodLength),
+            t.regularity to if (state.cycleIsRegular) t.regularSteady else t.regularVaries,
         ).forEach { (label, value) ->
             SadoraCard(modifier = Modifier.weight(1f), padding = Spacing.sm) {
                 Text(label, style = Sadora.type.body, color = c.muted)
@@ -341,57 +349,68 @@ private fun CycleStatsRow(state: AppState) {
     }
 }
 
-/** The last six cycles, projected back from the anchor when no history is loaded. */
-private fun recentCycleLengths(state: AppState): List<Int> {
-    val observed = state.observedCycleLengths()
-    if (observed.isNotEmpty()) return observed.takeLast(6)
-    return List(6) { state.averageCycleLength }
-}
-
+/** The chart and the list, or one honest sentence when there is no history yet. */
 @Composable
-private fun CycleLengthChart(state: AppState) {
+private fun CycleHistoryCards(health: HealthController) {
     val c = Sadora.colors
-    val lengths = recentCycleLengths(state)
+    val t = strings.journey
+    val cycles = health.history?.cycles.orEmpty().takeLast(6)
+
+    if (cycles.isEmpty()) {
+        SadoraCard {
+            CardLabel(t.previousCycles)
+            Text(t.noHistoryYet, style = Sadora.type.h3, color = c.text)
+            Text(t.noHistoryYetBody, style = Sadora.type.body, color = c.muted)
+        }
+        return
+    }
+
     SadoraCard {
         CardLabel(
-            "Sikl uzunligi",
-            trailing = { Text("oxirgi ${lengths.size} sikl", style = Sadora.type.body, color = c.muted) },
+            t.cycleLength,
+            trailing = {
+                Text(t.lastNCycles(cycles.size), style = Sadora.type.body, color = c.muted)
+            },
         )
+        val longest = cycles.maxOf { it.cycleLength }.coerceAtLeast(1)
         org.example.project.ui.components.WeeklyBars(
-            values = lengths.map { ((it - 20) / 20f).coerceIn(0.1f, 1f) },
-            labels = lengths.map { "$it" },
+            values = cycles.map { it.cycleLength / longest.toFloat() },
+            labels = cycles.map { "${it.cycleLength}" },
             color = c.primary,
         )
     }
-}
 
-@Composable
-private fun PreviousCyclesList(state: AppState) {
-    val c = Sadora.colors
-    val anchor = state.cycleStartDate ?: state.today
-    val length = state.averageCycleLength.coerceAtLeast(1)
-    val cycles = (0 until 3).map { back ->
-        val start = anchor.minus(length * back, DateTimeUnit.DAY)
-        val end = start.plus(length - 1, DateTimeUnit.DAY)
-        Triple(
-            "${strings.dates.dayMonth(start)} – ${strings.dates.dayMonth(end)}",
-            "$length kun",
-            if (back == 0) "Joriy" else "hayz ${state.averagePeriodLength} kun",
-        )
-    }
     SadoraCard {
-        CardLabel("Oldingi sikllar")
-        cycles.forEach { (range, len, note) ->
+        CardLabel(t.previousCycles)
+        cycles.reversed().forEachIndexed { index, cycle ->
             Row(
                 Modifier.fillMaxWidth().padding(vertical = 6.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
             ) {
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text(range, style = Sadora.type.h3, color = c.text)
-                    Text("$len · $note", style = Sadora.type.body, color = c.muted)
+                    Text(
+                        "${strings.dates.dayMonth(cycle.startedOn)} – " +
+                            strings.dates.dayMonth(cycle.endedOn),
+                        style = Sadora.type.h3,
+                        color = c.text,
+                    )
+                    Text(
+                        listOfNotNull(
+                            t.daysValue(cycle.cycleLength),
+                            if (index == 0) t.currentCycle else null,
+                            cycle.periodLength?.let { t.periodOfDays(it) },
+                        ).joinToString(" · "),
+                        style = Sadora.type.body,
+                        color = c.muted,
+                    )
                 }
-                Icon(SadoraIcons.ChevronRight, contentDescription = null, Modifier.size(IconSize.md), tint = c.muted2)
+                Icon(
+                    SadoraIcons.ChevronRight,
+                    contentDescription = null,
+                    Modifier.size(IconSize.md),
+                    tint = c.muted2,
+                )
             }
         }
     }

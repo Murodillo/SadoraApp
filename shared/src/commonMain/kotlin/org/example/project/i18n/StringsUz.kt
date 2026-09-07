@@ -8,6 +8,7 @@ import org.example.project.model.LifeStage
 import org.example.project.model.Mood
 import uz.sadora.contract.HealthMetric
 import uz.sadora.contract.MealSlot
+import uz.sadora.contract.SymptomCategory
 
 /**
  * O'zbekcha — the language the app was written in, and the reference the other two are
@@ -263,6 +264,8 @@ object StringsUz : Strings {
             "dushanba", "seshanba", "chorshanba", "payshanba", "juma", "shanba", "yakshanba",
         )
 
+        override val weekdaysShort = listOf("Du", "Se", "Ch", "Pa", "Ju", "Sh", "Ya")
+
         override fun dayMonth(date: LocalDate) =
             "${date.day}-${months[date.month.ordinal].lowercase()}"
 
@@ -428,6 +431,67 @@ object StringsUz : Strings {
         override val averagePeriod = "O'rtacha hayz"
         override val day = "Kun"
         override fun daysValue(days: Int) = "$days kun"
+
+        override val calendarTitle = "Kalendar"
+        override val history = "Tarix"
+        override val predictedNote = "Konturli kunlar — hisob-kitob natijasi, tibbiy kafolat emas."
+        override val markPeriodDay = "Hayzni belgilash"
+        override val phaseNotColouredYet = "Hayz sanalari kiritilgach, fazalar shu yerda bo'yaladi."
+        override val previousMonth = "Oldingi oy"
+        override val nextMonth = "Keyingi oy"
+        override val keyPeriod = "Hayz"
+        override val keyFertile = "Unumdor"
+        override val keyPredicted = "Taxminiy"
+        override val dayCaps = "KUN"
+        override fun symptomsAndMood(symptoms: String, mood: String) = "$symptoms · kayfiyat $mood"
+        override fun noSymptomsAndMood(mood: String) = "Simptom qayd etilmagan · kayfiyat $mood"
+        override val statsNote = "Statistika kiritilgan sikllar asosida. Ko'proq ma'lumot " +
+            "yig'ilgani sari aniqlik oshadi."
+        override val regularity = "Muntazamlik"
+        override val regularSteady = "Yaxshi"
+        override val regularVaries = "O'zgaruvchan"
+        override val cycleLength = "Sikl uzunligi"
+        override fun lastNCycles(count: Int) = "oxirgi $count sikl"
+        override val previousCycles = "Oldingi sikllar"
+        override val noHistoryYet = "Sikl tarixi hali yo'q"
+        override val noHistoryYetBody = "Ikkinchi hayz sanasi kiritilgach, uzunlik va " +
+            "muntazamlik shu yerda hisoblanadi."
+        override fun periodOfDays(days: Int) = "hayz $days kun"
+        override val currentCycle = "Joriy"
+
+        override fun cycleDayOrdinal(day: Int) = "Sikl $day-kuni"
+        override val cycleDayCaps = "SIKL KUNI"
+        override val loggedToday = "Bugun qayd etilgan"
+        override val logged = "Qayd etilgan"
+        override val noSymptomsLogged = "Simptom qayd etilmagan"
+        override val nothingLoggedForDay = "Bu kun uchun yozuv yo'q."
+        override fun moodLine(mood: String) = "Kayfiyat — $mood"
+        override fun energyLine(level: Int) = "Energiya — $level / 5"
+        override fun sleepAndSteps(sleep: String, steps: String) = "Uyqu $sleep · $steps qadam"
+        override val fromDevice = "Qurilmadan"
+        override val editEntry = "Tahrirlash"
+
+        override val symptomSheetTitle = "Simptom qo'shish"
+        override val catalogueLoading = "Belgilar ro'yxati yuklanmoqda…"
+        override val severity = "Og'riq darajasi"
+        override val severityWords = listOf(
+            "Sezilmaydi",
+            "Yengil — kunlik ishlarga to'sqinlik qilmaydi",
+            "O'rtacha — ba'zan chalg'itadi",
+            "Kuchli — ishni qiyinlashtiradi",
+            "Juda kuchli — odatdagi ishni bajara olmayman",
+        )
+        override val notePlaceholder = "Izoh qo'shish…"
+        override fun categoryName(category: SymptomCategory) = when (category) {
+            SymptomCategory.PAIN -> "Og'riq"
+            SymptomCategory.BLEEDING -> "Ajralma"
+            SymptomCategory.MOOD -> "Kayfiyat"
+            SymptomCategory.SLEEP -> "Uyqu"
+            SymptomCategory.ENERGY -> "Energiya"
+            SymptomCategory.DIGESTION -> "Hazm"
+            SymptomCategory.SKIN -> "Teri"
+            SymptomCategory.OTHER -> "Boshqa"
+        }
 
         override val pregnancyTitle = "Homiladorlik"
         override fun trimester(week: Int) = when {

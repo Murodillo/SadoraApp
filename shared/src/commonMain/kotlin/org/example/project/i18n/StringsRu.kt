@@ -8,6 +8,7 @@ import org.example.project.model.LifeStage
 import org.example.project.model.Mood
 import uz.sadora.contract.HealthMetric
 import uz.sadora.contract.MealSlot
+import uz.sadora.contract.SymptomCategory
 
 /**
  * Русский. Translated from [StringsUz], not from English.
@@ -272,6 +273,8 @@ object StringsRu : Strings {
             "понедельник", "вторник", "среда", "четверг", "пятница", "суббота", "воскресенье",
         )
 
+        override val weekdaysShort = listOf("Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс")
+
         override fun dayMonth(date: LocalDate) = "${date.day} ${monthsOfDay[date.month.ordinal]}"
 
         override val today = "Сегодня"
@@ -435,6 +438,67 @@ object StringsRu : Strings {
         override val averagePeriod = "Средняя менструация"
         override val day = "День"
         override fun daysValue(days: Int) = "$days дн."
+
+        override val calendarTitle = "Календарь"
+        override val history = "История"
+        override val predictedNote = "Дни в контуре — это расчёт, а не медицинская гарантия."
+        override val markPeriodDay = "Отметить менструацию"
+        override val phaseNotColouredYet = "Как только появятся даты менструации, фазы здесь окрасятся."
+        override val previousMonth = "Предыдущий месяц"
+        override val nextMonth = "Следующий месяц"
+        override val keyPeriod = "Менструация"
+        override val keyFertile = "Фертильные дни"
+        override val keyPredicted = "Прогноз"
+        override val dayCaps = "ДЕНЬ"
+        override fun symptomsAndMood(symptoms: String, mood: String) = "$symptoms · настроение $mood"
+        override fun noSymptomsAndMood(mood: String) = "Симптомы не отмечены · настроение $mood"
+        override val statsNote = "Статистика построена на введённых циклах. Чем больше " +
+            "данных, тем точнее расчёт."
+        override val regularity = "Регулярность"
+        override val regularSteady = "Стабильно"
+        override val regularVaries = "Меняется"
+        override val cycleLength = "Длина цикла"
+        override fun lastNCycles(count: Int) = "последние $count цикла"
+        override val previousCycles = "Прошлые циклы"
+        override val noHistoryYet = "Истории циклов пока нет"
+        override val noHistoryYetBody = "Как только появится вторая дата менструации, здесь " +
+            "будут длина и регулярность."
+        override fun periodOfDays(days: Int) = "менструация $days дн."
+        override val currentCycle = "Текущий"
+
+        override fun cycleDayOrdinal(day: Int) = "$day-й день цикла"
+        override val cycleDayCaps = "ДЕНЬ ЦИКЛА"
+        override val loggedToday = "Отмечено сегодня"
+        override val logged = "Отмечено"
+        override val noSymptomsLogged = "Симптомы не отмечены"
+        override val nothingLoggedForDay = "За этот день записей нет."
+        override fun moodLine(mood: String) = "Настроение — $mood"
+        override fun energyLine(level: Int) = "Энергия — $level / 5"
+        override fun sleepAndSteps(sleep: String, steps: String) = "Сон $sleep · $steps шагов"
+        override val fromDevice = "С устройства"
+        override val editEntry = "Изменить"
+
+        override val symptomSheetTitle = "Добавить симптом"
+        override val catalogueLoading = "Список симптомов загружается…"
+        override val severity = "Насколько сильно"
+        override val severityWords = listOf(
+            "Не чувствуется",
+            "Слабо — делам не мешает",
+            "Умеренно — иногда отвлекает",
+            "Сильно — работать тяжело",
+            "Очень сильно — обычные дела не даются",
+        )
+        override val notePlaceholder = "Добавить заметку…"
+        override fun categoryName(category: SymptomCategory) = when (category) {
+            SymptomCategory.PAIN -> "Боль"
+            SymptomCategory.BLEEDING -> "Выделения"
+            SymptomCategory.MOOD -> "Настроение"
+            SymptomCategory.SLEEP -> "Сон"
+            SymptomCategory.ENERGY -> "Энергия"
+            SymptomCategory.DIGESTION -> "Пищеварение"
+            SymptomCategory.SKIN -> "Кожа"
+            SymptomCategory.OTHER -> "Другое"
+        }
 
         override val pregnancyTitle = "Беременность"
         override fun trimester(week: Int) = when {
