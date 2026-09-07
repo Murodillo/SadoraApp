@@ -30,6 +30,7 @@ interface Strings {
     val today: TodayStrings
     val mind: MindStrings
     val nutrition: NutritionStrings
+    val journey: JourneyStrings
 }
 
 /**
@@ -285,4 +286,82 @@ interface NutritionStrings {
     fun shortOf(macro: String): String
     fun kcal(value: Int): String
     fun grams(value: Int): String
+}
+
+/**
+ * The "Yo'l" tab, which is five screens rather than one: the stage decides which of
+ * them she sees, and each has its own vocabulary.
+ */
+interface JourneyStrings {
+    // ---- cycle
+    val cycleTitle: String
+    val info: String
+    val calendar: String
+    val noPredictionTitle: String
+    val noPredictionBody: String
+    val markPeriod: String
+    val today: String
+    fun daysToNextPeriod(days: Int): String
+    val symptoms: String
+    val change: String
+    val averageCycle: String
+    val averagePeriod: String
+    val day: String
+    fun daysValue(days: Int): String
+
+    // ---- pregnancy
+    val pregnancyTitle: String
+    fun trimester(week: Int): String
+    val weekCaps: String
+    fun weekAndDay(week: Int, day: Int): String
+    fun weekOnly(week: Int): String
+    fun dueOn(date: String, daysLeft: Int): String
+    fun dueOnPast(date: String): String
+    val babyDevelopment: String
+    val babyDevelopmentBody: String
+    val todaysSymptoms: String
+    val addSymptom: String
+    val upcomingAppointments: String
+    val all: String
+    val noAppointments: String
+    val noAppointmentsBody: String
+    val logToday: String
+    val aiAdvice: String
+    val aiBadge: String
+
+    // ---- postpartum
+    val postpartumTitle: String
+    val recoveryWeeks: String
+    val recoveryNote: String
+    val mood: String
+    val sleep: String
+    val brokenSleep: String
+    val feedingAndWater: String
+    val water: String
+    val calories: String
+    val moodWatch: String
+    val moodWatchBody: String
+    val postpartumLibrary: String
+    val postpartumLibraryBody: String
+
+    // ---- perimenopause
+    val perimenopauseTitle: String
+    val cycleRegularity: String
+    val noData: String
+    fun lastCycles(count: Int): String
+    val regularityEmpty: String
+    fun regularitySpread(shortest: Int, longest: Int): String
+    fun regularitySteady(shortest: Int, longest: Int): String
+    val energy: String
+    val observation: String
+    val observationBody: String
+    val seeSymptoms: String
+
+    // ---- menopause
+    val menopauseTitle: String
+    val scoreNote: String
+    val activity: String
+    val weeklyGoals: String
+    val strengthTraining: String
+    val calciumAndD: String
 }

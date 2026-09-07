@@ -288,4 +288,95 @@ object StringsEn : Strings {
         override fun kcal(value: Int) = "$value kcal"
         override fun grams(value: Int) = "$value g"
     }
+
+    override val journey = object : JourneyStrings {
+        override val cycleTitle = "My cycle"
+        override val info = "Info"
+        override val calendar = "Calendar"
+        override val noPredictionTitle = "Not enough data to predict yet"
+        override val noPredictionBody =
+            "Once two periods are recorded, the phases of your cycle and an estimate " +
+                "for the next one appear here."
+        override val markPeriod = "Mark a period"
+        override val today = "Today"
+        override fun daysToNextPeriod(days: Int) = "Next period in $days days"
+        override val symptoms = "Symptoms"
+        override val change = "Change"
+        override val averageCycle = "Average cycle"
+        override val averagePeriod = "Average period"
+        override val day = "Day"
+        override fun daysValue(days: Int) = if (days == 1) "1 day" else "$days days"
+
+        override val pregnancyTitle = "Pregnancy"
+        override fun trimester(week: Int) = when {
+            week <= 13 -> "1st trimester"
+            week <= 27 -> "2nd trimester"
+            else -> "3rd trimester"
+        }
+        override val weekCaps = "  WEEK"
+        override fun weekAndDay(week: Int, day: Int) = "Week $week, day $day"
+        override fun weekOnly(week: Int) = "Week $week"
+        override fun dueOn(date: String, daysLeft: Int) = "Due $date · $daysLeft days to go"
+        override fun dueOnPast(date: String) = "Due $date"
+        override val babyDevelopment = "Your baby's development"
+        override val babyDevelopmentBody =
+            "Read about what changes this week in the Knowledge library."
+        override val todaysSymptoms = "Today's symptoms"
+        override val addSymptom = "+ Add"
+        override val upcomingAppointments = "Upcoming appointments"
+        override val all = "All"
+        override val noAppointments = "No appointments yet"
+        override val noAppointmentsBody =
+            "Write down the date of a check-up or a test — a reminder will follow."
+        override val logToday = "Record how today feels"
+        override val aiAdvice =
+            "Iron-rich food and gentle stretching may help this week. This is general " +
+                "health information."
+        override val aiBadge = "SADORA AI · SUGGESTION"
+
+        override val postpartumTitle = "After birth"
+        override val recoveryWeeks = "  weeks · recovery"
+        override val recoveryNote =
+            "Recovery goes differently for every woman. This scale is only a guide."
+        override val mood = "Mood"
+        override val sleep = "Sleep"
+        override val brokenSleep = "Broken sleep"
+        override val feedingAndWater = "Feeding and water"
+        override val water = "Water"
+        override val calories = "Calories"
+        override val moodWatch = "Keeping an eye on mood"
+        override val moodWatchBody =
+            "If low mood or anxiety lasts, it is worth seeing a professional. SADORA " +
+                "does not diagnose."
+        override val postpartumLibrary = "Knowledge — after birth"
+        override val postpartumLibraryBody = "Reading on the postpartum period"
+
+        override val perimenopauseTitle = "Perimenopause"
+        override val cycleRegularity = "Cycle regularity"
+        override val noData = "no data"
+        override fun lastCycles(count: Int) = "last $count cycles"
+        override val regularityEmpty =
+            "Once you start marking periods, your cycle length appears here. No " +
+                "prediction is shown at this stage."
+        override fun regularitySpread(shortest: Int, longest: Int) =
+            "Your cycle has run between $shortest and $longest days — expected at this " +
+                "stage. No prediction is shown."
+        override fun regularitySteady(shortest: Int, longest: Int) =
+            "Your cycle runs between $shortest and $longest days. No prediction is " +
+                "shown at this stage."
+        override val energy = "Energy"
+        override val observation = "Observation"
+        override val observationBody =
+            "See how sleep, mood and symptoms line up."
+        override val seeSymptoms = "See symptoms"
+
+        override val menopauseTitle = "Wellbeing"
+        override val scoreNote =
+            "Based on sleep, activity, food and mood. This score is not a medical " +
+                "measure."
+        override val activity = "Activity"
+        override val weeklyGoals = "Goals for the week"
+        override val strengthTraining = "Strength training"
+        override val calciumAndD = "Calcium and vitamin D"
+    }
 }

@@ -46,6 +46,7 @@ import org.example.project.design.SadoraIcons
 import org.example.project.design.Spacing
 import org.example.project.design.StagePalettes
 import kotlinx.datetime.daysUntil
+import org.example.project.i18n.strings
 import org.example.project.model.AppState
 import org.example.project.model.CyclePhase
 import org.example.project.model.Fmt
@@ -93,6 +94,7 @@ fun JourneyScreen(
     onOpen: (Route) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val t = strings.journey
     Column(modifier) {
         when (state.lifeStage) {
             LifeStage.Cycle, LifeStage.TryingToConceive -> CycleJourney(state, onOpen)
@@ -115,22 +117,23 @@ private fun CyclePhase.dialColor(): Color = when (this) {
 }
 
 /**
- * "Mening siklim" — the deck's cycle screen: month header, this week's dates, the dial
+ * t.cycleTitle — the deck's cycle screen: month header, this week's dates, the dial
  * with every day of the cycle around it as its own bead, the legend, today's reading
  * with the lotus, and the symptom tiles.
  */
 @Composable
 private fun CycleJourney(state: AppState, onOpen: (Route) -> Unit) {
+    val t = strings.journey
     val c = Sadora.colors
     val phase = state.currentPhase()
 
     SadoraTopBar(
-        "Mening siklim",
+        t.cycleTitle,
         centered = true,
         trailing = {
             Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-                CircleIconButton(SadoraIcons.Info, contentDescription = "Ma'lumot") { onOpen(Route.Knowledge) }
-                CircleIconButton(SadoraIcons.Calendar, contentDescription = "Kalendar") { onOpen(Route.CycleCalendar) }
+                CircleIconButton(SadoraIcons.Info, contentDescription = t.info) { onOpen(Route.Knowledge) }
+                CircleIconButton(SadoraIcons.Calendar, contentDescription = t.calendar) { onOpen(Route.CycleCalendar) }
             }
         },
     )
@@ -158,13 +161,13 @@ private fun CycleJourney(state: AppState, onOpen: (Route) -> Unit) {
                 CycleDial(state, Modifier.fillMaxWidth(0.92f).aspectRatio(1f).align(Alignment.CenterHorizontally))
             } else {
                 SadoraCard {
-                    Text("Prognoz uchun ma'lumot yetarli emas", style = Sadora.type.h3, color = c.text)
+                    Text(t.noPredictionTitle, style = Sadora.type.h3, color = c.text)
                     Text(
-                        "Kamida ikkita hayz sanasi kiritilgach, sikl fazalari va keyingi hayz taxmini shu yerda ko'rinadi.",
+                        t.noPredictionBody,
                         style = Sadora.type.body,
                         color = c.muted,
                     )
-                    SadoraButton("Hayzni belgilash", onClick = { onOpen(Route.CycleCalendar) }, tone = ButtonTone.Secondary)
+                    SadoraButton(t.markPeriod, onClick = { onOpen(Route.CycleCalendar) }, tone = ButtonTone.Secondary)
                 }
             }
         }
@@ -179,7 +182,7 @@ private fun CycleJourney(state: AppState, onOpen: (Route) -> Unit) {
                     horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                 ) {
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Spacing.xxs)) {
-                        Text("Bugun", style = Sadora.type.h3, color = c.text)
+                        Text(t.today, style = Sadora.type.h3, color = c.text)
                         Text(phase.fertilityNote, style = Sadora.type.body.copy(fontWeight = FontWeight.SemiBold), color = c.text)
                         Text(phase.energyNote, style = Sadora.type.body, color = c.muted)
                         Row(
@@ -190,7 +193,7 @@ private fun CycleJourney(state: AppState, onOpen: (Route) -> Unit) {
                             // prediction shown without it reads as a fact, so the line
                             // beside it gives way first.
                             Text(
-                                "Keyingi hayz — ${state.daysToNextPeriod()} kun",
+                                t.daysToNextPeriod(state.daysToNextPeriod()),
                                 style = Sadora.type.body,
                                 color = c.muted,
                                 maxLines = 2,
@@ -213,7 +216,7 @@ private fun CycleJourney(state: AppState, onOpen: (Route) -> Unit) {
                 ) {
                     Text("Simptomlar", style = Sadora.type.h3, color = c.text)
                     Text(
-                        "O'zgartirish",
+                        t.change,
                         style = Sadora.type.body.copy(fontWeight = FontWeight.SemiBold),
                         color = c.textAccent,
                         modifier = Modifier.noRippleClickable { onOpen(Route.StageSymptoms) },
@@ -240,8 +243,8 @@ private fun CycleJourney(state: AppState, onOpen: (Route) -> Unit) {
 
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                StatCard("O'rtacha sikl", "${state.averageCycleLength} kun", Modifier.weight(1f))
-                StatCard("O'rtacha hayz", "${state.averagePeriodLength} kun", Modifier.weight(1f))
+                StatCard(t.averageCycle, t.daysValue(state.averageCycleLength), Modifier.weight(1f))
+                StatCard(t.averagePeriod, t.daysValue(state.averagePeriodLength), Modifier.weight(1f))
             }
         }
 
@@ -258,6 +261,7 @@ private fun CycleJourney(state: AppState, onOpen: (Route) -> Unit) {
  */
 @Composable
 private fun CycleDial(state: AppState, modifier: Modifier = Modifier) {
+    val t = strings.journey
     val c = Sadora.colors
     val n = state.averageCycleLength.coerceAtLeast(1)
     val today = state.cycleDay.coerceIn(1, n)
@@ -320,7 +324,7 @@ private fun CycleDial(state: AppState, modifier: Modifier = Modifier) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(2.dp),
         ) {
-            Text("Kun", style = Sadora.type.body, color = c.muted)
+            Text(t.day, style = Sadora.type.body, color = c.muted)
             AnimatedNumber(
                 today,
                 Sadora.type.data.copy(fontSize = 56.sp, lineHeight = 60.sp),
@@ -473,14 +477,15 @@ private fun StatCard(label: String, value: String, modifier: Modifier = Modifier
 
 @Composable
 private fun PregnancyJourney(state: AppState, health: HealthController, onOpen: (Route) -> Unit) {
+    val t = strings.journey
     LaunchedEffect(Unit) { health.loadAppointments() }
     val c = Sadora.colors
     val palette = LifeStage.Pregnancy.palette
 
     SadoraTopBar(
-        "Homiladorlik",
+        t.pregnancyTitle,
         trailing = {
-            Text(trimesterLabel(state.pregnancyWeek), style = Sadora.type.body, color = c.muted)
+            Text(t.trimester(state.pregnancyWeek), style = Sadora.type.body, color = c.muted)
         },
     )
 
@@ -499,7 +504,7 @@ private fun PregnancyJourney(state: AppState, health: HealthController, onOpen: 
                 Row(verticalAlignment = Alignment.Bottom) {
                     Text("${state.pregnancyWeek}", style = Sadora.type.data, color = onWarm)
                     Text(
-                        "  HAFTA",
+                        t.weekCaps,
                         style = Sadora.type.caption,
                         color = onWarm.copy(alpha = 0.8f),
                         modifier = Modifier.padding(bottom = 10.dp),
@@ -512,9 +517,9 @@ private fun PregnancyJourney(state: AppState, health: HealthController, onOpen: 
                 }
                 Text(
                     if (dayOfWeek != null) {
-                        "${state.pregnancyWeek}-hafta, $dayOfWeek-kun"
+                        t.weekAndDay(state.pregnancyWeek, dayOfWeek)
                     } else {
-                        "${state.pregnancyWeek}-hafta"
+                        t.weekOnly(state.pregnancyWeek)
                     },
                     style = Sadora.type.h3,
                     color = onWarm,
@@ -523,9 +528,9 @@ private fun PregnancyJourney(state: AppState, health: HealthController, onOpen: 
                     val left = state.today.daysUntil(due)
                     Text(
                         if (left >= 0) {
-                            "Tug'ish sanasi — ${Fmt.dayMonth(due)} · $left kun qoldi"
+                            t.dueOn(Fmt.dayMonth(due), left)
                         } else {
-                            "Tug'ish sanasi — ${Fmt.dayMonth(due)}"
+                            t.dueOnPast(Fmt.dayMonth(due))
                         },
                         style = Sadora.type.body,
                         color = onWarm.copy(alpha = 0.85f),
@@ -541,12 +546,12 @@ private fun PregnancyJourney(state: AppState, health: HealthController, onOpen: 
                     emoji = "🤰",
                     colors = listOf(palette.start.copy(alpha = 0.35f), palette.end.copy(alpha = 0.35f)),
                 )
-                Text("Bolaning rivojlanishi", style = Sadora.type.h3, color = c.text)
+                Text(t.babyDevelopment, style = Sadora.type.h3, color = c.text)
                 // The app carries no week-by-week medical table of its own, and inventing
                 // one is not an option — the library the clinicians write is where this
                 // belongs, so the card leads there rather than stating a size.
                 Text(
-                    "Bu haftada nima o'zgarayotgani haqida Bilim kutubxonasida o'qing.",
+                    t.babyDevelopmentBody,
                     style = Sadora.type.body,
                     color = c.muted,
                 )
@@ -555,7 +560,7 @@ private fun PregnancyJourney(state: AppState, health: HealthController, onOpen: 
 
         item {
             SadoraCard {
-                CardLabel("Bugungi simptomlar")
+                CardLabel(t.todaysSymptoms)
                 ChipFlowRow {
                     SampleData.pregnancySymptoms.forEach { symptom ->
                         SelectChip(
@@ -564,15 +569,15 @@ private fun PregnancyJourney(state: AppState, health: HealthController, onOpen: 
                             onClick = { state.toggleSymptom(symptom) },
                         )
                     }
-                    SelectChip("+ Qo'shish", selected = false, onClick = { onOpen(Route.StageSymptoms) })
+                    SelectChip(t.addSymptom, selected = false, onClick = { onOpen(Route.StageSymptoms) })
                 }
             }
         }
 
         item {
             SectionHeader(
-                "Yaqin uchrashuvlar",
-                action = "Barchasi",
+                t.upcomingAppointments,
+                action = t.all,
                 onAction = { onOpen(Route.PregnancyAppointments) },
             )
         }
@@ -583,9 +588,9 @@ private fun PregnancyJourney(state: AppState, health: HealthController, onOpen: 
         if (upcoming.isEmpty()) {
             item {
                 SadoraCard(onClick = { onOpen(Route.PregnancyAppointments) }) {
-                    Text("Tadbir qo'shilmagan", style = Sadora.type.h3, color = c.text)
+                    Text(t.noAppointments, style = Sadora.type.h3, color = c.text)
                     Text(
-                        "Ko'rik yoki tahlil sanasini yozib qo'ying — eslatma yuboriladi.",
+                        t.noAppointmentsBody,
                         style = Sadora.type.body,
                         color = c.muted,
                     )
@@ -631,7 +636,7 @@ private fun PregnancyJourney(state: AppState, health: HealthController, onOpen: 
 
         item {
             SadoraButton(
-                "Bugungi holatni qayd etish",
+                t.logToday,
                 onClick = { onOpen(Route.PregnancyCheckIn) },
                 tone = ButtonTone.Secondary,
             )
@@ -639,8 +644,7 @@ private fun PregnancyJourney(state: AppState, health: HealthController, onOpen: 
 
         item {
             AiAdviceCard(
-                "Bu haftada temirga boy ovqatlar va yengil cho'zilish mashqlari foydali " +
-                    "bo'lishi mumkin. Umumiy salomatlik ma'lumoti.",
+                t.aiAdvice,
             )
         }
     }
@@ -649,6 +653,7 @@ private fun PregnancyJourney(state: AppState, health: HealthController, onOpen: 
 /** Stage-level AI recommendation — gradient, premium-badged, explicitly general. */
 @Composable
 private fun AiAdviceCard(body: String) {
+    val t = strings.journey
     val c = Sadora.colors
     val onGradient = c.onPrimary
     Column(
@@ -664,7 +669,7 @@ private fun AiAdviceCard(body: String) {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
-            Text("SADORA AI · TAVSIYA", style = Sadora.type.caption, color = onGradient)
+            Text(t.aiBadge, style = Sadora.type.caption, color = onGradient)
             Box(
                 Modifier
                     .clip(Radius.chip)
@@ -682,8 +687,9 @@ private fun AiAdviceCard(body: String) {
 
 @Composable
 private fun PostpartumJourney(state: AppState, onOpen: (Route) -> Unit) {
+    val t = strings.journey
     val c = Sadora.colors
-    SadoraTopBar("Tug'ruqdan keyin")
+    SadoraTopBar(t.postpartumTitle)
 
     ScreenContent {
         item {
@@ -691,7 +697,7 @@ private fun PostpartumJourney(state: AppState, onOpen: (Route) -> Unit) {
                 Row(verticalAlignment = Alignment.Bottom) {
                     Text("${state.postpartumWeek}", style = Sadora.type.data, color = c.text)
                     Text(
-                        "  hafta · tiklanish davri",
+                        t.recoveryWeeks,
                         style = Sadora.type.body,
                         color = c.muted,
                         modifier = Modifier.padding(bottom = 10.dp),
@@ -699,7 +705,7 @@ private fun PostpartumJourney(state: AppState, onOpen: (Route) -> Unit) {
                 }
                 // No prediction here at all — recovery is not forecast.
                 Text(
-                    "Tiklanish har bir ayolda turlicha kechadi. Bu shkala faqat yo'naltiruvchi.",
+                    t.recoveryNote,
                     style = Sadora.type.body,
                     color = c.muted,
                 )
@@ -709,7 +715,7 @@ private fun PostpartumJourney(state: AppState, onOpen: (Route) -> Unit) {
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                 SadoraCard(modifier = Modifier.weight(1f), padding = Spacing.sm) {
-                    CardLabel("Kayfiyat")
+                    CardLabel(t.mood)
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
@@ -719,16 +725,16 @@ private fun PostpartumJourney(state: AppState, onOpen: (Route) -> Unit) {
                     }
                 }
                 SadoraCard(modifier = Modifier.weight(1f), padding = Spacing.sm) {
-                    CardLabel("Uyqu")
+                    CardLabel(t.sleep)
                     Text(state.sleepLabel(), style = Sadora.type.h2, color = c.text)
-                    Text("Bo'lingan uyqu", style = Sadora.type.body, color = c.muted)
+                    Text(t.brokenSleep, style = Sadora.type.body, color = c.muted)
                 }
             }
         }
 
         item {
             SadoraCard {
-                CardLabel("Emizish va suv")
+                CardLabel(t.feedingAndWater)
                 LabeledProgress(
                     "Suv",
                     "${Fmt.litres(state.waterMl)} / ${Fmt.litres(state.waterGoalMl)} l",
@@ -736,7 +742,7 @@ private fun PostpartumJourney(state: AppState, onOpen: (Route) -> Unit) {
                     color = c.accent,
                 )
                 LabeledProgress(
-                    "Kaloriya",
+                    t.calories,
                     "${Fmt.int(state.caloriesEaten)} / ${Fmt.int(state.calorieGoal)}",
                     state.caloriesEaten / state.calorieGoal.coerceAtLeast(1).toFloat(),
                 )
@@ -745,17 +751,16 @@ private fun PostpartumJourney(state: AppState, onOpen: (Route) -> Unit) {
 
         item {
             SadoraCard {
-                CardLabel("Kayfiyat kuzatuvi")
+                CardLabel(t.moodWatch)
                 Text(
-                    "Uzoq davom etgan tushkunlik yoki tashvish bo'lsa, mutaxassisga murojaat " +
-                        "qilish tavsiya etiladi. SADORA tashxis qo'ymaydi.",
+                    t.moodWatchBody,
                     style = Sadora.type.body,
                     color = c.muted,
                 )
             }
         }
 
-        item { SectionHeader("Bilim — tug'ruqdan keyin") }
+        item { SectionHeader(t.postpartumLibrary) }
 
         item {
             // The library is the server's, so this opens it rather than naming an
@@ -766,7 +771,7 @@ private fun PostpartumJourney(state: AppState, onOpen: (Route) -> Unit) {
                     SadoraBadge("KUTUBXONA", BadgeTone.Neutral)
                 }
                 Text(
-                    "Tug'ruqdan keyingi materiallar",
+                    t.postpartumLibraryBody,
                     style = Sadora.type.h3,
                     color = c.text,
                 )
@@ -779,9 +784,10 @@ private fun PostpartumJourney(state: AppState, onOpen: (Route) -> Unit) {
 
 @Composable
 private fun PerimenopauseJourney(state: AppState, health: HealthController, onOpen: (Route) -> Unit) {
+    val t = strings.journey
     LaunchedEffect(Unit) { health.loadHistory() }
     val c = Sadora.colors
-    SadoraTopBar("Perimenopauza")
+    SadoraTopBar(t.perimenopauseTitle)
 
     ScreenContent {
         item {
@@ -791,10 +797,10 @@ private fun PerimenopauseJourney(state: AppState, health: HealthController, onOp
                 // last six cycles rather than a shape drawn to look like variation.
                 val cycles = health.history?.cycles.orEmpty().takeLast(6)
                 CardLabel(
-                    "Sikl muntazamligi",
+                    t.cycleRegularity,
                     trailing = {
                         Text(
-                            if (cycles.isEmpty()) "ma'lumot yo'q" else "oxirgi ${cycles.size} sikl",
+                            if (cycles.isEmpty()) t.noData else t.lastCycles(cycles.size),
                             style = Sadora.type.body,
                             color = c.muted,
                         )
@@ -802,8 +808,7 @@ private fun PerimenopauseJourney(state: AppState, health: HealthController, onOp
                 )
                 if (cycles.isEmpty()) {
                     Text(
-                        "Hayz sanalarini belgilay boshlaganingizda sikl uzunligi shu yerda " +
-                            "ko'rinadi. Bu bosqichda bashorat ko'rsatilmaydi.",
+                        t.regularityEmpty,
                         style = Sadora.type.body,
                         color = c.muted,
                     )
@@ -821,11 +826,9 @@ private fun PerimenopauseJourney(state: AppState, health: HealthController, onOp
                     val shortest = cycles.minOf { it.cycleLength }
                     Text(
                         if (longest - shortest >= 7) {
-                            "Sikl uzunligi $shortest–$longest kun orasida o'zgargan — bu " +
-                                "bosqich uchun kutilgan holat. Bashorat ko'rsatilmaydi."
+                            t.regularitySpread(shortest, longest)
                         } else {
-                            "Sikl uzunligi $shortest–$longest kun orasida. Bu bosqichda " +
-                                "bashorat ko'rsatilmaydi."
+                            t.regularitySteady(shortest, longest)
                         },
                         style = Sadora.type.body,
                         color = c.muted,
@@ -858,11 +861,11 @@ private fun PerimenopauseJourney(state: AppState, health: HealthController, onOp
 
         item {
             SadoraCard(onClick = { onOpen(Route.StageSleepMood) }) {
-                CardLabel("Kuzatish")
+                CardLabel(t.observation)
                 // The observation is the insights service's, or there is none: a
                 // correlation nobody measured is the one thing this card must not say.
                 Text(
-                    "Uyqu, kayfiyat va simptomlar orasidagi bog'liqliklarni ko'rish.",
+                    t.observationBody,
                     style = Sadora.type.body,
                     color = c.muted,
                 )
@@ -871,7 +874,7 @@ private fun PerimenopauseJourney(state: AppState, health: HealthController, onOp
 
         item {
             SadoraButton(
-                "Simptomlarni ko'rish",
+                t.seeSymptoms,
                 onClick = { onOpen(Route.StageSymptoms) },
                 tone = ButtonTone.Secondary,
             )
@@ -883,8 +886,9 @@ private fun PerimenopauseJourney(state: AppState, health: HealthController, onOp
 
 @Composable
 private fun MenopauseJourney(state: AppState, onOpen: (Route) -> Unit) {
+    val t = strings.journey
     val c = Sadora.colors
-    SadoraTopBar("Salomatlik")
+    SadoraTopBar(t.menopauseTitle)
 
     ScreenContent {
         item {
@@ -907,8 +911,7 @@ private fun MenopauseJourney(state: AppState, onOpen: (Route) -> Unit) {
                         }
                     }
                     Text(
-                        "Uyqu, faollik, ovqatlanish va kayfiyat asosida. Bu ball tibbiy " +
-                            "ko'rsatkich emas.",
+                        t.scoreNote,
                         style = Sadora.type.body,
                         color = c.muted,
                         modifier = Modifier.weight(1f),
@@ -942,14 +945,14 @@ private fun MenopauseJourney(state: AppState, onOpen: (Route) -> Unit) {
                             onClick = { state.toggleSymptom(symptom) },
                         )
                     }
-                    SelectChip("+ Qo'shish", selected = false, onClick = { onOpen(Route.StageSymptoms) })
+                    SelectChip(t.addSymptom, selected = false, onClick = { onOpen(Route.StageSymptoms) })
                 }
             }
         }
 
         item {
             SadoraButton(
-                "Simptomlarni ko'rish",
+                t.seeSymptoms,
                 onClick = { onOpen(Route.StageSymptoms) },
                 tone = ButtonTone.Secondary,
             )
@@ -957,9 +960,9 @@ private fun MenopauseJourney(state: AppState, onOpen: (Route) -> Unit) {
 
         item {
             SadoraCard {
-                CardLabel("Haftalik maqsadlar")
-                LabeledProgress("Kuch mashqlari", "2 / 3", 2f / 3f, color = c.primary)
-                LabeledProgress("Kalsiy va D vitamini", "5 / 7", 5f / 7f, color = c.primary)
+                CardLabel(t.weeklyGoals)
+                LabeledProgress(t.strengthTraining, "2 / 3", 2f / 3f, color = c.primary)
+                LabeledProgress(t.calciumAndD, "5 / 7", 5f / 7f, color = c.primary)
             }
         }
     }
@@ -968,9 +971,3 @@ private fun MenopauseJourney(state: AppState, onOpen: (Route) -> Unit) {
 /** Keeps [Modifier.align] usable inside a LazyColumn item. */
 private fun Modifier.align(alignment: Alignment.Horizontal): Modifier = this
 
-/** Which third of the pregnancy a week falls in, as the header says it. */
-private fun trimesterLabel(week: Int): String = when {
-    week <= 13 -> "1-trimestr"
-    week <= 27 -> "2-trimestr"
-    else -> "3-trimestr"
-}

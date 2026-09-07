@@ -289,4 +289,95 @@ object StringsUz : Strings {
         override fun kcal(value: Int) = "$value kkal"
         override fun grams(value: Int) = "$value g"
     }
+
+    override val journey = object : JourneyStrings {
+        override val cycleTitle = "Mening siklim"
+        override val info = "Ma'lumot"
+        override val calendar = "Kalendar"
+        override val noPredictionTitle = "Prognoz uchun ma'lumot yetarli emas"
+        override val noPredictionBody =
+            "Kamida ikkita hayz sanasi kiritilgach, sikl fazalari va keyingi hayz " +
+                "taxmini shu yerda ko'rinadi."
+        override val markPeriod = "Hayzni belgilash"
+        override val today = "Bugun"
+        override fun daysToNextPeriod(days: Int) = "Keyingi hayz — $days kun"
+        override val symptoms = "Simptomlar"
+        override val change = "O'zgartirish"
+        override val averageCycle = "O'rtacha sikl"
+        override val averagePeriod = "O'rtacha hayz"
+        override val day = "Kun"
+        override fun daysValue(days: Int) = "$days kun"
+
+        override val pregnancyTitle = "Homiladorlik"
+        override fun trimester(week: Int) = when {
+            week <= 13 -> "1-trimestr"
+            week <= 27 -> "2-trimestr"
+            else -> "3-trimestr"
+        }
+        override val weekCaps = "  HAFTA"
+        override fun weekAndDay(week: Int, day: Int) = "$week-hafta, $day-kun"
+        override fun weekOnly(week: Int) = "$week-hafta"
+        override fun dueOn(date: String, daysLeft: Int) = "Tug'ish sanasi — $date · $daysLeft kun qoldi"
+        override fun dueOnPast(date: String) = "Tug'ish sanasi — $date"
+        override val babyDevelopment = "Bolaning rivojlanishi"
+        override val babyDevelopmentBody =
+            "Bu haftada nima o'zgarayotgani haqida Bilim kutubxonasida o'qing."
+        override val todaysSymptoms = "Bugungi simptomlar"
+        override val addSymptom = "+ Qo'shish"
+        override val upcomingAppointments = "Yaqin uchrashuvlar"
+        override val all = "Barchasi"
+        override val noAppointments = "Tadbir qo'shilmagan"
+        override val noAppointmentsBody =
+            "Ko'rik yoki tahlil sanasini yozib qo'ying — eslatma yuboriladi."
+        override val logToday = "Bugungi holatni qayd etish"
+        override val aiAdvice =
+            "Bu haftada temirga boy ovqatlar va yengil cho'zilish mashqlari foydali " +
+                "bo'lishi mumkin. Umumiy salomatlik ma'lumoti."
+        override val aiBadge = "SADORA AI · TAVSIYA"
+
+        override val postpartumTitle = "Tug'ruqdan keyin"
+        override val recoveryWeeks = "  hafta · tiklanish davri"
+        override val recoveryNote =
+            "Tiklanish har bir ayolda turlicha kechadi. Bu shkala faqat yo'naltiruvchi."
+        override val mood = "Kayfiyat"
+        override val sleep = "Uyqu"
+        override val brokenSleep = "Bo'lingan uyqu"
+        override val feedingAndWater = "Emizish va suv"
+        override val water = "Suv"
+        override val calories = "Kaloriya"
+        override val moodWatch = "Kayfiyat kuzatuvi"
+        override val moodWatchBody =
+            "Uzoq davom etgan tushkunlik yoki tashvish bo'lsa, mutaxassisga murojaat " +
+                "qilish tavsiya etiladi. SADORA tashxis qo'ymaydi."
+        override val postpartumLibrary = "Bilim — tug'ruqdan keyin"
+        override val postpartumLibraryBody = "Tug'ruqdan keyingi materiallar"
+
+        override val perimenopauseTitle = "Perimenopauza"
+        override val cycleRegularity = "Sikl muntazamligi"
+        override val noData = "ma'lumot yo'q"
+        override fun lastCycles(count: Int) = "oxirgi $count sikl"
+        override val regularityEmpty =
+            "Hayz sanalarini belgilay boshlaganingizda sikl uzunligi shu yerda " +
+                "ko'rinadi. Bu bosqichda bashorat ko'rsatilmaydi."
+        override fun regularitySpread(shortest: Int, longest: Int) =
+            "Sikl uzunligi $shortest–$longest kun orasida o'zgargan — bu bosqich uchun " +
+                "kutilgan holat. Bashorat ko'rsatilmaydi."
+        override fun regularitySteady(shortest: Int, longest: Int) =
+            "Sikl uzunligi $shortest–$longest kun orasida. Bu bosqichda bashorat " +
+                "ko'rsatilmaydi."
+        override val energy = "Energiya"
+        override val observation = "Kuzatish"
+        override val observationBody =
+            "Uyqu, kayfiyat va simptomlar orasidagi bog'liqliklarni ko'rish."
+        override val seeSymptoms = "Simptomlarni ko'rish"
+
+        override val menopauseTitle = "Salomatlik"
+        override val scoreNote =
+            "Uyqu, faollik, ovqatlanish va kayfiyat asosida. Bu ball tibbiy " +
+                "ko'rsatkich emas."
+        override val activity = "Faollik"
+        override val weeklyGoals = "Haftalik maqsadlar"
+        override val strengthTraining = "Kuch mashqlari"
+        override val calciumAndD = "Kalsiy va D vitamini"
+    }
 }

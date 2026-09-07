@@ -291,4 +291,95 @@ object StringsRu : Strings {
         override fun kcal(value: Int) = "$value ккал"
         override fun grams(value: Int) = "$value г"
     }
+
+    override val journey = object : JourneyStrings {
+        override val cycleTitle = "Мой цикл"
+        override val info = "Информация"
+        override val calendar = "Календарь"
+        override val noPredictionTitle = "Данных для прогноза недостаточно"
+        override val noPredictionBody =
+            "После двух отмеченных менструаций здесь появятся фазы цикла и примерная " +
+                "дата следующей."
+        override val markPeriod = "Отметить менструацию"
+        override val today = "Сегодня"
+        override fun daysToNextPeriod(days: Int) = "Следующая менструация — через $days дн."
+        override val symptoms = "Симптомы"
+        override val change = "Изменить"
+        override val averageCycle = "Средний цикл"
+        override val averagePeriod = "Средняя менструация"
+        override val day = "День"
+        override fun daysValue(days: Int) = "$days дн."
+
+        override val pregnancyTitle = "Беременность"
+        override fun trimester(week: Int) = when {
+            week <= 13 -> "1-й триместр"
+            week <= 27 -> "2-й триместр"
+            else -> "3-й триместр"
+        }
+        override val weekCaps = "  НЕДЕЛЯ"
+        override fun weekAndDay(week: Int, day: Int) = "$week-я неделя, $day-й день"
+        override fun weekOnly(week: Int) = "$week-я неделя"
+        override fun dueOn(date: String, daysLeft: Int) = "Дата родов — $date · осталось $daysLeft дн."
+        override fun dueOnPast(date: String) = "Дата родов — $date"
+        override val babyDevelopment = "Развитие ребёнка"
+        override val babyDevelopmentBody =
+            "О том, что меняется на этой неделе, читайте в библиотеке «Знания»."
+        override val todaysSymptoms = "Симптомы сегодня"
+        override val addSymptom = "+ Добавить"
+        override val upcomingAppointments = "Ближайшие визиты"
+        override val all = "Все"
+        override val noAppointments = "Визитов пока нет"
+        override val noAppointmentsBody =
+            "Запишите дату осмотра или анализа — придёт напоминание."
+        override val logToday = "Отметить самочувствие"
+        override val aiAdvice =
+            "На этой неделе полезны продукты, богатые железом, и лёгкая растяжка. " +
+                "Это общая информация о здоровье."
+        override val aiBadge = "SADORA AI · СОВЕТ"
+
+        override val postpartumTitle = "После родов"
+        override val recoveryWeeks = "  нед. · период восстановления"
+        override val recoveryNote =
+            "Восстановление у каждой женщины идёт по-своему. Эта шкала только ориентир."
+        override val mood = "Настроение"
+        override val sleep = "Сон"
+        override val brokenSleep = "Прерывистый сон"
+        override val feedingAndWater = "Кормление и вода"
+        override val water = "Вода"
+        override val calories = "Калории"
+        override val moodWatch = "Наблюдение за настроением"
+        override val moodWatchBody =
+            "Если подавленность или тревога держатся долго, стоит обратиться к специалисту. " +
+                "SADORA не ставит диагноз."
+        override val postpartumLibrary = "Знания — после родов"
+        override val postpartumLibraryBody = "Материалы о послеродовом периоде"
+
+        override val perimenopauseTitle = "Перименопауза"
+        override val cycleRegularity = "Регулярность цикла"
+        override val noData = "нет данных"
+        override fun lastCycles(count: Int) = "последние $count цикл."
+        override val regularityEmpty =
+            "Когда вы начнёте отмечать менструации, длина цикла появится здесь. " +
+                "На этом этапе прогноз не показывается."
+        override fun regularitySpread(shortest: Int, longest: Int) =
+            "Длина цикла менялась от $shortest до $longest дней — для этого этапа это " +
+                "ожидаемо. Прогноз не показывается."
+        override fun regularitySteady(shortest: Int, longest: Int) =
+            "Длина цикла от $shortest до $longest дней. На этом этапе прогноз не " +
+                "показывается."
+        override val energy = "Энергия"
+        override val observation = "Наблюдение"
+        override val observationBody =
+            "Посмотреть связи между сном, настроением и симптомами."
+        override val seeSymptoms = "Посмотреть симптомы"
+
+        override val menopauseTitle = "Здоровье"
+        override val scoreNote =
+            "По сну, активности, питанию и настроению. Этот балл не является " +
+                "медицинским показателем."
+        override val activity = "Активность"
+        override val weeklyGoals = "Цели на неделю"
+        override val strengthTraining = "Силовые упражнения"
+        override val calciumAndD = "Кальций и витамин D"
+    }
 }

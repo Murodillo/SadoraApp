@@ -64,6 +64,25 @@ class StringsTest {
             addAll(listOf(save, cancel, delete, close, add, edit, done))
             addAll(listOf(litres, millilitres, kcal, steps, minutesShort, days(3)))
         }
+        with(t.journey) {
+            addAll(
+                listOf(
+                    cycleTitle, info, calendar, noPredictionTitle, noPredictionBody, markPeriod,
+                    today, daysToNextPeriod(5), symptoms, change, averageCycle, averagePeriod,
+                    day, daysValue(28), pregnancyTitle, trimester(8), trimester(20), trimester(35),
+                    weekCaps, weekAndDay(26, 3), weekOnly(26), dueOn("12-dekabr", 112),
+                    dueOnPast("12-dekabr"), babyDevelopment, babyDevelopmentBody, todaysSymptoms,
+                    addSymptom, upcomingAppointments, all, noAppointments, noAppointmentsBody,
+                    logToday, aiAdvice, aiBadge, postpartumTitle, recoveryWeeks, recoveryNote,
+                    mood, sleep, brokenSleep, feedingAndWater, water, calories, moodWatch,
+                    moodWatchBody, postpartumLibrary, postpartumLibraryBody, perimenopauseTitle,
+                    cycleRegularity, noData, lastCycles(6), regularityEmpty,
+                    regularitySpread(24, 38), regularitySteady(27, 29), energy, observation,
+                    observationBody, seeSymptoms, menopauseTitle, scoreNote, activity,
+                    weeklyGoals, strengthTraining, calciumAndD,
+                ),
+            )
+        }
         with(t.mind) {
             addAll(
                 listOf(
@@ -154,6 +173,9 @@ class StringsTest {
             assertNotEquals(StringsUz.mind.breathingHint, t.mind.breathingHint)
             assertNotEquals(StringsUz.nutrition.emptyBody, t.nutrition.emptyBody)
             assertNotEquals(StringsUz.nutrition.scannerHint, t.nutrition.scannerHint)
+            assertNotEquals(StringsUz.journey.noPredictionBody, t.journey.noPredictionBody)
+            assertNotEquals(StringsUz.journey.recoveryNote, t.journey.recoveryNote)
+            assertNotEquals(StringsUz.journey.moodWatchBody, t.journey.moodWatchBody)
         }
     }
 
