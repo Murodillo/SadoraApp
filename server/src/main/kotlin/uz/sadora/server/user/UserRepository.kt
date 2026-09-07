@@ -214,6 +214,20 @@ class UserRepository {
         }
     }
 
+    /** Her stage anchor, or null when the stage she is in does not have one. */
+    suspend fun stageBaselineOf(userId: Uuid): StageBaseline? = dbQuery {
+        StageBaselines.selectAll()
+            .where { StageBaselines.userId eq userId }
+            .singleOrNull()
+            ?.let {
+                StageBaseline(
+                    dueDate = it[StageBaselines.dueDate],
+                    birthDate = it[StageBaselines.childBirthDate],
+                    lastPeriodStart = it[StageBaselines.lastPeriodStart],
+                )
+            }
+    }
+
     fun applyStageBaseline(userId: Uuid, baseline: StageBaseline) {
         StageBaselines.upsert(StageBaselines.userId) {
             it[StageBaselines.userId] = userId

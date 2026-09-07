@@ -2410,6 +2410,11 @@ components:
         onboardingCompleted: { type: boolean }
         status: { $ref: "#/components/schemas/AccountStatus" }
         createdAt: { type: string, format: date-time }
+        # The stage anchor: the app counts the pregnancy or recovery week from it, and
+        # without it can only show a number it made up.
+        stage:
+          allOf: [{ $ref: "#/components/schemas/StageBaseline" }]
+          nullable: true
 
     UpdateProfileRequest:
       type: object

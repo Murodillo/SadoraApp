@@ -45,6 +45,7 @@ import org.example.project.design.Sadora
 import org.example.project.design.SadoraIcons
 import org.example.project.design.Spacing
 import org.example.project.design.StagePalettes
+import kotlinx.datetime.daysUntil
 import org.example.project.model.AppState
 import org.example.project.model.CyclePhase
 import org.example.project.model.Fmt
@@ -478,7 +479,9 @@ private fun PregnancyJourney(state: AppState, health: HealthController, onOpen: 
 
     SadoraTopBar(
         "Homiladorlik",
-        trailing = { Text("2-trimestr", style = Sadora.type.body, color = c.muted) },
+        trailing = {
+            Text(trimesterLabel(state.pregnancyWeek), style = Sadora.type.body, color = c.muted)
+        },
     )
 
     ScreenContent {
@@ -502,12 +505,32 @@ private fun PregnancyJourney(state: AppState, health: HealthController, onOpen: 
                         modifier = Modifier.padding(bottom = 10.dp),
                     )
                 }
-                Text("${state.pregnancyWeek}-hafta, 3-kun", style = Sadora.type.h3, color = onWarm)
+                // The day within the week, counted from the same anchor as the week.
+                val due = state.dueDate
+                val dayOfWeek = due?.let {
+                    ((280 - state.today.daysUntil(it)) % 7).coerceIn(0, 6) + 1
+                }
                 Text(
-                    "Tug'ish sanasi — 12-dekabr · 112 kun qoldi",
-                    style = Sadora.type.body,
-                    color = onWarm.copy(alpha = 0.85f),
+                    if (dayOfWeek != null) {
+                        "${state.pregnancyWeek}-hafta, $dayOfWeek-kun"
+                    } else {
+                        "${state.pregnancyWeek}-hafta"
+                    },
+                    style = Sadora.type.h3,
+                    color = onWarm,
                 )
+                if (due != null) {
+                    val left = state.today.daysUntil(due)
+                    Text(
+                        if (left >= 0) {
+                            "Tug'ish sanasi — ${Fmt.dayMonth(due)} · $left kun qoldi"
+                        } else {
+                            "Tug'ish sanasi — ${Fmt.dayMonth(due)}"
+                        },
+                        style = Sadora.type.body,
+                        color = onWarm.copy(alpha = 0.85f),
+                    )
+                }
             }
         }
 
@@ -519,8 +542,11 @@ private fun PregnancyJourney(state: AppState, health: HealthController, onOpen: 
                     colors = listOf(palette.start.copy(alpha = 0.35f), palette.end.copy(alpha = 0.35f)),
                 )
                 Text("Bolaning rivojlanishi", style = Sadora.type.h3, color = c.text)
+                // The app carries no week-by-week medical table of its own, and inventing
+                // one is not an option — the library the clinicians write is where this
+                // belongs, so the card leads there rather than stating a size.
                 Text(
-                    "Taxminan 30 sm, 600 g. Eshitish sezgirligi ortadi.",
+                    "Bu haftada nima o'zgarayotgani haqida Bilim kutubxonasida o'qing.",
                     style = Sadora.type.body,
                     color = c.muted,
                 )
@@ -833,9 +859,10 @@ private fun PerimenopauseJourney(state: AppState, health: HealthController, onOp
         item {
             SadoraCard(onClick = { onOpen(Route.StageSleepMood) }) {
                 CardLabel("Kuzatish")
+                // The observation is the insights service's, or there is none: a
+                // correlation nobody measured is the one thing this card must not say.
                 Text(
-                    "Issiqlik to'lqinlari qayd etilgan kunlarda uyqu qisqaroq bo'lgan. " +
-                        "Bu holatlar ko'pincha birga kuzatilgan.",
+                    "Uyqu, kayfiyat va simptomlar orasidagi bog'liqliklarni ko'rish.",
                     style = Sadora.type.body,
                     color = c.muted,
                 )
@@ -940,3 +967,10 @@ private fun MenopauseJourney(state: AppState, onOpen: (Route) -> Unit) {
 
 /** Keeps [Modifier.align] usable inside a LazyColumn item. */
 private fun Modifier.align(alignment: Alignment.Horizontal): Modifier = this
+
+/** Which third of the pregnancy a week falls in, as the header says it. */
+private fun trimesterLabel(week: Int): String = when {
+    week <= 13 -> "1-trimestr"
+    week <= 27 -> "2-trimestr"
+    else -> "3-trimestr"
+}

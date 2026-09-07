@@ -102,7 +102,7 @@ class AuthService(
                 accessExpiresAt = access.expiresAt,
                 refreshExpiresAt = issued.expiresAt,
             ),
-            user = user.toProfile(users.goalsOf(user.id)),
+            user = user.toProfile(users.goalsOf(user.id), users.stageBaselineOf(user.id)),
             entitlements = entitlements.resolve(user.id, user.timezone),
             isNewUser = false,
         )
@@ -173,7 +173,7 @@ class AuthService(
                 accessExpiresAt = access.expiresAt,
                 refreshExpiresAt = refresh.expiresAt,
             ),
-            user = user.toProfile(users.goalsOf(user.id)),
+            user = user.toProfile(users.goalsOf(user.id), users.stageBaselineOf(user.id)),
             entitlements = entitlements.resolve(user.id, user.timezone),
             isNewUser = isNewUser,
         )

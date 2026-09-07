@@ -41,7 +41,7 @@ class UserService(
 
     suspend fun profile(userId: Uuid): UserProfile {
         val user = requireUser(userId)
-        return user.toProfile(users.goalsOf(userId))
+        return user.toProfile(users.goalsOf(userId), users.stageBaselineOf(userId))
     }
 
     suspend fun entitlements(userId: Uuid): Entitlements {
@@ -58,7 +58,7 @@ class UserService(
         val user = requireUser(userId)
         users.touchLastActive(userId)
         return Bootstrap(
-            user = user.toProfile(users.goalsOf(userId)),
+            user = user.toProfile(users.goalsOf(userId), users.stageBaselineOf(userId)),
             entitlements = entitlements.resolve(userId, user.timezone),
             flags = flags.evaluate(
                 FlagContext(

@@ -168,6 +168,9 @@ class AppState {
 
     /** Pregnancy due date, and the birth date behind a postpartum stage. */
     var dueDate by mutableStateOf<LocalDate?>(null)
+
+    /** The child's birth date, for the postpartum stage. */
+    var childBirthDate by mutableStateOf<LocalDate?>(null)
     var babyBirthDate by mutableStateOf<LocalDate?>(null)
 
     /** "Did a doctor recommend SADORA?" — null until answered, and null when skipped. */

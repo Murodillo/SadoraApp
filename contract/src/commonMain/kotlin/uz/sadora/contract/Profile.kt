@@ -29,6 +29,15 @@ data class UserProfile(
     val onboardingCompleted: Boolean,
     val status: AccountStatus = AccountStatus.ACTIVE,
     val createdAt: Instant,
+    /**
+     * The stage anchor she gave at onboarding: a due date, a child's birth date, or a
+     * last period.
+     *
+     * It comes back with the profile because the screens compute from it — a pregnancy
+     * week is the due date minus today, and without the anchor the app can only show a
+     * number it made up. Null for the stages that have no anchor.
+     */
+    val stage: StageBaseline? = null,
 )
 
 /**

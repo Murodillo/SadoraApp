@@ -1,7 +1,9 @@
 package org.example.project.data
 
 import org.example.project.model.AppLanguage
+import kotlinx.datetime.daysUntil
 import org.example.project.model.AppState
+import org.example.project.model.deviceToday
 import org.example.project.model.BirthControl
 import org.example.project.model.ConceptionWindow
 import org.example.project.model.Goal
@@ -49,8 +51,28 @@ fun AppState.applyServerProfile(profile: UserProfile, entitlements: Entitlements
     goals.clear()
     goals.addAll(profile.goals.mapNotNull { it.toAppGoal() })
 
+    // The stage anchor, and the two counts the screens read off it. Computing them here
+    // rather than on the screen keeps one answer to "which week is she in" — the header,
+    // the card and the knowledge link cannot disagree about it.
+    profile.stage?.let { stage ->
+        dueDate = stage.dueDate
+        childBirthDate = stage.birthDate
+        val today = deviceToday()
+        stage.dueDate?.let { due ->
+            // Forty weeks from conception to the due date, counted backwards from it.
+            val daysToDue = today.daysUntil(due)
+            pregnancyWeek = ((PregnancyDays - daysToDue) / 7).coerceIn(1, 42)
+        }
+        stage.birthDate?.let { born ->
+            postpartumWeek = (born.daysUntil(today) / 7).coerceAtLeast(0)
+        }
+    }
+
     isPremium = entitlements.tier == SubscriptionTier.PREMIUM
 }
+
+/** A full-term pregnancy, in days — the constant the week count is measured against. */
+private const val PregnancyDays = 280
 
 /**
  * Applies a freshly authenticated session.

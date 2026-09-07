@@ -6,6 +6,7 @@ import kotlinx.datetime.LocalDate
 import uz.sadora.contract.AccountStatus
 import uz.sadora.contract.Consents
 import uz.sadora.contract.Goal
+import uz.sadora.contract.StageBaseline
 import uz.sadora.contract.Language
 import uz.sadora.contract.LifeStage
 import uz.sadora.contract.UserProfile
@@ -36,7 +37,7 @@ data class UserRecord(
      * Goals live in their own table, so the caller supplies them. Note what is absent:
      * nothing derived from health data ever reaches this DTO.
      */
-    fun toProfile(goals: List<Goal>): UserProfile = UserProfile(
+    fun toProfile(goals: List<Goal>, stage: StageBaseline? = null): UserProfile = UserProfile(
         id = id.toString(),
         phone = phone,
         email = email,
@@ -52,6 +53,7 @@ data class UserRecord(
         onboardingCompleted = onboardingCompleted,
         status = status,
         createdAt = createdAt,
+        stage = stage,
     )
 }
 

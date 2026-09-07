@@ -54,7 +54,9 @@ import uz.sadora.contract.ArticleKind
 import uz.sadora.contract.Appointment
 import uz.sadora.contract.CompleteAppointmentRequest
 import uz.sadora.contract.SaveAppointmentRequest
+import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalTime
+import uz.sadora.contract.StageBaseline
 import uz.sadora.contract.AuthSession
 import uz.sadora.contract.BillingCatalogue
 import uz.sadora.contract.CheckoutRequest
@@ -178,6 +180,30 @@ class ApiIntegrationTest {
         val status = get<CycleStatus>("/v1/cycle/status", user.token)
         val day = get<DailyLog>("/v1/days/${status.today}", user.token)
         assertTrue(day.isEmpty, "nothing was stored: $day")
+    }
+
+    @Test
+    fun `the stage anchor comes back with the profile, so the app can count the week`() = api {
+        val her = signUp()
+        val due = LocalDate(2027, 3, 14)
+        val response = client.post("/v1/me/onboarding") {
+            auth(her.token)
+            json(
+                OnboardingRequest(
+                    name = "Dilnoza",
+                    language = Language.UZ,
+                    timezone = "Asia/Tashkent",
+                    lifeStage = LifeStage.PREGNANCY,
+                    stage = StageBaseline(dueDate = due),
+                    consents = ConsentGrants(storeHealth = true, policyVersion = "2026-08-01"),
+                ),
+            )
+        }
+        assertEquals(HttpStatusCode.OK, response.status, response.bodyAsTextSafe())
+
+        // Without this the app has no anchor and can only show a week it made up.
+        val profile = get<UserProfile>("/v1/me", her.token)
+        assertEquals(due, profile.stage?.dueDate)
     }
 
     // ---------------------------------------------------------------- appointments
