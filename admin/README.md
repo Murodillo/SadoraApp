@@ -60,9 +60,10 @@ Birinchi Owner hisobi backend birinchi marta ko'tarilganda yaratiladi —
 | Wearable providerlar | Owner/Admin (Analyst o'qiydi) | Provayderlar holati, metrika moslashtirish jadvali |
 | Audit log | faqat Owner | Filtr va sahifalash |
 
-Chap navigatsiyadagi o'chirilgan punktlar — hali backend'i yo'q sahifalar (obunalar,
-AI xarajat, Learn kontenti, qo'llab-quvvatlash). Yashirish o'rniga o'chirilgan holda
-ko'rsatilgan, chunki jamoa yakuniy panel qanday bo'lishini ko'rib turishi kerak.
+Barcha sahifalarning backend'i bor — o'chirilgan punkt qolmadi. Alohida
+"qo'llab-quvvatlash" sahifasi ataylab yo'q: operatorning ish oqimi (hisobni topish,
+kartochkani ochish, obunani yoki blokni o'zgartirish) foydalanuvchi kartochkasining
+o'zida, va bo'sh ikkinchi nusxasi faqat chalg'itardi.
 
 ## Qarorlar
 
@@ -83,9 +84,11 @@ endpoint'i ortida turishi kerak, tugmadek ko'rinadigan qulaylik ortida emas.
 havola yo'q va API uni bera olmaydi. "Muallifni cheklash" post orqali qo'llanadi —
 moderator kimligini bilmaydi. Bu maxfiy chatning butun mazmuni.
 
-**Dashboard'da DAU/MAU va AI xarajat grafigi yo'q.** Ular hodisalar jadvali va AI
-Gateway'ning xarajat logini talab qiladi — ikkalasi ham 3-sprintda. O'lchanmagan
-raqamni o'lchangandek ko'rsatish ko'rsatmaslikdan yomonroq.
+**DAU/MAU — hisobning oxirgi so'rovi bo'yicha, seans emas.** Auth qatlami har
+so'rovda `last_active_at` ni yangilaydi, shuning uchun bu raqamni halol o'lchash mumkin.
+Seanslar, ekranlar va voronkalar alohida hodisalar jadvalini talab qiladi; u yo'q,
+shuning uchun ular ko'rsatilmaydi — o'lchanmagan raqamni o'lchangandek ko'rsatish
+ko'rsatmaslikdan yomonroq. AI xarajati esa o'z sahifasida, kunlik dinamikasi bilan.
 
 ## Buyruqlar
 

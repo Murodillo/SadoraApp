@@ -373,6 +373,7 @@ private fun MainShell(
         SymptomSheet(
             visible = showSymptomSheet,
             state = state,
+            health = health,
             onDismiss = { showSymptomSheet = false },
         )
 

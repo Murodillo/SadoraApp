@@ -42,6 +42,14 @@ data class AdminStats(
     val newToday: Long,
     val newThisWeek: Long,
     val activeToday: Long,
+    /**
+     * Distinct accounts seen in the last 30 days.
+     *
+     * DAU and MAU as this product can honestly measure them: "seen" is the last request
+     * the account made, which the auth layer already stamps. It is not a session count
+     * and does not pretend to be one.
+     */
+    val activeThisMonth: Long,
     val premiumUsers: Long,
     val blockedUsers: Long,
     val deletionPending: Long,
@@ -65,6 +73,7 @@ class AdminStatsRepository {
     suspend fun stats(): AdminStats = dbQuery {
         val currentTime = now()
         val dayAgo = (currentTime - 1.days).toOffsetDateTime()
+        val monthAgo = (currentTime - 30.days).toOffsetDateTime()
         val weekAgo = (currentTime - 7.days).toOffsetDateTime()
         val weekAhead = (currentTime + 7.days).toOffsetDateTime()
 
@@ -83,6 +92,7 @@ class AdminStatsRepository {
             newToday = countWhere { Users.createdAt greaterEq dayAgo },
             newThisWeek = countWhere { Users.createdAt greaterEq weekAgo },
             activeToday = countWhere { Users.lastActiveAt greaterEq dayAgo },
+            activeThisMonth = countWhere { Users.lastActiveAt greaterEq monthAgo },
             premiumUsers = Subscriptions
                 .select(Subscriptions.userId)
                 .where { Subscriptions.status eq "active" }

@@ -55,6 +55,9 @@ import org.example.project.model.Fmt
 import org.example.project.model.SampleData
 import org.example.project.model.nowTimeLabel
 import org.example.project.ui.components.AiMarkHeader
+import org.example.project.ui.components.SadoraBottomSheet
+import org.example.project.ui.components.SadoraButton
+import org.example.project.ui.components.ButtonTone
 import org.example.project.ui.components.CircleIconButton
 import org.example.project.ui.components.appearFromBelow
 import org.example.project.ui.components.noRippleClickable
@@ -84,6 +87,7 @@ fun AiChatScreen(
     val c = Sadora.colors
     val scope = rememberCoroutineScope()
     var draft by remember { mutableStateOf("") }
+    var showMenu by remember { mutableStateOf(false) }
     val messages = remember { mutableStateListOf<ChatMessage>() }
     val listState = rememberLazyListState()
 
@@ -127,7 +131,7 @@ fun AiChatScreen(
                 )
                 Text("Shaxsiy yordamchingiz", style = Sadora.type.body, color = c.muted)
             }
-            CircleIconButton(SadoraIcons.More, contentDescription = "Yana", onClick = {})
+            CircleIconButton(SadoraIcons.More, contentDescription = "Yana", onClick = { showMenu = true })
         }
 
         LazyColumn(
@@ -246,6 +250,25 @@ fun AiChatScreen(
                 )
             }
         }
+    }
+
+    SadoraBottomSheet(visible = showMenu, title = "SADORA AI", onDismiss = { showMenu = false }) {
+        Text(
+            "Suhbat faqat shu seansda saqlanadi va serverga yozilmaydi. Ilovadan " +
+                "chiqsangiz u o'chadi.",
+            style = Sadora.type.body,
+            color = c.muted,
+        )
+        Text(SampleData.medicalDisclaimer, style = Sadora.type.caption, color = c.muted2)
+        SadoraButton(
+            "Suhbatni tozalash",
+            onClick = {
+                messages.clear()
+                showMenu = false
+            },
+            tone = ButtonTone.Secondary,
+            enabled = messages.isNotEmpty(),
+        )
     }
 }
 

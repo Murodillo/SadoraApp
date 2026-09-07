@@ -136,6 +136,8 @@ export interface AdminStats {
   newToday: number
   newThisWeek: number
   activeToday: number
+  /** Accounts seen in the last 30 days — MAU as the product can honestly measure it. */
+  activeThisMonth: number
   premiumUsers: number
   blockedUsers: number
   deletionPending: number

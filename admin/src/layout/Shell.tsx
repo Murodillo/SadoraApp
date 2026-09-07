@@ -51,13 +51,6 @@ const groups: NavGroup[] = [
   },
 ]
 
-/**
- * Pages the proposal specifies but whose backend arrives in sprint 2–3. Shown as
- * disabled rather than hidden: the team can see the shape of the finished panel, and
- * nobody files a bug asking where the AI cost page went.
- */
-const pending = ["Qo'llab-quvvatlash"]
-
 const titles: Record<string, string> = {
   '/': 'Dashboard',
   '/users': 'Foydalanuvchilar',
@@ -116,13 +109,6 @@ export function Shell() {
           )
         })}
 
-        <div className="nav-section">Keyingi sprintlarda</div>
-        {pending.map((label) => (
-          <div key={label} className="nav-item locked" title="Backend 2–3-sprintda tayyor bo'ladi">
-            <span className="glyph">◌</span>
-            {label}
-          </div>
-        ))}
       </nav>
 
       <div className="main">

@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { useRecentEvents, useSignUps, useStats } from '../api/hooks'
 import type { SignUpPoint } from '../api/types'
 import { Card, ErrorNotice, formatDateTime, Loading, Stat } from '../components/ui'
@@ -43,7 +44,11 @@ export function DashboardPage() {
       <div className="grid stat-row">
         <Stat label="Jami foydalanuvchi" value={data.totalUsers} hint={`Haftada +${data.newThisWeek}`} />
         <Stat label="Bugun ro'yxatdan o'tgan" value={data.newToday} />
-        <Stat label="24 soatda faol" value={data.activeToday} />
+        <Stat
+          label="Kunlik faol (DAU)"
+          value={data.activeToday}
+          hint={data.activeThisMonth ? `Oylik ${data.activeThisMonth} · ${Math.round((data.activeToday / data.activeThisMonth) * 100)}% qaytadi` : undefined}
+        />
         <Stat label="Aktiv obuna" value={data.premiumUsers} hint={`${data.expiringWithinWeek} tasi hafta ichida tugaydi`} />
         <Stat label="Bloklangan" value={data.blockedUsers} />
         <Stat label="O'chirish so'rovi" value={data.deletionPending} />
@@ -91,11 +96,18 @@ export function DashboardPage() {
           )}
         </Card>
 
-        <Card title="Bugungi AI foydalanish">
+        <Card
+          title="Bugungi AI foydalanish"
+          action={
+            <Link to="/ai" className="faint">
+              Xarajat →
+            </Link>
+          }
+        >
           {Object.keys(data.aiUsageToday).length === 0 ? (
             <p className="faint" style={{ margin: 0 }}>
               Bugun AI so'rovlari bo'lmagan. Har bir chat savoli <span className="mono">ai_chat</span>{' '}
-              hisoblagichini oshiradi; xarajat hisobi AI Gateway bilan birga keladi.
+              hisoblagichini oshiradi; kunlik xarajat "AI xarajati" sahifasida.
             </p>
           ) : (
             <table>
@@ -151,9 +163,9 @@ export function DashboardPage() {
       </div>
 
       <div className="notice">
-        DAU/MAU va AI xarajat dinamikasi bu yerda emas: ular hodisalar jadvali va AI Gateway'ning
-        xarajat logini talab qiladi, ikkalasi ham 3-sprintda. O'lchanmagan raqamni o'lchangandek
-        ko'rsatgandan ko'ra ko'rsatmagan ma'qul.
+        DAU va MAU — hisobning oxirgi so'rovi bo'yicha, seans soni emas. Seanslar, ekranlar va
+        voronkalar uchun alohida hodisalar jadvali kerak; u hali yo'q, shuning uchun bu yerda
+        o'lchanmagan raqam ko'rsatilmaydi.
       </div>
     </div>
   )
