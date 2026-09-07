@@ -101,6 +101,9 @@ object ErrorCodes {
     const val CONSENT_REQUIRED = "consent_required"
     const val LIMIT_REACHED = "limit_reached"
     const val FEATURE_DISABLED = "feature_disabled"
+
+    /** A service the API depends on could not answer — the model behind the food scanner. */
+    const val UPSTREAM_UNAVAILABLE = "upstream_unavailable"
     const val INTERNAL_ERROR = "internal_error"
 }
 

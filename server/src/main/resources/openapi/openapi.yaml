@@ -797,6 +797,36 @@ paths:
               schema: { $ref: "#/components/schemas/NutritionGoals" }
         "400": { $ref: "#/components/responses/BadRequest" }
 
+  /v1/nutrition/scan:
+    post:
+      tags: [Nutrition]
+      security: [{ bearerAuth: [] }]
+      summary: Ovqat suratini o'qish
+      description: >
+        Rasmni model o'qiydi va taxminiy qiymatlarni qaytaradi. Hech narsa yozilmaydi —
+        foydalanuvchi porsiyani to'g'rilagach, `POST /v1/nutrition/meals` yozadi.
+        Premium obuna va kunlik limit talab qilinadi.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/FoodScanRequest" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FoodScanResult" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "402": { $ref: "#/components/responses/EntitlementRequired" }
+        "403": { $ref: "#/components/responses/ConsentRequired" }
+        "429": { $ref: "#/components/responses/LimitReached" }
+        "503":
+          description: "Model javob bermadi (`upstream_unavailable`) — qayta urinish yoki qo'lda kiritish"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiErrorResponse" }
+
   /v1/nutrition/foods:
     get:
       tags: [Nutrition]
@@ -2709,6 +2739,37 @@ components:
         logs:
           type: array
           items: { $ref: "#/components/schemas/DailyLog" }
+
+    FoodScanRequest:
+      type: object
+      required: [imageBase64]
+      properties:
+        imageBase64:
+          type: string
+          description: "JPEG yoki PNG, base64. Eng ko'pi ~4 MB rasm."
+        mimeType:
+          type: string
+          enum: [image/jpeg, image/png, image/webp]
+          default: image/jpeg
+
+    FoodScanResult:
+      type: object
+      description: "Bir porsiya uchun taxminiy baho — o'lchov emas"
+      properties:
+        isFood: { type: boolean }
+        dish: { type: string }
+        confidence: { type: integer, minimum: 0, maximum: 100 }
+        kcal: { type: integer }
+        proteinG: { type: integer }
+        fatG: { type: integer }
+        carbsG: { type: integer }
+        fibreG: { type: integer, nullable: true }
+        sugarG: { type: integer, nullable: true }
+        sodiumMg: { type: integer, nullable: true }
+        message:
+          type: string
+          nullable: true
+          description: "isFood false bo'lganda sabab"
 
     MindPracticeKind:
       type: string

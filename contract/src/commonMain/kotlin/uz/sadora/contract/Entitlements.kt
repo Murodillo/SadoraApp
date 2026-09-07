@@ -20,6 +20,9 @@ object FeatureKeys {
     const val LEARN_PREMIUM = "learn_premium"
     const val WEARABLE_SYNC = "wearable_sync"
     const val DATA_EXPORT = "data_export"
+
+    /** Reading a photograph of a meal. Premium, metered, and billed like an AI call. */
+    const val FOOD_SCAN = "food_scan"
 }
 
 /**

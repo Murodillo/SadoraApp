@@ -16,6 +16,7 @@ import uz.sadora.server.billing.UnconfiguredStoreVerifier
 import uz.sadora.server.ai.AiService
 import uz.sadora.server.ai.AiUsageRepository
 import uz.sadora.server.ai.GeminiAnswerer
+import uz.sadora.server.ai.GeminiFoodVision
 import uz.sadora.server.community.CommunityModerationService
 import uz.sadora.server.community.CommunityRepository
 import uz.sadora.server.community.CommunityService
@@ -125,11 +126,21 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
         config = config,
     )
 
+    val aiUsageRepository = AiUsageRepository()
+
     val healthAccess = HealthAccess(userRepository, entitlementService)
     val healthService = HealthService(healthRepository, healthAccess)
     val mindService = MindService(mindRepository, healthRepository, healthAccess)
     val appointmentService = AppointmentService(appointmentRepository, healthAccess)
-    val nutritionService = NutritionService(nutritionRepository, healthAccess)
+    val nutritionService = NutritionService(
+        nutrition = nutritionRepository,
+        access = healthAccess,
+        // Same key and same model as the chat, and the same rule: no key, no model
+        // object, so the scanner reports itself unavailable instead of failing per call.
+        vision = config.ai.apiKey?.let { GeminiFoodVision(outboundHttpClient, config.ai) },
+        visionConfig = config.ai,
+        usage = aiUsageRepository,
+    )
     val medicationService = MedicationService(medicationRepository, healthAccess)
     val wearableService = WearableService(wearableRepository, healthAccess)
 
@@ -166,7 +177,6 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
         entitlements = entitlementService,
     )
 
-    val aiUsageRepository = AiUsageRepository()
     val aiGateway = AiGateway(
         config = config.ai,
         usage = aiUsageRepository,

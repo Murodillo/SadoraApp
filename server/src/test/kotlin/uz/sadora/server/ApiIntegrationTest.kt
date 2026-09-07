@@ -71,6 +71,7 @@ import uz.sadora.contract.CreateCommentRequest
 import uz.sadora.contract.CreatePostRequest
 import uz.sadora.contract.CycleBaseline
 import uz.sadora.contract.CycleStatus
+import uz.sadora.contract.FoodScanRequest
 import uz.sadora.contract.DailyLog
 import uz.sadora.contract.DeviceInfo
 import uz.sadora.contract.Entitlements
@@ -251,6 +252,57 @@ class ApiIntegrationTest {
             json(SaveAppointmentRequest(title = "Qon tahlili", scheduledOn = today))
         }
         assertEquals(HttpStatusCode.Forbidden, refused.status, refused.bodyAsTextSafe())
+    }
+
+    // ---------------------------------------------------------------- food scanner
+
+    /**
+     * The scanner is a paid model call, so it has the same three gates the chat has, in
+     * the same order: consent, then the subscription, then the limit. This pins the two
+     * refusals a free account should see before any image is ever sent anywhere.
+     */
+    @Test
+    fun `the food scanner refuses a free account and a malformed image`() = api {
+        val her = signUp()
+        onboard(her, referredByDoctor = null, storeHealth = true)
+
+        // Free tier: the feature is not in the plan, so it is 402 rather than a bad request.
+        val refused = client.post("/v1/nutrition/scan") {
+            auth(her.token)
+            json(FoodScanRequest(imageBase64 = "aGVsbG8=", mimeType = "image/jpeg"))
+        }
+        assertEquals(HttpStatusCode.PaymentRequired, refused.status, refused.bodyAsTextSafe())
+
+        postAck(
+            "/v1/admin/users/${her.userId}/premium",
+            adminToken(),
+            uz.sadora.server.admin.GrantPremiumRequest(reason = "integration test"),
+        )
+
+        // With the plan, the request itself is validated before anything leaves the box.
+        val empty = client.post("/v1/nutrition/scan") {
+            auth(her.token)
+            json(FoodScanRequest(imageBase64 = "", mimeType = "image/jpeg"))
+        }
+        assertEquals(HttpStatusCode.BadRequest, empty.status, empty.bodyAsTextSafe())
+
+        val wrongType = client.post("/v1/nutrition/scan") {
+            auth(her.token)
+            json(FoodScanRequest(imageBase64 = "aGVsbG8=", mimeType = "application/pdf"))
+        }
+        assertEquals(HttpStatusCode.BadRequest, wrongType.status, wrongType.bodyAsTextSafe())
+
+        // No model is configured in a test run, so a well-formed request says the
+        // scanner could not answer rather than inventing a dish.
+        val noModel = client.post("/v1/nutrition/scan") {
+            auth(her.token)
+            json(FoodScanRequest(imageBase64 = "aGVsbG8=", mimeType = "image/jpeg"))
+        }
+        assertEquals(HttpStatusCode.ServiceUnavailable, noModel.status, noModel.bodyAsTextSafe())
+        assertEquals(
+            ErrorCodes.UPSTREAM_UNAVAILABLE,
+            noModel.body<ApiErrorResponse>().error.code,
+        )
     }
 
     // ---------------------------------------------------------------- community

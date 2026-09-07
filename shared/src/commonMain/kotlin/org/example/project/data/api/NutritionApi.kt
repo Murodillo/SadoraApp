@@ -8,6 +8,8 @@ import org.example.project.data.HttpMethodKind
 import uz.sadora.contract.Ack
 import uz.sadora.contract.AddWaterRequest
 import uz.sadora.contract.FoodItem
+import uz.sadora.contract.FoodScanRequest
+import uz.sadora.contract.FoodScanResult
 import uz.sadora.contract.LogMealRequest
 import uz.sadora.contract.Meal
 import uz.sadora.contract.NutritionDay
@@ -38,6 +40,13 @@ class NutritionApi(private val caller: ApiCaller) {
 
     suspend fun updateGoals(request: UpdateNutritionGoalsRequest): ApiResult<NutritionGoals> =
         caller.authenticated("v1/nutrition/goals", HttpMethodKind.PUT) { setBody(request) }
+
+    /**
+     * A photograph of a meal. Nothing is logged by this call — the estimate comes back,
+     * she corrects the portion, and [addMeal] is what writes it down.
+     */
+    suspend fun scan(request: FoodScanRequest): ApiResult<FoodScanResult> =
+        caller.authenticated("v1/nutrition/scan", HttpMethodKind.POST) { setBody(request) }
 
     suspend fun searchFoods(query: String?): ApiResult<List<FoodItem>> {
         val suffix = query?.takeIf { it.isNotBlank() }?.let { "?q=$it" }.orEmpty()

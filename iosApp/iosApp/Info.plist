@@ -13,5 +13,10 @@
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
+	<!-- The food scanner. iOS terminates the app on present without these. -->
+	<key>NSCameraUsageDescription</key>
+	<string>SADORA ovqat suratini o'qib, taxminiy kaloriya va makrolarni ko'rsatadi.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Galereyadan ovqat suratini tanlab, uni skanerdan o'tkazishingiz mumkin.</string>
 </dict>
 </plist>

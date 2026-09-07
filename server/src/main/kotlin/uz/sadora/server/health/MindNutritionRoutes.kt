@@ -16,6 +16,7 @@ import kotlinx.datetime.LocalDate
 import kotlinx.datetime.minus
 import uz.sadora.contract.Ack
 import uz.sadora.contract.AddWaterRequest
+import uz.sadora.contract.FoodScanRequest
 import uz.sadora.contract.LogMealRequest
 import uz.sadora.contract.LogPracticeRequest
 import uz.sadora.contract.MindCheckIn
@@ -108,6 +109,15 @@ fun Route.nutritionRoutes(nutrition: NutritionService) {
             put("/goals") {
                 val request = call.receive<UpdateNutritionGoalsRequest>()
                 call.respond(nutrition.updateGoals(call.requireUserId(), request))
+            }
+
+            /**
+             * A photograph in, an estimate out. Nothing is written: the app shows the
+             * result, she corrects the portion, and logging it is a separate request.
+             */
+            post("/scan") {
+                val request = call.receive<FoodScanRequest>()
+                call.respond(nutrition.scan(call.requireUserId(), request))
             }
 
             get("/foods") {

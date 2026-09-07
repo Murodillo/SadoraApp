@@ -725,6 +725,34 @@ interface ModuleStrings {
     val payWithAppStore: String
     val payWithGooglePlay: String
 
+    // ---- food scanner
+    val scannerTitle: String
+    val scannerFrameHint: String
+    val scannerLightHint: String
+    val scannerGallery: String
+    val scannerShutter: String
+    val scannerManual: String
+    val scannerPremium: String
+    val scannerUnavailable: String
+    val scannerUnavailableBody: String
+    val analysing: String
+    val analysingWait: String
+    val scanFailed: String
+    val scanFailedBody: String
+    val notFood: String
+    val scanResult: String
+    fun scanConfidence(percent: Int): String
+    fun portionAndKcal(portion: String, kcal: String): String
+    val nutrients: String
+    val fibre: String
+    val sugar: String
+    val sodium: String
+    val portion: String
+    val portionHint: String
+    val didYouEatIt: String
+    val yesIAte: String
+    val planningToEat: String
+
     // ---- journal
     val journalTitle: String
     val journalPrivate: String

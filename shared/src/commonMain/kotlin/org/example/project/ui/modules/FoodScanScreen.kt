@@ -40,51 +40,28 @@ import org.example.project.ui.components.SadoraCard
 import org.example.project.ui.components.SadoraTopBar
 import org.example.project.ui.components.ScreenContent
 import org.example.project.ui.components.noRippleClickable
-
-/** What the scanner recognised. Fixed until a vision model sits behind the camera. */
-internal data class ScanResult(
-    val dish: String,
-    val emoji: String,
-    val confidence: Int,
-    val kcal: Int,
-    val protein: Int,
-    val fat: Int,
-    val carbs: Int,
-    val fibreG: Int,
-    val sugarG: Int,
-    val sodiumMg: Int,
-)
-
-internal val sampleScan = ScanResult(
-    dish = "Losos, kinoa va avokado",
-    emoji = "🥗",
-    confidence = 82,
-    kcal = 450,
-    protein = 30,
-    fat = 18,
-    carbs = 35,
-    fibreG = 6,
-    sugarG = 2,
-    sodiumMg = 320,
-)
+import org.example.project.i18n.strings
+import uz.sadora.contract.FoodScanResult
 
 /**
- * "Skan natijasi" — the deck's result screen.
+ * "Skan natijasi" — what the model made of the photo.
  *
  * Three things the design insists on: the estimate carries a confidence figure, it is
  * labelled as approximate, and the portion can be corrected before anything reaches
- * the diary. The question at the bottom separates eating it from merely checking.
+ * the diary. The question at the bottom separates eating it from merely checking —
+ * which is the whole reason the scan writes nothing on its own.
  */
 @Composable
 fun FoodScanScreen(
+    scan: FoodScanResult,
     state: AppState,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val c = Sadora.colors
-    val scan = sampleScan
-    var portion by remember { mutableStateOf(1.0f) }
-    var showMore by remember { mutableStateOf(false) }
+    val t = strings.modules
+    val n = strings.nutrition
+    var portion by remember(scan) { mutableStateOf(1.0f) }
 
     fun scaled(value: Int) = (value * portion).toInt()
 
@@ -97,26 +74,18 @@ fun FoodScanScreen(
                 time = nowTimeLabel(),
                 description = scan.dish,
                 calories = scaled(scan.kcal),
-                protein = scaled(scan.protein),
-                fat = scaled(scan.fat),
-                carbs = scaled(scan.carbs),
+                protein = scaled(scan.proteinG),
+                fat = scaled(scan.fatG),
+                carbs = scaled(scan.carbsG),
             ),
         )
         onClose()
     }
 
     Column(modifier) {
-        SadoraTopBar("Skan natijasi", onBack = onClose, centered = true)
+        SadoraTopBar(t.scanResult, onBack = onClose, centered = true)
 
         ScreenContent {
-            item {
-                ImagePlaceholder(
-                    Modifier.fillMaxWidth().aspectRatio(1.25f),
-                    emoji = scan.emoji,
-                    shape = Radius.card,
-                )
-            }
-
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(Spacing.xxs)) {
                     Row(
@@ -125,10 +94,13 @@ fun FoodScanScreen(
                         horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
                     ) {
                         Text(scan.dish, style = Sadora.type.h2, color = c.text, modifier = Modifier.weight(1f))
-                        SadoraBadge("Ishonch ${scan.confidence}%", if (scan.confidence >= 80) BadgeTone.Success else BadgeTone.Warning)
+                        SadoraBadge(
+                            t.scanConfidence(scan.confidence),
+                            if (scan.confidence >= ConfidentEnough) BadgeTone.Success else BadgeTone.Warning,
+                        )
                     }
                     Text(
-                        "${Fmt.oneDecimal(portion)} porsiya • ${Fmt.int(scaled(scan.kcal))} kkal • taxminan",
+                        t.portionAndKcal(Fmt.oneDecimal(portion), Fmt.int(scaled(scan.kcal))),
                         style = Sadora.type.body,
                         color = c.muted,
                     )
@@ -137,29 +109,25 @@ fun FoodScanScreen(
 
             item {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                    MacroCell("Oqsil", "${scaled(scan.protein)} g", c.protein, Modifier.weight(1f))
-                    MacroCell("Yog'", "${scaled(scan.fat)} g", c.fat, Modifier.weight(1f))
-                    MacroCell("Uglevod", "${scaled(scan.carbs)} g", c.carbs, Modifier.weight(1f))
+                    MacroCell(n.protein, n.grams(scaled(scan.proteinG)), c.protein, Modifier.weight(1f))
+                    MacroCell(n.fat, n.grams(scaled(scan.fatG)), c.fat, Modifier.weight(1f))
+                    MacroCell(n.carbs, n.grams(scaled(scan.carbsG)), c.carbs, Modifier.weight(1f))
                 }
             }
 
-            item {
-                SadoraCard {
-                    Text("Ozuqaviy qiymat", style = Sadora.type.h3, color = c.text)
-                    NutrientLine("Tola", "${scaled(scan.fibreG)} g")
-                    NutrientLine("Shakar", "${scaled(scan.sugarG)} g")
-                    NutrientLine("Natriy", "${scaled(scan.sodiumMg)} mg")
-                    if (showMore) {
-                        NutrientLine("Kaliy", "${scaled(680)} mg")
-                        NutrientLine("Omega-3", "${Fmt.oneDecimal(1.8f * portion)} g")
-                        NutrientLine("Temir", "${Fmt.oneDecimal(2.4f * portion)} mg")
+            // Only what the model actually returned. The "ko'proq ko'rsatish" row used
+            // to unfold potassium, omega-3 and iron, none of which anything measured.
+            val extra = listOfNotNull(
+                scan.fibreG?.let { t.fibre to n.grams(scaled(it)) },
+                scan.sugarG?.let { t.sugar to n.grams(scaled(it)) },
+                scan.sodiumMg?.let { t.sodium to "${scaled(it)} mg" },
+            )
+            if (extra.isNotEmpty()) {
+                item {
+                    SadoraCard {
+                        Text(t.nutrients, style = Sadora.type.h3, color = c.text)
+                        extra.forEach { (label, value) -> NutrientLine(label, value) }
                     }
-                    Text(
-                        if (showMore) "Kamroq ko'rsatish" else "Ko'proq ko'rsatish",
-                        style = Sadora.type.body.copy(fontWeight = FontWeight.SemiBold),
-                        color = c.textAccent,
-                        modifier = Modifier.noRippleClickable { showMore = !showMore },
-                    )
                 }
             }
 
@@ -171,8 +139,8 @@ fun FoodScanScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                     ) {
                         Column {
-                            Text("Porsiya", style = Sadora.type.h3, color = c.text)
-                            Text("AI baholashi taxminiy — o'zingiz to'g'rilang", style = Sadora.type.body, color = c.muted)
+                            Text(t.portion, style = Sadora.type.h3, color = c.text)
+                            Text(t.portionHint, style = Sadora.type.body, color = c.muted)
                         }
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -192,12 +160,17 @@ fun FoodScanScreen(
                     verticalArrangement = Arrangement.spacedBy(Spacing.sm),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    Text("Buni yedingizmi?", style = Sadora.type.h2, color = c.text, textAlign = TextAlign.Center)
+                    Text(t.didYouEatIt, style = Sadora.type.h2, color = c.text, textAlign = TextAlign.Center)
                     Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                        SadoraButton("Yo'q", onClick = onClose, tone = ButtonTone.Outline, modifier = Modifier.weight(1f))
-                        SadoraButton("Ha, yedim", onClick = ::logIt, modifier = Modifier.weight(1f))
+                        SadoraButton(
+                            strings.common.no,
+                            onClick = onClose,
+                            tone = ButtonTone.Outline,
+                            modifier = Modifier.weight(1f),
+                        )
+                        SadoraButton(t.yesIAte, onClick = ::logIt, modifier = Modifier.weight(1f))
                     }
-                    SadoraButton("Yeyishni rejalashtiryapman", onClick = onClose, tone = ButtonTone.Ghost)
+                    SadoraButton(t.planningToEat, onClick = onClose, tone = ButtonTone.Ghost)
                 }
             }
         }
@@ -239,3 +212,6 @@ private fun StepperButton(glyph: String, onClick: () -> Unit) {
         Text(glyph, style = Sadora.type.h2, color = c.text)
     }
 }
+
+/** Above this the identification is shown as confident; below it, as a guess. */
+private const val ConfidentEnough = 80

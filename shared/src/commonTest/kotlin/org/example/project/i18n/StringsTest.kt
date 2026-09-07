@@ -121,6 +121,12 @@ class StringsTest {
                     balanceTitle, fourDirections, balanceDisclaimer, balanced, someRoomIn("x"),
                     fallingBehind("x"), food, water, activity, sleep, ofKcal("1", "2"),
                     ofLitres("1", "2"), ofSteps("1", "2"), ofSleep("6s"),
+                    scannerTitle, scannerFrameHint, scannerLightHint, scannerGallery,
+                    scannerShutter, scannerManual, scannerPremium, scannerUnavailable,
+                    scannerUnavailableBody, analysing, analysingWait, scanFailed,
+                    scanFailedBody, notFood, scanResult, scanConfidence(82),
+                    portionAndKcal("1,0", "450"), nutrients, fibre, sugar, sodium, portion,
+                    portionHint, didYouEatIt, yesIAte, planningToEat,
                     journalTitle, journalPrivate, journalLabel, journalPrompt, journalEmpty,
                     journalEmptyBody, journalDeleteTitle, journalDeleteBody, journalDeleteAction,
                     sourcesTitle, sourcesConnected(2), lastSample("x"), noSampleYet, sourcesEmpty,
@@ -286,6 +292,8 @@ class StringsTest {
             assertNotEquals(StringsUz.settings.medicalDisclaimer, t.settings.medicalDisclaimer)
             assertNotEquals(StringsUz.modules.journalEmptyBody, t.modules.journalEmptyBody)
             assertNotEquals(StringsUz.modules.sourcesNote, t.modules.sourcesNote)
+            assertNotEquals(StringsUz.modules.portionHint, t.modules.portionHint)
+            assertNotEquals(StringsUz.modules.scanFailedBody, t.modules.scanFailedBody)
             assertNotEquals(StringsUz.dates.months.first(), t.dates.months.first())
             assertNotEquals(StringsUz.dates.weekdays.first(), t.dates.weekdays.first())
             assertNotEquals(StringsUz.dates.hoursAgo(3), t.dates.hoursAgo(3))

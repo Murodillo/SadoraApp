@@ -96,3 +96,17 @@ class ConsentRequiredException(consentKey: String) : ApiException(
     "Sog'liq ma'lumotlarini saqlash uchun rozilik kerak",
     mapOf("consent" to consentKey),
 )
+
+/**
+ * Raised when something the API calls out to could not answer.
+ *
+ * 503 rather than 500: the request was fine and trying again may well work, which is
+ * exactly what the food scanner's screen offers to do.
+ */
+class UpstreamUnavailableException(
+    message: String,
+) : ApiException(
+    HttpStatusCode.ServiceUnavailable,
+    ErrorCodes.UPSTREAM_UNAVAILABLE,
+    message,
+)

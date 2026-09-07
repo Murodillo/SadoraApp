@@ -83,9 +83,7 @@ import org.example.project.ui.modules.AddMedicationScreen
 import org.example.project.ui.modules.ArticleScreen
 import org.example.project.ui.modules.BalanceScreen
 import org.example.project.ui.modules.DataSourcesScreen
-import org.example.project.ui.modules.FoodScanAnalyzingScreen
-import org.example.project.ui.modules.FoodScanCameraScreen
-import org.example.project.ui.modules.FoodScanScreen
+import org.example.project.ui.modules.FoodScannerScreen
 import org.example.project.ui.modules.FoodSearchScreen
 import org.example.project.ui.modules.InsightsScreen
 import org.example.project.ui.modules.KnowledgeScreen
@@ -533,17 +531,12 @@ private fun PushedScreen(
         // Nutrition: camera -> analysing -> result is one linear flow, so each step
         // replaces the last rather than stacking on it.
         Route.FoodSearch -> FoodSearchScreen(state, health, close)
-        Route.FoodScanCamera -> FoodScanCameraScreen(
+        Route.FoodScanCamera -> FoodScannerScreen(
             state = state,
-            onCapture = { navigator.replaceTop(Route.FoodScanAnalyzing) },
+            health = health,
             onManualEntry = { navigator.replaceTop(Route.FoodSearch) },
             onClose = close,
         )
-        Route.FoodScanAnalyzing -> FoodScanAnalyzingScreen(
-            onDone = { navigator.replaceTop(Route.FoodScan) },
-            onCancel = close,
-        )
-        Route.FoodScan -> FoodScanScreen(state, close)
         Route.Balance -> BalanceScreen(state, close)
 
         Route.MindJournal -> MindJournalScreen(state, close)

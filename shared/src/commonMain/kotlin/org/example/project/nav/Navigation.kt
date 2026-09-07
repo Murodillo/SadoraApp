@@ -40,8 +40,6 @@ sealed interface Route {
     // Nutrition
     data object FoodSearch : Route
     data object FoodScanCamera : Route
-    data object FoodScanAnalyzing : Route
-    data object FoodScan : Route
     data object Balance : Route
 
     // Modules
@@ -77,8 +75,7 @@ sealed interface Route {
  * on its own dark ground in the deck, and a camera viewfinder has nowhere to put a bar.
  */
 val Route.isFullScreen: Boolean
-    get() = this == Route.AiChat || this == Route.FoodScanCamera ||
-        this == Route.FoodScanAnalyzing || this == Route.Paywall
+    get() = this == Route.AiChat || this == Route.FoodScanCamera || this == Route.Paywall
 
 /**
  * Where an AI entry point leads. The chat runs for Premium only; a free account sees

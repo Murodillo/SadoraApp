@@ -440,6 +440,15 @@ class HealthController(
         return true
     }
 
+    /**
+     * Reads a photo. Null when the call failed — the screen offers to try again or to
+     * enter it by hand rather than showing a dish the model did not identify.
+     */
+    suspend fun scanFood(imageBase64: String, mimeType: String): uz.sadora.contract.FoodScanResult? {
+        val api = nutritionApi ?: return null
+        return calls.run { api.scan(uz.sadora.contract.FoodScanRequest(imageBase64, mimeType)) }
+    }
+
     suspend fun addMeal(request: LogMealRequest): Boolean {
         val api = nutritionApi ?: return true
         calls.run { api.addMeal(request) } ?: return false

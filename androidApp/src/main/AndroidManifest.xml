@@ -5,6 +5,19 @@
          connection error that looks exactly like a flaky network. -->
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <!--
+        The food scanner deliberately does NOT declare android.permission.CAMERA.
+        It never opens the camera itself — it sends ACTION_IMAGE_CAPTURE to the system
+        camera app, which holds the permission. Declaring it flips that: Android then
+        requires the *sender* to hold it too, and since it is revoked by default the
+        intent throws a SecurityException the moment the shutter is tapped. That is
+        exactly what happened on an S23 the first time this was tried.
+
+        The gallery needs no permission either: PickVisualMedia returns the one image
+        the user picked. The camera itself is optional so the app installs without one.
+    -->
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"

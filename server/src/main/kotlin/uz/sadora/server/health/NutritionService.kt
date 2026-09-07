@@ -5,6 +5,8 @@ import kotlinx.datetime.LocalDate
 import uz.sadora.contract.AddWaterRequest
 import uz.sadora.contract.FeatureKeys
 import uz.sadora.contract.FoodItem
+import uz.sadora.contract.FoodScanRequest
+import uz.sadora.contract.FoodScanResult
 import uz.sadora.contract.LogMealRequest
 import uz.sadora.contract.Meal
 import uz.sadora.contract.NutritionDay
@@ -27,7 +29,75 @@ import uz.sadora.server.core.now
 class NutritionService(
     private val nutrition: NutritionRepository,
     private val access: HealthAccess,
+    /** Null when no model is configured; the scan endpoint then says so rather than guessing. */
+    private val vision: uz.sadora.server.ai.FoodVision? = null,
+    private val visionConfig: uz.sadora.server.config.AiConfig? = null,
+    private val usage: uz.sadora.server.ai.AiUsageRecorder? = null,
 ) {
+
+    /** True when a photo could be read at all — the app asks before offering the camera. */
+    val scannerAvailable: Boolean get() = vision != null && visionConfig?.apiKey != null
+
+    /**
+     * Reads a photo of a meal.
+     *
+     * Gated like every other paid AI call: consent, then entitlement, then the daily
+     * limit the operator sets. It writes nothing — the result comes back to the screen,
+     * she corrects the portion, and only then is a meal logged. That separation is what
+     * keeps an estimate out of the diary until she has agreed to it.
+     */
+    suspend fun scan(userId: Uuid, request: FoodScanRequest): FoodScanResult {
+        val user = access.requireWritable(userId, FeatureKeys.FOOD_SCAN)
+        val model = vision ?: throw uz.sadora.server.core.UpstreamUnavailableException(
+            "Skaner hozircha ishlamayapti. Taomni qo'lda qo'shishingiz mumkin.",
+        )
+        val image = request.imageBase64.trim()
+        if (image.isEmpty()) throw ValidationException("imageBase64", "Rasm bo'sh")
+        // Base64 is about a third larger than the bytes it carries, so the cap is on what
+        // arrives rather than on what the phone thinks it sent.
+        if (image.length > MAX_IMAGE_CHARS) {
+            throw ValidationException("imageBase64", "Rasm juda katta — kichikroq qilib yuboring")
+        }
+        if (request.mimeType !in ALLOWED_MIME) {
+            throw ValidationException("mimeType", "Faqat JPEG yoki PNG")
+        }
+
+        val started = kotlin.time.TimeSource.Monotonic.markNow()
+        return try {
+            val answer = model.recognise(image, request.mimeType, user.language)
+            usage?.record(
+                uz.sadora.server.ai.AiUsageEntry(
+                    userId = userId,
+                    source = uz.sadora.server.ai.AiSource.MODEL,
+                    model = answer.model,
+                    feature = FeatureKeys.FOOD_SCAN,
+                    promptTokens = answer.promptTokens,
+                    completionTokens = answer.completionTokens,
+                    costMicros = visionConfig?.costMicros(answer.promptTokens, answer.completionTokens) ?: 0,
+                    latencyMs = started.elapsedNow().inWholeMilliseconds.toInt(),
+                    outcome = "ok",
+                ),
+            )
+            answer.result
+        } catch (failure: uz.sadora.server.ai.ModelUnavailableException) {
+            usage?.record(
+                uz.sadora.server.ai.AiUsageEntry(
+                    userId = userId,
+                    source = uz.sadora.server.ai.AiSource.FALLBACK,
+                    model = model.name,
+                    feature = FeatureKeys.FOOD_SCAN,
+                    latencyMs = started.elapsedNow().inWholeMilliseconds.toInt(),
+                    outcome = "error",
+                    errorCode = failure.code,
+                ),
+            )
+            // There is no rule engine that can look at a photograph, so this one really
+            // does fail — and says so, rather than returning a plausible dish.
+            throw uz.sadora.server.core.UpstreamUnavailableException(
+                "Rasmni o'qib bo'lmadi. Qaytadan urinib ko'ring yoki qo'lda kiriting.",
+            )
+        }
+    }
 
     suspend fun day(userId: Uuid, date: LocalDate?): NutritionDay {
         val user = access.requireUser(userId)
@@ -134,5 +204,9 @@ class NutritionService(
         const val MAX_MACRO = 1_000
         const val MAX_WATER_STEP = 2_000
         const val FOOD_SEARCH_LIMIT = 50
+
+        /** Roughly 4 MB of image once base64 is undone. */
+        const val MAX_IMAGE_CHARS = 5_600_000
+        val ALLOWED_MIME = setOf("image/jpeg", "image/png", "image/webp")
     }
 }

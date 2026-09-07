@@ -62,7 +62,7 @@ fun NutritionScreen(
 
     Column(modifier) {
         SadoraTopBar(
-            "Ovqatlanish",
+            t.title,
             centered = true,
             trailing = {
                 CircleIconButton(SadoraIcons.Calendar, contentDescription = t.insights) { onOpen(Route.Insights) }
@@ -74,7 +74,7 @@ fun NutritionScreen(
 
             item {
                 SectionHeader(
-                    "Ovqatlar",
+                    t.meals,
                     trailing = {
                         RoundIconButton(SadoraIcons.Plus, onClick = { onOpen(Route.FoodSearch) }, filled = false, size = 36.dp, contentDescription = t.addMeal)
                     },
@@ -101,7 +101,7 @@ fun NutritionScreen(
                     ) {
                         IconTile(SadoraIcons.Drop, tint = c.accent, size = 40.dp)
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                            Text("Suv", style = Sadora.type.body, color = c.muted)
+                            Text(t.water, style = Sadora.type.body, color = c.muted)
                             Text(
                                 t.waterOfGoal(Fmt.litres(state.waterMl), Fmt.litres(state.waterGoalMl)),
                                 style = Sadora.type.h3,
