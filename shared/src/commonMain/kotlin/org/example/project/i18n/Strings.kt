@@ -69,11 +69,17 @@ interface CommonStrings {
     val steps: String
     val minutesShort: String
     fun days(count: Int): String
+
+    /** "6s 40d" — a duration in hours and minutes, abbreviated per language. */
+    fun hoursMinutes(hours: Int, minutes: Int): String
 }
 
 interface TodayStrings {
     /** The header line: the greeting, then the app's own sentence about the day. */
     fun greetingLine(greeting: String): String
+
+    /** "Salom, Malika!", or just the greeting when the name is not known yet. */
+    fun hello(name: String): String
 
     val aiFootnote: String
     val aiFreePrompt: String
@@ -143,6 +149,9 @@ interface TabStrings {
 /** The stage names, as the app says them back to her in a settings row or a header. */
 interface LifeStageStrings {
     fun title(stage: LifeStage): String
+
+    /** The line under the title: what that stage is about, in a few words. */
+    fun subtitle(stage: LifeStage): String
 }
 
 interface WelcomeStrings {

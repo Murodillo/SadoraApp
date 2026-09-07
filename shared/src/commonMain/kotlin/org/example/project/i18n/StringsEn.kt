@@ -35,6 +35,15 @@ object StringsEn : Strings {
             LifeStage.Perimenopause -> "Perimenopause"
             LifeStage.Menopause -> "Menopause"
         }
+
+        override fun subtitle(stage: LifeStage) = when (stage) {
+            LifeStage.Cycle -> "Periods, ovulation, symptoms"
+            LifeStage.TryingToConceive -> "Fertile days, getting ready"
+            LifeStage.Pregnancy -> "Week, growth, appointments"
+            LifeStage.Postpartum -> "Recovery, sleep, mood"
+            LifeStage.Perimenopause -> "Regularity, symptoms"
+            LifeStage.Menopause -> "Health and mood"
+        }
     }
 
     override val welcome = object : WelcomeStrings {
@@ -155,6 +164,7 @@ object StringsEn : Strings {
         override val edit = "Edit"
         override val done = "Done"
 
+        override fun hoursMinutes(hours: Int, minutes: Int) = "${hours}h ${minutes}m"
         override val litres = "l"
         override val millilitres = "ml"
         override val kcal = "kcal"
@@ -167,6 +177,7 @@ object StringsEn : Strings {
         override fun greetingLine(greeting: String) =
             "$greeting — a lovely day to take care of yourself 🌸"
 
+        override fun hello(name: String) = if (name.isBlank()) "Hello!" else "Hello, $name!"
         override val aiFootnote = "Based on your data · written by AI"
         override val aiFreePrompt = "Ask anything about your health and how you feel"
 

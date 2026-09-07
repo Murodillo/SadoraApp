@@ -255,8 +255,8 @@ Nutrition, Meds, wearable, maxfiy chat, tahlillar (`GET /v1/insights`), Premium 
 (Payme va Click) va AI Gateway — javobni haqiqiy model (Gemini) yozadi, kalit bo'lmasa
 yoki `ai_model_enabled` o'chirilgan bo'lsa qoidalar javob beradi.
 
-Sog'liq yozuvlari serverda saqlanadi: sikl, ovqat, suv, kayfiyat va dorilar qurilma
-almashsa ham qoladi. Sessiya qurilmada saqlanadi, shuning uchun ilova qayta ishga
+Sog'liq yozuvlari serverda saqlanadi: sikl, ovqat, suv, kayfiyat, kundalik, dorilar va
+tadbirlar (ko'rik, UTT, tahlil) qurilma almashsa ham qoladi. Sessiya qurilmada saqlanadi, shuning uchun ilova qayta ishga
 tushganda foydalanuvchi kirgan holida qoladi.
 
 Ulanish `data/SadoraController` va `data/HealthController` orqali: ekranlar wire
@@ -272,9 +272,12 @@ Hali yo'q:
 - **Apple/Google kirish** — tugmalar bor va server `idToken`ni tekshiradi, lekin
   platforma SDK'si hali o'sha tokenni bermaydi
 - **Qurilma integratsiyasi** — Apple Health / Oura ma'lumotlari namuna
-- **RU va EN tarjimalari** — `i18n/` qatlami qo'yildi va til
-  sozlamasi ishlaydi, lekin hozircha faqat birinchi bo'lak ko'chirilgan: tab yorliqlari,
-  xush kelibsiz ekrani, Profil va sozlamalar. Qolgan ekranlar hali kodda o'zbekcha
+- **RU va EN tarjimalari — qisman.** Kundalik ishlatiladigan sirt to'liq uch tilda:
+  beshta tab (Bugun, Yo'l, Ong, Ovqat, Profil), Uyqu, Tahlillar, Bilim, Dorilar,
+  Balans, Premium ekrani va domen atamalari (kayfiyat, sikl fazasi, salomlashuv).
+  Qolgani hali kodda o'zbekcha: ro'yxatdan o'tish savollari, huquqiy matnlar
+  (ular professional tarjimani talab qiladi), sozlama ichki ekranlari va bir nechta
+  ikkilamchi ekran
 - **AI javoblari faqat o'zbekcha** — prompt til so'ramaydi, shuning uchun rus yoki
   ingliz tilini tanlagan foydalanuvchi ham o'zbekcha javob oladi
 

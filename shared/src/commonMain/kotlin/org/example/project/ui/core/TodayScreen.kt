@@ -97,7 +97,7 @@ fun TodayScreen(
                 Box(Modifier.appearFromBelow(0)) {
                     if (state.isPremium) {
                         AiSummaryCard(
-                            body = premiumSummary(state, t),
+                            body = premiumSummary(state, t, strings.common),
                             showPremiumBadge = true,
                             footnote = t.aiFootnote,
                             onClick = { onOpen(state.aiRoute()) },
@@ -182,14 +182,14 @@ private fun StageCard(state: AppState, onOpen: () -> Unit) {
             horizontalArrangement = Arrangement.spacedBy(Spacing.md),
         ) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Spacing.xxs)) {
-                Text(if (cycle) "Sikl" else stage.title, style = Sadora.type.body, color = c.muted)
+                Text(if (cycle) t.cycleCard else strings.stages.title(stage), style = Sadora.type.body, color = c.muted)
                 Text(
                     when {
                         // The eyebrow above already names the stage; the headline says
                         // what it is about.
-                        !cycle -> stage.subtitle
+                        !cycle -> strings.stages.subtitle(stage)
                         !state.hasCyclePrediction -> t.notEnoughForPrediction
-                        else -> phase.label
+                        else -> strings.common.phase(phase)
                     },
                     style = Sadora.type.h2,
                     color = c.text,
@@ -197,7 +197,7 @@ private fun StageCard(state: AppState, onOpen: () -> Unit) {
                 val caption = when {
                     cycle -> t.cycleDayOf(state.cycleDay, state.averageCycleLength)
                     stage == LifeStage.Pregnancy || stage == LifeStage.Postpartum -> t.pregnancyWeek(weeks)
-                    else -> stage.subtitle
+                    else -> strings.stages.subtitle(stage)
                 }
                 Text(caption, style = Sadora.type.body, color = c.muted)
             }
@@ -299,8 +299,8 @@ internal fun ruleSummary(state: AppState, t: TodayStrings, common: CommonStrings
 }
 
 /** What the Premium card says on Today. Stands in for the AI daily summary. */
-private fun premiumSummary(state: AppState, t: TodayStrings): String =
-    t.sleptAndEnergy(state.sleepLabel(), state.energy >= 4) + " " + t.generalAdvice
+private fun premiumSummary(state: AppState, t: TodayStrings, common: CommonStrings): String =
+    t.sleptAndEnergy(state.sleepLabel(format = common::hoursMinutes), state.energy >= 4) + " " + t.generalAdvice
 
 /**
  * t.plan — the deck's checklist of what today still asks for.
@@ -355,7 +355,7 @@ private fun TodayPlanCard(
             if (waterLeft > 0) {
                 PlanRow(
                     emoji = "\uD83D\uDCA7",
-                    title = "Suv",
+                    title = t.water,
                     caption = t.waterLeft(waterLeft),
                     time = null,
                     tint = c.accent,
@@ -446,8 +446,8 @@ private fun HealthScoreCard(
             }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-                    SignalTile(t.sleep, state.sleepLabel(), Modifier.weight(1f), onClick = onOpenSleep)
-                    SignalTile(t.mood, state.mood.label, Modifier.weight(1f), emoji = state.mood.emoji, onClick = onOpenMind)
+                    SignalTile(t.sleep, state.sleepLabel(format = strings.common::hoursMinutes), Modifier.weight(1f), onClick = onOpenSleep)
+                    SignalTile(t.mood, strings.common.mood(state.mood), Modifier.weight(1f), emoji = state.mood.emoji, onClick = onOpenMind)
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
                     SignalTile(t.water, "${Fmt.litres(state.waterMl)} ${strings.common.litres}", Modifier.weight(1f), onClick = onAddWater)

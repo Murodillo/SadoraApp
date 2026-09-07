@@ -17,6 +17,7 @@ import kotlinx.datetime.LocalDate
 import org.example.project.design.Radius
 import org.example.project.design.Sadora
 import org.example.project.design.Spacing
+import org.example.project.i18n.strings
 import org.example.project.model.AppState
 import org.example.project.model.Fmt
 import org.example.project.ui.components.BadgeTone
@@ -64,7 +65,7 @@ fun CycleDayScreen(
                         if (cycleDay != null) {
                             Text("Sikl $cycleDay-kuni", style = Sadora.type.body, color = c.muted)
                         }
-                        if (phase != null) SadoraBadge(phase.label, BadgeTone.Estimated)
+                        if (phase != null) SadoraBadge(strings.common.phase(phase), BadgeTone.Estimated)
                     }
                 }
             }
@@ -82,7 +83,7 @@ fun CycleDayScreen(
                                 Text("$cycleDay", style = Sadora.type.data, color = c.text)
                             }
                             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                Text(phase.label, style = Sadora.type.h2, color = c.text)
+                                Text(strings.common.phase(phase), style = Sadora.type.h2, color = c.text)
                                 Text(phase.energyNote, style = Sadora.type.body, color = c.muted)
                             }
                         }
@@ -99,7 +100,7 @@ fun CycleDayScreen(
                         } else {
                             state.symptoms.forEach { LoggedLine("•", it) }
                         }
-                        LoggedLine(state.mood.emoji, "Kayfiyat — ${state.mood.label.lowercase()}")
+                        LoggedLine(state.mood.emoji, "Kayfiyat — ${strings.common.mood(state.mood).lowercase()}")
                         LoggedLine("⚡", "Energiya — ${state.energy} / 5")
                     } else {
                         Text("Bu kun uchun yozuv yo'q.", style = Sadora.type.body, color = c.muted)
@@ -119,7 +120,7 @@ fun CycleDayScreen(
                             Text("⌚", style = Sadora.type.h3)
                             Column(Modifier.weight(1f)) {
                                 Text(
-                                    "Uyqu ${state.sleepLabel()} · ${Fmt.int(state.steps)} qadam",
+                                    "Uyqu ${state.sleepLabel(format = strings.common::hoursMinutes)} · ${Fmt.int(state.steps)} qadam",
                                     style = Sadora.type.h3,
                                     color = c.text,
                                 )

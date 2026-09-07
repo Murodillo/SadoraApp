@@ -30,6 +30,7 @@ import org.example.project.design.Radius
 import org.example.project.design.Sadora
 import org.example.project.design.SadoraIcons
 import org.example.project.design.Spacing
+import org.example.project.i18n.strings
 import org.example.project.model.AppState
 import org.example.project.model.Fmt
 import org.example.project.model.Mood
@@ -423,7 +424,7 @@ fun PregnancyCheckInScreen(
                         horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
                     ) {
                         Mood.entries.forEach { mood ->
-                            val label = if (mood == Mood.Bad) "Qiyin" else mood.label
+                            val label = strings.common.mood(mood)
                             MoodCell(
                                 emoji = mood.emoji,
                                 label = label,

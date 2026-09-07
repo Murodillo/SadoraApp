@@ -29,6 +29,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import org.example.project.i18n.strings
 import org.example.project.design.IconSize
 import org.example.project.design.MinTouchTarget
 import org.example.project.design.Radius
@@ -233,7 +234,7 @@ fun GreetingHeader(
             verticalArrangement = Arrangement.spacedBy(Spacing.xxs),
         ) {
             Text(
-                if (name.isBlank()) "Salom!" else "Salom, $name!",
+                strings.today.hello(name),
                 style = Sadora.type.h1,
                 color = c.text,
             )

@@ -29,7 +29,7 @@ class StringsTest {
         add(t.tabs.nutrition)
         add(t.tabs.profile)
         LifeStage.entries.forEach { add(t.tabs.journey(it)) }
-        LifeStage.entries.forEach { add(t.stages.title(it)) }
+        LifeStage.entries.forEach { add(t.stages.title(it)); add(t.stages.subtitle(it)) }
 
         with(t.welcome) {
             addAll(
@@ -62,7 +62,7 @@ class StringsTest {
             Mood.entries.forEach { add(mood(it)); add(moodCaption(it)) }
             CyclePhase.entries.forEach { add(phase(it)); add(phaseFertility(it)); add(phaseEnergy(it)) }
             addAll(listOf(save, cancel, delete, close, add, edit, done))
-            addAll(listOf(litres, millilitres, kcal, steps, minutesShort, days(3)))
+            addAll(listOf(litres, millilitres, kcal, steps, minutesShort, days(3), hoursMinutes(6, 40)))
         }
         with(t.modules) {
             addAll(
@@ -134,7 +134,7 @@ class StringsTest {
         with(t.today) {
             addAll(
                 listOf(
-                    greetingLine("X"), aiFootnote, aiFreePrompt, cycleCard, notEnoughForPrediction,
+                    greetingLine("X"), hello("Malika"), hello(""), aiFootnote, aiFreePrompt, cycleCard, notEnoughForPrediction,
                     cycleDayOf(10, 28), pregnancyWeek(26), quickActions, journal, meditation,
                     breathing, reminders, summary, phaseSentence(10, "x"), waterRemaining(250),
                     waterGoalMet, doseDue("X", "09:00"), sleptAndEnergy("6s", true),
@@ -204,6 +204,9 @@ class StringsTest {
             assertNotEquals(StringsUz.modules.medsDisclaimer, t.modules.medsDisclaimer)
             assertNotEquals(StringsUz.modules.noCorrelationBody, t.modules.noCorrelationBody)
             assertNotEquals(StringsUz.modules.balanced, t.modules.balanced)
+            assertNotEquals(StringsUz.today.hello("X"), t.today.hello("X"))
+            assertNotEquals(StringsUz.stages.subtitle(LifeStage.Cycle), t.stages.subtitle(LifeStage.Cycle))
+            assertNotEquals(StringsUz.common.hoursMinutes(6, 40), t.common.hoursMinutes(6, 40))
         }
     }
 

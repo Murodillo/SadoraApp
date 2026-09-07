@@ -17,6 +17,7 @@ import org.example.project.data.HealthController
 import org.example.project.data.InsightsController
 import org.example.project.design.Sadora
 import org.example.project.design.Spacing
+import org.example.project.i18n.strings
 import org.example.project.model.AppState
 import org.example.project.model.Fmt
 import org.example.project.nav.Route
@@ -283,7 +284,7 @@ fun StageSleepMoodScreen(
                                 Modifier.weight(1f),
                                 verticalArrangement = Arrangement.spacedBy(6.dp),
                             ) {
-                                Text(state.sleepLabel(minutes), style = Sadora.type.h1, color = c.text)
+                                Text(state.sleepLabel(minutes, strings.common::hoursMinutes), style = Sadora.type.h1, color = c.text)
                                 Text("Maqsad · 8s", style = Sadora.type.body, color = c.muted)
                             }
                         }

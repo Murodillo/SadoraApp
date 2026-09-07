@@ -38,6 +38,15 @@ object StringsRu : Strings {
             LifeStage.Perimenopause -> "Перименопауза"
             LifeStage.Menopause -> "Менопауза"
         }
+
+        override fun subtitle(stage: LifeStage) = when (stage) {
+            LifeStage.Cycle -> "Менструация, овуляция, симптомы"
+            LifeStage.TryingToConceive -> "Фертильные дни, подготовка"
+            LifeStage.Pregnancy -> "Неделя, рост, визиты"
+            LifeStage.Postpartum -> "Восстановление, сон, настроение"
+            LifeStage.Perimenopause -> "Регулярность, симптомы"
+            LifeStage.Menopause -> "Здоровье и настроение"
+        }
     }
 
     override val welcome = object : WelcomeStrings {
@@ -158,6 +167,7 @@ object StringsRu : Strings {
         override val edit = "Изменить"
         override val done = "Готово"
 
+        override fun hoursMinutes(hours: Int, minutes: Int) = "${hours}ч ${minutes}м"
         override val litres = "л"
         override val millilitres = "мл"
         override val kcal = "ккал"
@@ -170,6 +180,7 @@ object StringsRu : Strings {
         override fun greetingLine(greeting: String) =
             "$greeting — отличный день, чтобы позаботиться о себе 🌸"
 
+        override fun hello(name: String) = if (name.isBlank()) "Здравствуйте!" else "Здравствуйте, $name!"
         override val aiFootnote = "На основе ваших данных · создано ИИ"
         override val aiFreePrompt = "Задайте любой вопрос о здоровье и самочувствии"
 

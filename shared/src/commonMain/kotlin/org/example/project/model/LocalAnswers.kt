@@ -11,7 +11,7 @@ fun localAnswerFor(question: String, state: AppState): String {
     val q = question.lowercase()
     val phase = state.currentPhase()
     val context = "Sikl ${state.cycleDay}-kun (${phase.label.lowercase()}), " +
-        "uyqu ${state.sleepLabel()}, suv ${Fmt.litres(state.waterMl)} l asosida."
+        "uyqu ${state.sleepLabel(format = ::uzbekHoursMinutes)}, suv ${Fmt.litres(state.waterMl)} l asosida."
     val body = when {
         "charch" in q || "energiya" in q || "toliq" in q -> when (phase) {
             CyclePhase.Luteal, CyclePhase.Period ->
@@ -30,7 +30,7 @@ fun localAnswerFor(question: String, state: AppState): String {
                 "toshmalar ko'payishi odatiy. Yumshoq tozalash, yetarli suv va uyqu yordam beradi. " +
                 "Uzoq davom etsa, dermatologga ko'rsating."
         "uyqu" in q || "uxla" in q ->
-            "Kecha ${state.sleepLabel()} uxlagansiz. Kechqurun ekranni kamaytirish va bir xil " +
+            "Kecha ${state.sleepLabel(format = ::uzbekHoursMinutes)} uxlagansiz. Kechqurun ekranni kamaytirish va bir xil " +
                 "vaqtda yotish uyqu sifatini yaxshilaydi. Uyqu ma'lumotlarini kuzatishda davom eting."
         "sikl" in q || "hayz" in q || "ovulyats" in q ->
             "Hozir siklning ${state.cycleDay}-kuni — ${phase.label.lowercase()}. " +
@@ -41,3 +41,12 @@ fun localAnswerFor(question: String, state: AppState): String {
     }
     return "$body\n\n$context Bu umumiy ma'lumot — tashxis emas."
 }
+
+/**
+ * The duration format this file uses.
+ *
+ * [localAnswerFor] is written in Uzbek from end to end — it is the offline fallback for
+ * the assistant, not a translated surface — so it names its own abbreviations rather
+ * than reaching for the language the screen happens to be in.
+ */
+private fun uzbekHoursMinutes(hours: Int, minutes: Int): String = "${hours}s ${minutes}d"

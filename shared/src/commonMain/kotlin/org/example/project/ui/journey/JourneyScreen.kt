@@ -330,7 +330,7 @@ private fun CycleDial(state: AppState, modifier: Modifier = Modifier) {
                 Sadora.type.data.copy(fontSize = 56.sp, lineHeight = 60.sp),
                 c.text,
             )
-            Text(phase.label, style = Sadora.type.h3, color = c.text, textAlign = TextAlign.Center, maxLines = 2)
+            Text(strings.common.phase(phase), style = Sadora.type.h3, color = c.text, textAlign = TextAlign.Center, maxLines = 2)
         }
     }
 }
@@ -410,7 +410,7 @@ private fun PhaseLegend() {
             ) {
                 Box(Modifier.size(8.dp).clip(Radius.chip).background(phase.dialColor()))
                 Text(
-                    phase.label.substringBefore(" "),
+                    strings.common.phase(phase).substringBefore(" "),
                     style = Sadora.type.caption.copy(letterSpacing = androidx.compose.ui.unit.TextUnit.Unspecified),
                     color = c.muted,
                 )
@@ -721,12 +721,12 @@ private fun PostpartumJourney(state: AppState, onOpen: (Route) -> Unit) {
                         horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
                     ) {
                         Text(state.mood.emoji, style = Sadora.type.h1)
-                        Text(state.mood.label, style = Sadora.type.h3, color = c.text)
+                        Text(strings.common.mood(state.mood), style = Sadora.type.h3, color = c.text)
                     }
                 }
                 SadoraCard(modifier = Modifier.weight(1f), padding = Spacing.sm) {
                     CardLabel(t.sleep)
-                    Text(state.sleepLabel(), style = Sadora.type.h2, color = c.text)
+                    Text(state.sleepLabel(format = strings.common::hoursMinutes), style = Sadora.type.h2, color = c.text)
                     Text(t.brokenSleep, style = Sadora.type.body, color = c.muted)
                 }
             }
@@ -854,7 +854,7 @@ private fun PerimenopauseJourney(state: AppState, health: HealthController, onOp
 
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                StatCard("Uyqu", state.sleepLabel(), Modifier.weight(1f))
+                StatCard("Uyqu", state.sleepLabel(format = strings.common::hoursMinutes), Modifier.weight(1f))
                 StatCard("Energiya", "${state.energy} / 5", Modifier.weight(1f))
             }
         }
@@ -922,14 +922,14 @@ private fun MenopauseJourney(state: AppState, onOpen: (Route) -> Unit) {
 
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                StatCard("Uyqu", state.sleepLabel(), Modifier.weight(1f))
+                StatCard("Uyqu", state.sleepLabel(format = strings.common::hoursMinutes), Modifier.weight(1f))
                 StatCard("Faollik", Fmt.int(state.steps), Modifier.weight(1f))
             }
         }
 
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                StatCard("Kayfiyat", state.mood.label, Modifier.weight(1f))
+                StatCard(t.mood, strings.common.mood(state.mood), Modifier.weight(1f))
                 StatCard("Suv", "${Fmt.litres(state.waterMl)} l", Modifier.weight(1f))
             }
         }

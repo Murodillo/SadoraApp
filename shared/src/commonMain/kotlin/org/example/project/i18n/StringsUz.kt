@@ -35,6 +35,15 @@ object StringsUz : Strings {
             LifeStage.Perimenopause -> "Perimenopauza"
             LifeStage.Menopause -> "Menopauza"
         }
+
+        override fun subtitle(stage: LifeStage) = when (stage) {
+            LifeStage.Cycle -> "Hayz, ovulyatsiya, simptomlar"
+            LifeStage.TryingToConceive -> "Unumdor kunlar, tayyorgarlik"
+            LifeStage.Pregnancy -> "Hafta, o'sish, tadbirlar"
+            LifeStage.Postpartum -> "Tiklanish, uyqu, kayfiyat"
+            LifeStage.Perimenopause -> "Muntazamlik, simptomlar"
+            LifeStage.Menopause -> "Salomatlik va kayfiyat"
+        }
     }
 
     override val welcome = object : WelcomeStrings {
@@ -155,6 +164,7 @@ object StringsUz : Strings {
         override val edit = "Tahrirlash"
         override val done = "Tayyor"
 
+        override fun hoursMinutes(hours: Int, minutes: Int) = "${hours}s ${minutes}d"
         override val litres = "l"
         override val millilitres = "ml"
         override val kcal = "kkal"
@@ -167,6 +177,7 @@ object StringsUz : Strings {
         override fun greetingLine(greeting: String) =
             "$greeting — bugun o'zingizga g'amxo'rlik qilish uchun ajoyib kun 🌸"
 
+        override fun hello(name: String) = if (name.isBlank()) "Salom!" else "Salom, $name!"
         override val aiFootnote = "Ma'lumotlaringiz asosida · AI tomonidan yaratilgan"
         override val aiFreePrompt = "Salomatlik va kayfiyat haqida istalgan savolingizni bering"
 

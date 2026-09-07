@@ -33,6 +33,7 @@ import org.example.project.design.Radius
 import org.example.project.design.Sadora
 import org.example.project.design.SadoraIcons
 import org.example.project.design.Spacing
+import org.example.project.i18n.strings
 import org.example.project.model.AppState
 import org.example.project.model.CyclePhase
 import org.example.project.model.Fmt
@@ -291,13 +292,13 @@ private fun SelectedDaySummary(state: AppState, onOpen: () -> Unit) {
                     horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
                 ) {
                     Text("Bugun", style = Sadora.type.h3, color = c.text)
-                    SadoraBadge(state.currentPhase().label, BadgeTone.Estimated)
+                    SadoraBadge(strings.common.phase(state.currentPhase()), BadgeTone.Estimated)
                 }
                 Text(
                     if (state.symptoms.isEmpty()) {
-                        "Simptom qayd etilmagan · kayfiyat ${state.mood.label.lowercase()}"
+                        "Simptom qayd etilmagan · kayfiyat ${strings.common.mood(state.mood).lowercase()}"
                     } else {
-                        "${state.symptoms.joinToString(", ")} · kayfiyat ${state.mood.label.lowercase()}"
+                        "${state.symptoms.joinToString(", ")} · kayfiyat ${strings.common.mood(state.mood).lowercase()}"
                     },
                     style = Sadora.type.body,
                     color = c.muted,

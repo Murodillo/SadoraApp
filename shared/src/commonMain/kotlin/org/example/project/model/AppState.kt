@@ -660,7 +660,16 @@ class AppState {
     }
 
     /** "6s 40d" — the app's sleep-duration format. */
-    fun sleepLabel(minutes: Int = sleepMinutes): String = "${minutes / 60}s ${minutes % 60}d"
+    /**
+     * "6s 40d" — sleep as hours and minutes.
+     *
+     * The abbreviations differ by language, so the caller hands in the two words. The
+     * arithmetic stays here because every screen that shows a night does it the same way.
+     */
+    fun sleepLabel(
+        minutes: Int = sleepMinutes,
+        format: (hours: Int, minutes: Int) -> String,
+    ): String = format(minutes / 60, minutes % 60)
 }
 
 /**

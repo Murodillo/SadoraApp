@@ -52,7 +52,7 @@ fun BalanceScreen(
         Quad("👟", t.activity, ratio(state.steps, StepGoal), c.secondary,
             t.ofSteps(Fmt.int(state.steps), Fmt.int(StepGoal))),
         Quad("💤", t.sleep, ratio(state.sleepMinutes, SleepGoalMinutes), c.success,
-            t.ofSleep(state.sleepLabel())),
+            t.ofSleep(state.sleepLabel(format = strings.common::hoursMinutes))),
     )
     val score = (directions.map { it.value }.average() * 100).toInt()
 

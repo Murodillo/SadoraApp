@@ -50,6 +50,7 @@ import org.example.project.design.SadoraIcons
 import org.example.project.design.Spacing
 import kotlinx.coroutines.launch
 import org.example.project.data.AiController
+import org.example.project.i18n.strings
 import org.example.project.model.AppState
 import org.example.project.model.Fmt
 import org.example.project.model.SampleData
@@ -144,7 +145,7 @@ fun AiChatScreen(
 
             item {
                 Text(
-                    "Sikl ${state.cycleDay}-kun · Uyqu ${state.sleepLabel()} · " +
+                    "Sikl ${state.cycleDay}-kun · Uyqu ${state.sleepLabel(format = strings.common::hoursMinutes)} · " +
                         "Suv ${Fmt.litres(state.waterMl)} l asosida" + quotaLabel(ai),
                     style = Sadora.type.caption.copy(letterSpacing = 0.02.em),
                     color = c.muted2,
