@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.dp
 import org.example.project.data.LearnController
 import org.example.project.design.Sadora
 import org.example.project.design.Spacing
+import org.example.project.i18n.strings
 import org.example.project.model.AppState
 import org.example.project.nav.Route
 import org.example.project.ui.components.BadgeTone
@@ -53,6 +54,7 @@ fun KnowledgeScreen(
     onOpen: (Route) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val t = strings.modules
     val c = Sadora.colors
     var query by remember { mutableStateOf("") }
     var category by remember { mutableStateOf(AllCategories) }
@@ -66,11 +68,11 @@ fun KnowledgeScreen(
     }
 
     Column(modifier) {
-        SadoraTopBar("Bilim", onBack = onClose)
+        SadoraTopBar(t.knowledgeTitle, onBack = onClose)
 
         ScreenContent {
             item {
-                SadoraSearchField(query, { query = it }, placeholder = "Qidirish")
+                SadoraSearchField(query, { query = it }, placeholder = t.search)
             }
 
             if (feed != null && feed.categories.isNotEmpty()) {
@@ -99,9 +101,9 @@ fun KnowledgeScreen(
 
                 feed == null -> item {
                     EmptyState(
-                        title = "Kutubxona ochilmadi",
+                        title = t.libraryFailed,
                         body = learn.error
-                            ?: "Ma'lumotlar yuklanmadi. Internetni tekshirib, qayta urinib ko'ring.",
+                            ?: t.loadFailed,
                         actionText = null,
                         onAction = {},
                     )
@@ -109,8 +111,8 @@ fun KnowledgeScreen(
 
                 feed.articles.isEmpty() -> item {
                     EmptyState(
-                        title = "Kutubxona hozircha bo'sh",
-                        body = "Yangi maqolalar chiqqanda shu yerda paydo bo'ladi.",
+                        title = t.libraryEmpty,
+                        body = t.libraryEmptyBody,
                         actionText = null,
                         onAction = {},
                     )
@@ -118,9 +120,9 @@ fun KnowledgeScreen(
 
                 visible.isEmpty() -> item {
                     EmptyState(
-                        title = "Hech narsa topilmadi",
-                        body = "Boshqa kalit so'z yoki kategoriya bilan urinib ko'ring.",
-                        actionText = "Filtrlarni tozalash",
+                        title = t.nothingFound,
+                        body = t.nothingFoundBody,
+                        actionText = t.clearFilters,
                         onAction = {
                             query = ""
                             category = AllCategories
@@ -143,12 +145,13 @@ private fun ArticleSummary.matches(query: String): Boolean =
 
 @Composable
 private fun KnowledgeCard(article: ArticleSummary, onClick: () -> Unit) {
+    val t = strings.modules
     val c = Sadora.colors
     SadoraCard(padding = Spacing.sm, onClick = onClick) {
         Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xxs)) {
             SadoraBadge(article.kind.label(), BadgeTone.Neutral)
             SadoraBadge(article.categoryLabel.uppercase(), BadgeTone.Neutral)
-            SadoraBadge("${article.readMinutes} DAQIQA", BadgeTone.Neutral)
+            SadoraBadge(t.readMinutes(article.readMinutes), BadgeTone.Neutral)
             if (article.premium) SadoraBadge("PREMIUM", BadgeTone.Premium)
         }
         Text(article.title, style = Sadora.type.h3, color = c.text)

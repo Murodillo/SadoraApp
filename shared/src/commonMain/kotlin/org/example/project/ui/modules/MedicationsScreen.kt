@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import org.example.project.design.Radius
 import org.example.project.design.Sadora
 import org.example.project.design.Spacing
+import org.example.project.i18n.strings
 import org.example.project.model.AppState
 import org.example.project.model.MedStatus
 import org.example.project.model.Medication
@@ -53,9 +54,10 @@ fun MedicationsScreen(
     onOpen: (Route) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val t = strings.modules
     val c = Sadora.colors
     var tab by remember { mutableStateOf(0) }
-    // "Keyinroq" hides the next-dose card for this visit; the dose itself stays due,
+    // t.later hides the next-dose card for this visit; the dose itself stays due,
     // because snoozing is not the same as skipping.
     var snoozedId by remember { mutableStateOf<String?>(null) }
 
@@ -94,7 +96,7 @@ fun MedicationsScreen(
                 item {
                     SadoraCard {
                         CardLabel(
-                            "Keyingi qabul",
+                            t.nextDose,
                             trailing = {
                                 Text(next.time, style = Sadora.type.h3, color = c.textAccent)
                             },
@@ -119,7 +121,7 @@ fun MedicationsScreen(
                             ) {
                                 Text(next.name, style = Sadora.type.h3, color = c.text)
                                 Text(
-                                    "1 tabletka · ${next.note}",
+                                    t.oneTabletWith(next.note),
                                     style = Sadora.type.body,
                                     color = c.muted,
                                 )
@@ -127,12 +129,12 @@ fun MedicationsScreen(
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
                             PillButton(
-                                "Qabul qildim",
+                                t.take,
                                 { state.markMedicationTaken(next.id) },
                                 tone = ButtonTone.Primary,
                             )
-                            PillButton("Keyinroq", { snoozedId = next.id })
-                            PillButton("O'tkazish", { state.markMedicationSkipped(next.id) })
+                            PillButton(t.later, { snoozedId = next.id })
+                            PillButton(t.skip, { state.markMedicationSkipped(next.id) })
                         }
                     }
                 }
@@ -141,9 +143,9 @@ fun MedicationsScreen(
             if (state.medications.isEmpty()) {
                 item {
                     EmptyState(
-                        title = "Hali dori qo'shilmagan",
-                        body = "Dori qo'shsangiz, qabul vaqtlari va zaxirasi shu yerda ko'rinadi.",
-                        actionText = "Dori qo'shish",
+                        title = t.medsEmpty,
+                        body = t.medsEmptyBody,
+                        actionText = t.addMedication,
                         onAction = { onOpen(Route.AddMedication) },
                         glyph = "💊",
                     )
@@ -156,8 +158,7 @@ fun MedicationsScreen(
 
             item {
                 DisclaimerNote(
-                    "O'tkazib yuborilgan qabul bo'yicha SADORA yo'riqnoma bermaydi. " +
-                        "Dori qabul qilish tartibi yoki shifokor/farmatsevt tavsiyasiga amal qiling.",
+                    t.medsDisclaimer,
                 )
             }
 
@@ -189,6 +190,7 @@ fun MedicationsScreen(
 
 @Composable
 private fun MedicationRow(medication: Medication) {
+    val t = strings.modules
     val c = Sadora.colors
     SadoraCard(padding = Spacing.sm) {
         Row(
@@ -214,7 +216,7 @@ private fun MedicationRow(medication: Medication) {
                 )
                 if (medication.stockDays != null) {
                     Text(
-                        "Zaxira ${medication.stockDays} kun",
+                        t.stockDays(medication.stockDays),
                         style = Sadora.type.body,
                         color = c.warning,
                     )
@@ -222,8 +224,8 @@ private fun MedicationRow(medication: Medication) {
             }
             when (medication.status) {
                 MedStatus.Taken -> Text("✓", style = Sadora.type.h2, color = c.success)
-                MedStatus.Pending -> SadoraBadge("Kutilmoqda", BadgeTone.Neutral)
-                MedStatus.Skipped -> SadoraBadge("O'tkazildi", BadgeTone.Neutral)
+                MedStatus.Pending -> SadoraBadge(t.pending, BadgeTone.Neutral)
+                MedStatus.Skipped -> SadoraBadge(t.skipped, BadgeTone.Neutral)
             }
         }
     }

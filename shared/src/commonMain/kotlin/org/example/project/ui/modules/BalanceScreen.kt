@@ -12,6 +12,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import org.example.project.design.Sadora
 import org.example.project.design.Spacing
+import org.example.project.i18n.strings
 import org.example.project.model.AppState
 import org.example.project.model.Fmt
 import org.example.project.ui.components.CardLabel
@@ -35,6 +36,7 @@ fun BalanceScreen(
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val t = strings.modules
     val c = Sadora.colors
 
     // The same four signals Today scores, against the same goals. A second screen with
@@ -43,19 +45,19 @@ fun BalanceScreen(
         if (goal <= 0) 0f else (value / goal.toFloat()).coerceIn(0f, 1f)
 
     val directions = listOf(
-        Quad("🍽", "Ovqatlanish", ratio(state.caloriesEaten, state.calorieGoal), c.primary,
-            "${Fmt.int(state.caloriesEaten)} / ${Fmt.int(state.calorieGoal)} kkal"),
-        Quad("💧", "Suv", ratio(state.waterMl, state.waterGoalMl), c.accent,
-            "${Fmt.litres(state.waterMl)} / ${Fmt.litres(state.waterGoalMl)} l"),
-        Quad("👟", "Faollik", ratio(state.steps, StepGoal), c.secondary,
-            "${Fmt.int(state.steps)} / ${Fmt.int(StepGoal)} qadam"),
-        Quad("💤", "Uyqu", ratio(state.sleepMinutes, SleepGoalMinutes), c.success,
-            "${state.sleepLabel()} / 8s"),
+        Quad("🍽", t.food, ratio(state.caloriesEaten, state.calorieGoal), c.primary,
+            t.ofKcal(Fmt.int(state.caloriesEaten), Fmt.int(state.calorieGoal))),
+        Quad("💧", t.water, ratio(state.waterMl, state.waterGoalMl), c.accent,
+            t.ofLitres(Fmt.litres(state.waterMl), Fmt.litres(state.waterGoalMl))),
+        Quad("👟", t.activity, ratio(state.steps, StepGoal), c.secondary,
+            t.ofSteps(Fmt.int(state.steps), Fmt.int(StepGoal))),
+        Quad("💤", t.sleep, ratio(state.sleepMinutes, SleepGoalMinutes), c.success,
+            t.ofSleep(state.sleepLabel())),
     )
     val score = (directions.map { it.value }.average() * 100).toInt()
 
     Column(modifier) {
-        SadoraTopBar("Balans", onBack = onClose)
+        SadoraTopBar(t.balanceTitle, onBack = onClose)
 
         ScreenContent {
             item {
@@ -88,7 +90,7 @@ fun BalanceScreen(
 
             item {
                 SadoraCard {
-                    CardLabel("To'rt yo'nalish")
+                    CardLabel(t.fourDirections)
                     directions.forEach { direction ->
                         LabeledProgress(
                             // The reading, not a percentage: "1,2 / 2,0 l" says what to do
@@ -104,8 +106,7 @@ fun BalanceScreen(
 
             item {
                 DisclaimerNote(
-                    "Balans balli o'zingiz belgilagan maqsadlarga nisbatan hisoblanadi. " +
-                        "Bu ball tibbiy ko'rsatkich emas.",
+                    t.balanceDisclaimer,
                 )
             }
         }

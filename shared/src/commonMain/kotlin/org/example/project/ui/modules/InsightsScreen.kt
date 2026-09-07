@@ -19,6 +19,8 @@ import androidx.compose.ui.unit.dp
 import org.example.project.data.InsightsController
 import org.example.project.design.Sadora
 import org.example.project.design.Spacing
+import org.example.project.i18n.ModuleStrings
+import org.example.project.i18n.strings
 import org.example.project.model.AppState
 import org.example.project.model.SampleData
 import org.example.project.ui.components.CardLabel
@@ -58,6 +60,7 @@ fun InsightsScreen(
     onUpgrade: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val t = strings.modules
     val c = Sadora.colors
     var range by remember { mutableStateOf(0) }
     val locked = if (state.isPremium) emptySet() else setOf(1, 2)
@@ -67,7 +70,7 @@ fun InsightsScreen(
     LaunchedEffect(days) { insights.load(days) }
 
     Column(modifier) {
-        SadoraTopBar("Tahlillar", onBack = onClose)
+        SadoraTopBar(t.insightsTitle, onBack = onClose)
 
         ScreenContent {
             item {
@@ -83,14 +86,14 @@ fun InsightsScreen(
                 summary == null && insights.busy -> item { InsightsSkeleton() }
 
                 summary == null && insights.lockedWindow == days -> item {
-                    LockedBlock("Bu oraliq Premium bilan ochiladi", onUnlock = onUpgrade)
+                    LockedBlock(t.windowPremium, onUnlock = onUpgrade)
                 }
 
                 summary == null -> item {
                     EmptyState(
-                        title = "Tahlillar hozircha yo'q",
+                        title = t.insightsEmptyTitle,
                         body = insights.error
-                            ?: "Ma'lumotlar yuklanmadi. Internetni tekshirib, qayta urinib ko'ring.",
+                            ?: t.loadFailed,
                         actionText = null,
                         onAction = {},
                     )
@@ -98,15 +101,14 @@ fun InsightsScreen(
 
                 summary.isEmpty -> item {
                     EmptyState(
-                        title = "Bu oraliqda yozuv yo'q",
-                        body = "Uyqu, kayfiyat, suv yoki ovqatni qayd etsangiz, trendlar shu " +
-                            "yerda chiziladi. O'lchanmagan raqamni ko'rsatmaymiz.",
+                        title = t.noRecordsInWindow,
+                        body = t.noRecordsBody,
                         actionText = null,
                         onAction = {},
                     )
                 }
 
-                else -> insightsContent(summary, onUpgrade)
+                else -> insightsContent(summary, onUpgrade, t)
             }
         }
     }
@@ -116,11 +118,12 @@ fun InsightsScreen(
 private fun LazyListScope.insightsContent(
     summary: InsightsSummary,
     onUpgrade: () -> Unit,
+    t: ModuleStrings,
 ) {
     val charted = listOf(
-        TrendMetric.SLEEP_MINUTES to "Uyqu trendi",
-        TrendMetric.STEPS to "Faollik",
-        TrendMetric.MOOD to "Kayfiyat",
+        TrendMetric.SLEEP_MINUTES to t.sleepTrend,
+        TrendMetric.STEPS to t.activityTrend,
+        TrendMetric.MOOD to t.moodTrend,
     ).mapNotNull { (metric, title) ->
         summary.trend(metric)?.takeIf { it.hasData }?.let { title to it }
     }
@@ -130,9 +133,9 @@ private fun LazyListScope.insightsContent(
     if (charted.isEmpty()) {
         item {
             SadoraCard {
-                Text("Grafik uchun ma'lumot yetarli emas", style = Sadora.type.h3, color = Sadora.colors.text)
+                Text(t.notEnoughForChart, style = Sadora.type.h3, color = Sadora.colors.text)
                 Text(
-                    "Bu oraliqda uyqu, qadam va kayfiyat bo'yicha yozuv topilmadi.",
+                    t.notEnoughForChartBody,
                     style = Sadora.type.body,
                     color = Sadora.colors.muted,
                 )
@@ -140,19 +143,19 @@ private fun LazyListScope.insightsContent(
         }
     }
 
-    item { CardLabel("Kuzatilgan bog'liqliklar") }
+    item { CardLabel(t.correlations) }
 
     item {
         Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
             when {
                 !summary.findingsAvailable -> LockedBlock(
-                    "Bog'liqliklar Premium bilan ochiladi",
+                    t.correlationsPremium,
                     onUnlock = onUpgrade,
                 )
 
                 summary.findings.isEmpty() -> SadoraCard {
                     Text(
-                        "Bu oraliqda ishonchli bog'liqlik topilmadi.",
+                        t.noCorrelation,
                         style = Sadora.type.h3,
                         color = Sadora.colors.text,
                     )
@@ -186,6 +189,7 @@ private fun LazyListScope.insightsContent(
 
 @Composable
 private fun TrendCard(title: String, trend: MetricTrend) {
+    val t = strings.modules
     val c = Sadora.colors
     val change = trend.changeLabel()
     val good = trend.changeIsGood()
@@ -219,12 +223,12 @@ private fun TrendCard(title: String, trend: MetricTrend) {
         )
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Text(
-                trend.averageLabel()?.let { "O'rtacha $it" } ?: "O'rtacha — ",
+                trend.averageLabel()?.let { t.average(it) } ?: t.averagePrefix,
                 style = Sadora.type.body,
                 color = c.muted,
             )
             Text(
-                "${trend.daysWithData} / ${trend.points.size} kun",
+                t.daysRecorded(trend.daysWithData, trend.points.size),
                 style = Sadora.type.body,
                 color = c.muted2,
             )

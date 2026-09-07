@@ -380,4 +380,122 @@ object StringsUz : Strings {
         override val strengthTraining = "Kuch mashqlari"
         override val calciumAndD = "Kalsiy va D vitamini"
     }
+
+    override val modules = object : ModuleStrings {
+        override val sleepTitle = "Uyqu"
+        override val sleepEmptyTitle = "Uyqu ma'lumoti yo'q"
+        override val sleepEmptyBody =
+            "Soat yoki telefon sinxronlanganda uyqu davomiyligi va bosqichlari shu " +
+                "yerda ko'rinadi."
+        override val sleepWeek = "7 kunlik davomiylik"
+        override fun average(value: String) = "O'rtacha $value"
+        override fun daysRecorded(withData: Int, total: Int) = "$withData / $total kun qayd etilgan"
+        override val sleepManual = "Uyquni qo'lda kiritish"
+        override fun goalFrom(hours: Int) = "$hours soatdan"
+        override val lastNight = "Kecha"
+        override fun restingPulse(bpm: Int) = "Tinch puls $bpm bpm"
+        override val deep = "Chuqur"
+        override val light = "Yengil"
+        override val stages = "Bosqichlar"
+
+        override val insightsTitle = "Tahlillar"
+        override fun windowDays(days: Int) = "$days kun"
+        override val windowPremium = "Bu oraliq Premium bilan ochiladi"
+        override val insightsEmptyTitle = "Tahlillar hozircha yo'q"
+        override val loadFailed = "Ma'lumotlar yuklanmadi. Internetni tekshirib, qayta urinib ko'ring."
+        override val noRecordsInWindow = "Bu oraliqda yozuv yo'q"
+        override val noRecordsBody =
+            "Uyqu, kayfiyat, suv yoki ovqatni qayd etsangiz, trendlar shu yerda " +
+                "chiziladi. O'lchanmagan raqamni ko'rsatmaymiz."
+        override val sleepTrend = "Uyqu trendi"
+        override val activityTrend = "Faollik"
+        override val moodTrend = "Kayfiyat"
+        override val notEnoughForChart = "Grafik uchun ma'lumot yetarli emas"
+        override val notEnoughForChartBody =
+            "Bu oraliqda uyqu, qadam va kayfiyat bo'yicha yozuv topilmadi."
+        override val correlations = "Kuzatilgan bog'liqliklar"
+        override val correlationsPremium = "Bog'liqliklar Premium bilan ochiladi"
+        override val noCorrelation = "Bu oraliqda ishonchli bog'liqlik topilmadi."
+        override val noCorrelationBody =
+            "Kamida sakkiz kunlik yozuv kerak, va farq sezilarli bo'lishi shart — aks " +
+                "holda hech narsa yozmaymiz."
+        override val averagePrefix = "O'rtacha — "
+
+        override val all = "Barchasi"
+        override val knowledgeTitle = "Bilim"
+        override val search = "Qidirish"
+        override val libraryFailed = "Kutubxona ochilmadi"
+        override val libraryEmpty = "Kutubxona hozircha bo'sh"
+        override val libraryEmptyBody = "Yangi maqolalar chiqqanda shu yerda paydo bo'ladi."
+        override val nothingFound = "Hech narsa topilmadi"
+        override val nothingFoundBody = "Boshqa kalit so'z yoki kategoriya bilan urinib ko'ring."
+        override val clearFilters = "Filtrlarni tozalash"
+        override fun readMinutes(minutes: Int) = "$minutes DAQIQA"
+
+        override val medsTitle = "Dorilar"
+        override val today = "Bugun"
+        override val history = "Tarix"
+        override val nextDose = "Keyingi qabul"
+        override fun oneTabletWith(note: String) = "1 tabletka · $note"
+        override val take = "Qabul qildim"
+        override val later = "Keyinroq"
+        override val skip = "O'tkazish"
+        override val medsEmpty = "Hali dori qo'shilmagan"
+        override val medsEmptyBody = "Dori qo'shsangiz, qabul vaqtlari va zaxirasi shu yerda ko'rinadi."
+        override val addMedication = "Dori qo'shish"
+        override val medsDisclaimer =
+            "O'tkazib yuborilgan qabul bo'yicha SADORA yo'riqnoma bermaydi. Dori qabul " +
+                "qilish tartibi yoki shifokor/farmatsevt tavsiyasiga amal qiling."
+        override fun stockLeft(name: String, days: Int) = "$name zaxirasi $days kunga qoldi"
+        override fun stockDays(days: Int) = "Zaxira $days kun"
+        override val pending = "Kutilmoqda"
+        override val skipped = "O'tkazildi"
+
+        override val featureCycleMood = "Sikl va kayfiyat"
+        override val featureFoodDiary = "Ovqat kundaligi"
+        override val featureAiChat = "AI suhbat"
+        override val featureScanner = "Ovqat skaneri"
+        override val featureLongInsights = "30/90 kunlik tahlil"
+        override val premiumTitle = "SADORA Premium"
+        override val premiumBody =
+            "AI suhbat, ovqat skaneri va kengaytirilgan tahlillar. Bepul rejadagi " +
+                "hamma narsa saqlanadi."
+        override val plansFailed = "Tariflar yuklanmadi"
+        override val plansFailedBody = "Internetni tekshirib, qayta urinib ko'ring."
+        override val paymentAccepted = "To'lov qabul qilindi. Premium ochildi."
+        override val paymentPending = "To'lov kutilmoqda…"
+        override val noPaymentMethod = "Hozircha to'lov usuli mavjud emas."
+        override val cancelAnytime = "Istalgan vaqtda bekor qilish mumkin"
+        override val restorePurchase = "Xaridni tiklash"
+        override fun priceFor(sum: String, monthly: Boolean) =
+            "$sum so'm / " + (if (monthly) "oy" else "yil")
+        override fun perMonth(sum: String) = "$sum so'm/oy"
+        override fun saving(percent: Int) = "−$percent%"
+        override val payWithPayme = "Payme orqali to'lash"
+        override val payWithClick = "Click orqali to'lash"
+        override val payWithAppStore = "App Store orqali"
+        override val payWithGooglePlay = "Google Play orqali"
+
+        override val balanceTitle = "Balans"
+        override val fourDirections = "To'rt yo'nalish"
+        override val balanceDisclaimer =
+            "Balans balli o'zingiz belgilagan maqsadlarga nisbatan hisoblanadi. Bu ball " +
+                "tibbiy ko'rsatkich emas."
+        override val balanced =
+            "Bugun to'rt yo'nalish ham muvozanatda. Ovqat \"yoqib yuborilishi\" kerak " +
+                "bo'lgan qarz emas."
+        override fun someRoomIn(direction: String) =
+            "Kun yaxshi ketyapti. \"$direction\" bo'yicha biroz joy bor — xohlasangiz " +
+                "shunga e'tibor bering."
+        override fun fallingBehind(direction: String) =
+            "Bugun \"$direction\" ortda qolyapti. Kun hali tugagani yo'q, shoshilmang."
+        override val food = "Ovqatlanish"
+        override val water = "Suv"
+        override val activity = "Faollik"
+        override val sleep = "Uyqu"
+        override fun ofKcal(eaten: String, goal: String) = "$eaten / $goal kkal"
+        override fun ofLitres(drunk: String, goal: String) = "$drunk / $goal l"
+        override fun ofSteps(walked: String, goal: String) = "$walked / $goal qadam"
+        override fun ofSleep(slept: String) = "$slept / 8s"
+    }
 }

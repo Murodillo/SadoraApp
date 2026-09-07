@@ -382,4 +382,121 @@ object StringsRu : Strings {
         override val strengthTraining = "Силовые упражнения"
         override val calciumAndD = "Кальций и витамин D"
     }
+
+    override val modules = object : ModuleStrings {
+        override val sleepTitle = "Сон"
+        override val sleepEmptyTitle = "Нет данных о сне"
+        override val sleepEmptyBody =
+            "Когда часы или телефон синхронизируются, длительность и фазы сна появятся здесь."
+        override val sleepWeek = "Длительность за 7 дней"
+        override fun average(value: String) = "В среднем $value"
+        override fun daysRecorded(withData: Int, total: Int) = "$withData / $total дн. записано"
+        override val sleepManual = "Ввести сон вручную"
+        override fun goalFrom(hours: Int) = "от $hours часов"
+        override val lastNight = "Прошлая ночь"
+        override fun restingPulse(bpm: Int) = "Пульс покоя $bpm уд/мин"
+        override val deep = "Глубокий"
+        override val light = "Лёгкий"
+        override val stages = "Фазы"
+
+        override val insightsTitle = "Аналитика"
+        override fun windowDays(days: Int) = "$days дн."
+        override val windowPremium = "Этот период открывается с Premium"
+        override val insightsEmptyTitle = "Аналитики пока нет"
+        override val loadFailed = "Данные не загрузились. Проверьте интернет и попробуйте снова."
+        override val noRecordsInWindow = "За этот период записей нет"
+        override val noRecordsBody =
+            "Отмечайте сон, настроение, воду или еду — и здесь появятся тренды. " +
+                "Неизмеренные числа мы не показываем."
+        override val sleepTrend = "Тренд сна"
+        override val activityTrend = "Активность"
+        override val moodTrend = "Настроение"
+        override val notEnoughForChart = "Данных для графика недостаточно"
+        override val notEnoughForChartBody =
+            "За этот период нет записей о сне, шагах и настроении."
+        override val correlations = "Замеченные связи"
+        override val correlationsPremium = "Связи открываются с Premium"
+        override val noCorrelation = "За этот период надёжных связей не нашлось."
+        override val noCorrelationBody =
+            "Нужно минимум восемь дней записей, и разница должна быть заметной — иначе " +
+                "мы ничего не пишем."
+        override val averagePrefix = "В среднем — "
+
+        override val all = "Все"
+        override val knowledgeTitle = "Знания"
+        override val search = "Поиск"
+        override val libraryFailed = "Библиотека не открылась"
+        override val libraryEmpty = "Библиотека пока пуста"
+        override val libraryEmptyBody = "Новые статьи появятся здесь."
+        override val nothingFound = "Ничего не найдено"
+        override val nothingFoundBody = "Попробуйте другое слово или категорию."
+        override val clearFilters = "Сбросить фильтры"
+        override fun readMinutes(minutes: Int) = "$minutes МИН"
+
+        override val medsTitle = "Лекарства"
+        override val today = "Сегодня"
+        override val history = "История"
+        override val nextDose = "Следующий приём"
+        override fun oneTabletWith(note: String) = "1 таблетка · $note"
+        override val take = "Приняла"
+        override val later = "Позже"
+        override val skip = "Пропустить"
+        override val medsEmpty = "Лекарства ещё не добавлены"
+        override val medsEmptyBody = "Добавьте лекарство — время приёма и запас появятся здесь."
+        override val addMedication = "Добавить лекарство"
+        override val medsDisclaimer =
+            "SADORA не даёт указаний по пропущенному приёму. Следуйте инструкции к " +
+                "препарату или рекомендации врача либо фармацевта."
+        override fun stockLeft(name: String, days: Int) = "Запаса $name осталось на $days дн."
+        override fun stockDays(days: Int) = "Запас $days дн."
+        override val pending = "Ожидается"
+        override val skipped = "Пропущено"
+
+        override val featureCycleMood = "Цикл и настроение"
+        override val featureFoodDiary = "Дневник питания"
+        override val featureAiChat = "Разговор с ИИ"
+        override val featureScanner = "Сканер еды"
+        override val featureLongInsights = "Аналитика за 30/90 дней"
+        override val premiumTitle = "SADORA Premium"
+        override val premiumBody =
+            "Разговор с ИИ, сканер еды и расширенная аналитика. Всё из бесплатного " +
+                "плана остаётся."
+        override val plansFailed = "Тарифы не загрузились"
+        override val plansFailedBody = "Проверьте интернет и попробуйте снова."
+        override val paymentAccepted = "Оплата принята. Premium открыт."
+        override val paymentPending = "Ожидаем оплату…"
+        override val noPaymentMethod = "Способов оплаты пока нет."
+        override val cancelAnytime = "Отменить можно в любой момент"
+        override val restorePurchase = "Восстановить покупку"
+        override fun priceFor(sum: String, monthly: Boolean) =
+            "$sum сум / " + (if (monthly) "мес." else "год")
+        override fun perMonth(sum: String) = "$sum сум/мес."
+        override fun saving(percent: Int) = "−$percent%"
+        override val payWithPayme = "Оплатить через Payme"
+        override val payWithClick = "Оплатить через Click"
+        override val payWithAppStore = "Через App Store"
+        override val payWithGooglePlay = "Через Google Play"
+
+        override val balanceTitle = "Баланс"
+        override val fourDirections = "Четыре направления"
+        override val balanceDisclaimer =
+            "Балл баланса считается относительно ваших собственных целей. Это не " +
+                "медицинский показатель."
+        override val balanced =
+            "Сегодня все четыре направления в балансе. Еда — не долг, который нужно " +
+                "«отработать»."
+        override fun someRoomIn(direction: String) =
+            "День идёт хорошо. По направлению «$direction» есть небольшой запас — если " +
+                "захотите, обратите на него внимание."
+        override fun fallingBehind(direction: String) =
+            "Сегодня «$direction» отстаёт. День ещё не кончился, не торопитесь."
+        override val food = "Питание"
+        override val water = "Вода"
+        override val activity = "Активность"
+        override val sleep = "Сон"
+        override fun ofKcal(eaten: String, goal: String) = "$eaten / $goal ккал"
+        override fun ofLitres(drunk: String, goal: String) = "$drunk / $goal л"
+        override fun ofSteps(walked: String, goal: String) = "$walked / $goal шагов"
+        override fun ofSleep(slept: String) = "$slept / 8ч"
+    }
 }

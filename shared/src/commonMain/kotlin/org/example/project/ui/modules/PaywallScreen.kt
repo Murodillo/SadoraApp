@@ -36,6 +36,8 @@ import org.example.project.design.Radius
 import org.example.project.design.Sadora
 import org.example.project.design.SadoraIcons
 import org.example.project.design.Spacing
+import org.example.project.i18n.ModuleStrings
+import org.example.project.i18n.strings
 import org.example.project.model.AppState
 import org.example.project.ui.components.CardLabel
 import org.example.project.ui.components.PremiumCtaButton
@@ -50,16 +52,20 @@ import org.example.project.ui.components.noRippleClickable
 
 private data class PlanFeature(val name: String, val free: String, val premium: String)
 
-private val features = listOf(
-    PlanFeature("Sikl va kayfiyat", "✓", "✓"),
-    PlanFeature("Ovqat kundaligi", "✓", "✓"),
-    PlanFeature("AI suhbat", "—", "20/kun"),
-    PlanFeature("Ovqat skaneri", "—", "30/oy"),
-    PlanFeature("30/90 kunlik tahlil", "—", "✓"),
-)
+/** The comparison table, built per language because every row of it is read. */
+@Composable
+private fun planFeatures(): List<PlanFeature> = strings.modules.let {
+    listOf(
+        PlanFeature(it.featureCycleMood, "✓", "✓"),
+        PlanFeature(it.featureFoodDiary, "✓", "✓"),
+        PlanFeature(it.featureAiChat, "—", "20/kun"),
+        PlanFeature(it.featureScanner, "—", "30/oy"),
+        PlanFeature(it.featureLongInsights, "—", "✓"),
+    )
+}
 
 /**
- * "SADORA Premium".
+ * t.premiumTitle.
  *
  * The comparison table is honest about limits (20 chats a day, 30 scans a month)
  * and states plainly that nothing on the free plan is taken away.
@@ -72,6 +78,7 @@ fun PaywallScreen(
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val t = strings.modules
     val c = Sadora.colors
     val scope = rememberCoroutineScope()
     val uriHandler = LocalUriHandler.current
@@ -137,10 +144,9 @@ fun PaywallScreen(
                             tint = c.onPrimary,
                         )
                     }
-                    Text("SADORA Premium", style = Sadora.type.h1, color = c.text)
+                    Text(t.premiumTitle, style = Sadora.type.h1, color = c.text)
                     Text(
-                        "AI suhbat, ovqat skaneri va kengaytirilgan tahlillar. " +
-                            "Bepul rejadagi hamma narsa saqlanadi.",
+                        t.premiumBody,
                         style = Sadora.type.body,
                         color = c.muted,
                         textAlign = TextAlign.Center,
@@ -173,7 +179,7 @@ fun PaywallScreen(
                         )
                     }
                     SadoraDivider()
-                    features.forEach { feature ->
+                    planFeatures().forEach { feature ->
                         Row(
                             Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically,
@@ -216,7 +222,7 @@ fun PaywallScreen(
                         SadoraCard {
                             Text("Tariflar yuklanmadi", style = Sadora.type.h3, color = c.text)
                             Text(
-                                billing.error ?: "Internetni tekshirib, qayta urinib ko'ring.",
+                                billing.error ?: t.plansFailedBody,
                                 style = Sadora.type.body,
                                 color = c.muted,
                             )
@@ -229,9 +235,9 @@ fun PaywallScreen(
                 val plan = plans[index]
                 PlanOption(
                     title = plan.title,
-                    price = plan.priceLabel(),
-                    note = plan.monthlyNote(),
-                    discount = plan.savingLabel(plans),
+                    price = plan.priceLabel(t),
+                    note = plan.monthlyNote(t),
+                    discount = plan.savingLabel(plans, t),
                     selected = plan.id == selectedPlan,
                     onClick = { selectedPlan = plan.id },
                 )
@@ -249,7 +255,7 @@ fun PaywallScreen(
 
                     if (billing.paid) {
                         Text(
-                            "To'lov qabul qilindi. Premium ochildi.",
+                            t.paymentAccepted,
                             style = Sadora.type.h3,
                             color = c.success,
                         )
@@ -258,8 +264,8 @@ fun PaywallScreen(
                     payable.forEach { provider ->
                         PremiumCtaButton(
                             when {
-                                waiting -> "To'lov kutilmoqda…"
-                                else -> provider.buttonLabel()
+                                waiting -> t.paymentPending
+                                else -> provider.buttonLabel(t)
                             },
                             enabled = !waiting && !billing.busy && selectedPlan != null,
                             onClick = { pay(provider) },
@@ -271,7 +277,7 @@ fun PaywallScreen(
                         // does not carry yet; saying so is better than a button that
                         // cannot do anything.
                         Text(
-                            "Hozircha to'lov usuli mavjud emas.",
+                            t.noPaymentMethod,
                             style = Sadora.type.body,
                             color = c.muted,
                             textAlign = TextAlign.Center,
@@ -283,14 +289,14 @@ fun PaywallScreen(
                     }
 
                     Text(
-                        "Istalgan vaqtda bekor qilish mumkin",
+                        t.cancelAnytime,
                         style = Sadora.type.body,
                         color = c.muted,
                     )
                     // Restoring is asking the server what this account is entitled to —
                     // the client never decides that for itself.
                     Text(
-                        "Xaridni tiklash",
+                        t.restorePurchase,
                         style = Sadora.type.body.copy(fontWeight = FontWeight.SemiBold),
                         color = c.textAccent,
                         modifier = Modifier.noRippleClickable(enabled = !controller.busy) {
@@ -312,6 +318,7 @@ private fun PlanOption(
     selected: Boolean,
     onClick: () -> Unit,
 ) {
+    val t = strings.modules
     val c = Sadora.colors
     Row(
         Modifier
@@ -349,12 +356,12 @@ private fun PlanOption(
 }
 
 /** "299 000 so'm / yil". The server sends tiyin; the screen is the only place that formats it. */
-private fun BillingPlan.priceLabel(): String =
-    "${sumLabel(priceMinor)} so'm / ${if (period == BillingPeriod.YEAR) "yil" else "oy"}"
+private fun BillingPlan.priceLabel(t: ModuleStrings): String =
+    t.priceFor(sumLabel(priceMinor), monthly = period != BillingPeriod.YEAR)
 
 /** What a year plan works out to per month, so the comparison is hers to make. */
-private fun BillingPlan.monthlyNote(): String? =
-    monthlyEquivalentMinor?.let { "${sumLabel(it)} so'm/oy" }
+private fun BillingPlan.monthlyNote(t: ModuleStrings): String? =
+    monthlyEquivalentMinor?.let { t.perMonth(sumLabel(it)) }
 
 /**
  * "−38%" against the cheapest monthly plan.
@@ -362,13 +369,13 @@ private fun BillingPlan.monthlyNote(): String? =
  * Computed from the two prices rather than stored, so it cannot contradict them — a
  * discount badge that disagrees with the numbers beside it is worse than no badge.
  */
-private fun BillingPlan.savingLabel(all: List<BillingPlan>): String? {
+private fun BillingPlan.savingLabel(all: List<BillingPlan>, t: ModuleStrings): String? {
     if (period != BillingPeriod.YEAR) return null
     val monthly = all.filter { it.period == BillingPeriod.MONTH }.minByOrNull { it.priceMinor } ?: return null
     val fullYear = monthly.priceMinor * 12
     if (fullYear <= priceMinor) return null
     val saved = (fullYear - priceMinor) * 100 / fullYear
-    return "−$saved%"
+    return t.saving(saved.toInt())
 }
 
 /** Thousands separated with a space, the way prices are written in Uzbek. */
@@ -379,9 +386,9 @@ private fun sumLabel(minor: Long): String =
         .joinToString(" ")
         .reversed()
 
-private fun PaymentProvider.buttonLabel(): String = when (this) {
-    PaymentProvider.PAYME -> "Payme orqali to'lash"
-    PaymentProvider.CLICK -> "Click orqali to'lash"
-    PaymentProvider.APP_STORE -> "App Store orqali"
-    PaymentProvider.GOOGLE_PLAY -> "Google Play orqali"
+private fun PaymentProvider.buttonLabel(t: ModuleStrings): String = when (this) {
+    PaymentProvider.PAYME -> t.payWithPayme
+    PaymentProvider.CLICK -> t.payWithClick
+    PaymentProvider.APP_STORE -> t.payWithAppStore
+    PaymentProvider.GOOGLE_PLAY -> t.payWithGooglePlay
 }

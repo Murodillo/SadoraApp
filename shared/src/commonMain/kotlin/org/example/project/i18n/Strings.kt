@@ -31,6 +31,7 @@ interface Strings {
     val mind: MindStrings
     val nutrition: NutritionStrings
     val journey: JourneyStrings
+    val modules: ModuleStrings
 }
 
 /**
@@ -364,4 +365,113 @@ interface JourneyStrings {
     val weeklyGoals: String
     val strengthTraining: String
     val calciumAndD: String
+}
+
+/**
+ * The screens reached from a tab rather than being one: sleep, insights, the library,
+ * medications, the paywall and balance.
+ */
+interface ModuleStrings {
+    // ---- sleep
+    val sleepTitle: String
+    val sleepEmptyTitle: String
+    val sleepEmptyBody: String
+    val sleepWeek: String
+    fun average(value: String): String
+    fun daysRecorded(withData: Int, total: Int): String
+    val sleepManual: String
+    fun goalFrom(hours: Int): String
+    val lastNight: String
+    fun restingPulse(bpm: Int): String
+    val deep: String
+    val light: String
+    val stages: String
+
+    // ---- insights
+    val insightsTitle: String
+    fun windowDays(days: Int): String
+    val windowPremium: String
+    val insightsEmptyTitle: String
+    val loadFailed: String
+    val noRecordsInWindow: String
+    val noRecordsBody: String
+    val sleepTrend: String
+    val activityTrend: String
+    val moodTrend: String
+    val notEnoughForChart: String
+    val notEnoughForChartBody: String
+    val correlations: String
+    val correlationsPremium: String
+    val noCorrelation: String
+    val noCorrelationBody: String
+    val averagePrefix: String
+
+    // ---- knowledge
+    val all: String
+    val knowledgeTitle: String
+    val search: String
+    val libraryFailed: String
+    val libraryEmpty: String
+    val libraryEmptyBody: String
+    val nothingFound: String
+    val nothingFoundBody: String
+    val clearFilters: String
+    fun readMinutes(minutes: Int): String
+
+    // ---- medications
+    val medsTitle: String
+    val today: String
+    val history: String
+    val nextDose: String
+    fun oneTabletWith(note: String): String
+    val take: String
+    val later: String
+    val skip: String
+    val medsEmpty: String
+    val medsEmptyBody: String
+    val addMedication: String
+    val medsDisclaimer: String
+    fun stockLeft(name: String, days: Int): String
+    fun stockDays(days: Int): String
+    val pending: String
+    val skipped: String
+
+    // ---- paywall
+    val featureCycleMood: String
+    val featureFoodDiary: String
+    val featureAiChat: String
+    val featureScanner: String
+    val featureLongInsights: String
+    val premiumTitle: String
+    val premiumBody: String
+    val plansFailed: String
+    val plansFailedBody: String
+    val paymentAccepted: String
+    val paymentPending: String
+    val noPaymentMethod: String
+    val cancelAnytime: String
+    val restorePurchase: String
+    fun priceFor(sum: String, monthly: Boolean): String
+    fun perMonth(sum: String): String
+    fun saving(percent: Int): String
+    val payWithPayme: String
+    val payWithClick: String
+    val payWithAppStore: String
+    val payWithGooglePlay: String
+
+    // ---- balance
+    val balanceTitle: String
+    val fourDirections: String
+    val balanceDisclaimer: String
+    val balanced: String
+    fun someRoomIn(direction: String): String
+    fun fallingBehind(direction: String): String
+    val food: String
+    val water: String
+    val activity: String
+    val sleep: String
+    fun ofKcal(eaten: String, goal: String): String
+    fun ofLitres(drunk: String, goal: String): String
+    fun ofSteps(walked: String, goal: String): String
+    fun ofSleep(slept: String): String
 }

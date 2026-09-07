@@ -22,6 +22,8 @@ import org.example.project.design.Radius
 import org.example.project.design.Sadora
 import org.example.project.design.SadoraIcons
 import org.example.project.design.Spacing
+import org.example.project.i18n.ModuleStrings
+import org.example.project.i18n.strings
 import org.example.project.model.AppState
 import org.example.project.model.Fmt
 import org.example.project.ui.components.BadgeTone
@@ -60,6 +62,7 @@ fun SleepScreen(
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val t = strings.modules
     val c = Sadora.colors
     val today = health.wearableToday
     val week = insights.summary(7)?.trend(TrendMetric.SLEEP_MINUTES)
@@ -71,15 +74,14 @@ fun SleepScreen(
     }
 
     Column(modifier) {
-        SadoraTopBar("Uyqu", onBack = onClose)
+        SadoraTopBar(t.sleepTitle, onBack = onClose)
 
         ScreenContent {
             if (minutes == null && week?.hasData != true) {
                 item {
                     EmptyState(
-                        title = "Uyqu ma'lumoti yo'q",
-                        body = "Soat yoki telefon sinxronlanganda uyqu davomiyligi va bosqichlari " +
-                            "shu yerda ko'rinadi.",
+                        title = t.sleepEmptyTitle,
+                        body = t.sleepEmptyBody,
                         actionText = null,
                         onAction = {},
                         glyph = "🌙",
@@ -89,17 +91,17 @@ fun SleepScreen(
 
             if (minutes != null) {
                 item { LastNightCard(minutes, today) }
-                stagesCard(today, minutes)?.let { item { it() } }
+                stagesCard(today, minutes, t)?.let { item { it() } }
             }
 
             if (week != null && week.hasData) {
                 item {
                     SadoraCard {
                         CardLabel(
-                            "7 kunlik davomiylik",
+                            t.sleepWeek,
                             trailing = {
                                 week.averageLabel()?.let {
-                                    Text("O'rtacha $it", style = Sadora.type.body, color = c.muted)
+                                    Text(t.average(it), style = Sadora.type.body, color = c.muted)
                                 }
                             },
                         )
@@ -110,7 +112,7 @@ fun SleepScreen(
                             highlightLast = true,
                         )
                         Text(
-                            "${week.daysWithData} / ${week.points.size} kun qayd etilgan",
+                            t.daysRecorded(week.daysWithData, week.points.size),
                             style = Sadora.type.body,
                             color = c.muted2,
                         )
@@ -120,7 +122,7 @@ fun SleepScreen(
 
             item {
                 SadoraCard(padding = Spacing.xs) {
-                    SettingsRow(SadoraIcons.Pencil, "Uyquni qo'lda kiritish", showChevron = false) {}
+                    SettingsRow(SadoraIcons.Pencil, t.sleepManual, showChevron = false) {}
                 }
             }
         }
@@ -130,6 +132,7 @@ fun SleepScreen(
 /** Duration against the goal, plus the resting heart rate when the device sent one. */
 @Composable
 private fun LastNightCard(minutes: Int, today: DailyHealth?) {
+    val t = strings.modules
     val c = Sadora.colors
     val resting = today?.value(HealthMetric.RESTING_HEART_RATE)?.roundToInt()
     val providers = today?.metrics
@@ -152,13 +155,13 @@ private fun LastNightCard(minutes: Int, today: DailyHealth?) {
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(minutesLabel(minutes), style = Sadora.type.h2, color = c.text)
-                    Text("${SleepGoalMinutes / 60} soatdan", style = Sadora.type.body, color = c.muted)
+                    Text(t.goalFrom(SleepGoalMinutes / 60), style = Sadora.type.body, color = c.muted)
                 }
             }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text("Kecha", style = Sadora.type.body, color = c.muted)
                 if (resting != null) {
-                    Text("Tinch puls $resting bpm", style = Sadora.type.h3, color = c.text)
+                    Text(t.restingPulse(resting), style = Sadora.type.h3, color = c.text)
                 }
                 if (providers.isNotEmpty()) {
                     SadoraBadge(providers.joinToString(", "), BadgeTone.Connected)
@@ -175,7 +178,7 @@ private fun LastNightCard(minutes: Int, today: DailyHealth?) {
  * than invented — and if that arithmetic goes negative the device disagreed with itself
  * and the card is not drawn at all.
  */
-private fun stagesCard(today: DailyHealth?, totalMinutes: Int): (@Composable () -> Unit)? {
+private fun stagesCard(today: DailyHealth?, totalMinutes: Int, t: ModuleStrings): (@Composable () -> Unit)? {
     val deep = today?.value(HealthMetric.SLEEP_DEEP)?.roundToInt() ?: return null
     val rem = today.value(HealthMetric.SLEEP_REM)?.roundToInt() ?: return null
     val light = totalMinutes - deep - rem
@@ -184,12 +187,12 @@ private fun stagesCard(today: DailyHealth?, totalMinutes: Int): (@Composable () 
     return {
         val c = Sadora.colors
         val stages = listOf(
-            Triple("Chuqur", deep, c.primary),
+            Triple(t.deep, deep, c.primary),
             Triple("REM", rem, c.secondary),
-            Triple("Yengil", light, c.accent),
+            Triple(t.light, light, c.accent),
         )
         SadoraCard {
-            CardLabel("Bosqichlar")
+            CardLabel(t.stages)
             StackedBar(
                 segments = stages.map { (_, value, colour) ->
                     (value.toFloat() / totalMinutes.coerceAtLeast(1)) to colour

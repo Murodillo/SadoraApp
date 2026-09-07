@@ -64,6 +64,31 @@ class StringsTest {
             addAll(listOf(save, cancel, delete, close, add, edit, done))
             addAll(listOf(litres, millilitres, kcal, steps, minutesShort, days(3)))
         }
+        with(t.modules) {
+            addAll(
+                listOf(
+                    sleepTitle, sleepEmptyTitle, sleepEmptyBody, sleepWeek, average("6s"),
+                    daysRecorded(5, 7), sleepManual, goalFrom(8), lastNight, restingPulse(58),
+                    deep, light, stages, insightsTitle, windowDays(30), windowPremium,
+                    insightsEmptyTitle, loadFailed, noRecordsInWindow, noRecordsBody, sleepTrend,
+                    activityTrend, moodTrend, notEnoughForChart, notEnoughForChartBody,
+                    correlations, correlationsPremium, noCorrelation, noCorrelationBody,
+                    averagePrefix, all, knowledgeTitle, search, libraryFailed, libraryEmpty,
+                    libraryEmptyBody, nothingFound, nothingFoundBody, clearFilters,
+                    readMinutes(4), medsTitle, today, history, nextDose, oneTabletWith("x"),
+                    take, later, skip, medsEmpty, medsEmptyBody, addMedication, medsDisclaimer,
+                    stockLeft("X", 5), stockDays(5), pending, skipped, featureCycleMood,
+                    featureFoodDiary, featureAiChat, featureScanner, featureLongInsights,
+                    premiumTitle, premiumBody, plansFailed, plansFailedBody, paymentAccepted,
+                    paymentPending, noPaymentMethod, cancelAnytime, restorePurchase,
+                    priceFor("299 000", true), priceFor("299 000", false), perMonth("24 900"),
+                    saving(38), payWithPayme, payWithClick, payWithAppStore, payWithGooglePlay,
+                    balanceTitle, fourDirections, balanceDisclaimer, balanced, someRoomIn("x"),
+                    fallingBehind("x"), food, water, activity, sleep, ofKcal("1", "2"),
+                    ofLitres("1", "2"), ofSteps("1", "2"), ofSleep("6s"),
+                ),
+            )
+        }
         with(t.journey) {
             addAll(
                 listOf(
@@ -176,6 +201,9 @@ class StringsTest {
             assertNotEquals(StringsUz.journey.noPredictionBody, t.journey.noPredictionBody)
             assertNotEquals(StringsUz.journey.recoveryNote, t.journey.recoveryNote)
             assertNotEquals(StringsUz.journey.moodWatchBody, t.journey.moodWatchBody)
+            assertNotEquals(StringsUz.modules.medsDisclaimer, t.modules.medsDisclaimer)
+            assertNotEquals(StringsUz.modules.noCorrelationBody, t.modules.noCorrelationBody)
+            assertNotEquals(StringsUz.modules.balanced, t.modules.balanced)
         }
     }
 
