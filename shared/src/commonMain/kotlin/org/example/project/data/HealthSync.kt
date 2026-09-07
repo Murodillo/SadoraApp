@@ -9,7 +9,6 @@ import org.example.project.model.Mood
 import org.example.project.model.PracticeKind
 import uz.sadora.contract.DoseStatus
 import uz.sadora.contract.LogMealRequest
-import uz.sadora.contract.MealSlot
 import uz.sadora.contract.MindPracticeKind
 import uz.sadora.contract.SymptomEntry
 
@@ -73,7 +72,7 @@ class HealthSync(
             health.addMeal(
                 LogMealRequest(
                     date = date,
-                    slot = meal.slot.toSlot(),
+                    slot = meal.slot,
                     eatenAt = runCatching { LocalTime.parse(meal.time) }.getOrNull(),
                     description = meal.description,
                     kcal = meal.calories,
@@ -108,10 +107,4 @@ class HealthSync(
         scope.launch { health.deleteJournalEntry(id) }
     }
 
-    private fun String.toSlot(): MealSlot = when (this) {
-        "Nonushta" -> MealSlot.BREAKFAST
-        "Tushlik" -> MealSlot.LUNCH
-        "Kechki ovqat" -> MealSlot.DINNER
-        else -> MealSlot.SNACK
-    }
 }

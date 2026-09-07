@@ -1,11 +1,8 @@
 package org.example.project.data
 
-import kotlin.time.Clock
-import kotlin.time.Instant
 import org.example.project.model.CommunityComment
 import org.example.project.model.CommunityPost
 import org.example.project.model.CommunityTopic
-import org.example.project.model.Fmt
 import uz.sadora.contract.CommunityComment as WireComment
 import uz.sadora.contract.CommunityPost as WirePost
 import uz.sadora.contract.CommunityTopic as WireTopic
@@ -17,12 +14,12 @@ import uz.sadora.contract.CommunityTopic as WireTopic
  * — which already includes hers — has it taken back off here. Doing it in one place is
  * what keeps a like from being counted twice the moment the feed refreshes.
  */
-fun WirePost.toAppPost(now: Instant = Clock.System.now()): CommunityPost = CommunityPost(
+fun WirePost.toAppPost(): CommunityPost = CommunityPost(
     id = id,
     alias = alias,
     tint = tint,
     topic = topic.toAppTopic(),
-    ago = Fmt.ago(createdAt, now),
+    createdAt = createdAt,
     body = body,
     likes = likeCount - (if (liked) 1 else 0),
     comments = emptyList(),
@@ -30,10 +27,10 @@ fun WirePost.toAppPost(now: Instant = Clock.System.now()): CommunityPost = Commu
     isMine = isMine,
 )
 
-fun WireComment.toAppComment(now: Instant = Clock.System.now()): CommunityComment = CommunityComment(
+fun WireComment.toAppComment(): CommunityComment = CommunityComment(
     alias = alias,
     tint = tint,
-    ago = Fmt.ago(createdAt, now),
+    createdAt = createdAt,
     body = body,
     isMine = isMine,
 )

@@ -107,7 +107,7 @@ fun SleepScreen(
                         )
                         TrendBars(
                             values = week.barValues(),
-                            labels = week.barLabels(),
+                            labels = week.barLabels(strings.dates),
                             color = c.accent,
                             highlightLast = true,
                         )

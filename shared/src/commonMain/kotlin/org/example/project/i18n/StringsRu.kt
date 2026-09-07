@@ -1,8 +1,13 @@
 package org.example.project.i18n
 
+import kotlinx.datetime.LocalDate
+import org.example.project.model.ConceptionWindow
 import org.example.project.model.CyclePhase
+import org.example.project.model.Goal
 import org.example.project.model.LifeStage
 import org.example.project.model.Mood
+import uz.sadora.contract.HealthMetric
+import uz.sadora.contract.MealSlot
 
 /**
  * Русский. Translated from [StringsUz], not from English.
@@ -99,6 +104,9 @@ object StringsRu : Strings {
         override val premiumBadge = "SADORA PREMIUM"
         override val premiumActive = "Активна"
         override val premiumYearly = "Годовая подписка"
+        override fun premiumUntil(date: String) = "до $date"
+        override fun premiumRenewsOn(date: String) = "продлится $date"
+        override val premiumNoExpiry = "Бессрочно"
         override val premiumFeatureAi = "AI-чат"
         override val premiumFeatureScanner = "Сканер еды"
         override val premiumFeatureInsights = "Расширенная аналитика"
@@ -113,6 +121,52 @@ object StringsRu : Strings {
         override val languageNote = "Язык приложения меняется сразу. Ответы AI пока только " +
             "на узбекском."
         override val languageSaveFailed = "Язык не сохранён — попробуйте позже."
+        override val personalTitle = "Личные данные"
+        override val name = "Имя"
+        override val birthDate = "Дата рождения"
+        override val height = "Рост"
+        override val weight = "Вес"
+        override val centimetres = "см"
+        override val kilograms = "кг"
+        override val weightNote = "Вес указывать необязательно, и он никогда никому не показывается."
+
+        override val goalsTitle = "Цели"
+        override fun goalsChosen(count: Int) = "Выбрано: $count"
+
+        override val lifeStageTitle = "Этап жизни"
+        override val lifeStageNote = "Если сменить этап, раздел «Путь» и связанные экраны " +
+            "обновятся полностью. Записанные данные сохранятся."
+
+        override val notificationsTitle = "Уведомления"
+        override val medReminder = "Напоминания о приёме"
+        override val medReminderNote = "За 10 минут до времени приёма"
+        override val cycleReminder = "Напоминание о цикле"
+        override val cycleReminderNote = "Когда приближается ожидаемая дата"
+        override val waterReminder = "Напоминание о воде"
+        override val waterReminderNote = "Три раза в день"
+        override val aiSummary = "Ежедневная сводка ИИ"
+        override val aiSummaryNote = "Утром в 08:00"
+
+        override val privacyTitle = "Приватность и безопасность"
+        override val consentHealth = "Хранение данных о здоровье"
+        override val consentHealthNote = "Нужно для работы приложения. Данные хранятся в зашифрованном виде."
+        override val consentAi = "Использовать для выводов ИИ"
+        override val consentAiNote = "Чтобы готовить персональные выводы и советы."
+        override val consentAnalytics = "Анонимная аналитика"
+        override val consentAnalyticsNote = "По желанию. Помогает улучшать приложение."
+        override val saveConsents = "Сохранить согласия"
+        override val legalDocuments = "Правовые документы"
+        override val terms = "Условия использования"
+        override val privacyPolicy = "Политика конфиденциальности"
+        override val yourData = "Ваши данные"
+        override val exportData = "Экспортировать данные"
+        override val deleteAccount = "Удалить аккаунт"
+        override val deleteAccountConfirm = "Удалить аккаунт?"
+        override val deleteAccountBody = "Ваши данные будут удалены безвозвратно. " +
+            "Советуем сначала их экспортировать."
+
+        override val medicalDisclaimer = "SADORA не ставит диагнозов. При сомнениях " +
+            "обратитесь к врачу."
     }
 
     override val common = object : CommonStrings {
@@ -159,6 +213,32 @@ object StringsRu : Strings {
             CyclePhase.Luteal -> "Энергия постепенно спадает — оставьте место для отдыха."
         }
 
+        override fun goal(goal: Goal) = when (goal) {
+            Goal.UnderstandCycle -> "Понять свой цикл"
+            Goal.SleepBetter -> "Лучше спать"
+            Goal.MoreEnergy -> "Больше энергии"
+            Goal.LessStress -> "Меньше стресса"
+            Goal.EatBalanced -> "Сбалансированное питание"
+            Goal.DrinkWater -> "Пить больше воды"
+            Goal.BeActive -> "Быть активнее"
+            Goal.RememberMeds -> "Не забывать о препаратах"
+        }
+
+        override fun conceptionWindow(window: ConceptionWindow) = when (window) {
+            ConceptionWindow.JustStarted -> "Только начала"
+            ConceptionWindow.UnderThreeMonths -> "До 3 месяцев"
+            ConceptionWindow.ThreeToSix -> "3–6 месяцев"
+            ConceptionWindow.SixToTwelve -> "6–12 месяцев"
+            ConceptionWindow.OverAYear -> "Больше года"
+        }
+
+        override val saving = "Сохранение…"
+        override val yes = "Да"
+        override val no = "Нет"
+        override val back = "Назад"
+        override val loading = "Загрузка…"
+        override val retry = "Повторить"
+        override val optional = "Необязательно"
         override val save = "Сохранить"
         override val cancel = "Отмена"
         override val delete = "Удалить"
@@ -174,6 +254,34 @@ object StringsRu : Strings {
         override val steps = "шагов"
         override val minutesShort = "мин"
         override fun days(count: Int) = "$count дн."
+    }
+
+    override val dates = object : DateStrings {
+        override val months = listOf(
+            "Январь", "Февраль", "Март", "Апрель", "Май", "Июнь",
+            "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь",
+        )
+
+        /** The genitive: a day is "4 сентября", never "4 Сентябрь". */
+        private val monthsOfDay = listOf(
+            "января", "февраля", "марта", "апреля", "мая", "июня",
+            "июля", "августа", "сентября", "октября", "ноября", "декабря",
+        )
+
+        override val weekdays = listOf(
+            "понедельник", "вторник", "среда", "четверг", "пятница", "суббота", "воскресенье",
+        )
+
+        override fun dayMonth(date: LocalDate) = "${date.day} ${monthsOfDay[date.month.ordinal]}"
+
+        override val today = "Сегодня"
+        override val yesterday = "Вчера"
+        override val tomorrow = "Завтра"
+
+        override val justNow = "только что"
+        override fun minutesAgo(minutes: Int) = "$minutes мин. назад"
+        override fun hoursAgo(hours: Int) = "$hours ч. назад"
+        override fun daysAgo(days: Int) = "$days дн. назад"
     }
 
     override val today = object : TodayStrings {
@@ -286,6 +394,13 @@ object StringsRu : Strings {
         override val scannerHint = "Наведите камеру — блюдо, порция и макросы определятся примерно"
         override val balance = "Баланс"
         override val balanceHint = "Еда, вода, активность и сон — четыре направления"
+
+        override fun mealSlot(slot: MealSlot) = when (slot) {
+            MealSlot.BREAKFAST -> "Завтрак"
+            MealSlot.LUNCH -> "Обед"
+            MealSlot.DINNER -> "Ужин"
+            MealSlot.SNACK -> "Перекус"
+        }
 
         override val today = "Сегодня"
         override val protein = "Белки"
@@ -487,6 +602,43 @@ object StringsRu : Strings {
         override val payWithClick = "Оплатить через Click"
         override val payWithAppStore = "Через App Store"
         override val payWithGooglePlay = "Через Google Play"
+
+        override val journalTitle = "Дневник и практика"
+        override val journalPrivate = "ВИДИТЕ ТОЛЬКО ВЫ"
+        override val journalLabel = "Дневник"
+        override val journalPrompt = "Как вы себя чувствуете сегодня?"
+        override val journalEmpty = "В дневнике пока пусто"
+        override val journalEmptyBody = "Напишите первую запись. Кроме вас её никто не увидит."
+        override val journalDeleteTitle = "Удалить запись"
+        override val journalDeleteBody = "Запись будет удалена безвозвратно."
+        override val journalDeleteAction = "Удалить запись"
+
+        override val sourcesTitle = "Источники данных"
+        override fun sourcesConnected(count: Int) = "Подключено источников: $count"
+        override fun lastSample(ago: String) = "Последние данные $ago"
+        override val noSampleYet = "Данных пока не было"
+        override val sourcesEmpty = "Нет подключённых источников"
+        override val sourcesEmptyBody = "Как только вы дадите доступ к HealthKit или Health " +
+            "Connect, здесь появятся полученные данные и их время."
+        override val sourcesNote = "У каждого показателя видно, откуда он и когда получен. " +
+            "Если один показатель приходит из нескольких источников, применяется приоритет."
+        override val connected = "Подключено"
+        override val notConnected = "Не подключено"
+        override fun samples(count: String) = "$count записей"
+        override fun metric(metric: HealthMetric) = when (metric) {
+            HealthMetric.STEPS -> "Шаги"
+            HealthMetric.ACTIVE_ENERGY -> "Активные калории"
+            HealthMetric.DISTANCE -> "Расстояние"
+            HealthMetric.HEART_RATE -> "Пульс"
+            HealthMetric.RESTING_HEART_RATE -> "Пульс покоя"
+            HealthMetric.HRV -> "ВСР"
+            HealthMetric.RESPIRATORY_RATE -> "Дыхание"
+            HealthMetric.BODY_TEMPERATURE -> "Температура"
+            HealthMetric.SLEEP_DURATION -> "Сон"
+            HealthMetric.SLEEP_DEEP -> "Глубокий сон"
+            HealthMetric.SLEEP_REM -> "Фаза REM"
+            HealthMetric.WEIGHT -> "Вес"
+        }
 
         override val balanceTitle = "Баланс"
         override val fourDirections = "Четыре направления"

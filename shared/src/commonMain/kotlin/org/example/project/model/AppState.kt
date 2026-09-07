@@ -198,7 +198,9 @@ class AppState {
      * not paid, so the tier now only ever comes from [Entitlements].
      */
     var isPremium by mutableStateOf(false)
-    var premiumRenewal by mutableStateOf("14-mart 2027-yilgacha")
+    /** When the plan ends, and whether it renews itself — the Profile card words it. */
+    var premiumExpiresAt by mutableStateOf<LocalDate?>(null)
+    var premiumAutoRenewing by mutableStateOf(false)
 
     // ---- appearance ----
     var darkTheme by mutableStateOf(false)
@@ -306,7 +308,9 @@ class AppState {
      * folded into them: a post is everyone's, and her reaction to it is only hers, so
      * the two have different owners the moment there is a server behind this.
      */
-    val communityPosts = mutableStateListOf(*SampleData.communityPosts.toTypedArray())
+    // Empty until the feed loads. Seeding it with written-out posts meant every phone
+    // opened the secret chat on five conversations nobody had had.
+    val communityPosts = mutableStateListOf<CommunityPost>()
     val likedPosts = mutableStateListOf<String>()
     val savedPosts = mutableStateListOf<String>()
     private val ownComments = mutableStateMapOf<String, SnapshotStateList<CommunityComment>>()
@@ -348,7 +352,15 @@ class AppState {
         val text = body.trim()
         if (text.isEmpty()) return
         ownComments.getOrPut(postId) { mutableStateListOf() }
-            .add(CommunityComment(alias = communityAlias ?: "Siz", tint = communityTint, ago = "hozir", body = text, isMine = true))
+            .add(
+                CommunityComment(
+                    alias = communityAlias ?: "Siz",
+                    tint = communityTint,
+                    createdAt = Clock.System.now(),
+                    body = text,
+                    isMine = true,
+                ),
+            )
         communitySync?.commentAdded(postId, text)
     }
 
@@ -371,7 +383,7 @@ class AppState {
                 alias = communityAlias ?: "Siz",
                 tint = communityTint,
                 topic = topic,
-                ago = "hozir",
+                createdAt = Clock.System.now(),
                 body = text,
                 likes = 0,
                 isMine = true,

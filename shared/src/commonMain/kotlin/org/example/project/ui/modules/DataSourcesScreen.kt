@@ -21,6 +21,7 @@ import org.example.project.design.Sadora
 import org.example.project.design.Spacing
 import kotlin.time.Clock
 import org.example.project.data.HealthController
+import org.example.project.i18n.strings
 import org.example.project.model.Fmt
 import org.example.project.ui.components.BadgeTone
 import org.example.project.ui.components.ChipFlowRow
@@ -30,7 +31,6 @@ import org.example.project.ui.components.SadoraBadge
 import org.example.project.ui.components.SadoraCard
 import org.example.project.ui.components.SadoraTopBar
 import org.example.project.ui.components.ScreenContent
-import uz.sadora.contract.HealthMetric
 import uz.sadora.contract.ProviderStatus
 
 /**
@@ -46,6 +46,8 @@ fun DataSourcesScreen(
     modifier: Modifier = Modifier,
 ) {
     val c = Sadora.colors
+    val t = strings.modules
+    val dates = strings.dates
     val sources = health.sources
     val connected = sources.count { it.connected }
     val lastSync = sources.mapNotNull { it.lastSampleAt }.maxOrNull()
@@ -53,7 +55,7 @@ fun DataSourcesScreen(
     LaunchedEffect(Unit) { health.loadSources() }
 
     Column(modifier) {
-        SadoraTopBar("Ma'lumot manbalari", onBack = onClose)
+        SadoraTopBar(t.sourcesTitle, onBack = onClose)
 
         ScreenContent {
             item {
@@ -69,15 +71,15 @@ fun DataSourcesScreen(
                     Text("✓", style = Sadora.type.h3, color = c.success)
                     Column {
                         Text(
-                            "$connected manba ulangan",
+                            t.sourcesConnected(connected),
                             style = Sadora.type.h3,
                             color = c.success,
                         )
                         Text(
                             // The real age of the newest sample, or nothing — a fixed
                             // "12:40" told everyone their watch had just synced.
-                            lastSync?.let { "Oxirgi namuna ${Fmt.ago(it, Clock.System.now())}" }
-                                ?: "Hali namuna kelmagan",
+                            lastSync?.let { t.lastSample(dates.ago(it, Clock.System.now())) }
+                                ?: t.noSampleYet,
                             style = Sadora.type.body,
                             color = c.muted,
                         )
@@ -88,9 +90,8 @@ fun DataSourcesScreen(
             if (sources.isEmpty()) {
                 item {
                     EmptyState(
-                        title = "Ulangan manba yo'q",
-                        body = "HealthKit yoki Health Connect ruxsat bergach, kelgan namunalar " +
-                            "va ularning vaqti shu yerda ko'rinadi.",
+                        title = t.sourcesEmpty,
+                        body = t.sourcesEmptyBody,
                         actionText = null,
                         onAction = {},
                         glyph = "⌚",
@@ -103,10 +104,7 @@ fun DataSourcesScreen(
             }
 
             item {
-                DisclaimerNote(
-                    "Har bir ko'rsatkichda manba va vaqt belgisi ko'rsatiladi. Bir xil " +
-                        "ko'rsatkich bir nechta manbadan kelsa, ustuvorlik sozlamalari qo'llanadi.",
-                )
+                DisclaimerNote(t.sourcesNote)
             }
         }
     }
@@ -115,6 +113,8 @@ fun DataSourcesScreen(
 @Composable
 private fun SourceCard(source: ProviderStatus) {
     val c = Sadora.colors
+    val t = strings.modules
+    val dates = strings.dates
     val name = source.provider.name.lowercase().split('_').joinToString(" ") { part ->
         part.replaceFirstChar { it.uppercase() }
     }
@@ -137,42 +137,26 @@ private fun SourceCard(source: ProviderStatus) {
                 Text(name, style = Sadora.type.h3, color = c.text)
                 Text(
                     listOfNotNull(
-                        "${Fmt.int(source.sampleCount.toInt())} namuna",
-                        source.lastSampleAt?.let { Fmt.ago(it, Clock.System.now()) },
+                        t.samples(Fmt.int(source.sampleCount.toInt())),
+                        source.lastSampleAt?.let { dates.ago(it, Clock.System.now()) },
                     ).joinToString(" · "),
                     style = Sadora.type.body,
                     color = c.muted,
                 )
             }
             if (source.connected) {
-                SadoraBadge("Ulangan", BadgeTone.Connected)
+                SadoraBadge(t.connected, BadgeTone.Connected)
             } else {
-                SadoraBadge("Ulanmagan", BadgeTone.Neutral)
+                SadoraBadge(t.notConnected, BadgeTone.Neutral)
             }
         }
 
         if (source.metrics.isNotEmpty()) {
             ChipFlowRow(horizontalGap = Spacing.xxs, verticalGap = Spacing.xxs) {
                 source.metrics.forEach { metric ->
-                    SadoraBadge(metric.label(), BadgeTone.Neutral)
+                    SadoraBadge(t.metric(metric), BadgeTone.Neutral)
                 }
             }
         }
     }
-}
-
-/** The metric names as the app words them, not as the wire spells them. */
-private fun HealthMetric.label(): String = when (this) {
-    HealthMetric.STEPS -> "Qadamlar"
-    HealthMetric.ACTIVE_ENERGY -> "Faol kaloriya"
-    HealthMetric.DISTANCE -> "Masofa"
-    HealthMetric.HEART_RATE -> "Puls"
-    HealthMetric.RESTING_HEART_RATE -> "Tinch puls"
-    HealthMetric.HRV -> "HRV"
-    HealthMetric.RESPIRATORY_RATE -> "Nafas"
-    HealthMetric.BODY_TEMPERATURE -> "Harorat"
-    HealthMetric.SLEEP_DURATION -> "Uyqu"
-    HealthMetric.SLEEP_DEEP -> "Chuqur uyqu"
-    HealthMetric.SLEEP_REM -> "REM"
-    HealthMetric.WEIGHT -> "Vazn"
 }

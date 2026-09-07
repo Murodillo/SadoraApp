@@ -252,7 +252,7 @@ private fun MealRow(meal: Meal) {
         ) {
             MealThumb(meal.emoji, size = 64.dp)
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(meal.slot, style = Sadora.type.h3, color = c.text)
+                Text(t.mealSlot(meal.slot), style = Sadora.type.h3, color = c.text)
                 Text(
                     listOf(meal.time, t.kcal(meal.calories)).filter { it.isNotBlank() }.joinToString(" • "),
                     style = Sadora.type.body,

@@ -146,7 +146,7 @@ private fun CycleJourney(state: AppState, onOpen: (Route) -> Unit) {
                 horizontalArrangement = Arrangement.Center,
             ) {
                 Text(
-                    Fmt.monthYear(state.today.year, state.today.month.ordinal + 1),
+                    strings.dates.monthYear(state.today.year, state.today.month.ordinal + 1),
                     style = Sadora.type.h3,
                     color = c.text,
                 )
@@ -366,7 +366,7 @@ private fun CycleWeekStrip(state: AppState, onOpen: (Route) -> Unit) {
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 Text(
-                    Fmt.weekdays[index].take(2).replaceFirstChar { it.uppercase() },
+                    strings.dates.weekdays[index].take(2).replaceFirstChar { it.uppercase() },
                     style = Sadora.type.caption.copy(letterSpacing = androidx.compose.ui.unit.TextUnit.Unspecified),
                     color = c.muted2,
                     maxLines = 1,
@@ -528,9 +528,9 @@ private fun PregnancyJourney(state: AppState, health: HealthController, onOpen: 
                     val left = state.today.daysUntil(due)
                     Text(
                         if (left >= 0) {
-                            t.dueOn(Fmt.dayMonth(due), left)
+                            t.dueOn(strings.dates.dayMonth(due), left)
                         } else {
-                            t.dueOnPast(Fmt.dayMonth(due))
+                            t.dueOnPast(strings.dates.dayMonth(due))
                         },
                         style = Sadora.type.body,
                         color = onWarm.copy(alpha = 0.85f),
@@ -615,7 +615,7 @@ private fun PregnancyJourney(state: AppState, health: HealthController, onOpen: 
                     ) {
                         Text("${appointment.scheduledOn.day}", style = Sadora.type.h2, color = c.text)
                         Text(
-                            Fmt.months[appointment.scheduledOn.month.ordinal].take(3).uppercase(),
+                            strings.dates.months[appointment.scheduledOn.month.ordinal].take(3).uppercase(),
                             style = Sadora.type.caption,
                             color = c.muted,
                         )
@@ -819,7 +819,7 @@ private fun PerimenopauseJourney(state: AppState, health: HealthController, onOp
                     WeeklyBars(
                         values = cycles.map { it.cycleLength / longest.toFloat() },
                         labels = cycles.map {
-                            Fmt.months[it.startedOn.month.ordinal].take(3)
+                            strings.dates.months[it.startedOn.month.ordinal].take(3)
                         },
                         color = c.primary,
                     )

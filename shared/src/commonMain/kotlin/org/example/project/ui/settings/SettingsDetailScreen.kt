@@ -24,7 +24,6 @@ import org.example.project.model.AppLanguage
 import org.example.project.model.AppState
 import org.example.project.model.Goal
 import org.example.project.model.LifeStage
-import org.example.project.model.SampleData
 import org.example.project.nav.Route
 import org.example.project.ui.components.ButtonTone
 import org.example.project.ui.components.CardLabel
@@ -81,12 +80,12 @@ fun SettingsDetailScreen(
 private fun SaveButton(
     controller: SadoraController,
     onSaved: () -> Unit,
-    label: String = "Saqlash",
+    label: String = strings.common.save,
 ) {
     val scope = rememberCoroutineScope()
     controller.error?.let { ErrorStrip(it) }
     SadoraButton(
-        if (controller.busy) "Saqlanmoqda…" else label,
+        if (controller.busy) strings.common.saving else label,
         enabled = !controller.busy,
         onClick = { scope.launch { if (controller.saveProfile()) onSaved() } },
     )
@@ -94,56 +93,55 @@ private fun SaveButton(
 
 @Composable
 private fun PersonalDetails(state: AppState, controller: SadoraController, onClose: () -> Unit) {
-    val c = Sadora.colors
-    SadoraTopBar("Shaxsiy ma'lumotlar", onBack = onClose)
+    val t = strings.settings
+    SadoraTopBar(t.personalTitle, onBack = onClose)
     ScreenContent {
         item {
             SadoraCard {
-                SadoraTextField(state.name, { state.name = it }, label = "Ism")
+                SadoraTextField(state.name, { state.name = it }, label = t.name)
                 SadoraTextField(
                     state.birthDate,
                     { state.birthDate = it },
-                    label = "Tug'ilgan sana",
+                    label = t.birthDate,
                     keyboardType = KeyboardType.Number,
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                     SadoraTextField(
                         state.heightCm,
                         { state.heightCm = it },
-                        label = "Bo'y",
-                        suffix = "sm",
+                        label = t.height,
+                        suffix = t.centimetres,
                         keyboardType = KeyboardType.Number,
                         modifier = Modifier.weight(1f),
                     )
                     SadoraTextField(
                         state.weightKg,
                         { state.weightKg = it },
-                        label = "Vazn",
-                        suffix = "kg",
+                        label = t.weight,
+                        suffix = t.kilograms,
                         keyboardType = KeyboardType.Number,
                         modifier = Modifier.weight(1f),
                     )
                 }
             }
         }
-        item {
-            DisclaimerNote("Vazn ixtiyoriy va hech qachon boshqalarga ko'rsatilmaydi.")
-        }
+        item { DisclaimerNote(t.weightNote) }
         item { SaveButton(controller, onClose) }
     }
 }
 
 @Composable
 private fun GoalsSettings(state: AppState, controller: SadoraController, onClose: () -> Unit) {
-    SadoraTopBar("Maqsadlar", onBack = onClose)
+    val t = strings.settings
+    SadoraTopBar(t.goalsTitle, onBack = onClose)
     ScreenContent {
         item {
             SadoraCard {
-                CardLabel("${state.goals.size} tanlandi")
+                CardLabel(t.goalsChosen(state.goals.size))
                 ChipFlowRow {
                     Goal.entries.forEach { goal ->
                         SelectChip(
-                            label = goal.label,
+                            label = strings.common.goal(goal),
                             selected = goal in state.goals,
                             onClick = { state.toggleGoal(goal) },
                         )
@@ -157,47 +155,40 @@ private fun GoalsSettings(state: AppState, controller: SadoraController, onClose
 
 @Composable
 private fun LifeStageSettings(state: AppState, controller: SadoraController, onClose: () -> Unit) {
-    SadoraTopBar("Hayot bosqichi", onBack = onClose)
+    val t = strings.settings
+    val stages = strings.stages
+    SadoraTopBar(t.lifeStageTitle, onBack = onClose)
     ScreenContent {
         items(LifeStage.entries.size) { index ->
             val stage = LifeStage.entries[index]
             OptionRow(
-                title = stage.title,
-                subtitle = stage.subtitle,
+                title = stages.title(stage),
+                subtitle = stages.subtitle(stage),
                 leading = stage.glyph,
                 selected = state.lifeStage == stage,
                 onClick = { state.lifeStage = stage },
             )
         }
-        item {
-            DisclaimerNote(
-                "Bosqichni o'zgartirsangiz \"Yo'l\" bo'limi va tegishli ekranlar " +
-                    "butunlay yangilanadi. Yozilgan ma'lumotlaringiz saqlanadi.",
-            )
-        }
+        item { DisclaimerNote(t.lifeStageNote) }
         item { SaveButton(controller, onClose) }
     }
 }
 
 @Composable
 private fun NotificationSettings(state: AppState, onClose: () -> Unit) {
-    val c = Sadora.colors
-    SadoraTopBar("Bildirishnomalar", onBack = onClose)
+    val t = strings.settings
+    SadoraTopBar(t.notificationsTitle, onBack = onClose)
     ScreenContent {
         item {
             SadoraCard {
-                ToggleRow(
-                    "Dori eslatmalari",
-                    "Qabul vaqtidan 10 daqiqa oldin",
-                    state.notificationsAllowed,
-                ) { state.notificationsAllowed = it }
-                ToggleRow(
-                    "Hayz eslatmasi",
-                    "Taxminiy sana yaqinlashganda",
-                    state.notificationsAllowed,
-                ) { state.notificationsAllowed = it }
-                ToggleRow("Suv eslatmasi", "Kuniga uch marta", false) {}
-                ToggleRow("Kunlik AI xulosasi", "Ertalab 08:00", state.isPremium) {}
+                ToggleRow(t.medReminder, t.medReminderNote, state.notificationsAllowed) {
+                    state.notificationsAllowed = it
+                }
+                ToggleRow(t.cycleReminder, t.cycleReminderNote, state.notificationsAllowed) {
+                    state.notificationsAllowed = it
+                }
+                ToggleRow(t.waterReminder, t.waterReminderNote, false) {}
+                ToggleRow(t.aiSummary, t.aiSummaryNote, state.isPremium) {}
             }
         }
     }
@@ -232,33 +223,33 @@ private fun PrivacySettings(
     onOpen: (Route) -> Unit,
     onSignedOut: () -> Unit,
 ) {
-    val c = Sadora.colors
+    val t = strings.settings
     val scope = rememberCoroutineScope()
     var confirmDelete by remember { mutableStateOf(false) }
 
     // Show what the server actually has, not what this device last set.
     LaunchedEffect(Unit) { controller.loadConsents() }
 
-    SadoraTopBar("Maxfiylik va xavfsizlik", onBack = onClose)
+    SadoraTopBar(t.privacyTitle, onBack = onClose)
     ScreenContent {
         item {
             SadoraCard {
                 ConsentRow(
-                    "Salomatlik ma'lumotlarini saqlash",
-                    "Ilova ishlashi uchun zarur. Ma'lumot shifrlangan holda saqlanadi.",
+                    t.consentHealth,
+                    t.consentHealthNote,
                     state.consentStoreHealth,
                     { state.consentStoreHealth = it },
                     required = true,
                 )
                 ConsentRow(
-                    "AI xulosalar uchun ishlatish",
-                    "Shaxsiy xulosa va tavsiyalar tayyorlash uchun.",
+                    t.consentAi,
+                    t.consentAiNote,
                     state.consentAiInsights,
                     { state.consentAiInsights = it },
                 )
                 ConsentRow(
-                    "Anonim analitika",
-                    "Ixtiyoriy. Ilovani yaxshilashga yordam beradi.",
+                    t.consentAnalytics,
+                    t.consentAnalyticsNote,
                     state.consentAnalytics,
                     { state.consentAnalytics = it },
                 )
@@ -267,7 +258,7 @@ private fun PrivacySettings(
         item {
             controller.error?.let { ErrorStrip(it) }
             SadoraButton(
-                if (controller.busy) "Saqlanmoqda…" else "Roziliklarni saqlash",
+                if (controller.busy) strings.common.saving else t.saveConsents,
                 enabled = !controller.busy,
                 onClick = { scope.launch { controller.saveConsents() } },
             )
@@ -275,14 +266,10 @@ private fun PrivacySettings(
 
         item {
             SadoraCard {
-                CardLabel("Huquqiy hujjatlar")
+                CardLabel(t.legalDocuments)
+                SadoraButton(t.terms, { onOpen(Route.Terms) }, tone = ButtonTone.Secondary)
                 SadoraButton(
-                    "Foydalanish shartlari",
-                    { onOpen(Route.Terms) },
-                    tone = ButtonTone.Secondary,
-                )
-                SadoraButton(
-                    "Maxfiylik siyosati",
+                    t.privacyPolicy,
                     { onOpen(Route.PrivacyPolicy) },
                     tone = ButtonTone.Secondary,
                 )
@@ -291,10 +278,10 @@ private fun PrivacySettings(
 
         item {
             SadoraCard {
-                CardLabel("Ma'lumotlaringiz")
-                SadoraButton("Ma'lumotlarni eksport qilish", {}, tone = ButtonTone.Secondary)
+                CardLabel(t.yourData)
+                SadoraButton(t.exportData, {}, tone = ButtonTone.Secondary)
                 SadoraButton(
-                    "Hisobni o'chirish",
+                    t.deleteAccount,
                     { confirmDelete = true },
                     tone = ButtonTone.Destructive,
                 )
@@ -304,9 +291,9 @@ private fun PrivacySettings(
 
     SadoraDialog(
         visible = confirmDelete,
-        title = "Hisobni o'chirish?",
-        body = "Ma'lumotlaringiz butunlay o'chiriladi. Avval eksport qilishni tavsiya qilamiz.",
-        confirmText = "O'chirish",
+        title = t.deleteAccountConfirm,
+        body = t.deleteAccountBody,
+        confirmText = strings.common.delete,
         onConfirm = {
             confirmDelete = false
             scope.launch {
@@ -370,7 +357,7 @@ private fun About(onClose: () -> Unit) {
             SadoraCard {
                 Text("SADORA", style = Sadora.type.h1, color = c.text)
                 Text(strings.settings.version("1.0.0"), style = Sadora.type.body, color = c.muted)
-                Text(SampleData.medicalDisclaimer, style = Sadora.type.body, color = c.muted)
+                Text(strings.settings.medicalDisclaimer, style = Sadora.type.body, color = c.muted)
             }
         }
     }

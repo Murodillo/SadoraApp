@@ -1,8 +1,13 @@
 package org.example.project.i18n
 
+import kotlinx.datetime.LocalDate
+import org.example.project.model.ConceptionWindow
 import org.example.project.model.CyclePhase
+import org.example.project.model.Goal
 import org.example.project.model.LifeStage
 import org.example.project.model.Mood
+import uz.sadora.contract.HealthMetric
+import uz.sadora.contract.MealSlot
 
 /**
  * O'zbekcha — the language the app was written in, and the reference the other two are
@@ -96,6 +101,9 @@ object StringsUz : Strings {
         override val premiumBadge = "SADORA PREMIUM"
         override val premiumActive = "Faol"
         override val premiumYearly = "Yillik obuna"
+        override fun premiumUntil(date: String) = "$date-gacha"
+        override fun premiumRenewsOn(date: String) = "$date-da yangilanadi"
+        override val premiumNoExpiry = "Muddatsiz"
         override val premiumFeatureAi = "AI chat"
         override val premiumFeatureScanner = "Ovqat skaneri"
         override val premiumFeatureInsights = "Kengaytirilgan tahlil"
@@ -110,6 +118,52 @@ object StringsUz : Strings {
         override val languageNote = "Ilova tili darhol o'zgaradi. AI javoblari hozircha " +
             "faqat o'zbekcha."
         override val languageSaveFailed = "Til saqlanmadi — keyinroq qayta urinib ko'ring."
+        override val personalTitle = "Shaxsiy ma'lumotlar"
+        override val name = "Ism"
+        override val birthDate = "Tug'ilgan sana"
+        override val height = "Bo'y"
+        override val weight = "Vazn"
+        override val centimetres = "sm"
+        override val kilograms = "kg"
+        override val weightNote = "Vazn ixtiyoriy va hech qachon boshqalarga ko'rsatilmaydi."
+
+        override val goalsTitle = "Maqsadlar"
+        override fun goalsChosen(count: Int) = "$count tanlandi"
+
+        override val lifeStageTitle = "Hayot bosqichi"
+        override val lifeStageNote = "Bosqichni o'zgartirsangiz \"Yo'l\" bo'limi va tegishli " +
+            "ekranlar butunlay yangilanadi. Yozilgan ma'lumotlaringiz saqlanadi."
+
+        override val notificationsTitle = "Bildirishnomalar"
+        override val medReminder = "Dori eslatmalari"
+        override val medReminderNote = "Qabul vaqtidan 10 daqiqa oldin"
+        override val cycleReminder = "Hayz eslatmasi"
+        override val cycleReminderNote = "Taxminiy sana yaqinlashganda"
+        override val waterReminder = "Suv eslatmasi"
+        override val waterReminderNote = "Kuniga uch marta"
+        override val aiSummary = "Kunlik AI xulosasi"
+        override val aiSummaryNote = "Ertalab 08:00"
+
+        override val privacyTitle = "Maxfiylik va xavfsizlik"
+        override val consentHealth = "Salomatlik ma'lumotlarini saqlash"
+        override val consentHealthNote = "Ilova ishlashi uchun zarur. Ma'lumot shifrlangan holda saqlanadi."
+        override val consentAi = "AI xulosalar uchun ishlatish"
+        override val consentAiNote = "Shaxsiy xulosa va tavsiyalar tayyorlash uchun."
+        override val consentAnalytics = "Anonim analitika"
+        override val consentAnalyticsNote = "Ixtiyoriy. Ilovani yaxshilashga yordam beradi."
+        override val saveConsents = "Roziliklarni saqlash"
+        override val legalDocuments = "Huquqiy hujjatlar"
+        override val terms = "Foydalanish shartlari"
+        override val privacyPolicy = "Maxfiylik siyosati"
+        override val yourData = "Ma'lumotlaringiz"
+        override val exportData = "Ma'lumotlarni eksport qilish"
+        override val deleteAccount = "Hisobni o'chirish"
+        override val deleteAccountConfirm = "Hisobni o'chirish?"
+        override val deleteAccountBody = "Ma'lumotlaringiz butunlay o'chiriladi. " +
+            "Avval eksport qilishni tavsiya qilamiz."
+
+        override val medicalDisclaimer = "SADORA tibbiy tashxis qo'ymaydi. Shubha tug'ilsa " +
+            "shifokorga murojaat qiling."
     }
 
     override val common = object : CommonStrings {
@@ -156,6 +210,32 @@ object StringsUz : Strings {
             CyclePhase.Luteal -> "Energiya sekin pasayadi — dam olishga joy qoldiring."
         }
 
+        override fun goal(goal: Goal) = when (goal) {
+            Goal.UnderstandCycle -> "Siklni tushunish"
+            Goal.SleepBetter -> "Yaxshi uxlash"
+            Goal.MoreEnergy -> "Energiyani oshirish"
+            Goal.LessStress -> "Stressni kamaytirish"
+            Goal.EatBalanced -> "Muvozanatli ovqatlanish"
+            Goal.DrinkWater -> "Ko'proq suv ichish"
+            Goal.BeActive -> "Faolroq bo'lish"
+            Goal.RememberMeds -> "Dorilarni eslab qolish"
+        }
+
+        override fun conceptionWindow(window: ConceptionWindow) = when (window) {
+            ConceptionWindow.JustStarted -> "Endi boshladim"
+            ConceptionWindow.UnderThreeMonths -> "3 oygacha"
+            ConceptionWindow.ThreeToSix -> "3–6 oy"
+            ConceptionWindow.SixToTwelve -> "6–12 oy"
+            ConceptionWindow.OverAYear -> "Bir yildan ko'p"
+        }
+
+        override val saving = "Saqlanmoqda…"
+        override val yes = "Ha"
+        override val no = "Yo'q"
+        override val back = "Orqaga"
+        override val loading = "Yuklanmoqda…"
+        override val retry = "Qayta urinish"
+        override val optional = "Ixtiyoriy"
         override val save = "Saqlash"
         override val cancel = "Bekor"
         override val delete = "O'chirish"
@@ -171,6 +251,29 @@ object StringsUz : Strings {
         override val steps = "qadam"
         override val minutesShort = "daq"
         override fun days(count: Int) = "$count kun"
+    }
+
+    override val dates = object : DateStrings {
+        override val months = listOf(
+            "Yanvar", "Fevral", "Mart", "Aprel", "May", "Iyun",
+            "Iyul", "Avgust", "Sentabr", "Oktabr", "Noyabr", "Dekabr",
+        )
+
+        override val weekdays = listOf(
+            "dushanba", "seshanba", "chorshanba", "payshanba", "juma", "shanba", "yakshanba",
+        )
+
+        override fun dayMonth(date: LocalDate) =
+            "${date.day}-${months[date.month.ordinal].lowercase()}"
+
+        override val today = "Bugun"
+        override val yesterday = "Kecha"
+        override val tomorrow = "Ertaga"
+
+        override val justNow = "hozir"
+        override fun minutesAgo(minutes: Int) = "$minutes daqiqa oldin"
+        override fun hoursAgo(hours: Int) = "$hours soat oldin"
+        override fun daysAgo(days: Int) = "$days kun oldin"
     }
 
     override val today = object : TodayStrings {
@@ -284,6 +387,13 @@ object StringsUz : Strings {
         override val scannerHint = "Kamerani yo'naltiring — taom, porsiya va makrolar taxminan aniqlanadi"
         override val balance = "Balans"
         override val balanceHint = "Ovqat, suv, faollik va uyqu — to'rt yo'nalish"
+
+        override fun mealSlot(slot: MealSlot) = when (slot) {
+            MealSlot.BREAKFAST -> "Nonushta"
+            MealSlot.LUNCH -> "Tushlik"
+            MealSlot.DINNER -> "Kechki ovqat"
+            MealSlot.SNACK -> "Gazak"
+        }
 
         override val today = "Bugun"
         override val protein = "Oqsil"
@@ -486,6 +596,43 @@ object StringsUz : Strings {
         override val payWithClick = "Click orqali to'lash"
         override val payWithAppStore = "App Store orqali"
         override val payWithGooglePlay = "Google Play orqali"
+
+        override val journalTitle = "Kundalik va praktika"
+        override val journalPrivate = "FAQAT SIZ KO'RASIZ"
+        override val journalLabel = "Kundalik"
+        override val journalPrompt = "Bugun o'zingizni qanday his qilyapsiz?"
+        override val journalEmpty = "Kundalik hozircha bo'sh"
+        override val journalEmptyBody = "Birinchi yozuvingizni yozing. Uni sizdan boshqa hech kim ko'rmaydi."
+        override val journalDeleteTitle = "Yozuvni o'chirish"
+        override val journalDeleteBody = "Bu yozuv butunlay o'chiriladi va uni qaytarib bo'lmaydi."
+        override val journalDeleteAction = "Yozuvni o'chirish"
+
+        override val sourcesTitle = "Ma'lumot manbalari"
+        override fun sourcesConnected(count: Int) = "$count manba ulangan"
+        override fun lastSample(ago: String) = "Oxirgi namuna $ago"
+        override val noSampleYet = "Hali namuna kelmagan"
+        override val sourcesEmpty = "Ulangan manba yo'q"
+        override val sourcesEmptyBody = "HealthKit yoki Health Connect ruxsat bergach, kelgan " +
+            "namunalar va ularning vaqti shu yerda ko'rinadi."
+        override val sourcesNote = "Har bir ko'rsatkichda manba va vaqt belgisi ko'rsatiladi. " +
+            "Bir xil ko'rsatkich bir nechta manbadan kelsa, ustuvorlik sozlamalari qo'llanadi."
+        override val connected = "Ulangan"
+        override val notConnected = "Ulanmagan"
+        override fun samples(count: String) = "$count namuna"
+        override fun metric(metric: HealthMetric) = when (metric) {
+            HealthMetric.STEPS -> "Qadamlar"
+            HealthMetric.ACTIVE_ENERGY -> "Faol kaloriya"
+            HealthMetric.DISTANCE -> "Masofa"
+            HealthMetric.HEART_RATE -> "Puls"
+            HealthMetric.RESTING_HEART_RATE -> "Tinch puls"
+            HealthMetric.HRV -> "HRV"
+            HealthMetric.RESPIRATORY_RATE -> "Nafas"
+            HealthMetric.BODY_TEMPERATURE -> "Harorat"
+            HealthMetric.SLEEP_DURATION -> "Uyqu"
+            HealthMetric.SLEEP_DEEP -> "Chuqur uyqu"
+            HealthMetric.SLEEP_REM -> "REM"
+            HealthMetric.WEIGHT -> "Vazn"
+        }
 
         override val balanceTitle = "Balans"
         override val fourDirections = "To'rt yo'nalish"

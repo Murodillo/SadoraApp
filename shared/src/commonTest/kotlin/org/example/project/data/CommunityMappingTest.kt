@@ -9,7 +9,9 @@ import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 import org.example.project.model.AppState
 import org.example.project.model.CommunityTopic
-import org.example.project.model.Fmt
+import org.example.project.i18n.StringsEn
+import org.example.project.i18n.StringsRu
+import org.example.project.i18n.StringsUz
 import uz.sadora.contract.CommunityComment as WireComment
 import uz.sadora.contract.CommunityPost as WirePost
 import uz.sadora.contract.CommunityTopic as WireTopic
@@ -37,7 +39,7 @@ class CommunityMappingTest {
 
     @Test
     fun `her own like comes off the server's count so the store can add it back`() {
-        val post = wirePost(liked = true, likeCount = 5).toAppPost(now = TestNow)
+        val post = wirePost(liked = true, likeCount = 5).toAppPost()
         assertEquals(4, post.likes)
 
         val state = AppState()
@@ -48,7 +50,7 @@ class CommunityMappingTest {
 
     @Test
     fun `a post she has not liked keeps the server's count whole`() {
-        assertEquals(5, wirePost(liked = false, likeCount = 5).toAppPost(now = TestNow).likes)
+        assertEquals(5, wirePost(liked = false, likeCount = 5).toAppPost().likes)
     }
 
     @Test
@@ -61,18 +63,32 @@ class CommunityMappingTest {
 
     @Test
     fun `age reads the way the feed writes it`() {
-        assertEquals("hozir", Fmt.ago(TestNow - 30.seconds, TestNow))
-        assertEquals("20 daqiqa oldin", Fmt.ago(TestNow - 20.minutes, TestNow))
-        assertEquals("3 soat oldin", Fmt.ago(TestNow - 3.hours, TestNow))
-        assertEquals("kecha", Fmt.ago(TestNow - 30.hours, TestNow))
-        assertEquals("5 kun oldin", Fmt.ago(TestNow - 5.days, TestNow))
+        val uz = StringsUz.dates
+        assertEquals("hozir", uz.ago(TestNow - 30.seconds, TestNow))
+        assertEquals("20 daqiqa oldin", uz.ago(TestNow - 20.minutes, TestNow))
+        assertEquals("3 soat oldin", uz.ago(TestNow - 3.hours, TestNow))
+        assertEquals("Kecha", uz.ago(TestNow - 30.hours, TestNow))
+        assertEquals("5 kun oldin", uz.ago(TestNow - 5.days, TestNow))
+    }
+
+    /**
+     * The post carries the instant, not a sentence, so the same post reads in whichever
+     * language the screen is drawn in. Storing the words was what made a feed loaded in
+     * Uzbek stay Uzbek after switching to Russian.
+     */
+    @Test
+    fun `the same post ages in every language`() {
+        val at = TestNow - 3.hours
+        assertEquals("3 soat oldin", StringsUz.dates.ago(at, TestNow))
+        assertEquals("3 ч. назад", StringsRu.dates.ago(at, TestNow))
+        assertEquals("3 h ago", StringsEn.dates.ago(at, TestNow))
     }
 
     @Test
     fun `a loaded comment marked as hers renders as hers`() {
         val comment = WireComment("c1", "p1", "Iliq Shabnam", 1, "Javob", TestNow - 5.minutes, isMine = true)
-            .toAppComment(now = TestNow)
+            .toAppComment()
         assertEquals(true, comment.isMine)
-        assertEquals("5 daqiqa oldin", comment.ago)
+        assertEquals("5 daqiqa oldin", StringsUz.dates.ago(comment.createdAt, TestNow))
     }
 }

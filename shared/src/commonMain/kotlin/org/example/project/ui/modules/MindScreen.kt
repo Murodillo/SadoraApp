@@ -110,7 +110,7 @@ fun MindScreen(
             ScreenContent {
                 item {
                     Text(
-                        t.todayIs(Fmt.dayMonth(state.today)),
+                        t.todayIs(strings.dates.dayMonth(state.today)),
                         style = Sadora.type.body,
                         color = c.muted,
                         textAlign = TextAlign.Center,
@@ -183,7 +183,7 @@ fun MindScreen(
                             )
                             TrendBars(
                                 values = moodWeek.barValues(),
-                                labels = moodWeek.barLabels(),
+                                labels = moodWeek.barLabels(strings.dates),
                                 color = c.primary,
                                 highlightLast = true,
                             )

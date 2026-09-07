@@ -1,8 +1,17 @@
 package org.example.project.i18n
 
+import kotlin.time.Instant
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.daysUntil
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
+import org.example.project.model.ConceptionWindow
 import org.example.project.model.CyclePhase
+import org.example.project.model.Goal
 import org.example.project.model.LifeStage
 import org.example.project.model.Mood
+import uz.sadora.contract.HealthMetric
+import uz.sadora.contract.MealSlot
 
 /**
  * Every string the app shows, grouped by the screen that shows it.
@@ -27,6 +36,7 @@ interface Strings {
     val profile: ProfileStrings
     val settings: SettingsStrings
     val common: CommonStrings
+    val dates: DateStrings
     val today: TodayStrings
     val mind: MindStrings
     val nutrition: NutritionStrings
@@ -54,13 +64,24 @@ interface CommonStrings {
     fun phaseFertility(phase: CyclePhase): String
     fun phaseEnergy(phase: CyclePhase): String
 
+    fun goal(goal: Goal): String
+    fun conceptionWindow(window: ConceptionWindow): String
+
     val save: String
+    /** The save button while the request is in flight. */
+    val saving: String
     val cancel: String
     val delete: String
     val close: String
     val add: String
     val edit: String
     val done: String
+    val yes: String
+    val no: String
+    val back: String
+    val loading: String
+    val retry: String
+    val optional: String
 
     /** "1,2 l" — the unit, not the number, which [org.example.project.model.Fmt] makes. */
     val litres: String
@@ -72,6 +93,62 @@ interface CommonStrings {
 
     /** "6s 40d" — a duration in hours and minutes, abbreviated per language. */
     fun hoursMinutes(hours: Int, minutes: Int): String
+}
+
+/**
+ * Dates in words.
+ *
+ * The bucketing of "how long ago" is the same in every language, so it stays here and
+ * only the words are answered per language. Months are given twice where a language
+ * needs it: Russian names a month on its own in the nominative ("Сентябрь") and a day
+ * inside it in the genitive ("4 сентября").
+ */
+interface DateStrings {
+    /** Month names as a month is named on its own, January first. */
+    val months: List<String>
+
+    /** Weekday names, Monday first, as they read in the middle of a sentence. */
+    val weekdays: List<String>
+
+    /** "4-sentabr" — the day inside its month. */
+    fun dayMonth(date: LocalDate): String
+
+    /** "4-sentabr, payshanba" */
+    fun dayMonthWeekday(date: LocalDate): String =
+        "${dayMonth(date)}, ${weekdays[date.dayOfWeek.ordinal]}"
+
+    /** "Sentabr 2026" — a calendar header. */
+    fun monthYear(year: Int, month: Int): String = "${months[month - 1]} $year"
+
+    val today: String
+    val yesterday: String
+    val tomorrow: String
+
+    val justNow: String
+    fun minutesAgo(minutes: Int): String
+    fun hoursAgo(hours: Int): String
+    fun daysAgo(days: Int): String
+
+    /** How old something is, the way a feed reads it. Past a month it says the date. */
+    fun ago(at: Instant, now: Instant): String {
+        val seconds = (now - at).inWholeSeconds
+        return when {
+            seconds < 60 -> justNow
+            seconds < 3600 -> minutesAgo((seconds / 60).toInt())
+            seconds < 86_400 -> hoursAgo((seconds / 3600).toInt())
+            seconds < 2 * 86_400 -> yesterday
+            seconds < 30 * 86_400 -> daysAgo((seconds / 86_400).toInt())
+            else -> dayMonth(at.toLocalDateTime(TimeZone.currentSystemDefault()).date)
+        }
+    }
+
+    /** "Bugun", "Kecha", then the date — the way a diary is read. */
+    fun relativeDay(date: LocalDate, today: LocalDate): String = when (date.daysUntil(today)) {
+        0 -> this.today
+        1 -> yesterday
+        -1 -> tomorrow
+        else -> dayMonth(date)
+    }
 }
 
 interface TodayStrings {
@@ -208,6 +285,12 @@ interface ProfileStrings {
     val premiumBadge: String
     val premiumActive: String
     val premiumYearly: String
+    /** "6-sentabr 2027-yilgacha" — when the plan ends. */
+    fun premiumUntil(date: String): String
+    /** The same date when the plan renews itself instead of ending. */
+    fun premiumRenewsOn(date: String): String
+    /** A plan with no end date at all — a grant, not a purchase. */
+    val premiumNoExpiry: String
     val premiumFeatureAi: String
     val premiumFeatureScanner: String
     val premiumFeatureInsights: String
@@ -222,6 +305,57 @@ interface SettingsStrings {
     /** Said once above the list: the app changes language immediately, nothing else does. */
     val languageNote: String
     val languageSaveFailed: String
+
+    // ---- personal details
+    val personalTitle: String
+    val name: String
+    val birthDate: String
+    val height: String
+    val weight: String
+    val centimetres: String
+    val kilograms: String
+    /** Said next to the weight field, because it is the one people hesitate over. */
+    val weightNote: String
+
+    // ---- goals
+    val goalsTitle: String
+    fun goalsChosen(count: Int): String
+
+    // ---- life stage
+    val lifeStageTitle: String
+    val lifeStageNote: String
+
+    // ---- notifications
+    val notificationsTitle: String
+    val medReminder: String
+    val medReminderNote: String
+    val cycleReminder: String
+    val cycleReminderNote: String
+    val waterReminder: String
+    val waterReminderNote: String
+    val aiSummary: String
+    val aiSummaryNote: String
+
+    // ---- privacy
+    val privacyTitle: String
+    val consentHealth: String
+    val consentHealthNote: String
+    val consentAi: String
+    val consentAiNote: String
+    val consentAnalytics: String
+    val consentAnalyticsNote: String
+    val saveConsents: String
+    val legalDocuments: String
+    val terms: String
+    val privacyPolicy: String
+    val yourData: String
+    val exportData: String
+    val deleteAccount: String
+    val deleteAccountConfirm: String
+    val deleteAccountBody: String
+
+    /** The line the app repeats wherever it says anything about health. */
+    val medicalDisclaimer: String
 }
 
 interface MindStrings {
@@ -282,6 +416,9 @@ interface NutritionStrings {
     val scannerHint: String
     val balance: String
     val balanceHint: String
+
+    /** Which meal of the day a log belongs to. The slot is the enum; this is its name. */
+    fun mealSlot(slot: MealSlot): String
 
     val today: String
     val protein: String
@@ -467,6 +604,30 @@ interface ModuleStrings {
     val payWithClick: String
     val payWithAppStore: String
     val payWithGooglePlay: String
+
+    // ---- journal
+    val journalTitle: String
+    val journalPrivate: String
+    val journalLabel: String
+    val journalPrompt: String
+    val journalEmpty: String
+    val journalEmptyBody: String
+    val journalDeleteTitle: String
+    val journalDeleteBody: String
+    val journalDeleteAction: String
+
+    // ---- data sources
+    val sourcesTitle: String
+    fun sourcesConnected(count: Int): String
+    fun lastSample(ago: String): String
+    val noSampleYet: String
+    val sourcesEmpty: String
+    val sourcesEmptyBody: String
+    val sourcesNote: String
+    val connected: String
+    val notConnected: String
+    fun samples(count: String): String
+    fun metric(metric: HealthMetric): String
 
     // ---- balance
     val balanceTitle: String

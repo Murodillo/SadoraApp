@@ -5,10 +5,8 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.todayIn
 import kotlinx.datetime.toLocalDateTime
 import org.example.project.model.AppState
-import org.example.project.model.Fmt
 import uz.sadora.contract.AuthProvider
 import uz.sadora.contract.OtpChallenge
-import uz.sadora.contract.SubscriptionStatus
 
 /** Where the user belongs after an auth call succeeds. */
 enum class AuthDestination { Onboarding, Main }
@@ -109,7 +107,9 @@ class SadoraController(
         // The Profile card says when the plan ends; that date lives on the subscription,
         // not on the entitlements, so it is read alongside them.
         call(silent = true) { repo.api.subscription() }?.let { subscription ->
-            state.premiumRenewal = subscription.renewalLabel()
+            state.premiumExpiresAt =
+                subscription.expiresAt?.toLocalDateTime(TimeZone.currentSystemDefault())?.date
+            state.premiumAutoRenewing = subscription.autoRenewing
         }
     }
 
@@ -198,9 +198,4 @@ internal fun normalizePhone(input: String): String {
     }
 }
 
-/** "6-sentabr 2027-yilgacha", "… yangilanadi" for a renewing plan, "Muddatsiz" for a grant with no end. */
-private fun SubscriptionStatus.renewalLabel(): String {
-    val until = expiresAt?.toLocalDateTime(TimeZone.currentSystemDefault())?.date ?: return "Muddatsiz"
-    val day = "${Fmt.dayMonth(until)} ${until.year}"
-    return if (autoRenewing) "$day-da yangilanadi" else "$day-yilgacha"
-}
+

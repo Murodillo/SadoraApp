@@ -7,6 +7,7 @@ import uz.sadora.contract.InsightFinding
 import uz.sadora.contract.InsightKeys
 import uz.sadora.contract.MetricTrend
 import uz.sadora.contract.TrendMetric
+import org.example.project.i18n.DateStrings
 
 /**
  * How a measured series becomes something on screen.
@@ -20,18 +21,18 @@ import uz.sadora.contract.TrendMetric
 fun MetricTrend.barValues(): List<Float?> = points.map { it.value?.toFloat() }
 
 /** "Du", "Se" … under a short window; nothing under a long one, where they would not fit. */
-fun MetricTrend.barLabels(): List<String> =
+fun MetricTrend.barLabels(dates: DateStrings): List<String> =
     if (points.size > 10) {
         emptyList()
     } else {
-        points.map { Fmt.weekdays[it.date.dayOfWeek.ordinal].take(2).replaceFirstChar { c -> c.uppercase() } }
+        points.map { dates.weekdays[it.date.dayOfWeek.ordinal].take(2).replaceFirstChar { c -> c.uppercase() } }
     }
 
 /** The window's own dates, for the caption under a long series. */
-fun MetricTrend.rangeLabel(): String? {
+fun MetricTrend.rangeLabel(dates: DateStrings): String? {
     val first = points.firstOrNull()?.date ?: return null
     val last = points.lastOrNull()?.date ?: return null
-    return "${Fmt.dayMonth(first)} — ${Fmt.dayMonth(last)}"
+    return "${dates.dayMonth(first)} — ${dates.dayMonth(last)}"
 }
 
 /** The average, in the metric's own words. Null when there was nothing to average. */

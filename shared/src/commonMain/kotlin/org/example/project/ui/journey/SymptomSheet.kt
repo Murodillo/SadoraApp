@@ -39,6 +39,7 @@ import uz.sadora.contract.SymptomCategory
 import uz.sadora.contract.SymptomDefinition
 import uz.sadora.contract.SymptomEntry
 import uz.sadora.contract.SymptomSeverity
+import org.example.project.i18n.strings
 
 /** Severity 1–5, each step explained in words rather than left as a bare number. */
 private val severityWords = listOf(
@@ -115,7 +116,7 @@ fun SymptomSheet(
     var saving by remember { mutableStateOf(false) }
 
     SadoraBottomSheet(visible = visible, title = "Simptom qo'shish", onDismiss = onDismiss) {
-        Text(Fmt.dayMonth(state.today), style = Sadora.type.body, color = c.muted)
+        Text(strings.dates.dayMonth(state.today), style = Sadora.type.body, color = c.muted)
 
         if (catalogue.isEmpty()) {
             Text(

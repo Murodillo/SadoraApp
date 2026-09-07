@@ -15,7 +15,6 @@ import uz.sadora.contract.DailyHealth
 import uz.sadora.contract.DailyLog
 import uz.sadora.contract.DoseStatus
 import uz.sadora.contract.HealthMetric
-import uz.sadora.contract.MealSlot
 import uz.sadora.contract.Medication
 import uz.sadora.contract.MedicationDay
 import uz.sadora.contract.MindSummary
@@ -88,7 +87,7 @@ fun AppState.applyNutrition(day: NutritionDay) {
         day.meals.map { meal ->
             AppMeal(
                 id = meal.id,
-                slot = meal.slot.label(),
+                slot = meal.slot,
                 time = meal.eatenAt?.toString()?.take(5).orEmpty(),
                 description = meal.description,
                 calories = meal.kcal,
@@ -159,13 +158,6 @@ private fun DoseStatus.toAppStatus(): MedStatus = when (this) {
     DoseStatus.TAKEN -> MedStatus.Taken
     DoseStatus.SKIPPED -> MedStatus.Skipped
     DoseStatus.PENDING -> MedStatus.Pending
-}
-
-private fun MealSlot.label(): String = when (this) {
-    MealSlot.BREAKFAST -> "Nonushta"
-    MealSlot.LUNCH -> "Tushlik"
-    MealSlot.DINNER -> "Kechki ovqat"
-    MealSlot.SNACK -> "Gazak"
 }
 
 private fun uz.sadora.contract.ScheduleKind.label(): String = when (this) {

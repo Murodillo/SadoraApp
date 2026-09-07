@@ -236,7 +236,7 @@ private fun EventRow(
                 color = if (highlighted) c.textAccent else c.text,
             )
             Text(
-                Fmt.months[appointment.scheduledOn.month.ordinal].take(3).uppercase(),
+                strings.dates.months[appointment.scheduledOn.month.ordinal].take(3).uppercase(),
                 style = Sadora.type.caption,
                 color = c.muted,
             )

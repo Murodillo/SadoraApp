@@ -1,16 +1,19 @@
 package org.example.project.model
 
 import kotlin.time.Clock
-import kotlin.time.Instant
-import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.LocalTime
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
+import uz.sadora.contract.MealSlot
 
 /**
- * Number and date formatting for the Uzbek locale used throughout the design:
- * thousands are separated by a space ("1 240") and decimals use a comma ("1,2").
+ * Numbers and clock times — the parts of formatting that do not change with the
+ * language: thousands separated by a space ("1 240"), decimals with a comma ("1,2").
+ *
+ * Anything made of words — month names, weekdays, "3 soat oldin" — lives in
+ * [org.example.project.i18n.DateStrings] instead, because this object is one instance
+ * for the whole process while the language belongs to the screen doing the asking.
  */
 object Fmt {
 
@@ -31,27 +34,6 @@ object Fmt {
     /** 1200 ml -> "1,2" litres. */
     fun litres(ml: Int): String = oneDecimal(ml / 1000f)
 
-    /** Uzbek month names, nominative. */
-    val months = listOf(
-        "Yanvar", "Fevral", "Mart", "Aprel", "May", "Iyun",
-        "Iyul", "Avgust", "Sentabr", "Oktabr", "Noyabr", "Dekabr",
-    )
-
-    /** Monday first, matching [SampleData.weekDays]. */
-    val weekdays = listOf(
-        "dushanba", "seshanba", "chorshanba", "payshanba", "juma", "shanba", "yakshanba",
-    )
-
-    /** "4-sentabr" */
-    fun dayMonth(date: LocalDate): String = "${date.day}-${months[date.month.ordinal].lowercase()}"
-
-    /** "4-sentabr, payshanba" */
-    fun dayMonthWeekday(date: LocalDate): String =
-        "${dayMonth(date)}, ${weekdays[date.dayOfWeek.ordinal]}"
-
-    /** "Sentabr 2026" */
-    fun monthYear(year: Int, month: Int): String = "${months[month - 1]} $year"
-
     /** "08:35", from a wall-clock time that carries no date. */
     fun clock(at: LocalTime): String =
         "${at.hour.toString().padStart(2, '0')}:${at.minute.toString().padStart(2, '0')}"
@@ -59,22 +41,6 @@ object Fmt {
     /** "08:35" */
     fun time(dateTime: LocalDateTime): String =
         "${dateTime.hour.toString().padStart(2, '0')}:${dateTime.minute.toString().padStart(2, '0')}"
-
-    /**
-     * "hozir", "20 daqiqa oldin", "3 soat oldin", "kecha", "5 kun oldin" — how old a post
-     * is, the way the feed reads it. Anything older than a month says the date.
-     */
-    fun ago(at: Instant, now: Instant): String {
-        val seconds = (now - at).inWholeSeconds
-        return when {
-            seconds < 60 -> "hozir"
-            seconds < 3600 -> "${seconds / 60} daqiqa oldin"
-            seconds < 86_400 -> "${seconds / 3600} soat oldin"
-            seconds < 2 * 86_400 -> "kecha"
-            seconds < 30 * 86_400 -> "${seconds / 86_400} kun oldin"
-            else -> dayMonth(at.toLocalDateTime(TimeZone.currentSystemDefault()).date)
-        }
-    }
 }
 
 /** The device's wall clock, in its own zone. */
@@ -86,10 +52,13 @@ fun nowTimeLabel(): String = Fmt.time(deviceNow())
 /**
  * Which meal a log made at this hour belongs to. The scanner and the search both ask,
  * so the answer lives in one place.
+ *
+ * It answers with the slot itself rather than its name: the name belongs to whichever
+ * language the screen is in, and the slot is what goes up to the server.
  */
-fun mealSlotForHour(hour: Int): String = when (hour) {
-    in 4..10 -> "Nonushta"
-    in 11..15 -> "Tushlik"
-    in 16..21 -> "Kechki ovqat"
-    else -> "Gazak"
+fun mealSlotForHour(hour: Int): MealSlot = when (hour) {
+    in 4..10 -> MealSlot.BREAKFAST
+    in 11..15 -> MealSlot.LUNCH
+    in 16..21 -> MealSlot.DINNER
+    else -> MealSlot.SNACK
 }

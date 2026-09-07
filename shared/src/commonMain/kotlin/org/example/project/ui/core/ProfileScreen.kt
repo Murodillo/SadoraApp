@@ -178,6 +178,7 @@ fun ProfileScreen(
 private fun PremiumStatusCard(state: AppState) {
     val c = Sadora.colors
     val t = strings.profile
+    val dates = strings.dates
     val onGradient = c.onPrimary
     Column(
         Modifier
@@ -203,7 +204,13 @@ private fun PremiumStatusCard(state: AppState) {
             }
         }
         Text(t.premiumYearly, style = Sadora.type.h2, color = onGradient)
-        Text(state.premiumRenewal, style = Sadora.type.body, color = onGradient.copy(alpha = 0.85f))
+        val until = state.premiumExpiresAt
+        val renewal = when {
+            until == null -> t.premiumNoExpiry
+            state.premiumAutoRenewing -> t.premiumRenewsOn(dates.dayMonth(until) + " " + until.year)
+            else -> t.premiumUntil(dates.dayMonth(until) + " " + until.year)
+        }
+        Text(renewal, style = Sadora.type.body, color = onGradient.copy(alpha = 0.85f))
         // Flow, not a fixed row — the longest feature name would otherwise wrap mid-chip.
         ChipFlowRow(horizontalGap = Spacing.xs, verticalGap = Spacing.xs) {
             listOf(t.premiumFeatureAi, t.premiumFeatureScanner, t.premiumFeatureInsights).forEach { feature ->

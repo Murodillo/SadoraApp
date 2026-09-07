@@ -82,6 +82,7 @@ import kotlinx.datetime.LocalDate
 import kotlinx.datetime.isoDayNumber
 import kotlinx.datetime.minus
 import kotlinx.datetime.plus
+import org.example.project.i18n.strings
 
 // ---------------------------------------------------------------- reveal
 
@@ -723,7 +724,7 @@ fun CalendarPicker(
                 tint = if (canGoBack) c.text else c.muted2.copy(alpha = 0.4f),
             )
             Text(
-                Fmt.monthYear(month.year, month.month.ordinal + 1),
+                strings.dates.monthYear(month.year, month.month.ordinal + 1),
                 style = Sadora.type.h3,
                 color = c.text,
             )

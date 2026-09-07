@@ -65,6 +65,8 @@ import org.example.project.ui.components.SelectChip
 import org.example.project.ui.components.appearFromBelow
 import org.example.project.ui.components.noRippleClickable
 import org.example.project.ui.components.rememberShareAction
+import kotlin.time.Clock
+import org.example.project.i18n.strings
 
 /** The tints an alias avatar can take, so the feed is not five identical circles. */
 @Composable
@@ -301,7 +303,7 @@ private fun PostCard(
                     color = c.text,
                 )
                 Text(
-                    "${post.topic.label} · ${post.ago}",
+                    "${post.topic.label} · ${strings.dates.ago(post.createdAt, Clock.System.now())}",
                     style = Sadora.type.body,
                     color = c.muted2,
                 )
@@ -432,7 +434,8 @@ private fun CommentsSheet(comments: List<CommunityComment>, onSend: (String) -> 
                     AliasAvatar(comment.alias, comment.tint, size = 30.dp)
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         Text(
-                            (if (comment.isMine) "${comment.alias} (siz)" else comment.alias) + " · ${comment.ago}",
+                            (if (comment.isMine) "${comment.alias} (siz)" else comment.alias) +
+                                " · " + strings.dates.ago(comment.createdAt, Clock.System.now()),
                             style = Sadora.type.caption.copy(letterSpacing = TextUnit.Unspecified),
                             color = c.muted2,
                         )

@@ -7,6 +7,8 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlinx.datetime.LocalDate
 import org.example.project.data.applyCycle
+import org.example.project.i18n.StringsUz
+import uz.sadora.contract.MealSlot
 
 /**
  * The store's derived cycle logic is what every screen draws from, so it is pinned
@@ -199,17 +201,18 @@ class AppStateTest {
 
     @Test
     fun `a meal logged now lands in the slot the hour belongs to`() {
-        assertEquals("Nonushta", mealSlotForHour(8))
-        assertEquals("Tushlik", mealSlotForHour(13))
-        assertEquals("Kechki ovqat", mealSlotForHour(19))
-        assertEquals("Gazak", mealSlotForHour(23))
+        assertEquals(MealSlot.BREAKFAST, mealSlotForHour(8))
+        assertEquals(MealSlot.LUNCH, mealSlotForHour(13))
+        assertEquals(MealSlot.DINNER, mealSlotForHour(19))
+        assertEquals(MealSlot.SNACK, mealSlotForHour(23))
     }
 
     @Test
     fun `dates read in Uzbek`() {
-        assertEquals("4-sentabr", Fmt.dayMonth(today))
-        assertEquals("4-sentabr, juma", Fmt.dayMonthWeekday(today))
-        assertEquals("Sentabr 2026", Fmt.monthYear(2026, 9))
+        val uz = StringsUz.dates
+        assertEquals("4-sentabr", uz.dayMonth(today))
+        assertEquals("4-sentabr, juma", uz.dayMonthWeekday(today))
+        assertEquals("Sentabr 2026", uz.monthYear(2026, 9))
     }
 
     private fun LocalDate.minus(days: Int): LocalDate =

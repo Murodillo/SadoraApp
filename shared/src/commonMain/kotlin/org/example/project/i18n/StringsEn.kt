@@ -1,8 +1,13 @@
 package org.example.project.i18n
 
+import kotlinx.datetime.LocalDate
+import org.example.project.model.ConceptionWindow
 import org.example.project.model.CyclePhase
+import org.example.project.model.Goal
 import org.example.project.model.LifeStage
 import org.example.project.model.Mood
+import uz.sadora.contract.HealthMetric
+import uz.sadora.contract.MealSlot
 
 /**
  * English. Translated from [StringsUz], and kept plain: this is the language most of
@@ -96,6 +101,9 @@ object StringsEn : Strings {
         override val premiumBadge = "SADORA PREMIUM"
         override val premiumActive = "Active"
         override val premiumYearly = "Yearly plan"
+        override fun premiumUntil(date: String) = "until $date"
+        override fun premiumRenewsOn(date: String) = "renews on $date"
+        override val premiumNoExpiry = "No end date"
         override val premiumFeatureAi = "AI chat"
         override val premiumFeatureScanner = "Food scanner"
         override val premiumFeatureInsights = "Advanced insights"
@@ -110,6 +118,52 @@ object StringsEn : Strings {
         override val languageNote = "The app changes language straight away. AI answers are " +
             "in Uzbek for now."
         override val languageSaveFailed = "The language was not saved — try again later."
+        override val personalTitle = "Personal details"
+        override val name = "Name"
+        override val birthDate = "Date of birth"
+        override val height = "Height"
+        override val weight = "Weight"
+        override val centimetres = "cm"
+        override val kilograms = "kg"
+        override val weightNote = "Weight is optional, and it is never shown to anyone else."
+
+        override val goalsTitle = "Goals"
+        override fun goalsChosen(count: Int) = "$count chosen"
+
+        override val lifeStageTitle = "Life stage"
+        override val lifeStageNote = "Changing the stage rebuilds the Journey tab and the " +
+            "screens that belong to it. Everything you have recorded stays."
+
+        override val notificationsTitle = "Notifications"
+        override val medReminder = "Medication reminders"
+        override val medReminderNote = "10 minutes before each dose"
+        override val cycleReminder = "Period reminder"
+        override val cycleReminderNote = "As the expected date approaches"
+        override val waterReminder = "Water reminder"
+        override val waterReminderNote = "Three times a day"
+        override val aiSummary = "Daily AI summary"
+        override val aiSummaryNote = "At 08:00"
+
+        override val privacyTitle = "Privacy and security"
+        override val consentHealth = "Store health data"
+        override val consentHealthNote = "Required for the app to work. Stored encrypted."
+        override val consentAi = "Use it for AI insights"
+        override val consentAiNote = "To prepare insights and suggestions for you."
+        override val consentAnalytics = "Anonymous analytics"
+        override val consentAnalyticsNote = "Optional. It helps make the app better."
+        override val saveConsents = "Save consents"
+        override val legalDocuments = "Legal documents"
+        override val terms = "Terms of use"
+        override val privacyPolicy = "Privacy policy"
+        override val yourData = "Your data"
+        override val exportData = "Export my data"
+        override val deleteAccount = "Delete account"
+        override val deleteAccountConfirm = "Delete your account?"
+        override val deleteAccountBody = "Your data will be deleted for good. " +
+            "We suggest exporting it first."
+
+        override val medicalDisclaimer = "SADORA does not diagnose. If something worries " +
+            "you, see a doctor."
     }
 
     override val common = object : CommonStrings {
@@ -156,6 +210,32 @@ object StringsEn : Strings {
             CyclePhase.Luteal -> "Energy tapers off — leave room to rest."
         }
 
+        override fun goal(goal: Goal) = when (goal) {
+            Goal.UnderstandCycle -> "Understand my cycle"
+            Goal.SleepBetter -> "Sleep better"
+            Goal.MoreEnergy -> "More energy"
+            Goal.LessStress -> "Less stress"
+            Goal.EatBalanced -> "Eat in balance"
+            Goal.DrinkWater -> "Drink more water"
+            Goal.BeActive -> "Be more active"
+            Goal.RememberMeds -> "Remember my medication"
+        }
+
+        override fun conceptionWindow(window: ConceptionWindow) = when (window) {
+            ConceptionWindow.JustStarted -> "Just started"
+            ConceptionWindow.UnderThreeMonths -> "Under 3 months"
+            ConceptionWindow.ThreeToSix -> "3–6 months"
+            ConceptionWindow.SixToTwelve -> "6–12 months"
+            ConceptionWindow.OverAYear -> "Over a year"
+        }
+
+        override val saving = "Saving…"
+        override val yes = "Yes"
+        override val no = "No"
+        override val back = "Back"
+        override val loading = "Loading…"
+        override val retry = "Try again"
+        override val optional = "Optional"
         override val save = "Save"
         override val cancel = "Cancel"
         override val delete = "Delete"
@@ -171,6 +251,28 @@ object StringsEn : Strings {
         override val steps = "steps"
         override val minutesShort = "min"
         override fun days(count: Int) = if (count == 1) "1 day" else "$count days"
+    }
+
+    override val dates = object : DateStrings {
+        override val months = listOf(
+            "January", "February", "March", "April", "May", "June",
+            "July", "August", "September", "October", "November", "December",
+        )
+
+        override val weekdays = listOf(
+            "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday",
+        )
+
+        override fun dayMonth(date: LocalDate) = "${date.day} ${months[date.month.ordinal]}"
+
+        override val today = "Today"
+        override val yesterday = "Yesterday"
+        override val tomorrow = "Tomorrow"
+
+        override val justNow = "just now"
+        override fun minutesAgo(minutes: Int) = "$minutes min ago"
+        override fun hoursAgo(hours: Int) = "$hours h ago"
+        override fun daysAgo(days: Int) = "$days d ago"
     }
 
     override val today = object : TodayStrings {
@@ -283,6 +385,13 @@ object StringsEn : Strings {
         override val scannerHint = "Point the camera — the dish, portion and macros are estimated"
         override val balance = "Balance"
         override val balanceHint = "Food, water, activity and sleep — four directions"
+
+        override fun mealSlot(slot: MealSlot) = when (slot) {
+            MealSlot.BREAKFAST -> "Breakfast"
+            MealSlot.LUNCH -> "Lunch"
+            MealSlot.DINNER -> "Dinner"
+            MealSlot.SNACK -> "Snack"
+        }
 
         override val today = "Today"
         override val protein = "Protein"
@@ -484,6 +593,43 @@ object StringsEn : Strings {
         override val payWithClick = "Pay with Click"
         override val payWithAppStore = "Through the App Store"
         override val payWithGooglePlay = "Through Google Play"
+
+        override val journalTitle = "Journal and practice"
+        override val journalPrivate = "ONLY YOU SEE THIS"
+        override val journalLabel = "Journal"
+        override val journalPrompt = "How are you feeling today?"
+        override val journalEmpty = "The journal is still empty"
+        override val journalEmptyBody = "Write your first entry. Nobody but you will see it."
+        override val journalDeleteTitle = "Delete this entry"
+        override val journalDeleteBody = "The entry will be deleted for good."
+        override val journalDeleteAction = "Delete this entry"
+
+        override val sourcesTitle = "Data sources"
+        override fun sourcesConnected(count: Int) = "$count sources connected"
+        override fun lastSample(ago: String) = "Last sample $ago"
+        override val noSampleYet = "No samples yet"
+        override val sourcesEmpty = "Nothing connected"
+        override val sourcesEmptyBody = "Once you allow HealthKit or Health Connect, the " +
+            "samples that arrive and their times will show up here."
+        override val sourcesNote = "Every figure carries its source and a timestamp. When the " +
+            "same figure arrives from more than one source, your priority settings decide."
+        override val connected = "Connected"
+        override val notConnected = "Not connected"
+        override fun samples(count: String) = "$count samples"
+        override fun metric(metric: HealthMetric) = when (metric) {
+            HealthMetric.STEPS -> "Steps"
+            HealthMetric.ACTIVE_ENERGY -> "Active calories"
+            HealthMetric.DISTANCE -> "Distance"
+            HealthMetric.HEART_RATE -> "Heart rate"
+            HealthMetric.RESTING_HEART_RATE -> "Resting heart rate"
+            HealthMetric.HRV -> "HRV"
+            HealthMetric.RESPIRATORY_RATE -> "Respiratory rate"
+            HealthMetric.BODY_TEMPERATURE -> "Temperature"
+            HealthMetric.SLEEP_DURATION -> "Sleep"
+            HealthMetric.SLEEP_DEEP -> "Deep sleep"
+            HealthMetric.SLEEP_REM -> "REM"
+            HealthMetric.WEIGHT -> "Weight"
+        }
 
         override val balanceTitle = "Balance"
         override val fourDirections = "Four directions"

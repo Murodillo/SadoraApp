@@ -4,10 +4,15 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
+import kotlinx.datetime.LocalDate
 import org.example.project.model.AppLanguage
+import org.example.project.model.ConceptionWindow
 import org.example.project.model.CyclePhase
+import org.example.project.model.Goal
 import org.example.project.model.LifeStage
 import org.example.project.model.Mood
+import uz.sadora.contract.HealthMetric
+import uz.sadora.contract.MealSlot
 
 /**
  * The interface already guarantees that every language answers every string — that is
@@ -17,6 +22,9 @@ import org.example.project.model.Mood
 class StringsTest {
 
     private val languages = listOf(StringsUz, StringsRu, StringsEn)
+
+    /** A Friday, so the weekday and the month both have something to say. */
+    private val SampleDate = LocalDate.parse("2026-09-04")
 
     /** Everything a language says, in one list, so a test can look at all of it. */
     private fun everything(t: Strings): List<String> = buildList {
@@ -45,6 +53,7 @@ class StringsTest {
         with(t.profile) {
             addAll(
                 listOf(
+                    premiumUntil("x"), premiumRenewsOn("x"), premiumNoExpiry,
                     title, unnamed, sleep, medications, secretChat, insights, knowledge,
                     personalDetails, goals, lifeStage, connectedDevices, notifications,
                     privacyAndSecurity, language, theme, themeDark, themeLight, about,
@@ -55,14 +64,38 @@ class StringsTest {
             )
         }
         with(t.settings) {
-            addAll(listOf(aboutTitle, version("1.0.0"), languageTitle, languageNote, languageSaveFailed))
+            addAll(
+                listOf(
+                    aboutTitle, version("1.0.0"), languageTitle, languageNote, languageSaveFailed,
+                    personalTitle, name, birthDate, height, weight, centimetres, kilograms,
+                    weightNote, goalsTitle, goalsChosen(3), lifeStageTitle, lifeStageNote,
+                    notificationsTitle, medReminder, medReminderNote, cycleReminder,
+                    cycleReminderNote, waterReminder, waterReminderNote, aiSummary, aiSummaryNote,
+                    privacyTitle, consentHealth, consentHealthNote, consentAi, consentAiNote,
+                    consentAnalytics, consentAnalyticsNote, saveConsents, legalDocuments, terms,
+                    privacyPolicy, yourData, exportData, deleteAccount, deleteAccountConfirm,
+                    deleteAccountBody, medicalDisclaimer,
+                ),
+            )
         }
         with(t.common) {
             addAll(listOf(0, 9, 13, 21).map { greeting(it) })
             Mood.entries.forEach { add(mood(it)); add(moodCaption(it)) }
             CyclePhase.entries.forEach { add(phase(it)); add(phaseFertility(it)); add(phaseEnergy(it)) }
-            addAll(listOf(save, cancel, delete, close, add, edit, done))
+            Goal.entries.forEach { add(goal(it)) }
+            ConceptionWindow.entries.forEach { add(conceptionWindow(it)) }
+            addAll(listOf(save, saving, cancel, delete, close, add, edit, done))
+            addAll(listOf(yes, no, back, loading, retry, optional))
             addAll(listOf(litres, millilitres, kcal, steps, minutesShort, days(3), hoursMinutes(6, 40)))
+        }
+        with(t.dates) {
+            addAll(months)
+            addAll(weekdays)
+            addAll(listOf(today, yesterday, tomorrow, justNow))
+            addAll(listOf(minutesAgo(20), hoursAgo(3), daysAgo(5)))
+            add(dayMonth(SampleDate))
+            add(dayMonthWeekday(SampleDate))
+            add(monthYear(2026, 9))
         }
         with(t.modules) {
             addAll(
@@ -86,8 +119,13 @@ class StringsTest {
                     balanceTitle, fourDirections, balanceDisclaimer, balanced, someRoomIn("x"),
                     fallingBehind("x"), food, water, activity, sleep, ofKcal("1", "2"),
                     ofLitres("1", "2"), ofSteps("1", "2"), ofSleep("6s"),
+                    journalTitle, journalPrivate, journalLabel, journalPrompt, journalEmpty,
+                    journalEmptyBody, journalDeleteTitle, journalDeleteBody, journalDeleteAction,
+                    sourcesTitle, sourcesConnected(2), lastSample("x"), noSampleYet, sourcesEmpty,
+                    sourcesEmptyBody, sourcesNote, connected, notConnected, samples("12"),
                 ),
             )
+            HealthMetric.entries.forEach { add(t.modules.metric(it)) }
         }
         with(t.journey) {
             addAll(
@@ -130,6 +168,7 @@ class StringsTest {
                     kcal(250), grams(12),
                 ),
             )
+            MealSlot.entries.forEach { add(mealSlot(it)) }
         }
         with(t.today) {
             addAll(
@@ -207,6 +246,31 @@ class StringsTest {
             assertNotEquals(StringsUz.today.hello("X"), t.today.hello("X"))
             assertNotEquals(StringsUz.stages.subtitle(LifeStage.Cycle), t.stages.subtitle(LifeStage.Cycle))
             assertNotEquals(StringsUz.common.hoursMinutes(6, 40), t.common.hoursMinutes(6, 40))
+            assertNotEquals(StringsUz.common.goal(Goal.SleepBetter), t.common.goal(Goal.SleepBetter))
+            assertNotEquals(StringsUz.settings.weightNote, t.settings.weightNote)
+            assertNotEquals(StringsUz.settings.consentHealthNote, t.settings.consentHealthNote)
+            assertNotEquals(StringsUz.settings.medicalDisclaimer, t.settings.medicalDisclaimer)
+            assertNotEquals(StringsUz.modules.journalEmptyBody, t.modules.journalEmptyBody)
+            assertNotEquals(StringsUz.modules.sourcesNote, t.modules.sourcesNote)
+            assertNotEquals(StringsUz.dates.months.first(), t.dates.months.first())
+            assertNotEquals(StringsUz.dates.weekdays.first(), t.dates.weekdays.first())
+            assertNotEquals(StringsUz.dates.hoursAgo(3), t.dates.hoursAgo(3))
+            assertNotEquals(StringsUz.nutrition.mealSlot(MealSlot.LUNCH), t.nutrition.mealSlot(MealSlot.LUNCH))
+        }
+    }
+
+    /**
+     * A month named on its own and a day inside it are different words in Russian, and
+     * writing "4 Сентябрь" is the mistake this catches.
+     */
+    @Test
+    fun `a day inside a month reads as a date rather than a month name`() {
+        assertEquals("4-sentabr", StringsUz.dates.dayMonth(SampleDate))
+        assertEquals("4 сентября", StringsRu.dates.dayMonth(SampleDate))
+        assertEquals("4 September", StringsEn.dates.dayMonth(SampleDate))
+        languages.forEach { t ->
+            assertEquals(12, t.dates.months.size)
+            assertEquals(7, t.dates.weekdays.size)
         }
     }
 

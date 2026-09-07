@@ -42,6 +42,8 @@ import org.example.project.ui.components.ScreenContent
 import org.example.project.ui.components.SegmentedControl
 import org.example.project.ui.components.SelectChip
 import org.example.project.ui.components.noRippleClickable
+import uz.sadora.contract.MealSlot
+import org.example.project.i18n.strings
 
 /** Long enough that a fast typist sends one request, short enough to feel immediate. */
 private const val SearchDebounceMillis = 250L
@@ -70,7 +72,7 @@ fun FoodSearchScreen(
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
     /** Which meal the entry belongs to; by default the one this hour falls in. */
-    slot: String = mealSlotForHour(deviceNow().hour),
+    slot: MealSlot = mealSlotForHour(deviceNow().hour),
 ) {
     val c = Sadora.colors
     var query by remember { mutableStateOf("") }
@@ -93,7 +95,7 @@ fun FoodSearchScreen(
     val factor = grams / 100f
 
     Column(modifier) {
-        SadoraTopBar(slot, onBack = onClose)
+        SadoraTopBar(strings.nutrition.mealSlot(slot), onBack = onClose)
 
         ScreenContent {
             item {

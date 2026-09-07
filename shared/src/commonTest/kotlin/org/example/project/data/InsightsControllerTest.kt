@@ -21,6 +21,7 @@ import uz.sadora.contract.InsightsSummary
 import uz.sadora.contract.MetricTrend
 import uz.sadora.contract.TrendMetric
 import uz.sadora.contract.TrendPoint
+import org.example.project.i18n.StringsUz
 
 /**
  * The Insights screen drew invented numbers for a long time. These pin the replacement:
@@ -153,8 +154,8 @@ class InsightsControllerTest {
 
     @Test
     fun `weekday labels appear on a short window and are dropped on a long one`() {
-        assertEquals(listOf("Du", "Se", "Ch"), sleepTrend(listOf(1.0, 2.0, 3.0)).barLabels())
-        assertTrue(sleepTrend(List(30) { 1.0 }).barLabels().isEmpty())
+        assertEquals(listOf("Du", "Se", "Ch"), sleepTrend(listOf(1.0, 2.0, 3.0)).barLabels(StringsUz.dates))
+        assertTrue(sleepTrend(List(30) { 1.0 }).barLabels(StringsUz.dates).isEmpty())
     }
 
     /** The wording states both numbers and never a cause; an unknown key says nothing. */

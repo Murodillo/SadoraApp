@@ -1,5 +1,7 @@
 package org.example.project.model
 
+import kotlin.time.Instant
+
 /**
  * One post in the secret chat.
  *
@@ -14,8 +16,8 @@ data class CommunityPost(
     val tint: Int,
     /** The room the post belongs to. */
     val topic: CommunityTopic,
-    /** Human-readable age, as the server would render it. */
-    val ago: String,
+    /** When it was posted. The screen words the age, in the language it is drawn in. */
+    val createdAt: Instant,
     val body: String,
     /** Likes from everyone else. Her own like is counted on top of this. */
     val likes: Int,
@@ -29,7 +31,7 @@ data class CommunityPost(
 data class CommunityComment(
     val alias: String,
     val tint: Int,
-    val ago: String,
+    val createdAt: Instant,
     val body: String,
     val isMine: Boolean = false,
 )

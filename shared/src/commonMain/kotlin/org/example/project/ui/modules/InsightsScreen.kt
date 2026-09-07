@@ -213,7 +213,7 @@ private fun TrendCard(title: String, trend: MetricTrend) {
         )
         TrendBars(
             values = trend.barValues(),
-            labels = trend.barLabels(),
+            labels = trend.barLabels(strings.dates),
             color = when (trend.metric) {
                 TrendMetric.SLEEP_MINUTES -> c.accent
                 TrendMetric.STEPS -> c.primary
@@ -233,7 +233,7 @@ private fun TrendCard(title: String, trend: MetricTrend) {
                 color = c.muted2,
             )
         }
-        trend.rangeLabel()?.takeIf { trend.barLabels().isEmpty() }?.let {
+        trend.rangeLabel(strings.dates)?.takeIf { trend.barLabels(strings.dates).isEmpty() }?.let {
             Text(it, style = Sadora.type.body, color = c.muted2)
         }
     }

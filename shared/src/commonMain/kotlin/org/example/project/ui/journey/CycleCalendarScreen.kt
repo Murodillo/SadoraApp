@@ -137,7 +137,7 @@ private fun MonthGrid(state: AppState, onDayClick: (LocalDate) -> Unit) {
                 Modifier.size(IconSize.lg).noRippleClickable { offset-- },
                 tint = c.muted,
             )
-            Text(Fmt.monthYear(first.year, first.month.ordinal + 1), style = Sadora.type.h3, color = c.text)
+            Text(strings.dates.monthYear(first.year, first.month.ordinal + 1), style = Sadora.type.h3, color = c.text)
             Icon(
                 SadoraIcons.ChevronRight,
                 contentDescription = "Keyingi oy",
@@ -374,7 +374,7 @@ private fun PreviousCyclesList(state: AppState) {
         val start = anchor.minus(length * back, DateTimeUnit.DAY)
         val end = start.plus(length - 1, DateTimeUnit.DAY)
         Triple(
-            "${Fmt.dayMonth(start)} – ${Fmt.dayMonth(end)}",
+            "${strings.dates.dayMonth(start)} – ${strings.dates.dayMonth(end)}",
             "$length kun",
             if (back == 0) "Joriy" else "hayz ${state.averagePeriodLength} kun",
         )

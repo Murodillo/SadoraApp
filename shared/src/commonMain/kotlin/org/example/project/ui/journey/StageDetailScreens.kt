@@ -325,7 +325,7 @@ fun StageSleepMoodScreen(
                         )
                         WeeklyBars(
                             values = mood.barValues().map { it ?: 0f }.map { (it / 5f).coerceIn(0f, 1f) },
-                            labels = mood.barLabels(),
+                            labels = mood.barLabels(strings.dates),
                             color = c.secondary,
                             highlightIndex = mood.points.lastIndex,
                         )

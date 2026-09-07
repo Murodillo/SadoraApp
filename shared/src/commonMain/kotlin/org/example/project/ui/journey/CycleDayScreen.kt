@@ -57,7 +57,7 @@ fun CycleDayScreen(
         ScreenContent {
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text(Fmt.dayMonthWeekday(day), style = Sadora.type.h1, color = c.text)
+                    Text(strings.dates.dayMonthWeekday(day), style = Sadora.type.h1, color = c.text)
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(Spacing.xs),

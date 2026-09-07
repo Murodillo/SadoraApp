@@ -16,15 +16,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import kotlinx.datetime.DateTimeUnit
-import kotlinx.datetime.LocalDate
-import kotlinx.datetime.minus
 import org.example.project.design.IconSize
 import org.example.project.design.Sadora
 import org.example.project.design.SadoraIcons
 import org.example.project.design.Spacing
+import org.example.project.i18n.strings
 import org.example.project.model.AppState
-import org.example.project.model.Fmt
 import org.example.project.model.JournalNote
 import org.example.project.ui.components.BadgeTone
 import org.example.project.ui.components.CardLabel
@@ -56,6 +53,8 @@ fun MindJournalScreen(
     modifier: Modifier = Modifier,
 ) {
     val c = Sadora.colors
+    val t = strings.modules
+    val dates = strings.dates
     var draft by remember { mutableStateOf("") }
     var practising by remember { mutableStateOf(false) }
     // Confirmed before removing: the journal is the one place in the app where an
@@ -63,15 +62,15 @@ fun MindJournalScreen(
     var pendingDelete by remember { mutableStateOf<JournalNote?>(null) }
 
     Column(modifier) {
-        SadoraTopBar("Kundalik va praktika", onBack = onClose)
+        SadoraTopBar(t.journalTitle, onBack = onClose)
 
         ScreenContent {
             item { PracticeCard(breathingPractice(), onStart = { practising = true }) }
 
             item {
                 CardLabel(
-                    "Kundalik",
-                    trailing = { SadoraBadge("FAQAT SIZ KO'RASIZ", BadgeTone.Neutral, leading = "🔒") },
+                    t.journalLabel,
+                    trailing = { SadoraBadge(t.journalPrivate, BadgeTone.Neutral, leading = "🔒") },
                 )
             }
 
@@ -80,11 +79,11 @@ fun MindJournalScreen(
                     SadoraTextField(
                         draft,
                         { draft = it },
-                        placeholder = "Bugun o'zingizni qanday his qilyapsiz?",
+                        placeholder = t.journalPrompt,
                         singleLine = false,
                     )
                     SadoraButton(
-                        "Saqlash",
+                        strings.common.save,
                         onClick = {
                             state.addJournalNote(draft)
                             draft = ""
@@ -97,8 +96,8 @@ fun MindJournalScreen(
             if (state.journal.isEmpty()) {
                 item {
                     EmptyState(
-                        title = "Kundalik hozircha bo'sh",
-                        body = "Birinchi yozuvingizni yozing. Uni sizdan boshqa hech kim ko'rmaydi.",
+                        title = t.journalEmpty,
+                        body = t.journalEmptyBody,
                         actionText = null,
                         onAction = {},
                         glyph = "📝",
@@ -110,7 +109,7 @@ fun MindJournalScreen(
                 val note = state.journal[index]
                 JournalCard(
                     note = note,
-                    today = state.today,
+                    label = dates.relativeDay(note.date, state.today),
                     onDelete = { pendingDelete = note },
                 )
             }
@@ -132,12 +131,12 @@ fun MindJournalScreen(
     pendingDelete?.let { lastPending.value = it }
     SadoraBottomSheet(
         visible = pendingDelete != null,
-        title = "Yozuvni o'chirish",
+        title = t.journalDeleteTitle,
         onDismiss = { pendingDelete = null },
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
             Text(
-                "Bu yozuv butunlay o'chiriladi va uni qaytarib bo'lmaydi.",
+                t.journalDeleteBody,
                 style = Sadora.type.body,
                 color = c.muted,
             )
@@ -146,13 +145,13 @@ fun MindJournalScreen(
             }
             Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
                 SadoraButton(
-                    "Bekor",
+                    strings.common.cancel,
                     onClick = { pendingDelete = null },
                     tone = org.example.project.ui.components.ButtonTone.Secondary,
                     modifier = Modifier.weight(1f),
                 )
                 SadoraButton(
-                    "O'chirish",
+                    strings.common.delete,
                     onClick = {
                         pendingDelete?.let { state.deleteJournalNote(it) }
                         pendingDelete = null
@@ -167,8 +166,9 @@ fun MindJournalScreen(
 
 /** One entry: when it was written, what it says, and a way to remove it. */
 @Composable
-private fun JournalCard(note: JournalNote, today: LocalDate, onDelete: () -> Unit) {
+private fun JournalCard(note: JournalNote, label: String, onDelete: () -> Unit) {
     val c = Sadora.colors
+    val t = strings.modules
     SadoraCard(padding = Spacing.sm) {
         Row(
             Modifier.fillMaxWidth(),
@@ -176,7 +176,7 @@ private fun JournalCard(note: JournalNote, today: LocalDate, onDelete: () -> Uni
             horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
         ) {
             Text(
-                dayLabel(note.date, today),
+                label,
                 style = Sadora.type.h3,
                 color = c.text,
                 modifier = Modifier.weight(1f),
@@ -190,7 +190,7 @@ private fun JournalCard(note: JournalNote, today: LocalDate, onDelete: () -> Uni
             ) {
                 Icon(
                     SadoraIcons.More,
-                    contentDescription = "Yozuvni o'chirish",
+                    contentDescription = t.journalDeleteAction,
                     Modifier.size(IconSize.sm),
                     tint = c.muted2,
                 )
@@ -198,11 +198,4 @@ private fun JournalCard(note: JournalNote, today: LocalDate, onDelete: () -> Uni
         }
         Text(note.body, style = Sadora.type.body, color = c.muted)
     }
-}
-
-/** "Bugun", "Kecha", then the date — the way a diary is read. */
-private fun dayLabel(date: LocalDate, today: LocalDate): String = when (date) {
-    today -> "Bugun"
-    today.minus(1, DateTimeUnit.DAY) -> "Kecha"
-    else -> Fmt.dayMonth(date)
 }
