@@ -128,6 +128,8 @@ class AppStateTest {
         override fun mealLogged(meal: Meal) { events += "meal:${meal.slot}" }
         override fun checkInChanged(mood: Mood, energy: Int, stress: Int) { events += "checkin:${mood.name}:$energy:$stress" }
         override fun practiceLogged(kind: PracticeKind, seconds: Int) { events += "practice:${kind.name}:$seconds" }
+        override fun journalSaved(body: String) { events += "journal:$body" }
+        override fun journalDeleted(id: String) { events += "journal-deleted:$id" }
     }
 
     @Test
@@ -243,5 +245,73 @@ class CycleAnchorTest {
         assertEquals(14, s.cycleDayFor(today))
         assertEquals(13..19, s.fertileWindowDays())
         assertEquals(CyclePhase.Fertile, s.currentPhase())
+    }
+}
+
+class AppStateJournalTest {
+
+    private fun state() = AppState()
+
+    private class RecordingSync : AppStateSync {
+        val events = mutableListOf<String>()
+        override fun symptomToggled(label: String, nowSelected: Boolean) {}
+        override fun waterAdded(ml: Int) {}
+        override fun doseTaken(doseId: String) {}
+        override fun doseSkipped(doseId: String) {}
+        override fun mealLogged(meal: Meal) {}
+        override fun checkInChanged(mood: Mood, energy: Int, stress: Int) {}
+        override fun practiceLogged(kind: PracticeKind, seconds: Int) {}
+        override fun journalSaved(body: String) { events += "journal:$body" }
+        override fun journalDeleted(id: String) { events += "journal-deleted:$id" }
+    }
+
+    @Test
+    fun `a journal note appears at once and is sent on`() {
+        val sync = RecordingSync()
+        val s = state().apply { this.sync = sync }
+
+        s.addJournalNote("  Bugun yaxshi kun  ")
+
+        assertEquals(1, s.journal.size)
+        assertEquals("Bugun yaxshi kun", s.journal.first().body)
+        assertEquals(listOf("journal:Bugun yaxshi kun"), sync.events)
+    }
+
+    @Test
+    fun `an empty journal note is not written`() {
+        val sync = RecordingSync()
+        val s = state().apply { this.sync = sync }
+
+        s.addJournalNote("   ")
+
+        assertEquals(0, s.journal.size)
+        assertEquals(emptyList(), sync.events)
+    }
+
+    @Test
+    fun `deleting a note the server never saw sends nothing`() {
+        val sync = RecordingSync()
+        val s = state().apply { this.sync = sync }
+        s.addJournalNote("hali yuborilmagan")
+        sync.events.clear()
+
+        s.deleteJournalNote(s.journal.first())
+
+        assertEquals(0, s.journal.size)
+        // It has no server id yet, so there is nothing there to delete.
+        assertEquals(emptyList(), sync.events)
+    }
+
+    @Test
+    fun `deleting a saved note sends its id`() {
+        val sync = RecordingSync()
+        val s = state().apply { this.sync = sync }
+        val saved = JournalNote(id = "abc-123", date = s.today, time = "21:40", body = "kecha")
+        s.journal.add(saved)
+
+        s.deleteJournalNote(saved)
+
+        assertEquals(0, s.journal.size)
+        assertEquals(listOf("journal-deleted:abc-123"), sync.events)
     }
 }

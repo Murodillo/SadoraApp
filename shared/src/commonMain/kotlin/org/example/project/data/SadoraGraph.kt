@@ -9,6 +9,7 @@ import org.example.project.data.api.BillingApi
 import org.example.project.data.api.InsightsApi
 import org.example.project.data.api.LearnApi
 import org.example.project.data.api.MedicationApi
+import org.example.project.data.api.AppointmentApi
 import org.example.project.data.api.MindApi
 import org.example.project.data.api.NotificationApi
 import org.example.project.data.api.NutritionApi
@@ -43,6 +44,7 @@ class SadoraGraph(
     val medicationApi: MedicationApi = MedicationApi(caller)
     val notificationApi: NotificationApi = NotificationApi(caller)
     val wearableApi: WearableApi = WearableApi(caller)
+    val appointmentApi: AppointmentApi = AppointmentApi(caller)
     val communityApi: CommunityApi = CommunityApi(caller)
     val aiApi: AiApi = AiApi(caller)
     val insightsApi: InsightsApi = InsightsApi(caller)
@@ -55,7 +57,7 @@ class SadoraGraph(
      * UI owns and there is exactly one of those.
      */
     fun healthController(state: org.example.project.model.AppState): HealthController =
-        HealthController(cycleApi, mindApi, nutritionApi, medicationApi, wearableApi, state)
+        HealthController(cycleApi, mindApi, nutritionApi, medicationApi, wearableApi, appointmentApi, state)
 
     fun communityController(state: org.example.project.model.AppState): CommunityController =
         CommunityController(communityApi, state)

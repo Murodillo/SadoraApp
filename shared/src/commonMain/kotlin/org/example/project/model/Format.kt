@@ -4,6 +4,7 @@ import kotlin.time.Clock
 import kotlin.time.Instant
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.LocalTime
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 
@@ -50,6 +51,10 @@ object Fmt {
 
     /** "Sentabr 2026" */
     fun monthYear(year: Int, month: Int): String = "${months[month - 1]} $year"
+
+    /** "08:35", from a wall-clock time that carries no date. */
+    fun clock(at: LocalTime): String =
+        "${at.hour.toString().padStart(2, '0')}:${at.minute.toString().padStart(2, '0')}"
 
     /** "08:35" */
     fun time(dateTime: LocalDateTime): String =

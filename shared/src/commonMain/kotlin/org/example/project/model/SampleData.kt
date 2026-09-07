@@ -54,7 +54,6 @@ data class DataSource(
     val metrics: List<String> = emptyList(),
 )
 
-data class Conversation(val title: String, val whenLabel: String)
 
 /** A catalogue entry. Values are per 100 g unless [perPiece] is set. */
 data class FoodItem(
@@ -178,12 +177,6 @@ object SampleData {
         "Teri" to "Sikl davomida terim nega o'zgaradi?",
     )
 
-    val suggestedQuestions = aiTopics.map { it.second }
-
-    val recentConversations = listOf(
-        Conversation("Uyqu sifatini qanday yaxshilash mumkin", "Kecha"),
-        Conversation("Haftalik ovqatlanish rejasi", "3 kun"),
-    )
 
     /** Local dishes lead the catalogue — the design's food search is Uzbek-first. */
     val foods = listOf(

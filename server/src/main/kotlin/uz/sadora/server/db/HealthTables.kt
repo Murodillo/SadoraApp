@@ -206,3 +206,26 @@ object ProviderMetricMappings : Table("provider_metric_mappings") {
 
     override val primaryKey = PrimaryKey(provider, providerMetric)
 }
+
+/**
+ * Appointments — visits, scans and tests she has entered herself.
+ *
+ * Alongside the other health tables and behind the same boundary: an appointment names
+ * a clinic and a condition by implication, which is not something an operator should be
+ * able to read.
+ */
+object Appointments : Table("appointments") {
+    val id = uuid("id")
+    val userId = uuid("user_id").references(Users.id)
+    val title = text("title")
+    val scheduledOn = date("scheduled_on")
+    val scheduledAt = time("scheduled_at").nullable()
+    val place = text("place").nullable()
+    val note = text("note").nullable()
+    val remindHoursBefore = integer("remind_hours_before").nullable()
+    val completedAt = timestampWithTimeZone("completed_at").nullable()
+    val createdAt = timestampWithTimeZone("created_at")
+    val updatedAt = timestampWithTimeZone("updated_at")
+
+    override val primaryKey = PrimaryKey(id)
+}

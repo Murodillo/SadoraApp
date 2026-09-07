@@ -465,6 +465,84 @@ paths:
       responses:
         "200": { $ref: "#/components/responses/Ack" }
 
+  /v1/appointments:
+    get:
+      tags: [Cycle]
+      security: [{ bearerAuth: [] }]
+      summary: Tadbirlar ro'yxati
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/Appointment" } }
+    post:
+      tags: [Cycle]
+      security: [{ bearerAuth: [] }]
+      summary: Tadbir qo'shish
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SaveAppointmentRequest" }
+      responses:
+        "201":
+          description: Yaratildi
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Appointment" }
+        "403": { description: Sog'liq ma'lumotlarini saqlashga rozilik yo'q }
+
+  /v1/appointments/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+    put:
+      tags: [Cycle]
+      security: [{ bearerAuth: [] }]
+      summary: Tadbirni tahrirlash
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SaveAppointmentRequest" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Appointment" }
+        "404": { description: Topilmadi }
+    delete:
+      tags: [Cycle]
+      security: [{ bearerAuth: [] }]
+      summary: Tadbirni o'chirish
+      responses:
+        "200": { description: OK }
+        "404": { description: Topilmadi }
+
+  /v1/appointments/{id}/completed:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+    put:
+      tags: [Cycle]
+      security: [{ bearerAuth: [] }]
+      summary: Bo'lib o'tgan deb belgilash
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [done]
+              properties:
+                done: { type: boolean }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Appointment" }
+
   /v1/symptoms:
     get:
       tags: [Cycle]
@@ -2730,6 +2808,31 @@ components:
     ArticleKind:
       type: string
       enum: [article, course, video]
+
+    Appointment:
+      type: object
+      required: [id, title, scheduledOn, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string, maxLength: 120 }
+        scheduledOn: { type: string, format: date }
+        scheduledAt: { type: string, example: "10:30", nullable: true }
+        place: { type: string, nullable: true }
+        note: { type: string, nullable: true }
+        remindHoursBefore: { type: integer, minimum: 0, maximum: 168, nullable: true }
+        completedAt: { type: string, format: date-time, nullable: true }
+        createdAt: { type: string, format: date-time }
+
+    SaveAppointmentRequest:
+      type: object
+      required: [title, scheduledOn]
+      properties:
+        title: { type: string, maxLength: 120 }
+        scheduledOn: { type: string, format: date }
+        scheduledAt: { type: string, example: "10:30", nullable: true }
+        place: { type: string, nullable: true }
+        note: { type: string, nullable: true }
+        remindHoursBefore: { type: integer, minimum: 0, maximum: 168, nullable: true }
 
     ArticleBlock:
       type: object

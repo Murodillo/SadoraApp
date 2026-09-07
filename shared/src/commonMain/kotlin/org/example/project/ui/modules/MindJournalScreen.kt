@@ -1,96 +1,72 @@
 package org.example.project.ui.modules
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
-import org.example.project.design.Radius
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.minus
+import org.example.project.design.IconSize
 import org.example.project.design.Sadora
+import org.example.project.design.SadoraIcons
 import org.example.project.design.Spacing
+import org.example.project.model.AppState
+import org.example.project.model.Fmt
+import org.example.project.model.JournalNote
 import org.example.project.ui.components.BadgeTone
 import org.example.project.ui.components.CardLabel
+import org.example.project.ui.components.EmptyState
 import org.example.project.ui.components.SadoraBadge
+import org.example.project.ui.components.SadoraBottomSheet
 import org.example.project.ui.components.SadoraButton
 import org.example.project.ui.components.SadoraCard
 import org.example.project.ui.components.SadoraTextField
 import org.example.project.ui.components.SadoraTopBar
 import org.example.project.ui.components.ScreenContent
-
-private data class JournalEntry(val whenLabel: String, val time: String, val mood: String, val text: String)
+import org.example.project.ui.components.noRippleClickable
 
 /**
  * "Ong · kundalik va nafas".
  *
  * The privacy label is shown on the surface itself, not buried in settings — the
  * journal is the most sensitive thing the app stores.
+ *
+ * Entries come from the store, which the Mind summary fills; writing one puts it on
+ * screen immediately and sends it on. The breathing practice here is the same one the
+ * Mind tab runs, not a second copy of it: the screen is titled "kundalik va praktika"
+ * and both halves have to actually work.
  */
 @Composable
 fun MindJournalScreen(
+    state: AppState,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val c = Sadora.colors
     var draft by remember { mutableStateOf("") }
-    val entries = remember {
-        mutableStateListOf(
-            JournalEntry(
-                "Bugun",
-                "21:40",
-                "🙂",
-                "Ish kuni zich bo'ldi, lekin kechqurun yurish yaxshi ta'sir qildi.",
-            ),
-            JournalEntry("Kecha", "22:05", "😐", "Kechqurun bosh og'rig'i bezovta qildi."),
-        )
-    }
+    var practising by remember { mutableStateOf(false) }
+    // Confirmed before removing: the journal is the one place in the app where an
+    // accidental tap destroys something she cannot get back.
+    var pendingDelete by remember { mutableStateOf<JournalNote?>(null) }
 
     Column(modifier) {
         SadoraTopBar("Kundalik va praktika", onBack = onClose)
 
         ScreenContent {
-            item {
-                SadoraCard {
-                    Row(
-                        Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-                    ) {
-                        Box(
-                            Modifier
-                                .size(48.dp)
-                                .clip(RoundedCornerShape(Radius.md))
-                                .background(c.surface2),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Text("🌬️", style = Sadora.type.h2)
-                        }
-                        Column(Modifier.weight(1f)) {
-                            Text("4-7-8 · Nafas", style = Sadora.type.h3, color = c.text)
-                            Text(
-                                "4 soniya oling · 7 soniya ushlang · 8 soniya chiqaring",
-                                style = Sadora.type.body,
-                                color = c.muted,
-                            )
-                        }
-                    }
-                    SadoraButton("3 daqiqa boshlash", onClick = {})
-                }
-            }
+            item { PracticeCard(breathing, onStart = { practising = true }) }
 
             item {
                 CardLabel(
@@ -99,48 +75,133 @@ fun MindJournalScreen(
                 )
             }
 
-            items(entries.size) { index ->
-                val entry = entries[index]
-                SadoraCard(padding = Spacing.sm) {
-                    Row(
-                        Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
-                    ) {
-                        Text(entry.mood, style = Sadora.type.h3)
-                        Text(
-                            entry.whenLabel,
-                            style = Sadora.type.h3,
-                            color = c.text,
-                            modifier = Modifier.weight(1f),
-                        )
-                        Text(entry.time, style = Sadora.type.body, color = c.muted2)
-                    }
-                    Text(entry.text, style = Sadora.type.body, color = c.muted)
+            item {
+                SadoraCard {
+                    SadoraTextField(
+                        draft,
+                        { draft = it },
+                        placeholder = "Bugun o'zingizni qanday his qilyapsiz?",
+                        singleLine = false,
+                    )
+                    SadoraButton(
+                        "Saqlash",
+                        onClick = {
+                            state.addJournalNote(draft)
+                            draft = ""
+                        },
+                        enabled = draft.isNotBlank(),
+                    )
                 }
             }
 
-            item {
-                SadoraTextField(
-                    draft,
-                    { draft = it },
-                    placeholder = "Yangi yozuv qo'shish…",
-                    singleLine = false,
-                )
+            if (state.journal.isEmpty()) {
+                item {
+                    EmptyState(
+                        title = "Kundalik hozircha bo'sh",
+                        body = "Birinchi yozuvingizni yozing. Uni sizdan boshqa hech kim ko'rmaydi.",
+                        actionText = null,
+                        onAction = {},
+                        glyph = "📝",
+                    )
+                }
             }
 
-            item {
-                SadoraButton(
-                    "Saqlash",
-                    onClick = {
-                        if (draft.isNotBlank()) {
-                            entries.add(0, JournalEntry("Bugun", "hozir", "🙂", draft))
-                            draft = ""
-                        }
-                    },
-                    enabled = draft.isNotBlank(),
+            items(state.journal.size) { index ->
+                val note = state.journal[index]
+                JournalCard(
+                    note = note,
+                    today = state.today,
+                    onDelete = { pendingDelete = note },
                 )
             }
         }
     }
+
+    PracticeSheet(
+        practice = if (practising) breathing else null,
+        onFinish = { seconds ->
+            state.logPractice(breathing.kind, seconds)
+            practising = false
+        },
+        onDismiss = { practising = false },
+    )
+
+    // Kept mounted through the exit animation so the sheet does not blank as it closes.
+    val lastPending = remember { mutableStateOf<JournalNote?>(null) }
+    pendingDelete?.let { lastPending.value = it }
+    SadoraBottomSheet(
+        visible = pendingDelete != null,
+        title = "Yozuvni o'chirish",
+        onDismiss = { pendingDelete = null },
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+            Text(
+                "Bu yozuv butunlay o'chiriladi va uni qaytarib bo'lmaydi.",
+                style = Sadora.type.body,
+                color = c.muted,
+            )
+            lastPending.value?.let { note ->
+                Text(note.body, style = Sadora.type.body, color = c.text, maxLines = 3)
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                SadoraButton(
+                    "Bekor",
+                    onClick = { pendingDelete = null },
+                    tone = org.example.project.ui.components.ButtonTone.Secondary,
+                    modifier = Modifier.weight(1f),
+                )
+                SadoraButton(
+                    "O'chirish",
+                    onClick = {
+                        pendingDelete?.let { state.deleteJournalNote(it) }
+                        pendingDelete = null
+                    },
+                    tone = org.example.project.ui.components.ButtonTone.Destructive,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+        }
+    }
+}
+
+/** One entry: when it was written, what it says, and a way to remove it. */
+@Composable
+private fun JournalCard(note: JournalNote, today: LocalDate, onDelete: () -> Unit) {
+    val c = Sadora.colors
+    SadoraCard(padding = Spacing.sm) {
+        Row(
+            Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+        ) {
+            Text(
+                dayLabel(note.date, today),
+                style = Sadora.type.h3,
+                color = c.text,
+                modifier = Modifier.weight(1f),
+            )
+            Text(note.time, style = Sadora.type.body, color = c.muted2)
+            Box(
+                Modifier
+                    .size(28.dp)
+                    .noRippleClickable(onClick = onDelete),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    SadoraIcons.More,
+                    contentDescription = "Yozuvni o'chirish",
+                    Modifier.size(IconSize.sm),
+                    tint = c.muted2,
+                )
+            }
+        }
+        Text(note.body, style = Sadora.type.body, color = c.muted)
+    }
+}
+
+/** "Bugun", "Kecha", then the date — the way a diary is read. */
+private fun dayLabel(date: LocalDate, today: LocalDate): String = when (date) {
+    today -> "Bugun"
+    today.minus(1, DateTimeUnit.DAY) -> "Kecha"
+    else -> Fmt.dayMonth(date)
 }

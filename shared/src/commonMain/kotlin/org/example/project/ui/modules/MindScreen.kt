@@ -56,7 +56,7 @@ import org.example.project.ui.components.noRippleClickable
 import org.example.project.ui.components.pressable
 
 /** One practice the Mind tab can start. */
-private data class Practice(
+internal data class Practice(
     val kind: PracticeKind,
     val title: String,
     val subtitle: String,
@@ -64,7 +64,7 @@ private data class Practice(
     val purpose: String,
 )
 
-private val breathing = Practice(PracticeKind.Breathing, "Nafas", "4-7-8", 5, "Stressni kamaytirish")
+internal val breathing = Practice(PracticeKind.Breathing, "Nafas", "4-7-8", 5, "Stressni kamaytirish")
 private val meditation = Practice(PracticeKind.Meditation, "Meditatsiya", "Xotirjam ong", 10, "Dam olish")
 
 /**
@@ -315,7 +315,7 @@ private fun DialCard(
 }
 
 @Composable
-private fun PracticeCard(practice: Practice, onStart: () -> Unit) {
+internal fun PracticeCard(practice: Practice, onStart: () -> Unit) {
     val c = Sadora.colors
     SadoraCard(onClick = onStart) {
         Row(
@@ -344,7 +344,7 @@ private val breathPhases = listOf("Nafas oling" to 4, "Ushlab turing" to 7, "Chi
  * of breathing.
  */
 @Composable
-private fun PracticeSheet(
+internal fun PracticeSheet(
     practice: Practice?,
     onFinish: (seconds: Int) -> Unit,
     onDismiss: () -> Unit,

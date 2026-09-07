@@ -4,9 +4,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import kotlinx.datetime.DateTimeUnit
+import kotlin.time.Clock
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
 import kotlinx.datetime.minus
 import kotlinx.datetime.plus
+import kotlinx.datetime.todayIn
 import org.example.project.model.AppState
 import org.example.project.data.api.CycleApi
 import org.example.project.data.api.MedicationApi
@@ -54,6 +57,7 @@ class HealthController(
     private val nutritionApi: NutritionApi?,
     private val medicationApi: MedicationApi?,
     private val wearableApi: org.example.project.data.api.WearableApi? = null,
+    private val appointmentApi: org.example.project.data.api.AppointmentApi? = null,
     /**
      * Mirrored onto here after every load, so the existing screens show server data
      * without any of them having to learn a wire type.
@@ -97,6 +101,15 @@ class HealthController(
 
     /** The day the screens are looking at. Defaults to the server's idea of today. */
     var selectedDate by mutableStateOf<LocalDate?>(null)
+
+    /** The window [loadRecentLogs] filled, newest last. Empty until it is asked for. */
+    var recentLogs by mutableStateOf<List<DailyLog>>(emptyList())
+
+    /** Her appointments, in the order they fall. Loaded by the screens that show them. */
+    var appointments by mutableStateOf<List<uz.sadora.contract.Appointment>>(emptyList())
+
+    /** Completed cycles, oldest first. The regularity view is built from their lengths. */
+    var history by mutableStateOf<uz.sadora.contract.CycleHistory?>(null)
         private set
 
     // ---------------------------------------------------------------- loading
@@ -170,6 +183,61 @@ class HealthController(
         }
     }
 
+    /**
+     * The last [days] days of records, for the screens that count how often something
+     * happened rather than showing one day.
+     *
+     * Held separately from [day] because it answers a different question and is loaded
+     * by the screens that ask it, not with the tabs.
+     */
+    suspend fun loadRecentLogs(days: Int = 30) {
+        val api = cycleApi ?: return
+        val to = cycle?.today ?: mind?.today ?: selectedDate
+            ?: Clock.System.todayIn(TimeZone.currentSystemDefault())
+        val from = to.minus(days - 1, DateTimeUnit.DAY)
+        calls.run(silent = true) { api.days(from, to) }?.let { recentLogs = it.logs }
+    }
+
+    suspend fun loadHistory() {
+        val api = cycleApi ?: return
+        calls.run(silent = true) { api.history() }?.let { history = it }
+    }
+
+    // ---------------------------------------------------------------- appointments
+
+    suspend fun loadAppointments() {
+        val api = appointmentApi ?: return
+        calls.run(silent = true) { api.list() }?.let { appointments = it }
+    }
+
+    suspend fun addAppointment(request: uz.sadora.contract.SaveAppointmentRequest): Boolean {
+        val api = appointmentApi ?: return true
+        calls.run { api.add(request) } ?: return false
+        loadAppointments()
+        return true
+    }
+
+    suspend fun updateAppointment(id: String, request: uz.sadora.contract.SaveAppointmentRequest): Boolean {
+        val api = appointmentApi ?: return true
+        calls.run { api.update(id, request) } ?: return false
+        loadAppointments()
+        return true
+    }
+
+    suspend fun setAppointmentDone(id: String, done: Boolean): Boolean {
+        val api = appointmentApi ?: return true
+        calls.run { api.setCompleted(id, done) } ?: return false
+        loadAppointments()
+        return true
+    }
+
+    suspend fun deleteAppointment(id: String): Boolean {
+        val api = appointmentApi ?: return true
+        calls.run { api.delete(id) } ?: return false
+        loadAppointments()
+        return true
+    }
+
     suspend fun loadSymptoms(lifeStage: LifeStage?) {
         val api = cycleApi ?: return
         calls.run(silent = true) { api.symptoms(lifeStage) }?.let {
@@ -181,7 +249,10 @@ class HealthController(
 
     suspend fun refreshMind() {
         val api = mindApi ?: return
-        calls.run(silent = true) { api.summary() }?.let { mind = it }
+        calls.run(silent = true) { api.summary() }?.let {
+            mind = it
+            state?.applyMind(it)
+        }
     }
 
     suspend fun refreshNutrition() {

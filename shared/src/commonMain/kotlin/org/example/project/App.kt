@@ -474,7 +474,7 @@ private fun RootTab(
             onOpenJournal = { navigator.push(Route.MindJournal) },
         )
 
-        Tab.Journey -> JourneyScreen(state = state, onOpen = navigator::push)
+        Tab.Journey -> JourneyScreen(state = state, health = health, onOpen = navigator::push)
 
         Tab.Nutrition -> NutritionScreen(
             state = state,
@@ -518,12 +518,12 @@ private fun PushedScreen(
         is Route.CycleDay -> CycleDayScreen(state, route.date, onSymptomSheet, close)
 
         // Pregnancy
-        Route.PregnancyAppointments -> PregnancyAppointmentsScreen(close)
+        Route.PregnancyAppointments -> PregnancyAppointmentsScreen(health, close)
         Route.PregnancyCheckIn -> PregnancyCheckInScreen(state, close)
 
         // Stage detail
-        Route.StageSymptoms -> StageSymptomsScreen(state, close)
-        Route.StageSleepMood -> StageSleepMoodScreen(state, close)
+        Route.StageSymptoms -> StageSymptomsScreen(state, health, close)
+        Route.StageSleepMood -> StageSleepMoodScreen(state, health, insights, onOpen = { navigator.push(it) }, onClose = close)
 
         // AI — the chat is drawn on the deck's navy whatever the app theme is.
         Route.AiChat -> SadoraDarkSurface { AiChatScreen(state, ai, close) }
@@ -545,7 +545,7 @@ private fun PushedScreen(
         Route.FoodScan -> FoodScanScreen(state, close)
         Route.Balance -> BalanceScreen(state, close)
 
-        Route.MindJournal -> MindJournalScreen(close)
+        Route.MindJournal -> MindJournalScreen(state, close)
         Route.Medications -> MedicationsScreen(state, close, navigator::push)
         Route.AddMedication -> AddMedicationScreen(state, close)
         Route.MedicationHistory -> MedicationHistoryScreen(close)

@@ -97,6 +97,17 @@ class HealthSync(
         scope.launch { health.logPractice(wire, seconds) }
     }
 
+    override fun journalSaved(body: String) {
+        // Dated by the day the app is showing, not by the device clock at send time: an
+        // entry written just before midnight belongs to the day she was writing about.
+        val date = health.selectedDate ?: health.mind?.today ?: return
+        scope.launch { health.addJournalEntry(date, body) }
+    }
+
+    override fun journalDeleted(id: String) {
+        scope.launch { health.deleteJournalEntry(id) }
+    }
+
     private fun String.toSlot(): MealSlot = when (this) {
         "Nonushta" -> MealSlot.BREAKFAST
         "Tushlik" -> MealSlot.LUNCH

@@ -43,6 +43,8 @@ import uz.sadora.server.health.HealthRepository
 import uz.sadora.server.health.HealthService
 import uz.sadora.server.health.MedicationRepository
 import uz.sadora.server.health.MedicationService
+import uz.sadora.server.health.AppointmentRepository
+import uz.sadora.server.health.AppointmentService
 import uz.sadora.server.health.MindRepository
 import uz.sadora.server.health.MindService
 import uz.sadora.server.health.NutritionRepository
@@ -91,6 +93,7 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
     val flagRepository = FeatureFlagRepository()
     val healthRepository = HealthRepository()
     val mindRepository = MindRepository()
+    val appointmentRepository = AppointmentRepository()
     val nutritionRepository = NutritionRepository()
     val medicationRepository = MedicationRepository()
     val wearableRepository = WearableRepository()
@@ -125,6 +128,7 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
     val healthAccess = HealthAccess(userRepository, entitlementService)
     val healthService = HealthService(healthRepository, healthAccess)
     val mindService = MindService(mindRepository, healthRepository, healthAccess)
+    val appointmentService = AppointmentService(appointmentRepository, healthAccess)
     val nutritionService = NutritionService(nutritionRepository, healthAccess)
     val medicationService = MedicationService(medicationRepository, healthAccess)
     val wearableService = WearableService(wearableRepository, healthAccess)

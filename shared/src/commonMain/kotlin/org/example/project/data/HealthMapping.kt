@@ -1,10 +1,14 @@
 package org.example.project.data
 
 import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.TimeZone
 import kotlinx.datetime.minus
+import kotlinx.datetime.toLocalDateTime
+import org.example.project.model.Fmt
 import org.example.project.model.AppState
 import org.example.project.model.CyclePhase
 import org.example.project.model.MedStatus
+import org.example.project.model.JournalNote
 import org.example.project.model.Mood
 import uz.sadora.contract.CycleStatus
 import uz.sadora.contract.DailyHealth
@@ -14,6 +18,7 @@ import uz.sadora.contract.HealthMetric
 import uz.sadora.contract.MealSlot
 import uz.sadora.contract.Medication
 import uz.sadora.contract.MedicationDay
+import uz.sadora.contract.MindSummary
 import uz.sadora.contract.MoodLevel
 import uz.sadora.contract.NutritionDay
 import uz.sadora.contract.PredictionConfidence
@@ -174,4 +179,28 @@ private fun uz.sadora.contract.FoodRelation.label(): String = when (this) {
     uz.sadora.contract.FoodRelation.WITH -> "Ovqat bilan"
     uz.sadora.contract.FoodRelation.AFTER -> "Ovqatdan keyin"
     uz.sadora.contract.FoodRelation.ANY -> ""
+}
+
+/**
+ * Mirrors the Mind summary: the check-in the screens already show, and the journal.
+ *
+ * The list is replaced rather than merged. An entry written a moment ago is in it under
+ * a local id, and the server's copy is the one that should survive — merging would leave
+ * the optimistic duplicate behind.
+ */
+fun AppState.applyMind(summary: MindSummary) {
+    val zone = TimeZone.currentSystemDefault()
+    journal.clear()
+    journal.addAll(
+        summary.recentEntries
+            .sortedByDescending { it.createdAt }
+            .map { entry ->
+                JournalNote(
+                    id = entry.id,
+                    date = entry.date,
+                    time = Fmt.time(entry.createdAt.toLocalDateTime(zone)),
+                    body = entry.body,
+                )
+            },
+    )
 }

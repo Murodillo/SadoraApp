@@ -51,6 +51,10 @@ import uz.sadora.contract.Article
 import uz.sadora.contract.ArticleBlock
 import uz.sadora.contract.ArticleFeed
 import uz.sadora.contract.ArticleKind
+import uz.sadora.contract.Appointment
+import uz.sadora.contract.CompleteAppointmentRequest
+import uz.sadora.contract.SaveAppointmentRequest
+import kotlinx.datetime.LocalTime
 import uz.sadora.contract.AuthSession
 import uz.sadora.contract.BillingCatalogue
 import uz.sadora.contract.CheckoutRequest
@@ -174,6 +178,53 @@ class ApiIntegrationTest {
         val status = get<CycleStatus>("/v1/cycle/status", user.token)
         val day = get<DailyLog>("/v1/days/${status.today}", user.token)
         assertTrue(day.isEmpty, "nothing was stored: $day")
+    }
+
+    // ---------------------------------------------------------------- appointments
+
+    @Test
+    fun `appointments belong to their owner and need the storage consent to write`() = api {
+        val her = signUp()
+        onboard(her, referredByDoctor = null, storeHealth = true)
+
+        val today = get<CycleStatus>("/v1/cycle/status", her.token).today
+        val created = post<Appointment>(
+            "/v1/appointments",
+            her.token,
+            SaveAppointmentRequest(
+                title = "Skrining UTT",
+                scheduledOn = today,
+                scheduledAt = LocalTime(10, 30),
+                place = "Respublika markazi",
+                remindHoursBefore = 24,
+            ),
+        )
+        assertEquals("Skrining UTT", created.title)
+        assertFalse(created.isDone)
+
+        // Marking it done is a timestamp, and it survives a re-read.
+        put<Appointment>("/v1/appointments/${created.id}/completed", her.token, CompleteAppointmentRequest(true))
+        val mine = get<List<Appointment>>("/v1/appointments", her.token)
+        assertEquals(1, mine.size)
+        assertTrue(mine.single().isDone)
+
+        // Another account sees none of it, and cannot reach this one by id.
+        val other = signUp()
+        onboard(other, referredByDoctor = null, storeHealth = true)
+        assertTrue(get<List<Appointment>>("/v1/appointments", other.token).isEmpty())
+        assertEquals(
+            HttpStatusCode.NotFound,
+            client.delete("/v1/appointments/${created.id}") { auth(other.token) }.status,
+        )
+
+        // Without the health-storage consent there is nothing to write into.
+        val withoutConsent = signUp()
+        onboard(withoutConsent, referredByDoctor = null, storeHealth = false)
+        val refused = client.post("/v1/appointments") {
+            auth(withoutConsent.token)
+            json(SaveAppointmentRequest(title = "Qon tahlili", scheduledOn = today))
+        }
+        assertEquals(HttpStatusCode.Forbidden, refused.status, refused.bodyAsTextSafe())
     }
 
     // ---------------------------------------------------------------- community

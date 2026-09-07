@@ -281,6 +281,15 @@ class AppState {
     /** Seconds of breathing and meditation practised today. */
     var practiceSecondsToday by mutableStateOf(0)
 
+    /**
+     * The journal, newest first.
+     *
+     * Held here like every other health record so the screen reads the store rather than
+     * the network, and so an entry she has just written is on screen before the server
+     * has confirmed it.
+     */
+    val journal = mutableStateListOf<JournalNote>()
+
     // Filled by the onboarding check-in, then by the symptom sheet.
     val symptoms = mutableStateListOf<String>()
     val meals = mutableStateListOf(*SampleData.meals.toTypedArray())
@@ -627,6 +636,43 @@ class AppState {
         sync?.practiceLogged(kind, seconds)
     }
 
+    /**
+     * Writes a journal entry.
+     *
+     * The entry appears at the top immediately under a local id; the server's copy
+     * replaces the whole list on the next refresh, which is when it gains its real one.
+     * Writing is the one thing in this app that must never feel like it is waiting.
+     */
+    fun addJournalNote(body: String) {
+        val text = body.trim()
+        if (text.isEmpty()) return
+        journal.add(0, JournalNote(id = LOCAL_NOTE_ID, date = today, time = nowTimeLabel(), body = text))
+        sync?.journalSaved(text)
+    }
+
+    /** Removes an entry. A note that never reached the server has nothing to delete there. */
+    fun deleteJournalNote(note: JournalNote) {
+        journal.remove(note)
+        if (note.id != LOCAL_NOTE_ID) sync?.journalDeleted(note.id)
+    }
+
     /** "6s 40d" — the app's sleep-duration format. */
     fun sleepLabel(minutes: Int = sleepMinutes): String = "${minutes / 60}s ${minutes % 60}d"
 }
+
+/**
+ * One journal entry as a screen shows it.
+ *
+ * [time] is formatted where the entry is mapped rather than where it is drawn: the wire
+ * carries an instant, and turning that into a wall clock needs the device's zone, which
+ * is a data-layer concern.
+ */
+data class JournalNote(
+    val id: String,
+    val date: LocalDate,
+    val time: String,
+    val body: String,
+)
+
+/** The id an entry carries until the server has given it a real one. */
+const val LOCAL_NOTE_ID: String = "local"

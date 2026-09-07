@@ -13,6 +13,7 @@ import androidx.compose.ui.unit.dp
 import org.example.project.design.Sadora
 import org.example.project.design.Spacing
 import org.example.project.model.AppState
+import org.example.project.model.Fmt
 import org.example.project.ui.components.CardLabel
 import org.example.project.ui.components.DisclaimerNote
 import org.example.project.ui.components.LabeledProgress
@@ -36,11 +37,20 @@ fun BalanceScreen(
 ) {
     val c = Sadora.colors
 
+    // The same four signals Today scores, against the same goals. A second screen with
+    // its own idea of how the day went would only disagree with the first one.
+    fun ratio(value: Int, goal: Int): Float =
+        if (goal <= 0) 0f else (value / goal.toFloat()).coerceIn(0f, 1f)
+
     val directions = listOf(
-        Quad("🍽", "Ovqatlanish", 0.67f, c.primary),
-        Quad("💧", "Suv", 0.60f, c.accent),
-        Quad("👟", "Faollik", 0.82f, c.secondary),
-        Quad("💤", "Uyqu", 0.74f, c.success),
+        Quad("🍽", "Ovqatlanish", ratio(state.caloriesEaten, state.calorieGoal), c.primary,
+            "${Fmt.int(state.caloriesEaten)} / ${Fmt.int(state.calorieGoal)} kkal"),
+        Quad("💧", "Suv", ratio(state.waterMl, state.waterGoalMl), c.accent,
+            "${Fmt.litres(state.waterMl)} / ${Fmt.litres(state.waterGoalMl)} l"),
+        Quad("👟", "Faollik", ratio(state.steps, StepGoal), c.secondary,
+            "${Fmt.int(state.steps)} / ${Fmt.int(StepGoal)} qadam"),
+        Quad("💤", "Uyqu", ratio(state.sleepMinutes, SleepGoalMinutes), c.success,
+            "${state.sleepLabel()} / 8s"),
     )
     val score = (directions.map { it.value }.average() * 100).toInt()
 
@@ -67,8 +77,7 @@ fun BalanceScreen(
                             }
                         }
                         Text(
-                            "Bugun to'rt yo'nalish ham muvozanatda. Ovqat \"yoqib " +
-                                "yuborilishi\" kerak bo'lgan qarz emas.",
+                            balanceNote(directions),
                             style = Sadora.type.body,
                             color = c.muted,
                             modifier = Modifier.weight(1f),
@@ -82,8 +91,10 @@ fun BalanceScreen(
                     CardLabel("To'rt yo'nalish")
                     directions.forEach { direction ->
                         LabeledProgress(
+                            // The reading, not a percentage: "1,2 / 2,0 l" says what to do
+                            // next, and "60%" does not.
                             label = "${direction.emoji}  ${direction.label}",
-                            value = "${(direction.value * 100).toInt()}%",
+                            value = direction.reading,
                             progress = direction.value,
                             color = direction.color,
                         )
@@ -106,4 +117,30 @@ private data class Quad(
     val label: String,
     val value: Float,
     val color: Color,
+    /** What was measured against what, in the screen's own words. */
+    val reading: String,
 )
+
+/**
+ * What the day looks like, said about the weakest direction rather than in general.
+ *
+ * The design rejects debt language outright, so a missed goal is described as something
+ * still available today, never as something owed.
+ */
+private fun balanceNote(directions: List<Quad>): String {
+    val weakest = directions.minByOrNull { it.value } ?: return ""
+    return when {
+        weakest.value >= 0.8f ->
+            "Bugun to'rt yo'nalish ham muvozanatda. Ovqat \"yoqib yuborilishi\" kerak " +
+                "bo'lgan qarz emas."
+        weakest.value >= 0.5f ->
+            "Kun yaxshi ketyapti. \"${weakest.label}\" bo'yicha biroz joy bor — " +
+                "xohlasangiz shunga e'tibor bering."
+        else ->
+            "Bugun \"${weakest.label}\" ortda qolyapti. Kun hali tugagani yo'q, " +
+                "shoshilmang."
+    }
+}
+
+private const val SleepGoalMinutes = 480
+private const val StepGoal = 8000

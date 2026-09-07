@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -36,6 +37,7 @@ import androidx.compose.ui.unit.sp
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.minus
 import kotlinx.datetime.plus
+import org.example.project.data.HealthController
 import org.example.project.design.IconSize
 import org.example.project.design.PhaseColors
 import org.example.project.design.Radius
@@ -86,15 +88,16 @@ import kotlin.math.sin
 @Composable
 fun JourneyScreen(
     state: AppState,
+    health: HealthController,
     onOpen: (Route) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier) {
         when (state.lifeStage) {
             LifeStage.Cycle, LifeStage.TryingToConceive -> CycleJourney(state, onOpen)
-            LifeStage.Pregnancy -> PregnancyJourney(state, onOpen)
+            LifeStage.Pregnancy -> PregnancyJourney(state, health, onOpen)
             LifeStage.Postpartum -> PostpartumJourney(state, onOpen)
-            LifeStage.Perimenopause -> PerimenopauseJourney(state, onOpen)
+            LifeStage.Perimenopause -> PerimenopauseJourney(state, health, onOpen)
             LifeStage.Menopause -> MenopauseJourney(state, onOpen)
         }
     }
@@ -468,7 +471,8 @@ private fun StatCard(label: String, value: String, modifier: Modifier = Modifier
 // ---------------------------------------------------------------- pregnancy
 
 @Composable
-private fun PregnancyJourney(state: AppState, onOpen: (Route) -> Unit) {
+private fun PregnancyJourney(state: AppState, health: HealthController, onOpen: (Route) -> Unit) {
+    LaunchedEffect(Unit) { health.loadAppointments() }
     val c = Sadora.colors
     val palette = LifeStage.Pregnancy.palette
 
@@ -547,8 +551,24 @@ private fun PregnancyJourney(state: AppState, onOpen: (Route) -> Unit) {
             )
         }
 
-        items(SampleData.appointments.size) { index ->
-            val appointment = SampleData.appointments[index]
+        val today = health.cycle?.today ?: state.today
+        val upcoming = health.appointments.filter { !it.isDone && it.scheduledOn >= today }.take(2)
+
+        if (upcoming.isEmpty()) {
+            item {
+                SadoraCard(onClick = { onOpen(Route.PregnancyAppointments) }) {
+                    Text("Tadbir qo'shilmagan", style = Sadora.type.h3, color = c.text)
+                    Text(
+                        "Ko'rik yoki tahlil sanasini yozib qo'ying — eslatma yuboriladi.",
+                        style = Sadora.type.body,
+                        color = c.muted,
+                    )
+                }
+            }
+        }
+
+        items(upcoming.size) { index ->
+            val appointment = upcoming[index]
             SadoraCard {
                 Row(
                     Modifier.fillMaxWidth(),
@@ -562,16 +582,22 @@ private fun PregnancyJourney(state: AppState, onOpen: (Route) -> Unit) {
                             .padding(horizontal = Spacing.sm, vertical = Spacing.xs),
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
-                        Text(appointment.day, style = Sadora.type.h2, color = c.text)
-                        Text(appointment.month, style = Sadora.type.caption, color = c.muted)
+                        Text("${appointment.scheduledOn.day}", style = Sadora.type.h2, color = c.text)
+                        Text(
+                            Fmt.months[appointment.scheduledOn.month.ordinal].take(3).uppercase(),
+                            style = Sadora.type.caption,
+                            color = c.muted,
+                        )
                     }
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         Text(appointment.title, style = Sadora.type.h3, color = c.text)
-                        Text(
-                            "${appointment.time} · ${appointment.who}",
-                            style = Sadora.type.body,
-                            color = c.muted,
-                        )
+                        val detail = listOfNotNull(
+                            appointment.scheduledAt?.let { Fmt.clock(it) },
+                            appointment.place,
+                        ).joinToString(" · ")
+                        if (detail.isNotEmpty()) {
+                            Text(detail, style = Sadora.type.body, color = c.muted)
+                        }
                     }
                 }
             }
@@ -726,29 +752,59 @@ private fun PostpartumJourney(state: AppState, onOpen: (Route) -> Unit) {
 // ---------------------------------------------------------------- perimenopause
 
 @Composable
-private fun PerimenopauseJourney(state: AppState, onOpen: (Route) -> Unit) {
+private fun PerimenopauseJourney(state: AppState, health: HealthController, onOpen: (Route) -> Unit) {
+    LaunchedEffect(Unit) { health.loadHistory() }
     val c = Sadora.colors
     SadoraTopBar("Perimenopauza")
 
     ScreenContent {
         item {
             SadoraCard {
+                // A regularity chart replaces prediction entirely at this stage: the
+                // value is in seeing the spread, and its bars are the lengths of her own
+                // last six cycles rather than a shape drawn to look like variation.
+                val cycles = health.history?.cycles.orEmpty().takeLast(6)
                 CardLabel(
                     "Sikl muntazamligi",
-                    trailing = { Text("oxirgi 6 oy", style = Sadora.type.body, color = c.muted) },
+                    trailing = {
+                        Text(
+                            if (cycles.isEmpty()) "ma'lumot yo'q" else "oxirgi ${cycles.size} sikl",
+                            style = Sadora.type.body,
+                            color = c.muted,
+                        )
+                    },
                 )
-                // A regularity chart replaces prediction entirely at this stage.
-                WeeklyBars(
-                    values = listOf(0.62f, 0.85f, 0.5f, 0.95f, 0.42f, 0.7f),
-                    labels = listOf("Mar", "Apr", "May", "Iyun", "Iyul", "Avg"),
-                    color = c.primary,
-                )
-                Text(
-                    "Siklingiz uzunligi o'zgarib turadi — bu bosqich uchun kutilgan holat. " +
-                        "Bashorat ko'rsatilmaydi.",
-                    style = Sadora.type.body,
-                    color = c.muted,
-                )
+                if (cycles.isEmpty()) {
+                    Text(
+                        "Hayz sanalarini belgilay boshlaganingizda sikl uzunligi shu yerda " +
+                            "ko'rinadi. Bu bosqichda bashorat ko'rsatilmaydi.",
+                        style = Sadora.type.body,
+                        color = c.muted,
+                    )
+                } else {
+                    // Scaled against the longest cycle so the bars compare with each
+                    // other, which is the only comparison that means anything here.
+                    val longest = cycles.maxOf { it.cycleLength }.coerceAtLeast(1)
+                    WeeklyBars(
+                        values = cycles.map { it.cycleLength / longest.toFloat() },
+                        labels = cycles.map {
+                            Fmt.months[it.startedOn.month.ordinal].take(3)
+                        },
+                        color = c.primary,
+                    )
+                    val shortest = cycles.minOf { it.cycleLength }
+                    Text(
+                        if (longest - shortest >= 7) {
+                            "Sikl uzunligi $shortest–$longest kun orasida o'zgargan — bu " +
+                                "bosqich uchun kutilgan holat. Bashorat ko'rsatilmaydi."
+                        } else {
+                            "Sikl uzunligi $shortest–$longest kun orasida. Bu bosqichda " +
+                                "bashorat ko'rsatilmaydi."
+                        },
+                        style = Sadora.type.body,
+                        color = c.muted,
+                    )
+                }
             }
         }
 

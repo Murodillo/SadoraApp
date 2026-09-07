@@ -10,6 +10,7 @@ import uz.sadora.contract.CycleCalendar
 import uz.sadora.contract.CycleHistory
 import uz.sadora.contract.CycleStatus
 import uz.sadora.contract.DailyLog
+import uz.sadora.contract.DailyLogRange
 import uz.sadora.contract.LifeStage
 import uz.sadora.contract.LogPeriodRequest
 import uz.sadora.contract.PeriodEntry
@@ -40,6 +41,14 @@ class CycleApi(private val caller: ApiCaller) {
 
     suspend fun deletePeriod(id: String): ApiResult<Ack> =
         caller.authenticated("v1/cycle/periods/$id", HttpMethodKind.DELETE)
+
+    /**
+     * Every recorded day in a range, which is what a frequency view needs: the calendar
+     * carries only a count per day, and "which symptom, how often" cannot be answered
+     * from a count.
+     */
+    suspend fun days(from: LocalDate, to: LocalDate): ApiResult<DailyLogRange> =
+        caller.authenticated("v1/days?from=$from&to=$to", HttpMethodKind.GET)
 
     suspend fun day(date: LocalDate): ApiResult<DailyLog> =
         caller.authenticated("v1/days/$date", HttpMethodKind.GET)

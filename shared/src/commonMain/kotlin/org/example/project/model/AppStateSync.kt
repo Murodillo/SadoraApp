@@ -24,6 +24,12 @@ interface AppStateSync {
 
     /** A finished breathing or meditation session. */
     fun practiceLogged(kind: PracticeKind, seconds: Int)
+
+    /** A new journal entry, dated today. */
+    fun journalSaved(body: String)
+
+    /** An entry removed. Only ever called with an id the server issued. */
+    fun journalDeleted(id: String)
 }
 
 /** What the Mind tab can start. Mirrors the wire enum without depending on it. */
