@@ -42,6 +42,7 @@ import org.example.project.ui.modules.basisLabel
 import org.example.project.ui.modules.sentence
 import uz.sadora.contract.HealthMetric
 import uz.sadora.contract.TrendMetric
+import org.example.project.model.DailySleepGoalMinutes
 
 /** How far back the frequency view looks. Four whole weeks, so the bars are comparable. */
 private const val WindowDays = 28
@@ -64,6 +65,7 @@ fun StageSymptomsScreen(
     modifier: Modifier = Modifier,
 ) {
     val c = Sadora.colors
+    val t = strings.journey
 
     LaunchedEffect(Unit) {
         health.loadSymptoms(null)
@@ -84,15 +86,14 @@ fun StageSymptomsScreen(
     val weeks = top?.let { (key, _) -> weeklyCounts(logs, key, state.today) }
 
     Column(modifier) {
-        SadoraTopBar("Simptomlar", onBack = onClose)
+        SadoraTopBar(t.stageSymptomsTitle, onBack = onClose)
 
         ScreenContent {
             if (counts.isEmpty()) {
                 item {
                     EmptyState(
-                        title = "Hali yozuv yo'q",
-                        body = "Quyidan bugungi belgilarni belgilang. Bir necha kundan keyin " +
-                            "shu yerda qaysi belgi qanchalik tez-tez uchrashi ko'rinadi.",
+                        title = t.noRecordsYet,
+                        body = t.noRecordsYetBody,
                         actionText = null,
                         onAction = {},
                         glyph = "📋",
@@ -105,16 +106,18 @@ fun StageSymptomsScreen(
                     SadoraCard {
                         CardLabel(
                             labels[top.first] ?: top.first,
-                            trailing = { Text("$WindowDays kun", style = Sadora.type.body, color = c.muted) },
+                            trailing = {
+                                Text(t.windowDays(WindowDays), style = Sadora.type.body, color = c.muted)
+                            },
                         )
                         val peak = (weeks.maxOrNull() ?: 0).coerceAtLeast(1)
                         WeeklyBars(
                             values = weeks.map { it / peak.toFloat() },
-                            labels = listOf("1-hafta", "2-hafta", "3-hafta", "4-hafta"),
+                            labels = (1..4).map { t.weekNumber(it) },
                             color = c.warning,
                         )
                         Text(
-                            "$WindowDays kun ichida ${top.second} kun qayd etilgan.",
+                            t.recordedOnDays(WindowDays, top.second),
                             style = Sadora.type.body,
                             color = c.muted,
                         )
@@ -124,9 +127,9 @@ fun StageSymptomsScreen(
 
             item {
                 SadoraCard {
-                    CardLabel("Bugun qayd etish")
+                    CardLabel(t.logToday2)
                     ChipFlowRow {
-                        quickLogOptions(labels.values.toList()).forEach { label ->
+                        labels.values.take(QuickLogChips).forEach { label ->
                             SelectChip(
                                 label = label,
                                 selected = label in state.symptoms,
@@ -140,7 +143,7 @@ fun StageSymptomsScreen(
             if (counts.size > 1) {
                 item {
                     SadoraCard {
-                        CardLabel("Eng ko'p uchraganlar")
+                        CardLabel(t.mostFrequent)
                         counts.take(5).forEach { (key, days) ->
                             Row(
                                 Modifier.fillMaxWidth(),
@@ -153,7 +156,7 @@ fun StageSymptomsScreen(
                                     color = c.text,
                                     modifier = Modifier.weight(1f),
                                 )
-                                Text("$days kun", style = Sadora.type.body, color = c.muted)
+                                Text(t.daysValue(days), style = Sadora.type.body, color = c.muted)
                             }
                         }
                     }
@@ -161,13 +164,10 @@ fun StageSymptomsScreen(
             }
 
             item {
-                DisclaimerNote(
-                    "Simptomlar ro'yxati kuzatuv uchun. Yangi yoki kuchayib borayotgan " +
-                        "belgilar bo'lsa shifokor bilan maslahatlashing.",
-                )
+                DisclaimerNote(t.symptomsDisclaimer)
             }
 
-            item { SadoraButton("Yopish", onClose) }
+            item { SadoraButton(strings.common.close, onClose) }
         }
     }
 }
@@ -190,23 +190,14 @@ private fun weeklyCounts(
 }
 
 /**
- * The chips offered for a quick log.
+ * How many chips the quick-log row offers.
  *
- * Taken from the server's catalogue when it has arrived, so the list matches what the
- * counts above are counting; the fallback is the stage's usual six, because a chip row
- * with nothing in it teaches her the screen is broken.
+ * They come from the server's catalogue, so the list always matches what the counts
+ * above are counting. There used to be a written-in fallback of six menopause symptoms,
+ * which meant a woman tracking a cycle could be offered "issiqlik to'lqini" whenever the
+ * catalogue was slow, and tapping it logged nothing the server knew about.
  */
-private fun quickLogOptions(catalogue: List<String>): List<String> =
-    catalogue.take(8).ifEmpty {
-        listOf(
-            "Issiqlik to'lqini",
-            "Tungi terlash",
-            "Uyqusizlik",
-            "Bo'g'im og'rig'i",
-            "Quruqlik",
-            "Yurak tez urishi",
-        )
-    }
+private const val QuickLogChips = 8
 
 /**
  * "Uyqu va kayfiyat" — the stage-level view of the two signals that move together.
@@ -225,6 +216,7 @@ fun StageSleepMoodScreen(
     modifier: Modifier = Modifier,
 ) {
     val c = Sadora.colors
+    val t = strings.journey
     val stageColors = listOf(c.secondary, c.accent, c.muted2)
 
     LaunchedEffect(Unit) {
@@ -239,16 +231,14 @@ fun StageSleepMoodScreen(
     val finding = summary?.findings?.firstOrNull()
 
     Column(modifier) {
-        SadoraTopBar("Uyqu va kayfiyat", onBack = onClose)
+        SadoraTopBar(t.sleepMoodTitle, onBack = onClose)
 
         ScreenContent {
             if (minutes == null && mood?.hasData != true) {
                 item {
                     EmptyState(
-                        title = "Ma'lumot yetarli emas",
-                        body = "Uyqu soat yoki telefondan keladi, kayfiyat esa kunlik " +
-                            "check-in'dan. Bir necha kundan keyin bu yerda ikkalasi " +
-                            "birga ko'rinadi.",
+                        title = t.notEnoughData,
+                        body = t.notEnoughDataBody,
                         actionText = null,
                         onAction = {},
                         glyph = "🌙",
@@ -264,7 +254,7 @@ fun StageSleepMoodScreen(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(Spacing.md),
                         ) {
-                            val goal = 480
+                            val goal = DailySleepGoalMinutes
                             ProgressRing(
                                 progress = (minutes / goal.toFloat()).coerceIn(0f, 1f),
                                 size = 112.dp,
@@ -277,7 +267,7 @@ fun StageSleepMoodScreen(
                                         style = Sadora.type.data,
                                         color = c.text,
                                     )
-                                    Text("BALL", style = Sadora.type.caption, color = c.muted)
+                                    Text(t.scoreCaps, style = Sadora.type.caption, color = c.muted)
                                 }
                             }
                             Column(
@@ -285,10 +275,14 @@ fun StageSleepMoodScreen(
                                 verticalArrangement = Arrangement.spacedBy(6.dp),
                             ) {
                                 Text(state.sleepLabel(minutes, strings.common::hoursMinutes), style = Sadora.type.h1, color = c.text)
-                                Text("Maqsad · 8s", style = Sadora.type.body, color = c.muted)
+                                Text(
+                                    t.sleepGoal(strings.common.hoursMinutes(goal / 60, goal % 60)),
+                                    style = Sadora.type.body,
+                                    color = c.muted,
+                                )
                             }
                         }
-                        sleepStages(today, minutes)?.let { stages ->
+                        sleepStages(today, minutes, strings.modules)?.let { stages ->
                             StackedBar(
                                 segments = stages.mapIndexed { index, (_, value) ->
                                     (value.toFloat() / minutes.coerceAtLeast(1)) to stageColors[index]
@@ -301,7 +295,7 @@ fun StageSleepMoodScreen(
                             ) {
                                 stages.forEach { (name, value) ->
                                     Text(
-                                        "$name ${value}d",
+                                        "$name $value${strings.common.minutesShort}",
                                         style = Sadora.type.body,
                                         color = c.muted,
                                     )
@@ -316,7 +310,7 @@ fun StageSleepMoodScreen(
                 item {
                     SadoraCard {
                         CardLabel(
-                            "7 kunlik kayfiyat",
+                            t.moodWeek7,
                             trailing = {
                                 mood.averageLabel()?.let {
                                     Text(it, style = Sadora.type.body, color = c.muted)
@@ -336,7 +330,7 @@ fun StageSleepMoodScreen(
             finding?.sentence()?.let { sentence ->
                 item {
                     SadoraCard {
-                        CardLabel("Kuzatish", color = c.textAccent)
+                        CardLabel(t.noticed, color = c.textAccent)
                         Text(sentence, style = Sadora.type.body, color = c.muted)
                         Text(finding.basisLabel(), style = Sadora.type.caption, color = c.muted2)
                     }
@@ -351,8 +345,8 @@ fun StageSleepMoodScreen(
                         onClick = { onOpen(Route.MindJournal) },
                     ) {
                         Text("🌬️", style = Sadora.type.h1)
-                        Text("Nafas mashqi", style = Sadora.type.h3, color = c.text)
-                        Text("Uyqu oldidan · 4 daqiqa", style = Sadora.type.body, color = c.muted)
+                        Text(t.breathingCard, style = Sadora.type.h3, color = c.text)
+                        Text(t.breathingCardNote, style = Sadora.type.body, color = c.muted)
                     }
                     SadoraCard(
                         modifier = Modifier.weight(1f),
@@ -360,8 +354,8 @@ fun StageSleepMoodScreen(
                         onClick = { onOpen(Route.MindJournal) },
                     ) {
                         Text("📝", style = Sadora.type.h1)
-                        Text("Kundalik", style = Sadora.type.h3, color = c.text)
-                        Text("Faqat siz ko'rasiz", style = Sadora.type.body, color = c.muted)
+                        Text(t.journalCard, style = Sadora.type.h3, color = c.text)
+                        Text(t.journalCardNote, style = Sadora.type.body, color = c.muted)
                     }
                 }
             }
@@ -375,10 +369,14 @@ fun StageSleepMoodScreen(
  * Light is what the night has left after the two measured stages, the same way the Sleep
  * screen derives it — a provider reports deep and REM, not all three.
  */
-private fun sleepStages(day: uz.sadora.contract.DailyHealth, totalMinutes: Int): List<Pair<String, Int>>? {
+private fun sleepStages(
+    day: uz.sadora.contract.DailyHealth,
+    totalMinutes: Int,
+    modules: org.example.project.i18n.ModuleStrings,
+): List<Pair<String, Int>>? {
     val deep = day.value(HealthMetric.SLEEP_DEEP)?.roundToInt() ?: return null
     val rem = day.value(HealthMetric.SLEEP_REM)?.roundToInt() ?: return null
     val light = totalMinutes - deep - rem
     if (light < 0) return null
-    return listOf("Chuqur" to deep, "REM" to rem, "Yengil" to light)
+    return listOf(modules.deep to deep, "REM" to rem, modules.light to light)
 }

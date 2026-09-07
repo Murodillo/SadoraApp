@@ -51,7 +51,6 @@ import org.example.project.model.AppState
 import org.example.project.model.CyclePhase
 import org.example.project.model.Fmt
 import org.example.project.model.LifeStage
-import org.example.project.model.SampleData
 import org.example.project.nav.Route
 import org.example.project.ui.components.AnimatedNumber
 import org.example.project.ui.components.BadgeTone
@@ -79,6 +78,7 @@ import org.example.project.ui.components.pressable
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
+import uz.sadora.contract.SymptomDefinition
 
 /**
  * "Yo'l" — the tab that changes completely with the life stage.
@@ -97,11 +97,11 @@ fun JourneyScreen(
     val t = strings.journey
     Column(modifier) {
         when (state.lifeStage) {
-            LifeStage.Cycle, LifeStage.TryingToConceive -> CycleJourney(state, onOpen)
+            LifeStage.Cycle, LifeStage.TryingToConceive -> CycleJourney(state, health, onOpen)
             LifeStage.Pregnancy -> PregnancyJourney(state, health, onOpen)
             LifeStage.Postpartum -> PostpartumJourney(state, onOpen)
             LifeStage.Perimenopause -> PerimenopauseJourney(state, health, onOpen)
-            LifeStage.Menopause -> MenopauseJourney(state, onOpen)
+            LifeStage.Menopause -> MenopauseJourney(state, health, onOpen)
         }
     }
 }
@@ -122,7 +122,7 @@ private fun CyclePhase.dialColor(): Color = when (this) {
  * with the lotus, and the symptom tiles.
  */
 @Composable
-private fun CycleJourney(state: AppState, onOpen: (Route) -> Unit) {
+private fun CycleJourney(state: AppState, health: HealthController, onOpen: (Route) -> Unit) {
     val t = strings.journey
     val c = Sadora.colors
     val phase = state.currentPhase()
@@ -199,7 +199,7 @@ private fun CycleJourney(state: AppState, onOpen: (Route) -> Unit) {
                                 maxLines = 2,
                                 modifier = Modifier.weight(1f, fill = false),
                             )
-                            SadoraBadge("TAXMINIY", BadgeTone.Estimated, icon = SadoraIcons.Clock)
+                            SadoraBadge(t.estimatedCaps, BadgeTone.Estimated, icon = SadoraIcons.Clock)
                         }
                     }
                     LotusIllustration(Modifier.size(96.dp))
@@ -214,7 +214,7 @@ private fun CycleJourney(state: AppState, onOpen: (Route) -> Unit) {
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
-                    Text("Simptomlar", style = Sadora.type.h3, color = c.text)
+                    Text(t.symptoms, style = Sadora.type.h3, color = c.text)
                     Text(
                         t.change,
                         style = Sadora.type.body.copy(fontWeight = FontWeight.SemiBold),
@@ -226,15 +226,18 @@ private fun CycleJourney(state: AppState, onOpen: (Route) -> Unit) {
                     Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
                 ) {
-                    SampleData.cycleSymptomTiles.forEach { tile ->
-                        val selected = tile.label in state.symptoms
+                    // The catalogue, not a list written here: what she can tap has to be
+                    // something the rest of the app can count, and the severity shown is
+                    // the one she recorded rather than a number chosen for the picture.
+                    health.symptoms.take(SymptomTiles).forEach { definition ->
+                        val selected = definition.label in state.symptoms
                         SymptomTileView(
-                            emoji = tile.emoji,
-                            label = tile.label,
-                            severity = if (selected) tile.severity else 0,
+                            emoji = definition.glyph(),
+                            label = definition.label,
+                            severity = health.severityOf(definition.key),
                             selected = selected,
                             modifier = Modifier.weight(1f),
-                            onClick = { state.toggleSymptom(tile.label) },
+                            onClick = { state.toggleSymptom(definition.label) },
                         )
                     }
                 }
@@ -248,7 +251,7 @@ private fun CycleJourney(state: AppState, onOpen: (Route) -> Unit) {
             }
         }
 
-        item { DisclaimerNote(SampleData.predictionDisclaimer) }
+        item { DisclaimerNote(t.predictionDisclaimer) }
     }
 }
 
@@ -562,11 +565,11 @@ private fun PregnancyJourney(state: AppState, health: HealthController, onOpen: 
             SadoraCard {
                 CardLabel(t.todaysSymptoms)
                 ChipFlowRow {
-                    SampleData.pregnancySymptoms.forEach { symptom ->
+                    health.symptoms.forEach { definition ->
                         SelectChip(
-                            label = symptom,
-                            selected = symptom in state.symptoms,
-                            onClick = { state.toggleSymptom(symptom) },
+                            label = definition.label,
+                            selected = definition.label in state.symptoms,
+                            onClick = { state.toggleSymptom(definition.label) },
                         )
                     }
                     SelectChip(t.addSymptom, selected = false, onClick = { onOpen(Route.StageSymptoms) })
@@ -676,7 +679,7 @@ private fun AiAdviceCard(body: String) {
                     .background(onGradient.copy(alpha = 0.2f))
                     .padding(horizontal = Spacing.xs, vertical = 3.dp),
             ) {
-                Text("PREMIUM", style = Sadora.type.caption, color = onGradient)
+                Text(strings.journey.premiumCaps, style = Sadora.type.caption, color = onGradient)
             }
         }
         Text(body, style = Sadora.type.body, color = onGradient)
@@ -736,8 +739,9 @@ private fun PostpartumJourney(state: AppState, onOpen: (Route) -> Unit) {
             SadoraCard {
                 CardLabel(t.feedingAndWater)
                 LabeledProgress(
-                    "Suv",
-                    "${Fmt.litres(state.waterMl)} / ${Fmt.litres(state.waterGoalMl)} l",
+                    t.water,
+                    "${Fmt.litres(state.waterMl)} / ${Fmt.litres(state.waterGoalMl)} " +
+                        strings.common.litres,
                     state.waterMl / state.waterGoalMl.coerceAtLeast(1).toFloat(),
                     color = c.accent,
                 )
@@ -768,7 +772,7 @@ private fun PostpartumJourney(state: AppState, onOpen: (Route) -> Unit) {
             SadoraCard(onClick = { onOpen(Route.Knowledge) }) {
                 ImagePlaceholder(Modifier.fillMaxWidth().aspectRatio(2.4f), emoji = "🧘‍♀️")
                 Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-                    SadoraBadge("KUTUBXONA", BadgeTone.Neutral)
+                    SadoraBadge(t.libraryCaps, BadgeTone.Neutral)
                 }
                 Text(
                     t.postpartumLibraryBody,
@@ -839,13 +843,13 @@ private fun PerimenopauseJourney(state: AppState, health: HealthController, onOp
 
         item {
             SadoraCard {
-                CardLabel("Simptomlar")
+                CardLabel(t.symptoms)
                 ChipFlowRow {
-                    SampleData.perimenopauseSymptoms.forEach { symptom ->
+                    health.symptoms.forEach { definition ->
                         SelectChip(
-                            label = symptom,
-                            selected = symptom in state.symptoms,
-                            onClick = { state.toggleSymptom(symptom) },
+                            label = definition.label,
+                            selected = definition.label in state.symptoms,
+                            onClick = { state.toggleSymptom(definition.label) },
                         )
                     }
                 }
@@ -854,8 +858,8 @@ private fun PerimenopauseJourney(state: AppState, health: HealthController, onOp
 
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                StatCard("Uyqu", state.sleepLabel(format = strings.common::hoursMinutes), Modifier.weight(1f))
-                StatCard("Energiya", "${state.energy} / 5", Modifier.weight(1f))
+                StatCard(t.sleep, state.sleepLabel(format = strings.common::hoursMinutes), Modifier.weight(1f))
+                StatCard(t.energy, "${state.energy} / 5", Modifier.weight(1f))
             }
         }
 
@@ -885,7 +889,7 @@ private fun PerimenopauseJourney(state: AppState, health: HealthController, onOp
 // ---------------------------------------------------------------- menopause
 
 @Composable
-private fun MenopauseJourney(state: AppState, onOpen: (Route) -> Unit) {
+private fun MenopauseJourney(state: AppState, health: HealthController, onOpen: (Route) -> Unit) {
     val t = strings.journey
     val c = Sadora.colors
     SadoraTopBar(t.menopauseTitle)
@@ -898,16 +902,18 @@ private fun MenopauseJourney(state: AppState, onOpen: (Route) -> Unit) {
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(Spacing.md),
                 ) {
-                    // Balance score, not a cycle count, is the headline here.
+                    // Balance score, not a cycle count, is the headline here — and it is
+                    // the same score the Balance screen works out, not a fixed 72.
+                    val score = state.balanceScore()
                     ProgressRing(
-                        progress = 0.72f,
+                        progress = score / 100f,
                         size = 120.dp,
                         strokeWidth = 11.dp,
                         color = c.accent,
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("72", style = Sadora.type.data, color = c.text)
-                            Text("BALANS", style = Sadora.type.caption, color = c.muted)
+                            Text("$score", style = Sadora.type.data, color = c.text)
+                            Text(t.balanceCaps, style = Sadora.type.caption, color = c.muted)
                         }
                     }
                     Text(
@@ -922,27 +928,27 @@ private fun MenopauseJourney(state: AppState, onOpen: (Route) -> Unit) {
 
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                StatCard("Uyqu", state.sleepLabel(format = strings.common::hoursMinutes), Modifier.weight(1f))
-                StatCard("Faollik", Fmt.int(state.steps), Modifier.weight(1f))
+                StatCard(t.sleep, state.sleepLabel(format = strings.common::hoursMinutes), Modifier.weight(1f))
+                StatCard(t.activity, Fmt.int(state.steps), Modifier.weight(1f))
             }
         }
 
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                 StatCard(t.mood, strings.common.mood(state.mood), Modifier.weight(1f))
-                StatCard("Suv", "${Fmt.litres(state.waterMl)} l", Modifier.weight(1f))
+                StatCard(t.water, "${Fmt.litres(state.waterMl)} ${strings.common.litres}", Modifier.weight(1f))
             }
         }
 
         item {
             SadoraCard {
-                CardLabel("Simptomlar")
+                CardLabel(t.symptoms)
                 ChipFlowRow {
-                    SampleData.menopauseSymptoms.forEach { symptom ->
+                    health.symptoms.forEach { definition ->
                         SelectChip(
-                            label = symptom,
-                            selected = symptom in state.symptoms,
-                            onClick = { state.toggleSymptom(symptom) },
+                            label = definition.label,
+                            selected = definition.label in state.symptoms,
+                            onClick = { state.toggleSymptom(definition.label) },
                         )
                     }
                     SelectChip(t.addSymptom, selected = false, onClick = { onOpen(Route.StageSymptoms) })
@@ -958,16 +964,39 @@ private fun MenopauseJourney(state: AppState, onOpen: (Route) -> Unit) {
             )
         }
 
-        item {
-            SadoraCard {
-                CardLabel(t.weeklyGoals)
-                LabeledProgress(t.strengthTraining, "2 / 3", 2f / 3f, color = c.primary)
-                LabeledProgress(t.calciumAndD, "5 / 7", 5f / 7f, color = c.primary)
-            }
-        }
     }
 }
 
 /** Keeps [Modifier.align] usable inside a LazyColumn item. */
 private fun Modifier.align(alignment: Alignment.Horizontal): Modifier = this
 
+
+/** How many symptom tiles fit the cycle card's row. */
+private const val SymptomTiles = 4
+
+/**
+ * A face for a symptom tile.
+ *
+ * The catalogue is a list of words; the tiles want a picture. Anything the design has
+ * not drawn falls back to a neutral dot rather than to a wrong one.
+ */
+private fun SymptomDefinition.glyph(): String = when (key) {
+    "discharge" -> "💧"
+    "cramps" -> "🌀"
+    "headache" -> "🤕"
+    "back_pain" -> "🪢"
+    "joint_pain" -> "🦴"
+    "breast_tender" -> "🎀"
+    "nausea" -> "🤢"
+    "bloating" -> "🎈"
+    "swelling" -> "🫧"
+    "acne" -> "✨"
+    "mood_swings" -> "🎭"
+    "anxiety" -> "😟"
+    "insomnia" -> "🌙"
+    "night_sweats" -> "💦"
+    "hot_flush" -> "🔥"
+    "fatigue" -> "🔋"
+    "cravings" -> "🍫"
+    else -> "•"
+}

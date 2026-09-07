@@ -22,6 +22,8 @@ import org.example.project.ui.components.ProgressRing
 import org.example.project.ui.components.SadoraCard
 import org.example.project.ui.components.SadoraTopBar
 import org.example.project.ui.components.ScreenContent
+import org.example.project.model.DailyStepGoal
+import org.example.project.model.DailySleepGoalMinutes
 
 /**
  * "Balans" — four directions in one score.
@@ -49,9 +51,9 @@ fun BalanceScreen(
             t.ofKcal(Fmt.int(state.caloriesEaten), Fmt.int(state.calorieGoal))),
         Quad("💧", t.water, ratio(state.waterMl, state.waterGoalMl), c.accent,
             t.ofLitres(Fmt.litres(state.waterMl), Fmt.litres(state.waterGoalMl))),
-        Quad("👟", t.activity, ratio(state.steps, StepGoal), c.secondary,
-            t.ofSteps(Fmt.int(state.steps), Fmt.int(StepGoal))),
-        Quad("💤", t.sleep, ratio(state.sleepMinutes, SleepGoalMinutes), c.success,
+        Quad("👟", t.activity, ratio(state.steps, DailyStepGoal), c.secondary,
+            t.ofSteps(Fmt.int(state.steps), Fmt.int(DailyStepGoal))),
+        Quad("💤", t.sleep, ratio(state.sleepMinutes, DailySleepGoalMinutes), c.success,
             t.ofSleep(state.sleepLabel(format = strings.common::hoursMinutes))),
     )
     val score = (directions.map { it.value }.average() * 100).toInt()
@@ -143,5 +145,3 @@ private fun balanceNote(directions: List<Quad>): String {
     }
 }
 
-private const val SleepGoalMinutes = 480
-private const val StepGoal = 8000

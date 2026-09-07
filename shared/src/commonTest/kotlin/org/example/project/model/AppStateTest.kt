@@ -121,6 +121,22 @@ class AppStateTest {
 
     // ---------------------------------------------------------------- writes
 
+    /**
+     * A store with a day's medication in it.
+     *
+     * The store no longer seeds itself with a sample course — a phone that has just
+     * signed in must not show a prescription nobody entered — so a test about doses
+     * says which doses it means.
+     */
+    private fun withMedications() = AppState().apply {
+        medications.addAll(
+            listOf(
+                Medication("d1", "🌿", "Folik kislota", "08:00", "Har kuni", "", MedStatus.Taken),
+                Medication("d2", "💊", "D vitamini", "20:00", "Har kuni", "", MedStatus.Pending),
+            ),
+        )
+    }
+
     private class RecordingSync : AppStateSync {
         val events = mutableListOf<String>()
         override fun symptomToggled(label: String, nowSelected: Boolean) { events += "symptom:$label:$nowSelected" }
@@ -155,7 +171,7 @@ class AppStateTest {
     @Test
     fun `skipping a dose marks it and reports it separately from taking one`() {
         val sync = RecordingSync()
-        val s = state().apply { this.sync = sync }
+        val s = withMedications().apply { this.sync = sync }
         val pending = s.medications.first { it.status == MedStatus.Pending }
 
         s.markMedicationSkipped(pending.id)
@@ -184,7 +200,7 @@ class AppStateTest {
 
     @Test
     fun `doses count what was confirmed against what is due`() {
-        val s = state()
+        val s = withMedications()
         assertEquals(2, s.dosesDue)
         assertEquals(1, s.dosesTaken)
     }
@@ -254,6 +270,7 @@ class CycleAnchorTest {
 class AppStateJournalTest {
 
     private fun state() = AppState()
+
 
     private class RecordingSync : AppStateSync {
         val events = mutableListOf<String>()

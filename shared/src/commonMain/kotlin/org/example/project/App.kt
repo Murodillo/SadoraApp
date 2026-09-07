@@ -520,7 +520,7 @@ private fun PushedScreen(
 
         // Pregnancy
         Route.PregnancyAppointments -> PregnancyAppointmentsScreen(health, close)
-        Route.PregnancyCheckIn -> PregnancyCheckInScreen(state, close)
+        Route.PregnancyCheckIn -> PregnancyCheckInScreen(state, health, close)
 
         // Stage detail
         Route.StageSymptoms -> StageSymptomsScreen(state, health, close)

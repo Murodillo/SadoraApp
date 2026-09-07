@@ -10,6 +10,7 @@ import org.example.project.model.CyclePhase
 import org.example.project.model.Goal
 import org.example.project.model.LifeStage
 import org.example.project.model.Mood
+import uz.sadora.contract.FetalMovement
 import uz.sadora.contract.HealthMetric
 import uz.sadora.contract.MealSlot
 import uz.sadora.contract.SymptomCategory
@@ -527,6 +528,46 @@ interface JourneyStrings {
     val aiAdvice: String
     val aiBadge: String
 
+    // ---- appointments
+    val appointmentsTitle: String
+    val filterUpcoming: String
+    val filterPast: String
+    val filterAll: String
+    val listEmpty: String
+    val nothingInThisFilter: String
+    val appointmentsEmptyBody: String
+    val addAppointment: String
+    val nextCaps: String
+    val todayCaps: String
+    val tomorrowCaps: String
+    fun inDaysCaps(days: Int): String
+    val appointmentsNote: String
+    val appointmentDone: String
+    fun reminderSet(offset: String): String
+    fun reminderOffset(hours: Int): String
+    val noReminder: String
+    val editAppointment: String
+    val appointmentName: String
+    val appointmentNameHint: String
+    val appointmentDate: String
+    val appointmentDateHint: String
+    val appointmentDateInvalid: String
+    val appointmentTime: String
+    val appointmentPlace: String
+    val appointmentPlaceHint: String
+    val reminder: String
+    val appointmentDateNote: String
+
+    // ---- pregnancy check-in
+    val checkInTitle: String
+    val todaysSymptomsLabel: String
+    val babyMovement: String
+    fun movement(movement: FetalMovement): String
+    val movementWarning: String
+    val privateNote: String
+    val privateNoteHint: String
+    val checkInSaved: String
+
     // ---- postpartum
     val postpartumTitle: String
     val recoveryWeeks: String
@@ -559,9 +600,37 @@ interface JourneyStrings {
     val menopauseTitle: String
     val scoreNote: String
     val activity: String
-    val weeklyGoals: String
-    val strengthTraining: String
-    val calciumAndD: String
+
+    // ---- stage detail: symptoms
+    val stageSymptomsTitle: String
+    val noRecordsYet: String
+    val noRecordsYetBody: String
+    fun windowDays(days: Int): String
+    fun weekNumber(week: Int): String
+    fun recordedOnDays(window: Int, days: Int): String
+    val logToday2: String
+    val mostFrequent: String
+    val symptomsDisclaimer: String
+
+    // ---- stage detail: sleep and mood
+    val sleepMoodTitle: String
+    val notEnoughData: String
+    val notEnoughDataBody: String
+    val scoreCaps: String
+    fun sleepGoal(hours: String): String
+    val moodWeek7: String
+    val noticed: String
+    val breathingCard: String
+    val breathingCardNote: String
+    val journalCard: String
+    val journalCardNote: String
+
+    // ---- badges, in the caps the design draws them in
+    val estimatedCaps: String
+    val balanceCaps: String
+    val premiumCaps: String
+    val libraryCaps: String
+    val predictionDisclaimer: String
 }
 
 /**

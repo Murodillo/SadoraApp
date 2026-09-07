@@ -15,6 +15,7 @@ import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.update
 import org.jetbrains.exposed.v1.jdbc.upsert
 import uz.sadora.contract.DailyLog
+import uz.sadora.contract.FetalMovement
 import uz.sadora.contract.FlowLevel
 import uz.sadora.contract.LifeStage
 import uz.sadora.contract.MoodLevel
@@ -176,6 +177,7 @@ class HealthRepository {
                     stress = row[DailyLogs.stress],
                     symptoms = symptoms[date].orEmpty(),
                     note = row[DailyLogs.note],
+                    fetalMovement = enumFromDb<FetalMovement>(row[DailyLogs.fetalMovement]),
                     updatedAt = row[DailyLogs.updatedAt].toKotlinInstant(),
                 )
             }
@@ -201,6 +203,7 @@ class HealthRepository {
             it[energy] = request.energy
             it[stress] = request.stress
             it[note] = request.note?.takeIf { text -> text.isNotBlank() }
+            it[fetalMovement] = request.fetalMovement?.dbValue()
             it[createdAt] = timestamp
             it[updatedAt] = timestamp
         }

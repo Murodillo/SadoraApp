@@ -11,6 +11,7 @@ import org.example.project.model.CyclePhase
 import org.example.project.model.Goal
 import org.example.project.model.LifeStage
 import org.example.project.model.Mood
+import uz.sadora.contract.FetalMovement
 import uz.sadora.contract.HealthMetric
 import uz.sadora.contract.MealSlot
 import uz.sadora.contract.SymptomCategory
@@ -143,7 +144,21 @@ class StringsTest {
                     cycleRegularity, noData, lastCycles(6), regularityEmpty,
                     regularitySpread(24, 38), regularitySteady(27, 29), energy, observation,
                     observationBody, seeSymptoms, menopauseTitle, scoreNote, activity,
-                    weeklyGoals, strengthTraining, calciumAndD,
+                    stageSymptomsTitle, noRecordsYet, noRecordsYetBody, windowDays(28),
+                    weekNumber(2), recordedOnDays(28, 9), logToday2, mostFrequent,
+                    symptomsDisclaimer, sleepMoodTitle, notEnoughData, notEnoughDataBody,
+                    scoreCaps, sleepGoal("8s"), moodWeek7, noticed, breathingCard,
+                    breathingCardNote, journalCard, journalCardNote,
+                    estimatedCaps, balanceCaps, premiumCaps, libraryCaps, predictionDisclaimer,
+                    appointmentsTitle, filterUpcoming, filterPast, filterAll, listEmpty,
+                    nothingInThisFilter, appointmentsEmptyBody, addAppointment, nextCaps,
+                    todayCaps, tomorrowCaps, inDaysCaps(8), appointmentsNote, appointmentDone,
+                    reminderSet("x"), reminderOffset(2), reminderOffset(24), reminderOffset(48),
+                    noReminder, editAppointment, appointmentName, appointmentNameHint,
+                    appointmentDate, appointmentDateHint, appointmentDateInvalid, appointmentTime,
+                    appointmentPlace, appointmentPlaceHint, reminder, appointmentDateNote,
+                    checkInTitle, todaysSymptomsLabel, babyMovement, movementWarning,
+                    privateNote, privateNoteHint, checkInSaved,
                     calendarTitle, history, predictedNote, markPeriodDay, phaseNotColouredYet,
                     previousMonth, nextMonth, keyPeriod, keyFertile, keyPredicted, dayCaps,
                     symptomsAndMood("x", "y"), noSymptomsAndMood("y"), statsNote, regularity,
@@ -157,6 +172,7 @@ class StringsTest {
             )
             addAll(severityWords)
             SymptomCategory.entries.forEach { add(categoryName(it)) }
+            FetalMovement.entries.forEach { add(movement(it)) }
         }
         with(t.mind) {
             addAll(
@@ -255,6 +271,9 @@ class StringsTest {
             assertNotEquals(StringsUz.journey.predictedNote, t.journey.predictedNote)
             assertNotEquals(StringsUz.journey.noHistoryYetBody, t.journey.noHistoryYetBody)
             assertNotEquals(StringsUz.journey.severityWords[2], t.journey.severityWords[2])
+            assertNotEquals(StringsUz.journey.movementWarning, t.journey.movementWarning)
+            assertNotEquals(StringsUz.journey.appointmentsNote, t.journey.appointmentsNote)
+            assertNotEquals(StringsUz.journey.notEnoughDataBody, t.journey.notEnoughDataBody)
             assertNotEquals(StringsUz.modules.medsDisclaimer, t.modules.medsDisclaimer)
             assertNotEquals(StringsUz.modules.noCorrelationBody, t.modules.noCorrelationBody)
             assertNotEquals(StringsUz.modules.balanced, t.modules.balanced)

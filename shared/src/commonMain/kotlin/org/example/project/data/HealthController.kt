@@ -20,6 +20,7 @@ import uz.sadora.contract.CycleStatus
 import uz.sadora.contract.DailyHealth
 import uz.sadora.contract.DailyLog
 import uz.sadora.contract.DoseStatus
+import uz.sadora.contract.FetalMovement
 import uz.sadora.contract.FlowLevel
 import uz.sadora.contract.LifeStage
 import uz.sadora.contract.LogMealRequest
@@ -181,6 +182,18 @@ class HealthController(
      * for any other day: opening last Tuesday in the calendar would otherwise replace
      * today's symptoms on every screen with that Tuesday's.
      */
+    /**
+     * How strongly today's log records one symptom, on the tiles' 0-3 scale, or 0 when
+     * it is not recorded at all. The tile used to carry a severity written into the
+     * file, so every phone showed the same three-out-of-three headache.
+     */
+    fun severityOf(key: String): Int = when (day?.symptoms?.firstOrNull { it.key == key }?.severity) {
+        uz.sadora.contract.SymptomSeverity.MILD -> 1
+        uz.sadora.contract.SymptomSeverity.MODERATE -> 2
+        uz.sadora.contract.SymptomSeverity.SEVERE -> 3
+        null -> 0
+    }
+
     suspend fun dayAt(date: LocalDate): DailyLog? {
         val api = cycleApi ?: return null
         return calls.run(silent = true) { api.day(date) }
@@ -350,6 +363,7 @@ class HealthController(
         stress: Int? = day?.stress,
         symptomKeys: List<SymptomEntry> = day?.symptoms.orEmpty(),
         note: String? = day?.note,
+        fetalMovement: FetalMovement? = day?.fetalMovement,
     ): Boolean {
         val api = cycleApi ?: return true
         val saved = calls.run {
@@ -362,6 +376,7 @@ class HealthController(
                     stress = stress,
                     symptoms = symptomKeys,
                     note = note,
+                    fetalMovement = fetalMovement,
                 ),
             )
         } ?: return false

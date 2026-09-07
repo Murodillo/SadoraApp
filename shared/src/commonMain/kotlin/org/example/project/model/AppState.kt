@@ -297,8 +297,10 @@ class AppState {
 
     // Filled by the onboarding check-in, then by the symptom sheet.
     val symptoms = mutableStateListOf<String>()
-    val meals = mutableStateListOf(*SampleData.meals.toTypedArray())
-    val medications = mutableStateListOf(*SampleData.medications.toTypedArray())
+    // Empty until the server answers. Seeding them meant a phone that had just signed
+    // in showed two meals and a medication course nobody had entered.
+    val meals = mutableStateListOf<Meal>()
+    val medications = mutableStateListOf<Medication>()
 
     // ---- secret chat ----
     /**
@@ -603,6 +605,24 @@ class AppState {
         sync?.waterAdded(ml)
     }
 
+    /**
+     * The one balance score, so every screen that shows one shows the same one.
+     *
+     * Four signals against her own goals, averaged. The menopause header used to draw a
+     * fixed 72 next to real numbers, which made the real ones look invented too.
+     */
+    fun balanceScore(): Int {
+        fun ratio(value: Int, goal: Int): Float =
+            if (goal <= 0) 0f else (value / goal.toFloat()).coerceIn(0f, 1f)
+        val parts = listOf(
+            ratio(caloriesEaten, calorieGoal),
+            ratio(waterMl, waterGoalMl),
+            ratio(steps, DailyStepGoal),
+            ratio(sleepMinutes, DailySleepGoalMinutes),
+        )
+        return (parts.average() * 100).toInt()
+    }
+
     /** Millilitres still to drink; never negative once the goal is passed. */
     val waterRemainingMl: Int get() = (waterGoalMl - waterMl).coerceAtLeast(0)
 
@@ -700,3 +720,7 @@ data class JournalNote(
 
 /** The id an entry carries until the server has given it a real one. */
 const val LOCAL_NOTE_ID: String = "local"
+
+/** The two goals the app sets itself, because nothing on the wire carries them yet. */
+const val DailyStepGoal = 8000
+const val DailySleepGoalMinutes = 480

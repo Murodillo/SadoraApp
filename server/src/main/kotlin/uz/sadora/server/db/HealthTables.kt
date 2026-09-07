@@ -33,6 +33,7 @@ object DailyLogs : Table("daily_logs") {
     val stress = integer("stress").nullable()
     val waterMl = integer("water_ml")
     val note = text("note").nullable()
+    val fetalMovement = text("fetal_movement").nullable()
     val createdAt = timestampWithTimeZone("created_at")
     val updatedAt = timestampWithTimeZone("updated_at")
 

@@ -63,6 +63,15 @@ data class SymptomEntry(
 )
 
 /**
+ * How the baby has been moving today, as the pregnancy check-in asks it.
+ *
+ * [LESS] is the answer the app acts on: it is the one thing in the whole product that
+ * says "see a doctor without delay" rather than offering an interpretation.
+ */
+@Serializable
+enum class FetalMovement { USUAL, LESS, MORE }
+
+/**
  * Everything recorded for one calendar day.
  *
  * A single row per day rather than an event stream: the app's day sheet edits the day as
@@ -79,11 +88,13 @@ data class DailyLog(
     val stress: Int? = null,
     val symptoms: List<SymptomEntry> = emptyList(),
     val note: String? = null,
+    /** Asked only during pregnancy; null everywhere else. */
+    val fetalMovement: FetalMovement? = null,
     val updatedAt: Instant? = null,
 ) {
     val isEmpty: Boolean
         get() = flow == null && mood == null && energy == null && stress == null &&
-            symptoms.isEmpty() && note.isNullOrBlank()
+            symptoms.isEmpty() && note.isNullOrBlank() && fetalMovement == null
 }
 
 /**
@@ -98,6 +109,7 @@ data class SaveDailyLogRequest(
     val stress: Int? = null,
     val symptoms: List<SymptomEntry> = emptyList(),
     val note: String? = null,
+    val fetalMovement: FetalMovement? = null,
 )
 
 @Serializable

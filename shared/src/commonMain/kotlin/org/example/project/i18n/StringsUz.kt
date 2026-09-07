@@ -6,6 +6,7 @@ import org.example.project.model.CyclePhase
 import org.example.project.model.Goal
 import org.example.project.model.LifeStage
 import org.example.project.model.Mood
+import uz.sadora.contract.FetalMovement
 import uz.sadora.contract.HealthMetric
 import uz.sadora.contract.MealSlot
 import uz.sadora.contract.SymptomCategory
@@ -520,6 +521,55 @@ object StringsUz : Strings {
                 "bo'lishi mumkin. Umumiy salomatlik ma'lumoti."
         override val aiBadge = "SADORA AI · TAVSIYA"
 
+        override val appointmentsTitle = "Tadbirlar"
+        override val filterUpcoming = "Yaqin"
+        override val filterPast = "O'tgan"
+        override val filterAll = "Barchasi"
+        override val listEmpty = "Ro'yxat bo'sh"
+        override val nothingInThisFilter = "Bu bo'limda tadbir yo'q"
+        override val appointmentsEmptyBody = "Shifokor ko'rigi, UTT yoki tahlil sanasini " +
+            "yozib qo'ying — eslatma ham shu yerdan sozlanadi."
+        override val addAppointment = "Tadbir qo'shish"
+        override val nextCaps = "KEYINGI"
+        override val todayCaps = "BUGUN"
+        override val tomorrowCaps = "ERTAGA"
+        override fun inDaysCaps(days: Int) = "$days KUNDAN KEYIN"
+        override val appointmentsNote = "Tadbirlar ro'yxatini o'zingiz to'ldirasiz. " +
+            "SADORA tekshiruv jadvalini tayinlamaydi."
+        override val appointmentDone = "Bo'lib o'tdi"
+        override fun reminderSet(offset: String) = "Eslatma $offset"
+        override fun reminderOffset(hours: Int) = when (hours) {
+            in 0..2 -> "2 soat oldin"
+            in 3..24 -> "1 kun oldin"
+            else -> "2 kun oldin"
+        }
+        override val noReminder = "Kerak emas"
+        override val editAppointment = "Tadbirni tahrirlash"
+        override val appointmentName = "Nomi"
+        override val appointmentNameHint = "Skrining UTT"
+        override val appointmentDate = "Sana"
+        override val appointmentDateHint = "27.8.2026"
+        override val appointmentDateInvalid = "Sana kun.oy.yil ko'rinishida"
+        override val appointmentTime = "Vaqti (ixtiyoriy)"
+        override val appointmentPlace = "Joyi (ixtiyoriy)"
+        override val appointmentPlaceHint = "Respublika markazi"
+        override val reminder = "Eslatma"
+        override val appointmentDateNote = "Sana kun.oy.yil ko'rinishida yoziladi, masalan 27.8.2026."
+
+        override val checkInTitle = "O'zingizni qanday his qilyapsiz?"
+        override val todaysSymptomsLabel = "Bugungi simptomlar"
+        override val babyMovement = "Bolaning harakati"
+        override fun movement(movement: FetalMovement) = when (movement) {
+            FetalMovement.USUAL -> "Odatdagidek"
+            FetalMovement.LESS -> "Kamroq"
+            FetalMovement.MORE -> "Ko'proq"
+        }
+        override val movementWarning = "Harakat sezilarli kamaysa yoki umuman sezilmasa, " +
+            "kechiktirmasdan shifokorga murojaat qiling."
+        override val privateNote = "Izoh — faqat siz ko'rasiz"
+        override val privateNoteHint = "Yozib qo'ying…"
+        override val checkInSaved = "Bugungi holat saqlandi"
+
         override val postpartumTitle = "Tug'ruqdan keyin"
         override val recoveryWeeks = "  hafta · tiklanish davri"
         override val recoveryNote =
@@ -561,9 +611,38 @@ object StringsUz : Strings {
             "Uyqu, faollik, ovqatlanish va kayfiyat asosida. Bu ball tibbiy " +
                 "ko'rsatkich emas."
         override val activity = "Faollik"
-        override val weeklyGoals = "Haftalik maqsadlar"
-        override val strengthTraining = "Kuch mashqlari"
-        override val calciumAndD = "Kalsiy va D vitamini"
+
+        override val stageSymptomsTitle = "Simptomlar"
+        override val noRecordsYet = "Hali yozuv yo'q"
+        override val noRecordsYetBody = "Quyidan bugungi belgilarni belgilang. Bir necha " +
+            "kundan keyin shu yerda qaysi belgi qanchalik tez-tez uchrashi ko'rinadi."
+        override fun windowDays(days: Int) = "$days kun"
+        override fun weekNumber(week: Int) = "$week-hafta"
+        override fun recordedOnDays(window: Int, days: Int) = "$window kun ichida $days kun qayd etilgan."
+        override val logToday2 = "Bugun qayd etish"
+        override val mostFrequent = "Eng ko'p uchraganlar"
+        override val symptomsDisclaimer = "Simptomlar ro'yxati kuzatuv uchun. Yangi yoki " +
+            "kuchayib borayotgan belgilar bo'lsa shifokor bilan maslahatlashing."
+
+        override val sleepMoodTitle = "Uyqu va kayfiyat"
+        override val notEnoughData = "Ma'lumot yetarli emas"
+        override val notEnoughDataBody = "Uyqu soat yoki telefondan keladi, kayfiyat esa " +
+            "kunlik check-in'dan. Bir necha kundan keyin bu yerda ikkalasi birga ko'rinadi."
+        override val scoreCaps = "BALL"
+        override fun sleepGoal(hours: String) = "Maqsad · $hours"
+        override val moodWeek7 = "7 kunlik kayfiyat"
+        override val noticed = "Kuzatish"
+        override val breathingCard = "Nafas mashqi"
+        override val breathingCardNote = "Uyqu oldidan · 4 daqiqa"
+        override val journalCard = "Kundalik"
+        override val journalCardNote = "Faqat siz ko'rasiz"
+
+        override val estimatedCaps = "TAXMINIY"
+        override val balanceCaps = "BALANS"
+        override val premiumCaps = "PREMIUM"
+        override val libraryCaps = "KUTUBXONA"
+        override val predictionDisclaimer = "Bashorat kiritilgan ma'lumotlarga asoslanadi " +
+            "va tibbiy xulosa emas."
     }
 
     override val modules = object : ModuleStrings {

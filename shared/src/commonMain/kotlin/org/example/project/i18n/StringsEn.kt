@@ -6,6 +6,7 @@ import org.example.project.model.CyclePhase
 import org.example.project.model.Goal
 import org.example.project.model.LifeStage
 import org.example.project.model.Mood
+import uz.sadora.contract.FetalMovement
 import uz.sadora.contract.HealthMetric
 import uz.sadora.contract.MealSlot
 import uz.sadora.contract.SymptomCategory
@@ -518,6 +519,55 @@ object StringsEn : Strings {
                 "health information."
         override val aiBadge = "SADORA AI · SUGGESTION"
 
+        override val appointmentsTitle = "Appointments"
+        override val filterUpcoming = "Upcoming"
+        override val filterPast = "Past"
+        override val filterAll = "All"
+        override val listEmpty = "Nothing here yet"
+        override val nothingInThisFilter = "Nothing in this filter"
+        override val appointmentsEmptyBody = "Write down the date of a check-up, a scan or a " +
+            "test — the reminder is set from here too."
+        override val addAppointment = "Add an appointment"
+        override val nextCaps = "NEXT"
+        override val todayCaps = "TODAY"
+        override val tomorrowCaps = "TOMORROW"
+        override fun inDaysCaps(days: Int) = "IN $days DAYS"
+        override val appointmentsNote = "You fill this list in yourself. SADORA does not " +
+            "prescribe a screening schedule."
+        override val appointmentDone = "Done"
+        override fun reminderSet(offset: String) = "Reminder $offset"
+        override fun reminderOffset(hours: Int) = when (hours) {
+            in 0..2 -> "2 hours before"
+            in 3..24 -> "a day before"
+            else -> "2 days before"
+        }
+        override val noReminder = "None"
+        override val editAppointment = "Edit appointment"
+        override val appointmentName = "Name"
+        override val appointmentNameHint = "Screening scan"
+        override val appointmentDate = "Date"
+        override val appointmentDateHint = "27.8.2026"
+        override val appointmentDateInvalid = "Date as day.month.year"
+        override val appointmentTime = "Time (optional)"
+        override val appointmentPlace = "Place (optional)"
+        override val appointmentPlaceHint = "Republican centre"
+        override val reminder = "Reminder"
+        override val appointmentDateNote = "Write the date as day.month.year, for example 27.8.2026."
+
+        override val checkInTitle = "How are you feeling?"
+        override val todaysSymptomsLabel = "Symptoms today"
+        override val babyMovement = "Baby's movement"
+        override fun movement(movement: FetalMovement) = when (movement) {
+            FetalMovement.USUAL -> "As usual"
+            FetalMovement.LESS -> "Less"
+            FetalMovement.MORE -> "More"
+        }
+        override val movementWarning = "If movement drops noticeably or stops, see a doctor " +
+            "without delay."
+        override val privateNote = "Note — only you see this"
+        override val privateNoteHint = "Write it down…"
+        override val checkInSaved = "Today's check-in is saved"
+
         override val postpartumTitle = "After birth"
         override val recoveryWeeks = "  weeks · recovery"
         override val recoveryNote =
@@ -559,9 +609,38 @@ object StringsEn : Strings {
             "Based on sleep, activity, food and mood. This score is not a medical " +
                 "measure."
         override val activity = "Activity"
-        override val weeklyGoals = "Goals for the week"
-        override val strengthTraining = "Strength training"
-        override val calciumAndD = "Calcium and vitamin D"
+
+        override val stageSymptomsTitle = "Symptoms"
+        override val noRecordsYet = "Nothing recorded yet"
+        override val noRecordsYetBody = "Mark today's signs below. After a few days you will " +
+            "see here which of them comes up most often."
+        override fun windowDays(days: Int) = "$days days"
+        override fun weekNumber(week: Int) = "Week $week"
+        override fun recordedOnDays(window: Int, days: Int) = "Recorded on $days of $window days."
+        override val logToday2 = "Log today"
+        override val mostFrequent = "Most frequent"
+        override val symptomsDisclaimer = "This list is for keeping track. If something is new " +
+            "or getting stronger, talk it over with a doctor."
+
+        override val sleepMoodTitle = "Sleep and mood"
+        override val notEnoughData = "Not enough data yet"
+        override val notEnoughDataBody = "Sleep comes from a watch or a phone, and mood from " +
+            "the daily check-in. After a few days the two will show here together."
+        override val scoreCaps = "SCORE"
+        override fun sleepGoal(hours: String) = "Goal · $hours"
+        override val moodWeek7 = "Mood over 7 days"
+        override val noticed = "Noticed"
+        override val breathingCard = "Breathing practice"
+        override val breathingCardNote = "Before bed · 4 minutes"
+        override val journalCard = "Journal"
+        override val journalCardNote = "Only you see it"
+
+        override val estimatedCaps = "ESTIMATE"
+        override val balanceCaps = "BALANCE"
+        override val premiumCaps = "PREMIUM"
+        override val libraryCaps = "LIBRARY"
+        override val predictionDisclaimer = "The prediction rests on what you have entered " +
+            "and is not a medical conclusion."
     }
 
     override val modules = object : ModuleStrings {

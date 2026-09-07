@@ -53,6 +53,11 @@ import org.example.project.ui.components.SettingsRow
 import org.example.project.ui.components.noRippleClickable
 import uz.sadora.contract.Appointment
 import uz.sadora.contract.SaveAppointmentRequest
+import org.example.project.i18n.JourneyStrings
+import org.example.project.data.toWire
+import uz.sadora.contract.FetalMovement
+import uz.sadora.contract.LifeStage
+import uz.sadora.contract.SymptomEntry
 
 /**
  * "Homiladorlik · Tadbirlar".
@@ -67,6 +72,7 @@ fun PregnancyAppointmentsScreen(
     modifier: Modifier = Modifier,
 ) {
     val c = Sadora.colors
+    val t = strings.journey
     val scope = rememberCoroutineScope()
     var filter by remember { mutableStateOf(0) }
     var editing by remember { mutableStateOf<Appointment?>(null) }
@@ -86,7 +92,7 @@ fun PregnancyAppointmentsScreen(
 
     Column(modifier) {
         SadoraTopBar(
-            "Tadbirlar",
+            t.appointmentsTitle,
             onBack = onClose,
             trailing = {
                 Box(
@@ -105,7 +111,7 @@ fun PregnancyAppointmentsScreen(
         ScreenContent {
             item {
                 SegmentedControl(
-                    options = listOf("Yaqin", "O'tgan", "Barchasi"),
+                    options = listOf(t.filterUpcoming, t.filterPast, t.filterAll),
                     selectedIndex = filter,
                     onSelect = { filter = it },
                 )
@@ -114,10 +120,9 @@ fun PregnancyAppointmentsScreen(
             if (shown.isEmpty()) {
                 item {
                     EmptyState(
-                        title = if (all.isEmpty()) "Ro'yxat bo'sh" else "Bu bo'limda tadbir yo'q",
-                        body = "Shifokor ko'rigi, UTT yoki tahlil sanasini yozib qo'ying — " +
-                            "eslatma ham shu yerdan sozlanadi.",
-                        actionText = "Tadbir qo'shish",
+                        title = if (all.isEmpty()) t.listEmpty else t.nothingInThisFilter,
+                        body = t.appointmentsEmptyBody,
+                        actionText = t.addAppointment,
                         onAction = { composing = true },
                         glyph = "🗓",
                     )
@@ -133,8 +138,8 @@ fun PregnancyAppointmentsScreen(
                             Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
                         ) {
-                            Text("KEYINGI", style = Sadora.type.caption, color = c.muted)
-                            countdownLabel(next.scheduledOn, today)?.let {
+                            Text(t.nextCaps, style = Sadora.type.caption, color = c.muted)
+                            countdownLabel(next.scheduledOn, today, t)?.let {
                                 Text(it, style = Sadora.type.caption, color = c.textAccent)
                             }
                         }
@@ -164,10 +169,7 @@ fun PregnancyAppointmentsScreen(
             }
 
             item {
-                DisclaimerNote(
-                    "Tadbirlar ro'yxatini o'zingiz to'ldirasiz. SADORA tekshiruv " +
-                        "jadvalini tayinlamaydi.",
-                )
+                DisclaimerNote(t.appointmentsNote)
             }
         }
     }
@@ -198,14 +200,14 @@ fun PregnancyAppointmentsScreen(
 }
 
 /** "8 kundan keyin", "Ertaga", "Bugun" — how far off the next one is. */
-private fun countdownLabel(date: LocalDate, today: LocalDate?): String? {
+private fun countdownLabel(date: LocalDate, today: LocalDate?, t: JourneyStrings): String? {
     if (today == null) return null
     val days = today.daysUntil(date)
     return when {
         days < 0 -> null
-        days == 0 -> "BUGUN"
-        days == 1 -> "ERTAGA"
-        else -> "$days KUNDAN KEYIN"
+        days == 0 -> t.todayCaps
+        days == 1 -> t.tomorrowCaps
+        else -> t.inDaysCaps(days)
     }
 }
 
@@ -217,6 +219,7 @@ private fun EventRow(
     onToggleDone: () -> Unit,
 ) {
     val c = Sadora.colors
+    val t = strings.journey
     Row(
         Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
@@ -251,10 +254,10 @@ private fun EventRow(
                 Text(detail, style = Sadora.type.body, color = c.muted)
             }
             when {
-                appointment.isDone -> SadoraBadge("Bo'lib o'tdi", BadgeTone.Neutral, leading = "✓")
+                appointment.isDone -> SadoraBadge(t.appointmentDone, BadgeTone.Neutral, leading = "✓")
                 appointment.remindHoursBefore != null ->
                     SadoraBadge(
-                        "Eslatma ${reminderLabel(appointment.remindHoursBefore!!)}",
+                        t.reminderSet(t.reminderOffset(appointment.remindHoursBefore!!)),
                         BadgeTone.Neutral,
                         leading = "🔔",
                     )
@@ -269,14 +272,8 @@ private fun EventRow(
     }
 }
 
-/** The reminder offsets the sheet offers, and how they are said. */
+/** The reminder offsets the sheet offers; each language says them its own way. */
 private val reminderChoices = listOf<Int?>(null, 2, 24, 48)
-
-private fun reminderLabel(hours: Int): String = when (hours) {
-    in 0..2 -> "2 soat oldin"
-    in 3..24 -> "1 kun oldin"
-    else -> "2 kun oldin"
-}
 
 /**
  * Adding or editing one.
@@ -294,6 +291,7 @@ private fun AppointmentSheet(
     onDelete: (() -> Unit)?,
 ) {
     val c = Sadora.colors
+    val t = strings.journey
     // Re-keyed on the entry being edited so opening a different one refills the fields.
     var title by remember(existing, visible) { mutableStateOf(existing?.title.orEmpty()) }
     var day by remember(existing, visible) {
@@ -310,25 +308,35 @@ private fun AppointmentSheet(
 
     SadoraBottomSheet(
         visible = visible,
-        title = if (existing == null) "Tadbir qo'shish" else "Tadbirni tahrirlash",
+        title = if (existing == null) t.addAppointment else t.editAppointment,
         onDismiss = onDismiss,
     ) {
-        SadoraTextField(title, { title = it }, label = "Nomi", placeholder = "Skrining UTT")
+        SadoraTextField(
+            title,
+            { title = it },
+            label = t.appointmentName,
+            placeholder = t.appointmentNameHint,
+        )
         SadoraTextField(
             day,
             { day = it },
-            label = "Sana",
-            placeholder = "27.8.2026",
-            error = if (day.isNotBlank() && date == null) "Sana kun.oy.yil ko'rinishida" else null,
+            label = t.appointmentDate,
+            placeholder = t.appointmentDateHint,
+            error = if (day.isNotBlank() && date == null) t.appointmentDateInvalid else null,
         )
-        SadoraTextField(time, { time = it }, label = "Vaqti (ixtiyoriy)", placeholder = "10:30")
-        SadoraTextField(place, { place = it }, label = "Joyi (ixtiyoriy)", placeholder = "Respublika markazi")
+        SadoraTextField(time, { time = it }, label = t.appointmentTime, placeholder = "10:30")
+        SadoraTextField(
+            place,
+            { place = it },
+            label = t.appointmentPlace,
+            placeholder = t.appointmentPlaceHint,
+        )
 
-        CardLabel("Eslatma")
+        CardLabel(t.reminder)
         ChipFlowRow {
             reminderChoices.forEach { hours ->
                 SelectChip(
-                    label = hours?.let { reminderLabel(it) } ?: "Kerak emas",
+                    label = hours?.let { t.reminderOffset(it) } ?: t.noReminder,
                     selected = remind == hours,
                     onClick = { remind = hours },
                 )
@@ -338,14 +346,14 @@ private fun AppointmentSheet(
         Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
             if (onDelete != null) {
                 SadoraButton(
-                    "O'chirish",
+                    strings.common.delete,
                     onClick = onDelete,
                     tone = ButtonTone.Destructive,
                     modifier = Modifier.weight(1f),
                 )
             }
             SadoraButton(
-                "Saqlash",
+                strings.common.save,
                 onClick = {
                     val parsed = date ?: return@SadoraButton
                     onSave(
@@ -362,11 +370,7 @@ private fun AppointmentSheet(
                 modifier = Modifier.weight(1f),
             )
         }
-        Text(
-            "Sana kun.oy.yil ko'rinishida yoziladi, masalan 27.8.2026.",
-            style = Sadora.type.caption,
-            color = c.muted2,
-        )
+        Text(t.appointmentDateNote, style = Sadora.type.caption, color = c.muted2)
     }
 }
 
@@ -391,30 +395,48 @@ private fun parseClock(raw: String): LocalTime? {
 /**
  * "Homiladorlik · o'zini his qilish" — the daily check-in.
  *
+ * Everything on it is saved. It used to offer five symptoms written into the file, a
+ * movement question and a note, and then throw all three away when "Saqlash" closed
+ * the screen — which is worse than not asking, because she believes it was recorded.
+ * The symptoms are now the server's own pregnancy catalogue, and the answer goes up as
+ * the day's log.
+ *
  * Foetal movement is the one place the app escalates: a marked drop gets an explicit
  * "see a doctor without delay" warning rather than a reassuring interpretation.
  */
 @Composable
 fun PregnancyCheckInScreen(
     state: AppState,
+    health: HealthController,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val c = Sadora.colors
-    val symptoms = remember { mutableStateListOf<String>() }
-    var movement by remember { mutableStateOf("Odatdagidek") }
-    var note by remember { mutableStateOf("") }
+    val t = strings.journey
+    val scope = rememberCoroutineScope()
+
+    LaunchedEffect(Unit) {
+        health.loadSymptoms(LifeStage.PREGNANCY)
+        health.loadDay(state.today)
+    }
+
+    val catalogue = health.symptoms
+    val today = health.day
+    val chosen = remember(today) {
+        mutableStateListOf<String>().apply { addAll(today?.symptoms.orEmpty().map { it.key }) }
+    }
+    var movement by remember(today) {
+        mutableStateOf(today?.fetalMovement ?: FetalMovement.USUAL)
+    }
+    var note by remember(today) { mutableStateOf(today?.note.orEmpty()) }
+    var saving by remember { mutableStateOf(false) }
 
     Column(modifier) {
         SadoraTopBar("", onBack = onClose)
 
         ScreenContent {
             item {
-                Text(
-                    "O'zingizni qanday his qilyapsiz?",
-                    style = Sadora.type.h1,
-                    color = c.text,
-                )
+                Text(t.checkInTitle, style = Sadora.type.h1, color = c.text)
             }
 
             item {
@@ -424,10 +446,9 @@ fun PregnancyCheckInScreen(
                         horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
                     ) {
                         Mood.entries.forEach { mood ->
-                            val label = strings.common.mood(mood)
                             MoodCell(
                                 emoji = mood.emoji,
-                                label = label,
+                                label = strings.common.mood(mood),
                                 selected = state.mood == mood,
                                 onClick = { state.mood = mood },
                                 modifier = Modifier.weight(1f),
@@ -437,24 +458,20 @@ fun PregnancyCheckInScreen(
                 }
             }
 
-            item {
-                SadoraCard {
-                    CardLabel("Bugungi simptomlar")
-                    ChipFlowRow {
-                        listOf(
-                            "Belda og'riq",
-                            "Ko'ngil aynishi",
-                            "Shish",
-                            "Nafas qisishi",
-                            "Uyqusizlik",
-                        ).forEach { symptom ->
-                            SelectChip(
-                                label = symptom,
-                                selected = symptom in symptoms,
-                                onClick = {
-                                    if (!symptoms.remove(symptom)) symptoms.add(symptom)
-                                },
-                            )
+            if (catalogue.isNotEmpty()) {
+                item {
+                    SadoraCard {
+                        CardLabel(t.todaysSymptomsLabel)
+                        ChipFlowRow {
+                            catalogue.forEach { definition ->
+                                SelectChip(
+                                    label = definition.label,
+                                    selected = definition.key in chosen,
+                                    onClick = {
+                                        if (!chosen.remove(definition.key)) chosen.add(definition.key)
+                                    },
+                                )
+                            }
                         }
                     }
                 }
@@ -462,11 +479,11 @@ fun PregnancyCheckInScreen(
 
             item {
                 SadoraCard {
-                    CardLabel("Bolaning harakati")
+                    CardLabel(t.babyMovement)
                     ChipFlowRow {
-                        listOf("Odatdagidek", "Kamroq", "Ko'proq").forEach { option ->
+                        FetalMovement.entries.forEach { option ->
                             SelectChip(
-                                label = option,
+                                label = t.movement(option),
                                 selected = movement == option,
                                 onClick = { movement = option },
                             )
@@ -482,12 +499,7 @@ fun PregnancyCheckInScreen(
                         horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
                     ) {
                         Text("⚠", style = Sadora.type.h3, color = c.danger)
-                        Text(
-                            "Harakat sezilarli kamaysa yoki umuman sezilmasa, " +
-                                "kechiktirmasdan shifokorga murojaat qiling.",
-                            style = Sadora.type.body,
-                            color = c.danger,
-                        )
+                        Text(t.movementWarning, style = Sadora.type.body, color = c.danger)
                     }
                 }
             }
@@ -496,12 +508,32 @@ fun PregnancyCheckInScreen(
                 SadoraTextField(
                     note,
                     { note = it },
-                    label = "Izoh — faqat siz ko'rasiz",
-                    placeholder = "Yozib qo'ying…",
+                    label = t.privateNote,
+                    placeholder = t.privateNoteHint,
+                    singleLine = false,
                 )
             }
 
-            item { SadoraButton("Saqlash", onClose) }
+            item {
+                SadoraButton(
+                    if (saving) strings.common.saving else strings.common.save,
+                    enabled = !saving,
+                    onClick = {
+                        saving = true
+                        scope.launch {
+                            health.saveDay(
+                                date = state.today,
+                                mood = state.mood.toWire(),
+                                symptomKeys = chosen.map { SymptomEntry(it) },
+                                note = note.trim().takeIf { it.isNotEmpty() },
+                                fetalMovement = movement,
+                            )
+                            saving = false
+                            onClose()
+                        }
+                    },
+                )
+            }
         }
     }
 }

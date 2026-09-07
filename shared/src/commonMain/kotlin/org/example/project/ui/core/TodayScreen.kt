@@ -54,6 +54,8 @@ import org.example.project.ui.components.Skeleton
 import org.example.project.ui.components.appearFromBelow
 import org.example.project.ui.components.noRippleClickable
 import org.example.project.ui.components.pressable
+import org.example.project.model.DailyStepGoal
+import org.example.project.model.DailySleepGoalMinutes
 
 /**
  * "Bugun" — the deck's daily companion: the assistant's read on today, the health
@@ -506,16 +508,14 @@ internal fun healthScore(state: AppState): Int {
     fun ratio(value: Int, goal: Int): Float =
         if (goal <= 0) 0f else (value / goal.toFloat()).coerceIn(0f, 1f)
 
-    val sleep = ratio(state.sleepMinutes, SleepGoalMinutes)
+    val sleep = ratio(state.sleepMinutes, DailySleepGoalMinutes)
     val water = ratio(state.waterMl, state.waterGoalMl)
-    val steps = ratio(state.steps, StepGoal)
+    val steps = ratio(state.steps, DailyStepGoal)
     // Mood runs 1..5; a neutral day should not read as a failing quarter.
     val mood = ((state.mood.score - 1) / 4f).coerceIn(0f, 1f)
     return ((sleep + water + steps + mood) / 4f * 100f).toInt().coerceIn(0, 100)
 }
 
-private const val SleepGoalMinutes = 480
-private const val StepGoal = 8000
 
 
 

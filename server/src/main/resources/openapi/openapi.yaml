@@ -2678,6 +2678,7 @@ components:
           type: array
           items: { $ref: "#/components/schemas/SymptomEntry" }
         note: { type: string, nullable: true, maxLength: 1000 }
+        fetalMovement: { $ref: "#/components/schemas/FetalMovement" }
         updatedAt: { type: string, format: date-time, nullable: true }
 
     SaveDailyLogRequest:
@@ -2692,6 +2693,13 @@ components:
           type: array
           items: { $ref: "#/components/schemas/SymptomEntry" }
         note: { type: string, nullable: true }
+        fetalMovement: { $ref: "#/components/schemas/FetalMovement" }
+
+    FetalMovement:
+      type: string
+      description: "Homiladorlik davridagi kunlik so'rov — bolaning harakati"
+      nullable: true
+      enum: [usual, less, more]
 
     DailyLogRange:
       type: object

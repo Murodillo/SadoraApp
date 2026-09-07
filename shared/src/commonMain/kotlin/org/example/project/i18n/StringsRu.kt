@@ -6,6 +6,7 @@ import org.example.project.model.CyclePhase
 import org.example.project.model.Goal
 import org.example.project.model.LifeStage
 import org.example.project.model.Mood
+import uz.sadora.contract.FetalMovement
 import uz.sadora.contract.HealthMetric
 import uz.sadora.contract.MealSlot
 import uz.sadora.contract.SymptomCategory
@@ -527,6 +528,55 @@ object StringsRu : Strings {
                 "Это общая информация о здоровье."
         override val aiBadge = "SADORA AI · СОВЕТ"
 
+        override val appointmentsTitle = "События"
+        override val filterUpcoming = "Ближайшие"
+        override val filterPast = "Прошедшие"
+        override val filterAll = "Все"
+        override val listEmpty = "Список пуст"
+        override val nothingInThisFilter = "В этом разделе ничего нет"
+        override val appointmentsEmptyBody = "Запишите дату приёма, УЗИ или анализа — " +
+            "напоминание настраивается здесь же."
+        override val addAppointment = "Добавить событие"
+        override val nextCaps = "БЛИЖАЙШЕЕ"
+        override val todayCaps = "СЕГОДНЯ"
+        override val tomorrowCaps = "ЗАВТРА"
+        override fun inDaysCaps(days: Int) = "ЧЕРЕЗ $days ДН."
+        override val appointmentsNote = "Список событий вы заполняете сами. " +
+            "SADORA не назначает график обследований."
+        override val appointmentDone = "Состоялось"
+        override fun reminderSet(offset: String) = "Напоминание $offset"
+        override fun reminderOffset(hours: Int) = when (hours) {
+            in 0..2 -> "за 2 часа"
+            in 3..24 -> "за день"
+            else -> "за 2 дня"
+        }
+        override val noReminder = "Не нужно"
+        override val editAppointment = "Изменить событие"
+        override val appointmentName = "Название"
+        override val appointmentNameHint = "Скрининговое УЗИ"
+        override val appointmentDate = "Дата"
+        override val appointmentDateHint = "27.8.2026"
+        override val appointmentDateInvalid = "Дата в виде день.месяц.год"
+        override val appointmentTime = "Время (необязательно)"
+        override val appointmentPlace = "Место (необязательно)"
+        override val appointmentPlaceHint = "Республиканский центр"
+        override val reminder = "Напоминание"
+        override val appointmentDateNote = "Дата пишется как день.месяц.год, например 27.8.2026."
+
+        override val checkInTitle = "Как вы себя чувствуете?"
+        override val todaysSymptomsLabel = "Симптомы сегодня"
+        override val babyMovement = "Шевеления малыша"
+        override fun movement(movement: FetalMovement) = when (movement) {
+            FetalMovement.USUAL -> "Как обычно"
+            FetalMovement.LESS -> "Меньше"
+            FetalMovement.MORE -> "Больше"
+        }
+        override val movementWarning = "Если шевелений стало заметно меньше или их совсем " +
+            "нет, обратитесь к врачу без промедления."
+        override val privateNote = "Заметка — видите только вы"
+        override val privateNoteHint = "Запишите…"
+        override val checkInSaved = "Сегодняшнее состояние сохранено"
+
         override val postpartumTitle = "После родов"
         override val recoveryWeeks = "  нед. · период восстановления"
         override val recoveryNote =
@@ -568,9 +618,39 @@ object StringsRu : Strings {
             "По сну, активности, питанию и настроению. Этот балл не является " +
                 "медицинским показателем."
         override val activity = "Активность"
-        override val weeklyGoals = "Цели на неделю"
-        override val strengthTraining = "Силовые упражнения"
-        override val calciumAndD = "Кальций и витамин D"
+
+        override val stageSymptomsTitle = "Симптомы"
+        override val noRecordsYet = "Записей пока нет"
+        override val noRecordsYetBody = "Отметьте сегодняшние признаки ниже. Через " +
+            "несколько дней здесь будет видно, что встречается чаще всего."
+        override fun windowDays(days: Int) = "$days дн."
+        override fun weekNumber(week: Int) = "$week-я нед."
+        override fun recordedOnDays(window: Int, days: Int) =
+            "За $window дн. отмечено в $days дн."
+        override val logToday2 = "Отметить сегодня"
+        override val mostFrequent = "Чаще всего"
+        override val symptomsDisclaimer = "Список симптомов нужен для наблюдения. " +
+            "Если появляются новые или усиливающиеся признаки, обсудите их с врачом."
+
+        override val sleepMoodTitle = "Сон и настроение"
+        override val notEnoughData = "Данных пока мало"
+        override val notEnoughDataBody = "Сон приходит с часов или телефона, а настроение — " +
+            "из ежедневного чек-ина. Через несколько дней они появятся здесь рядом."
+        override val scoreCaps = "БАЛЛ"
+        override fun sleepGoal(hours: String) = "Цель · $hours"
+        override val moodWeek7 = "Настроение за 7 дней"
+        override val noticed = "Наблюдение"
+        override val breathingCard = "Дыхательная практика"
+        override val breathingCardNote = "Перед сном · 4 мин."
+        override val journalCard = "Дневник"
+        override val journalCardNote = "Видите только вы"
+
+        override val estimatedCaps = "ПРОГНОЗ"
+        override val balanceCaps = "БАЛАНС"
+        override val premiumCaps = "PREMIUM"
+        override val libraryCaps = "БИБЛИОТЕКА"
+        override val predictionDisclaimer = "Прогноз строится на введённых " +
+            "данных и не является медицинским заключением."
     }
 
     override val modules = object : ModuleStrings {
