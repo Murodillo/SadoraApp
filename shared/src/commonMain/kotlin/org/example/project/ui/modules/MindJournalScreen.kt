@@ -66,7 +66,7 @@ fun MindJournalScreen(
         SadoraTopBar("Kundalik va praktika", onBack = onClose)
 
         ScreenContent {
-            item { PracticeCard(breathing, onStart = { practising = true }) }
+            item { PracticeCard(breathingPractice(), onStart = { practising = true }) }
 
             item {
                 CardLabel(
@@ -117,10 +117,11 @@ fun MindJournalScreen(
         }
     }
 
+    val practice = breathingPractice()
     PracticeSheet(
-        practice = if (practising) breathing else null,
+        practice = if (practising) practice else null,
         onFinish = { seconds ->
-            state.logPractice(breathing.kind, seconds)
+            state.logPractice(practice.kind, seconds)
             practising = false
         },
         onDismiss = { practising = false },

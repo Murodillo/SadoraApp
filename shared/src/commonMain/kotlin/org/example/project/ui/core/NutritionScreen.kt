@@ -22,6 +22,8 @@ import org.example.project.design.Radius
 import org.example.project.design.Sadora
 import org.example.project.design.SadoraIcons
 import org.example.project.design.Spacing
+import org.example.project.i18n.NutritionStrings
+import org.example.project.i18n.strings
 import org.example.project.model.AppState
 import org.example.project.model.Fmt
 import org.example.project.model.Meal
@@ -54,6 +56,7 @@ fun NutritionScreen(
     onAddWater: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val t = strings.nutrition
     val c = Sadora.colors
     val scanRoute = if (state.isPremium) Route.FoodScanCamera else Route.Paywall
 
@@ -62,7 +65,7 @@ fun NutritionScreen(
             "Ovqatlanish",
             centered = true,
             trailing = {
-                CircleIconButton(SadoraIcons.Calendar, contentDescription = "Tahlillar") { onOpen(Route.Insights) }
+                CircleIconButton(SadoraIcons.Calendar, contentDescription = t.insights) { onOpen(Route.Insights) }
             },
         )
 
@@ -73,7 +76,7 @@ fun NutritionScreen(
                 SectionHeader(
                     "Ovqatlar",
                     trailing = {
-                        RoundIconButton(SadoraIcons.Plus, onClick = { onOpen(Route.FoodSearch) }, filled = false, size = 36.dp, contentDescription = "Ovqat qo'shish")
+                        RoundIconButton(SadoraIcons.Plus, onClick = { onOpen(Route.FoodSearch) }, filled = false, size = 36.dp, contentDescription = t.addMeal)
                     },
                 )
             }
@@ -81,8 +84,8 @@ fun NutritionScreen(
             if (state.meals.isEmpty()) {
                 item {
                     SadoraCard(onClick = { onOpen(Route.FoodSearch) }) {
-                        Text("Bugun hali ovqat qayd etilmagan", style = Sadora.type.h3, color = c.text)
-                        Text("Birinchi taomni qo'shing — kaloriya va makrolar shu yerda yig'iladi.", style = Sadora.type.body, color = c.muted)
+                        Text(t.emptyTitle, style = Sadora.type.h3, color = c.text)
+                        Text(t.emptyBody, style = Sadora.type.body, color = c.muted)
                     }
                 }
             } else {
@@ -100,21 +103,21 @@ fun NutritionScreen(
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                             Text("Suv", style = Sadora.type.body, color = c.muted)
                             Text(
-                                "${Fmt.litres(state.waterMl)} l / ${Fmt.litres(state.waterGoalMl)} l",
+                                t.waterOfGoal(Fmt.litres(state.waterMl), Fmt.litres(state.waterGoalMl)),
                                 style = Sadora.type.h3,
                                 color = c.text,
                             )
                         }
-                        PillButton("+250 ml", onAddWater)
+                        PillButton(t.addWater(250), onAddWater)
                     }
                 }
             }
 
             item {
                 AiSummaryCard(
-                    label = "AI tahlili",
-                    body = macroNote(state),
-                    footnote = "Bugungi ko'rsatkichlaringiz asosida hisoblandi",
+                    label = t.aiAnalysis,
+                    body = macroNote(state, t),
+                    footnote = t.aiBasis,
                     onClick = { onOpen(Route.Insights) },
                 )
             }
@@ -128,9 +131,9 @@ fun NutritionScreen(
                     ) {
                         IconTile(SadoraIcons.Camera, tint = c.primary, shape = Radius.cardSmall)
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                            Text("Ovqat skaneri", style = Sadora.type.h3, color = c.text)
+                            Text(t.scanner, style = Sadora.type.h3, color = c.text)
                             Text(
-                                "Kamerani yo'naltiring — taom, porsiya va makrolar taxminan aniqlanadi",
+                                t.scannerHint,
                                 style = Sadora.type.body,
                                 color = c.muted,
                             )
@@ -149,9 +152,9 @@ fun NutritionScreen(
                     ) {
                         IconTile(SadoraIcons.Target, tint = c.success, shape = Radius.cardSmall)
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                            Text("Balans", style = Sadora.type.h3, color = c.text)
+                            Text(t.balance, style = Sadora.type.h3, color = c.text)
                             Text(
-                                "Ovqat, suv, faollik va uyqu — to'rt yo'nalish",
+                                t.balanceHint,
                                 style = Sadora.type.body,
                                 color = c.muted,
                             )
@@ -174,16 +177,17 @@ fun NutritionScreen(
 @Composable
 private fun TodayRingCard(state: AppState) {
     val c = Sadora.colors
+    val t = strings.nutrition
     SadoraCard {
-        Text("Bugun", style = Sadora.type.body, color = c.muted)
+        Text(t.today, style = Sadora.type.body, color = c.muted)
         Row(
             Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(Spacing.xxs),
         ) {
-            MacroRing("kkal", state.caloriesEaten, state.calorieGoal, c.primary, Modifier.weight(1f), delayMillis = 0)
-            MacroRing("Oqsil", state.proteinG, state.proteinGoalG, c.protein, Modifier.weight(1f), unit = "g", delayMillis = 90)
-            MacroRing("Yog'", state.fatG, state.fatGoalG, c.fat, Modifier.weight(1f), unit = "g", delayMillis = 180)
-            MacroRing("Uglevod", state.carbsG, state.carbsGoalG, c.carbs, Modifier.weight(1f), unit = "g", delayMillis = 270)
+            MacroRing(strings.common.kcal, state.caloriesEaten, state.calorieGoal, c.primary, Modifier.weight(1f), delayMillis = 0)
+            MacroRing(t.protein, state.proteinG, state.proteinGoalG, c.protein, Modifier.weight(1f), unit = "g", delayMillis = 90)
+            MacroRing(t.fat, state.fatG, state.fatGoalG, c.fat, Modifier.weight(1f), unit = "g", delayMillis = 180)
+            MacroRing(t.carbs, state.carbsG, state.carbsGoalG, c.carbs, Modifier.weight(1f), unit = "g", delayMillis = 270)
         }
     }
 }
@@ -217,27 +221,28 @@ private fun MacroRing(
  * No model behind it — it names the largest gap the rings already show, which is what
  * makes it safe to put under a heading the user will read as advice.
  */
-private fun macroNote(state: AppState): String {
+private fun macroNote(state: AppState, t: NutritionStrings): String {
     fun gap(value: Int, goal: Int): Float =
         if (goal <= 0) 0f else 1f - (value / goal.toFloat()).coerceIn(0f, 1f)
 
     val (name, largest) = listOf(
-        "oqsil" to gap(state.proteinG, state.proteinGoalG),
-        "yog'" to gap(state.fatG, state.fatGoalG),
-        "uglevod" to gap(state.carbsG, state.carbsGoalG),
+        t.proteinInline to gap(state.proteinG, state.proteinGoalG),
+        t.fatInline to gap(state.fatG, state.fatGoalG),
+        t.carbsInline to gap(state.carbsG, state.carbsGoalG),
     ).maxBy { it.second }
     val kcalLeft = (state.calorieGoal - state.caloriesEaten).coerceAtLeast(0)
 
     return if (largest < 0.1f) {
-        "Makrolar bugun muvozanatda. Qolgan $kcalLeft kkal uchun yengil taom yetarli."
+        t.balanced(kcalLeft)
     } else {
-        "Bugun eng ko'p yetishmayotgani — $name. Keyingi taomda shunga e'tibor bering."
+        t.shortOf(name)
     }
 }
 
 /** One meal: photo tile, slot, "08:30 • 450 kkal", and the macros as coloured letters. */
 @Composable
 private fun MealRow(meal: Meal) {
+    val t = strings.nutrition
     val c = Sadora.colors
     SadoraCard(padding = Spacing.sm) {
         Row(
@@ -249,7 +254,7 @@ private fun MealRow(meal: Meal) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(meal.slot, style = Sadora.type.h3, color = c.text)
                 Text(
-                    listOf(meal.time, "${meal.calories} kkal").filter { it.isNotBlank() }.joinToString(" • "),
+                    listOf(meal.time, t.kcal(meal.calories)).filter { it.isNotBlank() }.joinToString(" • "),
                     style = Sadora.type.body,
                     color = c.muted,
                 )
@@ -265,9 +270,10 @@ private fun MealRow(meal: Meal) {
 
 @Composable
 private fun MacroLetter(letter: String, grams: Int, color: Color) {
+    val t = strings.nutrition
     val c = Sadora.colors
     Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(letter, style = Sadora.type.body.copy(fontWeight = FontWeight.Bold), color = color)
-        Text("$grams g", style = Sadora.type.body, color = c.muted)
+        Text(t.grams(grams), style = Sadora.type.body, color = c.muted)
     }
 }

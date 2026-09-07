@@ -64,6 +64,29 @@ class StringsTest {
             addAll(listOf(save, cancel, delete, close, add, edit, done))
             addAll(listOf(litres, millilitres, kcal, steps, minutesShort, days(3)))
         }
+        with(t.mind) {
+            addAll(
+                listOf(
+                    title, todayIs("1-may"), stress, energy, journal, journalPrompt, journalHint,
+                    moodWeek, weekAverage("3,8"), assistant, assistantPremium, assistantFree, mood,
+                    breathing, breathingPurpose, meditation, meditationSubtitle, meditationPurpose,
+                    fourSevenEight, practiceMeta(5, "x"), start, breathIn, breathHold, breathOut,
+                    breathingHint, meditationHint, finish, close,
+                ),
+            )
+            addAll(levels)
+        }
+        with(t.nutrition) {
+            addAll(
+                listOf(
+                    title, insights, meals, addMeal, emptyTitle, emptyBody, water,
+                    waterOfGoal("1,2", "2,0"), addWater(250), aiAnalysis, aiBasis, scanner,
+                    scannerHint, balance, balanceHint, today, protein, fat, carbs,
+                    proteinInline, fatInline, carbsInline, balanced(400), shortOf("x"),
+                    kcal(250), grams(12),
+                ),
+            )
+        }
         with(t.today) {
             addAll(
                 listOf(
@@ -127,6 +150,19 @@ class StringsTest {
             assertNotEquals(StringsUz.common.moodCaption(Mood.Great), t.common.moodCaption(Mood.Great))
             assertNotEquals(StringsUz.today.generalAdvice, t.today.generalAdvice)
             assertNotEquals(StringsUz.today.startBody, t.today.startBody)
+            assertNotEquals(StringsUz.mind.journalPrompt, t.mind.journalPrompt)
+            assertNotEquals(StringsUz.mind.breathingHint, t.mind.breathingHint)
+            assertNotEquals(StringsUz.nutrition.emptyBody, t.nutrition.emptyBody)
+            assertNotEquals(StringsUz.nutrition.scannerHint, t.nutrition.scannerHint)
+        }
+    }
+
+    /** Five rungs share one dial; a long word there wraps and breaks the row. */
+    @Test
+    fun `a dial rung stays short enough for its row`() {
+        languages.forEach { t ->
+            t.mind.levels.forEach { assertTrue(it.length <= 16, "too long for the dial: $it") }
+            assertEquals(5, t.mind.levels.size)
         }
     }
 

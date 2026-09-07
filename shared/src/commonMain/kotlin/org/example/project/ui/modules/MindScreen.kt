@@ -34,6 +34,7 @@ import org.example.project.design.Sadora
 import org.example.project.design.SadoraIcons
 import org.example.project.design.Spacing
 import org.example.project.data.InsightsController
+import org.example.project.i18n.strings
 import org.example.project.model.AppState
 import org.example.project.model.Fmt
 import org.example.project.model.Mood
@@ -64,8 +65,19 @@ internal data class Practice(
     val purpose: String,
 )
 
-internal val breathing = Practice(PracticeKind.Breathing, "Nafas", "4-7-8", 5, "Stressni kamaytirish")
-private val meditation = Practice(PracticeKind.Meditation, "Meditatsiya", "Xotirjam ong", 10, "Dam olish")
+/**
+ * The two practices, built per language rather than held as constants: every field on a
+ * [Practice] is shown, so it cannot be a value fixed at class-load time.
+ */
+@Composable
+internal fun breathingPractice(): Practice = strings.mind.let {
+    Practice(PracticeKind.Breathing, it.breathing, it.fourSevenEight, 5, it.breathingPurpose)
+}
+
+@Composable
+private fun meditationPractice(): Practice = strings.mind.let {
+    Practice(PracticeKind.Meditation, it.meditation, it.meditationSubtitle, 10, it.meditationPurpose)
+}
 
 /**
  * "Ong va kayfiyat" — the deck's emotional-wellbeing screen, and now a root tab.
@@ -84,6 +96,7 @@ fun MindScreen(
     onOpenJournal: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val t = strings.mind
     val c = Sadora.colors
     var running by remember { mutableStateOf<Practice?>(null) }
     val moodWeek = insights.summary(7)?.trend(TrendMetric.MOOD)
@@ -92,12 +105,12 @@ fun MindScreen(
 
     Box(modifier) {
         Column {
-            SadoraTopBar("Ong va kayfiyat", onBack = onClose, centered = true)
+            SadoraTopBar(t.title, onBack = onClose, centered = true)
 
             ScreenContent {
                 item {
                     Text(
-                        "Bugun · ${Fmt.dayMonth(state.today)}",
+                        t.todayIs(Fmt.dayMonth(state.today)),
                         style = Sadora.type.body,
                         color = c.muted,
                         textAlign = TextAlign.Center,
@@ -110,17 +123,17 @@ fun MindScreen(
                 item {
                     Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                         DialCard(
-                            label = "Stress",
+                            label = t.stress,
                             level = state.stress,
-                            words = listOf("Juda past", "Past", "O'rtacha", "Yuqori", "Juda yuqori"),
+                            words = t.levels,
                             color = c.primary,
                             modifier = Modifier.weight(1f),
                             onLevel = { state.setCheckIn(stress = it) },
                         )
                         DialCard(
-                            label = "Energiya",
+                            label = t.energy,
                             level = state.energy,
-                            words = listOf("Juda past", "Past", "O'rtacha", "Yuqori", "Juda yuqori"),
+                            words = t.levels,
                             color = c.primary,
                             modifier = Modifier.weight(1f),
                             onLevel = { state.setCheckIn(energy = it) },
@@ -128,7 +141,10 @@ fun MindScreen(
                     }
                 }
 
-                item { PracticeCard(breathing, onStart = { running = breathing }) }
+                item {
+                    val practice = breathingPractice()
+                    PracticeCard(practice, onStart = { running = practice })
+                }
 
                 item {
                     SadoraCard(onClick = onOpenJournal) {
@@ -139,15 +155,18 @@ fun MindScreen(
                         ) {
                             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                                 Text("Jurnal", style = Sadora.type.h3, color = c.text)
-                                Text("O'zingizni qanday his qilyapsiz?", style = Sadora.type.body, color = c.muted)
-                                Text("Fikr va his-tuyg'ularingizni yozing", style = Sadora.type.body, color = c.muted2)
+                                Text(t.journalPrompt, style = Sadora.type.body, color = c.muted)
+                                Text(t.journalHint, style = Sadora.type.body, color = c.muted2)
                             }
                             RoundIconButton(SadoraIcons.Pencil, onClick = onOpenJournal, contentDescription = "Jurnal")
                         }
                     }
                 }
 
-                item { PracticeCard(meditation, onStart = { running = meditation }) }
+                item {
+                    val practice = meditationPractice()
+                    PracticeCard(practice, onStart = { running = practice })
+                }
 
                 // Only drawn once something has been checked in: a week of constants
                 // dressed up as her own week was the version this replaces.
@@ -155,10 +174,10 @@ fun MindScreen(
                     item {
                         SadoraCard {
                             CardLabel(
-                                "7 kunlik kayfiyat",
+                                t.moodWeek,
                                 trailing = {
                                     moodWeek.averageLabel()?.let {
-                                        Text("O'rtacha $it", style = Sadora.type.body, color = c.muted)
+                                        Text(t.weekAverage(it), style = Sadora.type.body, color = c.muted)
                                     }
                                 },
                             )
@@ -174,11 +193,11 @@ fun MindScreen(
 
                 item {
                     AiSummaryCard(
-                        label = "Ong yordamchisi",
+                        label = t.assistant,
                         body = if (state.isPremium) {
-                            "Kayfiyat va uyqu bog'liqliklari haqida suhbatlashing"
+                            t.assistantPremium
                         } else {
-                            "Premium'da: qo'llab-quvvatlovchi suhbat — terapevt emas"
+                            t.assistantFree
                         },
                         showPremiumBadge = true,
                         onClick = onOpenAi,
@@ -281,6 +300,7 @@ private fun DialCard(
     modifier: Modifier = Modifier,
     onLevel: (Int) -> Unit,
 ) {
+    val t = strings.mind
     val c = Sadora.colors
     val fraction = level / 5f
     SadoraCard(modifier = modifier, padding = Spacing.sm) {
@@ -316,6 +336,7 @@ private fun DialCard(
 
 @Composable
 internal fun PracticeCard(practice: Practice, onStart: () -> Unit) {
+    val t = strings.mind
     val c = Sadora.colors
     SadoraCard(onClick = onStart) {
         Row(
@@ -326,15 +347,19 @@ internal fun PracticeCard(practice: Practice, onStart: () -> Unit) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(practice.title, style = Sadora.type.h3, color = c.text)
                 Text(practice.subtitle, style = Sadora.type.body, color = c.muted)
-                Text("${practice.minutes} daq • ${practice.purpose}", style = Sadora.type.body, color = c.muted2)
+                Text(t.practiceMeta(practice.minutes, practice.purpose), style = Sadora.type.body, color = c.muted2)
             }
-            RoundIconButton(SadoraIcons.Play, onClick = onStart, contentDescription = "Boshlash")
+            RoundIconButton(SadoraIcons.Play, onClick = onStart, contentDescription = t.start)
         }
     }
 }
 
 /** Seconds per phase of the 4-7-8 pattern; meditation is one long "breathe" phase. */
-private val breathPhases = listOf("Nafas oling" to 4, "Ushlab turing" to 7, "Chiqaring" to 8)
+@Composable
+private fun breathPhases(): List<Pair<String, Int>> = strings.mind.let {
+    val t = strings.mind
+    listOf(it.breathIn to 4, it.breathHold to 7, it.breathOut to 8)
+}
 
 /**
  * The running practice, as a sheet over the tab.
@@ -349,6 +374,7 @@ internal fun PracticeSheet(
     onFinish: (seconds: Int) -> Unit,
     onDismiss: () -> Unit,
 ) {
+    val t = strings.mind
     val c = Sadora.colors
     // Kept mounted through the exit animation so the sheet does not blank as it closes.
     val last = remember { mutableStateOf<Practice?>(null) }
@@ -372,16 +398,16 @@ internal fun PracticeSheet(
         onDismiss = { if (elapsed > 0) onFinish(elapsed) else onDismiss() },
     ) {
         val isBreathing = shown?.kind == PracticeKind.Breathing
-        val cycle = breathPhases.sumOf { it.second }
+        val cycle = breathPhases().sumOf { it.second }
         val inCycle = elapsed % cycle
         var acc = 0
-        val (phaseLabel, phaseLeft) = breathPhases.firstNotNullOfOrNull { (label, secs) ->
+        val (phaseLabel, phaseLeft) = breathPhases().firstNotNullOfOrNull { (label, secs) ->
             val end = acc + secs
             val hit = inCycle < end
             val left = end - inCycle
             acc = end
             if (hit) label to left else null
-        } ?: ("Nafas oling" to 4)
+        } ?: (strings.mind.breathIn to 4)
 
         Column(
             Modifier.fillMaxWidth(),
@@ -402,21 +428,21 @@ internal fun PracticeSheet(
                         color = c.text,
                     )
                     Text(
-                        if (isBreathing) phaseLabel else "Xotirjam ong",
+                        if (isBreathing) phaseLabel else t.meditationSubtitle,
                         style = Sadora.type.body,
                         color = c.muted,
                     )
                 }
             }
             Text(
-                if (isBreathing) "4 soniya oling · 7 soniya ushlang · 8 soniya chiqaring" else "Ko'zingizni yuming va nafasingizni kuzating",
+                if (isBreathing) t.breathingHint else t.meditationHint,
                 style = Sadora.type.body,
                 color = c.muted,
                 textAlign = TextAlign.Center,
             )
             SadoraProgressBar(elapsed / total.toFloat(), gradient = true, height = 6.dp)
             SadoraButton(
-                if (elapsed > 0) "Tugatish" else "Yopish",
+                if (elapsed > 0) t.finish else t.close,
                 onClick = { if (elapsed > 0) onFinish(elapsed) else onDismiss() },
                 tone = ButtonTone.Secondary,
             )

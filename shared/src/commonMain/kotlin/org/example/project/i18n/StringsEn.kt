@@ -215,4 +215,77 @@ object StringsEn : Strings {
         override val startBody = "Mood, water or food — whichever is easiest to begin with."
         override val startAction = "Add your first entry"
     }
+
+    override val mind = object : MindStrings {
+        override val title = "Mind and mood"
+        override fun todayIs(date: String) = "Today · $date"
+
+        override val stress = "Stress"
+        override val energy = "Energy"
+        override val levels = listOf("Very low", "Low", "Moderate", "High", "Very high")
+
+        override val journal = "Journal"
+        override val journalPrompt = "How are you feeling?"
+        override val journalHint = "Write down your thoughts and feelings"
+
+        override val moodWeek = "Mood over 7 days"
+        override fun weekAverage(value: String) = "Average $value"
+
+        override val assistant = "Mind assistant"
+        override val assistantPremium = "Talk through how your mood and sleep connect"
+        override val assistantFree = "With Premium: a supportive conversation — not a therapist"
+        override val mood = "Mood"
+
+        override val breathing = "Breathing"
+        override val breathingPurpose = "Lower stress"
+        override val meditation = "Meditation"
+        override val meditationSubtitle = "A quiet mind"
+        override val meditationPurpose = "Rest"
+        override val fourSevenEight = "4-7-8"
+        override fun practiceMeta(minutes: Int, purpose: String) = "$minutes min • $purpose"
+        override val start = "Start"
+
+        override val breathIn = "Breathe in"
+        override val breathHold = "Hold"
+        override val breathOut = "Breathe out"
+        override val breathingHint = "In for 4 · hold for 7 · out for 8"
+        override val meditationHint = "Close your eyes and follow your breath"
+        override val finish = "Finish"
+        override val close = "Close"
+    }
+
+    override val nutrition = object : NutritionStrings {
+        override val title = "Nutrition"
+        override val insights = "Insights"
+        override val meals = "Meals"
+        override val addMeal = "Add a meal"
+        override val emptyTitle = "Nothing eaten recorded today"
+        override val emptyBody = "Add your first dish — calories and macros will add up here."
+
+        override val water = "Water"
+        override fun waterOfGoal(drunk: String, goal: String) = "$drunk l / $goal l"
+        override fun addWater(ml: Int) = "+$ml ml"
+
+        override val aiAnalysis = "AI analysis"
+        override val aiBasis = "Worked out from today's numbers"
+        override val scanner = "Food scanner"
+        override val scannerHint = "Point the camera — the dish, portion and macros are estimated"
+        override val balance = "Balance"
+        override val balanceHint = "Food, water, activity and sleep — four directions"
+
+        override val today = "Today"
+        override val protein = "Protein"
+        override val fat = "Fat"
+        override val carbs = "Carbs"
+        override val proteinInline = "protein"
+        override val fatInline = "fat"
+        override val carbsInline = "carbohydrate"
+
+        override fun balanced(kcalLeft: Int) =
+            "Macros are balanced today. A light dish covers the remaining $kcalLeft kcal."
+        override fun shortOf(macro: String) =
+            "Today is shortest on $macro. Keep that in mind at your next meal."
+        override fun kcal(value: Int) = "$value kcal"
+        override fun grams(value: Int) = "$value g"
+    }
 }

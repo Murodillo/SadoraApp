@@ -28,6 +28,8 @@ interface Strings {
     val settings: SettingsStrings
     val common: CommonStrings
     val today: TodayStrings
+    val mind: MindStrings
+    val nutrition: NutritionStrings
 }
 
 /**
@@ -209,4 +211,78 @@ interface SettingsStrings {
     /** Said once above the list: the app changes language immediately, nothing else does. */
     val languageNote: String
     val languageSaveFailed: String
+}
+
+interface MindStrings {
+    val title: String
+    fun todayIs(date: String): String
+
+    val stress: String
+    val energy: String
+    /** The five rungs of a dial, from lowest to highest. */
+    val levels: List<String>
+
+    val journal: String
+    val journalPrompt: String
+    val journalHint: String
+
+    val moodWeek: String
+    fun weekAverage(value: String): String
+
+    val assistant: String
+    val assistantPremium: String
+    val assistantFree: String
+    val mood: String
+
+    val breathing: String
+    val breathingPurpose: String
+    val meditation: String
+    val meditationSubtitle: String
+    val meditationPurpose: String
+    val fourSevenEight: String
+    fun practiceMeta(minutes: Int, purpose: String): String
+    val start: String
+
+    /** The three phases of 4-7-8, in order. */
+    val breathIn: String
+    val breathHold: String
+    val breathOut: String
+    val breathingHint: String
+    val meditationHint: String
+    val finish: String
+    val close: String
+}
+
+interface NutritionStrings {
+    val title: String
+    val insights: String
+    val meals: String
+    val addMeal: String
+    val emptyTitle: String
+    val emptyBody: String
+
+    val water: String
+    fun waterOfGoal(drunk: String, goal: String): String
+    fun addWater(ml: Int): String
+
+    val aiAnalysis: String
+    val aiBasis: String
+    val scanner: String
+    val scannerHint: String
+    val balance: String
+    val balanceHint: String
+
+    val today: String
+    val protein: String
+    val fat: String
+    val carbs: String
+    /** The macro named inside a sentence, which several languages inflect. */
+    val proteinInline: String
+    val fatInline: String
+    val carbsInline: String
+
+    fun balanced(kcalLeft: Int): String
+    fun shortOf(macro: String): String
+    fun kcal(value: Int): String
+    fun grams(value: Int): String
 }

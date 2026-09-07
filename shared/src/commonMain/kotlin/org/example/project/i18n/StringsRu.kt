@@ -218,4 +218,77 @@ object StringsRu : Strings {
         override val startBody = "Настроение, вода или еда — с чего вам удобнее начать."
         override val startAction = "Добавить первую отметку"
     }
+
+    override val mind = object : MindStrings {
+        override val title = "Состояние и настроение"
+        override fun todayIs(date: String) = "Сегодня · $date"
+
+        override val stress = "Стресс"
+        override val energy = "Энергия"
+        override val levels = listOf("Очень низкий", "Низкий", "Средний", "Высокий", "Очень высокий")
+
+        override val journal = "Дневник"
+        override val journalPrompt = "Как вы себя чувствуете?"
+        override val journalHint = "Запишите мысли и чувства"
+
+        override val moodWeek = "Настроение за 7 дней"
+        override fun weekAverage(value: String) = "В среднем $value"
+
+        override val assistant = "Помощник по состоянию"
+        override val assistantPremium = "Поговорите о связи настроения и сна"
+        override val assistantFree = "В Premium: поддерживающий разговор — не терапевт"
+        override val mood = "Настроение"
+
+        override val breathing = "Дыхание"
+        override val breathingPurpose = "Снизить стресс"
+        override val meditation = "Медитация"
+        override val meditationSubtitle = "Спокойный ум"
+        override val meditationPurpose = "Отдых"
+        override val fourSevenEight = "4-7-8"
+        override fun practiceMeta(minutes: Int, purpose: String) = "$minutes мин • $purpose"
+        override val start = "Начать"
+
+        override val breathIn = "Вдохните"
+        override val breathHold = "Задержите"
+        override val breathOut = "Выдохните"
+        override val breathingHint = "4 секунды вдох · 7 задержка · 8 выдох"
+        override val meditationHint = "Закройте глаза и следите за дыханием"
+        override val finish = "Завершить"
+        override val close = "Закрыть"
+    }
+
+    override val nutrition = object : NutritionStrings {
+        override val title = "Питание"
+        override val insights = "Аналитика"
+        override val meals = "Приёмы пищи"
+        override val addMeal = "Добавить приём пищи"
+        override val emptyTitle = "Сегодня приёмов пищи ещё нет"
+        override val emptyBody = "Добавьте первое блюдо — калории и макросы соберутся здесь."
+
+        override val water = "Вода"
+        override fun waterOfGoal(drunk: String, goal: String) = "$drunk л / $goal л"
+        override fun addWater(ml: Int) = "+$ml мл"
+
+        override val aiAnalysis = "Анализ ИИ"
+        override val aiBasis = "Рассчитано по вашим сегодняшним данным"
+        override val scanner = "Сканер еды"
+        override val scannerHint = "Наведите камеру — блюдо, порция и макросы определятся примерно"
+        override val balance = "Баланс"
+        override val balanceHint = "Еда, вода, активность и сон — четыре направления"
+
+        override val today = "Сегодня"
+        override val protein = "Белки"
+        override val fat = "Жиры"
+        override val carbs = "Углеводы"
+        override val proteinInline = "белка"
+        override val fatInline = "жиров"
+        override val carbsInline = "углеводов"
+
+        override fun balanced(kcalLeft: Int) =
+            "Макросы сегодня в балансе. На оставшиеся $kcalLeft ккал хватит лёгкого блюда."
+        override fun shortOf(macro: String) =
+            "Сегодня больше всего не хватает $macro. Обратите на это внимание в следующем приёме."
+        override fun kcal(value: Int) = "$value ккал"
+        override fun grams(value: Int) = "$value г"
+    }
 }

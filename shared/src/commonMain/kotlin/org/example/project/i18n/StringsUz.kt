@@ -216,4 +216,77 @@ object StringsUz : Strings {
         override val startBody = "Kayfiyat, suv yoki ovqat — qaysi biridan boshlash sizga qulay bo'lsa."
         override val startAction = "Birinchi belgini qo'shish"
     }
+
+    override val mind = object : MindStrings {
+        override val title = "Ong va kayfiyat"
+        override fun todayIs(date: String) = "Bugun · $date"
+
+        override val stress = "Stress"
+        override val energy = "Energiya"
+        override val levels = listOf("Juda past", "Past", "O'rtacha", "Yuqori", "Juda yuqori")
+
+        override val journal = "Jurnal"
+        override val journalPrompt = "O'zingizni qanday his qilyapsiz?"
+        override val journalHint = "Fikr va his-tuyg'ularingizni yozing"
+
+        override val moodWeek = "7 kunlik kayfiyat"
+        override fun weekAverage(value: String) = "O'rtacha $value"
+
+        override val assistant = "Ong yordamchisi"
+        override val assistantPremium = "Kayfiyat va uyqu bog'liqliklari haqida suhbatlashing"
+        override val assistantFree = "Premium'da: qo'llab-quvvatlovchi suhbat — terapevt emas"
+        override val mood = "Kayfiyat"
+
+        override val breathing = "Nafas"
+        override val breathingPurpose = "Stressni kamaytirish"
+        override val meditation = "Meditatsiya"
+        override val meditationSubtitle = "Xotirjam ong"
+        override val meditationPurpose = "Dam olish"
+        override val fourSevenEight = "4-7-8"
+        override fun practiceMeta(minutes: Int, purpose: String) = "$minutes daq • $purpose"
+        override val start = "Boshlash"
+
+        override val breathIn = "Nafas oling"
+        override val breathHold = "Ushlab turing"
+        override val breathOut = "Chiqaring"
+        override val breathingHint = "4 soniya oling · 7 soniya ushlang · 8 soniya chiqaring"
+        override val meditationHint = "Ko'zingizni yuming va nafasingizni kuzating"
+        override val finish = "Tugatish"
+        override val close = "Yopish"
+    }
+
+    override val nutrition = object : NutritionStrings {
+        override val title = "Ovqatlanish"
+        override val insights = "Tahlillar"
+        override val meals = "Ovqatlar"
+        override val addMeal = "Ovqat qo'shish"
+        override val emptyTitle = "Bugun hali ovqat qayd etilmagan"
+        override val emptyBody = "Birinchi taomni qo'shing — kaloriya va makrolar shu yerda yig'iladi."
+
+        override val water = "Suv"
+        override fun waterOfGoal(drunk: String, goal: String) = "$drunk l / $goal l"
+        override fun addWater(ml: Int) = "+$ml ml"
+
+        override val aiAnalysis = "AI tahlili"
+        override val aiBasis = "Bugungi ko'rsatkichlaringiz asosida hisoblandi"
+        override val scanner = "Ovqat skaneri"
+        override val scannerHint = "Kamerani yo'naltiring — taom, porsiya va makrolar taxminan aniqlanadi"
+        override val balance = "Balans"
+        override val balanceHint = "Ovqat, suv, faollik va uyqu — to'rt yo'nalish"
+
+        override val today = "Bugun"
+        override val protein = "Oqsil"
+        override val fat = "Yog'"
+        override val carbs = "Uglevod"
+        override val proteinInline = "oqsil"
+        override val fatInline = "yog'"
+        override val carbsInline = "uglevod"
+
+        override fun balanced(kcalLeft: Int) =
+            "Makrolar bugun muvozanatda. Qolgan $kcalLeft kkal uchun yengil taom yetarli."
+        override fun shortOf(macro: String) =
+            "Bugun eng ko'p yetishmayotgani — $macro. Keyingi taomda shunga e'tibor bering."
+        override fun kcal(value: Int) = "$value kkal"
+        override fun grams(value: Int) = "$value g"
+    }
 }
