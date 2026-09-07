@@ -25,6 +25,9 @@ import org.example.project.design.Radius
 import org.example.project.design.Sadora
 import org.example.project.design.SadoraIcons
 import org.example.project.design.Spacing
+import org.example.project.i18n.CommonStrings
+import org.example.project.i18n.TodayStrings
+import org.example.project.i18n.strings
 import org.example.project.model.AppState
 import org.example.project.model.CyclePhase
 import org.example.project.model.Fmt
@@ -67,9 +70,10 @@ fun TodayScreen(
     modifier: Modifier = Modifier,
     isLoading: Boolean = false,
 ) {
+    val t = strings.today
     Column(modifier) {
         GreetingHeader(
-            greeting = "${greetingFor(deviceNow().hour)} — bugun o'zingizga g'amxo'rlik qilish uchun ajoyib kun 🌸",
+            greeting = t.greetingLine(strings.common.greeting(deviceNow().hour)),
             name = state.name,
             onAvatarClick = { onOpen(Route.PersonalDetails) },
             onNotificationsClick = { onOpen(Route.Notifications) },
@@ -93,14 +97,14 @@ fun TodayScreen(
                 Box(Modifier.appearFromBelow(0)) {
                     if (state.isPremium) {
                         AiSummaryCard(
-                            body = premiumSummary(state),
+                            body = premiumSummary(state, t),
                             showPremiumBadge = true,
-                            footnote = "Ma'lumotlaringiz asosida · AI tomonidan yaratilgan",
+                            footnote = t.aiFootnote,
                             onClick = { onOpen(state.aiRoute()) },
                         )
                     } else {
                         AiSummaryCard(
-                            body = "Salomatlik va kayfiyat haqida istalgan savolingizni bering",
+                            body = t.aiFreePrompt,
                             onClick = { onOpen(state.aiRoute()) },
                         )
                     }
@@ -153,6 +157,7 @@ fun TodayScreen(
  */
 @Composable
 private fun StageCard(state: AppState, onOpen: () -> Unit) {
+    val t = strings.today
     val c = Sadora.colors
     val stage = state.lifeStage
     val cycle = stage.predictsCycle
@@ -183,15 +188,15 @@ private fun StageCard(state: AppState, onOpen: () -> Unit) {
                         // The eyebrow above already names the stage; the headline says
                         // what it is about.
                         !cycle -> stage.subtitle
-                        !state.hasCyclePrediction -> "Prognoz uchun ma'lumot yetarli emas"
+                        !state.hasCyclePrediction -> t.notEnoughForPrediction
                         else -> phase.label
                     },
                     style = Sadora.type.h2,
                     color = c.text,
                 )
                 val caption = when {
-                    cycle -> "Kun ${state.cycleDay} / ${state.averageCycleLength}"
-                    stage == LifeStage.Pregnancy || stage == LifeStage.Postpartum -> "$weeks-hafta"
+                    cycle -> t.cycleDayOf(state.cycleDay, state.averageCycleLength)
+                    stage == LifeStage.Pregnancy || stage == LifeStage.Postpartum -> t.pregnancyWeek(weeks)
                     else -> stage.subtitle
                 }
                 Text(caption, style = Sadora.type.body, color = c.muted)
@@ -222,20 +227,21 @@ internal fun CyclePhase.color() = when (this) {
     CyclePhase.Luteal -> PhaseColors.luteal
 }
 
-/** "Tezkor amallar" — the four shortcuts under the grid. */
+/** t.quickActions — the four shortcuts under the grid. */
 @Composable
 private fun QuickActions(onOpen: (Route) -> Unit, onSelectTab: (Tab) -> Unit) {
+    val t = strings.today
     val c = Sadora.colors
     SadoraCard {
-        Text("Tezkor amallar", style = Sadora.type.h3, color = c.text)
+        Text(t.quickActions, style = Sadora.type.h3, color = c.text)
         Row(
             Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
         ) {
-            QuickAction(SadoraIcons.Document, "Jurnal", Modifier.weight(1f)) { onOpen(Route.MindJournal) }
-            QuickAction(SadoraIcons.Meditation, "Meditatsiya", Modifier.weight(1f)) { onSelectTab(Tab.Mind) }
-            QuickAction(SadoraIcons.Wind, "Nafas", Modifier.weight(1f)) { onSelectTab(Tab.Mind) }
-            QuickAction(SadoraIcons.Bell, "Eslatmalar", Modifier.weight(1f)) { onOpen(Route.Medications) }
+            QuickAction(SadoraIcons.Document, t.journal, Modifier.weight(1f)) { onOpen(Route.MindJournal) }
+            QuickAction(SadoraIcons.Meditation, t.meditation, Modifier.weight(1f)) { onSelectTab(Tab.Mind) }
+            QuickAction(SadoraIcons.Wind, t.breathing, Modifier.weight(1f)) { onSelectTab(Tab.Mind) }
+            QuickAction(SadoraIcons.Bell, t.reminders, Modifier.weight(1f)) { onOpen(Route.Medications) }
         }
     }
 }
@@ -247,6 +253,7 @@ private fun QuickAction(
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
+    val t = strings.today
     val c = Sadora.colors
     Column(
         modifier.noRippleClickable(onClick = onClick),
@@ -270,33 +277,33 @@ private fun QuickAction(
  */
 @Composable
 private fun RuleSummaryCard(state: AppState) {
+    val t = strings.today
     val c = Sadora.colors
     SadoraCard {
-        Text("Bugungi xulosa", style = Sadora.type.h3, color = c.text)
-        Text(ruleSummary(state), style = Sadora.type.body, color = c.muted)
+        Text(t.summary, style = Sadora.type.h3, color = c.text)
+        Text(ruleSummary(state, t, strings.common), style = Sadora.type.body, color = c.muted)
     }
 }
 
 /** Plain arithmetic over today's numbers — no model, no guessing. */
-internal fun ruleSummary(state: AppState): String {
+internal fun ruleSummary(state: AppState, t: TodayStrings, common: CommonStrings): String {
     val lines = mutableListOf<String>()
     if (state.lifeStage.predictsCycle && state.hasCyclePrediction) {
-        lines += "Sikl ${state.cycleDay}-kuni — ${state.currentPhase().label.lowercase()}."
+        lines += t.phaseSentence(state.cycleDay, common.phase(state.currentPhase()).lowercase())
     }
     val remaining = state.waterRemainingMl
-    lines += if (remaining > 0) "Suv: yana $remaining ml ichish kerak." else "Suv maqsadi bajarildi."
+    lines += if (remaining > 0) t.waterRemaining(remaining) else t.waterGoalMet
     val pending = state.medications.firstOrNull { it.status == MedStatus.Pending }
-    if (pending != null) lines += "${pending.name} — ${pending.time} da."
+    if (pending != null) lines += t.doseDue(pending.name, pending.time)
     return lines.joinToString(" ")
 }
 
 /** What the Premium card says on Today. Stands in for the AI daily summary. */
-private fun premiumSummary(state: AppState): String =
-    "Kecha ${state.sleepLabel()} uxlagansiz va energiyangiz ${if (state.energy >= 4) "yaxshi" else "odatdagidan pastroq"}. " +
-        "Bugun suvni ko'proq iching va yengil yurishni rejalashtiring."
+private fun premiumSummary(state: AppState, t: TodayStrings): String =
+    t.sleptAndEnergy(state.sleepLabel(), state.energy >= 4) + " " + t.generalAdvice
 
 /**
- * "Bugungi reja" — the deck's checklist of what today still asks for.
+ * t.plan — the deck's checklist of what today still asks for.
  *
  * Built from the doses that have not been taken and, once those are done, the water
  * that is still short of the goal. When there is nothing left the card says so rather
@@ -308,6 +315,7 @@ private fun TodayPlanCard(
     onOpenMedications: () -> Unit,
     onAddWater: () -> Unit,
 ) {
+    val t = strings.today
     val c = Sadora.colors
     val pending = state.medications.filter { it.status == MedStatus.Pending }
     val waterLeft = state.waterRemainingMl
@@ -318,7 +326,7 @@ private fun TodayPlanCard(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
-            Text("Bugungi reja", style = Sadora.type.h3, color = c.text)
+            Text(t.plan, style = Sadora.type.h3, color = c.text)
             // "0 / 0" on an account with no medications reads as a failure rather than
             // as nothing to count.
             if (state.dosesDue > 0) {
@@ -338,7 +346,7 @@ private fun TodayPlanCard(
                     caption = med.note,
                     time = med.time,
                     tint = c.secondary,
-                    actionText = "Qabul qildim",
+                    actionText = t.taken,
                     onAction = { state.markMedicationTaken(med.id) },
                     onClick = onOpenMedications,
                 )
@@ -348,10 +356,10 @@ private fun TodayPlanCard(
                 PlanRow(
                     emoji = "\uD83D\uDCA7",
                     title = "Suv",
-                    caption = "yana $waterLeft ml",
+                    caption = t.waterLeft(waterLeft),
                     time = null,
                     tint = c.accent,
-                    actionText = "+250 ml",
+                    actionText = t.addWater(250),
                     onAction = onAddWater,
                     onClick = onAddWater,
                 )
@@ -372,6 +380,7 @@ private fun PlanRow(
     onAction: () -> Unit,
     onClick: () -> Unit,
 ) {
+    val t = strings.today
     val c = Sadora.colors
     Row(
         Modifier.fillMaxWidth().noRippleClickable(onClick = onClick),
@@ -393,7 +402,7 @@ private fun PlanRow(
 }
 
 /**
- * "Salomatlik ko'rsatkichi" — the deck's score ring with the day's four signals beside it.
+ * t.healthScore — the deck's score ring with the day's four signals beside it.
  *
  * The number is plain arithmetic over what the app already knows (see [healthScore]),
  * and the four tiles next to it are exactly the four inputs, so the score is never a
@@ -407,6 +416,7 @@ private fun HealthScoreCard(
     onOpenBalance: () -> Unit,
     onOpenSleep: () -> Unit,
 ) {
+    val t = strings.today
     val c = Sadora.colors
     val score = healthScore(state)
     val tint = when {
@@ -416,7 +426,7 @@ private fun HealthScoreCard(
     }
 
     SadoraCard {
-        Text("Salomatlik ko'rsatkichi", style = Sadora.type.body, color = c.muted)
+        Text(t.healthScore, style = Sadora.type.body, color = c.muted)
         Row(
             Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
@@ -431,17 +441,17 @@ private fun HealthScoreCard(
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     AnimatedNumber(score, Sadora.type.h1, c.text)
-                    Text(scoreLabel(score), style = Sadora.type.body, color = c.muted, maxLines = 1)
+                    Text(t.scoreWord(score), style = Sadora.type.body, color = c.muted, maxLines = 1)
                 }
             }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-                    SignalTile("Uyqu", state.sleepLabel(), Modifier.weight(1f), onClick = onOpenSleep)
-                    SignalTile("Kayfiyat", state.mood.label, Modifier.weight(1f), emoji = state.mood.emoji, onClick = onOpenMind)
+                    SignalTile(t.sleep, state.sleepLabel(), Modifier.weight(1f), onClick = onOpenSleep)
+                    SignalTile(t.mood, state.mood.label, Modifier.weight(1f), emoji = state.mood.emoji, onClick = onOpenMind)
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-                    SignalTile("Suv", "${Fmt.litres(state.waterMl)} l", Modifier.weight(1f), onClick = onAddWater)
-                    SignalTile("Qadam", Fmt.int(state.steps), Modifier.weight(1f), onClick = onOpenBalance)
+                    SignalTile(t.water, "${Fmt.litres(state.waterMl)} ${strings.common.litres}", Modifier.weight(1f), onClick = onAddWater)
+                    SignalTile(t.steps, Fmt.int(state.steps), Modifier.weight(1f), onClick = onOpenBalance)
                 }
             }
         }
@@ -457,6 +467,7 @@ private fun SignalTile(
     emoji: String? = null,
     onClick: () -> Unit,
 ) {
+    val t = strings.today
     val c = Sadora.colors
     Column(
         modifier
@@ -506,12 +517,7 @@ internal fun healthScore(state: AppState): Int {
 private const val SleepGoalMinutes = 480
 private const val StepGoal = 8000
 
-private fun scoreLabel(score: Int): String = when {
-    score >= 80 -> "Ajoyib"
-    score >= 60 -> "Yaxshi"
-    score >= 40 -> "O'rtacha"
-    else -> "Past"
-}
+
 
 /**
  * Empty Today — a brand-new account with nothing logged yet.
@@ -521,25 +527,25 @@ private fun scoreLabel(score: Int): String = when {
  */
 @Composable
 private fun TodayEmpty(onStart: () -> Unit) {
+    val t = strings.today
     val c = Sadora.colors
     Column(
         Modifier.fillMaxWidth().padding(horizontal = Spacing.screen),
         verticalArrangement = Arrangement.spacedBy(Spacing.sm),
     ) {
         SadoraCard {
-            Text("Bugungi xulosa", style = Sadora.type.h3, color = c.text)
+            Text(t.emptySummaryTitle, style = Sadora.type.h3, color = c.text)
             Text(
-                "Hozircha ma'lumot yo'q. Birinchi belgini qo'shsangiz, bu yerda kunlik " +
-                    "xulosa va grafiklar paydo bo'ladi.",
+                t.emptySummaryBody,
                 style = Sadora.type.body,
                 color = c.muted,
             )
         }
 
         EmptyState(
-            title = "Bugundan boshlaymizmi?",
-            body = "Kayfiyat, suv yoki ovqat — qaysi biridan boshlash sizga qulay bo'lsa.",
-            actionText = "Birinchi belgini qo'shish",
+            title = t.startTitle,
+            body = t.startBody,
+            actionText = t.startAction,
             onAction = onStart,
         )
     }
@@ -548,6 +554,7 @@ private fun TodayEmpty(onStart: () -> Unit) {
 /** First-load skeleton — the design's fourth Today state. */
 @Composable
 private fun TodaySkeleton() {
+    val t = strings.today
     Column(
         Modifier.fillMaxWidth().padding(horizontal = Spacing.screen),
         verticalArrangement = Arrangement.spacedBy(Spacing.sm),

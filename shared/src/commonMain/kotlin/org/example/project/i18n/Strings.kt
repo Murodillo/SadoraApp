@@ -1,6 +1,8 @@
 package org.example.project.i18n
 
+import org.example.project.model.CyclePhase
 import org.example.project.model.LifeStage
+import org.example.project.model.Mood
 
 /**
  * Every string the app shows, grouped by the screen that shows it.
@@ -24,6 +26,90 @@ interface Strings {
     val onboarding: OnboardingStrings
     val profile: ProfileStrings
     val settings: SettingsStrings
+    val common: CommonStrings
+    val today: TodayStrings
+}
+
+/**
+ * Words several screens share, and the labels the domain enums used to carry.
+ *
+ * A label on an enum cannot be translated — the enum is one object for the whole
+ * process, and the language is a property of the screen reading it. So the enums keep
+ * their identity and the words live here, looked up by the value.
+ */
+interface CommonStrings {
+    /** "Xayrli tong" / "Xayrli kun" / "Xayrli kech", by the hour of the day. */
+    fun greeting(hour: Int): String
+
+    fun mood(mood: Mood): String
+
+    /** The line under the face: what the app says back about that mood. */
+    fun moodCaption(mood: Mood): String
+
+    fun phase(phase: CyclePhase): String
+    fun phaseFertility(phase: CyclePhase): String
+    fun phaseEnergy(phase: CyclePhase): String
+
+    val save: String
+    val cancel: String
+    val delete: String
+    val close: String
+    val add: String
+    val edit: String
+    val done: String
+
+    /** "1,2 l" — the unit, not the number, which [org.example.project.model.Fmt] makes. */
+    val litres: String
+    val millilitres: String
+    val kcal: String
+    val steps: String
+    val minutesShort: String
+    fun days(count: Int): String
+}
+
+interface TodayStrings {
+    /** The header line: the greeting, then the app's own sentence about the day. */
+    fun greetingLine(greeting: String): String
+
+    val aiFootnote: String
+    val aiFreePrompt: String
+
+    val cycleCard: String
+    val notEnoughForPrediction: String
+    fun cycleDayOf(day: Int, length: Int): String
+    fun pregnancyWeek(week: Int): String
+
+    val quickActions: String
+    val journal: String
+    val meditation: String
+    val breathing: String
+    val reminders: String
+
+    val summary: String
+    fun phaseSentence(day: Int, phase: String): String
+    fun waterRemaining(ml: Int): String
+    val waterGoalMet: String
+    fun doseDue(name: String, time: String): String
+    fun sleptAndEnergy(sleep: String, energyIsHigh: Boolean): String
+    val generalAdvice: String
+
+    val plan: String
+    val taken: String
+    val water: String
+    fun waterLeft(ml: Int): String
+    fun addWater(ml: Int): String
+
+    val healthScore: String
+    val sleep: String
+    val mood: String
+    val steps: String
+    fun scoreWord(score: Int): String
+
+    val emptySummaryTitle: String
+    val emptySummaryBody: String
+    val startTitle: String
+    val startBody: String
+    val startAction: String
 }
 
 /**

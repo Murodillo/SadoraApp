@@ -5,7 +5,9 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 import org.example.project.model.AppLanguage
+import org.example.project.model.CyclePhase
 import org.example.project.model.LifeStage
+import org.example.project.model.Mood
 
 /**
  * The interface already guarantees that every language answers every string — that is
@@ -55,6 +57,27 @@ class StringsTest {
         with(t.settings) {
             addAll(listOf(aboutTitle, version("1.0.0"), languageTitle, languageNote, languageSaveFailed))
         }
+        with(t.common) {
+            addAll(listOf(0, 9, 13, 21).map { greeting(it) })
+            Mood.entries.forEach { add(mood(it)); add(moodCaption(it)) }
+            CyclePhase.entries.forEach { add(phase(it)); add(phaseFertility(it)); add(phaseEnergy(it)) }
+            addAll(listOf(save, cancel, delete, close, add, edit, done))
+            addAll(listOf(litres, millilitres, kcal, steps, minutesShort, days(3)))
+        }
+        with(t.today) {
+            addAll(
+                listOf(
+                    greetingLine("X"), aiFootnote, aiFreePrompt, cycleCard, notEnoughForPrediction,
+                    cycleDayOf(10, 28), pregnancyWeek(26), quickActions, journal, meditation,
+                    breathing, reminders, summary, phaseSentence(10, "x"), waterRemaining(250),
+                    waterGoalMet, doseDue("X", "09:00"), sleptAndEnergy("6s", true),
+                    sleptAndEnergy("6s", false), generalAdvice, plan, taken, water,
+                    waterLeft(250), addWater(250), healthScore, sleep, mood, steps,
+                    scoreWord(90), scoreWord(70), scoreWord(50), scoreWord(10),
+                    emptySummaryTitle, emptySummaryBody, startTitle, startBody, startAction,
+                ),
+            )
+        }
     }
 
     @Test
@@ -100,6 +123,10 @@ class StringsTest {
             assertNotEquals(StringsUz.settings.languageNote, t.settings.languageNote)
             assertNotEquals(StringsUz.onboarding.languageTitle, t.onboarding.languageTitle)
             assertNotEquals(StringsUz.stages.title(LifeStage.Cycle), t.stages.title(LifeStage.Cycle))
+            assertNotEquals(StringsUz.common.greeting(9), t.common.greeting(9))
+            assertNotEquals(StringsUz.common.moodCaption(Mood.Great), t.common.moodCaption(Mood.Great))
+            assertNotEquals(StringsUz.today.generalAdvice, t.today.generalAdvice)
+            assertNotEquals(StringsUz.today.startBody, t.today.startBody)
         }
     }
 

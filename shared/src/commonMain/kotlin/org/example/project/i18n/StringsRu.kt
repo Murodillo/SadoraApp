@@ -1,6 +1,8 @@
 package org.example.project.i18n
 
+import org.example.project.model.CyclePhase
 import org.example.project.model.LifeStage
+import org.example.project.model.Mood
 
 /**
  * Русский. Translated from [StringsUz], not from English.
@@ -102,5 +104,118 @@ object StringsRu : Strings {
         override val languageNote = "Язык приложения меняется сразу. Ответы AI пока только " +
             "на узбекском."
         override val languageSaveFailed = "Язык не сохранён — попробуйте позже."
+    }
+
+    override val common = object : CommonStrings {
+        override fun greeting(hour: Int) = when (hour) {
+            in 5..11 -> "Доброе утро"
+            in 12..17 -> "Добрый день"
+            else -> "Добрый вечер"
+        }
+
+        override fun mood(mood: Mood) = when (mood) {
+            Mood.Bad -> "Тяжело"
+            Mood.Low -> "Вяло"
+            Mood.Ok -> "Нормально"
+            Mood.Good -> "Спокойно"
+            Mood.Great -> "Отлично"
+        }
+
+        override fun moodCaption(mood: Mood) = when (mood) {
+            Mood.Bad -> "Будьте сегодня добрее к себе."
+            Mood.Low -> "День помедленнее — это тоже нормально."
+            Mood.Ok -> "Обычный день для равновесия."
+            Mood.Good -> "Хороший день для равновесия."
+            Mood.Great -> "Энергии много — воспользуйтесь этим!"
+        }
+
+        override fun phase(phase: CyclePhase) = when (phase) {
+            CyclePhase.Period -> "Менструация"
+            CyclePhase.Follicular -> "Фолликулярная"
+            CyclePhase.Fertile -> "Овуляция"
+            CyclePhase.Luteal -> "Лютеиновая"
+        }
+
+        override fun phaseFertility(phase: CyclePhase) = when (phase) {
+            CyclePhase.Period -> "Вероятность зачатия низкая"
+            CyclePhase.Follicular -> "Вероятность зачатия растёт"
+            CyclePhase.Fertile -> "Вероятность зачатия высокая"
+            CyclePhase.Luteal -> "Вероятность зачатия снижается"
+        }
+
+        override fun phaseEnergy(phase: CyclePhase) = when (phase) {
+            CyclePhase.Period -> "Тело отдыхает — будьте к себе мягче."
+            CyclePhase.Follicular -> "Энергия растёт — удачное время для нового."
+            CyclePhase.Fertile -> "Энергия на пике — используйте активные дни."
+            CyclePhase.Luteal -> "Энергия постепенно спадает — оставьте место для отдыха."
+        }
+
+        override val save = "Сохранить"
+        override val cancel = "Отмена"
+        override val delete = "Удалить"
+        override val close = "Закрыть"
+        override val add = "Добавить"
+        override val edit = "Изменить"
+        override val done = "Готово"
+
+        override val litres = "л"
+        override val millilitres = "мл"
+        override val kcal = "ккал"
+        override val steps = "шагов"
+        override val minutesShort = "мин"
+        override fun days(count: Int) = "$count дн."
+    }
+
+    override val today = object : TodayStrings {
+        override fun greetingLine(greeting: String) =
+            "$greeting — отличный день, чтобы позаботиться о себе 🌸"
+
+        override val aiFootnote = "На основе ваших данных · создано ИИ"
+        override val aiFreePrompt = "Задайте любой вопрос о здоровье и самочувствии"
+
+        override val cycleCard = "Цикл"
+        override val notEnoughForPrediction = "Данных для прогноза недостаточно"
+        override fun cycleDayOf(day: Int, length: Int) = "День $day / $length"
+        override fun pregnancyWeek(week: Int) = "$week-я неделя"
+
+        override val quickActions = "Быстрые действия"
+        override val journal = "Дневник"
+        override val meditation = "Медитация"
+        override val breathing = "Дыхание"
+        override val reminders = "Напоминания"
+
+        override val summary = "Итог дня"
+        override fun phaseSentence(day: Int, phase: String) = "$day-й день цикла — $phase."
+        override fun waterRemaining(ml: Int) = "Вода: осталось выпить $ml мл."
+        override val waterGoalMet = "Цель по воде достигнута."
+        override fun doseDue(name: String, time: String) = "$name — в $time."
+        override fun sleptAndEnergy(sleep: String, energyIsHigh: Boolean) =
+            "Вы спали $sleep, энергия " + (if (energyIsHigh) "хорошая" else "пониже") + "."
+        override val generalAdvice = "Сегодня пейте больше воды и запланируйте лёгкую прогулку."
+
+        override val plan = "План на сегодня"
+        override val taken = "Приняла"
+        override val water = "Вода"
+        override fun waterLeft(ml: Int) = "ещё $ml мл"
+        override fun addWater(ml: Int) = "+$ml мл"
+
+        override val healthScore = "Показатель здоровья"
+        override val sleep = "Сон"
+        override val mood = "Настроение"
+        override val steps = "Шаги"
+        override fun scoreWord(score: Int) = when {
+            score >= 80 -> "Отлично"
+            score >= 60 -> "Хорошо"
+            score >= 40 -> "Средне"
+            else -> "Низко"
+        }
+
+        override val emptySummaryTitle = "Итог дня"
+        override val emptySummaryBody =
+            "Пока данных нет. Добавьте первую отметку — и здесь появятся дневной итог " +
+                "и графики."
+        override val startTitle = "Начнём с сегодняшнего дня?"
+        override val startBody = "Настроение, вода или еда — с чего вам удобнее начать."
+        override val startAction = "Добавить первую отметку"
     }
 }
