@@ -100,7 +100,7 @@ fun SleepScreen(
                         CardLabel(
                             t.sleepWeek,
                             trailing = {
-                                week.averageLabel()?.let {
+                                week.averageLabel(strings.modules, strings.common)?.let {
                                     Text(t.average(it), style = Sadora.type.body, color = c.muted)
                                 }
                             },
@@ -154,7 +154,7 @@ private fun LastNightCard(minutes: Int, today: DailyHealth?) {
                 color = c.accent,
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(minutesLabel(minutes), style = Sadora.type.h2, color = c.text)
+                    Text(minutesLabel(minutes, strings.modules, strings.common), style = Sadora.type.h2, color = c.text)
                     Text(t.goalFrom(SleepGoalMinutes / 60), style = Sadora.type.body, color = c.muted)
                 }
             }
@@ -212,7 +212,7 @@ private fun stagesCard(today: DailyHealth?, totalMinutes: Int, t: ModuleStrings)
                             LegendDot(colour)
                             Text(label, style = Sadora.type.body, color = c.muted)
                         }
-                        Text(minutesLabel(value), style = Sadora.type.body, color = c.text)
+                        Text(minutesLabel(value, strings.modules, strings.common), style = Sadora.type.body, color = c.text)
                     }
                 }
             }

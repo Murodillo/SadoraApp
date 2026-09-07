@@ -44,6 +44,7 @@ import org.example.project.ui.components.SelectChip
 import org.example.project.ui.components.noRippleClickable
 import uz.sadora.contract.MealSlot
 import org.example.project.i18n.strings
+import org.example.project.model.Fmt
 
 /** Long enough that a fast typist sends one request, short enough to feel immediate. */
 private const val SearchDebounceMillis = 250L
@@ -75,6 +76,7 @@ fun FoodSearchScreen(
     slot: MealSlot = mealSlotForHour(deviceNow().hour),
 ) {
     val c = Sadora.colors
+    val t = strings.modules
     var query by remember { mutableStateOf("") }
     var tab by remember { mutableStateOf(0) }
     var selected by remember { mutableStateOf<FoodItem?>(null) }
@@ -99,12 +101,12 @@ fun FoodSearchScreen(
 
         ScreenContent {
             item {
-                SadoraSearchField(query, { query = it }, placeholder = "Taom qidirish")
+                SadoraSearchField(query, { query = it }, placeholder = t.searchFood)
             }
 
             item {
                 SegmentedControl(
-                    options = listOf("Barchasi", "Tez-tez", "Retseptlar"),
+                    options = listOf(t.searchTabAll, t.searchTabFrequent, t.searchTabRecipes),
                     selectedIndex = tab,
                     onSelect = { tab = it },
                 )
@@ -114,12 +116,12 @@ fun FoodSearchScreen(
                 item {
                     SadoraCard {
                         Text(
-                            if (query.isBlank()) "Taom nomini yozing" else "\"$query\" bo'yicha topilmadi",
+                            if (query.isBlank()) t.typeADishName else t.nothingFoundFor(query),
                             style = Sadora.type.h3,
                             color = c.text,
                         )
                         Text(
-                            "Katalog serverdan keladi — o'zbek taomlari birinchi o'rinda.",
+                            t.catalogueNote,
                             style = Sadora.type.body,
                             color = c.muted,
                         )
@@ -139,7 +141,7 @@ fun FoodSearchScreen(
             if (chosen != null) {
                 item {
                     SadoraCard {
-                        CardLabel("Porsiya")
+                        CardLabel(t.portionLabel)
                         Row(
                             Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically,
@@ -152,7 +154,7 @@ fun FoodSearchScreen(
                             ) {
                                 Text("$grams", style = Sadora.type.h1, color = c.text)
                                 Text(
-                                    if (chosen.perPiece) "dona × 100" else "gramm",
+                                    if (chosen.perPiece) t.pieces else t.grams,
                                     style = Sadora.type.body,
                                     color = c.muted,
                                 )
@@ -161,7 +163,7 @@ fun FoodSearchScreen(
                         }
                         // Quick presets sit next to the numeric stepper, not instead of it.
                         ChipFlowRow {
-                            listOf(100 to "100 g", 250 to "1 kosa", 500 to "2 kosa")
+                            listOf(100 to t.perHundredGrams, 250 to t.bowls(1), 500 to t.bowls(2))
                                 .forEach { (value, label) ->
                                     SelectChip(
                                         label = label,
@@ -180,9 +182,9 @@ fun FoodSearchScreen(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceBetween,
                         ) {
-                            Text("Jami", style = Sadora.type.h3, color = c.muted)
+                            Text(t.total, style = Sadora.type.h3, color = c.muted)
                             Text(
-                                "${(chosen.kcal * factor).roundToInt()} kkal",
+                                t.kcalValue(Fmt.int((chosen.kcal * factor).roundToInt())),
                                 style = Sadora.type.h1,
                                 color = c.text,
                             )
@@ -192,17 +194,17 @@ fun FoodSearchScreen(
                             horizontalArrangement = Arrangement.SpaceBetween,
                         ) {
                             Text(
-                                "O ${(chosen.protein * factor).roundToInt()}",
+                                "${t.proteinInitial} ${(chosen.protein * factor).roundToInt()}",
                                 style = Sadora.type.body,
                                 color = c.muted,
                             )
                             Text(
-                                "Y ${(chosen.fat * factor).roundToInt()}",
+                                "${t.fatInitial} ${(chosen.fat * factor).roundToInt()}",
                                 style = Sadora.type.body,
                                 color = c.muted,
                             )
                             Text(
-                                "U ${(chosen.carbs * factor).roundToInt()}",
+                                "${t.carbsInitial} ${(chosen.carbs * factor).roundToInt()}",
                                 style = Sadora.type.body,
                                 color = c.muted,
                             )
@@ -211,7 +213,7 @@ fun FoodSearchScreen(
                 }
 
                 item {
-                    SadoraButton("Kundalikka qo'shish", onClick = {
+                    SadoraButton(t.addToDiary, onClick = {
                         state.logMeal(
                             Meal(
                                 id = "search-${state.meals.size}",
@@ -234,6 +236,7 @@ fun FoodSearchScreen(
 
 @Composable
 private fun FoodRow(food: FoodItem, selected: Boolean, onClick: () -> Unit) {
+    val t = strings.modules
     val c = Sadora.colors
     SadoraCard(padding = Spacing.sm, onClick = onClick) {
         Row(
@@ -250,8 +253,11 @@ private fun FoodRow(food: FoodItem, selected: Boolean, onClick: () -> Unit) {
                     color = c.text,
                 )
                 Text(
-                    "${food.kcal} kkal / ${if (food.perPiece) "dona" else "100 g"} · " +
-                        "O ${food.protein} · Y ${food.fat} · U ${food.carbs}",
+                    t.kcalValue("${food.kcal}") + " / " +
+                        (if (food.perPiece) t.perPiece else t.perHundredGrams) +
+                        " · ${t.proteinInitial} ${food.protein}" +
+                        " · ${t.fatInitial} ${food.fat}" +
+                        " · ${t.carbsInitial} ${food.carbs}",
                     style = Sadora.type.body,
                     color = c.muted,
                 )

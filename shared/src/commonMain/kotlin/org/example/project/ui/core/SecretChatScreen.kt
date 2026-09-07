@@ -72,6 +72,7 @@ import org.example.project.i18n.strings
 @Composable
 private fun avatarTints(): List<Color> {
     val c = Sadora.colors
+    val t = strings.community
     return listOf(c.primary, c.secondary, c.accent, c.success)
 }
 
@@ -100,6 +101,7 @@ fun SecretChatScreen(
     modifier: Modifier = Modifier,
 ) {
     val c = Sadora.colors
+    val t = strings.community
     val share = rememberShareAction()
     val posts = state.visiblePosts()
 
@@ -110,7 +112,7 @@ fun SecretChatScreen(
     Box(modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {
             SadoraTopBar(
-                title = "Maxfiy chat",
+                title = t.title,
                 onBack = onClose,
                 trailing = {
                     Row(
@@ -129,7 +131,7 @@ fun SecretChatScreen(
                                     }
                             },
                         )
-                        RoundIconButton(SadoraIcons.Pencil, onClick = onCompose, contentDescription = "Yozish")
+                        RoundIconButton(SadoraIcons.Pencil, onClick = onCompose, contentDescription = t.compose)
                     }
                 },
             )
@@ -143,7 +145,7 @@ fun SecretChatScreen(
             ) {
                 CommunityTopic.entries.forEach { topic ->
                     SelectChip(
-                        label = topic.label,
+                        label = t.topic(topic),
                         selected = state.communityTopic == topic,
                         onClick = { state.communityTopic = topic },
                     )
@@ -184,7 +186,7 @@ fun SecretChatScreen(
                                 onLike = { state.toggleLike(post.id) },
                                 onSave = { state.toggleSaved(post.id) },
                                 onComment = { onOpenComments(post) },
-                                onShare = { share("${post.body}\n\nSADORA — Maxfiy chat") },
+                                onShare = { share("${post.body}\n\n" + t.shareSuffix) },
                                 onMore = { onOpenMenu(post) },
                             )
                         }
@@ -213,6 +215,7 @@ fun CommentsSheetContent(state: AppState, post: CommunityPost) {
 @Composable
 private fun SavedToggle(active: Boolean, count: Int, onClick: () -> Unit) {
     val c = Sadora.colors
+    val t = strings.community
     val tint by animateColorAsState(if (active) c.primary else c.muted, tween(220), label = "saved")
     Row(
         Modifier
@@ -224,7 +227,7 @@ private fun SavedToggle(active: Boolean, count: Int, onClick: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        Icon(SadoraIcons.Bookmark, contentDescription = "Saqlangan", Modifier.size(IconSize.md), tint = tint)
+        Icon(SadoraIcons.Bookmark, contentDescription = strings.community.saved, Modifier.size(IconSize.md), tint = tint)
         if (count > 0) Text("$count", style = Sadora.type.body, color = tint)
     }
 }
@@ -232,6 +235,7 @@ private fun SavedToggle(active: Boolean, count: Int, onClick: () -> Unit) {
 @Composable
 private fun EmptyFeed(saved: Boolean, onCompose: () -> Unit) {
     val c = Sadora.colors
+    val t = strings.community
     Column(
         Modifier.fillMaxSize().padding(Spacing.xl),
         verticalArrangement = Arrangement.Center,
@@ -250,7 +254,7 @@ private fun EmptyFeed(saved: Boolean, onCompose: () -> Unit) {
         }
         Spacer(Modifier.height(Spacing.md))
         Text(
-            if (saved) "Saqlangan post yo'q" else "Bu bo'limda hozircha post yo'q",
+            if (saved) t.nothingSaved else t.nothingHere,
             style = Sadora.type.h3,
             color = c.text,
             textAlign = TextAlign.Center,
@@ -258,9 +262,9 @@ private fun EmptyFeed(saved: Boolean, onCompose: () -> Unit) {
         Spacer(Modifier.height(Spacing.xxs))
         Text(
             if (saved) {
-                "Yoqqan postni belgilab qo'ying — u shu yerda turadi."
+                t.nothingSavedBody
             } else {
-                "Birinchi bo'lib yozing — savolingiz taxallus ostida chiqadi."
+                t.nothingHereBody
             },
             style = Sadora.type.body,
             color = c.muted,
@@ -268,7 +272,7 @@ private fun EmptyFeed(saved: Boolean, onCompose: () -> Unit) {
         )
         if (!saved) {
             Spacer(Modifier.height(Spacing.md))
-            SadoraButton("Yozish", onClick = onCompose, fillWidth = false)
+            SadoraButton(t.write, onClick = onCompose, fillWidth = false)
         }
     }
 }
@@ -289,6 +293,7 @@ private fun PostCard(
     onMore: () -> Unit,
 ) {
     val c = Sadora.colors
+    val t = strings.community
     SadoraCard {
         Row(
             Modifier.fillMaxWidth(),
@@ -298,19 +303,19 @@ private fun PostCard(
             AliasAvatar(post.alias, post.tint)
             Column(Modifier.weight(1f)) {
                 Text(
-                    if (post.isMine) "${post.alias} · siz" else post.alias,
+                    if (post.isMine) "${post.alias} · ${t.you}" else post.alias,
                     style = Sadora.type.h3,
                     color = c.text,
                 )
                 Text(
-                    "${post.topic.label} · ${strings.dates.ago(post.createdAt, Clock.System.now())}",
+                    "${t.topic(post.topic)} · " + strings.dates.ago(post.createdAt, Clock.System.now()),
                     style = Sadora.type.body,
                     color = c.muted2,
                 )
             }
             Icon(
                 SadoraIcons.More,
-                contentDescription = "Yana",
+                contentDescription = t.more,
                 Modifier
                     .size(MinTouchTarget)
                     .clip(Radius.chip)
@@ -352,6 +357,7 @@ private fun PostCard(
 @Composable
 private fun AliasAvatar(alias: String, tint: Int, size: androidx.compose.ui.unit.Dp = 36.dp) {
     val c = Sadora.colors
+    val t = strings.community
     val colour = avatarTints()[tint % avatarTints().size]
     Box(
         Modifier.size(size).clip(Radius.chip).background(colour.copy(alpha = 0.18f)),
@@ -380,6 +386,7 @@ private fun PostAction(
     activeTint: Color = Sadora.colors.primary,
 ) {
     val c = Sadora.colors
+    val t = strings.community
     val tint by animateColorAsState(if (active) activeTint else c.muted, tween(220), label = "action")
     val scale by animateFloatAsState(
         targetValue = if (active) 1.12f else 1f,
@@ -416,12 +423,13 @@ private fun PostAction(
 @Composable
 private fun CommentsSheet(comments: List<CommunityComment>, onSend: (String) -> Unit) {
     val c = Sadora.colors
+    val t = strings.community
     var draft by remember { mutableStateOf("") }
 
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
         if (comments.isEmpty()) {
             Text(
-                "Hali izoh yo'q. Birinchi bo'lib javob bering.",
+                t.noComments,
                 style = Sadora.type.body,
                 color = c.muted,
             )
@@ -434,7 +442,7 @@ private fun CommentsSheet(comments: List<CommunityComment>, onSend: (String) -> 
                     AliasAvatar(comment.alias, comment.tint, size = 30.dp)
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         Text(
-                            (if (comment.isMine) "${comment.alias} (siz)" else comment.alias) +
+                            (if (comment.isMine) t.youParenthesised(comment.alias) else comment.alias) +
                                 " · " + strings.dates.ago(comment.createdAt, Clock.System.now()),
                             style = Sadora.type.caption.copy(letterSpacing = TextUnit.Unspecified),
                             color = c.muted2,
@@ -453,7 +461,7 @@ private fun CommentsSheet(comments: List<CommunityComment>, onSend: (String) -> 
             SadoraTextField(
                 value = draft,
                 onValueChange = { draft = it },
-                placeholder = "Izoh yozing",
+                placeholder = t.commentHint,
                 modifier = Modifier.weight(1f),
             )
             AnimatedVisibility(
@@ -474,7 +482,7 @@ private fun CommentsSheet(comments: List<CommunityComment>, onSend: (String) -> 
                 ) {
                     Icon(
                         SadoraIcons.ArrowUp,
-                        contentDescription = "Yuborish",
+                        contentDescription = t.send,
                         Modifier.size(IconSize.md),
                         tint = c.onPrimary,
                     )

@@ -31,6 +31,7 @@ import org.example.project.ui.components.ScreenContent
 import org.example.project.ui.components.Skeleton
 import uz.sadora.contract.Article
 import uz.sadora.contract.ArticleBlock
+import org.example.project.i18n.strings
 
 /**
  * "Maqola" — the reader.
@@ -50,6 +51,7 @@ fun ArticleScreen(
     modifier: Modifier = Modifier,
 ) {
     val c = Sadora.colors
+    val t = strings.modules
     val article = learn.article(slug)
 
     LaunchedEffect(slug) { learn.loadArticle(slug) }
@@ -63,15 +65,15 @@ fun ArticleScreen(
 
                 article == null -> item {
                     EmptyState(
-                        title = "Maqola ochilmadi",
+                        title = t.articleFailed,
                         body = learn.error
-                            ?: "Ma'lumot yuklanmadi. Internetni tekshirib, qayta urinib ko'ring.",
+                            ?: t.articleFailedBody,
                         actionText = null,
                         onAction = {},
                     )
                 }
 
-                else -> articleBody(article, onUpgrade)
+                else -> articleBody(article, t, onUpgrade)
             }
         }
     }
@@ -79,6 +81,7 @@ fun ArticleScreen(
 
 private fun androidx.compose.foundation.lazy.LazyListScope.articleBody(
     article: Article,
+    t: org.example.project.i18n.ModuleStrings,
     onUpgrade: () -> Unit,
 ) {
     val summary = article.summary
@@ -86,8 +89,8 @@ private fun androidx.compose.foundation.lazy.LazyListScope.articleBody(
     item {
         Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xxs)) {
             SadoraBadge(summary.categoryLabel.uppercase(), BadgeTone.Neutral)
-            SadoraBadge("${summary.readMinutes} DAQIQA", BadgeTone.Neutral)
-            if (summary.premium) SadoraBadge("PREMIUM", BadgeTone.Premium)
+            SadoraBadge(t.readMinutesCaps(summary.readMinutes), BadgeTone.Neutral)
+            if (summary.premium) SadoraBadge(t.premiumCaps, BadgeTone.Premium)
         }
     }
 
@@ -108,7 +111,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.articleBody(
                         Byline(
                             initials = it.initials(),
                             name = it,
-                            role = article.authorRole ?: "Muallif",
+                            role = article.authorRole ?: t.author,
                             modifier = Modifier.weight(1f),
                         )
                     }
@@ -116,7 +119,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.articleBody(
                         Byline(
                             initials = it.initials(),
                             name = it,
-                            role = "✓ Ko'rib chiqqan",
+                            role = t.reviewed,
                             modifier = Modifier.weight(1f),
                         )
                     }
@@ -129,7 +132,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.articleBody(
 
     if (article.truncated) {
         item {
-            LockedBlock("Maqolaning davomi Premium bilan ochiladi", onUnlock = onUpgrade)
+            LockedBlock(t.restIsPremium, onUnlock = onUpgrade)
         }
     }
 

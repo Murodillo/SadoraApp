@@ -1,11 +1,14 @@
 package org.example.project.i18n
 
 import kotlinx.datetime.LocalDate
+import org.example.project.model.CommunityFilter
+import org.example.project.model.CommunityTopic
 import org.example.project.model.ConceptionWindow
 import org.example.project.model.CyclePhase
 import org.example.project.model.Goal
 import org.example.project.model.LifeStage
 import org.example.project.model.Mood
+import org.example.project.model.ReportReason
 import uz.sadora.contract.DoseStatus
 import uz.sadora.contract.FetalMovement
 import uz.sadora.contract.FoodRelation
@@ -335,6 +338,54 @@ object StringsRu : Strings {
             "дневник питания, препараты, анализ за 7 дней."
         override val seePremium = "Посмотреть Premium"
         override val notNow = "Не сейчас"
+    }
+
+    override val community = object : CommunityStrings {
+        override val title = "Секретный чат"
+        override val compose = "Написать"
+        override val more = "Ещё"
+        override val saved = "Сохранённые"
+        override fun topic(topic: CommunityTopic) = when (topic) {
+            CommunityTopic.All -> "Все"
+            CommunityTopic.Cycle -> "Цикл"
+            CommunityTopic.Pregnancy -> "Беременность"
+            CommunityTopic.Wellbeing -> "Настроение"
+            CommunityTopic.Body -> "Тело"
+        }
+        override fun filter(filter: CommunityFilter) = when (filter) {
+            CommunityFilter.Feed -> "Лента"
+            CommunityFilter.Saved -> "Сохранённые"
+        }
+        override fun reportReason(reason: ReportReason) = when (reason) {
+            ReportReason.Spam -> "Спам или реклама"
+            ReportReason.Abuse -> "Оскорбление или угроза"
+            ReportReason.Misinformation -> "Опасный медицинский совет"
+            ReportReason.PersonalData -> "Раскрыты личные данные"
+            ReportReason.Other -> "Другая причина"
+        }
+
+        override val nothingSaved = "Сохранённых постов нет"
+        override val nothingHere = "Здесь пока нет постов"
+        override val nothingSavedBody = "Отметьте пост, который вам близок — он останется здесь."
+        override val nothingHereBody = "Напишите первой — ваш вопрос выйдет под псевдонимом."
+        override val write = "Написать"
+        override val you = "вы"
+        override fun youParenthesised(alias: String) = "$alias (вы)"
+
+        override val noComments = "Комментариев пока нет. Ответьте первой."
+        override val commentHint = "Напишите комментарий"
+        override val send = "Отправить"
+        override val whatIsOnYourMind = "О чём вы хотите спросить?"
+        override fun postsAs(alias: String) = "Пост выйдет от имени «$alias» — вашего имени не будет видно."
+        override val postsAnonymously = "Пост выйдет под псевдонимом — вашего имени не будет видно."
+        override val yourOwnPost = "Это ваш пост."
+        override val deletePost = "Удалить пост"
+        override val postDeleted = "Пост удалён"
+        override val reportReasonTitle = "Причина жалобы"
+        override val reportNote = "Жалоба уйдёт модератору. Кто её отправил, не видно."
+        override val sendReport = "Отправить жалобу"
+        override val reportSent = "Жалоба отправлена"
+        override val shareSuffix = "SADORA — Секретный чат"
     }
 
     override val today = object : TodayStrings {
@@ -797,6 +848,46 @@ object StringsRu : Strings {
         override val payWithClick = "Оплатить через Click"
         override val payWithAppStore = "Через App Store"
         override val payWithGooglePlay = "Через Google Play"
+
+        override val searchFood = "Поиск блюда"
+        override val searchTabAll = "Все"
+        override val searchTabFrequent = "Частые"
+        override val searchTabRecipes = "Рецепты"
+        override val typeADishName = "Введите название блюда"
+        override fun nothingFoundFor(query: String) = "По запросу «$query» ничего не найдено"
+        override val catalogueNote = "Каталог приходит с сервера — узбекские блюда идут первыми."
+        override val portionLabel = "Порция"
+        override val pieces = "шт. × 100"
+        override val grams = "граммов"
+        override fun bowls(count: Int) = "$count миски"
+        override val total = "Итого"
+        override val addToDiary = "Добавить в дневник"
+        override val perPiece = "шт."
+        override val perHundredGrams = "100 г"
+        override val proteinInitial = "Б"
+        override val fatInitial = "Ж"
+        override val carbsInitial = "У"
+
+        override val articleFailed = "Статья не открылась"
+        override val articleFailedBody = "Данные не загрузились. Проверьте интернет и попробуйте снова."
+        override fun readMinutesCaps(minutes: Int) = "$minutes МИН."
+        override val premiumCaps = "PREMIUM"
+        override val author = "Автор"
+        override val reviewed = "✓ Проверено"
+        override val restIsPremium = "Продолжение статьи открывается с Premium"
+
+        override fun stepsValue(steps: String) = "$steps шагов"
+        override fun litresValue(litres: String) = "$litres л"
+        override fun kcalValue(kcal: String) = "$kcal ккал"
+        override fun outOfFive(value: String) = "$value / 5"
+        override fun sleepEnergyFinding(high: String, low: String) =
+            "В дни, когда сна было больше, энергия в среднем $high, а когда меньше — $low."
+        override fun activityMoodFinding(high: String, low: String) =
+            "В дни с большей активностью настроение в среднем $high, с меньшей — $low."
+        override fun waterHeadacheFinding(high: String, low: String) =
+            "В дни с большим количеством воды головная боль отмечена в $high случаев, с меньшим — в $low."
+        override fun basedOnDays(days: Int) = "По $days дн. · встречалось вместе"
+        override fun minutesOnly(minutes: Int) = "$minutes мин."
 
         override val addMedTitle = "Добавить препарат"
         override val medName = "Название"

@@ -32,6 +32,7 @@ import org.example.project.ui.components.ButtonTone
 import org.example.project.ui.components.SadoraButton
 import org.example.project.ui.components.SelectChip
 import org.example.project.ui.components.pressable
+import org.example.project.i18n.strings
 
 /**
  * The composer, raised by the shell over the tab bar.
@@ -46,6 +47,7 @@ fun ComposePostSheetContent(
     onPosted: () -> Unit,
 ) {
     val c = Sadora.colors
+    val t = strings.community
     val rooms = remember { CommunityTopic.entries.filter { it != CommunityTopic.All } }
     var topic by remember {
         mutableStateOf(state.communityTopic.takeIf { it != CommunityTopic.All } ?: rooms.first())
@@ -55,8 +57,7 @@ fun ComposePostSheetContent(
 
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
         Text(
-            state.communityAlias?.let { "Post \"$it\" nomidan chiqadi — ismingiz ko'rinmaydi." }
-                ?: "Post taxallus ostida chiqadi — ismingiz ko'rinmaydi.",
+            state.communityAlias?.let { t.postsAs(it) } ?: t.postsAnonymously,
             style = Sadora.type.body,
             color = c.muted,
         )
@@ -66,7 +67,7 @@ fun ComposePostSheetContent(
             horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
         ) {
             rooms.forEach { room ->
-                SelectChip(label = room.label, selected = topic == room, onClick = { topic = room })
+                SelectChip(label = t.topic(room), selected = topic == room, onClick = { topic = room })
             }
         }
 
@@ -79,7 +80,7 @@ fun ComposePostSheetContent(
                 .heightIn(min = 120.dp),
         ) {
             if (body.isEmpty()) {
-                Text("Nima haqida so'ramoqchisiz?", style = Sadora.type.body, color = c.muted2)
+                Text(t.whatIsOnYourMind, style = Sadora.type.body, color = c.muted2)
             }
             BasicTextField(
                 value = body,
@@ -95,7 +96,7 @@ fun ComposePostSheetContent(
         }
 
         SadoraButton(
-            "Yuborish",
+            t.send,
             onClick = {
                 state.createPost(topic, body)
                 onPosted()
@@ -116,25 +117,26 @@ fun PostMenuSheetContent(
     onDone: (message: String?) -> Unit,
 ) {
     val c = Sadora.colors
+    val t = strings.community
     var reason by remember { mutableStateOf<ReportReason?>(null) }
 
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
         if (post.isMine) {
-            Text("Bu sizning postingiz.", style = Sadora.type.body, color = c.muted)
+            Text(t.yourOwnPost, style = Sadora.type.body, color = c.muted)
             SadoraButton(
-                "Postni o'chirish",
+                t.deletePost,
                 onClick = {
                     state.deletePost(post.id)
-                    onDone("Post o'chirildi")
+                    onDone(t.postDeleted)
                 },
                 tone = ButtonTone.Destructive,
             )
             return@Column
         }
 
-        Text("Shikoyat sababi", style = Sadora.type.h3, color = c.text)
+        Text(t.reportReasonTitle, style = Sadora.type.h3, color = c.text)
         Text(
-            "Shikoyat moderatorga boradi. Kim yuborgani ko'rinmaydi.",
+            t.reportNote,
             style = Sadora.type.body,
             color = c.muted,
         )
@@ -148,7 +150,7 @@ fun PostMenuSheetContent(
                     .padding(horizontal = Spacing.sm, vertical = 12.dp),
             ) {
                 Text(
-                    option.label,
+                    t.reportReason(option),
                     style = Sadora.type.body.copy(fontWeight = if (reason == option) FontWeight.SemiBold else FontWeight.Normal),
                     color = c.text,
                     modifier = Modifier.fillMaxWidth(),
@@ -156,10 +158,10 @@ fun PostMenuSheetContent(
             }
         }
         SadoraButton(
-            "Shikoyat yuborish",
+            t.sendReport,
             onClick = {
                 reason?.let { state.reportPost(post.id, it, null) }
-                onDone("Shikoyat yuborildi")
+                onDone(t.reportSent)
             },
             enabled = reason != null,
         )

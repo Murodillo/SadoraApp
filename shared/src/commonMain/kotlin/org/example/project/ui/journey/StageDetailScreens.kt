@@ -217,6 +217,7 @@ fun StageSleepMoodScreen(
 ) {
     val c = Sadora.colors
     val t = strings.journey
+    val modules = strings.modules
     val stageColors = listOf(c.secondary, c.accent, c.muted2)
 
     LaunchedEffect(Unit) {
@@ -312,7 +313,7 @@ fun StageSleepMoodScreen(
                         CardLabel(
                             t.moodWeek7,
                             trailing = {
-                                mood.averageLabel()?.let {
+                                mood.averageLabel(strings.modules, strings.common)?.let {
                                     Text(it, style = Sadora.type.body, color = c.muted)
                                 }
                             },
@@ -327,12 +328,12 @@ fun StageSleepMoodScreen(
                 }
             }
 
-            finding?.sentence()?.let { sentence ->
+            finding?.sentence(modules)?.let { sentence ->
                 item {
                     SadoraCard {
                         CardLabel(t.noticed, color = c.textAccent)
                         Text(sentence, style = Sadora.type.body, color = c.muted)
-                        Text(finding.basisLabel(), style = Sadora.type.caption, color = c.muted2)
+                        Text(finding.basisLabel(modules), style = Sadora.type.caption, color = c.muted2)
                     }
                 }
             }

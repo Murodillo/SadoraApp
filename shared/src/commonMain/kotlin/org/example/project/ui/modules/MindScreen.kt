@@ -176,7 +176,7 @@ fun MindScreen(
                             CardLabel(
                                 t.moodWeek,
                                 trailing = {
-                                    moodWeek.averageLabel()?.let {
+                                    moodWeek.averageLabel(strings.modules, strings.common)?.let {
                                         Text(t.weekAverage(it), style = Sadora.type.body, color = c.muted)
                                     }
                                 },

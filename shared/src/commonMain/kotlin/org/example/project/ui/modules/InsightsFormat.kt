@@ -7,7 +7,9 @@ import uz.sadora.contract.InsightFinding
 import uz.sadora.contract.InsightKeys
 import uz.sadora.contract.MetricTrend
 import uz.sadora.contract.TrendMetric
+import org.example.project.i18n.CommonStrings
 import org.example.project.i18n.DateStrings
+import org.example.project.i18n.ModuleStrings
 
 /**
  * How a measured series becomes something on screen.
@@ -36,14 +38,14 @@ fun MetricTrend.rangeLabel(dates: DateStrings): String? {
 }
 
 /** The average, in the metric's own words. Null when there was nothing to average. */
-fun MetricTrend.averageLabel(): String? {
+fun MetricTrend.averageLabel(t: ModuleStrings, common: CommonStrings): String? {
     val value = average ?: return null
     return when (metric) {
-        TrendMetric.SLEEP_MINUTES -> minutesLabel(value.roundToInt())
-        TrendMetric.STEPS -> "${Fmt.int(value.roundToInt())} qadam"
-        TrendMetric.WATER_ML -> "${Fmt.oneDecimal(value.toFloat() / 1000)} l"
-        TrendMetric.KCAL -> "${Fmt.int(value.roundToInt())} kkal"
-        TrendMetric.MOOD, TrendMetric.ENERGY, TrendMetric.STRESS -> "${decimal(value)} / 5"
+        TrendMetric.SLEEP_MINUTES -> minutesLabel(value.roundToInt(), t, common)
+        TrendMetric.STEPS -> t.stepsValue(Fmt.int(value.roundToInt()))
+        TrendMetric.WATER_ML -> t.litresValue(Fmt.oneDecimal(value.toFloat() / 1000))
+        TrendMetric.KCAL -> t.kcalValue(Fmt.int(value.roundToInt()))
+        TrendMetric.MOOD, TrendMetric.ENERGY, TrendMetric.STRESS -> t.outOfFive(decimal(value))
     }
 }
 
@@ -53,7 +55,7 @@ fun MetricTrend.averageLabel(): String? {
  * Null when either window has no data — the screen then shows nothing rather than a
  * confident-looking zero, which is the whole reason this replaced a hardcoded "+12".
  */
-fun MetricTrend.changeLabel(): String? {
+fun MetricTrend.changeLabel(t: ModuleStrings, common: CommonStrings): String? {
     val delta = change ?: return null
     val rounded = when (metric) {
         TrendMetric.SLEEP_MINUTES, TrendMetric.STEPS, TrendMetric.WATER_ML, TrendMetric.KCAL ->
@@ -65,10 +67,10 @@ fun MetricTrend.changeLabel(): String? {
     val sign = if (rounded > 0) "+" else "−"
     val size = abs(rounded)
     val body = when (metric) {
-        TrendMetric.SLEEP_MINUTES -> minutesLabel(size.roundToInt())
-        TrendMetric.STEPS -> "${Fmt.int(size.roundToInt())} qadam"
-        TrendMetric.WATER_ML -> "${Fmt.oneDecimal(size.toFloat() / 1000)} l"
-        TrendMetric.KCAL -> "${Fmt.int(size.roundToInt())} kkal"
+        TrendMetric.SLEEP_MINUTES -> minutesLabel(size.roundToInt(), t, common)
+        TrendMetric.STEPS -> t.stepsValue(Fmt.int(size.roundToInt()))
+        TrendMetric.WATER_ML -> t.litresValue(Fmt.oneDecimal(size.toFloat() / 1000))
+        TrendMetric.KCAL -> t.kcalValue(Fmt.int(size.roundToInt()))
         TrendMetric.MOOD, TrendMetric.ENERGY, TrendMetric.STRESS -> decimal(size)
     }
     return "$sign$body"
@@ -103,25 +105,19 @@ private fun MetricTrend.changeFloor(): Double = when (metric) {
  * rather than a guess, so a server that grows a new finding shows nothing until the app
  * learns how to say it.
  */
-fun InsightFinding.sentence(): String? = when (key) {
-    InsightKeys.SLEEP_AND_ENERGY ->
-        "Ko'proq uxlagan kunlarda energiya o'rtacha ${decimal(high)}, kamroq uxlagan kunlarda " +
-            "${decimal(low)} bo'lgan."
-    InsightKeys.STEPS_AND_MOOD ->
-        "Ko'proq yurgan kunlarda kayfiyat o'rtacha ${decimal(high)}, kamroq yurgan kunlarda " +
-            "${decimal(low)} bo'lgan."
-    InsightKeys.WATER_AND_HEADACHE ->
-        "Ko'proq suv ichgan kunlarning ${percent(high)}ida bosh og'rig'i qayd etilgan, " +
-            "kamroq ichgan kunlarning ${percent(low)}ida."
+fun InsightFinding.sentence(t: ModuleStrings): String? = when (key) {
+    InsightKeys.SLEEP_AND_ENERGY -> t.sleepEnergyFinding(decimal(high), decimal(low))
+    InsightKeys.STEPS_AND_MOOD -> t.activityMoodFinding(decimal(high), decimal(low))
+    InsightKeys.WATER_AND_HEADACHE -> t.waterHeadacheFinding(percent(high), percent(low))
     else -> null
 }
 
 /** "14 kun asosida" — the count is part of the claim, not a footnote. */
-fun InsightFinding.basisLabel(): String = "$daysConsidered kun asosida · birga kuzatilgan"
+fun InsightFinding.basisLabel(t: ModuleStrings): String = t.basedOnDays(daysConsidered)
 
 /** "6s 40d", the app's duration format, from a count of minutes. */
-fun minutesLabel(minutes: Int): String =
-    if (minutes >= 60) "${minutes / 60}s ${minutes % 60}d" else "$minutes daqiqa"
+fun minutesLabel(minutes: Int, t: ModuleStrings, common: CommonStrings): String =
+    if (minutes >= 60) common.hoursMinutes(minutes / 60, minutes % 60) else t.minutesOnly(minutes)
 
 private fun decimal(value: Double): String = Fmt.oneDecimal(value.toFloat())
 

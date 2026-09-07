@@ -6,11 +6,14 @@ import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 import kotlinx.datetime.LocalDate
 import org.example.project.model.AppLanguage
+import org.example.project.model.CommunityFilter
+import org.example.project.model.CommunityTopic
 import org.example.project.model.ConceptionWindow
 import org.example.project.model.CyclePhase
 import org.example.project.model.Goal
 import org.example.project.model.LifeStage
 import org.example.project.model.Mood
+import org.example.project.model.ReportReason
 import uz.sadora.contract.DoseStatus
 import uz.sadora.contract.FetalMovement
 import uz.sadora.contract.FoodRelation
@@ -124,6 +127,14 @@ class StringsTest {
                     balanceTitle, fourDirections, balanceDisclaimer, balanced, someRoomIn("x"),
                     fallingBehind("x"), food, water, activity, sleep, ofKcal("1", "2"),
                     ofLitres("1", "2"), ofSteps("1", "2"), ofSleep("6s"),
+                    searchFood, searchTabAll, searchTabFrequent, searchTabRecipes,
+                    typeADishName, nothingFoundFor("x"), catalogueNote, portionLabel, pieces,
+                    grams, bowls(2), total, addToDiary, perPiece, perHundredGrams,
+                    proteinInitial, fatInitial, carbsInitial, articleFailed, articleFailedBody,
+                    readMinutesCaps(4), premiumCaps, author, reviewed, restIsPremium,
+                    stepsValue("1 000"), litresValue("1,2"), kcalValue("450"), outOfFive("3,8"),
+                    sleepEnergyFinding("4,1", "3,2"), activityMoodFinding("4,1", "3,2"),
+                    waterHeadacheFinding("12%", "31%"), basedOnDays(14), minutesOnly(45),
                     addMedTitle, medName, medNameHint, medDose, medUnit, medTime, medTimeInvalid,
                     addTime, medDays, medFoodRelation, medStock, medStockUnit, medEndDate,
                     medNone, doseHistoryTitle, takenCount, skippedCount, adherenceOver(14),
@@ -228,6 +239,20 @@ class StringsTest {
             addAll(freeFeatures)
             topics.forEach { (label, question) -> add(label); add(question) }
         }
+        with(t.community) {
+            addAll(
+                listOf(
+                    title, compose, more, saved, nothingSaved, nothingHere, nothingSavedBody,
+                    nothingHereBody, write, you, youParenthesised("X"), noComments, commentHint,
+                    send, whatIsOnYourMind, postsAs("X"), postsAnonymously, yourOwnPost,
+                    deletePost, postDeleted, reportReasonTitle, reportNote, sendReport,
+                    reportSent, shareSuffix,
+                ),
+            )
+            CommunityTopic.entries.forEach { add(topic(it)) }
+            CommunityFilter.entries.forEach { add(filter(it)) }
+            ReportReason.entries.forEach { add(reportReason(it)) }
+        }
         with(t.today) {
             addAll(
                 listOf(
@@ -323,6 +348,12 @@ class StringsTest {
             assertNotEquals(StringsUz.ai.emptyPrompt, t.ai.emptyPrompt)
             assertNotEquals(StringsUz.ai.medicalDisclaimer, t.ai.medicalDisclaimer)
             assertNotEquals(StringsUz.ai.sampleAnswerAdvice, t.ai.sampleAnswerAdvice)
+            assertNotEquals(StringsUz.community.nothingHereBody, t.community.nothingHereBody)
+            assertNotEquals(StringsUz.community.reportNote, t.community.reportNote)
+            assertNotEquals(
+                StringsUz.modules.sleepEnergyFinding("1", "2"),
+                t.modules.sleepEnergyFinding("1", "2"),
+            )
             assertNotEquals(StringsUz.dates.months.first(), t.dates.months.first())
             assertNotEquals(StringsUz.dates.weekdays.first(), t.dates.weekdays.first())
             assertNotEquals(StringsUz.dates.hoursAgo(3), t.dates.hoursAgo(3))

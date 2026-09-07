@@ -36,26 +36,16 @@ data class CommunityComment(
     val isMine: Boolean = false,
 )
 
-/** Why a post is being reported. Mirrors the wire enum without depending on it. */
-enum class ReportReason(val label: String) {
-    Spam("Spam yoki reklama"),
-    Abuse("Haqorat yoki tahdid"),
-    Misinformation("Xavfli tibbiy maslahat"),
-    PersonalData("Shaxsiy ma'lumot oshkor qilingan"),
-    Other("Boshqa sabab"),
-}
+/**
+ * Why a post is being reported. Mirrors the wire enum without depending on it.
+ *
+ * The words for these live in [org.example.project.i18n.CommunityStrings], not here:
+ * an enum is one object for the process, and the language belongs to the screen.
+ */
+enum class ReportReason { Spam, Abuse, Misinformation, PersonalData, Other }
 
 /** The rooms the feed is divided into. */
-enum class CommunityTopic(val label: String) {
-    All("Hammasi"),
-    Cycle("Sikl"),
-    Pregnancy("Homiladorlik"),
-    Wellbeing("Kayfiyat"),
-    Body("Tana"),
-}
+enum class CommunityTopic { All, Cycle, Pregnancy, Wellbeing, Body }
 
 /** What the feed is currently showing. */
-enum class CommunityFilter(val label: String) {
-    Feed("Lenta"),
-    Saved("Saqlangan"),
-}
+enum class CommunityFilter { Feed, Saved }

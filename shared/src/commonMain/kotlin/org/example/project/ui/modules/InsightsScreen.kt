@@ -167,12 +167,12 @@ private fun LazyListScope.insightsContent(
                 }
 
                 else -> summary.findings.forEach { finding ->
-                    val sentence = finding.sentence()
+                    val sentence = finding.sentence(strings.modules)
                     if (sentence != null) {
                         SadoraCard {
                             Text(sentence, style = Sadora.type.body, color = Sadora.colors.text)
                             Text(
-                                finding.basisLabel(),
+                                finding.basisLabel(strings.modules),
                                 style = Sadora.type.body,
                                 color = Sadora.colors.muted2,
                             )
@@ -190,7 +190,7 @@ private fun LazyListScope.insightsContent(
 private fun TrendCard(title: String, trend: MetricTrend) {
     val t = strings.modules
     val c = Sadora.colors
-    val change = trend.changeLabel()
+    val change = trend.changeLabel(strings.modules, strings.common)
     val good = trend.changeIsGood()
 
     SadoraCard {
@@ -222,7 +222,7 @@ private fun TrendCard(title: String, trend: MetricTrend) {
         )
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Text(
-                trend.averageLabel()?.let { t.average(it) } ?: t.averagePrefix,
+                trend.averageLabel(strings.modules, strings.common)?.let { t.average(it) } ?: t.averagePrefix,
                 style = Sadora.type.body,
                 color = c.muted,
             )

@@ -1,11 +1,14 @@
 package org.example.project.i18n
 
 import kotlinx.datetime.LocalDate
+import org.example.project.model.CommunityFilter
+import org.example.project.model.CommunityTopic
 import org.example.project.model.ConceptionWindow
 import org.example.project.model.CyclePhase
 import org.example.project.model.Goal
 import org.example.project.model.LifeStage
 import org.example.project.model.Mood
+import org.example.project.model.ReportReason
 import uz.sadora.contract.DoseStatus
 import uz.sadora.contract.FetalMovement
 import uz.sadora.contract.FoodRelation
@@ -326,6 +329,54 @@ object StringsEn : Strings {
             "food diary, medication, and 7-day insights."
         override val seePremium = "See Premium"
         override val notNow = "Not now"
+    }
+
+    override val community = object : CommunityStrings {
+        override val title = "Secret chat"
+        override val compose = "Write"
+        override val more = "More"
+        override val saved = "Saved"
+        override fun topic(topic: CommunityTopic) = when (topic) {
+            CommunityTopic.All -> "All"
+            CommunityTopic.Cycle -> "Cycle"
+            CommunityTopic.Pregnancy -> "Pregnancy"
+            CommunityTopic.Wellbeing -> "Wellbeing"
+            CommunityTopic.Body -> "Body"
+        }
+        override fun filter(filter: CommunityFilter) = when (filter) {
+            CommunityFilter.Feed -> "Feed"
+            CommunityFilter.Saved -> "Saved"
+        }
+        override fun reportReason(reason: ReportReason) = when (reason) {
+            ReportReason.Spam -> "Spam or advertising"
+            ReportReason.Abuse -> "Abuse or a threat"
+            ReportReason.Misinformation -> "Dangerous medical advice"
+            ReportReason.PersonalData -> "Personal details revealed"
+            ReportReason.Other -> "Something else"
+        }
+
+        override val nothingSaved = "Nothing saved yet"
+        override val nothingHere = "No posts here yet"
+        override val nothingSavedBody = "Save a post that speaks to you and it will wait here."
+        override val nothingHereBody = "Be the first — your question goes out under an alias."
+        override val write = "Write"
+        override val you = "you"
+        override fun youParenthesised(alias: String) = "$alias (you)"
+
+        override val noComments = "No replies yet. Be the first."
+        override val commentHint = "Write a reply"
+        override val send = "Send"
+        override val whatIsOnYourMind = "What would you like to ask?"
+        override fun postsAs(alias: String) = "This goes out as \"$alias\" — your name is never shown."
+        override val postsAnonymously = "This goes out under an alias — your name is never shown."
+        override val yourOwnPost = "This is your post."
+        override val deletePost = "Delete this post"
+        override val postDeleted = "The post was deleted"
+        override val reportReasonTitle = "Why are you reporting this?"
+        override val reportNote = "The report goes to a moderator. Who sent it is never shown."
+        override val sendReport = "Send the report"
+        override val reportSent = "The report was sent"
+        override val shareSuffix = "SADORA — Secret chat"
     }
 
     override val today = object : TodayStrings {
@@ -787,6 +838,46 @@ object StringsEn : Strings {
         override val payWithClick = "Pay with Click"
         override val payWithAppStore = "Through the App Store"
         override val payWithGooglePlay = "Through Google Play"
+
+        override val searchFood = "Search for a dish"
+        override val searchTabAll = "All"
+        override val searchTabFrequent = "Frequent"
+        override val searchTabRecipes = "Recipes"
+        override val typeADishName = "Type a dish name"
+        override fun nothingFoundFor(query: String) = "Nothing found for \"$query\""
+        override val catalogueNote = "The catalogue comes from the server — Uzbek dishes come first."
+        override val portionLabel = "Portion"
+        override val pieces = "pieces × 100"
+        override val grams = "grams"
+        override fun bowls(count: Int) = "$count bowls"
+        override val total = "Total"
+        override val addToDiary = "Add to the diary"
+        override val perPiece = "piece"
+        override val perHundredGrams = "100 g"
+        override val proteinInitial = "P"
+        override val fatInitial = "F"
+        override val carbsInitial = "C"
+
+        override val articleFailed = "The article did not open"
+        override val articleFailedBody = "It could not be loaded. Check your connection and try again."
+        override fun readMinutesCaps(minutes: Int) = "$minutes MIN"
+        override val premiumCaps = "PREMIUM"
+        override val author = "Author"
+        override val reviewed = "✓ Reviewed"
+        override val restIsPremium = "The rest of the article opens with Premium"
+
+        override fun stepsValue(steps: String) = "$steps steps"
+        override fun litresValue(litres: String) = "$litres l"
+        override fun kcalValue(kcal: String) = "$kcal kcal"
+        override fun outOfFive(value: String) = "$value / 5"
+        override fun sleepEnergyFinding(high: String, low: String) =
+            "On days with more sleep, energy averaged $high; on days with less, $low."
+        override fun activityMoodFinding(high: String, low: String) =
+            "On days with more walking, mood averaged $high; on days with less, $low."
+        override fun waterHeadacheFinding(high: String, low: String) =
+            "On days with more water, a headache was logged $high of the time; with less, $low."
+        override fun basedOnDays(days: Int) = "Based on $days days · seen together"
+        override fun minutesOnly(minutes: Int) = "$minutes minutes"
 
         override val addMedTitle = "Add a medication"
         override val medName = "Name"

@@ -1,11 +1,14 @@
 package org.example.project.i18n
 
 import kotlinx.datetime.LocalDate
+import org.example.project.model.CommunityFilter
+import org.example.project.model.CommunityTopic
 import org.example.project.model.ConceptionWindow
 import org.example.project.model.CyclePhase
 import org.example.project.model.Goal
 import org.example.project.model.LifeStage
 import org.example.project.model.Mood
+import org.example.project.model.ReportReason
 import uz.sadora.contract.DoseStatus
 import uz.sadora.contract.FetalMovement
 import uz.sadora.contract.FoodRelation
@@ -327,6 +330,54 @@ object StringsUz : Strings {
             "ovqat kundaligi, dorilar, 7 kunlik tahlil."
         override val seePremium = "Premium'ni ko'rish"
         override val notNow = "Hozir emas"
+    }
+
+    override val community = object : CommunityStrings {
+        override val title = "Maxfiy chat"
+        override val compose = "Yozish"
+        override val more = "Yana"
+        override val saved = "Saqlangan"
+        override fun topic(topic: CommunityTopic) = when (topic) {
+            CommunityTopic.All -> "Hammasi"
+            CommunityTopic.Cycle -> "Sikl"
+            CommunityTopic.Pregnancy -> "Homiladorlik"
+            CommunityTopic.Wellbeing -> "Kayfiyat"
+            CommunityTopic.Body -> "Tana"
+        }
+        override fun filter(filter: CommunityFilter) = when (filter) {
+            CommunityFilter.Feed -> "Lenta"
+            CommunityFilter.Saved -> "Saqlangan"
+        }
+        override fun reportReason(reason: ReportReason) = when (reason) {
+            ReportReason.Spam -> "Spam yoki reklama"
+            ReportReason.Abuse -> "Haqorat yoki tahdid"
+            ReportReason.Misinformation -> "Xavfli tibbiy maslahat"
+            ReportReason.PersonalData -> "Shaxsiy ma'lumot oshkor qilingan"
+            ReportReason.Other -> "Boshqa sabab"
+        }
+
+        override val nothingSaved = "Saqlangan post yo'q"
+        override val nothingHere = "Bu bo'limda hozircha post yo'q"
+        override val nothingSavedBody = "Yoqqan postni belgilab qo'ying — u shu yerda turadi."
+        override val nothingHereBody = "Birinchi bo'lib yozing — savolingiz taxallus ostida chiqadi."
+        override val write = "Yozish"
+        override val you = "siz"
+        override fun youParenthesised(alias: String) = "$alias (siz)"
+
+        override val noComments = "Hali izoh yo'q. Birinchi bo'lib javob bering."
+        override val commentHint = "Izoh yozing"
+        override val send = "Yuborish"
+        override val whatIsOnYourMind = "Nima haqida so'ramoqchisiz?"
+        override fun postsAs(alias: String) = "Post \"$alias\" nomidan chiqadi — ismingiz ko'rinmaydi."
+        override val postsAnonymously = "Post taxallus ostida chiqadi — ismingiz ko'rinmaydi."
+        override val yourOwnPost = "Bu sizning postingiz."
+        override val deletePost = "Postni o'chirish"
+        override val postDeleted = "Post o'chirildi"
+        override val reportReasonTitle = "Shikoyat sababi"
+        override val reportNote = "Shikoyat moderatorga boradi. Kim yuborgani ko'rinmaydi."
+        override val sendReport = "Shikoyat yuborish"
+        override val reportSent = "Shikoyat yuborildi"
+        override val shareSuffix = "SADORA — Maxfiy chat"
     }
 
     override val today = object : TodayStrings {
@@ -790,6 +841,46 @@ object StringsUz : Strings {
         override val payWithClick = "Click orqali to'lash"
         override val payWithAppStore = "App Store orqali"
         override val payWithGooglePlay = "Google Play orqali"
+
+        override val searchFood = "Taom qidirish"
+        override val searchTabAll = "Barchasi"
+        override val searchTabFrequent = "Tez-tez"
+        override val searchTabRecipes = "Retseptlar"
+        override val typeADishName = "Taom nomini yozing"
+        override fun nothingFoundFor(query: String) = "\"$query\" bo'yicha topilmadi"
+        override val catalogueNote = "Katalog serverdan keladi — o'zbek taomlari birinchi o'rinda."
+        override val portionLabel = "Porsiya"
+        override val pieces = "dona × 100"
+        override val grams = "gramm"
+        override fun bowls(count: Int) = "$count kosa"
+        override val total = "Jami"
+        override val addToDiary = "Kundalikka qo'shish"
+        override val perPiece = "dona"
+        override val perHundredGrams = "100 g"
+        override val proteinInitial = "O"
+        override val fatInitial = "Y"
+        override val carbsInitial = "U"
+
+        override val articleFailed = "Maqola ochilmadi"
+        override val articleFailedBody = "Ma'lumot yuklanmadi. Internetni tekshirib, qayta urinib ko'ring."
+        override fun readMinutesCaps(minutes: Int) = "$minutes DAQIQA"
+        override val premiumCaps = "PREMIUM"
+        override val author = "Muallif"
+        override val reviewed = "✓ Ko'rib chiqqan"
+        override val restIsPremium = "Maqolaning davomi Premium bilan ochiladi"
+
+        override fun stepsValue(steps: String) = "$steps qadam"
+        override fun litresValue(litres: String) = "$litres l"
+        override fun kcalValue(kcal: String) = "$kcal kkal"
+        override fun outOfFive(value: String) = "$value / 5"
+        override fun sleepEnergyFinding(high: String, low: String) =
+            "Ko'proq uxlagan kunlarda energiya o'rtacha $high, kamroq uxlagan kunlarda $low bo'lgan."
+        override fun activityMoodFinding(high: String, low: String) =
+            "Ko'proq yurgan kunlarda kayfiyat o'rtacha $high, kamroq yurgan kunlarda $low bo'lgan."
+        override fun waterHeadacheFinding(high: String, low: String) =
+            "Ko'proq suv ichgan kunlarning ${high}ida bosh og'rig'i qayd etilgan, kamroq ichgan kunlarning ${low}ida."
+        override fun basedOnDays(days: Int) = "$days kun asosida · birga kuzatilgan"
+        override fun minutesOnly(minutes: Int) = "$minutes daqiqa"
 
         override val addMedTitle = "Dori qo'shish"
         override val medName = "Nomi"

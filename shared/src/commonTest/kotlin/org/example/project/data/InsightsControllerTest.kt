@@ -133,23 +133,23 @@ class InsightsControllerTest {
 
     @Test
     fun `no comparison window means no change label`() {
-        assertNull(sleepTrend(listOf(420.0), previous = null).changeLabel())
+        assertNull(sleepTrend(listOf(420.0), previous = null).changeLabel(StringsUz.modules, StringsUz.common))
     }
 
     @Test
     fun `a change is worded in the metric's own units and rounded away from noise`() {
         val trend = sleepTrend(listOf(420.0, 420.0), previous = 408.0)
-        assertEquals("+12 daqiqa", trend.changeLabel())
+        assertEquals("+12 daqiqa", trend.changeLabel(StringsUz.modules, StringsUz.common))
         assertEquals(true, trend.changeIsGood())
 
         // Under the floor, a movement is rounding rather than a trend.
-        assertNull(sleepTrend(listOf(420.0), previous = 418.0).changeLabel())
+        assertNull(sleepTrend(listOf(420.0), previous = 418.0).changeLabel(StringsUz.modules, StringsUz.common))
     }
 
     @Test
     fun `an hour or more reads as hours and minutes like everywhere else in the app`() {
-        assertEquals("7s 0d", sleepTrend(listOf(420.0)).averageLabel())
-        assertNull(sleepTrend(listOf(null)).averageLabel(), "an average of nothing is not zero")
+        assertEquals("7s 0d", sleepTrend(listOf(420.0)).averageLabel(StringsUz.modules, StringsUz.common))
+        assertNull(sleepTrend(listOf(null)).averageLabel(StringsUz.modules, StringsUz.common), "an average of nothing is not zero")
     }
 
     @Test
@@ -162,11 +162,11 @@ class InsightsControllerTest {
     @Test
     fun `findings are worded as co-occurrence and an unknown key is not guessed at`() {
         val sentence = InsightFinding(InsightKeys.SLEEP_AND_ENERGY, daysConsidered = 12, high = 4.2, low = 2.8)
-            .sentence()
+            .sentence(StringsUz.modules)
         assertNotNull(sentence)
         assertTrue("4,2" in sentence && "2,8" in sentence, sentence)
         assertTrue("sabab" !in sentence.lowercase(), sentence)
 
-        assertNull(InsightFinding("something_new", 12, 1.0, 2.0).sentence())
+        assertNull(InsightFinding("something_new", 12, 1.0, 2.0).sentence(StringsUz.modules))
     }
 }

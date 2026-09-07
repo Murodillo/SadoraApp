@@ -5,11 +5,14 @@ import kotlinx.datetime.LocalDate
 import kotlinx.datetime.daysUntil
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
+import org.example.project.model.CommunityFilter
+import org.example.project.model.CommunityTopic
 import org.example.project.model.ConceptionWindow
 import org.example.project.model.CyclePhase
 import org.example.project.model.Goal
 import org.example.project.model.LifeStage
 import org.example.project.model.Mood
+import org.example.project.model.ReportReason
 import uz.sadora.contract.DoseStatus
 import uz.sadora.contract.FetalMovement
 import uz.sadora.contract.FoodRelation
@@ -48,6 +51,7 @@ interface Strings {
     val journey: JourneyStrings
     val modules: ModuleStrings
     val ai: AiStrings
+    val community: CommunityStrings
 }
 
 /**
@@ -190,6 +194,45 @@ interface AiStrings {
     val freeKeeps: String
     val seePremium: String
     val notNow: String
+}
+
+/**
+ * The secret chat.
+ *
+ * The room names, the report reasons and the filter tabs used to be labels on enums,
+ * which is one object for the process and therefore one language for everyone.
+ */
+interface CommunityStrings {
+    val title: String
+    val compose: String
+    val more: String
+    val saved: String
+    fun topic(topic: CommunityTopic): String
+    fun filter(filter: CommunityFilter): String
+    fun reportReason(reason: ReportReason): String
+
+    val nothingSaved: String
+    val nothingHere: String
+    val nothingSavedBody: String
+    val nothingHereBody: String
+    val write: String
+    val you: String
+    fun youParenthesised(alias: String): String
+
+    val noComments: String
+    val commentHint: String
+    val send: String
+    val whatIsOnYourMind: String
+    fun postsAs(alias: String): String
+    val postsAnonymously: String
+    val yourOwnPost: String
+    val deletePost: String
+    val postDeleted: String
+    val reportReasonTitle: String
+    val reportNote: String
+    val sendReport: String
+    val reportSent: String
+    val shareSuffix: String
 }
 
 interface TodayStrings {
@@ -762,6 +805,47 @@ interface ModuleStrings {
     val payWithClick: String
     val payWithAppStore: String
     val payWithGooglePlay: String
+
+    // ---- food search
+    val searchFood: String
+    val searchTabAll: String
+    val searchTabFrequent: String
+    val searchTabRecipes: String
+    val typeADishName: String
+    fun nothingFoundFor(query: String): String
+    val catalogueNote: String
+    val portionLabel: String
+    val pieces: String
+    val grams: String
+    fun bowls(count: Int): String
+    val total: String
+    val addToDiary: String
+    val perPiece: String
+    val perHundredGrams: String
+    /** The macros as one initial each, as the row draws them. */
+    val proteinInitial: String
+    val fatInitial: String
+    val carbsInitial: String
+
+    // ---- an article
+    val articleFailed: String
+    val articleFailedBody: String
+    fun readMinutesCaps(minutes: Int): String
+    val premiumCaps: String
+    val author: String
+    val reviewed: String
+    val restIsPremium: String
+
+    // ---- insights, in words
+    fun stepsValue(steps: String): String
+    fun litresValue(litres: String): String
+    fun kcalValue(kcal: String): String
+    fun outOfFive(value: String): String
+    fun sleepEnergyFinding(high: String, low: String): String
+    fun activityMoodFinding(high: String, low: String): String
+    fun waterHeadacheFinding(high: String, low: String): String
+    fun basedOnDays(days: Int): String
+    fun minutesOnly(minutes: Int): String
 
     // ---- add a medication
     val addMedTitle: String
