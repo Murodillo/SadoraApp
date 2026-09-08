@@ -1312,14 +1312,12 @@ fun SymptomsQuestion(
                     Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                 ) {
-                    pair.forEach { (label, icon) ->
+                    pair.forEach { (symptom, icon) ->
                         AnswerTile(
-                            label = label,
+                            label = symptom.label,
                             icon = icon,
-                            selected = label in state.symptoms,
-                            onClick = {
-                                if (!state.symptoms.remove(label)) state.symptoms.add(label)
-                            },
+                            selected = symptom.label in state.symptoms,
+                            onClick = { state.toggleStarterSymptom(symptom.key, symptom.label) },
                             modifier = Modifier.weight(1f),
                         )
                     }

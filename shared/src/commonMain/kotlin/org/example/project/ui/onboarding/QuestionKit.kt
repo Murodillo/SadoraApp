@@ -210,7 +210,7 @@ fun QuestionScaffold(
     subtitle: String? = null,
     entry: Animatable<Float, *> = rememberPageEntry(),
     /** The wording of the skip link under the button. */
-    skipLabel: String = "O'tkazish",
+    skipLabel: String = strings.onboarding.skip,
     /** Set false on the pages that need every pixel for their own content. */
     brand: Boolean = true,
     /** Sits in the top-right corner, level with the progress bar. */
@@ -247,7 +247,7 @@ fun QuestionScaffold(
                 if (onBack != null) {
                     Icon(
                         SadoraIcons.ChevronLeft,
-                        contentDescription = "Ortga",
+                        contentDescription = strings.onboarding.back,
                         Modifier
                             .size(IconSize.lg)
                             .noRippleClickable(onClick = onBack),
@@ -715,7 +715,7 @@ fun CalendarPicker(
             val canGoForward = month < lastMonth
             Icon(
                 SadoraIcons.ChevronLeft,
-                contentDescription = "Oldingi oy",
+                contentDescription = strings.journey.previousMonth,
                 Modifier
                     .size(IconSize.lg)
                     .noRippleClickable(enabled = canGoBack) {
@@ -730,7 +730,7 @@ fun CalendarPicker(
             )
             Icon(
                 SadoraIcons.ChevronRight,
-                contentDescription = "Keyingi oy",
+                contentDescription = strings.journey.nextMonth,
                 Modifier
                     .size(IconSize.lg)
                     .noRippleClickable(enabled = canGoForward) {

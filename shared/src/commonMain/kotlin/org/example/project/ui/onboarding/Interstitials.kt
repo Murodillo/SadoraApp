@@ -45,17 +45,9 @@ import org.example.project.design.SadoraIcons
 import org.example.project.design.Spacing
 import org.example.project.ui.components.SadoraButton
 import kotlin.math.roundToInt
+import org.example.project.i18n.strings
 
 // ---------------------------------------------------------------- social proof
-
-/** One line of the reassurance panel. */
-private data class Proof(val headline: String, val body: String)
-
-private val proofs = listOf(
-    Proof("Ayollar tanlagan", "O'zbekistonda minglab ayol siklini SADORA bilan kuzatadi."),
-    Proof("Shifokorlar bilan", "Savollar va maqolalar ginekologlar bilan birga tayyorlanadi."),
-    Proof("Ma'lumot sizniki", "Istalgan vaqtda eksport qiling yoki butunlay o'chiring."),
-)
 
 /**
  * The pause between two stretches of questions.
@@ -68,6 +60,7 @@ private val proofs = listOf(
 @Composable
 fun ReassuranceScreen(onContinue: () -> Unit, modifier: Modifier = Modifier) {
     val c = Sadora.colors
+    val t = strings.onboarding
     val entry = rememberPageEntry(1300)
 
     Box(modifier.fillMaxSize()) {
@@ -84,7 +77,7 @@ fun ReassuranceScreen(onContinue: () -> Unit, modifier: Modifier = Modifier) {
         ) {
             Reveal(entry.value, from = 0.05f) {
                 Text(
-                    "Siz yolg'iz emassiz",
+                    t.notAloneTitle,
                     style = Sadora.type.h1,
                     color = c.text,
                     textAlign = TextAlign.Center,
@@ -92,7 +85,7 @@ fun ReassuranceScreen(onContinue: () -> Unit, modifier: Modifier = Modifier) {
             }
             Spacer(Modifier.height(Spacing.lg))
 
-            proofs.forEachIndexed { index, proof ->
+            t.proofs.forEachIndexed { index, proof ->
                 Reveal(entry.value, from = optionStart(index, base = 0.22f, step = 0.14f)) {
                     Row(
                         Modifier
@@ -124,7 +117,7 @@ fun ReassuranceScreen(onContinue: () -> Unit, modifier: Modifier = Modifier) {
 
             Spacer(Modifier.height(Spacing.xl))
             Reveal(entry.value, from = 0.72f) {
-                SadoraButton("Davom etish", onContinue)
+                SadoraButton(t.continueLabel, onContinue)
             }
         }
     }
@@ -132,13 +125,8 @@ fun ReassuranceScreen(onContinue: () -> Unit, modifier: Modifier = Modifier) {
 
 // ---------------------------------------------------------------- analysing
 
-/** The lines the analysing screen steps through, and where each one lands. */
-private val analysisSteps = listOf(
-    0.30f to "Javoblaringiz o'qilmoqda…",
-    0.58f to "Siklingiz hisoblanmoqda…",
-    0.82f to "Bugun ekrani sozlanmoqda…",
-    1.00f to "Deyarli tayyor…",
-)
+/** Where each of the four lines lands on the ring. */
+private val analysisMarks = listOf(0.30f, 0.58f, 0.82f, 1.00f)
 
 /**
  * The wait at the end of the flow, with a ring that fills to a hundred.
@@ -150,6 +138,7 @@ private val analysisSteps = listOf(
 @Composable
 fun AnalysingScreen(onDone: () -> Unit, modifier: Modifier = Modifier) {
     val c = Sadora.colors
+    val t = strings.onboarding
     val progress = remember { Animatable(0f) }
 
     LaunchedEffect(Unit) {
@@ -158,8 +147,9 @@ fun AnalysingScreen(onDone: () -> Unit, modifier: Modifier = Modifier) {
     }
 
     val percent = (progress.value * 100).roundToInt()
-    val caption = (analysisSteps.firstOrNull { progress.value <= it.first }
-        ?: analysisSteps.last()).second
+    val step = analysisMarks.indexOfFirst { progress.value <= it }.takeIf { it >= 0 }
+        ?: analysisMarks.lastIndex
+    val caption = t.analysisSteps[step]
 
     Column(
         modifier
@@ -170,7 +160,7 @@ fun AnalysingScreen(onDone: () -> Unit, modifier: Modifier = Modifier) {
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(
-            "Sizga moslashtirilmoqda",
+            t.analysingTitle,
             style = Sadora.type.h1,
             color = c.text,
             textAlign = TextAlign.Center,
@@ -194,6 +184,7 @@ fun AnalysingScreen(onDone: () -> Unit, modifier: Modifier = Modifier) {
 @Composable
 private fun ProgressRing(progress: Float, modifier: Modifier = Modifier) {
     val c = Sadora.colors
+    val t = strings.onboarding
     val shimmer = rememberInfiniteTransition(label = "ring-shimmer")
     val spin by shimmer.animateFloat(
         initialValue = 0f,

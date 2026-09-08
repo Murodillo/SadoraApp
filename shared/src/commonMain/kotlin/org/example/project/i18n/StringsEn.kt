@@ -80,6 +80,8 @@ object StringsEn : Strings {
         override val languageTitle = "Choose your language"
         override val languageSubtitle = "You can change this later in settings."
         override val continueLabel = "Continue"
+        override val skip = "Skip"
+        override val back = "Back"
         override val skipTheseQuestions = "Skip these questions"
 
         override val nameTitle = "What should we call you?"
@@ -218,13 +220,57 @@ object StringsEn : Strings {
             if (name.isBlank()) "What are you noticing today?" else "$name, what are you noticing today?"
         override val symptomsSubtitle = "You can pick several. If there is nothing — skip it."
         override val saveSymptoms = "Save these"
+        override val notAloneTitle = "You are not alone"
+        override val proofs = listOf(
+            Proof("Chosen by women", "Thousands of women in Uzbekistan follow their cycle with SADORA."),
+            Proof("With doctors", "The questions and the articles are prepared with gynaecologists."),
+            Proof("The data is yours", "Export it whenever you like, or delete all of it."),
+        )
+        override val analysingTitle = "Setting things up for you"
+        override val analysisSteps = listOf(
+            "Reading your answers…",
+            "Working out your cycle…",
+            "Setting up your Today screen…",
+            "Almost ready…",
+        )
+
+        override fun readyTitle(name: String) =
+            if (name.isBlank()) "Done! Your profile is ready" else "Done, $name!"
+        override val readyBody = "Your Today screen is set up from your answers. " +
+            "You can change any of it later in Profile."
+        override val saving = "Saving…"
+        override val startSadora = "Start with SADORA"
+        override fun cycleSummary(cycleLength: Int, periodLength: Int) =
+            "Cycle $cycleLength days · period $periodLength days"
+        override val remindersOn = "Reminders are on"
+        override val healthDataOn = "Health data will be connected"
+        override fun goalsChosen(count: Int) = "$count goals chosen"
+
+        override val signInTitle = "Welcome back"
+        override val signInSubtitle = "We will send a code to your number"
+        override val noAccount = "No account yet? "
+        override val signUp = "Sign up"
+
+        override val consentTitle = "Your body. Your data."
+        override val consentBody = "Your health data never leaves SADORA for anyone else, " +
+            "and you can delete it whenever you like."
+        override val consentHealth = "I agree to my health data being processed so the app can work. "
+        override val consentHealthMore = "More in the "
+        override val consentTermsPrefix = "I accept the "
+        override val terms = "Terms of use"
+        override val and = " and the "
+        override val privacyPolicy = "Privacy policy"
+        override val consentAnalytics = "I agree to anonymous analysis of what I do in the " +
+            "app. This is optional and is used to make SADORA better."
+        override val consentAll = "Agree to everything"
+
         override val starterSymptoms = listOf(
-            "Cramps",
-            "Fatigue",
-            "Bloating",
-            "Breast tenderness",
-            "Lower back pain",
-            "Headache",
+            StarterSymptom("cramps", "Cramps"),
+            StarterSymptom("fatigue", "Fatigue"),
+            StarterSymptom("swelling", "Bloating"),
+            StarterSymptom("breast_tender", "Breast tenderness"),
+            StarterSymptom("back_pain", "Lower back pain"),
+            StarterSymptom("headache", "Headache"),
         )
     }
 
@@ -519,6 +565,10 @@ object StringsEn : Strings {
         override val postsAnonymously = "This goes out under an alias — your name is never shown."
         override val yourOwnPost = "This is your post."
         override val deletePost = "Delete this post"
+        override val newPost = "New post"
+        override val postSent = "Your post was sent"
+        override val comments = "Comments"
+        override val reportPost = "Report this"
         override val postDeleted = "The post was deleted"
         override val reportReasonTitle = "Why are you reporting this?"
         override val reportNote = "The report goes to a moderator. Who sent it is never shown."
@@ -646,6 +696,9 @@ object StringsEn : Strings {
 
         override val water = "Water"
         override fun waterOfGoal(drunk: String, goal: String) = "$drunk l / $goal l"
+        override val addWaterTitle = "Add water"
+        override val undo = "Undo"
+        override fun waterAdded(ml: Int) = "$ml ml added"
         override fun addWater(ml: Int) = "+$ml ml"
 
         override val aiAnalysis = "AI analysis"

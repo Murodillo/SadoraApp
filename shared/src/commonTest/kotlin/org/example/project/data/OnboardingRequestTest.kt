@@ -71,13 +71,16 @@ class OnboardingRequestTest {
             referredByDoctor = true
             mood = org.example.project.model.Mood.Low
             moodAnswered = true
-            symptoms.addAll(listOf("Charchoq", "Bosh og'rig'i", "Noma'lum belgi"))
+            // The tiles record the key as they are tapped, so what is sent does not
+            // depend on which language she read the words in.
+            toggleStarterSymptom("fatigue", "Charchoq")
+            toggleStarterSymptom("headache", "Bosh og'rig'i")
         }.toOnboardingRequest("Asia/Tashkent")
 
         assertEquals(true, request.referredByDoctor)
         val checkIn = assertNotNull(request.firstCheckIn)
         assertEquals(uz.sadora.contract.MoodLevel.LOW, checkIn.mood)
-        assertEquals(listOf("fatigue", "headache"), checkIn.symptomKeys, "unknown labels are left out, not guessed")
+        assertEquals(listOf("fatigue", "headache"), checkIn.symptomKeys)
     }
 
     /** A skipped feeling question must not send the store's default mood as if she had answered. */

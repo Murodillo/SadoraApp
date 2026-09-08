@@ -231,6 +231,10 @@ interface CommunityStrings {
     val yourOwnPost: String
     val deletePost: String
     val postDeleted: String
+    val newPost: String
+    val postSent: String
+    val comments: String
+    val reportPost: String
     val reportReasonTitle: String
     val reportNote: String
     val sendReport: String
@@ -367,6 +371,8 @@ interface OnboardingStrings {
     val languageSubtitle: String
     val continueLabel: String
     val skipTheseQuestions: String
+    val skip: String
+    val back: String
 
     // ---- name
     val nameTitle: String
@@ -480,12 +486,60 @@ interface OnboardingStrings {
     fun symptomsTitle(name: String): String
     val symptomsSubtitle: String
     val saveSymptoms: String
-    /** The starter list, offered before the server's catalogue is reachable. */
-    val starterSymptoms: List<String>
+    // ---- the two interstitials
+    val notAloneTitle: String
+    /** Three reassurances, each a headline and a line under it. */
+    val proofs: List<Proof>
+    val analysingTitle: String
+    /** What the wait says as the ring fills. */
+    val analysisSteps: List<String>
+
+    // ---- the ready screen
+    fun readyTitle(name: String): String
+    val readyBody: String
+    val saving: String
+    val startSadora: String
+    fun cycleSummary(cycleLength: Int, periodLength: Int): String
+    val remindersOn: String
+    val healthDataOn: String
+    fun goalsChosen(count: Int): String
+
+    // ---- sign in
+    val signInTitle: String
+    val signInSubtitle: String
+    val noAccount: String
+    val signUp: String
+
+    // ---- the consent gate
+    val consentTitle: String
+    val consentBody: String
+    val consentHealth: String
+    val consentHealthMore: String
+    val consentTermsPrefix: String
+    val terms: String
+    val and: String
+    val privacyPolicy: String
+    val consentAnalytics: String
+    val consentAll: String
+
+    /**
+     * The starter list, offered before the server's catalogue is reachable.
+     *
+     * Each carries the catalogue key it stands for, so what she ticks here can be sent
+     * up whatever language she ticked it in. The keys were a lookup by Uzbek label,
+     * which stopped working the moment the labels were translated.
+     */
+    val starterSymptoms: List<StarterSymptom>
 }
 
 /** One answer to "how are you feeling", with the mood it records and the reply. */
 data class FeelingOption(val label: String, val mood: Int, val reply: String)
+
+/** A starter symptom: the word she reads, and the catalogue key it means. */
+data class StarterSymptom(val key: String, val label: String)
+
+/** One line of the reassurance panel between the questions. */
+data class Proof(val headline: String, val body: String)
 
 interface ProfileStrings {
     val title: String
@@ -640,6 +694,9 @@ interface NutritionStrings {
     val water: String
     fun waterOfGoal(drunk: String, goal: String): String
     fun addWater(ml: Int): String
+    val addWaterTitle: String
+    fun waterAdded(ml: Int): String
+    val undo: String
 
     val aiAnalysis: String
     val aiBasis: String

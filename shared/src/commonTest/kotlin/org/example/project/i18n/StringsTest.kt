@@ -78,14 +78,21 @@ class StringsTest {
                     sensitiveBody, birthControlTitle, birthControlSubtitle, conceptionTitle,
                     dueDateTitle, dueDateSubtitle, birthDateTitle, birthDateSubtitle,
                     symptomsTitle("Malika"), symptomsTitle(""), symptomsSubtitle, saveSymptoms,
+                    skip, back, notAloneTitle, analysingTitle, readyTitle("Malika"), readyTitle(""),
+                    readyBody, saving, startSadora, cycleSummary(28, 5), remindersOn,
+                    healthDataOn, goalsChosen(3), signInTitle, signInSubtitle, noAccount, signUp,
+                    consentTitle, consentBody, consentHealth, consentHealthMore,
+                    consentTermsPrefix, terms, and, privacyPolicy, consentAnalytics, consentAll,
                 ),
             )
             LifeStage.entries.forEach { add(stagePromise(it)) }
             BirthControl.entries.forEach { add(birthControl(it)) }
             addAll(BirthControl.entries.mapNotNull { birthControlNote(it) })
             addAll(ConceptionWindow.entries.mapNotNull { conceptionNote(it) })
-            addAll(starterSymptoms)
+            starterSymptoms.forEach { add(it.label) }
             feelings.forEach { add(it.label); add(it.reply) }
+            proofs.forEach { add(it.headline); add(it.body) }
+            addAll(analysisSteps)
         }
         with(t.profile) {
             addAll(
@@ -253,6 +260,7 @@ class StringsTest {
                     waterOfGoal("1,2", "2,0"), addWater(250), aiAnalysis, aiBasis, scanner,
                     scannerHint, balance, balanceHint, today, protein, fat, carbs,
                     proteinInline, fatInline, carbsInline, balanced(400), shortOf("x"),
+                    addWaterTitle, waterAdded(250), undo,
                     kcal(250), grams(12),
                 ),
             )
@@ -277,7 +285,8 @@ class StringsTest {
                     title, compose, more, saved, nothingSaved, nothingHere, nothingSavedBody,
                     nothingHereBody, write, you, youParenthesised("X"), noComments, commentHint,
                     send, whatIsOnYourMind, postsAs("X"), postsAnonymously, yourOwnPost,
-                    deletePost, postDeleted, reportReasonTitle, reportNote, sendReport,
+                    deletePost, postDeleted, newPost, postSent, comments, reportPost,
+                    reportReasonTitle, reportNote, sendReport,
                     reportSent, shareSuffix,
                 ),
             )
@@ -346,13 +355,16 @@ class StringsTest {
             assertNotEquals(StringsUz.onboarding.nameNote, t.onboarding.nameNote)
             assertNotEquals(StringsUz.onboarding.sensitiveBody, t.onboarding.sensitiveBody)
             assertNotEquals(StringsUz.onboarding.codeSecrecy, t.onboarding.codeSecrecy)
+            assertNotEquals(StringsUz.onboarding.consentBody, t.onboarding.consentBody)
+            assertNotEquals(StringsUz.onboarding.readyBody, t.onboarding.readyBody)
+            assertNotEquals(StringsUz.onboarding.proofs.first().body, t.onboarding.proofs.first().body)
             assertNotEquals(
                 StringsUz.onboarding.stagePromise(LifeStage.Pregnancy),
                 t.onboarding.stagePromise(LifeStage.Pregnancy),
             )
             assertNotEquals(
-                StringsUz.onboarding.starterSymptoms.first(),
-                t.onboarding.starterSymptoms.first(),
+                StringsUz.onboarding.starterSymptoms.first().label,
+                t.onboarding.starterSymptoms.first().label,
             )
             assertNotEquals(StringsUz.stages.title(LifeStage.Cycle), t.stages.title(LifeStage.Cycle))
             assertNotEquals(StringsUz.common.greeting(9), t.common.greeting(9))
@@ -427,7 +439,15 @@ class StringsTest {
     fun `every starter symptom has a tile to sit in`() {
         languages.forEach { t ->
             assertEquals(6, t.onboarding.starterSymptoms.size)
+            // The key is the catalogue's and must not drift between languages.
+            assertEquals(
+                StringsUz.onboarding.starterSymptoms.map { it.key },
+                t.onboarding.starterSymptoms.map { it.key },
+            )
             assertEquals(4, t.onboarding.feelings.size)
+            // The analysing ring steps through exactly four captions.
+            assertEquals(4, t.onboarding.analysisSteps.size)
+            assertEquals(3, t.onboarding.proofs.size)
             t.onboarding.feelings.forEach { assertTrue(it.mood in 1..5) }
         }
     }

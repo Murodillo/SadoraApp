@@ -83,6 +83,8 @@ object StringsRu : Strings {
         override val languageTitle = "Выберите язык"
         override val languageSubtitle = "Позже это можно изменить в настройках."
         override val continueLabel = "Продолжить"
+        override val skip = "Пропустить"
+        override val back = "Назад"
         override val skipTheseQuestions = "Пропустить эти вопросы"
 
         override val nameTitle = "Как к вам обращаться?"
@@ -221,13 +223,57 @@ object StringsRu : Strings {
             if (name.isBlank()) "Что вы чувствуете сегодня?" else "$name, что вы чувствуете сегодня?"
         override val symptomsSubtitle = "Можно выбрать несколько. Если ничего нет — пропустите."
         override val saveSymptoms = "Сохранить симптомы"
+        override val notAloneTitle = "Вы не одна"
+        override val proofs = listOf(
+            Proof("Выбор женщин", "Тысячи женщин в Узбекистане следят за циклом вместе с SADORA."),
+            Proof("Вместе с врачами", "Вопросы и статьи готовятся вместе с гинекологами."),
+            Proof("Данные — ваши", "Экспортируйте их когда угодно или удалите полностью."),
+        )
+        override val analysingTitle = "Настраиваем под вас"
+        override val analysisSteps = listOf(
+            "Читаем ваши ответы…",
+            "Считаем ваш цикл…",
+            "Настраиваем экран «Сегодня»…",
+            "Почти готово…",
+        )
+
+        override fun readyTitle(name: String) =
+            if (name.isBlank()) "Готово! Профиль создан" else "Готово, $name!"
+        override val readyBody = "Экран «Сегодня» настроен по вашим ответам. " +
+            "Всё это можно изменить позже в разделе «Профиль»."
+        override val saving = "Сохраняем…"
+        override val startSadora = "Начать с SADORA"
+        override fun cycleSummary(cycleLength: Int, periodLength: Int) =
+            "Цикл $cycleLength дн. · менструация $periodLength дн."
+        override val remindersOn = "Напоминания включены"
+        override val healthDataOn = "Данные о здоровье подключаются"
+        override fun goalsChosen(count: Int) = "Выбрано целей: $count"
+
+        override val signInTitle = "Добро пожаловать"
+        override val signInSubtitle = "Отправим код на ваш номер"
+        override val noAccount = "Нет аккаунта? "
+        override val signUp = "Зарегистрироваться"
+
+        override val consentTitle = "Ваше тело. Ваши данные."
+        override val consentBody = "Данные о вашем здоровье не передаются никому за пределы " +
+            "SADORA, и вы можете удалить их в любой момент."
+        override val consentHealth = "Согласна на обработку данных о здоровье для работы приложения. "
+        override val consentHealthMore = "Подробнее — "
+        override val consentTermsPrefix = "Я принимаю "
+        override val terms = "Условия использования"
+        override val and = " и "
+        override val privacyPolicy = "Политику конфиденциальности"
+        override val consentAnalytics = "Согласна на анонимный анализ моих действий в " +
+            "приложении. Это по желанию и нужно, чтобы улучшать SADORA."
+        override val consentAll = "Согласиться со всем"
+
         override val starterSymptoms = listOf(
-            "Боль внизу живота",
-            "Усталость",
-            "Отёчность",
-            "Болит грудь",
-            "Боль в пояснице",
-            "Головная боль",
+            StarterSymptom("cramps", "Боль внизу живота"),
+            StarterSymptom("fatigue", "Усталость"),
+            StarterSymptom("swelling", "Отёчность"),
+            StarterSymptom("breast_tender", "Болит грудь"),
+            StarterSymptom("back_pain", "Боль в пояснице"),
+            StarterSymptom("headache", "Головная боль"),
         )
     }
 
@@ -528,6 +574,10 @@ object StringsRu : Strings {
         override val postsAnonymously = "Пост выйдет под псевдонимом — вашего имени не будет видно."
         override val yourOwnPost = "Это ваш пост."
         override val deletePost = "Удалить пост"
+        override val newPost = "Новый пост"
+        override val postSent = "Пост отправлен"
+        override val comments = "Комментарии"
+        override val reportPost = "Пожаловаться"
         override val postDeleted = "Пост удалён"
         override val reportReasonTitle = "Причина жалобы"
         override val reportNote = "Жалоба уйдёт модератору. Кто её отправил, не видно."
@@ -656,6 +706,9 @@ object StringsRu : Strings {
 
         override val water = "Вода"
         override fun waterOfGoal(drunk: String, goal: String) = "$drunk л / $goal л"
+        override val addWaterTitle = "Добавить воду"
+        override val undo = "Отменить"
+        override fun waterAdded(ml: Int) = "Добавлено $ml мл"
         override fun addWater(ml: Int) = "+$ml мл"
 
         override val aiAnalysis = "Анализ ИИ"

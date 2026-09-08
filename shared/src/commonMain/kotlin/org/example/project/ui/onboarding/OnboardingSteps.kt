@@ -92,6 +92,7 @@ private fun StepScaffold(
     content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit,
 ) {
     val c = Sadora.colors
+    val t = strings.onboarding
     // The activity draws edge to edge, so the status and navigation bars sit over the
     // content unless the scaffold makes room. Without this the footer button lands
     // underneath the navigation bar and onboarding cannot be finished at all on a device
@@ -127,6 +128,7 @@ private fun StepScaffold(
 @Composable
 internal fun NumberPad(onDigit: (String) -> Unit, onDelete: () -> Unit) {
     val c = Sadora.colors
+    val t = strings.onboarding
     val rows = listOf(
         listOf("1", "2", "3"),
         listOf("4", "5", "6"),
@@ -165,14 +167,18 @@ internal fun NumberPad(onDigit: (String) -> Unit, onDelete: () -> Unit) {
 /** What the profile now carries, as the "ready" screen lists it back. */
 @Composable
 private fun readyLines(state: AppState): List<Pair<ImageVector, String>> = buildList {
+    val t = strings.onboarding
     add(SadoraIcons.Journey to strings.stages.title(state.lifeStage))
     if (state.lifeStage.predictsCycle) {
-        add(SadoraIcons.Calendar to "Sikl ${state.averageCycleLength} kun · hayz ${state.averagePeriodLength} kun")
+        add(
+            SadoraIcons.Calendar to
+                t.cycleSummary(state.averageCycleLength, state.averagePeriodLength),
+        )
     }
     if (state.goals.isNotEmpty()) {
-        add(SadoraIcons.Target to "${state.goals.size} ta maqsad belgilandi")
+        add(SadoraIcons.Target to t.goalsChosen(state.goals.size))
     }
-    if (state.notificationsAllowed) add(SadoraIcons.Bell to "Eslatmalar yoqildi")
+    if (state.notificationsAllowed) add(SadoraIcons.Bell to t.remindersOn)
     if (state.healthDataAllowed) add(SadoraIcons.Watch to "Salomatlik ma'lumotlari ulanadi")
 }
 
@@ -186,6 +192,7 @@ private fun readyLines(state: AppState): List<Pair<ImageVector, String>> = build
 @Composable
 fun ReadyStep(state: AppState, controller: SadoraController, onEnter: () -> Unit) {
     val c = Sadora.colors
+    val t = strings.onboarding
     val entry = rememberPageEntry(1100)
 
     Box(Modifier.fillMaxSize()) {
@@ -203,9 +210,7 @@ fun ReadyStep(state: AppState, controller: SadoraController, onEnter: () -> Unit
             Spacer(Modifier.height(Spacing.md))
             Reveal(entry.value, from = 0.14f) {
                 Text(
-                    state.name.trim().let {
-                        if (it.isEmpty()) "Tayyor! Profilingiz yaratildi" else "Tayyor, $it!"
-                    },
+                    t.readyTitle(state.name.trim()),
                     style = Sadora.type.h1,
                     color = c.text,
                     textAlign = TextAlign.Center,
@@ -214,8 +219,7 @@ fun ReadyStep(state: AppState, controller: SadoraController, onEnter: () -> Unit
             Spacer(Modifier.height(Spacing.xs))
             Reveal(entry.value, from = 0.24f) {
                 Text(
-                    "Bugun ekranini javoblaringiz asosida sozladik. Hammasini keyin " +
-                        "Profil bo'limidan o'zgartira olasiz.",
+                    t.readyBody,
                     style = Sadora.type.body,
                     color = c.muted,
                     textAlign = TextAlign.Center,
@@ -251,7 +255,7 @@ fun ReadyStep(state: AppState, controller: SadoraController, onEnter: () -> Unit
             }
             Reveal(entry.value, from = 0.55f) {
                 SadoraButton(
-                    if (controller.busy) "Saqlanmoqda…" else "SADORA'ni boshlash",
+                    if (controller.busy) t.saving else t.startSadora,
                     onEnter,
                     enabled = !controller.busy,
                 )
@@ -271,6 +275,7 @@ fun SignInScreen(
     modifier: Modifier = Modifier,
 ) {
     val c = Sadora.colors
+    val t = strings.onboarding
     val scope = rememberCoroutineScope()
     val focus = LocalFocusManager.current
 
@@ -362,8 +367,8 @@ fun SignInScreen(
             verticalArrangement = Arrangement.spacedBy(6.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Text("Xush kelibsiz", style = Sadora.type.h1, color = c.text)
-            Text("Raqamingizga kod yuboramiz", style = Sadora.type.body, color = c.muted)
+            Text(t.signInTitle, style = Sadora.type.h1, color = c.text)
+            Text(t.signInSubtitle, style = Sadora.type.body, color = c.muted)
         }
 
         SadoraTextField(
@@ -372,7 +377,7 @@ fun SignInScreen(
                 state.phone = it
                 controller.clearError()
             },
-            label = "Telefon raqami",
+            label = t.phoneLabel,
             leading = "+998",
             placeholder = "90 123 45 67",
             keyboardType = KeyboardType.Phone,
@@ -383,7 +388,7 @@ fun SignInScreen(
         controller.error?.let { org.example.project.ui.components.ErrorStrip(it.readable()) }
 
         SadoraButton(
-            if (controller.busy) "Yuborilmoqda…" else "Kodni yuborish",
+            if (controller.busy) t.sending else t.sendCode,
             onClick = ::sendCode,
             // Nine digits is a complete Uzbek number; the server normalises the spacing.
             enabled = state.phone.count { it.isDigit() } >= 9 && !controller.busy,
@@ -427,9 +432,9 @@ fun SignInScreen(
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text("Hisobingiz yo'qmi? ", style = Sadora.type.body, color = c.muted)
+            Text(t.noAccount, style = Sadora.type.body, color = c.muted)
             Text(
-                "Ro'yxatdan o'tish",
+                t.signUp,
                 style = Sadora.type.body.copy(fontWeight = FontWeight.SemiBold),
                 color = c.textAccent,
                 modifier = Modifier.noRippleClickable(onClick = onRegisterInstead),

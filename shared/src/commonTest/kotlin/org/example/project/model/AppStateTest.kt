@@ -216,14 +216,6 @@ class AppStateTest {
     // ---------------------------------------------------------------- helpers
 
     @Test
-    fun `greeting follows the hour`() {
-        assertEquals("Xayrli tong", greetingFor(7))
-        assertEquals("Xayrli kun", greetingFor(13))
-        assertEquals("Xayrli kech", greetingFor(21))
-        assertEquals("Xayrli kech", greetingFor(2))
-    }
-
-    @Test
     fun `a meal logged now lands in the slot the hour belongs to`() {
         assertEquals(MealSlot.BREAKFAST, mealSlotForHour(8))
         assertEquals(MealSlot.LUNCH, mealSlotForHour(13))

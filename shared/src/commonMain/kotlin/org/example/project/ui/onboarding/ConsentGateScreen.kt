@@ -56,6 +56,7 @@ import org.example.project.model.AppState
 import org.example.project.ui.components.SadoraButton
 import org.example.project.ui.components.SadoraCheckbox
 import org.example.project.ui.components.noRippleClickable
+import org.example.project.i18n.strings
 
 // ---------------------------------------------------------------- illustration
 
@@ -101,6 +102,7 @@ private const val CogCycleMillis = 26_000
 @Composable
 private fun ShieldIllustration(entry: Float, modifier: Modifier = Modifier) {
     val c = Sadora.colors
+    val t = strings.onboarding
     val cogTones = remember(c) {
         listOf(
             c.primary.copy(alpha = 0.35f),
@@ -282,6 +284,7 @@ fun ConsentGateScreen(
     modifier: Modifier = Modifier,
 ) {
     val c = Sadora.colors
+    val t = strings.onboarding
     val entry = remember { Animatable(0f) }
     LaunchedEffect(Unit) {
         entry.animateTo(1f, tween(durationMillis = 1100, easing = FastOutSlowInEasing))
@@ -307,7 +310,7 @@ fun ConsentGateScreen(
 
             GateReveal(entry.value, from = 0.45f) {
                 Text(
-                    "Tanangiz. Ma'lumotingiz.",
+                    t.consentTitle,
                     style = Sadora.type.h1,
                     color = c.text,
                     textAlign = TextAlign.Center,
@@ -316,8 +319,7 @@ fun ConsentGateScreen(
             Spacer(Modifier.height(Spacing.xs))
             GateReveal(entry.value, from = 0.55f) {
                 Text(
-                    "Salomatlik ma'lumotlaringiz SADORA'dan tashqarida hech kimga " +
-                        "berilmaydi va uni istalgan vaqtda o'chira olasiz.",
+                    t.consentBody,
                     style = Sadora.type.body,
                     color = c.muted,
                     textAlign = TextAlign.Center,
@@ -331,9 +333,9 @@ fun ConsentGateScreen(
                         checked = state.consentStoreHealth,
                         onCheckedChange = { state.consentStoreHealth = it },
                         text = buildAnnotatedString {
-                            append("Salomatlik ma'lumotlarimni ilova funksiyalari uchun ")
-                            append("qayta ishlashga roziman. Batafsil — ")
-                            withLink("Maxfiylik siyosati", c.textAccent)
+                            append(t.consentHealth)
+                            append(t.consentHealthMore)
+                            withLink(t.privacyPolicy, c.textAccent)
                             append(".")
                         },
                         onLinkClick = { onOpenLegal(LegalDocument.Privacy) },
@@ -342,11 +344,11 @@ fun ConsentGateScreen(
                         checked = state.consentTerms,
                         onCheckedChange = { state.consentTerms = it },
                         text = buildAnnotatedString {
-                            append("Men ")
-                            withLink("Foydalanish shartlari", c.textAccent)
-                            append(" va ")
-                            withLink("Maxfiylik siyosati", c.textAccent)
-                            append("ga roziman.")
+                            append(t.consentTermsPrefix)
+                            withLink(t.terms, c.textAccent)
+                            append(t.and)
+                            withLink(t.privacyPolicy, c.textAccent)
+                            append(".")
                         },
                         onLinkClick = { onOpenLegal(LegalDocument.Terms) },
                     )
@@ -354,10 +356,7 @@ fun ConsentGateScreen(
                         checked = state.consentAnalytics,
                         onCheckedChange = { state.consentAnalytics = it },
                         text = buildAnnotatedString {
-                            append(
-                                "Ilovadagi harakatlarim anonim tahlil qilinishiga roziman. " +
-                                    "Bu ixtiyoriy va SADORA'ni yaxshilash uchun ishlatiladi.",
-                            )
+                            append(t.consentAnalytics)
                         },
                         onLinkClick = null,
                     )
@@ -373,7 +372,7 @@ fun ConsentGateScreen(
                 verticalArrangement = Arrangement.spacedBy(Spacing.xs),
             ) {
                 Text(
-                    "Hammasiga rozilik",
+                    t.consentAll,
                     style = Sadora.type.h3,
                     color = c.textAccent,
                     modifier = Modifier
@@ -386,7 +385,7 @@ fun ConsentGateScreen(
                         }
                         .padding(horizontal = Spacing.md, vertical = Spacing.sm),
                 )
-                SadoraButton("Davom etish", onContinue, enabled = required)
+                SadoraButton(t.continueLabel, onContinue, enabled = required)
             }
         }
     }
@@ -401,6 +400,7 @@ private fun ConsentLine(
     onLinkClick: (() -> Unit)?,
 ) {
     val c = Sadora.colors
+    val t = strings.onboarding
     Row(
         Modifier
             .fillMaxWidth()

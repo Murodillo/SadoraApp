@@ -80,6 +80,8 @@ object StringsUz : Strings {
         override val languageTitle = "Tilni tanlang"
         override val languageSubtitle = "Keyin sozlamalardan o'zgartira olasiz."
         override val continueLabel = "Davom etish"
+        override val skip = "O'tkazish"
+        override val back = "Ortga"
         override val skipTheseQuestions = "Bu savollarni o'tkazib yuborish"
 
         override val nameTitle = "Sizni qanday chaqiraylik?"
@@ -218,13 +220,57 @@ object StringsUz : Strings {
             if (name.isBlank()) "Bugun nimani sezyapsiz?" else "$name, bugun nimani sezyapsiz?"
         override val symptomsSubtitle = "Bir nechtasini tanlashingiz mumkin. Hech qaysisi bo'lmasa — o'tkazib yuboring."
         override val saveSymptoms = "Belgilarni saqlash"
+        override val notAloneTitle = "Siz yolg'iz emassiz"
+        override val proofs = listOf(
+            Proof("Ayollar tanlagan", "O'zbekistonda minglab ayol siklini SADORA bilan kuzatadi."),
+            Proof("Shifokorlar bilan", "Savollar va maqolalar ginekologlar bilan birga tayyorlanadi."),
+            Proof("Ma'lumot sizniki", "Istalgan vaqtda eksport qiling yoki butunlay o'chiring."),
+        )
+        override val analysingTitle = "Sizga moslashtirilmoqda"
+        override val analysisSteps = listOf(
+            "Javoblaringiz o'qilmoqda…",
+            "Siklingiz hisoblanmoqda…",
+            "Bugun ekrani sozlanmoqda…",
+            "Deyarli tayyor…",
+        )
+
+        override fun readyTitle(name: String) =
+            if (name.isBlank()) "Tayyor! Profilingiz yaratildi" else "Tayyor, $name!"
+        override val readyBody = "Bugun ekranini javoblaringiz asosida sozladik. " +
+            "Hammasini keyin Profil bo'limidan o'zgartira olasiz."
+        override val saving = "Saqlanmoqda…"
+        override val startSadora = "SADORA'ni boshlash"
+        override fun cycleSummary(cycleLength: Int, periodLength: Int) =
+            "Sikl $cycleLength kun · hayz $periodLength kun"
+        override val remindersOn = "Eslatmalar yoqildi"
+        override val healthDataOn = "Salomatlik ma'lumotlari ulanadi"
+        override fun goalsChosen(count: Int) = "$count ta maqsad belgilandi"
+
+        override val signInTitle = "Xush kelibsiz"
+        override val signInSubtitle = "Raqamingizga kod yuboramiz"
+        override val noAccount = "Hisobingiz yo'qmi? "
+        override val signUp = "Ro'yxatdan o'tish"
+
+        override val consentTitle = "Tanangiz. Ma'lumotingiz."
+        override val consentBody = "Salomatlik ma'lumotlaringiz SADORA'dan tashqarida " +
+            "hech kimga berilmaydi va uni istalgan vaqtda o'chira olasiz."
+        override val consentHealth = "Salomatlik ma'lumotlarimni ilova funksiyalari uchun qayta ishlashga roziman. "
+        override val consentHealthMore = "Batafsil — "
+        override val consentTermsPrefix = "Men "
+        override val terms = "Foydalanish shartlari"
+        override val and = " va "
+        override val privacyPolicy = "Maxfiylik siyosati"
+        override val consentAnalytics = "Ilovadagi harakatlarim anonim tahlil qilinishiga " +
+            "roziman. Bu ixtiyoriy va SADORA'ni yaxshilash uchun ishlatiladi."
+        override val consentAll = "Hammasiga rozilik"
+
         override val starterSymptoms = listOf(
-            "Qorin og'rig'i",
-            "Charchoq",
-            "Shishish",
-            "Ko'krak og'rig'i",
-            "Bel og'rig'i",
-            "Bosh og'rig'i",
+            StarterSymptom("cramps", "Qorin og'rig'i"),
+            StarterSymptom("fatigue", "Charchoq"),
+            StarterSymptom("swelling", "Shishish"),
+            StarterSymptom("breast_tender", "Ko'krak og'rig'i"),
+            StarterSymptom("back_pain", "Bel og'rig'i"),
+            StarterSymptom("headache", "Bosh og'rig'i"),
         )
     }
 
@@ -520,6 +566,10 @@ object StringsUz : Strings {
         override val postsAnonymously = "Post taxallus ostida chiqadi — ismingiz ko'rinmaydi."
         override val yourOwnPost = "Bu sizning postingiz."
         override val deletePost = "Postni o'chirish"
+        override val newPost = "Yangi post"
+        override val postSent = "Post yuborildi"
+        override val comments = "Izohlar"
+        override val reportPost = "Shikoyat qilish"
         override val postDeleted = "Post o'chirildi"
         override val reportReasonTitle = "Shikoyat sababi"
         override val reportNote = "Shikoyat moderatorga boradi. Kim yuborgani ko'rinmaydi."
@@ -649,6 +699,9 @@ object StringsUz : Strings {
 
         override val water = "Suv"
         override fun waterOfGoal(drunk: String, goal: String) = "$drunk l / $goal l"
+        override val addWaterTitle = "Suv qo'shish"
+        override val undo = "Qaytarish"
+        override fun waterAdded(ml: Int) = "$ml ml qo'shildi"
         override fun addWater(ml: Int) = "+$ml ml"
 
         override val aiAnalysis = "AI tahlili"

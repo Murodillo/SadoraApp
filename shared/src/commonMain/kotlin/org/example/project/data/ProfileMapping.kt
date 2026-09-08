@@ -174,25 +174,16 @@ fun AppState.toOnboardingRequest(timezone: String): OnboardingRequest = Onboardi
  * The check-in taken before sign-up — the "how do you feel" answer and the symptoms
  * she ticked — so the day she joined is not empty on the server.
  *
- * Null when she skipped both, so the server does not write an empty day. Symptom
- * labels become catalogue keys here; a label the catalogue does not know is left out.
+ * Null when she skipped both, so the server does not write an empty day. The tiles
+ * record their catalogue key as she taps them, so what is sent does not depend on the
+ * language she read them in.
  */
 private fun AppState.toFirstCheckIn(): OnboardingCheckIn? {
-    val keys = symptoms.mapNotNull { onboardingSymptomKeys[it] }
+    val keys = starterSymptomKeys.toList()
     val mood = if (moodAnswered) mood.toWire() else null
     if (mood == null && keys.isEmpty()) return null
     return OnboardingCheckIn(mood = mood, symptomKeys = keys)
 }
-
-/** The six tiles of the onboarding symptom question, by the keys the catalogue stores them under. */
-internal val onboardingSymptomKeys: Map<String, String> = mapOf(
-    "Qorin og'rig'i" to "cramps",
-    "Charchoq" to "fatigue",
-    "Shishish" to "swelling",
-    "Ko'krak og'rig'i" to "breast_tender",
-    "Bel og'rig'i" to "back_pain",
-    "Bosh og'rig'i" to "headache",
-)
 
 /**
  * The stage-specific dates, or null for the stages that have none.

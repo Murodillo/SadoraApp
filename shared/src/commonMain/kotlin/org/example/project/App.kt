@@ -221,6 +221,8 @@ private fun MainShell(
     billing: BillingController,
 ) {
     val scope = rememberCoroutineScope()
+    val waterStrings = strings.nutrition
+    val communityStrings = strings.community
 
     // One load on entering the shell. Failures are silent — a tab that could not reach
     // the server shows its empty state rather than a banner over the whole app.
@@ -267,7 +269,7 @@ private fun MainShell(
     fun addWater(ml: Int) {
         state.addWater(ml)
         lastWaterAdded = ml
-        toast = "$ml ml qo'shildi"
+        toast = waterStrings.waterAdded(ml)
         showWaterSheet = false
     }
 
@@ -359,7 +361,7 @@ private fun MainShell(
         ) {
             SadoraToast(
                 message = toast,
-                actionText = "Qaytarish",
+                actionText = waterStrings.undo,
                 onAction = {
                     state.addWater(-lastWaterAdded)
                     toast = null
@@ -382,7 +384,7 @@ private fun MainShell(
         LaunchedEffect(commentsFor?.id) { commentsFor?.let { community.loadComments(it.id) } }
         SadoraBottomSheet(
             visible = commentsFor != null,
-            title = "Izohlar",
+            title = communityStrings.comments,
             onDismiss = { commentsFor = null },
         ) {
             lastComments.value?.let { post ->
@@ -396,7 +398,7 @@ private fun MainShell(
         menuFor?.let { lastMenu.value = it }
         SadoraBottomSheet(
             visible = menuFor != null,
-            title = if (lastMenu.value?.isMine == true) "Sizning postingiz" else "Shikoyat qilish",
+            title = if (lastMenu.value?.isMine == true) communityStrings.yourOwnPost else communityStrings.reportPost,
             onDismiss = { menuFor = null },
         ) {
             lastMenu.value?.let { post ->
@@ -413,21 +415,21 @@ private fun MainShell(
 
         SadoraBottomSheet(
             visible = showCompose,
-            title = "Yangi post",
+            title = communityStrings.newPost,
             onDismiss = { showCompose = false },
         ) {
             ComposePostSheetContent(
                 state = state,
                 onPosted = {
                     showCompose = false
-                    toast = "Post yuborildi"
+                    toast = communityStrings.postSent
                 },
             )
         }
 
         SadoraBottomSheet(
             visible = showWaterSheet,
-            title = "Suv qo'shish",
+            title = waterStrings.addWaterTitle,
             onDismiss = { showWaterSheet = false },
         ) {
             Row(

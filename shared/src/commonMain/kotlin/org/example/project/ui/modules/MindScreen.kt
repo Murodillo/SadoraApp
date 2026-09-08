@@ -230,8 +230,8 @@ private fun MoodCard(state: AppState) {
             verticalArrangement = Arrangement.spacedBy(Spacing.xxs),
         ) {
             Text(state.mood.emoji, style = TextStyle(fontSize = 64.sp))
-            Text(state.mood.label, style = Sadora.type.h2, color = c.text)
-            Text(state.mood.caption, style = Sadora.type.body, color = c.muted)
+            Text(strings.common.mood(state.mood), style = Sadora.type.h2, color = c.text)
+            Text(strings.common.moodCaption(state.mood), style = Sadora.type.body, color = c.muted)
         }
         Row(
             Modifier.fillMaxWidth().padding(top = Spacing.xs),

@@ -61,15 +61,16 @@ private val AssumedFertileCycleDays = 12..16
 /**
  * The five moods, worst first.
  *
- * [caption] is the one-line reading the Mind screen shows under the big face, and
- * [faceIndex] picks which of the deck's five coloured faces represents it.
+ * The word for each and the line the Mind screen shows under the big face live in
+ * [org.example.project.i18n.CommonStrings]; an enum is one object for the process, and
+ * the language belongs to the screen. The face is the same everywhere, so it stays.
  */
-enum class Mood(val emoji: String, val label: String, val score: Int, val caption: String) {
-    Bad("😞", "Og'ir", 1, "Bugun o'zingizga mehribon bo'ling."),
-    Low("😕", "So'lg'in", 2, "Sekinroq kun — bu ham normal."),
-    Ok("😐", "O'rtacha", 3, "Muvozanat uchun oddiy kun."),
-    Good("🙂", "Xotirjam", 4, "Muvozanat uchun yaxshi kun."),
-    Great("😄", "Ajoyib", 5, "Energiyangiz yuqori — foydalaning!");
+enum class Mood(val emoji: String, val score: Int) {
+    Bad("😞", 1),
+    Low("😕", 2),
+    Ok("😐", 3),
+    Good("🙂", 4),
+    Great("😄", 5);
 
     companion object {
         fun forScore(score: Int): Mood = entries.firstOrNull { it.score == score } ?: Ok
@@ -78,13 +79,6 @@ enum class Mood(val emoji: String, val label: String, val score: Int, val captio
 
 /** Today, in the device's own zone. */
 fun deviceToday(): LocalDate = Clock.System.todayIn(TimeZone.currentSystemDefault())
-
-/** "Xayrli tong" until noon, "Xayrli kun" until six, "Xayrli kech" after. */
-fun greetingFor(hour: Int): String = when (hour) {
-    in 5..11 -> "Xayrli tong"
-    in 12..17 -> "Xayrli kun"
-    else -> "Xayrli kech"
-}
 
 /**
  * Single in-memory store for the whole app.
@@ -342,7 +336,9 @@ class AppState {
         ownComments.getOrPut(postId) { mutableStateListOf() }
             .add(
                 CommunityComment(
-                    alias = communityAlias ?: "Siz",
+                    // Blank rather than a word: the screen already draws "siz" beside
+                    // a comment marked as hers, and a word here could not be translated.
+                    alias = communityAlias.orEmpty(),
                     tint = communityTint,
                     createdAt = Clock.System.now(),
                     body = text,
@@ -368,7 +364,7 @@ class AppState {
             0,
             CommunityPost(
                 id = "local-${communityPosts.size + 1}",
-                alias = communityAlias ?: "Siz",
+                alias = communityAlias.orEmpty(),
                 tint = communityTint,
                 topic = topic,
                 createdAt = Clock.System.now(),
@@ -578,6 +574,20 @@ class AppState {
 
     fun toggleGoal(goal: Goal) {
         if (!goals.remove(goal)) goals.add(goal)
+    }
+
+    /**
+     * The onboarding tiles, which record the catalogue key as well as the word.
+     *
+     * The sign-up request sends keys, and before this the key was found by looking the
+     * Uzbek word up in a map — which stopped working the moment the words could be
+     * Russian or English.
+     */
+    val starterSymptomKeys = mutableStateListOf<String>()
+
+    fun toggleStarterSymptom(key: String, label: String) {
+        if (!starterSymptomKeys.remove(key)) starterSymptomKeys.add(key)
+        toggleSymptom(label)
     }
 
     fun toggleSymptom(symptom: String) {

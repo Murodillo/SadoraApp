@@ -73,7 +73,7 @@ class ApiCaller internal constructor(
      */
     suspend fun refreshSession(): ApiResult<AuthSession> {
         val refreshToken = session.currentRefreshToken()
-            ?: return ApiResult.Failure(ApiFailure.Unauthorized("Sessiya topilmadi"))
+            ?: return ApiResult.Failure(ApiFailure.Unauthorized("no refresh token"))
         return unauthenticated<AuthSession>("v1/auth/refresh") { setBody(RefreshRequest(refreshToken)) }
             .onSuccess { session.saveTokens(it.tokens) }
     }
@@ -128,17 +128,22 @@ class ApiCaller internal constructor(
         // Everything reaching here is a transport or parsing problem, not a rejection the
         // server described. Reporting it as Network is what lets the UI offer a retry
         // rather than an apology.
-        ApiResult.Failure(ApiFailure.Network(failure.message ?: "Ulanishda xatolik"))
+        ApiResult.Failure(ApiFailure.Network(failure.message ?: "transport failure"))
     }
 
+    /**
+     * The message on these is a diagnostic, not a sentence for a screen: `readable()`
+     * writes its own words for every case but validation and OTP, where the server's
+     * message names the field.
+     */
     suspend fun HttpResponse.toFailure(): ApiFailure {
         val parsed = runCatching { body<ApiErrorResponse>() }.getOrNull()
         if (parsed != null) return ApiFailure.from(parsed.error)
         // A gateway or proxy answered instead of the API, so there is no error envelope.
         return when (status) {
-            HttpStatusCode.Unauthorized -> ApiFailure.Unauthorized("Sessiya tugadi")
-            HttpStatusCode.TooManyRequests -> ApiFailure.RateLimited("Juda ko'p so'rov", null)
-            else -> ApiFailure.Unexpected("Server xatosi (${status.value})")
+            HttpStatusCode.Unauthorized -> ApiFailure.Unauthorized("401 with no error envelope")
+            HttpStatusCode.TooManyRequests -> ApiFailure.RateLimited("429 with no error envelope", null)
+            else -> ApiFailure.Unexpected("http ${status.value} with no error envelope")
         }
     }
 }

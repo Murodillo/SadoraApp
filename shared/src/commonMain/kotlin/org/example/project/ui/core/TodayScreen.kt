@@ -34,7 +34,6 @@ import org.example.project.model.Fmt
 import org.example.project.model.LifeStage
 import org.example.project.model.MedStatus
 import org.example.project.model.deviceNow
-import org.example.project.model.greetingFor
 import org.example.project.nav.Route
 import org.example.project.nav.Tab
 import org.example.project.nav.aiRoute
