@@ -303,9 +303,31 @@ Hali yo'q:
 - **Apple/Google kirish** — tugmalar bor va server `idToken`ni tekshiradi, lekin
   platforma SDK'si hali o'sha tokenni bermaydi
 - **Qurilma integratsiyasi** — Apple Health / Oura ma'lumotlari namuna
-- **Huquqiy matnlar faqat o'zbekcha** — `LegalScreen.kt` ichidagi Foydalanish shartlari
-  va Maxfiylik siyosati tarjima qilinmagan. Bular yuristning ishi: bir noto'g'ri
-  tarjima qilingan band majburiyatni o'zgartiradi. Boshqa hamma ekran uch tilda
+
+---
+
+## Huquqiy matnlar
+
+Foydalanish shartlari va Maxfiylik siyosati `shared/.../i18n/LegalTexts*.kt` da, uch
+tilda. Asl matn o'zbekcha va yuridik kuchga ega bo'lgani ham o'sha — qolgan ikkitasi
+tarjima, va ekranning o'zi buni aytadi. Matn ilova ichida yashaydi, chunki onboarding
+rozilikni hisob paydo bo'lishidan oldin so'raydi: foydalanuvchi nimaga rozi
+bo'layotganini o'qish uchun oqimdan chiqmasligi yoki internetga ulanmasligi kerak.
+
+Do'konlar bir xil matnni ochiq havolada ham so'raydi. Ular o'sha Kotlin manbadan
+generatsiya qilinadi — qo'lda yozilgan ikkinchi nusxa vaqt o'tib boshqacha bo'lib
+qoladi, va aynan o'sha nusxani tekshiruvchi o'qiydi:
+
+```bash
+python3 tools/gen_legal_pages.py
+```
+
+`landing/privacy.html` va `landing/terms.html` — Play Console va App Store Connect'ga
+beriladigan manzillar (o'zbekcha); yonida `.ru` va `.en` variantlari.
+
+Ekrandagi sana va serverning `POLICY_VERSION` sozlamasi bitta kun bo'lishi shart:
+rozilik yozuvi versiyani saqlaydi, ya'ni ekran versiyadan kechroq sana ko'rsatsa,
+yozuv foydalanuvchi ko'rmagan matnga rozi bo'lgan deb turadi.
 
 ---
 

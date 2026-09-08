@@ -643,6 +643,16 @@ interface SettingsStrings {
     val legalDocuments: String
     val terms: String
     val privacyPolicy: String
+    val legalEffectiveDate: String
+
+    /**
+     * The two documents themselves, in this language.
+     *
+     * They hang off [Strings] rather than a composition local of their own so a screen
+     * that already wrote `val t = strings` has them, and so the language cannot be one
+     * thing for the interface and another for the terms she is agreeing to.
+     */
+    val legal: LegalTexts
     val yourData: String
     val exportData: String
     val deleteAccount: String

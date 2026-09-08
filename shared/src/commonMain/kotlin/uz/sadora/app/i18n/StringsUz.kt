@@ -355,6 +355,8 @@ object StringsUz : Strings {
         override val consentAnalyticsNote = "Ixtiyoriy. Ilovani yaxshilashga yordam beradi."
         override val saveConsents = "Roziliklarni saqlash"
         override val legalDocuments = "Huquqiy hujjatlar"
+        override val legalEffectiveDate = "Kuchga kirgan sana"
+        override val legal = LegalTextsUz
         override val terms = "Foydalanish shartlari"
         override val privacyPolicy = "Maxfiylik siyosati"
         override val yourData = "Ma'lumotlaringiz"

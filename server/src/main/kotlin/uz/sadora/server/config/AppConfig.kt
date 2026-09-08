@@ -102,7 +102,10 @@ data class AppConfig(
                         checkoutUrl = env("CLICK_CHECKOUT_URL", "https://my.click.uz/services/pay"),
                     ),
                 ),
-                policyVersion = env("POLICY_VERSION", "2026-08-01"),
+                // The day the copy in the app's LegalScreen took effect. The consent row records
+                // this string, so a screen dated later than the version stored against it
+                // would make the record say she agreed to something she never saw.
+                policyVersion = env("POLICY_VERSION", "2026-09-03"),
                 minimumAppVersion = envOrNull("MINIMUM_APP_VERSION"),
                 accountErasureGracePeriod = env("ACCOUNT_ERASURE_GRACE_DAYS", "30").toInt().days,
             )

@@ -355,6 +355,8 @@ object StringsEn : Strings {
         override val consentAnalyticsNote = "Optional. It helps make the app better."
         override val saveConsents = "Save consents"
         override val legalDocuments = "Legal documents"
+        override val legalEffectiveDate = "Effective date"
+        override val legal = LegalTextsEn
         override val terms = "Terms of use"
         override val privacyPolicy = "Privacy policy"
         override val yourData = "Your data"

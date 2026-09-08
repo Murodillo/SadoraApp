@@ -358,6 +358,8 @@ object StringsRu : Strings {
         override val consentAnalyticsNote = "По желанию. Помогает улучшать приложение."
         override val saveConsents = "Сохранить согласия"
         override val legalDocuments = "Правовые документы"
+        override val legalEffectiveDate = "Дата вступления в силу"
+        override val legal = LegalTextsRu
         override val terms = "Условия использования"
         override val privacyPolicy = "Политика конфиденциальности"
         override val yourData = "Ваши данные"
