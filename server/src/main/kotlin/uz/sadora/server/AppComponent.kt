@@ -53,7 +53,12 @@ import uz.sadora.server.health.NutritionService
 import uz.sadora.server.content.ContentRepository
 import uz.sadora.server.content.ContentService
 import uz.sadora.server.insights.InsightsService
+import java.io.File
+import uz.sadora.server.notify.FcmPushSender
+import uz.sadora.server.notify.GoogleAccessTokens
 import uz.sadora.server.notify.LoggingPushSender
+import uz.sadora.server.notify.PushSender
+import uz.sadora.server.notify.ServiceAccountKey
 import uz.sadora.server.notify.NotificationRepository
 import uz.sadora.server.notify.NotificationScheduler
 import uz.sadora.server.notify.NotificationService
@@ -147,11 +152,34 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
 
     val notificationRepository = NotificationRepository()
     val notificationService = NotificationService(notificationRepository)
+    /**
+     * FCM when it is configured, the log when it is not.
+     *
+     * Not a refusal like the store verifier: a notification that is only logged costs
+     * nobody anything, while a checkout that is only logged gives the product away. A
+     * laptop and a demo want the log; production wants the line below to say fcm, and
+     * the boot log says which one it got.
+     */
+    val pushSender: PushSender = if (config.push.isConfigured) {
+        FcmPushSender(
+            client = outboundHttpClient,
+            projectId = config.push.projectId!!,
+            tokens = GoogleAccessTokens(
+                client = outboundHttpClient,
+                credentials = ServiceAccountKey.parse(File(config.push.serviceAccountPath!!).readText()),
+                scope = FcmPushSender.SCOPE,
+            ),
+            onTokenRejected = { token -> userRepository.forgetPushToken(token) },
+        )
+    } else {
+        LoggingPushSender()
+    }
+
     val notificationScheduler = NotificationScheduler(
         notifications = notificationRepository,
         medications = medicationRepository,
         users = userRepository,
-        sender = LoggingPushSender(),
+        sender = pushSender,
     )
 
     val accountErasureJob = AccountErasureJob(

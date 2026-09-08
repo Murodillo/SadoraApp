@@ -136,6 +136,7 @@ import uz.sadora.server.config.Environment
 import uz.sadora.server.config.HttpConfig
 import uz.sadora.server.config.JwtConfig
 import uz.sadora.server.config.OtpConfig
+import uz.sadora.server.config.PushConfig
 import uz.sadora.server.config.RedisConfig
 import uz.sadora.server.config.SocialConfig
 import uz.sadora.server.core.now
@@ -1250,6 +1251,9 @@ class ApiIntegrationTest {
             inputCostPerMillionMicros = 100_000,
             outputCostPerMillionMicros = 400_000,
         ),
+        // Unconfigured, so notifications are logged rather than sent: the suite must not
+        // reach Firebase, and the scheduler's own behaviour is what it checks.
+        push = PushConfig(projectId = null, serviceAccountPath = null),
         // Provider credentials the tests sign with; a real deployment reads them from
         // the environment and refuses checkout when they are absent.
         billing = BillingConfig(

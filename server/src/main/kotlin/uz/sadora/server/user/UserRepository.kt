@@ -274,6 +274,17 @@ class UserRepository {
         }
     }
 
+    /**
+     * Clears a push token FCM says no longer exists.
+     *
+     * The device row survives — it is still the install's technical record — but a token
+     * that is gone must stop being tried, or every notification for that account carries
+     * one guaranteed failure for as long as the row lives.
+     */
+    suspend fun forgetPushToken(token: String): Unit = dbQuery {
+        Devices.update({ Devices.pushToken eq token }) { it[pushToken] = null }
+    }
+
     suspend fun touchLastActive(userId: Uuid): Unit = dbQuery {
         Users.update({ Users.id eq userId }) { it[lastActiveAt] = now().toOffsetDateTime() }
     }

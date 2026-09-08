@@ -268,6 +268,17 @@ audit jurnali va AI xarajat jurnali — tarix javob beradi, odam esa ichida qolm
 Muhlat "har ehtimolga qarshi" saqlash emas: u tugagach ma'lumot yo'q va uni ilova ichida
 qaytarib bo'lmaydi.
 
+**Bildirishnoma FCM orqali ketadi, sozlanmagan bo'lsa log'ga.** `FCM_PROJECT_ID` va
+`FCM_SERVICE_ACCOUNT_FILE` berilgan bo'lsa `FcmPushSender` ishlaydi — bitta Firebase
+loyihasi ikkala platformani ham qamraydi (Android to'g'ridan-to'g'ri, iOS o'sha loyihaga
+yuklangan APNs kaliti orqali). Berilmagan bo'lsa `LoggingPushSender`: bu store
+tekshiruvchisidan farqli o'laroq rad javob emas — faqat log'ga yozilgan bildirishnoma
+hech kimga zarar qilmaydi, faqat log'ga yozilgan to'lov esa mahsulotni bepul qilib
+qo'yadi. Kalit har bir token uchun alohida so'rov: FCM `UNREGISTERED` desa, o'sha token
+o'chiriladi — qurilma o'chirib tashlangan, va uni cheksiz sinash har bir
+bildirishnomaga kafolatlangan bitta xatolik qo'shadi. Bitta qurilmaning yiqilishi
+boshqasida yetib borgan eslatmani muvaffaqiyatsiz deb belgilamaydi.
+
 **Onboarding'dagi birinchi check-in health-gate ortida.** `firstCheckIn` profil bilan
 birga keladi, lekin `HealthService` orqali, `store_health` roziligi bo'lgandagina
 yoziladi — roziliksiz jimgina tashlab yuboriladi, so'rov muvaffaqiyatsiz bo'lmaydi.

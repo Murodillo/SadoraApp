@@ -23,6 +23,7 @@ data class AppConfig(
     val otp: OtpConfig,
     val social: SocialConfig,
     val ai: AiConfig,
+    val push: PushConfig,
     val billing: BillingConfig,
     val policyVersion: String,
     val minimumAppVersion: String?,
@@ -86,6 +87,10 @@ data class AppConfig(
                     maxOutputTokens = env("AI_MAX_OUTPUT_TOKENS", "800").toInt(),
                     inputCostPerMillionMicros = env("AI_INPUT_COST_MICROS", "100000").toLong(),
                     outputCostPerMillionMicros = env("AI_OUTPUT_COST_MICROS", "400000").toLong(),
+                ),
+                push = PushConfig(
+                    projectId = envOrNull("FCM_PROJECT_ID"),
+                    serviceAccountPath = envOrNull("FCM_SERVICE_ACCOUNT_FILE"),
                 ),
                 billing = BillingConfig(
                     payme = PaymeConfig(
@@ -209,6 +214,18 @@ data class AiConfig(
  * than failing at it: the catalogue asks [PaymeConfig.isConfigured] before listing a
  * button that would produce a link nobody can pay.
  */
+/**
+ * Firebase Cloud Messaging. Both fields or neither: with anything missing the server
+ * logs notifications instead of delivering them, which is what a laptop should do and
+ * what production must be noticed not doing.
+ */
+data class PushConfig(
+    val projectId: String?,
+    val serviceAccountPath: String?,
+) {
+    val isConfigured: Boolean get() = projectId != null && serviceAccountPath != null
+}
+
 data class BillingConfig(val payme: PaymeConfig, val click: ClickConfig)
 
 data class PaymeConfig(
