@@ -49,6 +49,7 @@ import uz.sadora.contract.BillingPeriod
 import uz.sadora.contract.BillingPlan
 import uz.sadora.contract.PaymentProvider
 import org.example.project.ui.components.noRippleClickable
+import org.example.project.data.readable
 
 private data class PlanFeature(val name: String, val free: String, val premium: String)
 
@@ -158,20 +159,20 @@ fun PaywallScreen(
                 SadoraCard(padding = Spacing.sm) {
                     Row(Modifier.fillMaxWidth()) {
                         Text(
-                            "IMKONIYAT",
+                            t.featureCaps,
                             style = Sadora.type.caption,
                             color = c.muted,
                             modifier = Modifier.weight(1f),
                         )
                         Text(
-                            "BEPUL",
+                            t.freeCaps,
                             style = Sadora.type.caption,
                             color = c.muted,
                             modifier = Modifier.width(64.dp),
                             textAlign = TextAlign.Center,
                         )
                         Text(
-                            "PREMIUM",
+                            t.premiumCapsBadge,
                             style = Sadora.type.caption,
                             color = c.textAccent,
                             modifier = Modifier.width(64.dp),
@@ -220,9 +221,9 @@ fun PaywallScreen(
                         // No prices means no offer: quoting a figure the server has not
                         // confirmed is how two app versions end up selling at two prices.
                         SadoraCard {
-                            Text("Tariflar yuklanmadi", style = Sadora.type.h3, color = c.text)
+                            Text(t.plansFailed, style = Sadora.type.h3, color = c.text)
                             Text(
-                                billing.error ?: t.plansFailedBody,
+                                billing.error?.readable() ?: t.plansFailedBody,
                                 style = Sadora.type.body,
                                 color = c.muted,
                             )
@@ -284,7 +285,7 @@ fun PaywallScreen(
                         )
                     }
 
-                    billing.error?.let {
+                    billing.error?.readable()?.let {
                         Text(it, style = Sadora.type.body, color = c.warning, textAlign = TextAlign.Center)
                     }
 

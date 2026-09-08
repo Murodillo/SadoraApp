@@ -29,7 +29,7 @@ class CommunityController(
     val calls = ApiCallState()
 
     val busy: Boolean get() = calls.busy
-    val error: String? get() = calls.error
+    val error: ApiFailure? get() = calls.error
     val isOffline: Boolean get() = api == null
 
     fun clearError() = calls.clearError()

@@ -183,8 +183,8 @@ private fun CycleJourney(state: AppState, health: HealthController, onOpen: (Rou
                 ) {
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Spacing.xxs)) {
                         Text(t.today, style = Sadora.type.h3, color = c.text)
-                        Text(phase.fertilityNote, style = Sadora.type.body.copy(fontWeight = FontWeight.SemiBold), color = c.text)
-                        Text(phase.energyNote, style = Sadora.type.body, color = c.muted)
+                        Text(strings.common.phaseFertility(phase), style = Sadora.type.body.copy(fontWeight = FontWeight.SemiBold), color = c.text)
+                        Text(strings.common.phaseEnergy(phase), style = Sadora.type.body, color = c.muted)
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(Spacing.xs),

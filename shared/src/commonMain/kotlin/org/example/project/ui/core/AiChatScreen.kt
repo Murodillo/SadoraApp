@@ -61,6 +61,7 @@ import org.example.project.ui.components.ButtonTone
 import org.example.project.ui.components.CircleIconButton
 import org.example.project.ui.components.appearFromBelow
 import org.example.project.ui.components.noRippleClickable
+import org.example.project.data.readable
 
 private data class ChatMessage(
     val fromUser: Boolean,
@@ -86,6 +87,7 @@ fun AiChatScreen(
 ) {
     val c = Sadora.colors
     val t = strings.ai
+    val errors = strings.errors
     val scope = rememberCoroutineScope()
     var draft by remember { mutableStateOf("") }
     var showMenu by remember { mutableStateOf(false) }
@@ -107,7 +109,7 @@ fun AiChatScreen(
             } else {
                 // The refusal reads as a reply rather than a banner: it is what the
                 // assistant has to say about this question.
-                ChatMessage(false, ai.error ?: t.answerFailed, nowTimeLabel(), isNotice = true)
+                ChatMessage(false, ai.error?.readable(errors) ?: t.answerFailed, nowTimeLabel(), isNotice = true)
             }
         }
     }

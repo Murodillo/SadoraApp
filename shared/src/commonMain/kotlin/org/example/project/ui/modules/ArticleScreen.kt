@@ -32,6 +32,7 @@ import org.example.project.ui.components.Skeleton
 import uz.sadora.contract.Article
 import uz.sadora.contract.ArticleBlock
 import org.example.project.i18n.strings
+import org.example.project.data.readable
 
 /**
  * "Maqola" — the reader.
@@ -66,7 +67,7 @@ fun ArticleScreen(
                 article == null -> item {
                     EmptyState(
                         title = t.articleFailed,
-                        body = learn.error
+                        body = learn.error?.readable()
                             ?: t.articleFailedBody,
                         actionText = null,
                         onAction = {},

@@ -35,6 +35,7 @@ import org.example.project.ui.components.TrendBars
 import uz.sadora.contract.InsightsSummary
 import uz.sadora.contract.MetricTrend
 import uz.sadora.contract.TrendMetric
+import org.example.project.data.readable
 
 /** The three windows, in the order the chips draw them. */
 private val windows = listOf(7, 30, 90)
@@ -91,7 +92,7 @@ fun InsightsScreen(
                 summary == null -> item {
                     EmptyState(
                         title = t.insightsEmptyTitle,
-                        body = insights.error
+                        body = insights.error?.readable()
                             ?: t.loadFailed,
                         actionText = null,
                         onAction = {},

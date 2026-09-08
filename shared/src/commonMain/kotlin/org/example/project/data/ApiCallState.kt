@@ -17,8 +17,13 @@ class ApiCallState {
     var busy by mutableStateOf(false)
         private set
 
-    /** The last failure, already turned into something a person can read. */
-    var error by mutableStateOf<String?>(null)
+    /**
+     * The last failure, as a failure.
+     *
+     * Not as a sentence: one worded when the call failed would keep the language the
+     * app happened to be in at that moment. The screen words it with `readable()`.
+     */
+    var error by mutableStateOf<ApiFailure?>(null)
         private set
 
     fun clearError() {
@@ -38,7 +43,7 @@ class ApiCallState {
             when (val result = block()) {
                 is ApiResult.Success -> result.value
                 is ApiResult.Failure -> {
-                    if (!silent) error = result.failure.readable()
+                    if (!silent) error = result.failure
                     null
                 }
             }

@@ -21,6 +21,7 @@ import uz.sadora.contract.ErrorCodes
 import uz.sadora.contract.LikeState
 import uz.sadora.contract.Page
 import uz.sadora.contract.SaveState
+import org.example.project.i18n.StringsUz
 
 /**
  * The two controllers the secret chat and the AI chat hang off. What is pinned: the
@@ -176,7 +177,7 @@ class CommunityAndAiControllerTest {
         assertTrue(!ai.canAsk)
 
         assertNull(ai.ask("Yana"))
-        assertEquals("Bugungi limit tugadi.", ai.error)
+        assertEquals(StringsUz.errors.dailyLimit, ai.error?.readable(StringsUz.errors))
     }
 
     @Test
@@ -186,7 +187,7 @@ class CommunityAndAiControllerTest {
         }
         val ai = graph(recording).aiController(AppState())
         assertNull(ai.ask("Salom"))
-        assertEquals("Bu bo'lim hozircha yopiq.", ai.error)
+        assertEquals(StringsUz.errors.featureClosed, ai.error?.readable(StringsUz.errors))
     }
 
     @Test

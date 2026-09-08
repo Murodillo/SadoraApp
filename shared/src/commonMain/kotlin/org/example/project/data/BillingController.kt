@@ -31,7 +31,7 @@ class BillingController(private val api: BillingApi?) {
     var catalogue by mutableStateOf<BillingCatalogue?>(null)
         private set
 
-    var error by mutableStateOf<String?>(null)
+    var error by mutableStateOf<ApiFailure?>(null)
         private set
 
     /** The checkout that is open, so the screen knows to show "waiting for payment". */
@@ -57,7 +57,7 @@ class BillingController(private val api: BillingApi?) {
                 catalogue = loaded
                 error = null
             }
-            refusal != null -> error = refusal.readable()
+            refusal != null -> error = refusal
         }
     }
 
@@ -71,7 +71,7 @@ class BillingController(private val api: BillingApi?) {
             api.checkout(planId, provider).onFailure { refusal = it }
         }
         if (session == null) {
-            error = refusal?.readable()
+            error = refusal
             return null
         }
         pending = session
@@ -103,7 +103,7 @@ class BillingController(private val api: BillingApi?) {
                 }
                 PaymentState.CANCELLED, PaymentState.FAILED -> {
                     pending = null
-                    error = "To'lov amalga oshmadi. Qayta urinib ko'ring."
+                    error = ApiFailure.PaymentFailed
                     return
                 }
                 PaymentState.PENDING -> Unit

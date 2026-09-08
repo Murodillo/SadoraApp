@@ -22,15 +22,15 @@ enum class AppLanguage(val code: String, val native: String, val english: String
 }
 
 /** The eight onboarding goals. Selected goals surface first on the Today screen. */
-enum class Goal(val label: String) {
-    UnderstandCycle("Siklni tushunish"),
-    SleepBetter("Yaxshi uxlash"),
-    MoreEnergy("Energiyani oshirish"),
-    LessStress("Stressni kamaytirish"),
-    EatBalanced("Muvozanatli ovqatlanish"),
-    DrinkWater("Ko'proq suv ichish"),
-    BeActive("Faolroq bo'lish"),
-    RememberMeds("Dorilarni eslab qolish"),
+enum class Goal {
+    UnderstandCycle,
+    SleepBetter,
+    MoreEnergy,
+    LessStress,
+    EatBalanced,
+    DrinkWater,
+    BeActive,
+    RememberMeds,
 }
 
 /**
@@ -38,13 +38,7 @@ enum class Goal(val label: String) {
  *
  * Asked only of that life stage, and only after the sensitive-topic notice.
  */
-enum class ConceptionWindow(val label: String) {
-    JustStarted("Endi boshladim"),
-    UnderThreeMonths("3 oygacha"),
-    ThreeToSix("3–6 oy"),
-    SixToTwelve("6–12 oy"),
-    OverAYear("Bir yildan ko'p"),
-}
+enum class ConceptionWindow { JustStarted, UnderThreeMonths, ThreeToSix, SixToTwelve, OverAYear }
 
 /**
  * Contraception used in the last six months.
@@ -53,15 +47,7 @@ enum class ConceptionWindow(val label: String) {
  * ovulation, so the first cycles after stopping one are not a baseline worth
  * predicting from, and the app should say so instead of guessing confidently.
  */
-enum class BirthControl(val label: String) {
-    None("Yo'q"),
-    StillUsing("Hozir ham ishlatyapman"),
-    Pill("Ha, tabletka"),
-    Iud("Ha, spiral (IUD)"),
-    Barrier("Ha, prezervativ yoki boshqa nogormonal usul"),
-    Other("Ha, boshqa usul"),
-    Undisclosed("Aytishni xohlamayman"),
-}
+enum class BirthControl { None, StillUsing, Pill, Iud, Barrier, Other, Undisclosed }
 
 /** How many period starts the onboarding calendar collects. */
 const val MaxEnteredCycles = 3

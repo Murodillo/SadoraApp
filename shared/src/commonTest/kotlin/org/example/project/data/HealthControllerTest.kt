@@ -32,6 +32,7 @@ import uz.sadora.contract.SymptomCategory
 import uz.sadora.contract.SymptomDefinition
 import uz.sadora.contract.SymptomEntry
 import uz.sadora.contract.SymptomSeverity
+import org.example.project.i18n.StringsUz
 
 class HealthControllerTest {
 
@@ -244,7 +245,7 @@ class HealthControllerTest {
         val controller = graph(recording).healthController(AppState())
 
         assertTrue(!controller.addWater(250))
-        val message = controller.error
+        val message = controller.error?.readable(StringsUz.errors)
         assertTrue(message != null && message.isNotBlank(), "the screen needs something to show")
     }
 

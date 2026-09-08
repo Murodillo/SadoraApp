@@ -51,6 +51,7 @@ import uz.sadora.contract.MedicationSchedule
 import uz.sadora.contract.SaveMedicationRequest
 import uz.sadora.contract.ScheduleKind
 import uz.sadora.contract.Weekday
+import org.example.project.data.readable
 
 /**
  * "Dori qo'shish" — the add-medication form.
@@ -182,7 +183,7 @@ fun AddMedicationScreen(
             }
 
             item {
-                health.error?.let { ErrorStrip(it) }
+                health.error?.let { ErrorStrip(it.readable()) }
                 SadoraButton(
                     if (saving) strings.common.saving else strings.common.save,
                     enabled = !saving && name.isNotBlank() && at != null && weekdays.isNotEmpty(),

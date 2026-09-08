@@ -78,6 +78,8 @@ import org.example.project.ui.components.TabSwitch
 import org.example.project.ui.components.noRippleClickable
 import uz.sadora.contract.AuthProvider
 import uz.sadora.contract.OtpChallenge
+import org.example.project.data.readable
+import org.example.project.i18n.strings
 
 /** Shared layout for a numbered onboarding step: header, body, pinned footer. */
 @Composable
@@ -163,7 +165,7 @@ internal fun NumberPad(onDigit: (String) -> Unit, onDelete: () -> Unit) {
 /** What the profile now carries, as the "ready" screen lists it back. */
 @Composable
 private fun readyLines(state: AppState): List<Pair<ImageVector, String>> = buildList {
-    add(SadoraIcons.Journey to state.lifeStage.title)
+    add(SadoraIcons.Journey to strings.stages.title(state.lifeStage))
     if (state.lifeStage.predictsCycle) {
         add(SadoraIcons.Calendar to "Sikl ${state.averageCycleLength} kun · hayz ${state.averagePeriodLength} kun")
     }
@@ -244,7 +246,7 @@ fun ReadyStep(state: AppState, controller: SadoraController, onEnter: () -> Unit
 
             Spacer(Modifier.height(Spacing.lg))
             controller.error?.let {
-                org.example.project.ui.components.ErrorStrip(it)
+                org.example.project.ui.components.ErrorStrip(it.readable())
                 Spacer(Modifier.height(Spacing.xs))
             }
             Reveal(entry.value, from = 0.55f) {
@@ -313,7 +315,7 @@ fun SignInScreen(
                 controller.clearError()
             },
             busy = controller.busy,
-            error = controller.error,
+            error = controller.error?.readable(),
             secondsLeft = secondsLeft,
             progress = 1f,
             onBack = {
@@ -378,7 +380,7 @@ fun SignInScreen(
             keyboardActions = KeyboardActions(onDone = { focus.clearFocus() }),
         )
 
-        controller.error?.let { org.example.project.ui.components.ErrorStrip(it) }
+        controller.error?.let { org.example.project.ui.components.ErrorStrip(it.readable()) }
 
         SadoraButton(
             if (controller.busy) "Yuborilmoqda…" else "Kodni yuborish",

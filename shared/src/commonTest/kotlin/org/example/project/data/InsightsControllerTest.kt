@@ -109,7 +109,7 @@ class InsightsControllerTest {
 
         insights.load(7)
         assertNull(insights.summary(7))
-        assertEquals("Nimadir noto'g'ri ketdi. Qayta urinib ko'ring.", insights.error)
+        assertEquals(StringsUz.errors.unexpected, insights.error?.readable(StringsUz.errors))
         assertNull(insights.lockedWindow)
     }
 

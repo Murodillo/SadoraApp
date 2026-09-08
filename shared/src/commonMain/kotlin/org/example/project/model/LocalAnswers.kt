@@ -1,5 +1,7 @@
 package org.example.project.model
 
+import org.example.project.i18n.StringsUz
+
 /**
  * The answer to a question when there is no backend behind the app.
  *
@@ -10,7 +12,10 @@ package org.example.project.model
 fun localAnswerFor(question: String, state: AppState): String {
     val q = question.lowercase()
     val phase = state.currentPhase()
-    val context = "Sikl ${state.cycleDay}-kun (${phase.label.lowercase()}), " +
+    // Uzbek throughout, deliberately: this is the offline stand-in for the model, and
+    // the model itself only answers in Uzbek.
+    val uz = StringsUz.common
+    val context = "Sikl ${state.cycleDay}-kun (${uz.phase(phase).lowercase()}), " +
         "uyqu ${state.sleepLabel(format = ::uzbekHoursMinutes)}, suv ${Fmt.litres(state.waterMl)} l asosida."
     val body = when {
         "charch" in q || "energiya" in q || "toliq" in q -> when (phase) {
@@ -33,8 +38,8 @@ fun localAnswerFor(question: String, state: AppState): String {
             "Kecha ${state.sleepLabel(format = ::uzbekHoursMinutes)} uxlagansiz. Kechqurun ekranni kamaytirish va bir xil " +
                 "vaqtda yotish uyqu sifatini yaxshilaydi. Uyqu ma'lumotlarini kuzatishda davom eting."
         "sikl" in q || "hayz" in q || "ovulyats" in q ->
-            "Hozir siklning ${state.cycleDay}-kuni — ${phase.label.lowercase()}. " +
-                "${phase.energyNote} Keyingi hayz taxminan ${state.daysToNextPeriod()} kundan keyin."
+            "Hozir siklning ${state.cycleDay}-kuni — ${uz.phase(phase).lowercase()}. " +
+                "${uz.phaseEnergy(phase)} Keyingi hayz taxminan ${state.daysToNextPeriod()} kundan keyin."
         else ->
             "Savolingizni tushundim. Sikl, ovqatlanish, kayfiyat va dorilaringiz bo'yicha " +
                 "ma'lumotlaringizga tayanib javob bera olaman — aniqroq so'rasangiz, batafsil tushuntiraman."

@@ -5,6 +5,7 @@ import kotlinx.datetime.LocalDate
 import kotlinx.datetime.daysUntil
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
+import org.example.project.model.BirthControl
 import org.example.project.model.CommunityFilter
 import org.example.project.model.CommunityTopic
 import org.example.project.model.ConceptionWindow
@@ -13,6 +14,7 @@ import org.example.project.model.Goal
 import org.example.project.model.LifeStage
 import org.example.project.model.Mood
 import org.example.project.model.ReportReason
+import uz.sadora.contract.ArticleKind
 import uz.sadora.contract.DoseStatus
 import uz.sadora.contract.FetalMovement
 import uz.sadora.contract.FoodRelation
@@ -52,6 +54,7 @@ interface Strings {
     val modules: ModuleStrings
     val ai: AiStrings
     val community: CommunityStrings
+    val errors: ErrorStrings
 }
 
 /**
@@ -235,6 +238,31 @@ interface CommunityStrings {
     val shareSuffix: String
 }
 
+/**
+ * What a failed request says.
+ *
+ * The wording is the app's, not the server's: the API talks to several clients and its
+ * message is not always what a phone should show. The one exception is a validation
+ * message, which names the field she just typed in and is therefore worth passing
+ * through when there is one.
+ */
+interface ErrorStrings {
+    val network: String
+    val validation: String
+    val sessionExpired: String
+    val blocked: String
+    val premiumRequired: String
+    val monthlyLimit: String
+    val dailyLimit: String
+    fun retryAfter(seconds: Int): String
+    val retrySoon: String
+    val otpInvalid: String
+    val featureClosed: String
+    val consentRequired: String
+    val paymentFailed: String
+    val unexpected: String
+}
+
 interface TodayStrings {
     /** The header line: the greeting, then the app's own sentence about the day. */
     fun greetingLine(greeting: String): String
@@ -338,7 +366,126 @@ interface OnboardingStrings {
     val languageTitle: String
     val languageSubtitle: String
     val continueLabel: String
+    val skipTheseQuestions: String
+
+    // ---- name
+    val nameTitle: String
+    val nameSubtitle: String
+    val nameLabel: String
+    val nameHint: String
+    val nameNote: String
+
+    // ---- birth year
+    val birthYearTitle: String
+    val birthYearSubtitle: String
+
+    // ---- goals
+    val goalsTitle: String
+    val goalsSubtitle: String
+
+    // ---- life stage
+    val stageTitle: String
+    val stageSubtitle: String
+    fun stagePromise(stage: LifeStage): String
+
+    // ---- referral
+    val doctorTitle: String
+    val no: String
+
+    // ---- cycle length
+    val cycleLengthTitle: String
+    fun cycleLengthDerived(days: Int): String
+    val cycleLengthHint: String
+    val periodLengthTitle: String
+
+    // ---- how she feels
+    fun feelingTitle(name: String): String
+    val feelingSubtitle: String
+    /** The four answers, each with what SADORA says back and the mood it records. */
+    val feelings: List<FeelingOption>
+
+    // ---- body
+    val bodyTitle: String
+    val bodySubtitle: String
+    val height: String
+    val weight: String
+
+    // ---- permissions
+    val permissionsTitle: String
+    val permissionsSubtitle: String
+    val permissionReminders: String
+    val permissionRemindersNote: String
+    val permissionHealth: String
+    val permissionHealthNote: String
+    val permissionCamera: String
+    val permissionCameraNote: String
+
+    // ---- phone and code
+    val phoneTitle: String
+    val phoneSubtitle: String
+    val sending: String
+    val sendCode: String
+    val haveAccount: String
+    val phoneLabel: String
+    val phoneNote: String
+    val codeTitle: String
+    fun codeSubtitle(phone: String): String
+    val checking: String
+    val confirm: String
+    fun resendIn(seconds: Int): String
+    val resend: String
+    val codeSecrecy: String
+
+    // ---- period calendar
+    val periodsTitle: String
+    fun periodsSubtitle(periodLength: Int): String
+    val markMore: String
+    fun markMoreBody(marked: Int): String
+    val iWillMark: String
+    fun markedWithAverage(filled: Int, total: Int, averageCycle: Int): String
+    fun markedMoreNeeded(filled: Int, total: Int): String
+    val markAPeriodStart: String
+
+    // ---- regularity
+    val regularityTitle: String
+    val regularitySubtitle: String
+    val regularYes: String
+    val regularYesNote: String
+    val regularNo: String
+    val regularNoNote: String
+    val regularUnknown: String
+    val regularUnknownNote: String
+
+    // ---- the sensitive-topic gate
+    val sensitiveTitle: String
+    val sensitiveBody: String
+
+    // ---- contraception
+    val birthControlTitle: String
+    val birthControlSubtitle: String
+    fun birthControl(option: BirthControl): String
+    fun birthControlNote(option: BirthControl): String?
+
+    // ---- conception
+    val conceptionTitle: String
+    fun conceptionNote(window: ConceptionWindow): String?
+
+    // ---- dates
+    val dueDateTitle: String
+    val dueDateSubtitle: String
+    val birthDateTitle: String
+    val birthDateSubtitle: String
+
+    // ---- symptoms
+    fun symptomsTitle(name: String): String
+    val symptomsSubtitle: String
+    val saveSymptoms: String
+    /** The starter list, offered before the server's catalogue is reachable. */
+    val starterSymptoms: List<String>
 }
+
+/** One answer to "how are you feeling", with the mood it records and the reply. */
+data class FeelingOption(val label: String, val mood: Int, val reply: String)
 
 interface ProfileStrings {
     val title: String
@@ -944,4 +1091,18 @@ interface ModuleStrings {
     fun ofLitres(drunk: String, goal: String): String
     fun ofSteps(walked: String, goal: String): String
     fun ofSleep(slept: String): String
+    val balanceCapsWord: String
+
+    // ---- knowledge and paywall badges
+    fun articleKind(kind: ArticleKind): String
+    val featureCaps: String
+    val freeCaps: String
+    val premiumCapsBadge: String
+
+    // ---- mind
+    val journalCardTitle: String
+    val moodLabel: String
+
+    // ---- today
+    val allDoneToday: String
 }

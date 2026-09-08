@@ -6,6 +6,7 @@ import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 import kotlinx.datetime.LocalDate
 import org.example.project.model.AppLanguage
+import org.example.project.model.BirthControl
 import org.example.project.model.CommunityFilter
 import org.example.project.model.CommunityTopic
 import org.example.project.model.ConceptionWindow
@@ -14,6 +15,7 @@ import org.example.project.model.Goal
 import org.example.project.model.LifeStage
 import org.example.project.model.Mood
 import org.example.project.model.ReportReason
+import uz.sadora.contract.ArticleKind
 import uz.sadora.contract.DoseStatus
 import uz.sadora.contract.FetalMovement
 import uz.sadora.contract.FoodRelation
@@ -56,7 +58,34 @@ class StringsTest {
             )
         }
         with(t.onboarding) {
-            addAll(listOf(languageTitle, languageSubtitle, continueLabel))
+            addAll(
+                listOf(
+                    languageTitle, languageSubtitle, continueLabel, skipTheseQuestions,
+                    nameTitle, nameSubtitle, nameLabel, nameHint, nameNote, birthYearTitle,
+                    birthYearSubtitle, goalsTitle, goalsSubtitle, stageTitle, stageSubtitle,
+                    doctorTitle, no, cycleLengthTitle, cycleLengthDerived(28), cycleLengthHint,
+                    periodLengthTitle, feelingTitle("Malika"), feelingTitle(""), feelingSubtitle,
+                    bodyTitle, bodySubtitle, height, weight, permissionsTitle,
+                    permissionsSubtitle, permissionReminders, permissionRemindersNote,
+                    permissionHealth, permissionHealthNote, permissionCamera,
+                    permissionCameraNote, phoneTitle, phoneSubtitle, sending, sendCode,
+                    haveAccount, phoneLabel, phoneNote, codeTitle, codeSubtitle("90 123 45 67"),
+                    checking, confirm, resendIn(45), resend, codeSecrecy, periodsTitle,
+                    periodsSubtitle(5), markMore, markMoreBody(2), iWillMark,
+                    markedWithAverage(2, 3, 28), markedMoreNeeded(1, 3), markAPeriodStart,
+                    regularityTitle, regularitySubtitle, regularYes, regularYesNote, regularNo,
+                    regularNoNote, regularUnknown, regularUnknownNote, sensitiveTitle,
+                    sensitiveBody, birthControlTitle, birthControlSubtitle, conceptionTitle,
+                    dueDateTitle, dueDateSubtitle, birthDateTitle, birthDateSubtitle,
+                    symptomsTitle("Malika"), symptomsTitle(""), symptomsSubtitle, saveSymptoms,
+                ),
+            )
+            LifeStage.entries.forEach { add(stagePromise(it)) }
+            BirthControl.entries.forEach { add(birthControl(it)) }
+            addAll(BirthControl.entries.mapNotNull { birthControlNote(it) })
+            addAll(ConceptionWindow.entries.mapNotNull { conceptionNote(it) })
+            addAll(starterSymptoms)
+            feelings.forEach { add(it.label); add(it.reply) }
         }
         with(t.profile) {
             addAll(
@@ -126,7 +155,9 @@ class StringsTest {
                     saving(38), payWithPayme, payWithClick, payWithAppStore, payWithGooglePlay,
                     balanceTitle, fourDirections, balanceDisclaimer, balanced, someRoomIn("x"),
                     fallingBehind("x"), food, water, activity, sleep, ofKcal("1", "2"),
-                    ofLitres("1", "2"), ofSteps("1", "2"), ofSleep("6s"),
+                    ofLitres("1", "2"), ofSteps("1", "2"), ofSleep("6s"), balanceCapsWord,
+                    featureCaps, freeCaps, premiumCapsBadge, journalCardTitle, moodLabel,
+                    allDoneToday,
                     searchFood, searchTabAll, searchTabFrequent, searchTabRecipes,
                     typeADishName, nothingFoundFor("x"), catalogueNote, portionLabel, pieces,
                     grams, bowls(2), total, addToDiary, perPiece, perHundredGrams,
@@ -155,6 +186,7 @@ class StringsTest {
             FoodRelation.entries.forEach { add(foodRelation(it)); add(doseCaption(null, it)) }
             ScheduleKind.entries.forEach { add(scheduleKind(it)) }
             DoseStatus.entries.forEach { add(doseStatus(it)) }
+            ArticleKind.entries.forEach { add(articleKind(it)) }
             add(doseCaption("her own note", FoodRelation.ANY))
         }
         with(t.journey) {
@@ -311,6 +343,17 @@ class StringsTest {
             assertNotEquals(StringsUz.profile.signOut, t.profile.signOut)
             assertNotEquals(StringsUz.settings.languageNote, t.settings.languageNote)
             assertNotEquals(StringsUz.onboarding.languageTitle, t.onboarding.languageTitle)
+            assertNotEquals(StringsUz.onboarding.nameNote, t.onboarding.nameNote)
+            assertNotEquals(StringsUz.onboarding.sensitiveBody, t.onboarding.sensitiveBody)
+            assertNotEquals(StringsUz.onboarding.codeSecrecy, t.onboarding.codeSecrecy)
+            assertNotEquals(
+                StringsUz.onboarding.stagePromise(LifeStage.Pregnancy),
+                t.onboarding.stagePromise(LifeStage.Pregnancy),
+            )
+            assertNotEquals(
+                StringsUz.onboarding.starterSymptoms.first(),
+                t.onboarding.starterSymptoms.first(),
+            )
             assertNotEquals(StringsUz.stages.title(LifeStage.Cycle), t.stages.title(LifeStage.Cycle))
             assertNotEquals(StringsUz.common.greeting(9), t.common.greeting(9))
             assertNotEquals(StringsUz.common.moodCaption(Mood.Great), t.common.moodCaption(Mood.Great))
@@ -373,6 +416,19 @@ class StringsTest {
         languages.forEach { t ->
             assertEquals(12, t.dates.months.size)
             assertEquals(7, t.dates.weekdays.size)
+        }
+    }
+
+    /**
+     * The onboarding symptom tiles pair a word with a glyph by position, so the two
+     * lists have to stay the same length in every language.
+     */
+    @Test
+    fun `every starter symptom has a tile to sit in`() {
+        languages.forEach { t ->
+            assertEquals(6, t.onboarding.starterSymptoms.size)
+            assertEquals(4, t.onboarding.feelings.size)
+            t.onboarding.feelings.forEach { assertTrue(it.mood in 1..5) }
         }
     }
 

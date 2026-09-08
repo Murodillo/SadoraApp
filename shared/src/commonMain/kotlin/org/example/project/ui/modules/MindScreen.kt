@@ -154,11 +154,11 @@ fun MindScreen(
                             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                         ) {
                             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                Text("Jurnal", style = Sadora.type.h3, color = c.text)
+                                Text(strings.modules.journalCardTitle, style = Sadora.type.h3, color = c.text)
                                 Text(t.journalPrompt, style = Sadora.type.body, color = c.muted)
                                 Text(t.journalHint, style = Sadora.type.body, color = c.muted2)
                             }
-                            RoundIconButton(SadoraIcons.Pencil, onClick = onOpenJournal, contentDescription = "Jurnal")
+                            RoundIconButton(SadoraIcons.Pencil, onClick = onOpenJournal, contentDescription = strings.modules.journalCardTitle)
                         }
                     }
                 }
@@ -223,7 +223,7 @@ fun MindScreen(
 private fun MoodCard(state: AppState) {
     val c = Sadora.colors
     SadoraCard {
-        Text("Kayfiyat", style = Sadora.type.body, color = c.muted)
+        Text(strings.modules.moodLabel, style = Sadora.type.body, color = c.muted)
         Column(
             Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally,

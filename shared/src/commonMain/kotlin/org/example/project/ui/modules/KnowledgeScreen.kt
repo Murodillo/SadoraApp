@@ -33,6 +33,7 @@ import org.example.project.ui.components.SelectChip
 import org.example.project.ui.components.Skeleton
 import uz.sadora.contract.ArticleKind
 import uz.sadora.contract.ArticleSummary
+import org.example.project.data.readable
 
 /** Drawn first, and the only category the app names itself — the rest are the server's. */
 private const val AllCategories = "Barchasi"
@@ -102,7 +103,7 @@ fun KnowledgeScreen(
                 feed == null -> item {
                     EmptyState(
                         title = t.libraryFailed,
-                        body = learn.error
+                        body = learn.error?.readable()
                             ?: t.loadFailed,
                         actionText = null,
                         onAction = {},
@@ -149,10 +150,10 @@ private fun KnowledgeCard(article: ArticleSummary, onClick: () -> Unit) {
     val c = Sadora.colors
     SadoraCard(padding = Spacing.sm, onClick = onClick) {
         Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xxs)) {
-            SadoraBadge(article.kind.label(), BadgeTone.Neutral)
+            SadoraBadge(t.articleKind(article.kind), BadgeTone.Neutral)
             SadoraBadge(article.categoryLabel.uppercase(), BadgeTone.Neutral)
             SadoraBadge(t.readMinutes(article.readMinutes), BadgeTone.Neutral)
-            if (article.premium) SadoraBadge("PREMIUM", BadgeTone.Premium)
+            if (article.premium) SadoraBadge(t.premiumCapsBadge, BadgeTone.Premium)
         }
         Text(article.title, style = Sadora.type.h3, color = c.text)
         if (article.excerpt.isNotBlank()) {
@@ -168,12 +169,6 @@ private fun KnowledgeCard(article: ArticleSummary, onClick: () -> Unit) {
             Text(it, style = Sadora.type.caption, color = c.muted2)
         }
     }
-}
-
-internal fun ArticleKind.label(): String = when (this) {
-    ArticleKind.ARTICLE -> "MAQOLA"
-    ArticleKind.COURSE -> "KURS"
-    ArticleKind.VIDEO -> "VIDEO"
 }
 
 @Composable

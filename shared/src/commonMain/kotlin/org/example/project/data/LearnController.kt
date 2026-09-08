@@ -28,7 +28,7 @@ class LearnController(private val api: LearnApi?) {
     var feed by mutableStateOf<ArticleFeed?>(null)
         private set
 
-    var error by mutableStateOf<String?>(null)
+    var error by mutableStateOf<ApiFailure?>(null)
         private set
 
     private val articles = mutableStateMapOf<String, Article>()
@@ -46,7 +46,7 @@ class LearnController(private val api: LearnApi?) {
                 feed = loaded
                 error = null
             }
-            refusal != null -> error = refusal.readable()
+            refusal != null -> error = refusal
         }
     }
 
@@ -67,7 +67,7 @@ class LearnController(private val api: LearnApi?) {
                 articles[slug] = loaded
                 error = null
             }
-            refusal != null -> error = refusal.readable()
+            refusal != null -> error = refusal
         }
     }
 

@@ -53,6 +53,14 @@ sealed class ApiFailure(open val message: String) {
     /** Health data was sent without the consent that permits storing it. */
     data class ConsentRequired(val consent: String, override val message: String) : ApiFailure(message)
 
+    /**
+     * The checkout came back cancelled or failed.
+     *
+     * Not something the API rejected — the provider did — but it reaches the screen
+     * through the same field, so it is one of these.
+     */
+    data object PaymentFailed : ApiFailure("")
+
     /** Anything else, including 5xx. [requestId] is what support needs to trace it. */
     data class Unexpected(override val message: String, val requestId: String? = null) :
         ApiFailure(message)

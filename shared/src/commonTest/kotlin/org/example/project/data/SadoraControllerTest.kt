@@ -20,6 +20,7 @@ import org.example.project.model.LifeStage
 import uz.sadora.contract.ErrorCodes
 import uz.sadora.contract.OnboardingRequest
 import uz.sadora.contract.SubscriptionTier
+import org.example.project.i18n.StringsUz
 
 /**
  * The controller is what every screen calls, so these cover the things a screen would
@@ -253,7 +254,7 @@ class SadoraControllerTest {
             val (controller, _) = controller(recording = recording)
 
             assertFalse(controller.completeOnboarding())
-            assertEquals("Ism bo'sh", controller.error)
+            assertEquals("Ism bo'sh", controller.error?.readable(StringsUz.errors))
             assertFalse(controller.busy)
         }
 
@@ -318,7 +319,7 @@ class SadoraControllerTest {
         val (controller, _) = controller(recording = recording)
 
         assertNull(controller.verifyOtp("challenge-1", "000000"))
-        assertEquals("Kod noto'g'ri", controller.error)
+        assertEquals("Kod noto'g'ri", controller.error?.readable(StringsUz.errors))
     }
 
     // ---------------------------------------------------------------- entitlements

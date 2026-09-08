@@ -1,6 +1,7 @@
 package org.example.project.i18n
 
 import kotlinx.datetime.LocalDate
+import org.example.project.model.BirthControl
 import org.example.project.model.CommunityFilter
 import org.example.project.model.CommunityTopic
 import org.example.project.model.ConceptionWindow
@@ -9,6 +10,7 @@ import org.example.project.model.Goal
 import org.example.project.model.LifeStage
 import org.example.project.model.Mood
 import org.example.project.model.ReportReason
+import uz.sadora.contract.ArticleKind
 import uz.sadora.contract.DoseStatus
 import uz.sadora.contract.FetalMovement
 import uz.sadora.contract.FoodRelation
@@ -78,6 +80,152 @@ object StringsUz : Strings {
         override val languageTitle = "Tilni tanlang"
         override val languageSubtitle = "Keyin sozlamalardan o'zgartira olasiz."
         override val continueLabel = "Davom etish"
+        override val skipTheseQuestions = "Bu savollarni o'tkazib yuborish"
+
+        override val nameTitle = "Sizni qanday chaqiraylik?"
+        override val nameSubtitle = "Keling, tanishamiz. Bu ismni keyin ham o'zgartira olasiz."
+        override val nameLabel = "Ism"
+        override val nameHint = "Ismingiz"
+        override val nameNote = "Ma'lumotlaringiz faqat SADORA ichida saqlanadi. Uchinchi " +
+            "shaxslarga berilmaydi va istalgan vaqtda o'chirasiz."
+
+        override val birthYearTitle = "Qaysi yilda tug'ilgansiz?"
+        override val birthYearSubtitle = "Yosh bashoratlarni aniqroq qiladi."
+
+        override val goalsTitle = "Sizga nimada yordam beraylik?"
+        override val goalsSubtitle = "Xohlaganingizcha tanlang."
+
+        override val stageTitle = "Hozir qaysi bosqichdasiz?"
+        override val stageSubtitle = "Keyingi savollar va ilovaning o'zi shu tanlovga moslashadi."
+        override fun stagePromise(stage: LifeStage) = when (stage) {
+            LifeStage.Cycle -> "Siklingizni kuzatamiz va keyingi hayzni oldindan aytamiz."
+            LifeStage.TryingToConceive -> "Unumdor kunlarni belgilaymiz va tayyorgarlikda yoningizda bo'lamiz."
+            LifeStage.Pregnancy -> "Har haftaning o'zgarishlarini va tekshiruvlarni kuzatamiz."
+            LifeStage.Postpartum -> "Tiklanish, emizish va kayfiyatga alohida e'tibor beramiz."
+            LifeStage.Perimenopause -> "Simptomlar, uyqu va energiyani birga kuzatib boramiz."
+            LifeStage.Menopause -> "Salomatlik maqsadlariga qaratilgan kundalik yordam beramiz."
+        }
+
+        override val doctorTitle = "SADORA'ni sizga shifokor tavsiya qildimi?"
+        override val no = "Yo'q"
+
+        override val cycleLengthTitle = "Siklingiz odatda necha kun davom etadi?"
+        override fun cycleLengthDerived(days: Int) =
+            "Belgilagan sanalaringizdan $days kun chiqdi. Noto'g'ri bo'lsa, to'g'rilang."
+        override val cycleLengthHint = "Aniq bilmasangiz, taxminiy son ham yetarli — keyin o'zi aniqlashadi."
+        override val periodLengthTitle = "Hayz necha kun davom etadi?"
+
+        override fun feelingTitle(name: String) =
+            if (name.isBlank()) "O'zingizni qanday his qilyapsiz?" else "$name, o'zingizni qanday his qilyapsiz?"
+        override val feelingSubtitle = "Rostini ayting — javobingizga qarab boshlashni moslaymiz."
+        override val feelings = listOf(
+            FeelingOption("Yaxshi — hammasi joyida 🙂", 4, "Ajoyib. Shu holatni ushlab turishga yordam beramiz."),
+            FeelingOption("Charchaganman 😴", 2, "Uyqu va energiyani birinchi o'ringa qo'yamiz."),
+            FeelingOption("Xavotirdaman 😟", 2, "Sekin boshlaymiz. Faqat o'zingiz xohlagan narsani yozasiz."),
+            FeelingOption("Tanamni yaxshiroq bilmoqchiman ✨", 3, "Aynan shu uchun ham SADORA bor."),
+        )
+
+        override val bodyTitle = "Bo'y va vazningiz"
+        override val bodySubtitle = "Ixtiyoriy. Hech kimga ko'rsatilmaydi va istalgan vaqtda o'chiriladi."
+        override val height = "Bo'y"
+        override val weight = "Vazn"
+
+        override val permissionsTitle = "Nimalarga ruxsat berasiz?"
+        override val permissionsSubtitle = "Har birini keyin Profil bo'limidan o'zgartira olasiz."
+        override val permissionReminders = "Eslatmalar"
+        override val permissionRemindersNote = "Hayz, dori va tekshiruv vaqtini eslatib turamiz."
+        override val permissionHealth = "Salomatlik ma'lumotlari"
+        override val permissionHealthNote = "Qadamlar va uyquni soatingizdan o'qiymiz."
+        override val permissionCamera = "Kamera"
+        override val permissionCameraNote = "Ovqatni suratga olib, tarkibini aniqlash uchun."
+
+        override val phoneTitle = "Raqamingizni kiriting"
+        override val phoneSubtitle = "Javoblaringizni saqlash uchun bir martalik kod yuboramiz."
+        override val sending = "Yuborilmoqda…"
+        override val sendCode = "Kodni yuborish"
+        override val haveAccount = "Hisobim bor · Kirish"
+        override val phoneLabel = "Telefon raqami"
+        override val phoneNote = "Raqam faqat kirish uchun ishlatiladi va reklama uchun berilmaydi."
+        override val codeTitle = "Kodni kiriting"
+        override fun codeSubtitle(phone: String) = "+998 $phone raqamiga 6 xonali kod yubordik."
+        override val checking = "Tekshirilmoqda…"
+        override val confirm = "Tasdiqlash"
+        override fun resendIn(seconds: Int) = "Qayta yuborish · ${seconds}s"
+        override val resend = "Kodni qayta yuborish"
+        override val codeSecrecy = "Kodni hech kimga aytmang. SADORA xodimlari kodni so'ramaydi."
+
+        override val periodsTitle = "Oxirgi hayzlaringiz qachon bo'lgan?"
+        override fun periodsSubtitle(periodLength: Int) =
+            "Hayz boshlangan kunni bosing — qolgan $periodLength kun o'zi belgilanadi. " +
+                "Keyin kunlarni bittalab qo'shish yoki olib tashlash mumkin."
+        override val markMore = "Yana belgilaysizmi?"
+        override fun markMoreBody(marked: Int) =
+            "Hozir $marked ta hayz belgilandi. Uchtasi belgilansa, siklingiz uzunligini " +
+                "o'lchay olamiz va bashorat ancha aniq bo'ladi."
+        override val iWillMark = "Belgilayman"
+        override fun markedWithAverage(filled: Int, total: Int, averageCycle: Int) =
+            "$filled/$total belgilandi · o'rtacha sikl $averageCycle kun"
+        override fun markedMoreNeeded(filled: Int, total: Int) = "$filled/$total belgilandi · yana belgilang"
+        override val markAPeriodStart = "Hayz boshlangan kunni belgilang"
+
+        override val regularityTitle = "Siklingiz muntazammi?"
+        override val regularitySubtitle = "Har oy taxminan bir xil kunda keladimi?"
+        override val regularYes = "Ha, muntazam"
+        override val regularYesNote = "Yaxshi — bashoratlar boshidanoq aniqroq bo'ladi."
+        override val regularNo = "Yo'q, o'zgarib turadi"
+        override val regularNoNote = "Buni hisobga olamiz va bashoratlarga ishonch darajasini ko'rsatamiz."
+        override val regularUnknown = "Bilmayman"
+        override val regularUnknownNote = "Muammo emas. Bir necha oy kuzatgach, o'zi ayon bo'ladi."
+
+        override val sensitiveTitle = "Keyingi savollar shaxsiy"
+        override val sensitiveBody = "Kontratsepsiya va homiladorlikni rejalashtirish haqida " +
+            "so'raymiz. Bu savollar bashoratlarni aniqroq qiladi, lekin javob berish shart emas."
+
+        override val birthControlTitle = "Oxirgi 6 oyda kontratsepsiyadan foydalanganmisiz?"
+        override val birthControlSubtitle = "Ba'zi usullar siklga ta'sir qiladi, shuning uchun so'rayapmiz."
+        override fun birthControl(option: BirthControl) = when (option) {
+            BirthControl.None -> "Yo'q"
+            BirthControl.StillUsing -> "Hozir ham ishlatyapman"
+            BirthControl.Pill -> "Ha, tabletka"
+            BirthControl.Iud -> "Ha, spiral (IUD)"
+            BirthControl.Barrier -> "Ha, prezervativ yoki boshqa nogormonal usul"
+            BirthControl.Other -> "Ha, boshqa usul"
+            BirthControl.Undisclosed -> "Aytishni xohlamayman"
+        }
+        override fun birthControlNote(option: BirthControl) = when (option) {
+            BirthControl.Pill, BirthControl.Iud ->
+                "Gormonal usuldan keyin sikl bir necha oy tiklanadi — bashoratlarni ehtiyotkorlik bilan beramiz."
+            BirthControl.StillUsing ->
+                "Gormonal usul davomida ovulyatsiya bo'lmaydi, shuning uchun unumdor kunlarni ko'rsatmaymiz."
+            else -> null
+        }
+
+        override val conceptionTitle = "Qachondan beri homiladorlikka harakat qilyapsiz?"
+        override fun conceptionNote(window: ConceptionWindow) = when (window) {
+            ConceptionWindow.JustStarted ->
+                "Yo'lning boshi — savollar ko'p bo'ladi va biz har birida yoningizdamiz."
+            ConceptionWindow.OverAYear ->
+                "Bir yildan oshgan bo'lsa, shifokorga murojaat qilish tavsiya etiladi. Buni ham eslatib turamiz."
+            else -> null
+        }
+
+        override val dueDateTitle = "Tug'ilish sanasi qachon kutilyapti?"
+        override val dueDateSubtitle = "Shifokor aytgan taxminiy sanani belgilang."
+        override val birthDateTitle = "Farzandingiz qachon tug'ilgan?"
+        override val birthDateSubtitle = "Tiklanish bosqichlarini shu sanadan hisoblaymiz."
+
+        override fun symptomsTitle(name: String) =
+            if (name.isBlank()) "Bugun nimani sezyapsiz?" else "$name, bugun nimani sezyapsiz?"
+        override val symptomsSubtitle = "Bir nechtasini tanlashingiz mumkin. Hech qaysisi bo'lmasa — o'tkazib yuboring."
+        override val saveSymptoms = "Belgilarni saqlash"
+        override val starterSymptoms = listOf(
+            "Qorin og'rig'i",
+            "Charchoq",
+            "Shishish",
+            "Ko'krak og'rig'i",
+            "Bel og'rig'i",
+            "Bosh og'rig'i",
+        )
     }
 
     override val profile = object : ProfileStrings {
@@ -378,6 +526,24 @@ object StringsUz : Strings {
         override val sendReport = "Shikoyat yuborish"
         override val reportSent = "Shikoyat yuborildi"
         override val shareSuffix = "SADORA — Maxfiy chat"
+    }
+
+    override val errors = object : ErrorStrings {
+        override val network = "Internetga ulanib bo'lmadi. Qayta urinib ko'ring."
+        override val validation = "Kiritilgan ma'lumot noto'g'ri."
+        override val sessionExpired = "Sessiya tugadi. Qaytadan kiring."
+        override val blocked = "Hisob bloklangan. Qo'llab-quvvatlash bilan bog'laning."
+        override val premiumRequired = "Bu imkoniyat Premium'da ochiladi."
+        override val monthlyLimit = "Bu oylik limit tugadi."
+        override val dailyLimit = "Bugungi limit tugadi."
+        override fun retryAfter(seconds: Int) =
+            "Juda ko'p urinish. $seconds soniyadan keyin qayta urining."
+        override val retrySoon = "Juda ko'p urinish. Birozdan keyin qayta urining."
+        override val otpInvalid = "Kod noto'g'ri yoki muddati tugagan."
+        override val featureClosed = "Bu bo'lim hozircha yopiq."
+        override val consentRequired = "Buning uchun Maxfiylik bo'limida rozilik bering."
+        override val paymentFailed = "To'lov amalga oshmadi. Qayta urinib ko'ring."
+        override val unexpected = "Nimadir noto'g'ri ketdi. Qayta urinib ko'ring."
     }
 
     override val today = object : TodayStrings {
@@ -1017,5 +1183,17 @@ object StringsUz : Strings {
         override fun ofLitres(drunk: String, goal: String) = "$drunk / $goal l"
         override fun ofSteps(walked: String, goal: String) = "$walked / $goal qadam"
         override fun ofSleep(slept: String) = "$slept / 8s"
+        override val balanceCapsWord = "BALANS"
+        override fun articleKind(kind: ArticleKind) = when (kind) {
+            ArticleKind.ARTICLE -> "MAQOLA"
+            ArticleKind.COURSE -> "KURS"
+            ArticleKind.VIDEO -> "VIDEO"
+        }
+        override val featureCaps = "IMKONIYAT"
+        override val freeCaps = "BEPUL"
+        override val premiumCapsBadge = "PREMIUM"
+        override val journalCardTitle = "Jurnal"
+        override val moodLabel = "Kayfiyat"
+        override val allDoneToday = "Bugungi hamma narsa bajarildi 🌸"
     }
 }

@@ -138,7 +138,7 @@ fun NutritionScreen(
                                 color = c.muted,
                             )
                         }
-                        if (!state.isPremium) SadoraBadge("PREMIUM", BadgeTone.Premium)
+                        if (!state.isPremium) SadoraBadge(strings.modules.premiumCapsBadge, BadgeTone.Premium)
                     }
                 }
             }

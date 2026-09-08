@@ -40,6 +40,7 @@ import org.example.project.ui.components.SadoraTextField
 import org.example.project.ui.components.SadoraTopBar
 import org.example.project.ui.components.ScreenContent
 import org.example.project.ui.components.SelectChip
+import org.example.project.data.readable
 
 /**
  * The settings detail screens reachable from Profile.
@@ -83,7 +84,7 @@ private fun SaveButton(
     label: String = strings.common.save,
 ) {
     val scope = rememberCoroutineScope()
-    controller.error?.let { ErrorStrip(it) }
+    controller.error?.let { ErrorStrip(it.readable()) }
     SadoraButton(
         if (controller.busy) strings.common.saving else label,
         enabled = !controller.busy,
@@ -256,7 +257,7 @@ private fun PrivacySettings(
             }
         }
         item {
-            controller.error?.let { ErrorStrip(it) }
+            controller.error?.let { ErrorStrip(it.readable()) }
             SadoraButton(
                 if (controller.busy) strings.common.saving else t.saveConsents,
                 enabled = !controller.busy,

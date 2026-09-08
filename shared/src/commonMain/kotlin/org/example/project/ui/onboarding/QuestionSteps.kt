@@ -129,17 +129,18 @@ fun NameQuestion(
     onNext: () -> Unit,
 ) {
     val entry = rememberPageEntry()
+    val t = strings.onboarding
     val focus = LocalFocusManager.current
     QuestionScaffold(
-        title = "Sizni qanday chaqiraylik?",
-        subtitle = "Keling, tanishamiz. Bu ismni keyin ham o'zgartira olasiz.",
+        title = t.nameTitle,
+        subtitle = t.nameSubtitle,
         progress = progress,
         onBack = onBack,
         onSkip = null,
         entry = entry,
         footer = {
             AnswerFooter(visible = state.name.isNotBlank()) {
-                SadoraButton("Davom etish", onNext)
+                SadoraButton(t.continueLabel, onNext)
             }
         },
     ) {
@@ -148,8 +149,8 @@ fun NameQuestion(
             SadoraTextField(
                 value = state.name,
                 onValueChange = { state.name = it },
-                label = "Ism",
-                placeholder = "Ismingiz",
+                label = t.nameLabel,
+                placeholder = t.nameHint,
                 leadingIcon = SadoraIcons.Profile,
                 // The only field on the page, so Next would have nowhere to go.
                 imeAction = ImeAction.Done,
@@ -158,8 +159,7 @@ fun NameQuestion(
         }
         Reveal(entry.value, from = 0.42f) {
             PrivacyNote(
-                "Ma'lumotlaringiz faqat SADORA ichida saqlanadi. Uchinchi shaxslarga " +
-                    "berilmaydi va istalgan vaqtda o'chirasiz.",
+                t.nameNote,
             )
         }
     }
@@ -214,18 +214,19 @@ fun BirthYearQuestion(
     onNext: () -> Unit,
 ) {
     val entry = rememberPageEntry()
+    val t = strings.onboarding
     val years = remember { (FirstBirthYear..LastBirthYear).map { it.toString() } }
     val current = remember { state.birthYear() }
     var index by remember { mutableStateOf((current - FirstBirthYear).coerceIn(0, years.lastIndex)) }
 
     QuestionScaffold(
-        title = "Qaysi yilda tug'ilgansiz?",
-        subtitle = "Yosh bashoratlarni aniqroq qiladi.",
+        title = t.birthYearTitle,
+        subtitle = t.birthYearSubtitle,
         progress = progress,
         onBack = onBack,
         onSkip = onSkip,
         entry = entry,
-        footer = { AnswerFooter(visible = true) { SadoraButton("Davom etish", onNext) } },
+        footer = { AnswerFooter(visible = true) { SadoraButton(t.continueLabel, onNext) } },
     ) {
         Spacer(Modifier.height(Spacing.md))
         Reveal(entry.value, from = 0.28f) {
@@ -280,18 +281,19 @@ fun FocusQuestion(
     onNext: () -> Unit,
 ) {
     val entry = rememberPageEntry(1100)
+    val t = strings.onboarding
     val goals = remember { Goal.entries.toList() }
 
     QuestionScaffold(
-        title = "Sizga nimada yordam beraylik?",
-        subtitle = "Xohlaganingizcha tanlang.",
+        title = t.goalsTitle,
+        subtitle = t.goalsSubtitle,
         progress = progress,
         onBack = onBack,
         onSkip = null,
         entry = entry,
         footer = {
             AnswerFooter(visible = state.goals.isNotEmpty()) {
-                SadoraButton("Davom etish", onNext)
+                SadoraButton(t.continueLabel, onNext)
             }
         },
     ) {
@@ -305,7 +307,7 @@ fun FocusQuestion(
                 ) {
                     pair.forEach { goal ->
                         AnswerTile(
-                            label = goal.label,
+                            label = strings.common.goal(goal),
                             icon = goal.icon(),
                             selected = goal in state.goals,
                             onClick = { state.toggleGoal(goal) },
@@ -321,17 +323,6 @@ fun FocusQuestion(
 }
 
 // ---------------------------------------------------------------- life stage
-
-/** What SADORA says back once a stage is chosen. */
-private fun LifeStage.reassurance(): String = when (this) {
-    LifeStage.Cycle -> "Siklingizni kuzatamiz va keyingi hayzni oldindan aytamiz."
-    LifeStage.TryingToConceive ->
-        "Unumdor kunlarni belgilaymiz va tayyorgarlikda yoningizda bo'lamiz."
-    LifeStage.Pregnancy -> "Har haftaning o'zgarishlarini va tekshiruvlarni kuzatamiz."
-    LifeStage.Postpartum -> "Tiklanish, emizish va kayfiyatga alohida e'tibor beramiz."
-    LifeStage.Perimenopause -> "Simptomlar, uyqu va energiyani birga kuzatib boramiz."
-    LifeStage.Menopause -> "Salomatlik maqsadlariga qaratilgan kundalik yordam beramiz."
-}
 
 /** The icon and tint the deck gives each stage in the list. */
 private fun LifeStage.icon(): ImageVector = when (this) {
@@ -360,28 +351,29 @@ fun LifeStageQuestion(
     onNext: () -> Unit,
 ) {
     val entry = rememberPageEntry(1200)
+    val t = strings.onboarding
     // Nothing is selected until she picks: the stage reshapes the whole app, so it
     // should never be answered by a default she never looked at.
     var picked by remember { mutableStateOf(false) }
 
     QuestionScaffold(
-        title = "Hozir qaysi bosqichdasiz?",
-        subtitle = "Keyingi savollar va ilovaning o'zi shu tanlovga moslashadi.",
+        title = t.stageTitle,
+        subtitle = t.stageSubtitle,
         progress = progress,
         onBack = onBack,
         onSkip = null,
         entry = entry,
         footer = {
-            AnswerFooter(visible = picked) { SadoraButton("Davom etish", onNext) }
+            AnswerFooter(visible = picked) { SadoraButton(t.continueLabel, onNext) }
         },
     ) {
         LifeStage.entries.forEachIndexed { index, stage ->
             Reveal(entry.value, from = optionStart(index, base = 0.26f, step = 0.07f)) {
                 AnswerRow(
-                    label = stage.title,
+                    label = strings.stages.title(stage),
                     icon = stage.icon(),
                     tint = stage.tint(),
-                    note = stage.reassurance(),
+                    note = t.stagePromise(stage),
                     selected = picked && state.lifeStage == stage,
                     onClick = {
                         state.lifeStage = stage
@@ -410,21 +402,22 @@ fun ReferralQuestion(
     onAnswered: () -> Unit,
 ) {
     val entry = rememberPageEntry(800)
+    val t = strings.onboarding
     val answer = state.referredByDoctor
 
     QuestionScaffold(
-        title = "SADORA'ni sizga shifokor tavsiya qildimi?",
+        title = t.doctorTitle,
         progress = progress,
         onBack = onBack,
         onSkip = onSkip,
         entry = entry,
         footer = {
             AnswerFooter(visible = answer != null) {
-                SadoraButton("Davom etish", onAnswered)
+                SadoraButton(t.continueLabel, onAnswered)
             }
         },
     ) {
-        listOf(true to "Ha", false to "Yo'q").forEachIndexed { index, (value, label) ->
+        listOf(true to strings.common.yes, false to t.no).forEachIndexed { index, (value, label) ->
             Reveal(entry.value, from = optionStart(index, base = 0.30f)) {
                 AnswerRow(
                     label = label,
@@ -447,6 +440,7 @@ fun CycleLengthQuestion(
     onNext: () -> Unit,
 ) {
     val entry = rememberPageEntry()
+    val t = strings.onboarding
     val lengths = remember { (21..40).map { it.toString() } }
     // Seeded from the calendar answers when there were enough of them, so this question
     // confirms what her own dates say rather than asking her to guess it twice.
@@ -456,17 +450,17 @@ fun CycleLengthQuestion(
     }
 
     QuestionScaffold(
-        title = "Siklingiz odatda necha kun davom etadi?",
+        title = t.cycleLengthTitle,
         subtitle = if (derived != null) {
-            "Belgilagan sanalaringizdan $derived kun chiqdi. Noto'g'ri bo'lsa, to'g'rilang."
+            t.cycleLengthDerived(derived)
         } else {
-            "Aniq bilmasangiz, taxminiy son ham yetarli — keyin o'zi aniqlashadi."
+            t.cycleLengthHint
         },
         progress = progress,
         onBack = onBack,
         onSkip = onSkip,
         entry = entry,
-        footer = { AnswerFooter(visible = true) { SadoraButton("Davom etish", onNext) } },
+        footer = { AnswerFooter(visible = true) { SadoraButton(t.continueLabel, onNext) } },
     ) {
         Spacer(Modifier.height(Spacing.md))
         Reveal(entry.value, from = 0.28f) {
@@ -492,18 +486,19 @@ fun PeriodLengthQuestion(
     onNext: () -> Unit,
 ) {
     val entry = rememberPageEntry()
+    val t = strings.onboarding
     val lengths = remember { (2..10).map { it.toString() } }
     var index by remember {
         mutableStateOf((state.averagePeriodLength - 2).coerceIn(0, lengths.lastIndex))
     }
 
     QuestionScaffold(
-        title = "Hayz necha kun davom etadi?",
+        title = t.periodLengthTitle,
         progress = progress,
         onBack = onBack,
         onSkip = onSkip,
         entry = entry,
-        footer = { AnswerFooter(visible = true) { SadoraButton("Davom etish", onNext) } },
+        footer = { AnswerFooter(visible = true) { SadoraButton(t.continueLabel, onNext) } },
     ) {
         Spacer(Modifier.height(Spacing.md))
         Reveal(entry.value, from = 0.28f) {
@@ -522,14 +517,6 @@ fun PeriodLengthQuestion(
 
 // ---------------------------------------------------------------- feeling
 
-/** The five moods, each with what SADORA says back. */
-private val feelings = listOf(
-    Triple("Yaxshi — hammasi joyida 🙂", 4, "Ajoyib. Shu holatni ushlab turishga yordam beramiz."),
-    Triple("Charchaganman 😴", 2, "Uyqu va energiyani birinchi o'ringa qo'yamiz."),
-    Triple("Xavotirdaman 😟", 2, "Sekin boshlaymiz. Faqat o'zingiz xohlagan narsani yozasiz."),
-    Triple("Tanamni yaxshiroq bilmoqchiman ✨", 3, "Aynan shu uchun ham SADORA bor."),
-)
-
 /**
  * The check-in question.
  *
@@ -546,21 +533,22 @@ fun FeelingQuestion(
     onNext: () -> Unit,
 ) {
     val entry = rememberPageEntry(1000)
+    val t = strings.onboarding
     var chosen by remember { mutableStateOf(-1) }
     val name = state.name.trim()
 
     QuestionScaffold(
-        title = if (name.isEmpty()) "O'zingizni qanday his qilyapsiz?" else "$name, o'zingizni qanday his qilyapsiz?",
-        subtitle = "Rostini ayting — javobingizga qarab boshlashni moslaymiz.",
+        title = t.feelingTitle(name),
+        subtitle = t.feelingSubtitle,
         progress = progress,
         onBack = onBack,
         onSkip = onSkip,
         entry = entry,
         footer = {
-            AnswerFooter(visible = chosen >= 0) { SadoraButton("Davom etish", onNext) }
+            AnswerFooter(visible = chosen >= 0) { SadoraButton(t.continueLabel, onNext) }
         },
     ) {
-        feelings.forEachIndexed { index, (label, score, note) ->
+        t.feelings.forEachIndexed { index, (label, score, note) ->
             Reveal(entry.value, from = optionStart(index, base = 0.28f, step = 0.08f)) {
                 AnswerRow(
                     label = label,
@@ -597,6 +585,7 @@ fun BodyQuestion(
     onNext: () -> Unit,
 ) {
     val entry = rememberPageEntry()
+    val t = strings.onboarding
     val heights = remember { (140..200).map { it.toString() } }
     val weights = remember { (35..150).map { it.toString() } }
     var heightIndex by remember {
@@ -607,17 +596,17 @@ fun BodyQuestion(
     }
 
     QuestionScaffold(
-        title = "Bo'y va vazningiz",
-        subtitle = "Ixtiyoriy. Hech kimga ko'rsatilmaydi va istalgan vaqtda o'chiriladi.",
+        title = t.bodyTitle,
+        subtitle = t.bodySubtitle,
         progress = progress,
         onBack = onBack,
         onSkip = onSkip,
         entry = entry,
-        footer = { AnswerFooter(visible = true) { SadoraButton("Davom etish", onNext) } },
+        footer = { AnswerFooter(visible = true) { SadoraButton(t.continueLabel, onNext) } },
     ) {
         Reveal(entry.value, from = 0.26f) {
             Column {
-                Text("Bo'y", style = Sadora.type.caption, color = Sadora.colors.muted2)
+                Text(t.height, style = Sadora.type.caption, color = Sadora.colors.muted2)
                 WheelPicker(
                     items = heights,
                     selectedIndex = heightIndex,
@@ -631,7 +620,7 @@ fun BodyQuestion(
         }
         Reveal(entry.value, from = 0.40f) {
             Column {
-                Text("Vazn", style = Sadora.type.caption, color = Sadora.colors.muted2)
+                Text(t.weight, style = Sadora.type.caption, color = Sadora.colors.muted2)
                 WheelPicker(
                     items = weights,
                     selectedIndex = weightIndex,
@@ -662,20 +651,21 @@ fun PermissionsQuestion(
     onNext: () -> Unit,
 ) {
     val entry = rememberPageEntry(1000)
+    val t = strings.onboarding
     QuestionScaffold(
-        title = "Nimalarga ruxsat berasiz?",
-        subtitle = "Har birini keyin Profil bo'limidan o'zgartira olasiz.",
+        title = t.permissionsTitle,
+        subtitle = t.permissionsSubtitle,
         progress = progress,
         onBack = onBack,
         onSkip = null,
         entry = entry,
-        footer = { AnswerFooter(visible = true) { SadoraButton("Davom etish", onNext) } },
+        footer = { AnswerFooter(visible = true) { SadoraButton(t.continueLabel, onNext) } },
     ) {
         Reveal(entry.value, from = 0.28f) {
             AnswerRow(
-                label = "Eslatmalar",
+                label = t.permissionReminders,
                 icon = SadoraIcons.Bell,
-                note = "Hayz, dori va tekshiruv vaqtini eslatib turamiz.",
+                note = t.permissionRemindersNote,
                 selected = state.notificationsAllowed,
                 noteAlwaysVisible = true,
                 onClick = { state.notificationsAllowed = !state.notificationsAllowed },
@@ -683,10 +673,10 @@ fun PermissionsQuestion(
         }
         Reveal(entry.value, from = 0.36f) {
             AnswerRow(
-                label = "Salomatlik ma'lumotlari",
+                label = t.permissionHealth,
                 icon = SadoraIcons.Heart,
                 tint = Color(0xFFFF6FB8),
-                note = "Qadamlar va uyquni soatingizdan o'qiymiz.",
+                note = t.permissionHealthNote,
                 selected = state.healthDataAllowed,
                 noteAlwaysVisible = true,
                 onClick = { state.healthDataAllowed = !state.healthDataAllowed },
@@ -694,10 +684,10 @@ fun PermissionsQuestion(
         }
         Reveal(entry.value, from = 0.44f) {
             AnswerRow(
-                label = "Kamera",
+                label = t.permissionCamera,
                 icon = SadoraIcons.Camera,
                 tint = Color(0xFF4FC3FF),
-                note = "Ovqatni suratga olib, tarkibini aniqlash uchun.",
+                note = t.permissionCameraNote,
                 selected = state.cameraAllowed,
                 noteAlwaysVisible = true,
                 onClick = { state.cameraAllowed = !state.cameraAllowed },
@@ -726,12 +716,13 @@ fun PhoneQuestion(
 ) {
     val c = Sadora.colors
     val entry = rememberPageEntry()
+    val t = strings.onboarding
     val focus = LocalFocusManager.current
     val ready = state.phone.count { it.isDigit() } >= 9
 
     QuestionScaffold(
-        title = "Raqamingizni kiriting",
-        subtitle = "Javoblaringizni saqlash uchun bir martalik kod yuboramiz.",
+        title = t.phoneTitle,
+        subtitle = t.phoneSubtitle,
         progress = progress,
         onBack = onBack,
         onSkip = null,
@@ -739,13 +730,13 @@ fun PhoneQuestion(
         footer = {
             AnswerFooter(visible = true) {
                 SadoraButton(
-                    if (busy) "Yuborilmoqda…" else "Kodni yuborish",
+                    if (busy) t.sending else t.sendCode,
                     onSubmit,
                     enabled = ready && !busy,
                 )
             }
             Text(
-                "Hisobim bor · Kirish",
+                t.haveAccount,
                 style = Sadora.type.body,
                 color = c.textAccent,
                 modifier = Modifier
@@ -760,7 +751,7 @@ fun PhoneQuestion(
             SadoraTextField(
                 value = state.phone,
                 onValueChange = { state.phone = it },
-                label = "Telefon raqami",
+                label = t.phoneLabel,
                 leading = "+998",
                 placeholder = "90 123 45 67",
                 keyboardType = KeyboardType.Phone,
@@ -773,7 +764,7 @@ fun PhoneQuestion(
         }
         Reveal(entry.value, from = 0.42f) {
             DisclaimerNote(
-                "Raqam faqat kirish uchun ishlatiladi va reklama uchun berilmaydi.",
+                t.phoneNote,
                 icon = "🔒",
             )
         }
@@ -803,10 +794,11 @@ fun OtpQuestion(
 ) {
     val c = Sadora.colors
     val entry = rememberPageEntry()
+    val t = strings.onboarding
 
     QuestionScaffold(
-        title = "Kodni kiriting",
-        subtitle = "+998 $phone raqamiga 6 xonali kod yubordik.",
+        title = t.codeTitle,
+        subtitle = t.codeSubtitle(phone),
         progress = progress,
         onBack = onBack,
         onSkip = null,
@@ -814,13 +806,13 @@ fun OtpQuestion(
         footer = {
             AnswerFooter(visible = code.length == 6) {
                 SadoraButton(
-                    if (busy) "Tekshirilmoqda…" else "Tasdiqlash",
+                    if (busy) t.checking else t.confirm,
                     onVerify,
                     enabled = !busy,
                 )
             }
             Text(
-                if (secondsLeft > 0) "Qayta yuborish · ${secondsLeft}s" else "Kodni qayta yuborish",
+                if (secondsLeft > 0) t.resendIn(secondsLeft) else t.resend,
                 style = Sadora.type.body,
                 color = if (secondsLeft > 0) c.muted2 else c.textAccent,
                 modifier = Modifier
@@ -838,7 +830,7 @@ fun OtpQuestion(
         }
         Reveal(entry.value, from = 0.36f) {
             DisclaimerNote(
-                "Kodni hech kimga aytmang. SADORA xodimlari kodni so'ramaydi.",
+                t.codeSecrecy,
                 icon = "🔒",
             )
         }
@@ -874,6 +866,7 @@ fun LastPeriodQuestion(
     onNext: () -> Unit,
 ) {
     val entry = rememberPageEntry()
+    val t = strings.onboarding
     val today = remember { deviceToday() }
     val marked = state.recentPeriodStarts.size
     var askAboutFewer by remember { mutableStateOf(false) }
@@ -882,10 +875,8 @@ fun LastPeriodQuestion(
     // calendar, and as a Column sibling it would be laid out below it, off screen.
     Box(Modifier.fillMaxSize()) {
         QuestionScaffold(
-            title = "Oxirgi hayzlaringiz qachon bo'lgan?",
-            subtitle = "Hayz boshlangan kunni bosing — qolgan " +
-                "${state.averagePeriodLength} kun o'zi belgilanadi. Keyin kunlarni " +
-                "bittalab qo'shish yoki olib tashlash mumkin.",
+            title = t.periodsTitle,
+            subtitle = t.periodsSubtitle(state.averagePeriodLength),
             progress = progress,
             onBack = onBack,
             // No skip: without at least one period there is nothing to predict from, and a
@@ -895,7 +886,7 @@ fun LastPeriodQuestion(
             footer = {
                 AnswerFooter(visible = marked > 0) {
                     SadoraButton(
-                        "Davom etish",
+                        t.continueLabel,
                         onClick = {
                             if (marked < MaxEnteredCycles) askAboutFewer = true else onNext()
                         },
@@ -925,15 +916,14 @@ fun LastPeriodQuestion(
         // dialog leaves her on the calendar, which is the safer of the two outcomes.
         SadoraDialog(
             visible = askAboutFewer,
-            title = "Yana belgilaysizmi?",
-            body = "Hozir $marked ta hayz belgilandi. Uchtasi belgilansa, siklingiz " +
-                "uzunligini o'lchay olamiz va bashorat ancha aniq bo'ladi.",
-            confirmText = "Davom etish",
+            title = t.markMore,
+            body = t.markMoreBody(marked),
+            confirmText = t.continueLabel,
             onConfirm = {
                 askAboutFewer = false
                 onNext()
             },
-            cancelText = "Belgilayman",
+            cancelText = t.iWillMark,
             onDismiss = { askAboutFewer = false },
             destructive = false,
         )
@@ -950,6 +940,7 @@ fun LastPeriodQuestion(
 @Composable
 private fun EnteredCyclesSummary(count: Int, averageCycleLength: Int?) {
     val c = Sadora.colors
+    val t = strings.onboarding
     val filled = count.coerceAtMost(MaxEnteredCycles)
 
     Column(
@@ -976,9 +967,9 @@ private fun EnteredCyclesSummary(count: Int, averageCycleLength: Int?) {
         Text(
             when {
                 averageCycleLength != null ->
-                    "$filled/$MaxEnteredCycles belgilandi · o'rtacha sikl $averageCycleLength kun"
-                filled > 0 -> "$filled/$MaxEnteredCycles belgilandi · yana belgilang"
-                else -> "Hayz boshlangan kunni belgilang"
+                    t.markedWithAverage(filled, MaxEnteredCycles, averageCycleLength)
+                filled > 0 -> t.markedMoreNeeded(filled, MaxEnteredCycles)
+                else -> t.markAPeriodStart
             },
             style = Sadora.type.body,
             color = c.muted,
@@ -998,33 +989,26 @@ fun CycleRegularityQuestion(
     onNext: () -> Unit,
 ) {
     val entry = rememberPageEntry(800)
+    val t = strings.onboarding
     // The index rather than the value: two of the three answers mean "not regular",
     // and only the one she tapped should light up.
     var chosen by remember { mutableStateOf(-1) }
 
     QuestionScaffold(
-        title = "Siklingiz muntazammi?",
-        subtitle = "Har oy taxminan bir xil kunda keladimi?",
+        title = t.regularityTitle,
+        subtitle = t.regularitySubtitle,
         progress = progress,
         onBack = onBack,
         onSkip = onSkip,
         entry = entry,
         footer = {
-            AnswerFooter(visible = chosen >= 0) { SadoraButton("Davom etish", onNext) }
+            AnswerFooter(visible = chosen >= 0) { SadoraButton(t.continueLabel, onNext) }
         },
     ) {
         val options = listOf(
-            Triple(true, "Ha, muntazam", "Yaxshi — bashoratlar boshidanoq aniqroq bo'ladi."),
-            Triple(
-                false,
-                "Yo'q, o'zgarib turadi",
-                "Buni hisobga olamiz va bashoratlarga ishonch darajasini ko'rsatamiz.",
-            ),
-            Triple(
-                false,
-                "Bilmayman",
-                "Muammo emas. Bir necha oy kuzatgach, o'zi ayon bo'ladi.",
-            ),
+            Triple(true, t.regularYes, t.regularYesNote),
+            Triple(false, t.regularNo, t.regularNoNote),
+            Triple(false, t.regularUnknown, t.regularUnknownNote),
         )
         options.forEachIndexed { index, (regular, label, note) ->
             Reveal(entry.value, from = optionStart(index, base = 0.28f)) {
@@ -1057,6 +1041,7 @@ fun SensitiveNoticeScreen(
 ) {
     val c = Sadora.colors
     val entry = rememberPageEntry(900)
+    val t = strings.onboarding
 
     Column(
         Modifier
@@ -1082,7 +1067,7 @@ fun SensitiveNoticeScreen(
         Spacer(Modifier.height(Spacing.md))
         Reveal(entry.value, from = 0.18f) {
             Text(
-                "Keyingi savollar shaxsiy",
+                t.sensitiveTitle,
                 style = Sadora.type.h1,
                 color = c.text,
                 textAlign = TextAlign.Center,
@@ -1091,9 +1076,7 @@ fun SensitiveNoticeScreen(
         Spacer(Modifier.height(Spacing.xs))
         Reveal(entry.value, from = 0.30f) {
             Text(
-                "Kontratsepsiya va homiladorlikni rejalashtirish haqida so'raymiz. " +
-                    "Bu savollar bashoratlarni aniqroq qiladi, lekin javob berish " +
-                    "majburiy emas.",
+                t.sensitiveBody,
                 style = Sadora.type.body,
                 color = c.muted,
                 textAlign = TextAlign.Center,
@@ -1101,12 +1084,12 @@ fun SensitiveNoticeScreen(
         }
         Spacer(Modifier.height(Spacing.xl))
         Reveal(entry.value, from = 0.50f) {
-            SadoraButton("Davom etish", onContinue)
+            SadoraButton(t.continueLabel, onContinue)
         }
         Spacer(Modifier.height(Spacing.xs))
         Reveal(entry.value, from = 0.60f) {
             Text(
-                "Bu savollarni o'tkazib yuborish",
+                t.skipTheseQuestions,
                 style = Sadora.type.body,
                 color = c.muted,
                 modifier = Modifier
@@ -1129,40 +1112,32 @@ fun BirthControlQuestion(
     onNext: () -> Unit,
 ) {
     val entry = rememberPageEntry(1200)
+    val t = strings.onboarding
 
     QuestionScaffold(
-        title = "Oxirgi 6 oyda kontratsepsiyadan foydalanganmisiz?",
-        subtitle = "Ba'zi usullar siklga ta'sir qiladi, shuning uchun so'rayapmiz.",
+        title = t.birthControlTitle,
+        subtitle = t.birthControlSubtitle,
         progress = progress,
         onBack = onBack,
         onSkip = onSkip,
         entry = entry,
         footer = {
             AnswerFooter(visible = state.birthControl != null) {
-                SadoraButton("Davom etish", onNext)
+                SadoraButton(t.continueLabel, onNext)
             }
         },
     ) {
         BirthControl.entries.forEachIndexed { index, option ->
             Reveal(entry.value, from = optionStart(index, base = 0.24f, step = 0.06f)) {
                 AnswerRow(
-                    label = option.label,
-                    note = option.note(),
+                    label = t.birthControl(option),
+                    note = t.birthControlNote(option),
                     selected = state.birthControl == option,
                     onClick = { state.birthControl = option },
                 )
             }
         }
     }
-}
-
-/** What SADORA does with each answer, said plainly. */
-private fun BirthControl.note(): String? = when (this) {
-    BirthControl.Pill, BirthControl.Iud ->
-        "Gormonal usuldan keyin sikl bir necha oy tiklanadi — bashoratlarni ehtiyotkorlik bilan beramiz."
-    BirthControl.StillUsing ->
-        "Gormonal usul davomida ovulyatsiya bo'lmaydi, shuning uchun unumdor kunlarni ko'rsatmaymiz."
-    else -> null
 }
 
 // ---------------------------------------------------------------- conception
@@ -1176,38 +1151,31 @@ fun ConceptionWindowQuestion(
     onNext: () -> Unit,
 ) {
     val entry = rememberPageEntry(1000)
+    val t = strings.onboarding
 
     QuestionScaffold(
-        title = "Qachondan beri homiladorlikka harakat qilyapsiz?",
+        title = t.conceptionTitle,
         progress = progress,
         onBack = onBack,
         onSkip = onSkip,
         entry = entry,
         footer = {
             AnswerFooter(visible = state.conceptionWindow != null) {
-                SadoraButton("Davom etish", onNext)
+                SadoraButton(t.continueLabel, onNext)
             }
         },
     ) {
         ConceptionWindow.entries.forEachIndexed { index, option ->
             Reveal(entry.value, from = optionStart(index, base = 0.26f)) {
                 AnswerRow(
-                    label = option.label,
-                    note = option.note(),
+                    label = strings.common.conceptionWindow(option),
+                    note = t.conceptionNote(option),
                     selected = state.conceptionWindow == option,
                     onClick = { state.conceptionWindow = option },
                 )
             }
         }
     }
-}
-
-private fun ConceptionWindow.note(): String? = when (this) {
-    ConceptionWindow.JustStarted ->
-        "Yo'lning boshi — savollar ko'p bo'ladi va biz har birida yoningizdamiz."
-    ConceptionWindow.SixToTwelve, ConceptionWindow.OverAYear ->
-        "Bir yildan oshgan bo'lsa, shifokorga murojaat qilish tavsiya etiladi. Buni ham eslatib turamiz."
-    else -> null
 }
 
 // ---------------------------------------------------------------- stage dates
@@ -1221,18 +1189,19 @@ fun DueDateQuestion(
     onNext: () -> Unit,
 ) {
     val entry = rememberPageEntry()
+    val t = strings.onboarding
     val today = remember { deviceToday() }
 
     QuestionScaffold(
-        title = "Tug'ilish sanasi qachon kutilyapti?",
-        subtitle = "Shifokor aytgan taxminiy sanani belgilang.",
+        title = t.dueDateTitle,
+        subtitle = t.dueDateSubtitle,
         progress = progress,
         onBack = onBack,
         onSkip = onSkip,
         entry = entry,
         footer = {
             AnswerFooter(visible = state.dueDate != null) {
-                SadoraButton("Davom etish", onNext)
+                SadoraButton(t.continueLabel, onNext)
             }
         },
     ) {
@@ -1258,18 +1227,19 @@ fun BirthDateQuestion(
     onNext: () -> Unit,
 ) {
     val entry = rememberPageEntry()
+    val t = strings.onboarding
     val today = remember { deviceToday() }
 
     QuestionScaffold(
-        title = "Farzandingiz qachon tug'ilgan?",
-        subtitle = "Tiklanish bosqichlarini shu sanadan hisoblaymiz.",
+        title = t.birthDateTitle,
+        subtitle = t.birthDateSubtitle,
         progress = progress,
         onBack = onBack,
         onSkip = onSkip,
         entry = entry,
         footer = {
             AnswerFooter(visible = state.babyBirthDate != null) {
-                SadoraButton("Davom etish", onNext)
+                SadoraButton(t.continueLabel, onNext)
             }
         },
     ) {
@@ -1287,14 +1257,19 @@ fun BirthDateQuestion(
 
 // ---------------------------------------------------------------- symptoms
 
-/** The symptoms the onboarding check-in offers, with the glyph each shows. */
-private val onboardingSymptoms = listOf(
-    "Qorin og'rig'i" to SadoraIcons.Heart,
-    "Charchoq" to SadoraIcons.Moon,
-    "Shishish" to SadoraIcons.Drop,
-    "Ko'krak og'rig'i" to SadoraIcons.Bloom,
-    "Bel og'rig'i" to SadoraIcons.Journey,
-    "Bosh og'rig'i" to SadoraIcons.Sparkle,
+/**
+ * The glyph each starter symptom shows.
+ *
+ * The words come from the strings; only the order is fixed here, so the two lists have
+ * to stay the same length — which is what the test in `StringsTest` checks.
+ */
+private val onboardingSymptomIcons = listOf(
+    SadoraIcons.Heart,
+    SadoraIcons.Moon,
+    SadoraIcons.Drop,
+    SadoraIcons.Bloom,
+    SadoraIcons.Journey,
+    SadoraIcons.Sparkle,
 )
 
 /**
@@ -1312,11 +1287,12 @@ fun SymptomsQuestion(
     onNext: () -> Unit,
 ) {
     val entry = rememberPageEntry(1100)
+    val t = strings.onboarding
     val name = state.name.trim()
 
     QuestionScaffold(
-        title = if (name.isEmpty()) "Bugun nimani sezyapsiz?" else "$name, bugun nimani sezyapsiz?",
-        subtitle = "Bir nechtasini tanlashingiz mumkin. Hech qaysisi bo'lmasa — o'tkazib yuboring.",
+        title = t.symptomsTitle(name),
+        subtitle = t.symptomsSubtitle,
         progress = progress,
         onBack = onBack,
         onSkip = onSkip,
@@ -1324,13 +1300,13 @@ fun SymptomsQuestion(
         footer = {
             AnswerFooter(visible = true) {
                 SadoraButton(
-                    if (state.symptoms.isEmpty()) "Davom etish" else "Belgilarni saqlash",
+                    if (state.symptoms.isEmpty()) t.continueLabel else t.saveSymptoms,
                     onNext,
                 )
             }
         },
     ) {
-        onboardingSymptoms.chunked(2).forEachIndexed { row, pair ->
+        t.starterSymptoms.zip(onboardingSymptomIcons).chunked(2).forEachIndexed { row, pair ->
             Reveal(entry.value, from = optionStart(row, base = 0.28f, step = 0.09f)) {
                 Row(
                     Modifier.fillMaxWidth(),

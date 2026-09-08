@@ -650,6 +650,79 @@ body {
 .foot .links { display: flex; gap: 18px; font-size: 13px; color: var(--muted); }
 .foot .links a:hover { color: var(--text); }
 
+
+/* ---------- Gullar va ayol chizmalari ----------
+   Gul geometriyasi ilovaning drawBloom funksiyasidan: olti gulbarg bitta
+   yadro atrofida. Ayol figuralari bitta qalam zarbida chiziladi — logotip
+   qanday chizilsa, shunday. ---------------------------------------- */
+
+/* Hero ustidan sekin suzuvchi gul maydoni */
+.petalfield { position: absolute; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; }
+.petalfield .fl {
+  position: absolute; display: block; opacity: 0;
+  transition: opacity 1.4s var(--gentle) var(--dl, 0ms);
+  animation: sway var(--t, 18s) ease-in-out infinite var(--dl, 0ms);
+  will-change: transform;
+}
+.petalfield.on .fl { opacity: var(--o, .5); }
+@keyframes sway {
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(var(--r, 0deg)); }
+  50%      { transform: translate3d(var(--dx, 10px), var(--dy, -16px), 0) rotate(calc(var(--r, 0deg) + 16deg)); }
+}
+@media (max-width: 900px) { .petalfield .fl:not(.m) { display: none; } }
+
+/* Chiziq bilan chizilgan ayol */
+.figure { display: block; width: 100%; height: auto; overflow: visible; }
+.figure .ln, .figure .thin {
+  fill: none; stroke: url(#brandGrad);
+  stroke-linecap: round; stroke-linejoin: round;
+}
+.figure .ln { stroke-width: 2.6; }
+.figure .thin { stroke-width: 1.7; opacity: .72; }
+.figure .bl { opacity: 0; transform: scale(.4); transform-box: fill-box; transform-origin: center; }
+.figure.on .bl { animation: blpop .7s var(--pop) forwards; animation-delay: calc(var(--bd, 0ms) + var(--i, 0) * 120ms); }
+@keyframes blpop { to { opacity: 1; transform: scale(1); } }
+
+/* Manifest bo'limi */
+.manifesto-grid {
+  display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr);
+  gap: clamp(28px, 5vw, 72px); align-items: center;
+}
+@media (max-width: 820px) { .manifesto-grid { grid-template-columns: minmax(0,1fr); } }
+.portrait { position: relative; display: grid; place-items: center; }
+.portrait .figure { max-width: 320px; margin-inline: auto; }
+.portrait::before {
+  content: ''; position: absolute; inset: 6% 10% 10%; z-index: -1; border-radius: 999px;
+  background: radial-gradient(circle at 45% 40%, color-mix(in srgb, var(--secondary) 24%, transparent), transparent 68%);
+  filter: blur(26px);
+}
+.manifesto-copy { display: grid; gap: 20px; }
+.manifesto-copy .quiet { display: grid; gap: 12px; }
+.quiet-row { display: grid; grid-template-columns: 24px 1fr; gap: 12px; align-items: start; font-size: 15px; line-height: 1.55; color: var(--muted); }
+.quiet-row b { color: var(--text); font-weight: 600; }
+.quiet-row svg { margin-top: 2px; color: var(--secondary); }
+
+/* Bosqich figurasi halqa yonida */
+.stage-viz { min-height: 168px; display: grid; grid-template-columns: auto auto; gap: clamp(12px, 3vw, 30px); place-items: center; place-content: center; }
+@media (max-width: 430px) { .stage-viz { grid-template-columns: auto; gap: 8px; } }
+.stage-fig { width: 130px; flex: none; }
+.stage-fig .ln, .stage-fig .thin { stroke: url(#stageGrad); }
+.stage-fig .bl { color: var(--sb); }
+
+/* Sarlavha yonidagi kichik gul */
+.eyebrow { display: inline-flex; align-items: center; gap: 8px; }
+.eyebrow .eb { width: 14px; height: 14px; flex: none; color: var(--secondary); }
+.band .eyebrow .eb, .close-card .eyebrow .eb { color: var(--b3); }
+
+/* Maxfiy chatdagi taxallus avatarlari — gul */
+.post .av { display: grid; place-items: center; }
+.post .av svg { width: 19px; height: 19px; }
+
+/* CTA atrofidagi gulchambar */
+.close-art { position: relative; display: grid; place-items: center; }
+.close-art .wreath { position: absolute; inset: -12%; pointer-events: none; }
+.close-art .wreath .fl { position: absolute; opacity: 0; animation: blpop .8s var(--pop) forwards; animation-delay: var(--dl); }
+
 /* ---------- Skroll bilan paydo bo'lish ---------- */
 .js .r { opacity: 0; transform: translateY(22px); transition: opacity .9s var(--ease), transform .9s var(--ease); transition-delay: var(--d, 0ms); }
 .js .r.in { opacity: 1; transform: none; }
@@ -658,6 +731,9 @@ body {
   html { scroll-behavior: auto; }
   *, *::before, *::after { animation-duration: .01ms !important; animation-delay: 0ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; transition-delay: 0ms !important; }
   .js .r, .js .lift, .chat .bub, .reveal-logo .tag, .moodwk em, .cal i { opacity: 1 !important; transform: none !important; }
+  .figure .bl, .close-art .wreath .fl { opacity: 1 !important; transform: none !important; }
+  .petalfield .fl { opacity: var(--o, .5) !important; }
+  .figure .ln, .figure .thin { stroke-dashoffset: 0 !important; }
   .pen { stroke-dashoffset: 0 !important; }
   .mark-dot { transform: scale(1) !important; opacity: 1 !important; }
   .play .word path { opacity: 1; transform: none; }
@@ -672,9 +748,6 @@ body {
   <defs>
     <linearGradient id="brandGrad" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0" stop-color="#B06CFF"/><stop offset="0.45" stop-color="#8A8CFF"/><stop offset="1" stop-color="#F68CCB"/>
-    </linearGradient>
-    <linearGradient id="stageGrad" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="var(--sa)"/><stop offset="1" stop-color="var(--sb)"/>
     </linearGradient>
     <path id="markOutline" d="M162.5,31.7L161.2,29.1L159.6,26.5L157.8,24.1L155.9,21.7L153.7,19.5L151.4,17.4L148.9,15.4L146.2,13.5L143.4,11.8L140.4,10.2L137.3,8.8L134.1,7.5L130.7,6.3L127.3,5.3L123.8,4.5L120.2,3.8L116.6,3.3L112.9,3.0L109.2,2.9L105.4,2.9L101.6,3.1L97.8,3.5L94.0,4.1L90.3,4.9L86.5,5.9L82.8,7.1L79.2,8.5L75.6,10.1L72.1,12.0L68.6,14.2L65.3,16.5L62.2,19.2L59.2,22.0L56.4,25.0L54.0,28.2L51.8,31.5L49.9,35.0L48.2,38.6L46.9,42.3L45.8,46.0L45.1,49.9L44.6,53.7L44.4,57.7L44.4,61.6L44.8,65.6L45.4,69.6L46.2,73.5L47.3,77.4L48.7,81.3L50.3,85.2L52.1,89.0L54.1,92.7L56.3,96.4L58.8,100.0L61.5,103.6L64.3,107.0L67.4,110.4L70.6,113.7L74.0,116.8L77.6,119.9L81.4,122.9L85.4,125.7L89.5,128.4L93.7,130.9L97.4,133.1L100.9,135.2L104.3,137.5L107.6,139.7L110.7,142.1L113.8,144.4L116.6,146.8L119.4,149.2L122.0,151.7L124.4,154.1L126.7,156.6L128.8,159.0L130.7,161.5L132.5,163.9L134.1,166.3L135.4,168.7L136.6,171.0L137.6,173.3L138.5,175.6L139.1,177.8L139.6,180.1L139.9,182.2L140.0,184.4L139.9,186.6L139.6,188.9L139.1,191.1L138.4,193.5L137.4,195.8L136.1,198.3L134.5,200.8L132.6,203.4L130.4,206.0L128.7,207.8L126.7,209.5L124.6,211.2L122.2,212.9L119.7,214.4L117.1,215.8L114.3,217.1L111.4,218.3L108.4,219.3L105.3,220.2L102.1,221.0L98.9,221.5L95.5,221.9L92.2,222.1L88.8,222.2L85.4,222.0L82.0,221.6L78.5,221.1L75.1,220.3L71.8,219.2L68.4,218.0L65.1,216.5L61.9,214.7L58.8,212.7L55.8,210.4L52.8,207.8L50.0,204.9L47.4,201.7L44.9,198.2L42.5,194.4L40.4,190.3L38.6,185.8L37.4,186.2L39.2,190.8L41.1,195.2L43.1,199.2L45.4,203.1L47.9,206.6L50.5,209.9L53.3,213.0L56.3,215.8L59.4,218.4L62.6,220.8L66.0,222.9L69.4,224.8L73.0,226.4L76.6,227.8L80.4,229.0L84.1,230.0L87.9,230.7L91.8,231.3L95.7,231.6L99.5,231.7L103.4,231.6L107.2,231.4L111.0,230.9L114.8,230.2L118.5,229.3L122.1,228.3L125.6,227.1L129.0,225.6L132.4,224.0L135.6,222.2L138.7,220.3L141.6,218.0L145.0,215.0L148.1,211.8L150.9,208.4L153.3,205.0L155.4,201.4L157.2,197.7L158.6,193.9L159.7,190.0L160.4,186.1L160.7,182.2L160.7,178.2L160.4,174.2L159.7,170.3L158.8,166.4L157.6,162.6L156.1,158.8L154.3,155.1L152.3,151.5L150.2,148.0L147.8,144.5L145.2,141.1L142.4,137.8L139.4,134.5L136.3,131.3L133.0,128.2L129.6,125.2L126.0,122.3L122.3,119.5L118.4,116.7L114.5,114.1L110.4,111.5L106.3,109.1L102.8,107.0L99.5,104.9L96.3,102.7L93.3,100.4L90.4,98.0L87.7,95.6L85.1,93.1L82.7,90.6L80.4,88.1L78.3,85.5L76.3,82.9L74.5,80.3L72.8,77.7L71.4,75.1L70.1,72.4L68.9,69.8L67.9,67.2L67.1,64.6L66.4,62.1L65.9,59.6L65.6,57.1L65.4,54.6L65.4,52.1L65.6,49.7L65.9,47.3L66.4,44.9L67.1,42.5L68.0,40.2L69.1,37.8L70.4,35.5L72.0,33.1L73.8,30.8L75.9,28.6L78.1,26.5L80.4,24.5L82.9,22.7L85.5,20.9L88.2,19.4L91.0,18.0L93.9,16.7L97.0,15.5L100.1,14.6L103.2,13.7L106.4,13.1L109.7,12.5L113.0,12.2L116.2,12.0L119.5,11.9L122.8,12.0L126.0,12.3L129.2,12.7L132.4,13.2L135.5,14.0L138.5,14.8L141.4,15.9L144.2,17.1L146.9,18.4L149.5,19.9L151.9,21.6L154.2,23.4L156.3,25.4L158.3,27.5L160.0,29.8L161.5,32.3Z"/>
     <path id="markDot" d="M55,149 C54.6,154 54.2,158 53.4,161 A8.5,8.5 0 1 1 43.1,151.7 C46.5,150 50.5,149.4 55,149 Z"/>
@@ -694,6 +767,18 @@ body {
       <path style="--i:4" d="M244,40 V0 H258 C274,0 274,22 258,22 H244 M258,22 L272,40"/>
       <path style="--i:5" d="M300,40 L317,0 L334,40"/>
     </symbol>
+    <!-- Gul: olti gulbarg va yadro — ilovaning drawBloom shakli -->
+    <g id="bloomArt">
+      <g fill="currentColor">
+        <path d="M0,0 C4.4,-2 4,-7.2 0,-9.2 C-4,-7.2 -4.4,-2 0,0"/>
+        <path d="M0,0 C4.4,-2 4,-7.2 0,-9.2 C-4,-7.2 -4.4,-2 0,0" transform="rotate(60)"/>
+        <path d="M0,0 C4.4,-2 4,-7.2 0,-9.2 C-4,-7.2 -4.4,-2 0,0" transform="rotate(120)"/>
+        <path d="M0,0 C4.4,-2 4,-7.2 0,-9.2 C-4,-7.2 -4.4,-2 0,0" transform="rotate(180)"/>
+        <path d="M0,0 C4.4,-2 4,-7.2 0,-9.2 C-4,-7.2 -4.4,-2 0,0" transform="rotate(240)"/>
+        <path d="M0,0 C4.4,-2 4,-7.2 0,-9.2 C-4,-7.2 -4.4,-2 0,0" transform="rotate(300)"/>
+      </g>
+      <circle r="2.1" fill="#FFFFFF" opacity=".92"/>
+    </g>
   </defs>
 </svg>
 
@@ -724,6 +809,7 @@ body {
 <!-- ==================== HERO ==================== -->
 <section class="hero">
   <div class="aurora" aria-hidden="true"><i></i><i></i><i></i></div>
+  <div class="petalfield" id="petals" aria-hidden="true"></div>
   <div class="wrap hero-grid">
     <div class="hero-copy">
       <div class="reveal-logo" id="logo" aria-label="SADORA logotipi">
@@ -858,12 +944,64 @@ body {
   </div>
 </section>
 
+
+<!-- ==================== MANIFEST ==================== -->
+<section class="sec" id="nega">
+  <div class="wrap manifesto-grid">
+    <div class="portrait r">
+      <svg class="figure" id="portrait" viewBox="0 0 240 300" role="img" aria-label="Sochiga gul taqqan ayolning bir chiziqda chizilgan profili">
+        <path class="ln" style="stroke-width:2.2" d="M52,268 C60,232 72,214 92,202
+          C66,196 52,160 58,120
+          C64,74 100,44 136,46
+          C166,48 182,74 180,100
+          C179,110 172,112 170,118
+          C168,126 186,138 186,146
+          C186,152 176,153 170,154
+          C165,156 164,160 168,163
+          C171,166 166,169 163,172
+          C173,178 170,192 154,199
+          C142,204 130,205 122,203
+          C122,215 124,227 126,237
+          C132,248 158,258 190,268"/>
+        <path class="thin" d="M120,48 C82,58 62,96 70,138 C76,170 92,186 96,206"/>
+        <path class="thin" d="M136,50 C100,64 78,100 86,140 C92,172 106,190 108,210"/>
+        <path class="thin" d="M92,202 C74,214 62,236 60,262"/>
+        <path class="thin" d="M104,206 C92,220 84,240 84,264"/>
+        <g transform="translate(96,70) scale(1.05)"><g class="bl" style="--i:0; color: var(--secondary)"><use href="#bloomArt"/></g></g>
+        <g transform="translate(78,96) scale(1.25)"><g class="bl" style="--i:1; color: var(--primary)"><use href="#bloomArt"/></g></g>
+        <g transform="translate(70,140) scale(.95)"><g class="bl" style="--i:2; color: var(--secondary)"><use href="#bloomArt"/></g></g>
+        <g transform="translate(86,184) scale(.8)"><g class="bl" style="--i:3; color: var(--accent)"><use href="#bloomArt"/></g></g>
+      </svg>
+    </div>
+    <div class="manifesto-copy r" style="--d:120ms">
+      <p class="eyebrow"><svg class="eb" viewBox="-11 -11 22 22" aria-hidden="true"><use href="#bloomArt"/></svg>Nega shunday</p>
+      <h2 class="h1">Ayol tanasi jadval emas. U bosqichlardan o&rsquo;tadi.</h2>
+      <p class="lede">Ko&rsquo;pchilik ilova bitta sikl kalendarini chizadi va qolgan hamma narsani o&rsquo;sha kalendarga sig&rsquo;dirmoqchi bo&rsquo;ladi. SADORA boshqacha qaraydi: har bir bosqich &mdash; alohida ekran, alohida ko&rsquo;rsatkich, alohida til.</p>
+      <div class="quiet">
+        <div class="quiet-row">
+          <svg width="20" height="20" viewBox="-11 -11 22 22" aria-hidden="true"><use href="#bloomArt"/></svg>
+          <span><b>Homilador ayol &laquo;Sikl&raquo; so&rsquo;zini ko&rsquo;rmaydi.</b> Tab yorlig&rsquo;i ham, ekran ham, matn ham almashadi.</span>
+        </div>
+        <div class="quiet-row">
+          <svg width="20" height="20" viewBox="-11 -11 22 22" aria-hidden="true"><use href="#bloomArt"/></svg>
+          <span><b>Bashorat qilib bo&rsquo;lmasa &mdash; ko&rsquo;rsatilmaydi.</b> Menopauzada sana o&rsquo;rniga muntazamlik grafigi turadi.</span>
+        </div>
+        <div class="quiet-row">
+          <svg width="20" height="20" viewBox="-11 -11 22 22" aria-hidden="true"><use href="#bloomArt"/></svg>
+          <span><b>Hech qanday raqam hukm qilmaydi.</b> Ilova o&rsquo;lchaydi, taqqoslaydi va shu yerda to&rsquo;xtaydi.</span>
+        </div>
+      </div>
+      <div class="hero-cta"><a class="btn btn-ghost" href="#bosqichlar">Bosqichlarni ko&rsquo;rish</a></div>
+    </div>
+  </div>
+</section>
+
 <!-- ==================== ILOVA (bento) ==================== -->
 <section class="sec" id="ilova">
   <div class="wrap">
     <div class="sec-head split r">
       <div>
-        <p class="eyebrow">Ilova</p>
+        <p class="eyebrow"><svg class="eb" viewBox="-11 -11 22 22" aria-hidden="true"><use href="#bloomArt"/></svg>Ilova</p>
         <h2 class="h1" style="margin-top:12px">Kun bitta ekranga sig'adi. Qolgani &mdash; bir teginishda.</h2>
       </div>
       <p class="lede">Xush kelibsiz ekranidagi oltita va'da &mdash; har biri o'z moduliga aylangan. Quyidagi raqamlar ilovaning o'zidan olingan namuna hisob.</p>
@@ -1007,9 +1145,14 @@ body {
 
 <!-- ==================== BOSQICHLAR ==================== -->
 <section class="sec stagescope" id="bosqichlar">
+  <svg width="0" height="0" aria-hidden="true"><defs>
+    <linearGradient id="stageGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="var(--sa)"/><stop offset="1" stop-color="var(--sb)"/>
+    </linearGradient>
+  </defs></svg>
   <div class="wrap">
     <div class="sec-head r">
-      <p class="eyebrow">Hayot bosqichlari</p>
+      <p class="eyebrow"><svg class="eb" viewBox="-11 -11 22 22" aria-hidden="true"><use href="#bloomArt"/></svg>Hayot bosqichlari</p>
       <h2 class="h1">Homiladorlik &mdash; bu &laquo;o'chirilgan Sikl ekrani&raquo; emas.</h2>
       <p class="lede">Bosqich ilovadagi eng katta tarmoqlanish. U butun bir tabni almashtiradi, tab yorlig'ini o'zgartiradi va asosiy ko'rsatkichni boshqasiga aylantiradi. Bosqichni tanlang.</p>
     </div>
@@ -1028,6 +1171,7 @@ body {
           </div>
           <div class="stage-body">
             <div class="stage-viz">
+              <svg class="figure stage-fig" id="stFig" viewBox="0 0 120 140" role="img" aria-label="Bosqichdagi ayol figurasi"></svg>
               <div class="ring ring-150" id="stRing">
                 <svg viewBox="0 0 150 150"><circle class="trk" cx="75" cy="75" r="64" stroke-width="12"/><circle class="arc" id="stArc" cx="75" cy="75" r="64" stroke-width="12" stroke-dasharray="402.1" stroke-dashoffset="402.1"/></svg>
                 <div class="mid"><div><b class="tnum" id="stBig">14</b><span id="stBigLbl">Sikl kuni</span></div></div>
@@ -1053,7 +1197,7 @@ body {
   <div class="wrap">
     <div class="band-grid">
       <div class="band-copy r">
-        <p class="eyebrow">SADORA AI</p>
+        <p class="eyebrow"><svg class="eb" viewBox="-11 -11 22 22" aria-hidden="true"><use href="#bloomArt"/></svg>SADORA AI</p>
         <h2 class="h1">Javobni model yozadi. Chegarani qoidalar belgilaydi.</h2>
         <p class="lede">AI Gateway serverda: javobni Gemini yozadi, kalit bo'lmasa yoki model o'chirilgan bo'lsa qoidalar javob beradi. Har bir so'rov narxi bilan jurnalga tushadi.</p>
         <ul class="rules-mini">
@@ -1076,22 +1220,22 @@ body {
     </div>
 
     <div class="sec-head r" style="margin-top:clamp(64px,8vw,104px);margin-bottom:0">
-      <p class="eyebrow">Maxfiy chat</p>
+      <p class="eyebrow"><svg class="eb" viewBox="-11 -11 22 22" aria-hidden="true"><use href="#bloomArt"/></svg>Maxfiy chat</p>
       <h2 class="h2" style="color:#fff">Ovoz chiqarib so'rashga uyaladigan savollar &mdash; taxallus ostida, hukmsiz.</h2>
     </div>
     <div class="posts">
       <article class="post r" style="--d:0ms">
-        <div class="who"><span class="av" style="background:linear-gradient(135deg,var(--b2),var(--b3))"></span><b>Anonim</b><span>&middot; Sikl &middot; 20 daqiqa oldin</span></div>
+        <div class="who"><span class="av" style="background:linear-gradient(135deg,var(--b2),var(--b3))"><svg viewBox="-11 -11 22 22" style="color:#fff" aria-hidden="true"><use href="#bloomArt"/></svg></span><b>Anonim</b><span>&middot; Sikl &middot; 20 daqiqa oldin</span></div>
         <p>Siklim har oy 3&ndash;4 kunga surilib ketyapti. Shifokorga borishim kerakmi, yoki bu normami? 24 yoshdaman.</p>
         <div class="acts"><span>♡ 34</span><span>💬 2</span></div>
       </article>
       <article class="post r" style="--d:70ms">
-        <div class="who"><span class="av" style="background:linear-gradient(135deg,var(--warm),var(--b3))"></span><b>Anonim</b><span>&middot; Kayfiyat &middot; 1 soat oldin</span></div>
+        <div class="who"><span class="av" style="background:linear-gradient(135deg,var(--warm),var(--b3))"><svg viewBox="-11 -11 22 22" style="color:#fff" aria-hidden="true"><use href="#bloomArt"/></svg></span><b>Anonim</b><span>&middot; Kayfiyat &middot; 1 soat oldin</span></div>
         <p>Hayzdan oldingi hafta juda asabiy bo'lib qolaman va keyin o'zimni ayblayman. Shu bilan qanday kurashasizlar?</p>
         <div class="acts"><span>♡ 78</span><span>💬 1</span></div>
       </article>
       <article class="post r" style="--d:140ms">
-        <div class="who"><span class="av" style="background:linear-gradient(135deg,var(--accent),var(--b1))"></span><b>Anonim</b><span>&middot; Sikl &middot; 2 kun oldin</span></div>
+        <div class="who"><span class="av" style="background:linear-gradient(135deg,var(--accent),var(--b1))"><svg viewBox="-11 -11 22 22" style="color:#fff" aria-hidden="true"><use href="#bloomArt"/></svg></span><b>Anonim</b><span>&middot; Sikl &middot; 2 kun oldin</span></div>
         <p>Birinchi marta shu ilovada siklimni kuzata boshladim va nihoyat tanamni tushunayotgandekman. Kimga qiyin bo'lsa &mdash; boshlang, arziydi.</p>
         <div class="acts"><span>♡ 142</span><span>💬 0</span></div>
       </article>
@@ -1104,7 +1248,7 @@ body {
   <div class="wrap">
     <div class="sec-head split r">
       <div>
-        <p class="eyebrow">Ma'lumot manbalari</p>
+        <p class="eyebrow"><svg class="eb" viewBox="-11 -11 22 22" aria-hidden="true"><use href="#bloomArt"/></svg>Ma'lumot manbalari</p>
         <h2 class="h1" style="margin-top:12px">Qaysi raqam qayerdan kelgani ko'rinadi.</h2>
       </div>
       <p class="lede">Sakkiz platforma. Ulangan manba oxirgi sinxron vaqtini va nima berayotganini ko'rsatadi; muddati o'tgan ruxsat yashirilmaydi.</p>
@@ -1126,7 +1270,7 @@ body {
 <section class="sec" id="premium" style="border-top:1px solid var(--line)">
   <div class="wrap">
     <div class="sec-head r">
-      <p class="eyebrow">SADORA Premium</p>
+      <p class="eyebrow"><svg class="eb" viewBox="-11 -11 22 22" aria-hidden="true"><use href="#bloomArt"/></svg>SADORA Premium</p>
       <h2 class="h1">Premium bloklovchi emas. Bepul rejadagi hamma narsa qoladi.</h2>
       <p class="lede">Narxlar serverda, to'lovni server tasdiqlaydi. Qulflangan bloklar yashirilmaydi &mdash; xiralashgan holda ko'rinadi, foydalanuvchi nima qo'shilishini biladi.</p>
     </div>
@@ -1168,7 +1312,7 @@ body {
 <section class="sec" id="qoidalar" style="border-top:1px solid var(--line)">
   <div class="wrap">
     <div class="sec-head r">
-      <p class="eyebrow">Ishonch qoidalari</p>
+      <p class="eyebrow"><svg class="eb" viewBox="-11 -11 22 22" aria-hidden="true"><use href="#bloomArt"/></svg>Ishonch qoidalari</p>
       <h2 class="h1">Bular uslub emas &mdash; kodda ataylab saqlangan qarorlar.</h2>
       <p class="lede">Sog'liq ilovasida dizayn qarori ishonch qarori hamdir. Oltitasi matnda emas, ekranning o'zida ko'rinadi.</p>
     </div>
@@ -1211,7 +1355,7 @@ body {
 <section class="sec" id="holat" style="border-top:1px solid var(--line)">
   <div class="wrap">
     <div class="sec-head r">
-      <p class="eyebrow">Holat</p>
+      <p class="eyebrow"><svg class="eb" viewBox="-11 -11 22 22" aria-hidden="true"><use href="#bloomArt"/></svg>Holat</p>
       <h2 class="h1">Nima tayyor, nima hali yo'q.</h2>
       <p class="lede">Sog'liq ilovasi haqida noaniq gapirish yaramaydi. Shuning uchun ro'yxat ochiq.</p>
     </div>
@@ -1248,7 +1392,7 @@ body {
     <div class="close-card r">
       <span class="close-glow" aria-hidden="true"></span>
       <div style="display:grid;gap:20px;position:relative">
-        <p class="eyebrow">Yopiq sinov</p>
+        <p class="eyebrow"><svg class="eb" viewBox="-11 -11 22 22" aria-hidden="true"><use href="#bloomArt"/></svg>Yopiq sinov</p>
         <h2 class="h1">Sadora'ni birinchilardan bo'lib sinab ko'ring.</h2>
         <p class="lede">Sinovga qo'shilsangiz, qaysi bosqichda ekanligingizni tanlaysiz &mdash; ilova qolganini o'zi moslashtiradi.</p>
         <div class="hero-cta">
@@ -1256,7 +1400,10 @@ body {
           <a class="btn btn-ghost" href="#ilova">Yana bir bor ko'rish</a>
         </div>
       </div>
-      <div class="orb" aria-hidden="true"><div class="sphere"></div><div class="rim"></div><div class="in-mark"><svg viewBox="20 -10 160 250"><use href="#markWhite"/></svg></div></div>
+      <div class="close-art r" style="--d:160ms">
+        <div class="wreath" id="wreath" aria-hidden="true"></div>
+        <div class="orb" aria-hidden="true"><div class="sphere"></div><div class="rim"></div><div class="in-mark"><svg viewBox="20 -10 160 250"><use href="#markWhite"/></svg></div></div>
+      </div>
     </div>
   </div>
 </section>
@@ -1326,6 +1473,8 @@ body {
   }
   function activate(el) {
     el.classList.add('in');
+    var fig = el.querySelector && el.querySelector('.figure');
+    if (fig && !fig.__drawn) { fig.__drawn = true; drawFigure(fig, 1600, 180); }
     var counters = el.querySelectorAll('[data-count]');
     for (var i = 0; i < counters.length; i++) if (!counters[i].__done) { counters[i].__done = true; countUp(counters[i]); }
     fillRings(el);
@@ -1355,39 +1504,164 @@ body {
     hero.addEventListener('pointerleave', function () { tilt.style.transform = ''; });
   }
 
+
+  /* ---- Gullar va ayol chizmalari ----
+     Chiziqlar bitta qalam zarbida chiziladi: har bir yo'l o'z uzunligicha
+     qirqilib, keyin ochiladi. Gullar chizib bo'lingach ochiladi. ---- */
+
+  function drawFigure(svg, dur, stagger) {
+    var strokes = svg.querySelectorAll('.ln, .thin');
+    var i;
+    if (reduce) {
+      for (i = 0; i < strokes.length; i++) {
+        strokes[i].style.strokeDasharray = 'none';
+        strokes[i].style.strokeDashoffset = 0;
+      }
+      svg.classList.add('on');
+      return;
+    }
+    for (i = 0; i < strokes.length; i++) {
+      var el = strokes[i], len = 400;
+      try { len = el.getTotalLength() || 400; } catch (e) {}
+      el.style.transition = 'none';
+      el.style.strokeDasharray = len;
+      el.style.strokeDashoffset = len;
+    }
+    svg.classList.remove('on');
+    void svg.getBoundingClientRect();
+    for (i = 0; i < strokes.length; i++) {
+      strokes[i].style.transition =
+        'stroke-dashoffset ' + dur + 'ms cubic-bezier(.2,0,0,1) ' + (i * stagger) + 'ms';
+      strokes[i].style.strokeDashoffset = 0;
+    }
+    // Birinchi gul oxirgi chiziq tugashidan sal oldin ochiladi.
+    svg.style.setProperty('--bd', Math.round(dur * 0.55 + (strokes.length - 1) * stagger) + 'ms');
+    svg.classList.add('on');
+  }
+
+  function bloomSvg(size, tone, extra) {
+    return '<svg width="' + size + '" height="' + size + '" viewBox="-11 -11 22 22" ' +
+      'style="color:' + tone + (extra || '') + '" aria-hidden="true"><use href="#bloomArt"/></svg>';
+  }
+
+  /* Hero ustidagi gul maydoni. O'rinlar qo'lda tanlangan — matn ustiga
+     tushmasin; `m` bilan belgilangani telefonda ham qoladi. */
+  var FIELD = [
+    [6, 12, 26, 'var(--secondary)', .5, 14, -18, 19, 1],
+    [15, 6, 16, 'var(--primary)', .42, -10, 14, 23, 1],
+    [3, 34, 18, 'var(--accent)', .34, 12, 16, 26, 0],
+    [2, 62, 22, 'var(--secondary)', .3, 10, -14, 21, 0],
+    [8, 88, 28, 'var(--primary)', .4, -12, -16, 24, 1],
+    [19, 94, 18, 'var(--b3)', .36, 14, 12, 18, 1],
+    [33, 90, 22, 'var(--accent)', .3, -14, -12, 27, 1],
+    [46, 8, 20, 'var(--secondary)', .44, 12, 14, 20, 0],
+    [34, 4, 14, 'var(--primary)', .34, -12, 16, 25, 1],
+    [56, 92, 24, 'var(--b3)', .4, 12, -14, 22, 1],
+    [70, 4, 18, 'var(--primary)', .4, -14, 12, 19, 1],
+    [88, 10, 26, 'var(--secondary)', .46, 12, 16, 23, 1],
+    [96, 34, 20, 'var(--accent)', .34, -12, -16, 28, 0],
+    [92, 74, 24, 'var(--b3)', .4, 14, 14, 20, 0],
+    [78, 94, 18, 'var(--primary)', .34, -12, -12, 26, 1]
+  ];
+  var field = $('petals');
+  FIELD.forEach(function (f, i) {
+    var el = document.createElement('span');
+    el.className = 'fl' + (f[8] ? ' m' : '');
+    el.style.cssText =
+      'left:' + f[0] + '%;top:' + f[1] + '%;--o:' + f[4] + ';--dx:' + f[5] + 'px;--dy:' + f[6] +
+      'px;--t:' + f[7] + 's;--dl:' + (i * 90) + 'ms;--r:' + ((i * 37) % 60 - 30) + 'deg';
+    el.innerHTML = bloomSvg(f[2], f[3]);
+    field.appendChild(el);
+  });
+  setTimeout(function () { field.classList.add('on'); }, reduce ? 0 : 700);
+
+  /* CTA atrofidagi gulchambar */
+  var wreath = $('wreath');
+  [0, 42, 88, 134, 180, 226, 268, 312].forEach(function (deg, i) {
+    var rad = deg * Math.PI / 180;
+    var el = document.createElement('span');
+    el.className = 'fl';
+    el.style.cssText =
+      'left:' + (50 + Math.cos(rad) * 46).toFixed(2) + '%;top:' + (50 + Math.sin(rad) * 46).toFixed(2) +
+      '%;transform:translate(-50%,-50%);--dl:' + (i * 90) + 'ms';
+    el.innerHTML = bloomSvg(i % 2 ? 16 : 22, i % 3 ? 'var(--b3)' : 'var(--b1)');
+    wreath.appendChild(el);
+  });
+
+
+  /* Har bir bosqich uchun bitta figura: bir xil bosh va tana, boshqa imo.
+     Homiladorlikda tana chizig'ining o'zi o'zgaradi — bu bosqich "o'chirilgan
+     Sikl" emas, boshqa shakl. */
+  var F_HEAD = '<circle class="ln" cx="56" cy="28" r="14"/>' +
+    '<circle class="thin" cx="38" cy="33" r="7"/>' +
+    '<path class="ln" d="M56,42 C56,46 56,49 56,52"/>';
+  var F_BACK = '<path class="ln" d="M56,52 C42,57 34,70 35,86 C36,98 39,112 41,128"/>';
+  var F_FRONT = '<path class="ln" d="M56,52 C70,57 78,68 78,84 C78,96 75,112 73,128"/>';
+  function fBloom(x, y, sc, i) {
+    return '<g transform="translate(' + x + ',' + y + ') scale(' + sc + ')">' +
+      '<g class="bl" style="--i:' + i + '"><use href="#bloomArt"/></g></g>';
+  }
+  var FIG = {
+    // Qo'l qorinda, kaftda gul.
+    cycle: F_HEAD + F_BACK + F_FRONT +
+      '<path class="ln" d="M68,60 C79,69 78,85 68,93 C64,96 60,97 57,97"/>' + fBloom(47, 97, 1, 0),
+    // Ikki qo'l gulni avaylab ushlagan.
+    ttc: F_HEAD + F_BACK + F_FRONT +
+      '<path class="ln" d="M68,60 C80,70 77,88 64,93"/>' +
+      '<path class="ln" d="M43,66 C38,79 46,91 60,93"/>' + fBloom(62, 82, 1, 0),
+    // Tana chizig'i qorinni aylanib o'tadi, qo'l ustida.
+    pregnancy: F_HEAD +
+      '<path class="ln" d="M56,52 C42,57 34,70 35,86 C36,100 39,114 41,128"/>' +
+      '<path class="ln" d="M56,52 C72,57 83,70 86,87 C89,103 80,114 67,114 C61,115 61,121 61,128"/>' +
+      '<path class="ln" d="M68,58 C84,64 94,80 88,96 C85,104 78,108 70,109"/>' + fBloom(45, 66, .9, 0),
+    // Ko'krakda beshik, ichida chaqaloq.
+    postpartum: F_HEAD + F_BACK + F_FRONT +
+      '<path class="ln" d="M42,64 C38,80 52,93 70,88 C81,85 84,73 77,65"/>' +
+      '<circle class="thin" cx="62" cy="76" r="9"/>' + fBloom(86, 58, .85, 0),
+    // Qo'l chakkada, yonida issiqlik to'lqinlari.
+    perimenopause: F_HEAD + F_BACK + F_FRONT +
+      '<path class="ln" d="M66,57 C82,60 88,42 73,31"/>' +
+      '<path class="thin" d="M88,16 C96,24 96,34 88,42"/>' +
+      '<path class="thin" d="M97,8 C109,21 109,39 97,52"/>' + fBloom(46, 100, .9, 0),
+    // Qo'l ochiq, uchida gul.
+    menopause: F_HEAD + F_BACK + F_FRONT +
+      '<path class="ln" d="M68,58 C82,63 93,55 97,43"/>' +
+      fBloom(99, 35, 1, 0) + fBloom(46, 102, .85, 1)
+  };
+
   /* ---- Bosqichlar — LifeStage.kt, StagePalettes, StringsUz.tabs.journey ---- */
   var STAGES = [
-    { id: 'cycle', name: 'Sikl kuzatuvi', sub: 'Hayz, ovulyatsiya, simptomlar', glyph: '◔', tab: 'Sikl',
+    { id: 'cycle', fig: FIG.cycle, name: 'Sikl kuzatuvi', sub: 'Hayz, ovulyatsiya, simptomlar', glyph: '◔', tab: 'Sikl',
       a: '#7B61FF', b: '#FF6FB8', inkL: '#6247E0', inkD: '#B2A6FF', warm: false,
       chart: 'ring', pct: 14 / 28, big: '14', bigLbl: 'Sikl kuni', metric: '14', metricSub: 'Kun / 28',
       factMetric: 'Sikl kuni', pred: true,
       chips: ['Ovulyatsiya davri', 'Unumdor oyna 12–16', 'Keyingi hayz 15 kundan keyin', 'Stress past'],
       body: "Sikl kuni, unumdor oyna va keyingi hayz bashorati. Bashorat ko'rsatilgan har bir joyda «Taxminiy» nishoni turadi — ilova taxminni hech qachon fakt qilib ko'rsatmaydi." },
-    { id: 'ttc', name: 'Homiladorlikni rejalashtirish', sub: 'Unumdor kunlar, tayyorgarlik', glyph: '◌', tab: 'Reja',
+    { id: 'ttc', fig: FIG.ttc, name: 'Homiladorlikni rejalashtirish', sub: 'Unumdor kunlar, tayyorgarlik', glyph: '◌', tab: 'Reja',
       a: '#7B61FF', b: '#FF6FB8', inkL: '#6247E0', inkD: '#B2A6FF', warm: false,
       chart: 'ring', pct: 14 / 28, big: '14', bigLbl: 'Unumdor kun', metric: '12–16', metricSub: 'Unumdor oyna',
       factMetric: 'Unumdor oyna', pred: true,
       chips: ['Homiladorlik ehtimoli yuqori', 'Folik kislota 400 mkg · qabul qilindi', 'Ovulyatsiya 14-kun'],
       body: "Sikl bilan bir xil hisob, lekin urg'u boshqa: ekran unumdor oynani birinchi o'ringa qo'yadi va vitamin qabulini kunning boshiga chiqaradi." },
-    { id: 'pregnancy', name: 'Homiladorlik', sub: 'Haftalar, rivojlanish, uchrashuvlar', glyph: '◕', tab: 'Homilador',
+    { id: 'pregnancy', fig: FIG.pregnancy, name: 'Homiladorlik', sub: 'Haftalar, rivojlanish, uchrashuvlar', glyph: '◕', tab: 'Homilador',
       a: '#FFB020', b: '#FF8E92', inkL: '#A85C2E', inkD: '#FFB020', warm: true,
       chart: 'ring', pct: 24 / 40, big: '24', bigLbl: 'Hafta', metric: '24', metricSub: 'Hafta / 40',
       factMetric: 'Hafta', pred: false,
       chips: ['Ikkinchi trimestr', 'Skrining UTT · 27-avgust 10:30', 'Qon tahlili · 4-sentabr', 'Harakat odatdagidek'],
       body: "Sikl bashorati umuman ko'rsatilmaydi. Ekran haftalar bo'yicha quriladi, tadbirlar ro'yxatini foydalanuvchi o'zi to'ldiradi va yagona tibbiy ko'rsatma shu yerda: bola harakati sezilarli kamaysa, ilova kechiktirmasdan shifokorga murojaat qilishni aytadi." },
-    { id: 'postpartum', name: "Tug'ruqdan keyin", sub: 'Tiklanish, emizish, kayfiyat', glyph: '◑', tab: 'Tiklanish',
+    { id: 'postpartum', fig: FIG.postpartum, name: "Tug'ruqdan keyin", sub: 'Tiklanish, emizish, kayfiyat', glyph: '◑', tab: 'Tiklanish',
       a: '#FF8AA3', b: '#FFB020', inkL: '#B23A5C', inkD: '#FF8AA3', warm: true,
       chart: 'ring', pct: 7 / 12, big: '7', bigLbl: 'Tiklanish haftasi', metric: '7', metricSub: 'Hafta / 12',
       factMetric: 'Tiklanish haftasi', pred: false,
       chips: ['Emizish 7 marta', "Uyqu bo'lakli — kutilgan holat", 'Kayfiyat 3/5'],
       body: "Emizish, bo'lakli uyqu va kayfiyat bir joyda. Ilova tiklanishni haftalar bilan o'lchaydi va kayfiyat pasayishini alohida kuzatadi — lekin tashxis qo'ymaydi." },
-    { id: 'perimenopause', name: 'Perimenopauza', sub: 'Simptomlar, uyqu, energiya', glyph: '◒', tab: 'Bosqich',
+    { id: 'perimenopause', fig: FIG.perimenopause, name: 'Perimenopauza', sub: 'Simptomlar, uyqu, energiya', glyph: '◒', tab: 'Bosqich',
       a: '#7B61FF', b: '#63D8FF', inkL: '#5A41D6', inkD: '#9B85FF', warm: false,
       chart: 'bars', bars: [26, 31, 24, 35, 28, 33, 27], metric: '24–35', metricSub: 'Kun · tarqalish',
       factMetric: 'Muntazamlik grafigi', pred: false,
       chips: ["Issiqlik to'lqini 2", 'Uyqu 6s 10d', 'Terlash', "Kayfiyat o'zgarishi"],
       body: "Halqa o'rnini grafik egallaydi. Bashorat qilinadigan sana yo'q, shuning uchun ilova sana ko'rsatmaydi — u oxirgi yetti sikl uzunligining qanday tarqalayotganini ko'rsatadi." },
-    { id: 'menopause', name: 'Menopauza', sub: 'Salomatlik maqsadlari', glyph: '◐', tab: 'Salomatlik',
+    { id: 'menopause', fig: FIG.menopause, name: 'Menopauza', sub: 'Salomatlik maqsadlari', glyph: '◐', tab: 'Salomatlik',
       a: '#63D8FF', b: '#2FBF8F', inkL: '#12786B', inkD: '#63D8FF', warm: false,
       chart: 'ring', pct: .70, big: '70', bigLbl: 'Balans', metric: '70', metricSub: 'Balans / 100',
       factMetric: 'Balans balli', pred: false,
@@ -1414,6 +1688,9 @@ body {
   function applyInk(s) { scope.style.setProperty('--st', isDark() ? s.inkD : s.inkL); }
 
   function render(s) {
+    var fig = $('stFig');
+    fig.innerHTML = s.fig;
+    drawFigure(fig, 900, 90);
     $('stEyebrow').textContent = "Yo'l tabi · " + s.tab;
     $('stTitle').textContent = s.name;
     $('stMetric').innerHTML = s.metric + '<small>' + s.metricSub + '</small>';

@@ -67,6 +67,7 @@ import org.example.project.ui.components.noRippleClickable
 import org.example.project.ui.components.rememberShareAction
 import kotlin.time.Clock
 import org.example.project.i18n.strings
+import org.example.project.data.readable
 
 /** The tints an alias avatar can take, so the feed is not five identical circles. */
 @Composable
@@ -154,7 +155,7 @@ fun SecretChatScreen(
 
             if (community.error != null) {
                 Text(
-                    community.error.orEmpty(),
+                    community.error?.readable().orEmpty(),
                     style = Sadora.type.body,
                     color = c.danger,
                     modifier = Modifier.padding(horizontal = Spacing.screen, vertical = Spacing.xs),

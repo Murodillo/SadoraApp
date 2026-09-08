@@ -1,6 +1,7 @@
 package org.example.project.i18n
 
 import kotlinx.datetime.LocalDate
+import org.example.project.model.BirthControl
 import org.example.project.model.CommunityFilter
 import org.example.project.model.CommunityTopic
 import org.example.project.model.ConceptionWindow
@@ -9,6 +10,7 @@ import org.example.project.model.Goal
 import org.example.project.model.LifeStage
 import org.example.project.model.Mood
 import org.example.project.model.ReportReason
+import uz.sadora.contract.ArticleKind
 import uz.sadora.contract.DoseStatus
 import uz.sadora.contract.FetalMovement
 import uz.sadora.contract.FoodRelation
@@ -78,6 +80,152 @@ object StringsEn : Strings {
         override val languageTitle = "Choose your language"
         override val languageSubtitle = "You can change this later in settings."
         override val continueLabel = "Continue"
+        override val skipTheseQuestions = "Skip these questions"
+
+        override val nameTitle = "What should we call you?"
+        override val nameSubtitle = "Let's get acquainted. You can change this name later."
+        override val nameLabel = "Name"
+        override val nameHint = "Your name"
+        override val nameNote = "Your data stays inside SADORA. It is never passed to anyone " +
+            "else, and you can delete it whenever you like."
+
+        override val birthYearTitle = "What year were you born?"
+        override val birthYearSubtitle = "Your age makes the predictions closer."
+
+        override val goalsTitle = "What would you like help with?"
+        override val goalsSubtitle = "Choose as many as you like."
+
+        override val stageTitle = "Where are you right now?"
+        override val stageSubtitle = "The next questions, and the app itself, follow this choice."
+        override fun stagePromise(stage: LifeStage) = when (stage) {
+            LifeStage.Cycle -> "We will follow your cycle and tell you when the next period is due."
+            LifeStage.TryingToConceive -> "We will mark your fertile days and be with you through the preparation."
+            LifeStage.Pregnancy -> "We will follow each week's changes and your check-ups."
+            LifeStage.Postpartum -> "Recovery, feeding and mood get particular attention."
+            LifeStage.Perimenopause -> "We will follow symptoms, sleep and energy together."
+            LifeStage.Menopause -> "Everyday support aimed at your health goals."
+        }
+
+        override val doctorTitle = "Did a doctor recommend SADORA to you?"
+        override val no = "No"
+
+        override val cycleLengthTitle = "How many days does your cycle usually last?"
+        override fun cycleLengthDerived(days: Int) =
+            "Your dates work out to $days days. Correct it if that is wrong."
+        override val cycleLengthHint = "If you are not sure, an approximate number is enough — it settles by itself."
+        override val periodLengthTitle = "How many days does your period last?"
+
+        override fun feelingTitle(name: String) =
+            if (name.isBlank()) "How are you feeling?" else "$name, how are you feeling?"
+        override val feelingSubtitle = "Say it honestly — where we start depends on your answer."
+        override val feelings = listOf(
+            FeelingOption("Good — all is well 🙂", 4, "Wonderful. We will help you keep it that way."),
+            FeelingOption("Tired 😴", 2, "We will put sleep and energy first."),
+            FeelingOption("Anxious 😟", 2, "We will start slowly. You only ever write what you want to."),
+            FeelingOption("I want to understand my body ✨", 3, "That is exactly what SADORA is for."),
+        )
+
+        override val bodyTitle = "Your height and weight"
+        override val bodySubtitle = "Optional. Never shown to anyone, and deleted whenever you like."
+        override val height = "Height"
+        override val weight = "Weight"
+
+        override val permissionsTitle = "What will you allow?"
+        override val permissionsSubtitle = "Each of these can be changed later in Profile."
+        override val permissionReminders = "Reminders"
+        override val permissionRemindersNote = "We will remind you about periods, medication and check-ups."
+        override val permissionHealth = "Health data"
+        override val permissionHealthNote = "We read steps and sleep from your watch."
+        override val permissionCamera = "Camera"
+        override val permissionCameraNote = "To photograph food and work out what is in it."
+
+        override val phoneTitle = "Enter your number"
+        override val phoneSubtitle = "We will send a one-time code so your answers are saved."
+        override val sending = "Sending…"
+        override val sendCode = "Send the code"
+        override val haveAccount = "I have an account · Sign in"
+        override val phoneLabel = "Phone number"
+        override val phoneNote = "The number is only used to sign in and is never sold for advertising."
+        override val codeTitle = "Enter the code"
+        override fun codeSubtitle(phone: String) = "We sent a 6-digit code to +998 $phone."
+        override val checking = "Checking…"
+        override val confirm = "Confirm"
+        override fun resendIn(seconds: Int) = "Send again · ${seconds}s"
+        override val resend = "Send the code again"
+        override val codeSecrecy = "Never share the code. SADORA staff will not ask for it."
+
+        override val periodsTitle = "When were your last periods?"
+        override fun periodsSubtitle(periodLength: Int) =
+            "Tap the day it started — the other $periodLength days fill themselves in. " +
+                "After that you can add or remove days one at a time."
+        override val markMore = "Mark another?"
+        override fun markMoreBody(marked: Int) =
+            "You have marked $marked so far. With three we can measure the length of your " +
+                "cycle, and the prediction gets a great deal closer."
+        override val iWillMark = "I will mark one"
+        override fun markedWithAverage(filled: Int, total: Int, averageCycle: Int) =
+            "$filled/$total marked · average cycle $averageCycle days"
+        override fun markedMoreNeeded(filled: Int, total: Int) = "$filled/$total marked · mark another"
+        override val markAPeriodStart = "Mark the day a period started"
+
+        override val regularityTitle = "Is your cycle regular?"
+        override val regularitySubtitle = "Does it arrive on roughly the same day each month?"
+        override val regularYes = "Yes, regular"
+        override val regularYesNote = "Good — the predictions will be closer from the start."
+        override val regularNo = "No, it varies"
+        override val regularNoNote = "We will take that into account and show how sure a prediction is."
+        override val regularUnknown = "I do not know"
+        override val regularUnknownNote = "That is fine. After a couple of months it becomes clear on its own."
+
+        override val sensitiveTitle = "The next questions are personal"
+        override val sensitiveBody = "We will ask about contraception and trying to conceive. " +
+            "They make the predictions closer, but answering is entirely optional."
+
+        override val birthControlTitle = "Have you used contraception in the last 6 months?"
+        override val birthControlSubtitle = "Some methods affect the cycle, which is why we ask."
+        override fun birthControl(option: BirthControl) = when (option) {
+            BirthControl.None -> "No"
+            BirthControl.StillUsing -> "I am still using it"
+            BirthControl.Pill -> "Yes, the pill"
+            BirthControl.Iud -> "Yes, an IUD"
+            BirthControl.Barrier -> "Yes, condoms or another non-hormonal method"
+            BirthControl.Other -> "Yes, another method"
+            BirthControl.Undisclosed -> "I would rather not say"
+        }
+        override fun birthControlNote(option: BirthControl) = when (option) {
+            BirthControl.Pill, BirthControl.Iud ->
+                "A cycle takes a few months to settle after a hormonal method — we will be careful with predictions."
+            BirthControl.StillUsing ->
+                "There is no ovulation on a hormonal method, so we do not show fertile days."
+            else -> null
+        }
+
+        override val conceptionTitle = "How long have you been trying to conceive?"
+        override fun conceptionNote(window: ConceptionWindow) = when (window) {
+            ConceptionWindow.JustStarted ->
+                "The beginning of the road — there will be many questions, and we will be there for each."
+            ConceptionWindow.OverAYear ->
+                "After a year it is worth seeing a doctor. We will remind you of that too."
+            else -> null
+        }
+
+        override val dueDateTitle = "When is the baby due?"
+        override val dueDateSubtitle = "Mark the approximate date your doctor gave you."
+        override val birthDateTitle = "When was your child born?"
+        override val birthDateSubtitle = "We count the recovery stages from that date."
+
+        override fun symptomsTitle(name: String) =
+            if (name.isBlank()) "What are you noticing today?" else "$name, what are you noticing today?"
+        override val symptomsSubtitle = "You can pick several. If there is nothing — skip it."
+        override val saveSymptoms = "Save these"
+        override val starterSymptoms = listOf(
+            "Cramps",
+            "Fatigue",
+            "Bloating",
+            "Breast tenderness",
+            "Lower back pain",
+            "Headache",
+        )
     }
 
     override val profile = object : ProfileStrings {
@@ -377,6 +525,23 @@ object StringsEn : Strings {
         override val sendReport = "Send the report"
         override val reportSent = "The report was sent"
         override val shareSuffix = "SADORA — Secret chat"
+    }
+
+    override val errors = object : ErrorStrings {
+        override val network = "Could not reach the internet. Try again."
+        override val validation = "Something you entered is not right."
+        override val sessionExpired = "Your session has ended. Please sign in again."
+        override val blocked = "This account is blocked. Please contact support."
+        override val premiumRequired = "This opens with Premium."
+        override val monthlyLimit = "The monthly limit is used up."
+        override val dailyLimit = "Today's limit is used up."
+        override fun retryAfter(seconds: Int) = "Too many attempts. Try again in $seconds s."
+        override val retrySoon = "Too many attempts. Try again shortly."
+        override val otpInvalid = "That code is wrong or has expired."
+        override val featureClosed = "This section is closed for now."
+        override val consentRequired = "Give consent in Privacy to use this."
+        override val paymentFailed = "The payment did not go through. Try again."
+        override val unexpected = "Something went wrong. Try again."
     }
 
     override val today = object : TodayStrings {
@@ -1013,5 +1178,17 @@ object StringsEn : Strings {
         override fun ofLitres(drunk: String, goal: String) = "$drunk / $goal l"
         override fun ofSteps(walked: String, goal: String) = "$walked / $goal steps"
         override fun ofSleep(slept: String) = "$slept / 8h"
+        override val balanceCapsWord = "BALANCE"
+        override fun articleKind(kind: ArticleKind) = when (kind) {
+            ArticleKind.ARTICLE -> "ARTICLE"
+            ArticleKind.COURSE -> "COURSE"
+            ArticleKind.VIDEO -> "VIDEO"
+        }
+        override val featureCaps = "FEATURE"
+        override val freeCaps = "FREE"
+        override val premiumCapsBadge = "PREMIUM"
+        override val journalCardTitle = "Journal"
+        override val moodLabel = "Mood"
+        override val allDoneToday = "Everything for today is done 🌸"
     }
 }

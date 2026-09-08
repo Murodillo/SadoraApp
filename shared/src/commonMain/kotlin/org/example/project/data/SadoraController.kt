@@ -4,6 +4,7 @@ import kotlin.time.Clock
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.todayIn
 import kotlinx.datetime.toLocalDateTime
+import org.example.project.i18n.ErrorStrings
 import org.example.project.model.AppState
 import uz.sadora.contract.AuthProvider
 import uz.sadora.contract.OtpChallenge
@@ -30,7 +31,7 @@ class SadoraController(
     val calls = ApiCallState()
 
     val busy: Boolean get() = calls.busy
-    val error: String? get() = calls.error
+    val error: ApiFailure? get() = calls.error
 
     /** True when there is no backend behind the app. */
     val isOffline: Boolean get() = repository == null
@@ -167,27 +168,36 @@ class SadoraController(
 }
 
 /**
- * Uzbek text for each failure.
+ * What a failure says on screen.
  *
  * Written per case rather than passing the server's message through: the server speaks
- * to several clients and its wording is not always what a phone should show.
+ * to several clients and its wording is not always what a phone should show. Two cases
+ * do prefer the server's text — a validation message names the field she just typed in,
+ * and an OTP message says which of the several ways a code can be wrong it was.
+ *
+ * It takes the strings rather than reading them, so a failure stored in the controller
+ * is a failure and not a sentence: one worded when it happened would stay in the
+ * language the app was in at the time.
  */
-fun ApiFailure.readable(): String = when (this) {
-    is ApiFailure.Network -> "Internetga ulanib bo'lmadi. Qayta urinib ko'ring."
-    is ApiFailure.Validation -> fields.values.firstOrNull() ?: "Kiritilgan ma'lumot noto'g'ri."
-    is ApiFailure.Unauthorized -> "Sessiya tugadi. Qaytadan kiring."
-    is ApiFailure.Blocked -> "Hisob bloklangan. Qo'llab-quvvatlash bilan bog'laning."
-    is ApiFailure.PremiumRequired -> "Bu imkoniyat Premium'da ochiladi."
-    is ApiFailure.LimitReached ->
-        if (period == "month") "Bu oylik limit tugadi." else "Bugungi limit tugadi."
+fun ApiFailure.readable(t: ErrorStrings): String = when (this) {
+    is ApiFailure.Network -> t.network
+    is ApiFailure.Validation -> fields.values.firstOrNull() ?: t.validation
+    is ApiFailure.Unauthorized -> t.sessionExpired
+    is ApiFailure.Blocked -> t.blocked
+    is ApiFailure.PremiumRequired -> t.premiumRequired
+    is ApiFailure.LimitReached -> if (period == "month") t.monthlyLimit else t.dailyLimit
     is ApiFailure.RateLimited ->
-        retryAfterSeconds?.let { "Juda ko'p urinish. $it soniyadan keyin qayta urining." }
-            ?: "Juda ko'p urinish. Birozdan keyin qayta urining."
-    is ApiFailure.Otp -> message.ifBlank { "Kod noto'g'ri yoki muddati tugagan." }
-    is ApiFailure.FeatureDisabled -> "Bu bo'lim hozircha yopiq."
-    is ApiFailure.ConsentRequired -> "Buning uchun Maxfiylik bo'limida rozilik bering."
-    is ApiFailure.Unexpected -> "Nimadir noto'g'ri ketdi. Qayta urinib ko'ring."
+        retryAfterSeconds?.let { t.retryAfter(it) } ?: t.retrySoon
+    is ApiFailure.Otp -> message.ifBlank { t.otpInvalid }
+    is ApiFailure.FeatureDisabled -> t.featureClosed
+    is ApiFailure.ConsentRequired -> t.consentRequired
+    is ApiFailure.PaymentFailed -> t.paymentFailed
+    is ApiFailure.Unexpected -> t.unexpected
 }
+
+/** `controller.error?.let { Text(it.readable()) }` — the composable half of the above. */
+@androidx.compose.runtime.Composable
+fun ApiFailure.readable(): String = readable(org.example.project.i18n.strings.errors)
 
 /** `90 123 45 67` as typed in the field becomes `+998901234567` on the wire. */
 internal fun normalizePhone(input: String): String {

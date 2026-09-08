@@ -32,6 +32,7 @@ import org.example.project.model.AppState
 import org.example.project.model.LifeStage
 import org.example.project.ui.components.SystemBackHandler
 import uz.sadora.contract.OtpChallenge
+import org.example.project.data.readable
 
 /**
  * The onboarding sequence, in order.
@@ -406,7 +407,7 @@ fun OnboardingFlow(
                     OnboardingStep.Phone -> PhoneQuestion(
                         state = state,
                         busy = controller.busy,
-                        error = controller.error,
+                        error = controller.error?.readable(),
                         progress = progressAt(current),
                         onBack = ::back,
                         onSubmit = {
@@ -428,7 +429,7 @@ fun OnboardingFlow(
                             controller.clearError()
                         },
                         busy = controller.busy,
-                        error = controller.error,
+                        error = controller.error?.readable(),
                         secondsLeft = secondsLeft,
                         progress = 1f,
                         onBack = ::back,

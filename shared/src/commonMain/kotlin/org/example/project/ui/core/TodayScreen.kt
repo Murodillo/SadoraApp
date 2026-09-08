@@ -337,7 +337,7 @@ private fun TodayPlanCard(
         }
 
         if (pending.isEmpty() && waterLeft == 0) {
-            Text("Bugungi hamma narsa bajarildi \uD83C\uDF38", style = Sadora.type.body, color = c.muted)
+            Text(strings.modules.allDoneToday, style = Sadora.type.body, color = c.muted)
         } else {
             // Three is what fits without the card becoming the screen; the rest are one
             // tap away in Medications.

@@ -28,7 +28,7 @@ class InsightsController(private val api: InsightsApi?) {
      * a window the subscription does not cover is the paywall, and the screen draws that
      * as a lock instead of a banner.
      */
-    var error by mutableStateOf<String?>(null)
+    var error by mutableStateOf<ApiFailure?>(null)
         private set
 
     fun clearError() {
@@ -66,7 +66,7 @@ class InsightsController(private val api: InsightsApi?) {
             }
             refusal is ApiFailure.PremiumRequired || refusal is ApiFailure.LimitReached ->
                 lockedWindow = days
-            refusal != null -> error = refusal.readable()
+            refusal != null -> error = refusal
         }
     }
 }

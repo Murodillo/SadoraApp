@@ -14,6 +14,7 @@ import uz.sadora.contract.ArticleFeed
 import uz.sadora.contract.ArticleKind
 import uz.sadora.contract.ArticleSummary
 import uz.sadora.contract.ErrorCodes
+import org.example.project.i18n.StringsUz
 
 /**
  * The Bilim library used to be three constants in the app. These pin the replacement:
@@ -123,7 +124,7 @@ class LearnControllerTest {
         learn.loadFeed()
 
         assertNull(learn.feed)
-        assertEquals("Nimadir noto'g'ri ketdi. Qayta urinib ko'ring.", learn.error)
+        assertEquals(StringsUz.errors.unexpected, learn.error?.readable(StringsUz.errors))
     }
 
     @Test

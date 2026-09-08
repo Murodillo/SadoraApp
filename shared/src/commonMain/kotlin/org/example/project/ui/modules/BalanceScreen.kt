@@ -12,6 +12,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import org.example.project.design.Sadora
 import org.example.project.design.Spacing
+import org.example.project.i18n.ModuleStrings
 import org.example.project.i18n.strings
 import org.example.project.model.AppState
 import org.example.project.model.Fmt
@@ -77,11 +78,11 @@ fun BalanceScreen(
                         ) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Text("$score", style = Sadora.type.data, color = c.text)
-                                Text("BALANS", style = Sadora.type.caption, color = c.muted)
+                                Text(t.balanceCapsWord, style = Sadora.type.caption, color = c.muted)
                             }
                         }
                         Text(
-                            balanceNote(directions),
+                            balanceNote(directions, t),
                             style = Sadora.type.body,
                             color = c.muted,
                             modifier = Modifier.weight(1f),
@@ -130,18 +131,12 @@ private data class Quad(
  * The design rejects debt language outright, so a missed goal is described as something
  * still available today, never as something owed.
  */
-private fun balanceNote(directions: List<Quad>): String {
+private fun balanceNote(directions: List<Quad>, t: ModuleStrings): String {
     val weakest = directions.minByOrNull { it.value } ?: return ""
     return when {
-        weakest.value >= 0.8f ->
-            "Bugun to'rt yo'nalish ham muvozanatda. Ovqat \"yoqib yuborilishi\" kerak " +
-                "bo'lgan qarz emas."
-        weakest.value >= 0.5f ->
-            "Kun yaxshi ketyapti. \"${weakest.label}\" bo'yicha biroz joy bor — " +
-                "xohlasangiz shunga e'tibor bering."
-        else ->
-            "Bugun \"${weakest.label}\" ortda qolyapti. Kun hali tugagani yo'q, " +
-                "shoshilmang."
+        weakest.value >= 0.8f -> t.balanced
+        weakest.value >= 0.5f -> t.someRoomIn(weakest.label)
+        else -> t.fallingBehind(weakest.label)
     }
 }
 
