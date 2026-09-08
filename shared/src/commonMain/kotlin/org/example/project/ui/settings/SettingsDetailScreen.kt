@@ -41,6 +41,12 @@ import org.example.project.ui.components.SadoraTopBar
 import org.example.project.ui.components.ScreenContent
 import org.example.project.ui.components.SelectChip
 import org.example.project.data.readable
+import org.example.project.ui.components.acceptDigits
+import org.example.project.ui.components.acceptText
+import org.example.project.ui.components.numberError
+import org.example.project.ui.components.requiredTextError
+import org.example.project.ui.components.typedDateError
+import uz.sadora.contract.Limits
 
 /**
  * The settings detail screens reachable from Profile.
@@ -82,12 +88,13 @@ private fun SaveButton(
     controller: SadoraController,
     onSaved: () -> Unit,
     label: String = strings.common.save,
+    enabled: Boolean = true,
 ) {
     val scope = rememberCoroutineScope()
     controller.error?.let { ErrorStrip(it.readable()) }
     SadoraButton(
         if (controller.busy) strings.common.saving else label,
-        enabled = !controller.busy,
+        enabled = enabled && !controller.busy,
         onClick = { scope.launch { if (controller.saveProfile()) onSaved() } },
     )
 }
@@ -95,31 +102,49 @@ private fun SaveButton(
 @Composable
 private fun PersonalDetails(state: AppState, controller: SadoraController, onClose: () -> Unit) {
     val t = strings.settings
+    val nameError = requiredTextError(state.name, Limits.NAME_MAX)
+    val birthError = typedDateError(state.birthDate, allowFuture = false)
+    val heightError = numberError(state.heightCm, Limits.HEIGHT_CM)
+    val weightError = numberError(state.weightKg, Limits.WEIGHT_KG)
+    // Save is refused for exactly what the server would refuse, so the round trip that
+    // loses the field the reason belongs to never happens.
+    val valid = state.name.isNotBlank() &&
+        listOf(nameError, birthError, heightError, weightError).all { it == null }
+
     SadoraTopBar(t.personalTitle, onBack = onClose)
     ScreenContent {
         item {
             SadoraCard {
-                SadoraTextField(state.name, { state.name = it }, label = t.name)
+                SadoraTextField(
+                    state.name,
+                    { state.name = acceptText(it, Limits.NAME_MAX) },
+                    label = t.name,
+                    error = nameError,
+                )
                 SadoraTextField(
                     state.birthDate,
-                    { state.birthDate = it },
+                    { state.birthDate = acceptText(it, DateFieldMax) },
                     label = t.birthDate,
+                    placeholder = "14.03.1994",
+                    error = birthError,
                     keyboardType = KeyboardType.Number,
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                     SadoraTextField(
                         state.heightCm,
-                        { state.heightCm = it },
+                        { state.heightCm = acceptDigits(it, 3) },
                         label = t.height,
                         suffix = t.centimetres,
+                        error = heightError,
                         keyboardType = KeyboardType.Number,
                         modifier = Modifier.weight(1f),
                     )
                     SadoraTextField(
                         state.weightKg,
-                        { state.weightKg = it },
+                        { state.weightKg = acceptDigits(it, 3) },
                         label = t.weight,
                         suffix = t.kilograms,
+                        error = weightError,
                         keyboardType = KeyboardType.Number,
                         modifier = Modifier.weight(1f),
                     )
@@ -127,9 +152,12 @@ private fun PersonalDetails(state: AppState, controller: SadoraController, onClo
             }
         }
         item { DisclaimerNote(t.weightNote) }
-        item { SaveButton(controller, onClose) }
+        item { SaveButton(controller, onClose, enabled = valid) }
     }
 }
+
+/** `27.08.2026` and its lenient variants; nothing longer is a date. */
+private const val DateFieldMax = 10
 
 @Composable
 private fun GoalsSettings(state: AppState, controller: SadoraController, onClose: () -> Unit) {

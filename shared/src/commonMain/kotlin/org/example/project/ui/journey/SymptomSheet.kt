@@ -40,6 +40,8 @@ import uz.sadora.contract.SymptomDefinition
 import uz.sadora.contract.SymptomEntry
 import uz.sadora.contract.SymptomSeverity
 import org.example.project.i18n.strings
+import org.example.project.ui.components.acceptText
+import uz.sadora.contract.Limits
 
 /** The five-step scale collapses onto the wire's three; the wording carries the rest. */
 private fun Int.toSeverity(): SymptomSeverity = when (this) {
@@ -156,7 +158,12 @@ fun SymptomSheet(
             Text(t.severityWords[severity - 1], style = Sadora.type.body, color = c.muted)
         }
 
-        SadoraTextField(note, { note = it }, placeholder = t.notePlaceholder, singleLine = false)
+        SadoraTextField(
+            note,
+            { note = acceptText(it, Limits.DAY_NOTE_MAX) },
+            placeholder = t.notePlaceholder,
+            singleLine = false,
+        )
 
         Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
             SadoraButton(

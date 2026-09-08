@@ -7,6 +7,7 @@ import {
   usePublishArticle,
   useUpdateArticle,
 } from '../api/hooks'
+import { acceptSlug, limits, slugPattern } from '../api/limits'
 import type { AdminArticle, ArticleBlock, ArticleKind, SaveArticleBody } from '../api/types'
 import { useAuth } from '../auth/AuthContext'
 import { Card, Empty, ErrorNotice, Field, formatDateTime, Loading, Modal } from '../components/ui'
@@ -197,9 +198,10 @@ function ArticleEditor({
         {!article && (
           <Field label="Slug — havolada shu ko'rinadi va keyin o'zgarmaydi">
             <input
-             
               value={slug}
-              onChange={(e) => setSlug(e.target.value)}
+              onChange={(e) => setSlug(acceptSlug(e.target.value))}
+              pattern={slugPattern}
+              maxLength={limits.article.slugMax}
               placeholder="temirga-boy-taomlar"
               disabled={readOnly}
             />
@@ -207,15 +209,20 @@ function ArticleEditor({
         )}
 
         <Field label="Sarlavha">
-          <input value={title} onChange={(e) => setTitle(e.target.value)} disabled={readOnly} />
+          <input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            maxLength={limits.article.titleMax}
+            disabled={readOnly}
+          />
         </Field>
 
         <Field label="Qisqacha — kartochkada ko'rinadi">
           <textarea
-           
             rows={2}
             value={excerpt}
             onChange={(e) => setExcerpt(e.target.value)}
+            maxLength={limits.article.excerptMax}
             disabled={readOnly}
           />
         </Field>
@@ -266,13 +273,18 @@ function ArticleEditor({
 
         <div className="row">
           <Field label="Muallif">
-            <input value={author} onChange={(e) => setAuthor(e.target.value)} disabled={readOnly} />
+            <input
+              value={author}
+              onChange={(e) => setAuthor(e.target.value)}
+              maxLength={limits.article.personMax}
+              disabled={readOnly}
+            />
           </Field>
           <Field label="Muallif roli">
             <input
-             
               value={authorRole}
               onChange={(e) => setAuthorRole(e.target.value)}
+              maxLength={limits.article.personMax}
               placeholder="Muallif · nutritsiolog"
               disabled={readOnly}
             />
@@ -281,9 +293,9 @@ function ArticleEditor({
 
         <Field label="Ko'rib chiqqan mutaxassis">
           <input
-           
             value={reviewedBy}
             onChange={(e) => setReviewedBy(e.target.value)}
+            maxLength={limits.article.personMax}
             placeholder="Dr. S. Aliyeva ko'rib chiqqan"
             disabled={readOnly}
           />
@@ -301,10 +313,10 @@ function ArticleEditor({
 
         <Field label="Ogohlantirish — maqola oxirida chiqadi">
           <textarea
-           
             rows={2}
             value={disclaimer}
             onChange={(e) => setDisclaimer(e.target.value)}
+            maxLength={limits.article.disclaimerMax}
             disabled={readOnly}
           />
         </Field>

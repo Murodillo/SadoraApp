@@ -12,6 +12,7 @@ import uz.sadora.contract.MindPractice
 import uz.sadora.contract.MindSummary
 import uz.sadora.contract.SaveJournalEntryRequest
 import uz.sadora.contract.UpdateJournalEntryRequest
+import uz.sadora.contract.Limits
 import uz.sadora.server.core.NotFoundException
 import uz.sadora.server.core.ValidationException
 import uz.sadora.server.core.dayIn
@@ -142,7 +143,7 @@ class MindService(
         const val WINDOW_DAYS = 14
         const val RECENT_ENTRIES = 20
         const val RECENT_PRACTICES = 10
-        const val MAX_BODY_LENGTH = 5000
+        const val MAX_BODY_LENGTH = Limits.JOURNAL_MAX
         const val MAX_PRACTICE_SECONDS = 7200
     }
 }

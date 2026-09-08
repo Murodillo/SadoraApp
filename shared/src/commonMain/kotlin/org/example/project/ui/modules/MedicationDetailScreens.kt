@@ -39,7 +39,6 @@ import org.example.project.ui.components.noRippleClickable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
-import kotlinx.datetime.LocalTime
 import org.example.project.data.HealthController
 import org.example.project.i18n.strings
 import org.example.project.model.Fmt
@@ -52,6 +51,13 @@ import uz.sadora.contract.SaveMedicationRequest
 import uz.sadora.contract.ScheduleKind
 import uz.sadora.contract.Weekday
 import org.example.project.data.readable
+import org.example.project.ui.components.acceptDigits
+import org.example.project.ui.components.acceptText
+import org.example.project.ui.components.numberError
+import org.example.project.ui.components.parseTypedTime
+import org.example.project.ui.components.requiredTextError
+import org.example.project.ui.components.typedTimeError
+import uz.sadora.contract.Limits
 
 /**
  * "Dori qo'shish" — the add-medication form.
@@ -82,7 +88,10 @@ fun AddMedicationScreen(
     var stock by remember { mutableStateOf("") }
     var saving by remember { mutableStateOf(false) }
 
-    val at = remember(time) { runCatching { LocalTime.parse(time) }.getOrNull() }
+    val at = parseTypedTime(time)
+    val nameError = requiredTextError(name, Limits.MEDICATION_NAME_MAX)
+    val timeError = typedTimeError(time, required = true)
+    val stockError = numberError(stock, 1..Limits.MEDICATION_STOCK_MAX)
 
     Column(modifier) {
         SadoraTopBar(t.addMedTitle, onBack = onClose)
@@ -90,11 +99,17 @@ fun AddMedicationScreen(
         ScreenContent {
             item {
                 SadoraCard {
-                    SadoraTextField(name, { name = it }, label = t.medName, placeholder = t.medNameHint)
+                    SadoraTextField(
+                        name,
+                        { name = acceptText(it, Limits.MEDICATION_NAME_MAX) },
+                        label = t.medName,
+                        placeholder = t.medNameHint,
+                        error = nameError,
+                    )
                     Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                         SadoraTextField(
                             dose,
-                            { dose = it },
+                            { dose = acceptDigits(it, 5) },
                             label = t.medDose,
                             placeholder = "30",
                             keyboardType = KeyboardType.Number,
@@ -102,7 +117,7 @@ fun AddMedicationScreen(
                         )
                         SadoraTextField(
                             unit,
-                            { unit = it },
+                            { unit = acceptText(it, UnitMax) },
                             label = t.medUnit,
                             modifier = Modifier.weight(1f),
                         )
@@ -115,10 +130,10 @@ fun AddMedicationScreen(
                     CardLabel(t.medTime)
                     SadoraTextField(
                         time,
-                        { time = it },
+                        { time = acceptText(it, TimeFieldMax) },
                         label = t.medTime,
                         placeholder = "20:00",
-                        error = if (at == null) t.medTimeInvalid else null,
+                        error = timeError,
                     )
                 }
             }
@@ -173,10 +188,11 @@ fun AddMedicationScreen(
                 SadoraCard {
                     SadoraTextField(
                         stock,
-                        { stock = it },
+                        { stock = acceptDigits(it, 5) },
                         label = t.medStock,
                         placeholder = "30",
                         suffix = t.medStockUnit,
+                        error = stockError,
                         keyboardType = KeyboardType.Number,
                     )
                 }
@@ -186,7 +202,8 @@ fun AddMedicationScreen(
                 health.error?.let { ErrorStrip(it.readable()) }
                 SadoraButton(
                     if (saving) strings.common.saving else strings.common.save,
-                    enabled = !saving && name.isNotBlank() && at != null && weekdays.isNotEmpty(),
+                    enabled = !saving && name.isNotBlank() && at != null &&
+                        weekdays.isNotEmpty() && nameError == null && stockError == null,
                     onClick = {
                         val chosen = at ?: return@SadoraButton
                         saving = true
@@ -365,6 +382,12 @@ fun MedicationHistoryScreen(
         }
     }
 }
+
+/** "20:00" — nothing longer is a time of day. */
+private const val TimeFieldMax = 5
+
+/** "mg", "mkg", "ml", "tabletka" — a unit, not a sentence. */
+private const val UnitMax = 12
 
 /** The window the screen reports on, and how many recorded doses it lists under it. */
 private const val HistoryDays = 14

@@ -13,6 +13,7 @@ import type { ModerationFilters } from '../api/hooks'
 import type { ModerationPost, ModerationReport, ReportReason } from '../api/types'
 import { useAuth } from '../auth/AuthContext'
 import { Card, Empty, ErrorNotice, Field, formatDateTime, Loading, Modal, Stat } from '../components/ui'
+import { limits } from '../api/limits'
 
 const PAGE_SIZE = 25
 
@@ -331,7 +332,12 @@ function HideDialog({ post, onClose }: { post: ModerationPost; onClose: () => vo
         {post.alias}: “{excerpt(post.body, 120)}”
       </p>
       <Field label="Sabab (majburiy)">
-        <input value={reason} onChange={(event) => setReason(event.target.value)} autoFocus />
+        <input
+          value={reason}
+          onChange={(event) => setReason(event.target.value)}
+          maxLength={limits.reasonMax}
+          autoFocus
+        />
       </Field>
       <p className="faint" style={{ margin: 0 }}>
         Post lentadan yo'qoladi, undagi ochiq shikoyatlar yopiladi. Sabab audit log'ga yoziladi.
@@ -364,7 +370,12 @@ function RestrictDialog({ post, onClose }: { post: ModerationPost; onClose: () =
         yozishni yopadi; o'qish ochiq qoladi. Siz uning hisobini ko'rmaysiz.
       </p>
       <Field label="Sabab (majburiy)">
-        <input value={reason} onChange={(event) => setReason(event.target.value)} autoFocus />
+        <input
+          value={reason}
+          onChange={(event) => setReason(event.target.value)}
+          maxLength={limits.reasonMax}
+          autoFocus
+        />
       </Field>
       <Field label="Muddat, kun (bo'sh — moderator ochguncha)">
         <input type="number" min={1} max={365} value={days} onChange={(event) => setDays(event.target.value)} />

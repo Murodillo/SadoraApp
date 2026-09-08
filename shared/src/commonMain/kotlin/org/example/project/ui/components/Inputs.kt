@@ -36,6 +36,10 @@ import org.example.project.design.Radius
 import org.example.project.design.Sadora
 import org.example.project.design.SadoraIcons
 import org.example.project.design.Spacing
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.input.OffsetMapping
+import androidx.compose.ui.text.input.TransformedText
+import uz.sadora.contract.UzbekPhone
 
 /**
  * Labelled text field.
@@ -69,6 +73,15 @@ fun SadoraTextField(
      */
     keyboardActions: KeyboardActions = KeyboardActions.Default,
     isPassword: Boolean = false,
+    /**
+     * How the value is drawn, when that differs from what is stored.
+     *
+     * The phone field is the reason this exists: reformatting the stored text on every
+     * keystroke moved the caret to wherever the new spaces put it, so editing the
+     * middle of a number produced nonsense. The value stays the digits and only the
+     * drawing is masked, which is what keeps the caret where the finger was.
+     */
+    visualTransformation: VisualTransformation = VisualTransformation.None,
     singleLine: Boolean = true,
 ) {
     val c = Sadora.colors
@@ -125,7 +138,7 @@ fun SadoraTextField(
                         visualTransformation = if (isPassword) {
                             PasswordVisualTransformation()
                         } else {
-                            VisualTransformation.None
+                            visualTransformation
                         },
                         keyboardOptions = KeyboardOptions(
                             keyboardType = keyboardType,
@@ -194,6 +207,37 @@ fun OtpInput(
             ) {
                 Text(char, style = Sadora.type.h2, color = c.text)
             }
+        }
+    }
+}
+
+/**
+ * Draws nine digits as `90 123 45 67` while the field holds only the digits.
+ *
+ * The two offset maps are the whole point: without them the caret lands wherever the
+ * inserted spaces push it, and backspacing through a number deletes the wrong digit.
+ */
+object PhoneMask : VisualTransformation {
+
+    override fun filter(text: AnnotatedString): TransformedText {
+        val digits = text.text.take(UzbekPhone.NATIONAL_LENGTH)
+        return TransformedText(AnnotatedString(UzbekPhone.format(digits)), PhoneOffsets)
+    }
+
+    /** Spaces go after the 2nd, 5th and 7th digit, so each shifts everything after it. */
+    private object PhoneOffsets : OffsetMapping {
+        override fun originalToTransformed(offset: Int): Int = when {
+            offset <= 2 -> offset
+            offset <= 5 -> offset + 1
+            offset <= 7 -> offset + 2
+            else -> offset + 3
+        }
+
+        override fun transformedToOriginal(offset: Int): Int = when {
+            offset <= 2 -> offset
+            offset <= 6 -> offset - 1
+            offset <= 9 -> offset - 2
+            else -> (offset - 3).coerceAtMost(UzbekPhone.NATIONAL_LENGTH)
         }
     }
 }

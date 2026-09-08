@@ -33,6 +33,7 @@ import org.example.project.ui.components.SadoraButton
 import org.example.project.ui.components.SelectChip
 import org.example.project.ui.components.pressable
 import org.example.project.i18n.strings
+import uz.sadora.contract.Limits
 
 /**
  * The composer, raised by the shell over the tab bar.
@@ -168,5 +169,5 @@ fun PostMenuSheetContent(
     }
 }
 
-private const val MinPostLength = 2
-private const val MaxPostLength = 2000
+private const val MinPostLength = Limits.POST_MIN
+private const val MaxPostLength = Limits.POST_MAX

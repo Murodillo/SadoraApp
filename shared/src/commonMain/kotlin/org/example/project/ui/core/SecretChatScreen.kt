@@ -68,6 +68,8 @@ import org.example.project.ui.components.rememberShareAction
 import kotlin.time.Clock
 import org.example.project.i18n.strings
 import org.example.project.data.readable
+import org.example.project.ui.components.acceptText
+import uz.sadora.contract.Limits
 
 /** The tints an alias avatar can take, so the feed is not five identical circles. */
 @Composable
@@ -461,7 +463,7 @@ private fun CommentsSheet(comments: List<CommunityComment>, onSend: (String) -> 
         ) {
             SadoraTextField(
                 value = draft,
-                onValueChange = { draft = it },
+                onValueChange = { draft = acceptText(it, Limits.COMMENT_MAX) },
                 placeholder = t.commentHint,
                 modifier = Modifier.weight(1f),
             )

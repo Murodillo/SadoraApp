@@ -15,6 +15,7 @@ import uz.sadora.contract.LikeState
 import uz.sadora.contract.Page
 import uz.sadora.contract.ReportRequest
 import uz.sadora.contract.SaveState
+import uz.sadora.contract.Limits
 import uz.sadora.server.config.Environment
 import uz.sadora.server.core.ConflictException
 import uz.sadora.server.core.FeatureDisabledException
@@ -261,10 +262,10 @@ class CommunityService(
 
     companion object {
         const val COMMUNITY_FLAG = "community"
-        const val MIN_BODY_LENGTH = 2
-        const val MAX_POST_LENGTH = 2000
-        const val MAX_COMMENT_LENGTH = 1000
-        const val MAX_NOTE_LENGTH = 500
+        const val MIN_BODY_LENGTH = Limits.POST_MIN
+        const val MAX_POST_LENGTH = Limits.POST_MAX
+        const val MAX_COMMENT_LENGTH = Limits.COMMENT_MAX
+        const val MAX_NOTE_LENGTH = Limits.REPORT_NOTE_MAX
         const val MAX_POSTS_PER_DAY = 10
         const val MAX_COMMENTS_PER_DAY = 60
         const val AUTO_HIDE_REPORTS = 5

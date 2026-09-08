@@ -8,6 +8,7 @@ import org.example.project.i18n.ErrorStrings
 import org.example.project.model.AppState
 import uz.sadora.contract.AuthProvider
 import uz.sadora.contract.OtpChallenge
+import uz.sadora.contract.UzbekPhone
 
 /** Where the user belongs after an auth call succeeds. */
 enum class AuthDestination { Onboarding, Main }
@@ -199,13 +200,15 @@ fun ApiFailure.readable(t: ErrorStrings): String = when (this) {
 @androidx.compose.runtime.Composable
 fun ApiFailure.readable(): String = readable(org.example.project.i18n.strings.errors)
 
-/** `90 123 45 67` as typed in the field becomes `+998901234567` on the wire. */
-internal fun normalizePhone(input: String): String {
-    val digits = input.filter { it.isDigit() }
-    return when {
-        digits.startsWith("998") -> "+$digits"
-        else -> "+998$digits"
-    }
-}
+/**
+ * `90 123 45 67` as typed in the field becomes `+998901234567` on the wire.
+ *
+ * An unparseable number is sent as its digits rather than guessed at: the field will
+ * not let one through, and if one somehow does, the server should say which field is
+ * wrong rather than the app inventing a country code and asking for a code that goes
+ * to somebody else.
+ */
+internal fun normalizePhone(input: String): String =
+    UzbekPhone.toE164(input) ?: input.filter { it.isDigit() }
 
 

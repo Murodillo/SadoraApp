@@ -112,11 +112,14 @@ class OnboardingRequestTest {
         assertEquals(uz.sadora.contract.LifeStage.MENOPAUSE, request.lifeStage)
     }
 
-    /** `+998901234567` on the wire is `90 123 45 67` in the field. */
+    /**
+     * `+998901234567` on the wire is nine digits in the field, which draws them as
+     * `90 123 45 67` itself.
+     */
     @Test
-    fun `the profile's phone comes back in the shape the field types it`() {
-        assertEquals("90 123 45 67", "+998901234567".toLocalPhone())
-        assertEquals("91 234 56 78", "998912345678".toLocalPhone())
+    fun `the profile's phone comes back as the digits the field holds`() {
+        assertEquals("901234567", "+998901234567".toLocalPhone())
+        assertEquals("912345678", "998912345678".toLocalPhone())
         // Anything that is not a full local number is left as the digits it had.
         assertEquals("12345", "12345".toLocalPhone())
     }

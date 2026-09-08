@@ -318,6 +318,11 @@ class AdminService(
         if (request.rolloutPercentage !in 0..100) {
             throw ValidationException("rolloutPercentage", "0–100 oralig'ida bo'lishi kerak")
         }
+        // Priority decides which rule wins; a negative one sorts before every rule
+        // there is, including ones an operator cannot see on the page they are on.
+        if (request.priority !in 0..MAX_RULE_PRIORITY) {
+            throw ValidationException("priority", "0–$MAX_RULE_PRIORITY oralig'ida bo'lishi kerak")
+        }
         val id = flagRepository.addRule(
             FlagRule(
                 id = Uuid.random(),
@@ -367,6 +372,11 @@ class AdminService(
             ),
         )
     }
+    private companion object {
+        /** Rules are ordered by priority; a thousand is more layers than anyone needs. */
+        const val MAX_RULE_PRIORITY = 1000
+    }
+
 }
 
 private fun UserRecord.toSummary(tier: SubscriptionTier) = AdminUserSummary(

@@ -34,6 +34,8 @@ import org.example.project.ui.components.SadoraTextField
 import org.example.project.ui.components.SadoraTopBar
 import org.example.project.ui.components.ScreenContent
 import org.example.project.ui.components.noRippleClickable
+import org.example.project.ui.components.acceptText
+import uz.sadora.contract.Limits
 
 /**
  * "Ong · kundalik va nafas".
@@ -78,7 +80,7 @@ fun MindJournalScreen(
                 SadoraCard {
                     SadoraTextField(
                         draft,
-                        { draft = it },
+                        { draft = acceptText(it, Limits.JOURNAL_MAX) },
                         placeholder = t.journalPrompt,
                         singleLine = false,
                     )

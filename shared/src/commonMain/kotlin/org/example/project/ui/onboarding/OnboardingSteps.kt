@@ -80,6 +80,10 @@ import uz.sadora.contract.AuthProvider
 import uz.sadora.contract.OtpChallenge
 import org.example.project.data.readable
 import org.example.project.i18n.strings
+import org.example.project.ui.components.acceptPhone
+import org.example.project.ui.components.phoneError
+import org.example.project.ui.components.phoneIsComplete
+import org.example.project.ui.components.PhoneMask
 
 /** Shared layout for a numbered onboarding step: header, body, pinned footer. */
 @Composable
@@ -374,12 +378,14 @@ fun SignInScreen(
         SadoraTextField(
             value = state.phone,
             onValueChange = {
-                state.phone = it
+                state.phone = acceptPhone(it)
                 controller.clearError()
             },
             label = t.phoneLabel,
             leading = "+998",
             placeholder = "90 123 45 67",
+            error = phoneError(state.phone),
+            visualTransformation = PhoneMask,
             keyboardType = KeyboardType.Phone,
             imeAction = ImeAction.Done,
             keyboardActions = KeyboardActions(onDone = { focus.clearFocus() }),
@@ -390,8 +396,7 @@ fun SignInScreen(
         SadoraButton(
             if (controller.busy) t.sending else t.sendCode,
             onClick = ::sendCode,
-            // Nine digits is a complete Uzbek number; the server normalises the spacing.
-            enabled = state.phone.count { it.isDigit() } >= 9 && !controller.busy,
+            enabled = phoneIsComplete(state.phone) && !controller.busy,
         )
 
         Row(verticalAlignment = Alignment.CenterVertically) {

@@ -251,6 +251,16 @@ interface CommunityStrings {
  * through when there is one.
  */
 interface ErrorStrings {
+    // ---- what a field says when what is in it cannot be sent
+    val phoneInvalid: String
+    val nameRequired: String
+    fun tooLong(max: Int): String
+    fun outOfRange(min: Int, max: Int): String
+    val dateFormat: String
+    val dateInFuture: String
+    val timeFormat: String
+    val wholeNumber: String
+
     val network: String
     val validation: String
     val sessionExpired: String

@@ -18,6 +18,7 @@ import uz.sadora.contract.RecordDoseRequest
 import uz.sadora.contract.RefillRequest
 import uz.sadora.contract.SaveMedicationRequest
 import uz.sadora.contract.ScheduleKind
+import uz.sadora.contract.Limits
 import uz.sadora.server.core.NotFoundException
 import uz.sadora.server.core.ValidationException
 import uz.sadora.server.core.dayIn
@@ -256,10 +257,10 @@ class MedicationService(
     )
 
     private companion object {
-        const val MAX_NAME = 120
-        const val MAX_TIMES_PER_DAY = 8
+        const val MAX_NAME = Limits.MEDICATION_NAME_MAX
+        const val MAX_TIMES_PER_DAY = Limits.MEDICATION_TIMES_PER_DAY_MAX
         const val MAX_INTERVAL_DAYS = 90
-        const val MAX_STOCK = 10_000
+        const val MAX_STOCK = Limits.MEDICATION_STOCK_MAX
         const val MAX_REFILL = 10_000
         const val MAX_HISTORY_DAYS = 180
     }

@@ -24,6 +24,7 @@ import uz.sadora.contract.ConceptionWindow as WireConceptionWindow
 import uz.sadora.contract.Goal as WireGoal
 import uz.sadora.contract.Language as WireLanguage
 import uz.sadora.contract.LifeStage as WireLifeStage
+import uz.sadora.contract.UzbekPhone
 
 /**
  * Copies a server profile onto the in-memory store the screens read from.
@@ -124,9 +125,8 @@ private fun Int.pad(): String = toString().padStart(2, '0')
 
 /** `+998901234567` -> `90 123 45 67`, the way the phone field is typed. */
 internal fun String.toLocalPhone(): String {
-    val digits = filter { it.isDigit() }.removePrefix("998")
-    if (digits.length != 9) return digits
-    return "${digits.take(2)} ${digits.substring(2, 5)} ${digits.substring(5, 7)} ${digits.substring(7)}"
+    // Digits, not the mask: the field stores digits and draws the mask itself.
+    return UzbekPhone.accept(this)
 }
 
 // ---------------------------------------------------------------- app -> wire

@@ -20,6 +20,10 @@ import uz.sadora.server.auth.RequestContext
 import uz.sadora.server.config.AppConfig
 import uz.sadora.server.core.NotFoundException
 import uz.sadora.server.core.ValidationException
+import kotlinx.datetime.LocalDate
+import uz.sadora.server.core.DEFAULT_TIMEZONE
+import uz.sadora.server.core.dayIn
+import uz.sadora.contract.Limits
 import uz.sadora.server.core.isValidTimeZone
 import uz.sadora.server.core.now
 import uz.sadora.server.db.dbQuery
@@ -83,12 +87,10 @@ class UserService(
         request.timezone?.let {
             if (!isValidTimeZone(it)) throw ValidationException("timezone", "Noma'lum vaqt mintaqasi")
         }
-        request.heightCm?.let {
-            if (it !in 80..250) throw ValidationException("heightCm", "80–250 oralig'ida bo'lishi kerak")
-        }
-        request.weightKg?.let {
-            if (it !in 25..300) throw ValidationException("weightKg", "25–300 oralig'ida bo'lishi kerak")
-        }
+        request.name?.let(::validateName)
+        request.heightCm?.let(::validateHeight)
+        request.weightKg?.let(::validateWeight)
+        request.birthDate?.let(::validateBirthDate)
 
         users.updateProfile(
             userId = userId,
@@ -137,20 +139,17 @@ class UserService(
         if (!isValidTimeZone(request.timezone)) {
             throw ValidationException("timezone", "Noma'lum vaqt mintaqasi")
         }
-        if (request.name.isBlank()) throw ValidationException("name", "Bo'sh bo'lishi mumkin emas")
-        request.heightCm?.let {
-            if (it !in 80..250) throw ValidationException("heightCm", "80–250 oralig'ida bo'lishi kerak")
-        }
-        request.weightKg?.let {
-            if (it !in 25..300) throw ValidationException("weightKg", "25–300 oralig'ida bo'lishi kerak")
-        }
+        validateName(request.name)
+        request.heightCm?.let(::validateHeight)
+        request.weightKg?.let(::validateWeight)
+        request.birthDate?.let(::validateBirthDate)
 
         val cycleBaseline = request.cycle?.takeIf { request.lifeStage.predictsCycle }
         cycleBaseline?.let { baseline ->
-            if (baseline.averageCycleLength !in 15..60) {
+            if (baseline.averageCycleLength !in Limits.CYCLE_LENGTH_DAYS) {
                 throw ValidationException("cycle.averageCycleLength", "15–60 kun oralig'ida")
             }
-            if (baseline.averagePeriodLength !in 1..15) {
+            if (baseline.averagePeriodLength !in Limits.PERIOD_LENGTH_DAYS) {
                 throw ValidationException("cycle.averagePeriodLength", "1–15 kun oralig'ida")
             }
         }
@@ -262,6 +261,42 @@ class UserService(
                 userAgent = context.userAgent,
             ),
         )
+    }
+
+    /**
+     * The four profile fields a person types, checked in one place.
+     *
+     * Both the onboarding request and the profile update reach them, and the two had
+     * drifted: onboarding refused a blank name, the update accepted one of any length,
+     * and neither looked at the birth date at all — so a profile could carry a name
+     * longer than the column and a birthday in 1815.
+     */
+    private fun validateName(raw: String) {
+        if (raw.isBlank()) throw ValidationException("name", "Bo'sh bo'lishi mumkin emas")
+        if (raw.trim().length > Limits.NAME_MAX) {
+            throw ValidationException("name", "Eng ko'pi ${Limits.NAME_MAX} belgi")
+        }
+    }
+
+    private fun validateHeight(value: Int) {
+        if (value !in Limits.HEIGHT_CM) {
+            throw ValidationException("heightCm", "80–250 oralig'ida bo'lishi kerak")
+        }
+    }
+
+    private fun validateWeight(value: Int) {
+        if (value !in Limits.WEIGHT_KG) {
+            throw ValidationException("weightKg", "25–300 oralig'ida bo'lishi kerak")
+        }
+    }
+
+    private fun validateBirthDate(value: LocalDate) {
+        if (value.year !in Limits.BIRTH_YEAR) {
+            throw ValidationException("birthDate", "Tug'ilgan yil noto'g'ri")
+        }
+        if (value > now().dayIn(DEFAULT_TIMEZONE)) {
+            throw ValidationException("birthDate", "Kelajakdagi sana bo'lishi mumkin emas")
+        }
     }
 
     private companion object {

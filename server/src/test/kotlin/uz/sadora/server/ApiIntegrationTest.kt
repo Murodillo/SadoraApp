@@ -8,6 +8,7 @@ import io.ktor.client.request.delete
 import io.ktor.client.request.forms.submitForm
 import io.ktor.client.request.get
 import io.ktor.client.request.header
+import io.ktor.client.request.patch
 import io.ktor.client.request.post
 import io.ktor.client.request.put
 import io.ktor.client.request.setBody
@@ -72,6 +73,7 @@ import uz.sadora.contract.CreatePostRequest
 import uz.sadora.contract.CycleBaseline
 import uz.sadora.contract.CycleStatus
 import uz.sadora.contract.FoodScanRequest
+import uz.sadora.contract.Limits
 import uz.sadora.contract.DailyLog
 import uz.sadora.contract.DeviceInfo
 import uz.sadora.contract.Entitlements
@@ -100,7 +102,9 @@ import uz.sadora.contract.SubscriptionSource
 import uz.sadora.contract.SubscriptionTier
 import uz.sadora.contract.SaveArticleRequest
 import uz.sadora.contract.TrendMetric
+import uz.sadora.contract.UpdateProfileRequest
 import uz.sadora.contract.UserProfile
+import uz.sadora.contract.UzbekPhone
 import uz.sadora.server.admin.AdminSession
 import uz.sadora.server.admin.AdminSignInRequest
 import uz.sadora.server.admin.AdminStats
@@ -252,6 +256,109 @@ class ApiIntegrationTest {
             json(SaveAppointmentRequest(title = "Qon tahlili", scheduledOn = today))
         }
         assertEquals(HttpStatusCode.Forbidden, refused.status, refused.bodyAsTextSafe())
+    }
+
+    // ---------------------------------------------------------------- validation
+
+    /**
+     * The four checks the profile screens rely on being there.
+     *
+     * They used to disagree with each other: onboarding refused a blank name, the
+     * profile update accepted one of any length, and neither looked at the birth date —
+     * so a saved profile could carry a name longer than its column and a birthday in
+     * 1815. All four now come from one place, and so does the number the app caps at.
+     */
+    @Test
+    fun `a profile refuses what the fields refuse`() = api {
+        val her = signUp()
+        onboard(her)
+
+        val tooLong = client.patch("/v1/me") {
+            auth(her.token)
+            json(UpdateProfileRequest(name = "M".repeat(Limits.NAME_MAX + 1)))
+        }
+        assertEquals(HttpStatusCode.BadRequest, tooLong.status, tooLong.bodyAsTextSafe())
+
+        val blank = client.patch("/v1/me") {
+            auth(her.token)
+            json(UpdateProfileRequest(name = "   "))
+        }
+        assertEquals(HttpStatusCode.BadRequest, blank.status, blank.bodyAsTextSafe())
+
+        val tall = client.patch("/v1/me") {
+            auth(her.token)
+            json(UpdateProfileRequest(heightCm = 300))
+        }
+        assertEquals(HttpStatusCode.BadRequest, tall.status, tall.bodyAsTextSafe())
+
+        val born = client.patch("/v1/me") {
+            auth(her.token)
+            json(UpdateProfileRequest(birthDate = LocalDate.parse("1815-06-18")))
+        }
+        assertEquals(HttpStatusCode.BadRequest, born.status, born.bodyAsTextSafe())
+
+        // And what is inside the limits still saves.
+        val ok = patch<UserProfile>(
+            "/v1/me",
+            her.token,
+            UpdateProfileRequest(name = "Malika", heightCm = 164, birthDate = LocalDate.parse("1994-03-14")),
+        )
+        assertEquals("Malika", ok.name)
+    }
+
+    /**
+     * A code is six digits. Anything else is refused before a challenge is looked up,
+     * so a paste into the code box cannot burn one of her five attempts.
+     */
+    @Test
+    fun `a code that is not six digits is not a wrong code`() = api {
+        val phone = randomPhone()
+        val challenge = client.post("/v1/auth/otp/request") { json(OtpRequest(phone)) }.body<OtpChallenge>()
+
+        listOf("", "12345", "1234567", "12345a").forEach { code ->
+            val response = client.post("/v1/auth/otp/verify") {
+                json(OtpVerifyRequest(challenge.challengeId, code, DeviceInfo("test-device", Platform.ANDROID)))
+            }
+            assertEquals(HttpStatusCode.BadRequest, response.status, "accepted: $code")
+        }
+
+        // The real code still works, so none of those consumed an attempt.
+        val session = client.post("/v1/auth/otp/verify") {
+            json(
+                OtpVerifyRequest(
+                    challenge.challengeId,
+                    assertNotNull(challenge.devCode),
+                    DeviceInfo("test-device", Platform.ANDROID, timezone = "Asia/Tashkent"),
+                ),
+            )
+        }
+        assertEquals(HttpStatusCode.OK, session.status, session.bodyAsTextSafe())
+    }
+
+    /** An appointment's place had no limit, which is a free text column open to anything. */
+    @Test
+    fun `an appointment refuses a title or a place longer than its column`() = api {
+        val her = signUp()
+        onboard(her, referredByDoctor = null, storeHealth = true)
+        val today = get<CycleStatus>("/v1/cycle/status", her.token).today
+
+        val longTitle = client.post("/v1/appointments") {
+            auth(her.token)
+            json(SaveAppointmentRequest(title = "x".repeat(Limits.APPOINTMENT_TITLE_MAX + 1), scheduledOn = today))
+        }
+        assertEquals(HttpStatusCode.BadRequest, longTitle.status, longTitle.bodyAsTextSafe())
+
+        val longPlace = client.post("/v1/appointments") {
+            auth(her.token)
+            json(
+                SaveAppointmentRequest(
+                    title = "Skrining",
+                    scheduledOn = today,
+                    place = "x".repeat(Limits.APPOINTMENT_PLACE_MAX + 1),
+                ),
+            )
+        }
+        assertEquals(HttpStatusCode.BadRequest, longPlace.status, longPlace.bodyAsTextSafe())
     }
 
     // ---------------------------------------------------------------- food scanner
@@ -784,7 +891,7 @@ class ApiIntegrationTest {
     }
 
     private suspend fun Api.signUp(): TestUser {
-        val phone = "+9989" + (1..8).joinToString("") { Random.nextInt(10).toString() }
+        val phone = randomPhone()
         val challenge = client.post("/v1/auth/otp/request") { json(OtpRequest(phone)) }.body<OtpChallenge>()
         val code = assertNotNull(challenge.devCode, "the test config exposes the code")
         val session = client.post("/v1/auth/otp/verify") {
@@ -865,6 +972,24 @@ class ApiIntegrationTest {
             body?.let { json(it) }
         }
         assertEquals(HttpStatusCode.OK, response.status, "PUT $path: ${response.bodyAsTextSafe()}")
+        return response.body()
+    }
+
+    /**
+     * A number an operator would actually issue.
+     *
+     * The previous `+9989` + eight random digits produced `+99892…` and `+99896…` about
+     * a fifth of the time, and no Uzbek operator uses 92 or 96 — so the tests were
+     * signing up with numbers the app itself now refuses to type.
+     */
+    private fun randomPhone(): String {
+        val code = UzbekPhone.OPERATOR_CODES.random()
+        return "+998" + code + (1..7).joinToString("") { Random.nextInt(10).toString() }
+    }
+
+    private suspend inline fun <reified T> Api.patch(path: String, token: String, body: Any): T {
+        val response = client.patch(path) { auth(token); json(body) }
+        assertEquals(HttpStatusCode.OK, response.status, "PATCH $path: ${response.bodyAsTextSafe()}")
         return response.body()
     }
 

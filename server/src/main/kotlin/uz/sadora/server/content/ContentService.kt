@@ -12,6 +12,7 @@ import uz.sadora.contract.FeatureKeys
 import uz.sadora.contract.SaveArticleRequest
 import uz.sadora.server.core.ConflictException
 import uz.sadora.server.core.NotFoundException
+import uz.sadora.contract.Limits
 import uz.sadora.server.core.ValidationException
 import uz.sadora.server.entitlement.EntitlementService
 import uz.sadora.server.user.UserRepository
@@ -98,6 +99,9 @@ class ContentService(
         if (!SLUG.matches(slug)) {
             throw ValidationException("slug", "Faqat kichik harf, raqam va chiziqcha")
         }
+        if (slug.length > Limits.ARTICLE_SLUG_MAX) {
+            throw ValidationException("slug", "Eng ko'pi ${Limits.ARTICLE_SLUG_MAX} belgi")
+        }
         if (repository.exists(slug)) throw ConflictException("Bu slug band")
 
         val record = request.article.toRecord(slug, published = false, publishedAt = null)
@@ -130,6 +134,12 @@ class ContentService(
         }
     }
 
+    private fun limit(field: String, value: String?, max: Int) {
+        if (value != null && value.length > max) {
+            throw ValidationException(field, "Eng ko'pi $max belgi")
+        }
+    }
+
     private suspend fun SaveArticleRequest.toRecord(
         slug: String,
         published: Boolean,
@@ -138,6 +148,23 @@ class ContentService(
         if (title.isBlank()) throw ValidationException("title", "Sarlavha bo'sh bo'lmasin")
         if (!repository.categoryExists(categoryKey)) {
             throw ValidationException("categoryKey", "Bunday kategoriya yo'q")
+        }
+        // The editor's free-text fields were unbounded, so a paste into the wrong box
+        // wrote a whole article into the byline column.
+        limit("title", title, Limits.ARTICLE_TITLE_MAX)
+        limit("excerpt", excerpt, Limits.ARTICLE_EXCERPT_MAX)
+        limit("author", author, Limits.ARTICLE_PERSON_MAX)
+        limit("authorRole", authorRole, Limits.ARTICLE_PERSON_MAX)
+        limit("reviewedBy", reviewedBy, Limits.ARTICLE_PERSON_MAX)
+        limit("disclaimer", disclaimer, Limits.ARTICLE_DISCLAIMER_MAX)
+        readMinutes?.let {
+            if (it !in Limits.ARTICLE_READ_MINUTES) {
+                throw ValidationException(
+                    "readMinutes",
+                    "${Limits.ARTICLE_READ_MINUTES.first}–${Limits.ARTICLE_READ_MINUTES.last} " +
+                        "oralig'ida bo'lishi kerak",
+                )
+            }
         }
         return ArticleRecord(
             slug = slug,

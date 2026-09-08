@@ -89,6 +89,11 @@ class OtpService(
      * valid challenge ids gains nothing.
      */
     suspend fun verify(challengeId: String, code: String): String {
+        // Checked before anything is looked up or hashed: the keypad can only produce
+        // six digits, so anything else is not a wrong code, it is not a code.
+        if (code.length != config.codeLength || code.any { !it.isDigit() }) {
+            throw ValidationException("code", "${config.codeLength} xonali raqam bo'lishi kerak")
+        }
         val id = runCatching { Uuid.parse(challengeId) }.getOrNull()
             ?: throw ValidationException("challengeId", "Noto'g'ri format")
 

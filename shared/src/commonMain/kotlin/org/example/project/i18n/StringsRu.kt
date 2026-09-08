@@ -587,6 +587,15 @@ object StringsRu : Strings {
     }
 
     override val errors = object : ErrorStrings {
+        override val phoneInvalid = "Номер неполный или такого кода оператора нет"
+        override val nameRequired = "Имя не может быть пустым"
+        override fun tooLong(max: Int) = "Не больше $max символов"
+        override fun outOfRange(min: Int, max: Int) = "Должно быть от $min до $max"
+        override val dateFormat = "Дата в виде день.месяц.год"
+        override val dateInFuture = "Дата не может быть в будущем"
+        override val timeFormat = "Время в виде 20:00"
+        override val wholeNumber = "Только цифры"
+
         override val network = "Не удалось подключиться к интернету. Попробуйте ещё раз."
         override val validation = "Введённые данные неверны."
         override val sessionExpired = "Сеанс закончился. Войдите снова."

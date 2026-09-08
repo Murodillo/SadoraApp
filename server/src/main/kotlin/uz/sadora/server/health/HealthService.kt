@@ -22,6 +22,7 @@ import uz.sadora.contract.SaveDailyLogRequest
 import uz.sadora.contract.SymptomDefinition
 import uz.sadora.contract.SymptomEntry
 import uz.sadora.contract.UpdatePeriodRequest
+import uz.sadora.contract.Limits
 import uz.sadora.server.core.NotFoundException
 import uz.sadora.server.core.ValidationException
 import uz.sadora.server.core.dayIn
@@ -294,7 +295,7 @@ class HealthService(
 
     private companion object {
         const val MAX_CALENDAR_DAYS = 400
-        const val MAX_PERIOD_DAYS = 15
-        const val MAX_NOTE_LENGTH = 1000
+        const val MAX_PERIOD_DAYS = Limits.PERIOD_LENGTH_MAX
+        const val MAX_NOTE_LENGTH = Limits.DAY_NOTE_MAX
     }
 }

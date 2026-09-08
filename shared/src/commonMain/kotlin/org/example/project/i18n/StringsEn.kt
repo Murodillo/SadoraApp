@@ -578,6 +578,15 @@ object StringsEn : Strings {
     }
 
     override val errors = object : ErrorStrings {
+        override val phoneInvalid = "That number is incomplete, or no operator uses that code"
+        override val nameRequired = "A name cannot be empty"
+        override fun tooLong(max: Int) = "At most $max characters"
+        override fun outOfRange(min: Int, max: Int) = "Must be between $min and $max"
+        override val dateFormat = "The date as day.month.year"
+        override val dateInFuture = "The date cannot be in the future"
+        override val timeFormat = "The time as 20:00"
+        override val wholeNumber = "Digits only"
+
         override val network = "Could not reach the internet. Try again."
         override val validation = "Something you entered is not right."
         override val sessionExpired = "Your session has ended. Please sign in again."

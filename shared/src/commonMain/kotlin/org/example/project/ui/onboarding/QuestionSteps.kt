@@ -57,6 +57,14 @@ import org.example.project.ui.components.SadoraButton
 import org.example.project.ui.components.SadoraDialog
 import org.example.project.ui.components.SadoraTextField
 import org.example.project.ui.components.noRippleClickable
+import org.example.project.ui.components.acceptPhone
+import org.example.project.ui.components.acceptText
+import org.example.project.ui.components.phoneError
+import org.example.project.ui.components.phoneIsComplete
+import org.example.project.ui.components.requiredTextError
+import uz.sadora.contract.Limits
+import org.example.project.ui.components.PhoneMask
+import uz.sadora.contract.UzbekPhone
 
 // ---------------------------------------------------------------- language
 
@@ -148,9 +156,10 @@ fun NameQuestion(
         Reveal(entry.value, from = 0.30f) {
             SadoraTextField(
                 value = state.name,
-                onValueChange = { state.name = it },
+                onValueChange = { state.name = acceptText(it, Limits.NAME_MAX) },
                 label = t.nameLabel,
                 placeholder = t.nameHint,
+                error = requiredTextError(state.name, Limits.NAME_MAX),
                 leadingIcon = SadoraIcons.Profile,
                 // The only field on the page, so Next would have nowhere to go.
                 imeAction = ImeAction.Done,
@@ -718,7 +727,7 @@ fun PhoneQuestion(
     val entry = rememberPageEntry()
     val t = strings.onboarding
     val focus = LocalFocusManager.current
-    val ready = state.phone.count { it.isDigit() } >= 9
+    val ready = phoneIsComplete(state.phone)
 
     QuestionScaffold(
         title = t.phoneTitle,
@@ -750,10 +759,13 @@ fun PhoneQuestion(
         Reveal(entry.value, from = 0.28f) {
             SadoraTextField(
                 value = state.phone,
-                onValueChange = { state.phone = it },
+                // The field holds nine digits at most; the mask is drawn, not stored.
+                onValueChange = { state.phone = acceptPhone(it) },
                 label = t.phoneLabel,
                 leading = "+998",
                 placeholder = "90 123 45 67",
+                error = phoneError(state.phone),
+                visualTransformation = PhoneMask,
                 keyboardType = KeyboardType.Phone,
                 imeAction = ImeAction.Done,
                 keyboardActions = KeyboardActions(onDone = { focus.clearFocus() }),
@@ -798,7 +810,7 @@ fun OtpQuestion(
 
     QuestionScaffold(
         title = t.codeTitle,
-        subtitle = t.codeSubtitle(phone),
+        subtitle = t.codeSubtitle(UzbekPhone.format(phone)),
         progress = progress,
         onBack = onBack,
         onSkip = null,

@@ -4,6 +4,17 @@ import type { AdminFlag } from '../api/types'
 import { useAuth } from '../auth/AuthContext'
 import { Card, ErrorNotice, Field, Loading, Modal } from '../components/ui'
 
+/**
+ * Priority orders the rules, and the server refuses anything outside this. Clamping
+ * here rather than letting the field hold -3 keeps the refusal from arriving after the
+ * dialog has closed over the number that caused it.
+ */
+function clampPriority(raw: string): number {
+  const value = Number(raw)
+  if (!Number.isFinite(value)) return 0
+  return Math.min(1000, Math.max(0, Math.round(value)))
+}
+
 export function FlagsPage() {
   const flags = useFlags()
   const update = useUpdateFlag()
@@ -166,7 +177,13 @@ function AddRuleDialog({ flag, onClose }: { flag: AdminFlag; onClose: () => void
         </select>
       </Field>
       <Field label="Prioritet (kichik raqam avval tekshiriladi)">
-        <input type="number" value={priority} onChange={(event) => setPriority(Number(event.target.value))} />
+        <input
+          type="number"
+          min={0}
+          max={1000}
+          value={priority}
+          onChange={(event) => setPriority(clampPriority(event.target.value))}
+        />
       </Field>
       {add.error && <ErrorNotice error={add.error} />}
       <div className="row" style={{ justifyContent: 'flex-end' }}>

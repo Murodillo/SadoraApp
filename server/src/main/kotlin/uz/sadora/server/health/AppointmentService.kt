@@ -2,6 +2,7 @@ package uz.sadora.server.health
 
 import kotlin.uuid.Uuid
 import uz.sadora.contract.Appointment
+import uz.sadora.contract.Limits
 import uz.sadora.contract.SaveAppointmentRequest
 import uz.sadora.server.core.ConsentRequiredException
 import uz.sadora.server.core.NotFoundException
@@ -62,8 +63,19 @@ class AppointmentService(
         if (request.title.isBlank()) {
             throw ValidationException("title", "Nomi bo'sh bo'lishi mumkin emas")
         }
-        if (request.title.length > MAX_TITLE) {
-            throw ValidationException("title", "Nomi $MAX_TITLE ta belgidan oshmasligi kerak")
+        if (request.title.length > Limits.APPOINTMENT_TITLE_MAX) {
+            throw ValidationException(
+                "title",
+                "Nomi ${Limits.APPOINTMENT_TITLE_MAX} ta belgidan oshmasligi kerak",
+            )
+        }
+        // The place was unbounded, which is a free text column open to anything.
+        val place = request.place
+        if (place != null && place.length > Limits.APPOINTMENT_PLACE_MAX) {
+            throw ValidationException(
+                "place",
+                "Joyi ${Limits.APPOINTMENT_PLACE_MAX} ta belgidan oshmasligi kerak",
+            )
         }
         val remind = request.remindHoursBefore
         if (remind != null && remind !in 0..MAX_REMIND_HOURS) {
@@ -74,8 +86,6 @@ class AppointmentService(
     private fun notFound() = NotFoundException("Tadbir topilmadi")
 
     private companion object {
-        const val MAX_TITLE = 120
-
         /** A week. Reminding someone a month early about a scan is not a reminder. */
         const val MAX_REMIND_HOURS = 168
     }

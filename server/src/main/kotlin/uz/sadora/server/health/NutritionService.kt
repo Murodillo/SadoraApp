@@ -14,6 +14,7 @@ import uz.sadora.contract.NutritionGoals
 import uz.sadora.contract.NutritionTotals
 import uz.sadora.contract.UpdateNutritionGoalsRequest
 import uz.sadora.contract.WaterState
+import uz.sadora.contract.Limits
 import uz.sadora.server.core.NotFoundException
 import uz.sadora.server.core.ValidationException
 import uz.sadora.server.core.dayIn
@@ -204,10 +205,10 @@ class NutritionService(
     }
 
     private companion object {
-        const val MAX_DESCRIPTION = 200
+        const val MAX_DESCRIPTION = Limits.MEAL_DESCRIPTION_MAX
         const val MAX_KCAL = 10_000
         const val MAX_MACRO = 1_000
-        const val MAX_WATER_STEP = 2_000
+        const val MAX_WATER_STEP = Limits.WATER_STEP_MAX_ML
         const val FOOD_SEARCH_LIMIT = 50
 
         /** Roughly 4 MB of image once base64 is undone. */

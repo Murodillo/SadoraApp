@@ -122,6 +122,16 @@ class StringsTest {
                 ),
             )
         }
+        with(t.errors) {
+            addAll(
+                listOf(
+                    phoneInvalid, nameRequired, tooLong(60), outOfRange(80, 250), dateFormat,
+                    dateInFuture, timeFormat, wholeNumber, network, validation, sessionExpired,
+                    blocked, premiumRequired, monthlyLimit, dailyLimit, retryAfter(30), retrySoon,
+                    otpInvalid, featureClosed, consentRequired, paymentFailed, unexpected,
+                ),
+            )
+        }
         with(t.common) {
             addAll(listOf(0, 9, 13, 21).map { greeting(it) })
             Mood.entries.forEach { add(mood(it)); add(moodCaption(it)) }
@@ -390,6 +400,8 @@ class StringsTest {
             assertNotEquals(StringsUz.today.hello("X"), t.today.hello("X"))
             assertNotEquals(StringsUz.stages.subtitle(LifeStage.Cycle), t.stages.subtitle(LifeStage.Cycle))
             assertNotEquals(StringsUz.common.hoursMinutes(6, 40), t.common.hoursMinutes(6, 40))
+            assertNotEquals(StringsUz.errors.phoneInvalid, t.errors.phoneInvalid)
+            assertNotEquals(StringsUz.errors.network, t.errors.network)
             assertNotEquals(StringsUz.common.goal(Goal.SleepBetter), t.common.goal(Goal.SleepBetter))
             assertNotEquals(StringsUz.settings.weightNote, t.settings.weightNote)
             assertNotEquals(StringsUz.settings.consentHealthNote, t.settings.consentHealthNote)

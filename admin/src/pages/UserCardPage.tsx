@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useGrantPremium, useSetBlocked, useUserCard } from '../api/hooks'
+import { limits } from '../api/limits'
 import { useAuth } from '../auth/AuthContext'
 import {
   Card,
@@ -217,7 +218,12 @@ function GrantPremiumDialog({ userId, onClose }: { userId: string; onClose: () =
   return (
     <Modal title="Qo'lda Premium berish" onClose={onClose}>
       <Field label="Sabab (majburiy)">
-        <input value={reason} onChange={(event) => setReason(event.target.value)} autoFocus />
+        <input
+          value={reason}
+          onChange={(event) => setReason(event.target.value)}
+          maxLength={limits.reasonMax}
+          autoFocus
+        />
       </Field>
       <Field label="Tugash sanasi (bo'sh — muddatsiz)">
         <input type="date" value={expiresAt} onChange={(event) => setExpiresAt(event.target.value)} />
@@ -257,7 +263,12 @@ function BlockDialog({ userId, blocked, onClose }: { userId: string; blocked: bo
   return (
     <Modal title={blocked ? 'Blokdan chiqarish' : 'Hisobni bloklash'} onClose={onClose}>
       <Field label="Sabab (majburiy)">
-        <input value={reason} onChange={(event) => setReason(event.target.value)} autoFocus />
+        <input
+          value={reason}
+          onChange={(event) => setReason(event.target.value)}
+          maxLength={limits.reasonMax}
+          autoFocus
+        />
       </Field>
       {!blocked && (
         <p className="faint" style={{ margin: 0 }}>

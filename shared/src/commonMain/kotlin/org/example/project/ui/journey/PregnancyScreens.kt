@@ -58,6 +58,13 @@ import org.example.project.data.toWire
 import uz.sadora.contract.FetalMovement
 import uz.sadora.contract.LifeStage
 import uz.sadora.contract.SymptomEntry
+import org.example.project.ui.components.acceptText
+import org.example.project.ui.components.parseTypedDate
+import org.example.project.ui.components.parseTypedTime
+import org.example.project.ui.components.requiredTextError
+import org.example.project.ui.components.typedDateError
+import org.example.project.ui.components.typedTimeError
+import uz.sadora.contract.Limits
 
 /**
  * "Homiladorlik · Tadbirlar".
@@ -303,8 +310,15 @@ private fun AppointmentSheet(
     var place by remember(existing, visible) { mutableStateOf(existing?.place.orEmpty()) }
     var remind by remember(existing, visible) { mutableStateOf(existing?.remindHoursBefore) }
 
-    val date = parseDay(day)
-    val ready = title.isNotBlank() && date != null
+    val date = parseTypedDate(day)
+    val titleError = requiredTextError(title, Limits.APPOINTMENT_TITLE_MAX)
+    val dateError = typedDateError(day)
+    // Optional, but not "anything": an unreadable time was silently dropped before, so
+    // an appointment saved with "half ten" in it lost the time without saying so.
+    val timeError = typedTimeError(time, required = false)
+    val placeError = requiredTextError(place, Limits.APPOINTMENT_PLACE_MAX)
+    val ready = title.isNotBlank() && date != null &&
+        listOf(titleError, dateError, timeError, placeError).all { it == null }
 
     SadoraBottomSheet(
         visible = visible,
@@ -313,23 +327,31 @@ private fun AppointmentSheet(
     ) {
         SadoraTextField(
             title,
-            { title = it },
+            { title = acceptText(it, Limits.APPOINTMENT_TITLE_MAX) },
             label = t.appointmentName,
             placeholder = t.appointmentNameHint,
+            error = titleError,
         )
         SadoraTextField(
             day,
-            { day = it },
+            { day = acceptText(it, DateFieldMax) },
             label = t.appointmentDate,
             placeholder = t.appointmentDateHint,
-            error = if (day.isNotBlank() && date == null) t.appointmentDateInvalid else null,
+            error = dateError,
         )
-        SadoraTextField(time, { time = it }, label = t.appointmentTime, placeholder = "10:30")
+        SadoraTextField(
+            time,
+            { time = acceptText(it, TimeFieldMax) },
+            label = t.appointmentTime,
+            placeholder = "10:30",
+            error = timeError,
+        )
         SadoraTextField(
             place,
-            { place = it },
+            { place = acceptText(it, Limits.APPOINTMENT_PLACE_MAX) },
             label = t.appointmentPlace,
             placeholder = t.appointmentPlaceHint,
+            error = placeError,
         )
 
         CardLabel(t.reminder)
@@ -360,7 +382,7 @@ private fun AppointmentSheet(
                         SaveAppointmentRequest(
                             title = title.trim(),
                             scheduledOn = parsed,
-                            scheduledAt = parseClock(time),
+                            scheduledAt = parseTypedTime(time),
                             place = place.trim().takeIf { it.isNotEmpty() },
                             remindHoursBefore = remind,
                         ),
@@ -374,23 +396,9 @@ private fun AppointmentSheet(
     }
 }
 
-/** "27.8.2026" -> a date, or null when it is not one yet. */
-private fun parseDay(raw: String): LocalDate? {
-    val parts = raw.trim().split('.', '/', '-').mapNotNull { it.trim().toIntOrNull() }
-    if (parts.size != 3) return null
-    val (day, month, year) = parts
-    if (month !in 1..12 || day !in 1..31 || year < 2000 || year > 2100) return null
-    return runCatching { LocalDate(year, month, day) }.getOrNull()
-}
-
-/** "10:30" -> a time, or null when it is blank or malformed. */
-private fun parseClock(raw: String): LocalTime? {
-    val parts = raw.trim().split(':', '.').mapNotNull { it.trim().toIntOrNull() }
-    if (parts.size != 2) return null
-    val (hour, minute) = parts
-    if (hour !in 0..23 || minute !in 0..59) return null
-    return LocalTime(hour, minute)
-}
+/** `27.08.2026` and `10:30` — nothing longer is a date or a time of day. */
+private const val DateFieldMax = 10
+private const val TimeFieldMax = 5
 
 /**
  * "Homiladorlik · o'zini his qilish" — the daily check-in.

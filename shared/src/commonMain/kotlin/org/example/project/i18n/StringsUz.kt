@@ -579,6 +579,15 @@ object StringsUz : Strings {
     }
 
     override val errors = object : ErrorStrings {
+        override val phoneInvalid = "Raqam to'liq emas yoki bunday operator kodi yo'q"
+        override val nameRequired = "Ism bo'sh bo'lishi mumkin emas"
+        override fun tooLong(max: Int) = "Eng ko'pi $max belgi"
+        override fun outOfRange(min: Int, max: Int) = "$min–$max oralig'ida bo'lishi kerak"
+        override val dateFormat = "Sana kun.oy.yil ko'rinishida"
+        override val dateInFuture = "Kelajakdagi sana bo'lishi mumkin emas"
+        override val timeFormat = "Vaqt 20:00 ko'rinishida"
+        override val wholeNumber = "Faqat raqam"
+
         override val network = "Internetga ulanib bo'lmadi. Qayta urinib ko'ring."
         override val validation = "Kiritilgan ma'lumot noto'g'ri."
         override val sessionExpired = "Sessiya tugadi. Qaytadan kiring."
