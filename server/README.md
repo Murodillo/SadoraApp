@@ -291,7 +291,7 @@ CI'da u job'ning o'z Postgres'iga qarshi ishlaydi.
 ## Nima hali yo'q
 App Store / Google Play cheklarini haqiqiy tekshirish (`StoreVerifier` interfeysi va
 grant yo'li tayyor, kalitlar yo'q) va ilovadagi billing SDK · SMS provayderi (`OtpSender` interfeysi
-tayyor, hozircha log'ga yozadi) · admin 2FA enrolment ekrani · Health Connect /
+tayyor, hozircha log'ga yozadi) · Health Connect /
 HealthKit o'qish qatlami (server tomon `POST /v1/health-data/samples` tayyor, ilovada
 namuna yig'uvchi hali yo'q, shuning uchun uyqu va qadam ekranlari bo'sh holatini
 ko'rsatadi).

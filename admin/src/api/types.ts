@@ -35,6 +35,19 @@ export interface Page<T> {
   offset: number
 }
 
+export interface AdminMe {
+  id: string
+  name: string
+  email: string
+  role: AdminRole
+  totpEnabled: boolean
+}
+
+export interface TotpEnrolment {
+  secret: string
+  otpauthUri: string
+}
+
 export interface AdminSession {
   accessToken: string
   expiresAt: string

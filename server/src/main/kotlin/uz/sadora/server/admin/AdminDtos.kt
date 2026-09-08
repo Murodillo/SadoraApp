@@ -17,6 +17,35 @@ data class AdminSignInRequest(
     val totpCode: String? = null,
 )
 
+/** Who the operator is, and whether her account is actually protected. */
+@Serializable
+data class AdminMe(
+    val id: String,
+    val name: String,
+    val email: String,
+    val role: AdminRole,
+    val totpEnabled: Boolean,
+)
+
+/** The secret to type into an authenticator, and the QR the app would rather scan. */
+@Serializable
+data class TotpEnrolment(
+    val secret: String,
+    val otpauthUri: String,
+)
+
+@Serializable
+data class TotpConfirmRequest(val code: String)
+
+/**
+ * Turning 2FA off asks for the password again as well as a current code.
+ *
+ * A borrowed session is exactly the thing 2FA is there to stop, so the one action that
+ * removes it must not be reachable from the session alone.
+ */
+@Serializable
+data class TotpDisableRequest(val password: String, val code: String)
+
 @Serializable
 data class AdminSession(
     val accessToken: String,

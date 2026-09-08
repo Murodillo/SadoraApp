@@ -30,6 +30,8 @@ object AuditActions {
     const val REFRESH_TOKEN_REUSED = "security.refresh_token_reused"
     const val ADMIN_SIGNED_IN = "admin.signed_in"
     const val ADMIN_SIGN_IN_FAILED = "admin.sign_in_failed"
+    const val ADMIN_TOTP_ENABLED = "admin.totp_enabled"
+    const val ADMIN_TOTP_DISABLED = "admin.totp_disabled"
     const val ENTITLEMENT_DEFINITION_UPDATED = "entitlement.definition_updated"
     const val ENTITLEMENT_OVERRIDE_SET = "entitlement.override_set"
     const val ENTITLEMENT_OVERRIDE_CLEARED = "entitlement.override_cleared"

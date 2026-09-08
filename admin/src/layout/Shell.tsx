@@ -47,7 +47,12 @@ const groups: NavGroup[] = [
   },
   {
     title: 'Xavfsizlik',
-    entries: [{ to: '/audit', label: 'Audit log', glyph: '☰', roles: ['OWNER'] }],
+    entries: [
+      // Every role: 2FA is each operator's own to switch on, and one that cannot enrol
+      // is one whose account stays a password.
+      { to: '/security', label: 'Hisobim va 2FA', glyph: '⚿', roles: ALL },
+      { to: '/audit', label: 'Audit log', glyph: '☰', roles: ['OWNER'] },
+    ],
   },
 ]
 
@@ -62,6 +67,7 @@ const titles: Record<string, string> = {
   '/wearables': 'Wearable providerlar',
   '/features': 'Entitlements va limitlar',
   '/flags': 'Feature flags',
+  '/security': 'Hisobim va 2FA',
   '/audit': 'Audit log va xavfsizlik',
 }
 

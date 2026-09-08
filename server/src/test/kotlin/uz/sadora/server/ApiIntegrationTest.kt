@@ -112,7 +112,12 @@ import uz.sadora.contract.UpdateProfileRequest
 import uz.sadora.contract.UserProfile
 import uz.sadora.contract.UzbekPhone
 import uz.sadora.server.admin.AdminSession
+import uz.sadora.server.admin.AdminMe
 import uz.sadora.server.admin.AdminSignInRequest
+import uz.sadora.server.admin.Totp
+import uz.sadora.server.admin.TotpConfirmRequest
+import uz.sadora.server.admin.TotpDisableRequest
+import uz.sadora.server.admin.TotpEnrolment
 import uz.sadora.server.admin.AdminStats
 import uz.sadora.server.auth.PasswordHasher
 import uz.sadora.server.billing.BillingService
@@ -218,6 +223,81 @@ class ApiIntegrationTest {
         val profile = get<UserProfile>("/v1/me", her.token)
         assertEquals(due, profile.stage?.dueDate)
     }
+
+    // ---------------------------------------------------------------- admin 2FA
+
+    /**
+     * Sign-in has always demanded a TOTP code from an account with 2FA enabled, and
+     * nothing could enable it — so every operator account was, in practice, a password.
+     * This walks the enrolment the panel now offers, and then proves the code is really
+     * required.
+     */
+    @Test
+    fun `an operator can enrol in 2FA, and afterwards a password alone is not enough`() = api {
+        val admin = adminAccount()
+
+        val before = get<AdminMe>("/v1/admin/me", admin.token)
+        assertTrue(!before.totpEnabled)
+
+        val enrolment = client.post("/v1/admin/me/totp/start") { auth(admin.token) }.body<TotpEnrolment>()
+        assertTrue(enrolment.otpauthUri.startsWith("otpauth://totp/SADORA:"), enrolment.otpauthUri)
+
+        // Nothing is switched on until a code proves the authenticator holds the secret.
+        assertTrue(!get<AdminMe>("/v1/admin/me", admin.token).totpEnabled)
+        val wrong = client.post("/v1/admin/me/totp/confirm") {
+            auth(admin.token)
+            json(TotpConfirmRequest("000000"))
+        }
+        assertEquals(HttpStatusCode.Unauthorized, wrong.status)
+        assertTrue(!get<AdminMe>("/v1/admin/me", admin.token).totpEnabled)
+
+        val code = currentCodeFor(enrolment.secret)
+        val confirmed = client.post("/v1/admin/me/totp/confirm") {
+            auth(admin.token)
+            json(TotpConfirmRequest(code))
+        }
+        assertEquals(HttpStatusCode.OK, confirmed.status, confirmed.bodyAsTextSafe())
+        assertTrue(get<AdminMe>("/v1/admin/me", admin.token).totpEnabled)
+
+        // The point of the whole exercise.
+        val passwordOnly = client.post("/v1/admin/auth/login") {
+            json(AdminSignInRequest(admin.email, admin.password))
+        }
+        assertEquals(HttpStatusCode.Unauthorized, passwordOnly.status)
+
+        val withCode = client.post("/v1/admin/auth/login") {
+            json(AdminSignInRequest(admin.email, admin.password, currentCodeFor(enrolment.secret)))
+        }
+        assertEquals(HttpStatusCode.OK, withCode.status, withCode.bodyAsTextSafe())
+    }
+
+    @Test
+    fun `turning 2FA off needs the password as well, so a borrowed session cannot`() = api {
+        val admin = adminAccount()
+        val enrolment = client.post("/v1/admin/me/totp/start") { auth(admin.token) }.body<TotpEnrolment>()
+        client.post("/v1/admin/me/totp/confirm") {
+            auth(admin.token)
+            json(TotpConfirmRequest(currentCodeFor(enrolment.secret)))
+        }
+
+        val sessionOnly = client.post("/v1/admin/me/totp/disable") {
+            auth(admin.token)
+            json(TotpDisableRequest(password = "not-the-password", code = currentCodeFor(enrolment.secret)))
+        }
+        assertEquals(HttpStatusCode.Unauthorized, sessionOnly.status)
+        assertTrue(get<AdminMe>("/v1/admin/me", admin.token).totpEnabled, "still protected")
+
+        val proper = client.post("/v1/admin/me/totp/disable") {
+            auth(admin.token)
+            json(TotpDisableRequest(password = admin.password, code = currentCodeFor(enrolment.secret)))
+        }
+        assertEquals(HttpStatusCode.OK, proper.status, proper.bodyAsTextSafe())
+        assertTrue(!get<AdminMe>("/v1/admin/me", admin.token).totpEnabled)
+    }
+
+    /** What the operator's authenticator would be showing right now. */
+    private fun currentCodeFor(secret: String): String =
+        Totp.generate(Totp.decodeBase32(secret), now().epochSeconds / 30)
 
     // ---------------------------------------------------------------- deletion
 
@@ -1003,7 +1083,11 @@ class ApiIntegrationTest {
         assertEquals(HttpStatusCode.OK, response.status, response.bodyAsTextSafe())
     }
 
-    private suspend fun Api.adminToken(): String {
+    private suspend fun Api.adminToken(): String = adminAccount().token
+
+    private class TestAdmin(val token: String, val email: String, val password: String)
+
+    private suspend fun Api.adminAccount(): TestAdmin {
         val email = "test-${Uuid.random()}@sadora.test"
         val password = "Test12345"
         dbQuery {
@@ -1020,7 +1104,9 @@ class ApiIntegrationTest {
                 it[updatedAt] = now().toOffsetDateTime()
             }
         }
-        return client.post("/v1/admin/auth/login") { json(AdminSignInRequest(email, password)) }.body<AdminSession>().accessToken
+        val token = client.post("/v1/admin/auth/login") { json(AdminSignInRequest(email, password)) }
+            .body<AdminSession>().accessToken
+        return TestAdmin(token, email, password)
     }
 
     private suspend fun Api.setFlag(admin: String, key: String, enabled: Boolean) {

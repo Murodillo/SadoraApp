@@ -20,6 +20,29 @@ object Totp {
     /** Accepts the neighbouring windows so a slow phone or a skewed clock still works. */
     private const val ALLOWED_DRIFT_STEPS = 1
 
+    /**
+     * A fresh 160-bit secret, base32-encoded — what an authenticator app expects, and
+     * the size RFC 4226 asks for.
+     */
+    fun newSecret(): String {
+        val bytes = ByteArray(20)
+        java.security.SecureRandom().nextBytes(bytes)
+        return encodeBase32(bytes)
+    }
+
+    /**
+     * The otpauth:// URI an authenticator reads from a QR code.
+     *
+     * [account] is the operator's email and [issuer] the product name, which is what the
+     * app then shows in its list — "SADORA (owner@sadora.uz)" rather than six anonymous
+     * digits next to five others.
+     */
+    fun provisioningUri(secret: String, account: String, issuer: String = "SADORA"): String {
+        val label = "${issuer.urlEncoded()}:${account.urlEncoded()}"
+        return "otpauth://totp/$label?secret=$secret&issuer=${issuer.urlEncoded()}" +
+            "&algorithm=SHA1&digits=$DIGITS&period=$TIME_STEP_SECONDS"
+    }
+
     fun verify(base32Secret: String, code: String): Boolean {
         val trimmed = code.filter { it.isDigit() }
         if (trimmed.length != DIGITS) return false
@@ -50,6 +73,23 @@ object Totp {
         return (binary % 1_000_000).toString().padStart(DIGITS, '0')
     }
 
+    fun encodeBase32(bytes: ByteArray): String {
+        val alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567"
+        val output = StringBuilder()
+        var buffer = 0
+        var bitsLeft = 0
+        bytes.forEach { byte ->
+            buffer = (buffer shl 8) or (byte.toInt() and 0xFF)
+            bitsLeft += 8
+            while (bitsLeft >= 5) {
+                output.append(alphabet[(buffer shr (bitsLeft - 5)) and 0x1F])
+                bitsLeft -= 5
+            }
+        }
+        if (bitsLeft > 0) output.append(alphabet[(buffer shl (5 - bitsLeft)) and 0x1F])
+        return output.toString()
+    }
+
     fun decodeBase32(secret: String): ByteArray {
         val alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567"
         val cleaned = secret.trim().replace("=", "").replace(" ", "").uppercase()
@@ -68,6 +108,9 @@ object Totp {
         }
         return output.toByteArray()
     }
+
+    private fun String.urlEncoded(): String =
+        java.net.URLEncoder.encode(this, Charsets.UTF_8).replace("+", "%20")
 
     private fun String.constantTimeEquals(other: String): Boolean {
         if (length != other.length) return false

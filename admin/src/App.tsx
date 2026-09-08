@@ -13,6 +13,7 @@ import { DashboardPage } from './pages/DashboardPage'
 import { FeaturesPage } from './pages/FeaturesPage'
 import { FlagsPage } from './pages/FlagsPage'
 import { NotificationsPage } from './pages/NotificationsPage'
+import { SecurityPage } from './pages/SecurityPage'
 import { UserCardPage } from './pages/UserCardPage'
 import { UsersPage } from './pages/UsersPage'
 import { WearablesPage } from './pages/WearablesPage'
@@ -72,6 +73,7 @@ function AppRoutes() {
         />
         <Route path="features" element={<FeaturesPage />} />
         <Route path="flags" element={<FlagsPage />} />
+        <Route path="security" element={<SecurityPage />} />
         <Route path="audit" element={can(['OWNER']) ? <AuditPage /> : <Navigate to="/" replace />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>

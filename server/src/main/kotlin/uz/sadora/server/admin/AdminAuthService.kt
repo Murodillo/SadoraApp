@@ -110,6 +110,114 @@ class AdminAuthService(
         )
     }
 
+    // ---------------------------------------------------------------- 2FA enrolment
+
+    suspend fun me(adminId: Uuid): AdminMe {
+        val row = requireAdmin(adminId)
+        return AdminMe(
+            id = adminId.toString(),
+            name = row[AdminUsers.name],
+            email = row[AdminUsers.email],
+            role = AdminRole.entries
+                .firstOrNull { it.name.equals(row[AdminUsers.role], ignoreCase = true) }
+                ?: AdminRole.ANALYST,
+            totpEnabled = row[AdminUsers.totpEnabled],
+        )
+    }
+
+    /**
+     * Starts enrolment: a new secret, stored but not yet in force.
+     *
+     * Nothing is enabled until [confirmTotp] proves the operator's authenticator produces
+     * the right code. Storing the secret first and switching it on second is what stops
+     * an account locking itself out of the panel with a secret nobody ever scanned.
+     *
+     * Re-starting while 2FA is already on is refused: that would replace the secret her
+     * authenticator holds, and the next sign-in would fail with no way back.
+     */
+    suspend fun startTotpEnrolment(adminId: Uuid): TotpEnrolment {
+        val row = requireAdmin(adminId)
+        if (row[AdminUsers.totpEnabled]) {
+            throw ForbiddenException(message = "2FA allaqachon yoqilgan — avval o'chiring")
+        }
+        val secret = Totp.newSecret()
+        dbQuery {
+            AdminUsers.update({ AdminUsers.id eq adminId }) {
+                it[totpSecret] = secret
+                it[totpEnabled] = false
+                it[updatedAt] = now().toOffsetDateTime()
+            }
+        }
+        return TotpEnrolment(
+            secret = secret,
+            otpauthUri = Totp.provisioningUri(secret, row[AdminUsers.email]),
+        )
+    }
+
+    suspend fun confirmTotp(adminId: Uuid, request: TotpConfirmRequest, context: RequestContext) {
+        val row = requireAdmin(adminId)
+        val secret = row[AdminUsers.totpSecret]
+            ?: throw ForbiddenException(message = "Avval 2FA sozlashni boshlang")
+        if (!Totp.verify(secret, request.code)) {
+            throw UnauthorizedException(message = "2FA kodi noto'g'ri")
+        }
+        dbQuery {
+            AdminUsers.update({ AdminUsers.id eq adminId }) {
+                it[totpEnabled] = true
+                it[updatedAt] = now().toOffsetDateTime()
+            }
+        }
+        recordTotpChange(adminId, row[AdminUsers.email], AuditActions.ADMIN_TOTP_ENABLED, context)
+    }
+
+    /**
+     * Turns 2FA off. Asks for the password and a current code, because a borrowed session
+     * is the thing 2FA exists to stop and must not be enough to remove it.
+     */
+    suspend fun disableTotp(adminId: Uuid, request: TotpDisableRequest, context: RequestContext) {
+        val row = requireAdmin(adminId)
+        if (!row[AdminUsers.totpEnabled]) return
+        val secret = row[AdminUsers.totpSecret]
+        if (!PasswordHasher.verify(request.password, row[AdminUsers.passwordHash])) {
+            throw UnauthorizedException(message = "Parol noto'g'ri")
+        }
+        if (secret == null || !Totp.verify(secret, request.code)) {
+            throw UnauthorizedException(message = "2FA kodi noto'g'ri")
+        }
+        dbQuery {
+            AdminUsers.update({ AdminUsers.id eq adminId }) {
+                it[totpEnabled] = false
+                it[totpSecret] = null
+                it[updatedAt] = now().toOffsetDateTime()
+            }
+        }
+        recordTotpChange(adminId, row[AdminUsers.email], AuditActions.ADMIN_TOTP_DISABLED, context)
+    }
+
+    private suspend fun requireAdmin(adminId: Uuid) = dbQuery {
+        AdminUsers.selectAll().where { AdminUsers.id eq adminId }.singleOrNull()
+    } ?: throw UnauthorizedException(message = "Hisob topilmadi")
+
+    private suspend fun recordTotpChange(
+        adminId: Uuid,
+        email: String,
+        action: String,
+        context: RequestContext,
+    ) {
+        audit.record(
+            AuditEntry(
+                actorType = ActorType.ADMIN,
+                actorId = adminId,
+                actorLabel = email,
+                action = action,
+                entityType = "admin_user",
+                entityId = adminId.toString(),
+                ip = context.ip,
+                userAgent = context.userAgent,
+            ),
+        )
+    }
+
     private suspend fun registerFailedAttempt(adminId: Uuid, attempts: Int) {
         dbQuery {
             AdminUsers.update({ AdminUsers.id eq adminId }) {

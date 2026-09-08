@@ -19,6 +19,7 @@ import uz.sadora.contract.LifeStage
 import uz.sadora.server.api.enumParameter
 import uz.sadora.server.api.intParameter
 import uz.sadora.server.api.requestContext
+import uz.sadora.server.api.requireAdmin
 import uz.sadora.server.api.requireAdminRole
 import uz.sadora.server.audit.AuditRepository
 import uz.sadora.server.auth.RefreshTokenService
@@ -54,6 +55,29 @@ fun Route.adminRoutes(
         }
 
         authenticate(ADMIN_AUTH) {
+
+            // --- the operator's own account -------------------------------------
+            // Every role reaches these: 2FA is each operator's own to switch on, and an
+            // analyst who cannot enrol is an analyst whose account stays a password.
+            get("/me") {
+                call.respond(adminAuth.me(call.requireAdmin().adminId))
+            }
+
+            post("/me/totp/start") {
+                call.respond(adminAuth.startTotpEnrolment(call.requireAdmin().adminId))
+            }
+
+            post("/me/totp/confirm") {
+                val request = call.receive<TotpConfirmRequest>()
+                adminAuth.confirmTotp(call.requireAdmin().adminId, request, call.requestContext())
+                call.respond(Ack())
+            }
+
+            post("/me/totp/disable") {
+                val request = call.receive<TotpDisableRequest>()
+                adminAuth.disableTotp(call.requireAdmin().adminId, request, call.requestContext())
+                call.respond(Ack())
+            }
 
             // --- dashboard ------------------------------------------------------
             get("/stats") {

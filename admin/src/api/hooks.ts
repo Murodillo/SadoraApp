@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { query, request } from './client'
 import type {
   AdminArticle,
+  AdminMe,
   AdminFlag,
   AdminPayment,
   AdminStats,
@@ -24,6 +25,7 @@ import type {
   ProviderHealth,
   SaveArticleBody,
   SignUpPoint,
+  TotpEnrolment,
 } from './types'
 
 export interface UserFilters {
@@ -365,3 +367,35 @@ export const usePayments = (state?: string) =>
     queryKey: ['billing', 'payments', state ?? 'all'],
     queryFn: () => request<AdminPayment[]>(`/v1/admin/billing/payments${query({ state, limit: '100' })}`),
   })
+
+// ---------------------------------------------------------------- the operator's own account
+
+export const useAdminMe = () =>
+  useQuery({
+    queryKey: ['me'],
+    queryFn: () => request<AdminMe>('/v1/admin/me'),
+  })
+
+export const useStartTotpEnrolment = () =>
+  useMutation({
+    mutationFn: () => request<TotpEnrolment>('/v1/admin/me/totp/start', { method: 'POST' }),
+  })
+
+/** Both of these change whether the account is protected, so the card is refetched. */
+const useTotpMutation = <T,>(mutationFn: (input: T) => Promise<unknown>) => {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn,
+    onSuccess: () => client.invalidateQueries({ queryKey: ['me'] }),
+  })
+}
+
+export const useConfirmTotp = () =>
+  useTotpMutation((code: string) =>
+    request('/v1/admin/me/totp/confirm', { method: 'POST', body: { code } }),
+  )
+
+export const useDisableTotp = () =>
+  useTotpMutation((input: { password: string; code: string }) =>
+    request('/v1/admin/me/totp/disable', { method: 'POST', body: input }),
+  )

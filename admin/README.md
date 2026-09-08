@@ -67,6 +67,13 @@ o'zida, va bo'sh ikkinchi nusxasi faqat chalg'itardi.
 
 ## Qarorlar
 
+**2FA — har bir operatorning o'zida, va QR yo'q.** "Hisobim va 2FA" sahifasi kalit
+yaratadi, uni ko'rsatadi va faqat autentifikator to'g'ri kod bergandan keyin yoqadi:
+skanerlanmagan kalit bilan yoqish — panelga o'zini qamab qo'yish. O'chirish parolni ham
+so'raydi, chunki o'g'irlangan seans — 2FA to'sib turgan narsaning o'zi. QR chizilmaydi:
+bu yo bog'liqlik, yo bir marta ro'yxatdan o'tadigan besh-o'nta odam uchun uch yuz qator
+kodlagich; kalit ham, `otpauth://` havolasi ham nusxa olish uchun ekranda turadi.
+
 **Token `sessionStorage` da, `localStorage` da emas.** Operator tokeni mahsulotdagi
 har bir obunani ochadi; taxta yopilganda u ham o'chishi kerak.
 
