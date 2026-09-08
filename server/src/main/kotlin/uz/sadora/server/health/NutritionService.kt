@@ -48,9 +48,10 @@ class NutritionService(
      */
     suspend fun scan(userId: Uuid, request: FoodScanRequest): FoodScanResult {
         val user = access.requireWritable(userId, FeatureKeys.FOOD_SCAN)
-        val model = vision ?: throw uz.sadora.server.core.UpstreamUnavailableException(
-            "Skaner hozircha ishlamayapti. Taomni qo'lda qo'shishingiz mumkin.",
-        )
+
+        // The request is checked before the model is looked for: a malformed request is
+        // malformed whether or not there is something to send it to, and answering 503
+        // to an empty image tells the app to retry something that cannot work.
         val image = request.imageBase64.trim()
         if (image.isEmpty()) throw ValidationException("imageBase64", "Rasm bo'sh")
         // Base64 is about a third larger than the bytes it carries, so the cap is on what
@@ -61,6 +62,10 @@ class NutritionService(
         if (request.mimeType !in ALLOWED_MIME) {
             throw ValidationException("mimeType", "Faqat JPEG yoki PNG")
         }
+
+        val model = vision ?: throw uz.sadora.server.core.UpstreamUnavailableException(
+            "Skaner hozircha ishlamayapti. Taomni qo'lda qo'shishingiz mumkin.",
+        )
 
         val started = kotlin.time.TimeSource.Monotonic.markNow()
         return try {
