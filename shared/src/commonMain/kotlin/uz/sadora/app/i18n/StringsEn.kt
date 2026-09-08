@@ -317,8 +317,8 @@ object StringsEn : Strings {
         override val aboutTitle = "About SADORA"
         override fun version(number: String) = "Version $number"
         override val languageTitle = "Language"
-        override val languageNote = "The app changes language straight away. AI answers are " +
-            "in Uzbek for now."
+        override val languageNote = "The app changes language straight away. AI answers, " +
+            "insights and the food scanner reply in it too."
         override val languageSaveFailed = "The language was not saved — try again later."
         override val personalTitle = "Personal details"
         override val name = "Name"

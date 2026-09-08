@@ -317,8 +317,8 @@ object StringsUz : Strings {
         override val aboutTitle = "SADORA haqida"
         override fun version(number: String) = "Versiya $number"
         override val languageTitle = "Til"
-        override val languageNote = "Ilova tili darhol o'zgaradi. AI javoblari hozircha " +
-            "faqat o'zbekcha."
+        override val languageNote = "Ilova tili darhol o'zgaradi. AI javoblari, tahlillar " +
+            "va ovqat skaneri ham shu tilda javob beradi."
         override val languageSaveFailed = "Til saqlanmadi — keyinroq qayta urinib ko'ring."
         override val personalTitle = "Shaxsiy ma'lumotlar"
         override val name = "Ism"

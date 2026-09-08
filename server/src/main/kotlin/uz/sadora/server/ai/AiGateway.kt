@@ -4,6 +4,7 @@ import kotlin.time.TimeSource
 import kotlin.uuid.Uuid
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.withTimeout
+import uz.sadora.contract.Language
 import uz.sadora.server.config.AiConfig
 
 /** Who produced the answer that reached her. */
@@ -42,10 +43,11 @@ class AiGateway(
         question: String,
         context: AiContext?,
         modelAllowed: Boolean,
+        language: Language,
     ): GatewayAnswer {
         val model = model
         if (model == null || !modelAllowed || config.apiKey == null) {
-            val text = rules.answer(question, context)
+            val text = rules.answer(question, context, language)
             usage.record(
                 AiUsageEntry(
                     userId = userId,
@@ -60,7 +62,7 @@ class AiGateway(
 
         val started = TimeSource.Monotonic.markNow()
         return try {
-            val answer = withTimeout(config.timeout) { model.answer(question, context) }
+            val answer = withTimeout(config.timeout) { model.answer(question, context, language) }
             usage.record(
                 AiUsageEntry(
                     userId = userId,
@@ -91,7 +93,7 @@ class AiGateway(
                 ),
             )
             // She still gets an answer; the operator still sees the failure.
-            GatewayAnswer(rules.answer(question, context), AiSource.FALLBACK, null)
+            GatewayAnswer(rules.answer(question, context, language), AiSource.FALLBACK, null)
         }
     }
 }

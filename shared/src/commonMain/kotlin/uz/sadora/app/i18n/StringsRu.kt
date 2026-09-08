@@ -320,8 +320,8 @@ object StringsRu : Strings {
         override val aboutTitle = "О SADORA"
         override fun version(number: String) = "Версия $number"
         override val languageTitle = "Язык"
-        override val languageNote = "Язык приложения меняется сразу. Ответы AI пока только " +
-            "на узбекском."
+        override val languageNote = "Язык приложения меняется сразу. Ответы AI, аналитика " +
+            "и сканер еды тоже отвечают на этом языке."
         override val languageSaveFailed = "Язык не сохранён — попробуйте позже."
         override val personalTitle = "Личные данные"
         override val name = "Имя"

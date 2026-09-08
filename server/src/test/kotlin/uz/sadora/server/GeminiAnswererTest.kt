@@ -21,10 +21,11 @@ import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
+import uz.sadora.contract.Language
 import uz.sadora.server.ai.AiContext
 import uz.sadora.server.ai.GeminiAnswerer
 import uz.sadora.server.ai.ModelUnavailableException
-import uz.sadora.server.ai.RuleBasedAnswerer
+import uz.sadora.server.ai.AiPhrasesUz
 import uz.sadora.server.config.AiConfig
 
 /**
@@ -86,10 +87,10 @@ class GeminiAnswererTest {
             )
         }
 
-        val answer = answerer.answer("Nega charchayapman?", AiContext(cycleDay = 5, sleepMinutes = 360))
+        val answer = answerer.answer("Nega charchayapman?", AiContext(cycleDay = 5, sleepMinutes = 360), Language.UZ)
 
         assertTrue(answer.text.startsWith("Ko'proq uxlashga harakat qiling."))
-        assertTrue(RuleBasedAnswerer.DISCLAIMER in answer.text)
+        assertTrue(AiPhrasesUz.disclaimer in answer.text)
         assertEquals("gemini-3.6-flash", answer.model)
         assertEquals(120, answer.promptTokens)
         assertEquals(40, answer.completionTokens)
@@ -98,12 +99,12 @@ class GeminiAnswererTest {
     @Test
     fun `a disclaimer the model already wrote is not repeated`() = runTest {
         val answerer = answerer {
-            json("""{"candidates":[{"content":{"parts":[{"text":"Javob.\n\n${RuleBasedAnswerer.DISCLAIMER}"}]}}]}""")
+            json("""{"candidates":[{"content":{"parts":[{"text":"Javob.\n\n${AiPhrasesUz.disclaimer}"}]}}]}""")
         }
 
-        val answer = answerer.answer("Savol", null)
+        val answer = answerer.answer("Savol", null, Language.UZ)
 
-        assertEquals(1, answer.text.split(RuleBasedAnswerer.DISCLAIMER).size - 1)
+        assertEquals(1, answer.text.split(AiPhrasesUz.disclaimer).size - 1)
     }
 
     @Test
@@ -119,7 +120,7 @@ class GeminiAnswererTest {
             )
         }
 
-        val answer = answerer.answer("Nega charchayapman?", null)
+        val answer = answerer.answer("Nega charchayapman?", null, Language.UZ)
 
         assertFalse("demak uyqu haqida yozaman" in answer.text)
         assertTrue(answer.text.startsWith("Uyqungiz olti soat"))
@@ -131,7 +132,7 @@ class GeminiAnswererTest {
             json("""{"candidates":[{"finishReason":"SAFETY"}]}""")
         }
 
-        val failure = assertFailsWith<ModelUnavailableException> { answerer.answer("Savol", null) }
+        val failure = assertFailsWith<ModelUnavailableException> { answerer.answer("Savol", null, Language.UZ) }
 
         assertEquals("safety", failure.code)
     }
@@ -140,7 +141,7 @@ class GeminiAnswererTest {
     fun `an http failure is reported by its status, so the log names the quota`() = runTest {
         val answerer = answerer { respondError(HttpStatusCode.TooManyRequests, "quota exceeded") }
 
-        val failure = assertFailsWith<ModelUnavailableException> { answerer.answer("Savol", null) }
+        val failure = assertFailsWith<ModelUnavailableException> { answerer.answer("Savol", null, Language.UZ) }
 
         assertEquals("http_429", failure.code)
     }
@@ -149,7 +150,7 @@ class GeminiAnswererTest {
     fun `no key is a failure before the request, not a request without one`() = runTest {
         val answerer = answerer(config.copy(apiKey = null)) { json("""{"candidates":[]}""") }
 
-        val failure = assertFailsWith<ModelUnavailableException> { answerer.answer("Savol", null) }
+        val failure = assertFailsWith<ModelUnavailableException> { answerer.answer("Savol", null, Language.UZ) }
 
         assertEquals("no_key", failure.code)
         assertEquals(null, lastRequest)
@@ -161,7 +162,7 @@ class GeminiAnswererTest {
             json("""{"candidates":[{"content":{"parts":[{"text":"Javob."}]}}]}""")
         }
 
-        answerer.answer("Nega charchayapman?", AiContext(cycleDay = 5, sleepMinutes = 380, waterMl = 1200))
+        answerer.answer("Nega charchayapman?", AiContext(cycleDay = 5, sleepMinutes = 380, waterMl = 1200), Language.UZ)
 
         val body = sentBody()
         assertTrue("Sikl 5-kun" in body)
@@ -176,7 +177,7 @@ class GeminiAnswererTest {
             json("""{"candidates":[{"content":{"parts":[{"text":"Javob."}]}}]}""")
         }
 
-        answerer.answer("Savol", AiContext())
+        answerer.answer("Savol", AiContext(), Language.UZ)
 
         assertTrue("ma'lumotlari yo'q" in sentBody())
     }

@@ -225,6 +225,14 @@ holat ham xato emas, javobdir; farqni faqat log biladi, va o'rni ham aynan shu.
 `thinkingLevel: minimal` bilan yuboriladi: o'ylash tokenlari `maxOutputTokens` ichidan
 yeyiladi va bitta javobni 3 soniyadan 16 soniyaga cho'zgan edi.
 
+**Javob foydalanuvchi tilida keladi.** `AiPhrases` — ilovadagi `Strings` bilan bir xil
+shakl: interfeys va uchta implementatsiya, ya'ni yangi jumla qo'shilsa, unga javob
+bermagan til kompilyatsiya xatosi bo'ladi. Model uchun bu prompt tili; qoidalar dvigateli
+uchun esa undan ham muhimi — u mavzuni savolning ichidagi so'zlardan topadi, va o'sha
+so'zlar tilga bog'liq. Ilgari ruscha "почему я устала" birorta o'zbekcha o'zakka
+tushmagani uchun umumiy javobga tushib ketardi. "Nimaga tayandim" qatori ham o'sha
+tilda yoziladi.
+
 **Suhbat saqlanmaydi, xarajat esa saqlanadi.** `ai_usage_log` — model, tokenlar, narx
 (USD mikro), kechikish, natija. Savol ham, javob ham yo'q, va jadvalda ularni qo'yadigan
 ustun ham yo'q: "xarajat logi" — bu va'da sezdirmay buziladigan eng ehtimolli joy.

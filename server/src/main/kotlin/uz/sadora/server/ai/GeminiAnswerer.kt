@@ -11,6 +11,7 @@ import io.ktor.http.contentType
 import io.ktor.http.isSuccess
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import uz.sadora.contract.Language
 import uz.sadora.server.config.AiConfig
 
 /** What a model produced, and what it cost to produce. */
@@ -29,7 +30,7 @@ class ModelUnavailableException(val code: String, message: String) : Exception(m
  */
 interface AiModel {
     val name: String
-    suspend fun answer(question: String, context: AiContext?): ModelAnswer
+    suspend fun answer(question: String, context: AiContext?, language: Language): ModelAnswer
 }
 
 /**
@@ -48,8 +49,9 @@ class GeminiAnswerer(
 
     override val name: String get() = config.model
 
-    override suspend fun answer(question: String, context: AiContext?): ModelAnswer {
+    override suspend fun answer(question: String, context: AiContext?, language: Language): ModelAnswer {
         val apiKey = config.apiKey ?: throw ModelUnavailableException("no_key", "No API key configured")
+        val phrases = AiPhrases.of(language)
 
         val response = runCatchingRequest {
             client.post("${config.endpoint}/v1beta/models/${config.model}:generateContent") {
@@ -57,8 +59,19 @@ class GeminiAnswerer(
                 contentType(ContentType.Application.Json)
                 setBody(
                     GeminiRequest(
-                        systemInstruction = GeminiContent(parts = listOf(GeminiPart(instruction()))),
-                        contents = listOf(GeminiContent(parts = listOf(GeminiPart(userTurn(question, context))))),
+                        systemInstruction = GeminiContent(parts = listOf(GeminiPart(phrases.instruction()))),
+                        contents = listOf(
+                            GeminiContent(
+                                parts = listOf(
+                                    GeminiPart(
+                                        phrases.userTurn(
+                                            question,
+                                            context?.takeUnless { it.isEmpty }?.summary(phrases),
+                                        ),
+                                    ),
+                                ),
+                            ),
+                        ),
                         generationConfig = GeminiGenerationConfig(
                             temperature = 0.4,
                             maxOutputTokens = config.maxOutputTokens,
@@ -103,7 +116,7 @@ class GeminiAnswerer(
         }
 
         return ModelAnswer(
-            text = withDisclaimer(text),
+            text = withDisclaimer(text, phrases),
             model = config.model,
             promptTokens = parsed.usageMetadata?.promptTokenCount,
             completionTokens = parsed.usageMetadata?.candidatesTokenCount,
@@ -114,34 +127,11 @@ class GeminiAnswerer(
      * The disclaimer is appended here rather than asked for in the prompt.
      *
      * A model can forget an instruction; the boundary line is a product promise and must
-     * be on every answer, so it is added by code that cannot forget.
+     * be on every answer, so it is added by code that cannot forget — and in the language
+     * the answer itself is written in.
      */
-    private fun withDisclaimer(text: String): String =
-        if (RuleBasedAnswerer.DISCLAIMER in text) text else "$text\n\n${RuleBasedAnswerer.DISCLAIMER}"
-
-    private fun instruction(): String = """
-        Sen SADORA ilovasidagi yordamchisan. Foydalanuvchi — o'zbek tilida yozadigan ayol.
-
-        Qoidalar:
-        - Faqat o'zbek tilida, sodda va iliq ohangda javob ber.
-        - Tashxis qo'yma, dori yozma, dozani aytma. Retseptli dori haqidagi savolga —
-          shifokorga murojaat qilishni ayt.
-        - Faqat berilgan raqamlarga tayan. Berilmagan raqamni o'ylab topma va
-          "sening ma'lumotingga ko'ra" deb boshqa hech narsani da'vo qilma.
-        - Sabab-oqishni qat'iy aytma: "bo'lishi mumkin", "ko'pincha bog'liq" kabi ayt.
-        - Qisqa yoz: eng ko'pi to'rt-besh jumla yoki qisqa ro'yxat.
-        - Xavfli belgilar (kuchli og'riq, ko'p qon ketishi, hushdan ketish) haqida
-          eshitsang — kechiktirmay shifokorga murojaat qilishni ayt.
-    """.trimIndent()
-
-    private fun userTurn(question: String, context: AiContext?): String {
-        val summary = context?.takeUnless { it.isEmpty }?.summary()
-        return if (summary != null) {
-            "Bugungi ma'lumotlari: $summary\n\nSavol: $question"
-        } else {
-            "Uning ma'lumotlari yo'q — umumiy javob ber va buni ayt.\n\nSavol: $question"
-        }
-    }
+    private fun withDisclaimer(text: String, phrases: AiPhrases): String =
+        if (phrases.disclaimer in text) text else "$text\n\n${phrases.disclaimer}"
 }
 
 /**
