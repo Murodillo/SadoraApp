@@ -1,7 +1,8 @@
 # SADORA backend
 
 Ktor (Netty) + PostgreSQL + Exposed + Flyway. Autentifikatsiya, profil va onboarding,
-sikl/Mind/ovqatlanish/dorilar, bildirishnomalar, wearable'lar, maxfiy chat, AI chat,
+sikl/Mind/ovqatlanish/dorilar, ovqat skaneri, bildirishnomalar, wearable'lar,
+maxfiy chat, AI chat,
 entitlements/limitlar, feature flags va admin panel API'si.
 
 ## Modullar
@@ -149,6 +150,13 @@ u bir soat oldin kiritilgan simptomni o'chirib yubormaydi.
 ovqatlardan yig'iladi — aks holda o'chirilgan ovqat kunlik raqamni buzib qoldirardi.
 Makrolar yeyilgan holicha saqlanadi: katalog tuzatilsa, o'tgan oyda nima yeganini
 jimgina o'zgartirmasligi kerak.
+
+**Rasmni model o'qiydi, lekin yozuv qilmaydi.** `POST /v1/nutrition/scan` bitta suratni
+oladi va bitta baho qaytaradi — hech narsa saqlanmaydi. Kundalikka yozish alohida
+so'rov (`POST /v1/nutrition/meals`), chunki porsiyani foydalanuvchi to'g'rilaydi va u
+rozi bo'lmaguncha taxmin kundalikka tushmasligi kerak. Model qaytargan raqamlar
+ishonilmasdan chegaralanadi: 90 000 kkal — bu katta baho emas, bu xato. `isFood: false`
+to'liq javob sifatida qaytadi.
 
 **Dori qabullari oldindan yozilmaydi.** Ular jadvaldan o'qish paytida hisoblanadi;
 saqlanadigan yagona narsa — foydalanuvchi qilgan ish. Bir yillik qatorlarni oldindan

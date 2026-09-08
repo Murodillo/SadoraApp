@@ -256,7 +256,13 @@ Nutrition, Meds, wearable, maxfiy chat, tahlillar (`GET /v1/insights`), Premium 
 yoki `ai_model_enabled` o'chirilgan bo'lsa qoidalar javob beradi.
 
 Sog'liq yozuvlari serverda saqlanadi: sikl, ovqat, suv, kayfiyat, kundalik, dorilar va
-tadbirlar (ko'rik, UTT, tahlil) qurilma almashsa ham qoladi. Sessiya qurilmada saqlanadi, shuning uchun ilova qayta ishga
+tadbirlar (ko'rik, UTT, tahlil) qurilma almashsa ham qoladi.
+
+Ovqat skaneri ham serverda: telefon suratni 1024 px JPEG qilib yuboradi, Gemini uni
+o'qiydi va bitta JSON qaytaradi. Raqamlar ishonilmasdan chegaralanadi, `isFood: false`
+— to'liq javob (kamera stolga qaratilsa, shuni aytadi). Gate boshqa pulli AI
+chaqiruvlari bilan bir xil: rozilik, Premium, keyin operator qo'ygan kunlik limit;
+har bir chaqiruv AI xarajat jadvaliga yoziladi. Sessiya qurilmada saqlanadi, shuning uchun ilova qayta ishga
 tushganda foydalanuvchi kirgan holida qoladi.
 
 Ulanish `data/SadoraController` va `data/HealthController` orqali: ekranlar wire
@@ -272,14 +278,11 @@ Hali yo'q:
 - **Apple/Google kirish** — tugmalar bor va server `idToken`ni tekshiradi, lekin
   platforma SDK'si hali o'sha tokenni bermaydi
 - **Qurilma integratsiyasi** — Apple Health / Oura ma'lumotlari namuna
-- **RU va EN tarjimalari — qisman.** Kundalik ishlatiladigan sirt to'liq uch tilda:
-  beshta tab (Bugun, Yo'l, Ong, Ovqat, Profil), Uyqu, Tahlillar, Bilim, Dorilar,
-  Balans, Premium ekrani va domen atamalari (kayfiyat, sikl fazasi, salomlashuv).
-  Qolgani hali kodda o'zbekcha: ro'yxatdan o'tish savollari, huquqiy matnlar
-  (ular professional tarjimani talab qiladi), sozlama ichki ekranlari va bir nechta
-  ikkilamchi ekran
-- **AI javoblari faqat o'zbekcha** — prompt til so'ramaydi, shuning uchun rus yoki
-  ingliz tilini tanlagan foydalanuvchi ham o'zbekcha javob oladi
+- **Huquqiy matnlar faqat o'zbekcha** — `LegalScreen.kt` ichidagi Foydalanish shartlari
+  va Maxfiylik siyosati tarjima qilinmagan. Bular yuristning ishi: bir noto'g'ri
+  tarjima qilingan band majburiyatni o'zgartiradi. Boshqa hamma ekran uch tilda
+- **AI javoblari faqat o'zbekcha** — chat promptida til so'ralmaydi. Ovqat skaneri esa
+  so'raydi: taom nomi foydalanuvchi tanlagan tilda qaytadi
 
 ---
 
