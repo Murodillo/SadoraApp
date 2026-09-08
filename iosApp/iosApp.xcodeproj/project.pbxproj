@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXFileReference section */
-		B031C4DFCBCB55032EC8111D /* KotlinProject.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = KotlinProject.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		B031C4DFCBCB55032EC8111D /* Sadora.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Sadora.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -59,7 +59,7 @@
 		91723F44454CFBFA8A17D6D2 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				B031C4DFCBCB55032EC8111D /* KotlinProject.app */,
+				B031C4DFCBCB55032EC8111D /* Sadora.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -87,7 +87,7 @@
 			packageProductDependencies = (
 			);
 			productName = iosApp;
-			productReference = B031C4DFCBCB55032EC8111D /* KotlinProject.app */;
+			productReference = B031C4DFCBCB55032EC8111D /* Sadora.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */

@@ -148,7 +148,7 @@ iosApp/              SwiftUI ContentView — App() ni chaqiradi
 admin/               React + TS admin panel — admin/README.md
 contract/            Mobil va backend bo'lishadigan DTO'lar (KMP)
 server/              Ktor backend — server/README.md
-shared/src/commonMain/kotlin/org/example/project/
+shared/src/commonMain/kotlin/uz/sadora/app/
 ├── App.kt           Ildiz: AppState va Navigator shu yerda yashaydi
 ├── design/          Dizayn tokenlari (ranglar, tipografika, o'lchamlar, mavzu)
 ├── i18n/            Uch tildagi matnlar (UZ — asl, RU, EN)

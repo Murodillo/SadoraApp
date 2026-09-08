@@ -1,0 +1,64 @@
+package uz.sadora.app.data.api
+
+import io.ktor.client.request.setBody
+import kotlinx.datetime.LocalDate
+import uz.sadora.app.data.ApiCaller
+import uz.sadora.app.data.ApiResult
+import uz.sadora.app.data.HttpMethodKind
+import uz.sadora.contract.Ack
+import uz.sadora.contract.CycleCalendar
+import uz.sadora.contract.CycleHistory
+import uz.sadora.contract.CycleStatus
+import uz.sadora.contract.DailyLog
+import uz.sadora.contract.DailyLogRange
+import uz.sadora.contract.LifeStage
+import uz.sadora.contract.LogPeriodRequest
+import uz.sadora.contract.PeriodEntry
+import uz.sadora.contract.SaveDailyLogRequest
+import uz.sadora.contract.SymptomDefinition
+import uz.sadora.contract.UpdatePeriodRequest
+
+/** Cycle, the day sheet and the symptom catalogue. */
+class CycleApi(private val caller: ApiCaller) {
+
+    suspend fun status(): ApiResult<CycleStatus> =
+        caller.authenticated("v1/cycle/status", HttpMethodKind.GET)
+
+    suspend fun calendar(from: LocalDate, to: LocalDate): ApiResult<CycleCalendar> =
+        caller.authenticated("v1/cycle/calendar?from=$from&to=$to", HttpMethodKind.GET)
+
+    suspend fun history(): ApiResult<CycleHistory> =
+        caller.authenticated("v1/cycle/history", HttpMethodKind.GET)
+
+    suspend fun periods(): ApiResult<List<PeriodEntry>> =
+        caller.authenticated("v1/cycle/periods", HttpMethodKind.GET)
+
+    suspend fun logPeriod(request: LogPeriodRequest): ApiResult<PeriodEntry> =
+        caller.authenticated("v1/cycle/periods", HttpMethodKind.POST) { setBody(request) }
+
+    suspend fun updatePeriod(id: String, request: UpdatePeriodRequest): ApiResult<PeriodEntry> =
+        caller.authenticated("v1/cycle/periods/$id", HttpMethodKind.PATCH) { setBody(request) }
+
+    suspend fun deletePeriod(id: String): ApiResult<Ack> =
+        caller.authenticated("v1/cycle/periods/$id", HttpMethodKind.DELETE)
+
+    /**
+     * Every recorded day in a range, which is what a frequency view needs: the calendar
+     * carries only a count per day, and "which symptom, how often" cannot be answered
+     * from a count.
+     */
+    suspend fun days(from: LocalDate, to: LocalDate): ApiResult<DailyLogRange> =
+        caller.authenticated("v1/days?from=$from&to=$to", HttpMethodKind.GET)
+
+    suspend fun day(date: LocalDate): ApiResult<DailyLog> =
+        caller.authenticated("v1/days/$date", HttpMethodKind.GET)
+
+    suspend fun saveDay(date: LocalDate, request: SaveDailyLogRequest): ApiResult<DailyLog> =
+        caller.authenticated("v1/days/$date", HttpMethodKind.PUT) { setBody(request) }
+
+    /** Scoped to the stage when given: a hot flush is not offered to a cycle tracker. */
+    suspend fun symptoms(lifeStage: LifeStage? = null): ApiResult<List<SymptomDefinition>> {
+        val query = lifeStage?.let { "?lifeStage=${it.name}" }.orEmpty()
+        return caller.authenticated("v1/symptoms$query", HttpMethodKind.GET)
+    }
+}

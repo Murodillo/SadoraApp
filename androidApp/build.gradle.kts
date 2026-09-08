@@ -29,11 +29,11 @@ dependencies {
 val devHost: String = (project.findProperty("sadora.devHost") as String?).orEmpty()
 
 android {
-    namespace = "org.example.project"
+    namespace = "uz.sadora.app"
     compileSdk = libs.versions.android.compileSdk.get().toInt()
 
     defaultConfig {
-        applicationId = "org.example.project"
+        applicationId = "uz.sadora.app"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
         versionCode = 1

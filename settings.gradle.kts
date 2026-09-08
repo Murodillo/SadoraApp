@@ -1,4 +1,4 @@
-rootProject.name = "KotlinProject"
+rootProject.name = "Sadora"
 
 pluginManagement {
     repositories {

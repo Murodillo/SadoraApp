@@ -1,0 +1,496 @@
+package uz.sadora.app.ui.core
+
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.TextUnit
+import androidx.compose.ui.unit.dp
+import uz.sadora.app.design.IconSize
+import uz.sadora.app.design.MinTouchTarget
+import uz.sadora.app.design.Radius
+import uz.sadora.app.design.Sadora
+import uz.sadora.app.design.SadoraIcons
+import uz.sadora.app.design.Spacing
+import uz.sadora.app.data.CommunityController
+import uz.sadora.app.model.AppState
+import uz.sadora.app.model.CommunityComment
+import uz.sadora.app.model.CommunityFilter
+import uz.sadora.app.model.CommunityPost
+import uz.sadora.app.model.CommunityTopic
+import uz.sadora.app.ui.components.RoundIconButton
+import uz.sadora.app.ui.components.SadoraBottomSheet
+import uz.sadora.app.ui.components.SadoraButton
+import uz.sadora.app.ui.components.SadoraCard
+import uz.sadora.app.ui.components.SadoraTextField
+import uz.sadora.app.ui.components.SadoraTopBar
+import uz.sadora.app.ui.components.SelectChip
+import uz.sadora.app.ui.components.appearFromBelow
+import uz.sadora.app.ui.components.noRippleClickable
+import uz.sadora.app.ui.components.rememberShareAction
+import kotlin.time.Clock
+import uz.sadora.app.i18n.strings
+import uz.sadora.app.data.readable
+import uz.sadora.app.ui.components.acceptText
+import uz.sadora.contract.Limits
+
+/** The tints an alias avatar can take, so the feed is not five identical circles. */
+@Composable
+private fun avatarTints(): List<Color> {
+    val c = Sadora.colors
+    val t = strings.community
+    return listOf(c.primary, c.secondary, c.accent, c.success)
+}
+
+/**
+ * The secret chat: an anonymous feed, one room per topic.
+ *
+ * Every post is written under an alias and nothing here reaches back to an account —
+ * that is the whole reason the space exists, and it is why the screen never shows a
+ * real name, not even the reader's own.
+ */
+@Composable
+fun SecretChatScreen(
+    state: AppState,
+    community: CommunityController,
+    /**
+     * Raises the comments sheet.
+     *
+     * The sheet is owned by the shell rather than by this screen so that it covers the
+     * tab bar; a sheet opened from inside the content area is drawn underneath it. The
+     * composer and the post menu are raised the same way for the same reason.
+     */
+    onOpenComments: (CommunityPost) -> Unit,
+    onOpenMenu: (CommunityPost) -> Unit,
+    onCompose: () -> Unit,
+    onClose: (() -> Unit)? = null,
+    modifier: Modifier = Modifier,
+) {
+    val c = Sadora.colors
+    val t = strings.community
+    val share = rememberShareAction()
+    val posts = state.visiblePosts()
+
+    // The server's feed replaces the samples on open; the samples are what a build
+    // with no backend keeps showing.
+    LaunchedEffect(community) { community.load() }
+
+    Box(modifier.fillMaxSize()) {
+        Column(Modifier.fillMaxSize()) {
+            SadoraTopBar(
+                title = t.title,
+                onBack = onClose,
+                trailing = {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.xxs),
+                    ) {
+                        SavedToggle(
+                            active = state.communityFilter == CommunityFilter.Saved,
+                            count = state.savedPosts.size,
+                            onClick = {
+                                state.communityFilter =
+                                    if (state.communityFilter == CommunityFilter.Saved) {
+                                        CommunityFilter.Feed
+                                    } else {
+                                        CommunityFilter.Saved
+                                    }
+                            },
+                        )
+                        RoundIconButton(SadoraIcons.Pencil, onClick = onCompose, contentDescription = t.compose)
+                    }
+                },
+            )
+
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState())
+                    .padding(horizontal = Spacing.screen, vertical = Spacing.xs),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+            ) {
+                CommunityTopic.entries.forEach { topic ->
+                    SelectChip(
+                        label = t.topic(topic),
+                        selected = state.communityTopic == topic,
+                        onClick = { state.communityTopic = topic },
+                    )
+                }
+            }
+
+            if (community.error != null) {
+                Text(
+                    community.error?.readable().orEmpty(),
+                    style = Sadora.type.body,
+                    color = c.danger,
+                    modifier = Modifier.padding(horizontal = Spacing.screen, vertical = Spacing.xs),
+                )
+            }
+
+            if (posts.isEmpty()) {
+                EmptyFeed(saved = state.communityFilter == CommunityFilter.Saved, onCompose = onCompose)
+            } else {
+                LazyColumn(
+                    Modifier.fillMaxSize(),
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                        start = Spacing.screen,
+                        end = Spacing.screen,
+                        top = Spacing.xs,
+                        // Room for the raised centre button on the tab bar.
+                        bottom = 96.dp,
+                    ),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+                ) {
+                    itemsIndexed(posts, key = { _, post -> post.id }) { index, post ->
+                        Box(Modifier.appearFromBelow(index.coerceAtMost(6))) {
+                            PostCard(
+                                post = post,
+                                liked = post.id in state.likedPosts,
+                                saved = post.id in state.savedPosts,
+                                likes = state.likeCount(post),
+                                comments = state.commentCountOf(post),
+                                onLike = { state.toggleLike(post.id) },
+                                onSave = { state.toggleSaved(post.id) },
+                                onComment = { onOpenComments(post) },
+                                onShare = { share("${post.body}\n\n" + t.shareSuffix) },
+                                onMore = { onOpenMenu(post) },
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+    }
+}
+
+/**
+ * The comments for one post, raised by the shell.
+ *
+ * Kept here rather than in the shell's own file because everything it draws — the
+ * aliases, the tints, the input — belongs to this screen.
+ */
+@Composable
+fun CommentsSheetContent(state: AppState, post: CommunityPost) {
+    CommentsSheet(
+        comments = state.commentsOf(post),
+        onSend = { state.addComment(post.id, it) },
+    )
+}
+
+@Composable
+private fun SavedToggle(active: Boolean, count: Int, onClick: () -> Unit) {
+    val c = Sadora.colors
+    val t = strings.community
+    val tint by animateColorAsState(if (active) c.primary else c.muted, tween(220), label = "saved")
+    Row(
+        Modifier
+            .clip(Radius.chip)
+            .background(if (active) c.primary.copy(alpha = 0.12f) else Color.Transparent)
+            .defaultMinSize(minHeight = MinTouchTarget)
+            .noRippleClickable(onClick = onClick)
+            .padding(horizontal = Spacing.sm),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Icon(SadoraIcons.Bookmark, contentDescription = strings.community.saved, Modifier.size(IconSize.md), tint = tint)
+        if (count > 0) Text("$count", style = Sadora.type.body, color = tint)
+    }
+}
+
+@Composable
+private fun EmptyFeed(saved: Boolean, onCompose: () -> Unit) {
+    val c = Sadora.colors
+    val t = strings.community
+    Column(
+        Modifier.fillMaxSize().padding(Spacing.xl),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Box(
+            Modifier.size(64.dp).clip(Radius.chip).background(c.surface2),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                if (saved) SadoraIcons.Bookmark else SadoraIcons.Lock,
+                contentDescription = null,
+                Modifier.size(28.dp),
+                tint = c.secondary,
+            )
+        }
+        Spacer(Modifier.height(Spacing.md))
+        Text(
+            if (saved) t.nothingSaved else t.nothingHere,
+            style = Sadora.type.h3,
+            color = c.text,
+            textAlign = TextAlign.Center,
+        )
+        Spacer(Modifier.height(Spacing.xxs))
+        Text(
+            if (saved) {
+                t.nothingSavedBody
+            } else {
+                t.nothingHereBody
+            },
+            style = Sadora.type.body,
+            color = c.muted,
+            textAlign = TextAlign.Center,
+        )
+        if (!saved) {
+            Spacer(Modifier.height(Spacing.md))
+            SadoraButton(t.write, onClick = onCompose, fillWidth = false)
+        }
+    }
+}
+
+// ---------------------------------------------------------------- post
+
+@Composable
+private fun PostCard(
+    post: CommunityPost,
+    liked: Boolean,
+    saved: Boolean,
+    likes: Int,
+    comments: Int,
+    onLike: () -> Unit,
+    onSave: () -> Unit,
+    onComment: () -> Unit,
+    onShare: () -> Unit,
+    onMore: () -> Unit,
+) {
+    val c = Sadora.colors
+    val t = strings.community
+    SadoraCard {
+        Row(
+            Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+        ) {
+            AliasAvatar(post.alias, post.tint)
+            Column(Modifier.weight(1f)) {
+                Text(
+                    if (post.isMine) "${post.alias} · ${t.you}" else post.alias,
+                    style = Sadora.type.h3,
+                    color = c.text,
+                )
+                Text(
+                    "${t.topic(post.topic)} · " + strings.dates.ago(post.createdAt, Clock.System.now()),
+                    style = Sadora.type.body,
+                    color = c.muted2,
+                )
+            }
+            Icon(
+                SadoraIcons.More,
+                contentDescription = t.more,
+                Modifier
+                    .size(MinTouchTarget)
+                    .clip(Radius.chip)
+                    .noRippleClickable(onClick = onMore)
+                    .padding(12.dp),
+                tint = c.muted2,
+            )
+        }
+        Text(post.body, style = Sadora.type.body, color = c.text)
+        Row(
+            Modifier.fillMaxWidth().padding(top = Spacing.xxs),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.md),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            PostAction(
+                icon = SadoraIcons.Heart,
+                label = likes.toString(),
+                active = liked,
+                activeTint = c.primary,
+                onClick = onLike,
+            )
+            PostAction(
+                icon = SadoraIcons.Message,
+                label = comments.toString(),
+                onClick = onComment,
+            )
+            PostAction(icon = SadoraIcons.Share, onClick = onShare)
+            Spacer(Modifier.weight(1f))
+            PostAction(
+                icon = SadoraIcons.Bookmark,
+                active = saved,
+                activeTint = c.secondary,
+                onClick = onSave,
+            )
+        }
+    }
+}
+
+@Composable
+private fun AliasAvatar(alias: String, tint: Int, size: androidx.compose.ui.unit.Dp = 36.dp) {
+    val c = Sadora.colors
+    val t = strings.community
+    val colour = avatarTints()[tint % avatarTints().size]
+    Box(
+        Modifier.size(size).clip(Radius.chip).background(colour.copy(alpha = 0.18f)),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            alias.take(1).uppercase(),
+            style = Sadora.type.h3,
+            color = colour,
+        )
+    }
+}
+
+/**
+ * One action under a post.
+ *
+ * The icon springs when it turns on — small, and only on the transition, so a feed of
+ * five posts never looks like it is fidgeting.
+ */
+@Composable
+private fun PostAction(
+    icon: ImageVector,
+    onClick: () -> Unit,
+    label: String? = null,
+    active: Boolean = false,
+    activeTint: Color = Sadora.colors.primary,
+) {
+    val c = Sadora.colors
+    val t = strings.community
+    val tint by animateColorAsState(if (active) activeTint else c.muted, tween(220), label = "action")
+    val scale by animateFloatAsState(
+        targetValue = if (active) 1.12f else 1f,
+        animationSpec = spring(dampingRatio = 0.45f),
+        label = "action-scale",
+    )
+    Row(
+        Modifier
+            .clip(Radius.chip)
+            .defaultMinSize(minHeight = MinTouchTarget)
+            .noRippleClickable(onClick = onClick)
+            .padding(vertical = Spacing.xxs),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Icon(
+            icon,
+            contentDescription = null,
+            Modifier.size(IconSize.lg).graphicsLayer { scaleX = scale; scaleY = scale },
+            tint = tint,
+        )
+        if (label != null) {
+            Text(
+                label,
+                style = Sadora.type.body.copy(fontWeight = FontWeight.Medium),
+                color = tint,
+            )
+        }
+    }
+}
+
+// ---------------------------------------------------------------- comments
+
+@Composable
+private fun CommentsSheet(comments: List<CommunityComment>, onSend: (String) -> Unit) {
+    val c = Sadora.colors
+    val t = strings.community
+    var draft by remember { mutableStateOf("") }
+
+    Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+        if (comments.isEmpty()) {
+            Text(
+                t.noComments,
+                style = Sadora.type.body,
+                color = c.muted,
+            )
+        } else {
+            comments.forEach { comment ->
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+                ) {
+                    AliasAvatar(comment.alias, comment.tint, size = 30.dp)
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text(
+                            (if (comment.isMine) t.youParenthesised(comment.alias) else comment.alias) +
+                                " · " + strings.dates.ago(comment.createdAt, Clock.System.now()),
+                            style = Sadora.type.caption.copy(letterSpacing = TextUnit.Unspecified),
+                            color = c.muted2,
+                        )
+                        Text(comment.body, style = Sadora.type.body, color = c.text)
+                    }
+                }
+            }
+        }
+
+        Row(
+            Modifier.fillMaxWidth().padding(top = Spacing.xxs),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+        ) {
+            SadoraTextField(
+                value = draft,
+                onValueChange = { draft = acceptText(it, Limits.COMMENT_MAX) },
+                placeholder = t.commentHint,
+                modifier = Modifier.weight(1f),
+            )
+            AnimatedVisibility(
+                visible = draft.isNotBlank(),
+                enter = fadeIn(tween(180)),
+                exit = fadeOut(tween(140)),
+            ) {
+                Box(
+                    Modifier
+                        .size(MinTouchTarget)
+                        .clip(Radius.chip)
+                        .background(c.primary)
+                        .noRippleClickable {
+                            onSend(draft)
+                            draft = ""
+                        },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        SadoraIcons.ArrowUp,
+                        contentDescription = t.send,
+                        Modifier.size(IconSize.md),
+                        tint = c.onPrimary,
+                    )
+                }
+            }
+        }
+    }
+}
