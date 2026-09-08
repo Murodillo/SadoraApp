@@ -57,6 +57,7 @@ import uz.sadora.server.notify.LoggingPushSender
 import uz.sadora.server.notify.NotificationRepository
 import uz.sadora.server.notify.NotificationScheduler
 import uz.sadora.server.notify.NotificationService
+import uz.sadora.server.user.AccountErasureJob
 import uz.sadora.server.user.UserRepository
 import uz.sadora.server.wearable.WearableRepository
 import uz.sadora.server.wearable.WearableService
@@ -153,6 +154,12 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
         sender = LoggingPushSender(),
     )
 
+    val accountErasureJob = AccountErasureJob(
+        users = userRepository,
+        audit = auditService,
+        gracePeriod = config.accountErasureGracePeriod,
+    )
+
     val communityRepository = CommunityRepository()
     val communityService = CommunityService(
         repository = communityRepository,
@@ -232,6 +239,7 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
 
     override fun close() {
         notificationScheduler.stop()
+        accountErasureJob.stop()
         outboundHttpClient.close()
         cache.close()
         databaseFactory.close()

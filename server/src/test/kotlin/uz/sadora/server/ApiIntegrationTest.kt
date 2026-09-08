@@ -27,6 +27,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
@@ -38,7 +39,10 @@ import kotlinx.serialization.json.int
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.serializer
+import org.jetbrains.exposed.v1.core.and
+import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.insert
+import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Assumptions.assumeTrue
 import org.junit.jupiter.api.BeforeAll
@@ -75,6 +79,7 @@ import uz.sadora.contract.CycleStatus
 import uz.sadora.contract.FoodScanRequest
 import uz.sadora.contract.Limits
 import uz.sadora.contract.DailyLog
+import uz.sadora.contract.DeleteAccountRequest
 import uz.sadora.contract.DeviceInfo
 import uz.sadora.contract.Entitlements
 import uz.sadora.contract.ErrorCodes
@@ -89,6 +94,7 @@ import uz.sadora.contract.OnboardingRequest
 import uz.sadora.contract.OtpChallenge
 import uz.sadora.contract.OtpRequest
 import uz.sadora.contract.OtpVerifyRequest
+import uz.sadora.contract.RefreshRequest
 import uz.sadora.contract.Page
 import uz.sadora.contract.PaymentProvider
 import uz.sadora.contract.PaymentState
@@ -128,8 +134,10 @@ import uz.sadora.server.config.OtpConfig
 import uz.sadora.server.config.RedisConfig
 import uz.sadora.server.config.SocialConfig
 import uz.sadora.server.core.now
+import uz.sadora.server.user.AccountErasureJob
 import uz.sadora.server.core.toOffsetDateTime
 import uz.sadora.server.db.AdminUsers
+import uz.sadora.server.db.AuditLog
 import uz.sadora.server.db.dbQuery
 
 /**
@@ -209,6 +217,70 @@ class ApiIntegrationTest {
         // Without this the app has no anchor and can only show a week it made up.
         val profile = get<UserProfile>("/v1/me", her.token)
         assertEquals(due, profile.stage?.dueDate)
+    }
+
+    // ---------------------------------------------------------------- deletion
+
+    /**
+     * The half of "delete my account" that used to be missing: the row was marked and
+     * then stayed forever. Health data is exactly the kind a person deletes an account
+     * to be rid of, so this checks it is actually gone rather than hidden.
+     */
+    @Test
+    fun `the erasure job removes the account and everything the schema hangs off it`() = api {
+        val her = signUp()
+        onboard(her, storeHealth = true, mood = MoodLevel.LOW, symptoms = listOf("fatigue"))
+        val userId = Uuid.parse(her.userId)
+
+        assertEquals(1, countRowsFor(userId, "daily_logs"), "she logged a check-in")
+
+        val response = client.delete("/v1/me") {
+            auth(her.token)
+            json(DeleteAccountRequest(confirmation = "DELETE", reason = "no longer needed"))
+        }
+        assertEquals(HttpStatusCode.OK, response.status, response.bodyAsTextSafe())
+
+        // Every device is signed out the moment she asks: the refresh token is dead, so
+        // no session can renew itself past the access token it is already holding.
+        val renewed = client.post("/v1/auth/refresh") { json(RefreshRequest(her.refreshToken)) }
+        assertEquals(HttpStatusCode.Unauthorized, renewed.status, renewed.bodyAsTextSafe())
+        assertNotNull(component.userRepository.findById(userId), "still there during the grace period")
+
+        // At least hers: the suite shares one database, so a previous test's pending
+        // account may be due in the same tick.
+        assertTrue(component.accountErasureJob.runOnce() >= 1)
+
+        assertNull(component.userRepository.findById(userId), "the account is gone")
+        assertEquals(0, countRowsFor(userId, "daily_logs"), "and so is her health data")
+        assertEquals(0, countRowsFor(userId, "devices"))
+        assertEquals(0, countRowsFor(userId, "user_consents"))
+
+        // What is left is the record that it happened, with no one in it.
+        val erasures = dbQuery {
+            AuditLog.selectAll()
+                .where { (AuditLog.action eq "user.erased") and (AuditLog.entityId eq userId.toString()) }
+                .count()
+        }
+        assertEquals(1L, erasures, "an erased account still leaves a line saying so")
+    }
+
+    @Test
+    fun `an account still inside its grace period is left alone`() = api {
+        val her = signUp()
+        val userId = Uuid.parse(her.userId)
+        client.delete("/v1/me") {
+            auth(her.token)
+            json(DeleteAccountRequest(confirmation = "DELETE"))
+        }
+
+        // A day of grace is enough to make "asked just now" not yet due.
+        val job = AccountErasureJob(
+            users = component.userRepository,
+            audit = component.auditService,
+            gracePeriod = 1.days,
+        )
+        assertEquals(0, job.runOnce())
+        assertNotNull(component.userRepository.findById(userId))
     }
 
     // ---------------------------------------------------------------- appointments
@@ -871,7 +943,7 @@ class ApiIntegrationTest {
 
     // ---------------------------------------------------------------- helpers
 
-    private class TestUser(val token: String, val userId: String)
+    private class TestUser(val token: String, val userId: String, val refreshToken: String)
 
     private val wireJson = Json { ignoreUnknownKeys = true; explicitNulls = false; encodeDefaults = true }
 
@@ -890,6 +962,14 @@ class ApiIntegrationTest {
         Api(client).block()
     }
 
+    /** Rows a table holds for one account, by its user_id column. */
+    private suspend fun countRowsFor(userId: Uuid, table: String): Int = dbQuery {
+        exec("SELECT count(*) FROM $table WHERE user_id = '$userId'") { rows ->
+            rows.next()
+            rows.getInt(1)
+        } ?: 0
+    }
+
     private suspend fun Api.signUp(): TestUser {
         val phone = randomPhone()
         val challenge = client.post("/v1/auth/otp/request") { json(OtpRequest(phone)) }.body<OtpChallenge>()
@@ -898,7 +978,7 @@ class ApiIntegrationTest {
             json(OtpVerifyRequest(challenge.challengeId, code, DeviceInfo("test-device", Platform.ANDROID, timezone = "Asia/Tashkent")))
         }.body<AuthSession>()
         assertTrue(session.isNewUser)
-        return TestUser(session.tokens.accessToken, session.user.id)
+        return TestUser(session.tokens.accessToken, session.user.id, session.tokens.refreshToken)
     }
 
     private suspend fun Api.onboard(
@@ -1103,5 +1183,7 @@ class ApiIntegrationTest {
         ),
         policyVersion = "2026-08-01",
         minimumAppVersion = null,
+        // Zero, so the erasure test can tick the job instead of waiting thirty days.
+        accountErasureGracePeriod = Duration.ZERO,
     )
 }

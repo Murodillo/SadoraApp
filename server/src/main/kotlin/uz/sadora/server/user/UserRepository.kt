@@ -9,12 +9,14 @@ import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.greaterEq
 import org.jetbrains.exposed.v1.core.less
+import org.jetbrains.exposed.v1.core.lessEq
 import org.jetbrains.exposed.v1.core.like
 import org.jetbrains.exposed.v1.core.lowerCase
 import org.jetbrains.exposed.v1.core.or
 import org.jetbrains.exposed.v1.jdbc.andWhere
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insert
+import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.update
 import org.jetbrains.exposed.v1.jdbc.upsert
@@ -286,8 +288,9 @@ class UserRepository {
 
     /**
      * Deletion is a two-step process: this marks the account and stops it signing in.
-     * The erasure job that follows is a sprint-3 deliverable, so the row survives until
-     * then and support can still answer "when did she ask?".
+     * [AccountErasureJob] erases it once the grace period has passed, and until then the
+     * row survives so support can answer "when did she ask?" — and, if she asks for the
+     * account back, an operator can set the status to ACTIVE and it is simply hers again.
      */
     suspend fun requestDeletion(userId: Uuid): Unit = dbQuery {
         Users.update({ Users.id eq userId }) {
@@ -295,6 +298,34 @@ class UserRepository {
             it[deletionRequestedAt] = now().toOffsetDateTime()
             it[updatedAt] = now().toOffsetDateTime()
         }
+    }
+
+    /** Accounts whose grace period ran out: asked for deletion, and asked before [before]. */
+    suspend fun findDueForErasure(before: Instant, limit: Int): List<Uuid> = dbQuery {
+        Users.select(Users.id)
+            .where {
+                (Users.status eq AccountStatus.DELETION_PENDING.dbValue()) and
+                    (Users.deletionRequestedAt lessEq before.toOffsetDateTime())
+            }
+            .orderBy(Users.deletionRequestedAt to SortOrder.ASC)
+            .limit(limit)
+            .map { it[Users.id] }
+    }
+
+    /**
+     * Erases the account for real.
+     *
+     * One statement, because the schema already says what belongs to her: every table
+     * holding her data references `users(id)` with ON DELETE CASCADE, so the row going
+     * takes her cycles, meals, journal, medications, posts, devices and tokens with it.
+     * The two deliberate exceptions are ON DELETE SET NULL — the audit log and the AI
+     * cost log — which keep the operator's history and the bill while losing the person.
+     *
+     * Doing it in the database rather than table by table is also the only version that
+     * cannot go stale: a table added next sprint is covered by its own foreign key.
+     */
+    suspend fun erase(userId: Uuid): Boolean = dbQuery {
+        Users.deleteWhere { Users.id eq userId } > 0
     }
 
     // ---------------------------------------------------------------- consent

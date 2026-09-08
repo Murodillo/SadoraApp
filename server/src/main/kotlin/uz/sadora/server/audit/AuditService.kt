@@ -24,6 +24,7 @@ object AuditActions {
     const val USER_PROFILE_UPDATED = "user.profile_updated"
     const val USER_CONSENT_CHANGED = "user.consent_changed"
     const val USER_DELETION_REQUESTED = "user.deletion_requested"
+    const val USER_ERASED = "user.erased"
     const val USER_BLOCKED = "user.blocked"
     const val USER_UNBLOCKED = "user.unblocked"
     const val REFRESH_TOKEN_REUSED = "security.refresh_token_reused"

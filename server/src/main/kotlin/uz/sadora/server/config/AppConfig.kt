@@ -26,6 +26,14 @@ data class AppConfig(
     val billing: BillingConfig,
     val policyVersion: String,
     val minimumAppVersion: String?,
+    /**
+     * How long a deletion request waits before the account is erased for real.
+     *
+     * A window for a person who changes her mind, or asks support to — not a soft delete
+     * kept "just in case". Thirty days is the ordinary support window; shorten it and a
+     * misplaced tap is unrecoverable, lengthen it and the promise stops being true.
+     */
+    val accountErasureGracePeriod: Duration,
 ) {
     companion object {
         fun fromEnvironment(): AppConfig {
@@ -96,6 +104,7 @@ data class AppConfig(
                 ),
                 policyVersion = env("POLICY_VERSION", "2026-08-01"),
                 minimumAppVersion = envOrNull("MINIMUM_APP_VERSION"),
+                accountErasureGracePeriod = env("ACCOUNT_ERASURE_GRACE_DAYS", "30").toInt().days,
             )
             config.verifyProductionSafety()
             return config

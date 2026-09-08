@@ -59,6 +59,9 @@ fun main() {
     // Reminders only mean anything if something is running to send them.
     component.notificationScheduler.start()
 
+    // "Delete my account" is a promise about the future, so something has to keep it.
+    component.accountErasureJob.start()
+
     Runtime.getRuntime().addShutdownHook(Thread { component.close() })
 
     logger.info(

@@ -256,6 +256,18 @@ yo'qotishi demakdir.
 rad etadi (`UnconfiguredStoreVerifier`). Bu ataylab: hammaga "ha" deydigan zaglushka
 testda ishlaydi va productionda paywall'ni butunlay ochib yuboradi.
 
+**"Hisobni o'chirish" ikki qadam, va ikkinchisini kimdir bajaradi.** `DELETE /v1/me`
+hisobni belgilaydi va barcha qurilmalarni darhol chiqaradi — refresh token o'ladi, ya'ni
+hech bir seans o'zini yangilay olmaydi. `AccountErasureJob` esa
+`ACCOUNT_ERASURE_GRACE_DAYS` (standart 30) o'tgach qatorni haqiqatan o'chiradi. Bitta
+`DELETE FROM users`: sxemada unga tegishli har bir jadval `ON DELETE CASCADE` bilan
+`users(id)` ga bog'langan, shuning uchun sikl, ovqat, kundalik, dorilar, postlar,
+qurilmalar va tokenlar u bilan birga ketadi — va kelasi sprintda qo'shilgan jadval ham
+o'z tashqi kaliti bilan qamrab olinadi. Ataylab qolgan ikki istisno `ON DELETE SET NULL`:
+audit jurnali va AI xarajat jurnali — tarix javob beradi, odam esa ichida qolmaydi.
+Muhlat "har ehtimolga qarshi" saqlash emas: u tugagach ma'lumot yo'q va uni ilova ichida
+qaytarib bo'lmaydi.
+
 **Onboarding'dagi birinchi check-in health-gate ortida.** `firstCheckIn` profil bilan
 birga keladi, lekin `HealthService` orqali, `store_health` roziligi bo'lgandagina
 yoziladi — roziliksiz jimgina tashlab yuboriladi, so'rov muvaffaqiyatsiz bo'lmaydi.
@@ -278,7 +290,7 @@ CI'da u job'ning o'z Postgres'iga qarshi ishlaydi.
 
 ## Nima hali yo'q
 App Store / Google Play cheklarini haqiqiy tekshirish (`StoreVerifier` interfeysi va
-grant yo'li tayyor, kalitlar yo'q) va ilovadagi billing SDK · hisobni haqiqiy o'chirish job'i · SMS provayderi (`OtpSender` interfeysi
+grant yo'li tayyor, kalitlar yo'q) va ilovadagi billing SDK · SMS provayderi (`OtpSender` interfeysi
 tayyor, hozircha log'ga yozadi) · admin 2FA enrolment ekrani · Health Connect /
 HealthKit o'qish qatlami (server tomon `POST /v1/health-data/samples` tayyor, ilovada
 namuna yig'uvchi hali yo'q, shuning uchun uyqu va qadam ekranlari bo'sh holatini
