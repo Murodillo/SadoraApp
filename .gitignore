@@ -24,3 +24,8 @@ node_modules/
 server/.env
 server/.env.prod
 server/.env.stage
+
+# The upload key. Generated once, kept in a password manager, never committed.
+androidApp/keystore.properties
+androidApp/*.jks
+androidApp/*.keystore

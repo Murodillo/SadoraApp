@@ -6,8 +6,8 @@ uchun bitta umumiy UI.
 
 > **Har bir ayol. Har bir lahza.**
 
-Interfeys tili — o'zbekcha. Ilova ichida uch til nazarda tutilgan (UZ / RU / EN),
-hozircha faqat o'zbekchasi yozilgan.
+Interfeys uch tilda — o'zbek, rus va ingliz. O'zbekchasi asl, qolgan ikkitasi undan
+tarjima; til `Profil → Til` da tanlanadi va AI javoblari ham o'sha tilda keladi.
 
 ---
 
@@ -65,7 +65,9 @@ Android ilovasi:
 ./gradlew :androidApp:assembleDebug
 ```
 
-iOS uchun `iosApp/iosApp.xcodeproj` faylini Xcode'da oching va ishga tushiring.
+iOS uchun `iosApp/iosApp.xcodeproj` faylini Xcode'da oching va ishga tushiring. Imzolash
+uchun `iosApp/Configuration/Config.xcconfig` faylidagi `TEAM_ID` ni to'ldiring — u
+hisobga bog'liq, shuning uchun repozitoriyda bo'sh turadi.
 
 Haqiqiy telefonda sinash uchun APK'ni shu kompyuterning nomiga qaratib yig'ing —
 emulyatordagi `10.0.2.2` telefonda mavjud emas:
@@ -85,6 +87,29 @@ qo'shilmaydi):
 ```
 sdk.dir=/Users/<siz>/Library/Android/sdk
 ```
+
+### Reliz uchun yig'ish
+
+Do'kon identifikatori — `uz.sadora.app`, ikkala platformada ham bir xil va serverning
+`APPLE_BUNDLE_IDS` sozlamasi ham shuni kutadi. U bir marta chiqqandan keyin
+o'zgartirilmaydi.
+
+Imzo kaliti `androidApp/keystore.properties` dan o'qiladi (git'ga qo'shilmaydi;
+`storeFile`, `storePassword`, `keyAlias`, `keyPassword`). Fayl bo'lmasa release turi
+imzosiz yig'iladi — Play baribir imzosiz yuklamani qabul qilmaydi, lekin toza klonda
+build buzilmaydi.
+
+Versiya buyruq qatoridan beriladi, ya'ni reliz uchun commit shart emas; Play bir marta
+ko'rgan `versionCode` ni ikkinchi marta qabul qilmaydi:
+
+```bash
+./gradlew :androidApp:bundleRelease -Psadora.versionCode=2 -Psadora.versionName=1.0.1
+```
+
+Release build R8 bilan qisqartiriladi va obfuskatsiya qilinadi. Wire format aks ettirish
+orqali topiladi, shuning uchun `androidApp/proguard-rules.pro` `:contract` DTO'larini va
+ularning serializatorlarini saqlaydi — bu qoidalarsiz ilova yig'iladi, o'rnatiladi va
+birinchi so'rovda yiqiladi. `bundleRelease` — o'sha qoidalarni tekshiradigan yagona narsa.
 
 Testlar:
 
@@ -281,8 +306,6 @@ Hali yo'q:
 - **Huquqiy matnlar faqat o'zbekcha** — `LegalScreen.kt` ichidagi Foydalanish shartlari
   va Maxfiylik siyosati tarjima qilinmagan. Bular yuristning ishi: bir noto'g'ri
   tarjima qilingan band majburiyatni o'zgartiradi. Boshqa hamma ekran uch tilda
-- **AI javoblari faqat o'zbekcha** — chat promptida til so'ralmaydi. Ovqat skaneri esa
-  so'raydi: taom nomi foydalanuvchi tanlagan tilda qaytadi
 
 ---
 
