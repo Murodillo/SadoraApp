@@ -11,6 +11,9 @@ import uz.sadora.app.model.LifeStage
 import uz.sadora.app.model.Mood
 import uz.sadora.app.model.ReportReason
 import uz.sadora.contract.ArticleKind
+import uz.sadora.contract.CoinReasons
+import uz.sadora.contract.HomeWidgets
+import uz.sadora.contract.ShopKind
 import uz.sadora.contract.DoseStatus
 import uz.sadora.contract.FetalMovement
 import uz.sadora.contract.FoodRelation
@@ -131,6 +134,27 @@ object StringsEn : Strings {
         override val bodySubtitle = "Optional. Never shown to anyone, and deleted whenever you like."
         override val height = "Height"
         override val weight = "Weight"
+
+        override val deviceTitle = "Do you wear a smart watch or band?"
+        override val deviceSubtitle =
+            "If you do, sleep and steps arrive on their own — nothing to type in."
+        override val deviceYes = "Yes, I do"
+        override val deviceYesNote = "We'll connect it in the next step"
+        override val deviceNo = "No"
+        override val deviceNoNote = "Everything can be entered by hand too"
+        override val deviceConnectTitle = "Shall we connect your device?"
+        override val deviceConnectBody =
+            "Connect it once and sleep, pulse and steps refresh every day. " +
+                "You can disconnect it at any time."
+        override val deviceConnectNow = "Connect now"
+        override val deviceConnectLater = "Later"
+
+        override val inviteTitle = "Do you have an invite code?"
+        override val inviteSubtitle = "If not, just skip this step."
+        override val inviteLabel = "Invite code"
+        override val inviteHint = "For example, K7M2QP"
+        override fun inviteReward(coins: String) = "With a code you start with $coins nur"
+        override val inviteFromLink = "Taken from your link"
 
         override val permissionsTitle = "What will you allow?"
         override val permissionsSubtitle = "Each of these can be changed later in Profile."
@@ -283,6 +307,11 @@ object StringsEn : Strings {
         override val secretChat = "Secret chat"
         override val insights = "Insights"
         override val knowledge = "Knowledge"
+
+        override val rewards = "Nur and streak"
+        override val shop = "Nur shop"
+        override val referral = "Invite friends"
+        override val homeLayout = "Home screen layout"
 
         override val personalDetails = "Personal details"
         override val goals = "Goals"
@@ -454,6 +483,7 @@ object StringsEn : Strings {
         override val kcal = "kcal"
         override val steps = "steps"
         override val minutesShort = "min"
+        override val daysWord = "days"
         override fun days(count: Int) = if (count == 1) "1 day" else "$count days"
     }
 
@@ -618,6 +648,7 @@ object StringsEn : Strings {
         override fun cycleDayOf(day: Int, length: Int) = "Day $day / $length"
         override fun pregnancyWeek(week: Int) = "Week $week"
 
+        override val customise = "Customise the home screen"
         override val quickActions = "Quick actions"
         override val journal = "Journal"
         override val meditation = "Meditation"
@@ -1255,4 +1286,160 @@ object StringsEn : Strings {
         override val moodLabel = "Mood"
         override val allDoneToday = "Everything for today is done 🌸"
     }
+
+    override val rewards = object : RewardStrings {
+        override val coinName = "Nur"
+        override fun coins(amount: String) = "$amount nur"
+        override fun coinsGained(amount: String) = "+$amount nur"
+
+        override fun streakDays(days: Int) = "$days days running"
+        override val streakStarted = "Streak started"
+        override val streakSubtitle = "You came back today 🌸"
+        override fun milestoneReached(days: Int) = "$days days! 🎉"
+        override fun daysToMilestone(days: Int, milestone: Int) =
+            "$days more days — the $milestone-day mark"
+        override val streakBeyondMilestones = "Every milestone is behind you"
+
+        override val walletTitle = "Nur wallet"
+        override val balance = "Balance"
+        override val earned = "Earned"
+        override val spent = "Spent"
+        override val currentStreak = "Current streak"
+        override val longestStreak = "Longest"
+        override fun days(count: Int) = "$count days"
+        override val history = "Activity"
+        override val historyEmpty = "Nothing yet. Use the app and nur will add up."
+        override val howToEarn = "How nur is earned"
+        override fun perDay(times: Int) = "up to $times a day"
+        override fun earnReason(reason: String) = when (reason) {
+            CoinReasons.DAILY_OPEN -> "First open of the day"
+            CoinReasons.STREAK_MILESTONE -> "Streak milestone"
+            CoinReasons.CHECK_IN -> "Log your mood"
+            CoinReasons.WATER_GOAL -> "Reach the water goal"
+            CoinReasons.DOSE_TAKEN -> "Confirm a dose"
+            CoinReasons.MEAL_LOGGED -> "Log a meal"
+            CoinReasons.JOURNAL_ENTRY -> "Write in the journal"
+            CoinReasons.PRACTICE -> "Breathing or meditation"
+            CoinReasons.ARTICLE_READ -> "Read an article"
+            CoinReasons.REFERRAL_JOINED -> "A friend joined"
+            CoinReasons.REFERRAL_WELCOME -> "Arriving with an invite code"
+            CoinReasons.REDEMPTION -> "Shop purchase"
+            CoinReasons.ADMIN_ADJUSTMENT -> "Manual adjustment"
+            else -> reason
+        }
+        override val openShop = "Nur shop"
+        override val inviteFriends = "Invite"
+
+        override val referralTitle = "Invite your friends"
+        override val referralSubtitle =
+            "For every friend who joins through your link, you both get nur."
+        override val yourCode = "Your code"
+        override val copyCode = "Copy"
+        override val codeCopied = "Code copied"
+        override val shareLink = "Share the link"
+        override fun shareMessage(link: String) =
+            "SADORA — a women's health app. Join through my link: $link"
+        override fun invitedCount(count: Int) = "$count friends joined"
+        override fun referralEarned(amount: String) = "$amount nur from invites"
+        override fun rewardPerJoin(amount: String) = "$amount nur per friend"
+        override fun welcomeReward(amount: String) = "Your friend starts with $amount nur"
+        override val referralHowTitle = "How it works"
+        override val referralSteps = listOf(
+            "Send the link to a friend",
+            "She installs the app and signs up",
+            "Nur reaches you both",
+        )
+        override val referralFairUse =
+            "A code counts once, and only for a new account. Your own code never pays you."
+    }
+
+    override val shop = object : ShopStrings {
+        override val title = "Nur shop"
+        override val subtitle = "Turn the nur you've earned into Premium, vitamins and devices"
+        override fun tab(kind: ShopKind) = when (kind) {
+            ShopKind.PREMIUM -> "Premium"
+            ShopKind.VITAMIN -> "Vitamins"
+            ShopKind.DEVICE -> "Devices"
+        }
+        override val empty = "Nothing here yet"
+        override val loading = "Loading the shop…"
+
+        override fun discount(percent: Int) = "$percent% off"
+        override fun priceWas(price: String) = price
+        override fun priceNow(price: String) = price
+        override fun saving(amount: String) = "saves $amount"
+        override fun premiumDays(days: Int) = "$days days of Premium"
+        override val outOfStock = "Out of stock"
+        override fun stockLeft(count: Int) = "$count left"
+        override val notEnough = "Not enough nur"
+        override fun shortBy(amount: String) = "$amount nur short"
+
+        override val redeem = "Redeem"
+        override val redeeming = "Redeeming…"
+        override fun confirmTitle(product: String) = product
+        override fun confirmBody(cost: String) =
+            "$cost nur will be taken and you'll get a discount code."
+        override val confirmPremiumBody = "The nur is taken and Premium opens straight away."
+        override val cancel = "Cancel"
+
+        override val issuedTitle = "Your code is ready"
+        override val issuedPremiumTitle = "Premium unlocked 🎉"
+        override val issuedBody = "Show the code at the counter — the discount is applied there."
+        override val issuedPremiumBody = "Your subscription is extended. Everything is open now."
+        override val yourCode = "Discount code"
+        override val copyCode = "Copy"
+        override val codeCopied = "Code copied"
+        override fun validUntil(date: String) = "Valid until $date"
+        override val myCodes = "My codes"
+        override val myCodesEmpty = "No codes yet"
+        override val statusIssued = "Active"
+        override val statusUsed = "Used"
+        override val statusExpired = "Expired"
+        override val statusCancelled = "Cancelled"
+
+        override val partnerNote =
+            "Vitamins and devices are sold by partners. SADORA issues the discount code; it does " +
+                "not sell or deliver the product. Talk to a doctor or pharmacist before taking a " +
+                "supplement."
+    }
+
+    override val homeLayout = object : HomeLayoutStrings {
+        override val title = "Home screen"
+        override val subtitle = "Choose which blocks appear, and in what order."
+        override val visible = "Shown"
+        override val hidden = "Hidden"
+        override val moveUp = "Up"
+        override val moveDown = "Down"
+        override val reset = "Restore the default order"
+        override val alwaysOn = "Always shown"
+        override fun widget(key: String) = when (key) {
+            HomeWidgets.AI -> "AI summary"
+            HomeWidgets.SCORE -> "Health score"
+            HomeWidgets.STREAK -> "Streak and nur"
+            HomeWidgets.STAGE -> "Cycle / stage"
+            HomeWidgets.PLAN -> "Today's plan"
+            HomeWidgets.SLEEP -> "Sleep"
+            HomeWidgets.MEDICATIONS -> "Medications"
+            HomeWidgets.INSIGHTS -> "Insights"
+            HomeWidgets.KNOWLEDGE -> "Knowledge"
+            HomeWidgets.QUICK_ACTIONS -> "Quick actions"
+            HomeWidgets.SUMMARY -> "Day summary"
+            else -> key
+        }
+        override fun widgetNote(key: String) = when (key) {
+            HomeWidgets.AI -> "A short read on the day"
+            HomeWidgets.SCORE -> "Sleep, mood, water and steps"
+            HomeWidgets.STREAK -> "Days running and your balance"
+            HomeWidgets.STAGE -> "Cycle day or week"
+            HomeWidgets.PLAN -> "Doses and water"
+            HomeWidgets.SLEEP -> "Last night"
+            HomeWidgets.MEDICATIONS -> "Today's doses"
+            HomeWidgets.INSIGHTS -> "The latest finding"
+            HomeWidgets.KNOWLEDGE -> "An article for you"
+            HomeWidgets.QUICK_ACTIONS -> "The four shortcuts"
+            HomeWidgets.SUMMARY -> "The day in numbers"
+            else -> ""
+        }
+    }
+
 }

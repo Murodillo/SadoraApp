@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { useGrantPremium, useSetBlocked, useUserCard } from '../api/hooks'
+import { useGrantPremium, useSetBlocked, useUserCard, useUserRewards } from '../api/hooks'
+import { UserRewardsCard } from './RewardsPage'
 import { limits } from '../api/limits'
 import { useAuth } from '../auth/AuthContext'
 import {
@@ -15,7 +16,7 @@ import {
   TierBadge,
 } from '../components/ui'
 
-type Tab = 'general' | 'subscription' | 'technical'
+type Tab = 'general' | 'subscription' | 'rewards' | 'technical'
 
 export function UserCardPage() {
   const { id } = useParams<{ id: string }>()
@@ -65,6 +66,7 @@ export function UserCardPage() {
           [
             ['general', 'Umumiy'],
             ['subscription', 'Obuna'],
+            ['rewards', 'Nur'],
             ['technical', 'Texnik'],
           ] as [Tab, string][]
         ).map(([key, label]) => (
@@ -132,6 +134,8 @@ export function UserCardPage() {
           )}
         </Card>
       )}
+
+      {tab === 'rewards' && id && <RewardsTab userId={id} />}
 
       {tab === 'technical' && (
         <div className="grid" style={{ gap: 16 }}>
@@ -208,6 +212,19 @@ function Row({ label, value, mono }: { label: string; value: React.ReactNode; mo
       <td className={mono ? 'mono' : undefined}>{value}</td>
     </tr>
   )
+}
+
+/**
+ * The Nur half of a user's card.
+ *
+ * Loaded only when the tab is opened: most support conversations are not about coins,
+ * and a card that fetched every domain up front would be four requests for one answer.
+ */
+function RewardsTab({ userId }: { userId: string }) {
+  const rewards = useUserRewards(userId)
+  if (rewards.isLoading) return <Loading rows={4} />
+  if (rewards.error) return <ErrorNotice error={rewards.error} />
+  return <UserRewardsCard userId={userId} card={rewards.data} />
 }
 
 function GrantPremiumDialog({ userId, onClose }: { userId: string; onClose: () => void }) {

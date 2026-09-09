@@ -54,6 +54,9 @@ interface Strings {
     val modules: ModuleStrings
     val ai: AiStrings
     val community: CommunityStrings
+    val rewards: RewardStrings
+    val shop: ShopStrings
+    val homeLayout: HomeLayoutStrings
     val errors: ErrorStrings
 }
 
@@ -102,6 +105,8 @@ interface CommonStrings {
     val kcal: String
     val steps: String
     val minutesShort: String
+    /** "kun" — the bare word under a day count, as the streak ring draws it. */
+    val daysWord: String
     fun days(count: Int): String
 
     /** "6s 40d" — a duration in hours and minutes, abbreviated per language. */
@@ -292,6 +297,9 @@ interface TodayStrings {
     fun cycleDayOf(day: Int, length: Int): String
     fun pregnancyWeek(week: Int): String
 
+    /** The pencil beside the greeting: "Bosh ekranni sozlash". */
+    val customise: String
+
     val quickActions: String
     val journal: String
     val meditation: String
@@ -425,6 +433,32 @@ interface OnboardingStrings {
     val bodySubtitle: String
     val height: String
     val weight: String
+
+    // ---- smart device
+    /**
+     * Asked because the answer changes where the flow ends: a yes lands on the connect
+     * screen instead of on Today.
+     */
+    val deviceTitle: String
+    val deviceSubtitle: String
+    val deviceYes: String
+    val deviceYesNote: String
+    val deviceNo: String
+    val deviceNoNote: String
+    /** The interstitial after a yes, before the connect screen opens. */
+    val deviceConnectTitle: String
+    val deviceConnectBody: String
+    val deviceConnectNow: String
+    val deviceConnectLater: String
+
+    // ---- invite code
+    val inviteTitle: String
+    val inviteSubtitle: String
+    val inviteLabel: String
+    val inviteHint: String
+    /** Said under the field: what the code is worth, so the question is not a mystery. */
+    fun inviteReward(coins: String): String
+    val inviteFromLink: String
 
     // ---- permissions
     val permissionsTitle: String
@@ -560,6 +594,12 @@ interface ProfileStrings {
     val secretChat: String
     val insights: String
     val knowledge: String
+
+    /** The three reward rows, above the settings block. */
+    val rewards: String
+    val shop: String
+    val referral: String
+    val homeLayout: String
 
     val personalDetails: String
     val goals: String

@@ -47,6 +47,7 @@ fun AppState.applyServerProfile(profile: UserProfile, entitlements: Entitlements
     profile.heightCm?.let { heightCm = it.toString() }
     profile.weightKg?.let { weightKg = it.toString() }
     profile.language.toAppLanguage()?.let { language = it }
+    hasWearable = profile.hasWearable
     profile.lifeStage.toAppLifeStage()?.let { lifeStage = it }
 
     goals.clear()
@@ -167,6 +168,10 @@ fun AppState.toOnboardingRequest(timezone: String): OnboardingRequest = Onboardi
     permissions = toPermissionGrants(),
     consents = toConsentGrants(),
     referredByDoctor = referredByDoctor,
+    hasWearable = hasWearable,
+    // Blank means she typed nothing; the server treats an unknown code as "no code"
+    // rather than as an error, so a typo never blocks a sign-up.
+    inviteCode = pendingInviteCode?.trim()?.takeIf { it.isNotEmpty() },
     firstCheckIn = toFirstCheckIn(),
 )
 

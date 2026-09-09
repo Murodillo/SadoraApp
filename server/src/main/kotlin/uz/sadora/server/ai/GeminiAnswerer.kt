@@ -31,6 +31,22 @@ class ModelUnavailableException(val code: String, message: String) : Exception(m
 interface AiModel {
     val name: String
     suspend fun answer(question: String, context: AiContext?, language: Language): ModelAnswer
+
+    /**
+     * A free-form completion, for the one caller that is not a health question: the
+     * home screen's greeting.
+     *
+     * Kept separate from [answer] because [answer] carries the product's whole clinical
+     * boundary — the instruction, the disclaimer appended by code — and a two-line
+     * compliment needs none of it. A model that cannot do this says so and the caller
+     * falls back to its own phrases.
+     */
+    suspend fun complete(
+        instruction: String,
+        prompt: String,
+        temperature: Double,
+        maxOutputTokens: Int,
+    ): ModelAnswer = throw ModelUnavailableException("unsupported", "no completion support")
 }
 
 /**
@@ -50,8 +66,31 @@ class GeminiAnswerer(
     override val name: String get() = config.model
 
     override suspend fun answer(question: String, context: AiContext?, language: Language): ModelAnswer {
-        val apiKey = config.apiKey ?: throw ModelUnavailableException("no_key", "No API key configured")
         val phrases = AiPhrases.of(language)
+        val answer = generate(
+            instruction = phrases.instruction(),
+            prompt = phrases.userTurn(question, context?.takeUnless { it.isEmpty }?.summary(phrases)),
+            temperature = 0.4,
+            maxOutputTokens = config.maxOutputTokens,
+        )
+        return answer.copy(text = withDisclaimer(answer.text, phrases))
+    }
+
+    override suspend fun complete(
+        instruction: String,
+        prompt: String,
+        temperature: Double,
+        maxOutputTokens: Int,
+    ): ModelAnswer = generate(instruction, prompt, temperature, maxOutputTokens)
+
+    /** One request to Gemini, with the response unwrapped and the failures named. */
+    private suspend fun generate(
+        instruction: String,
+        prompt: String,
+        temperature: Double,
+        maxOutputTokens: Int,
+    ): ModelAnswer {
+        val apiKey = config.apiKey ?: throw ModelUnavailableException("no_key", "No API key configured")
 
         val response = runCatchingRequest {
             client.post("${config.endpoint}/v1beta/models/${config.model}:generateContent") {
@@ -59,22 +98,11 @@ class GeminiAnswerer(
                 contentType(ContentType.Application.Json)
                 setBody(
                     GeminiRequest(
-                        systemInstruction = GeminiContent(parts = listOf(GeminiPart(phrases.instruction()))),
-                        contents = listOf(
-                            GeminiContent(
-                                parts = listOf(
-                                    GeminiPart(
-                                        phrases.userTurn(
-                                            question,
-                                            context?.takeUnless { it.isEmpty }?.summary(phrases),
-                                        ),
-                                    ),
-                                ),
-                            ),
-                        ),
+                        systemInstruction = GeminiContent(parts = listOf(GeminiPart(instruction))),
+                        contents = listOf(GeminiContent(parts = listOf(GeminiPart(prompt)))),
                         generationConfig = GeminiGenerationConfig(
-                            temperature = 0.4,
-                            maxOutputTokens = config.maxOutputTokens,
+                            temperature = temperature,
+                            maxOutputTokens = maxOutputTokens,
                             // Thinking is billed and counted against maxOutputTokens, and
                             // for a four-sentence health answer it bought nothing: with it
                             // on, a reply took 16 seconds and spent 720 tokens thinking
@@ -116,7 +144,7 @@ class GeminiAnswerer(
         }
 
         return ModelAnswer(
-            text = withDisclaimer(text, phrases),
+            text = text,
             model = config.model,
             promptTokens = parsed.usageMetadata?.promptTokenCount,
             completionTokens = parsed.usageMetadata?.candidatesTokenCount,

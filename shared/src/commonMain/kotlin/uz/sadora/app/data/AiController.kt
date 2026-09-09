@@ -33,6 +33,26 @@ class AiController(
     var quota by mutableStateOf<AiChatQuota?>(null)
         private set
 
+    /**
+     * The home screen's greeting line.
+     *
+     * Null until it loads, and the screen has its own line for that moment — a header
+     * that popped in a second late would be worse than one that never moved.
+     */
+    var greeting by mutableStateOf<String?>(null)
+        private set
+
+    /**
+     * Fetches a new greeting.
+     *
+     * Called on every entry to the home tab, which is the point: the server hands out a
+     * different line each time, so returning to Today is what changes it.
+     */
+    suspend fun loadGreeting() {
+        val api = api ?: return
+        calls.run(silent = true) { api.greeting() }?.let { greeting = it.line }
+    }
+
     /** Null until the quota has loaded; then the number the header shows. */
     val remainingToday: Int? get() = quota?.remainingToday
 

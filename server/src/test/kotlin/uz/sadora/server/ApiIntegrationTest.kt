@@ -48,6 +48,27 @@ import org.junit.jupiter.api.Assumptions.assumeTrue
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.TestInstance
 import uz.sadora.contract.AdminArticle
+import uz.sadora.contract.AdjustCoinsRequest
+import uz.sadora.contract.AiGreeting
+import uz.sadora.contract.AddWaterRequest
+import uz.sadora.contract.ClaimReferralRequest
+import uz.sadora.contract.ClaimReferralResult
+import uz.sadora.contract.CoinBalance
+import uz.sadora.contract.CoinReasons
+import uz.sadora.contract.DailyCheckInResult
+import uz.sadora.contract.HomeLayout
+import uz.sadora.contract.HomeWidget
+import uz.sadora.contract.HomeWidgets
+import uz.sadora.contract.NutritionGoals
+import uz.sadora.contract.RedeemRequest
+import uz.sadora.contract.RedeemResult
+import uz.sadora.contract.Redemption
+import uz.sadora.contract.ReferralStatus
+import uz.sadora.contract.RewardsSummary
+import uz.sadora.contract.SaveHomeLayoutRequest
+import uz.sadora.contract.ShopCatalog
+import uz.sadora.contract.ShopKind
+import uz.sadora.contract.WaterState
 import uz.sadora.contract.AiChatQuota
 import uz.sadora.contract.AiChatReply
 import uz.sadora.contract.AiChatRequest
@@ -223,6 +244,236 @@ class ApiIntegrationTest {
         // Without this the app has no anchor and can only show a week it made up.
         val profile = get<UserProfile>("/v1/me", her.token)
         assertEquals(due, profile.stage?.dueDate)
+    }
+
+    // ---------------------------------------------------------------- Nur
+
+    /**
+     * The whole daily loop in one pass.
+     *
+     * What it pins is the idempotence: a launch is a `POST`, phones launch the app many
+     * times a day, and only the first one of a day may pay or celebrate. Without that
+     * the balance would grow with every return from the camera.
+     */
+    @Test
+    fun `the first open of a day pays and celebrates, the second does neither`() = api {
+        val user = signUp()
+        onboard(user)
+
+        val first = post<DailyCheckInResult>("/v1/rewards/check-in", user.token, Unit)
+        assertTrue(first.celebrate, "the first open of a day is worth a celebration")
+        assertEquals(1, first.streak.current)
+        assertTrue(first.streak.openedToday)
+        val earned = first.coins.balance
+        assertTrue(earned > 0, "the daily rule pays something: $earned")
+        assertTrue(first.awards.any { it.reason == CoinReasons.DAILY_OPEN })
+
+        val second = post<DailyCheckInResult>("/v1/rewards/check-in", user.token, Unit)
+        assertFalse(second.celebrate, "the same day again is not a new day")
+        assertTrue(second.awards.isEmpty())
+        assertEquals(earned, second.coins.balance, "nothing was paid twice")
+    }
+
+    /**
+     * The ledger is the balance's explanation, so the wallet has to be able to show one
+     * line per coin. A summary with a balance and an empty history would be a number the
+     * app is asking her to take on trust.
+     */
+    @Test
+    fun `the wallet explains its balance and lists what each action pays`() = api {
+        val user = signUp()
+        onboard(user)
+        post<DailyCheckInResult>("/v1/rewards/check-in", user.token, Unit)
+
+        val summary = get<RewardsSummary>("/v1/rewards", user.token)
+        assertEquals(summary.coins.balance, summary.history.sumOf { it.amount })
+        assertTrue(summary.history.any { it.reason == CoinReasons.DAILY_OPEN })
+        assertTrue(summary.earnRates.any { it.reason == CoinReasons.DAILY_OPEN && it.amount > 0 })
+        // Every row is worded by the server in her language; a blank title would leave
+        // the wallet showing an internal key.
+        assertTrue(summary.history.all { it.title.isNotBlank() })
+    }
+
+    /** Logging pays, and the cap in the rules is what stops it paying forever. */
+    @Test
+    fun `reaching the water goal pays once, and drinking more pays nothing further`() = api {
+        val user = signUp()
+        onboard(user)
+        val goal = get<NutritionGoals>("/v1/nutrition/goals", user.token).waterGoalMl
+
+        post<WaterState>("/v1/nutrition/water", user.token, AddWaterRequest(goal))
+        val afterGoal = get<CoinBalance>("/v1/rewards", user.token).let {
+            get<RewardsSummary>("/v1/rewards", user.token).coins
+        }
+        assertTrue(
+            afterGoal.balance > 0,
+            "the water goal pays: ${afterGoal.balance}",
+        )
+
+        post<WaterState>("/v1/nutrition/water", user.token, AddWaterRequest(250))
+        val afterMore = get<RewardsSummary>("/v1/rewards", user.token).coins
+        assertEquals(afterGoal.balance, afterMore.balance, "the goal is reached once a day, not per glass")
+    }
+
+    /**
+     * The invite pays both sides exactly once, and never for a code somebody typed at
+     * their own account. A referral scheme that can be pointed at itself is a mint.
+     */
+    @Test
+    fun `an invite code pays the inviter and the invited, and never the same person twice`() = api {
+        val inviter = signUp()
+        onboard(inviter)
+        val referral = get<ReferralStatus>("/v1/rewards/referral", inviter.token)
+        assertTrue(referral.code.isNotBlank())
+        assertTrue(referral.link.endsWith(referral.code))
+
+        val inviterBefore = get<RewardsSummary>("/v1/rewards", inviter.token).coins.balance
+
+        val invited = signUp()
+        val response = client.post("/v1/me/onboarding") {
+            auth(invited.token)
+            json(
+                OnboardingRequest(
+                    name = "Invited",
+                    language = Language.UZ,
+                    timezone = "Asia/Tashkent",
+                    lifeStage = LifeStage.CYCLE,
+                    consents = ConsentGrants(storeHealth = true),
+                    inviteCode = referral.code,
+                ),
+            )
+        }
+        assertEquals(HttpStatusCode.OK, response.status, response.bodyAsTextSafe())
+
+        val inviterAfter = get<RewardsSummary>("/v1/rewards", inviter.token).coins.balance
+        assertTrue(inviterAfter > inviterBefore, "the inviter is paid: $inviterBefore -> $inviterAfter")
+
+        val invitedWallet = get<RewardsSummary>("/v1/rewards", invited.token)
+        assertTrue(invitedWallet.coins.balance > 0, "the invited account starts with a welcome")
+
+        // Presenting the same code again changes nothing: the claim is keyed by account.
+        val again = post<ClaimReferralResult>(
+            "/v1/rewards/referral/claim",
+            invited.token,
+            ClaimReferralRequest(referral.code),
+        )
+        assertFalse(again.accepted)
+
+        // And her own code pays her nothing.
+        val own = get<ReferralStatus>("/v1/rewards/referral", invited.token)
+        val selfClaim = post<ClaimReferralResult>(
+            "/v1/rewards/referral/claim",
+            invited.token,
+            ClaimReferralRequest(own.code),
+        )
+        assertFalse(selfClaim.accepted)
+    }
+
+    /**
+     * Spending. The important half is the refusal: a balance that could go negative
+     * would be a shop giving product away.
+     */
+    @Test
+    fun `Nur buys Premium, and a balance that does not cover it buys nothing`() = api {
+        val user = signUp()
+        onboard(user)
+
+        val catalogue = get<ShopCatalog>("/v1/shop", user.token)
+        val premium = assertNotNull(
+            catalogue.products.firstOrNull { it.kind == ShopKind.PREMIUM },
+            "the seeded shop sells Premium",
+        )
+        assertFalse(premium.affordable, "a new account cannot afford a month of Premium")
+
+        val refused = client.post("/v1/shop/redeem") {
+            auth(user.token)
+            json(RedeemRequest(premium.id))
+        }
+        assertEquals(HttpStatusCode.BadRequest, refused.status, refused.bodyAsTextSafe())
+        assertEquals(SubscriptionTier.FREE, get<Entitlements>("/v1/entitlements", user.token).tier)
+
+        // Given the coins by an operator, the same purchase goes through and the
+        // entitlement moves — the server owns both sides of that trade.
+        val admin = adminToken()
+        val credited = post<CoinBalance>(
+            "/v1/admin/rewards/users/${user.userId}/adjust",
+            admin,
+            AdjustCoinsRequest(amount = premium.coinCost, note = "integration test"),
+        )
+        assertEquals(premium.coinCost, credited.balance)
+
+        val result = post<RedeemResult>("/v1/shop/redeem", user.token, RedeemRequest(premium.id))
+        assertTrue(result.premiumGranted)
+        assertEquals(0, result.coins.balance, "the coins were spent, not copied")
+        assertTrue(result.redemption.code.startsWith("SDR-"))
+        assertEquals(SubscriptionTier.PREMIUM, get<Entitlements>("/v1/entitlements", user.token).tier)
+    }
+
+    /** A partner item hands over a code and a discount, and never claims to have shipped. */
+    @Test
+    fun `a vitamin redemption issues a code carrying the discount`() = api {
+        val user = signUp()
+        onboard(user)
+        val admin = adminToken()
+
+        val catalogue = get<ShopCatalog>("/v1/shop", user.token)
+        val vitamin = assertNotNull(catalogue.products.firstOrNull { it.kind == ShopKind.VITAMIN })
+        post<CoinBalance>(
+            "/v1/admin/rewards/users/${user.userId}/adjust",
+            admin,
+            AdjustCoinsRequest(amount = vitamin.coinCost, note = "integration test"),
+        )
+
+        val result = post<RedeemResult>("/v1/shop/redeem", user.token, RedeemRequest(vitamin.id))
+        assertFalse(result.premiumGranted, "a partner product grants no entitlement")
+        assertEquals(vitamin.discountPercent, result.redemption.discountPercent)
+        assertNotNull(result.redemption.expiresAt, "a partner code carries an expiry")
+
+        val mine = get<List<Redemption>>("/v1/shop/redemptions", user.token)
+        assertTrue(mine.any { it.code == result.redemption.code })
+    }
+
+    /**
+     * The layout is a preference the account carries between phones, which is the whole
+     * reason it is on the server rather than in local storage.
+     */
+    @Test
+    fun `the home layout is saved whole and reconciled against the shipped catalogue`() = api {
+        val user = signUp()
+        onboard(user)
+
+        val defaults = get<HomeLayout>("/v1/me/home-layout", user.token)
+        assertEquals(HomeWidgets.keys.size, defaults.widgets.size)
+
+        val rearranged = listOf(
+            HomeWidget(HomeWidgets.STREAK, 0, true),
+            HomeWidget(HomeWidgets.AI, 1, true),
+            HomeWidget(HomeWidgets.SLEEP, 2, true),
+            // A key from a client the server has never heard of: dropped, not refused.
+            HomeWidget("something_new", 3, true),
+        )
+        val saved = put<HomeLayout>("/v1/me/home-layout", user.token, SaveHomeLayoutRequest(rearranged))
+        assertEquals(HomeWidgets.STREAK, saved.visible().first())
+        assertTrue(HomeWidgets.SLEEP in saved.visible(), "a widget she switched on stays on")
+        assertFalse(saved.widgets.any { it.key == "something_new" })
+
+        // It survives the round trip, which is the point of storing it at all.
+        val reread = get<HomeLayout>("/v1/me/home-layout", user.token)
+        assertEquals(HomeWidgets.STREAK, reread.visible().first())
+    }
+
+    /**
+     * The greeting is free, unmetered, and different on every open — that last part is
+     * the feature, and a cached line handed out twice would quietly undo it.
+     */
+    @Test
+    fun `the home greeting answers for a free account and does not repeat itself`() = api {
+        val user = signUp()
+        onboard(user)
+
+        val lines = (1..4).map { get<AiGreeting>("/v1/ai/greeting", user.token).line }
+        assertTrue(lines.all { it.isNotBlank() })
+        assertTrue(lines.toSet().size > 1, "four opens produced the same line every time: $lines")
     }
 
     // ---------------------------------------------------------------- admin 2FA
@@ -1273,6 +1524,7 @@ class ApiIntegrationTest {
         ),
         policyVersion = "2026-08-01",
         minimumAppVersion = null,
+        referralLinkBase = "https://sadora.uz/r",
         // Zero, so the erasure test can tick the job instead of waiting thirty days.
         accountErasureGracePeriod = Duration.ZERO,
     )

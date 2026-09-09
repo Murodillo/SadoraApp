@@ -30,6 +30,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
 import uz.sadora.app.data.AiController
 import uz.sadora.app.data.CommunityController
 import uz.sadora.app.data.CommunitySyncBridge
@@ -38,6 +39,7 @@ import uz.sadora.app.data.HealthSync
 import uz.sadora.app.data.BillingController
 import uz.sadora.app.data.InsightsController
 import uz.sadora.app.data.LearnController
+import uz.sadora.app.data.RewardsController
 import uz.sadora.app.data.SadoraController
 import uz.sadora.app.data.SadoraGraph
 import uz.sadora.app.data.SessionState
@@ -61,6 +63,7 @@ import uz.sadora.app.ui.components.PillButton
 import uz.sadora.app.ui.components.SadoraBottomNav
 import uz.sadora.app.ui.components.SadoraBottomSheet
 import uz.sadora.app.ui.components.SadoraToast
+import uz.sadora.app.ui.components.StreakCelebration
 import uz.sadora.app.ui.components.SystemBackHandler
 import uz.sadora.app.ui.core.AiChatScreen
 import uz.sadora.app.ui.core.AiFreePreviewScreen
@@ -92,12 +95,16 @@ import uz.sadora.app.ui.modules.MedicationsScreen
 import uz.sadora.app.ui.modules.MindJournalScreen
 import uz.sadora.app.ui.modules.MindScreen
 import uz.sadora.app.ui.modules.PaywallScreen
+import uz.sadora.app.ui.modules.ReferralScreen
+import uz.sadora.app.ui.modules.RewardsScreen
+import uz.sadora.app.ui.modules.ShopScreen
 import uz.sadora.app.ui.modules.SleepScreen
 import uz.sadora.app.ui.onboarding.LegalDocument
 import uz.sadora.app.ui.onboarding.LegalScreen
 import uz.sadora.app.ui.onboarding.OnboardingFlow
 import uz.sadora.app.ui.onboarding.SignInScreen
 import uz.sadora.app.ui.onboarding.SplashScreen
+import uz.sadora.app.ui.settings.HomeLayoutScreen
 import uz.sadora.app.ui.settings.SettingsDetailScreen
 
 /**
@@ -108,7 +115,17 @@ import uz.sadora.app.ui.settings.SettingsDetailScreen
  */
 @Composable
 @Preview
-fun App(graph: SadoraGraph? = null) {
+fun App(
+    graph: SadoraGraph? = null,
+    /**
+     * The invite code the app was opened with, from a shared link.
+     *
+     * Passed in rather than read here because only the platform entry point sees the
+     * launch intent. It is only ever a prefill: the code is settled by the server when
+     * the account is created, and an existing account ignores it entirely.
+     */
+    inviteCode: String? = null,
+) {
     val state = remember { AppState() }
     val navigator = remember { Navigator() }
     // One controller for the whole app; with no graph it runs everything locally.
@@ -124,6 +141,14 @@ fun App(graph: SadoraGraph? = null) {
     val insights = remember(graph) { graph?.insightsController() ?: InsightsController(null) }
     val learn = remember(graph) { graph?.learnController() ?: LearnController(null) }
     val billing = remember(graph) { graph?.billingController() ?: BillingController(null) }
+    val rewards = remember(graph, state) { graph?.rewardsController(state) ?: RewardsController(null, state) }
+
+    // Only ever fills a blank: a code she has already typed is hers, not the link's.
+    LaunchedEffect(inviteCode) {
+        if (state.pendingInviteCode.isNullOrBlank()) {
+            state.pendingInviteCode = inviteCode?.takeIf { it.isNotBlank() }
+        }
+    }
 
     SadoraTheme(darkTheme = state.darkTheme) {
         // One language for the whole tree: a change to it recomposes every screen at
@@ -157,7 +182,7 @@ fun App(graph: SadoraGraph? = null) {
                         )
                     }
 
-                    AppPhase.Main -> MainShell(state, navigator, controller, health, community, ai, insights, learn, billing)
+                    AppPhase.Main -> MainShell(state, navigator, controller, health, community, ai, insights, learn, billing, rewards)
                 }
             }
         }
@@ -219,6 +244,7 @@ private fun MainShell(
     insights: InsightsController,
     learn: LearnController,
     billing: BillingController,
+    rewards: RewardsController,
 ) {
     val scope = rememberCoroutineScope()
     val waterStrings = strings.nutrition
@@ -238,6 +264,19 @@ private fun MainShell(
         // baseline's assumed one.
         health.flushOnboardingPeriods()
         health.loadAll()
+        // "The app just opened." The server decides whether that means anything today,
+        // and the layout comes back with it so Today draws her arrangement, not the
+        // default, on the first frame after the load.
+        rewards.checkIn()
+        rewards.loadHomeLayout()
+
+        // A yes to "do you wear a watch?" ends the flow on the connect screen rather
+        // than on Today. Consumed here so it happens exactly once, after sign-up — not
+        // on every launch of every account that owns one.
+        if (state.pendingDeviceConnect) {
+            state.pendingDeviceConnect = false
+            navigator.push(Route.DataSources)
+        }
     }
 
     var showWaterSheet by remember { mutableStateOf(false) }
@@ -312,6 +351,7 @@ private fun MainShell(
                             insights = insights,
                             learn = learn,
                             billing = billing,
+                            rewards = rewards,
                             onSymptomSheet = { showSymptomSheet = true },
                             onOpenComments = { commentsFor = it },
                             onOpenPostMenu = { menuFor = it },
@@ -335,6 +375,8 @@ private fun MainShell(
                                 onAddWater = { showWaterSheet = true },
                                 insights = insights,
                                 health = health,
+                                ai = ai,
+                                learn = learn,
                             )
                         }
                     }
@@ -369,6 +411,13 @@ private fun MainShell(
                 onTimeout = { toast = null },
             )
         }
+
+        // The once-a-day celebration, above everything including the sheets: it is the
+        // first thing that happens on the first open of a day, and it takes itself away.
+        StreakCelebration(
+            result = rewards.celebration,
+            onDismiss = rewards::celebrationShown,
+        )
 
         SymptomSheet(
             visible = showSymptomSheet,
@@ -458,14 +507,25 @@ private fun RootTab(
     onAddWater: () -> Unit,
     insights: InsightsController,
     health: HealthController,
+    ai: AiController,
+    learn: LearnController,
 ) {
     when (tab) {
-        Tab.Today -> TodayScreen(
-            state = state,
-            onOpen = navigator::push,
-            onSelectTab = navigator::select,
-            onAddWater = onAddWater,
-        )
+        Tab.Today -> {
+            // A new line on every entry to the tab — that is the feature, so it is asked
+            // for here rather than once per session.
+            LaunchedEffect(Unit) { ai.loadGreeting() }
+            TodayScreen(
+                state = state,
+                onOpen = navigator::push,
+                onSelectTab = navigator::select,
+                onAddWater = onAddWater,
+                greeting = ai.greeting,
+                health = health,
+                insights = insights,
+                learn = learn,
+            )
+        }
 
         Tab.Mind -> MindScreen(
             state = state,
@@ -505,6 +565,7 @@ private fun PushedScreen(
     insights: InsightsController,
     learn: LearnController,
     billing: BillingController,
+    rewards: RewardsController,
     onSymptomSheet: () -> Unit,
     onOpenComments: (CommunityPost) -> Unit,
     onOpenPostMenu: (CommunityPost) -> Unit,
@@ -512,6 +573,7 @@ private fun PushedScreen(
 ) {
     val close = navigator::pop
     val upgrade = { navigator.push(Route.Paywall) }
+    val scope = rememberCoroutineScope()
 
     when (route) {
         // Cycle
@@ -550,6 +612,18 @@ private fun PushedScreen(
         Route.Knowledge -> KnowledgeScreen(state, learn, close, navigator::push)
         is Route.Article -> ArticleScreen(route.slug, learn, close, upgrade)
         Route.DataSources -> DataSourcesScreen(health, close)
+
+        // Nur.
+        Route.Rewards -> RewardsScreen(state, rewards, close, navigator::push)
+        Route.Shop -> ShopScreen(
+            state = state,
+            rewards = rewards,
+            onClose = close,
+            // Premium bought with coins changes the tier, and half the app reads it.
+            onPremiumGranted = { scope.launch { controller.refreshEntitlements() } },
+        )
+        Route.Referral -> ReferralScreen(rewards, close)
+        Route.HomeLayout -> HomeLayoutScreen(state, rewards, close)
         Route.SecretChat -> SecretChatScreen(
             state = state,
             community = community,

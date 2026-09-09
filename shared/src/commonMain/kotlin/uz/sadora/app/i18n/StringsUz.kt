@@ -11,6 +11,9 @@ import uz.sadora.app.model.LifeStage
 import uz.sadora.app.model.Mood
 import uz.sadora.app.model.ReportReason
 import uz.sadora.contract.ArticleKind
+import uz.sadora.contract.CoinReasons
+import uz.sadora.contract.HomeWidgets
+import uz.sadora.contract.ShopKind
 import uz.sadora.contract.DoseStatus
 import uz.sadora.contract.FetalMovement
 import uz.sadora.contract.FoodRelation
@@ -131,6 +134,27 @@ object StringsUz : Strings {
         override val bodySubtitle = "Ixtiyoriy. Hech kimga ko'rsatilmaydi va istalgan vaqtda o'chiriladi."
         override val height = "Bo'y"
         override val weight = "Vazn"
+
+        override val deviceTitle = "Aqlli soat yoki bilaguzuk bormi?"
+        override val deviceSubtitle =
+            "Bo'lsa, uyqu va qadamlar o'zi tushadi — qo'lda kiritishning hojati qolmaydi."
+        override val deviceYes = "Ha, bor"
+        override val deviceYesNote = "Keyingi qadamda ulaymiz"
+        override val deviceNo = "Yo'q"
+        override val deviceNoNote = "Hammasini qo'lda ham kiritish mumkin"
+        override val deviceConnectTitle = "Qurilmangizni ulaymizmi?"
+        override val deviceConnectBody =
+            "Bir marta ulasangiz, uyqu, pulse va qadamlar har kuni o'zi yangilanadi. " +
+                "Istalgan vaqtda uzib qo'yishingiz mumkin."
+        override val deviceConnectNow = "Hozir ulash"
+        override val deviceConnectLater = "Keyinroq"
+
+        override val inviteTitle = "Taklif kodingiz bormi?"
+        override val inviteSubtitle = "Bo'lmasa, bu qadamni o'tkazib yuboring."
+        override val inviteLabel = "Taklif kodi"
+        override val inviteHint = "Masalan, K7M2QP"
+        override fun inviteReward(coins: String) = "Kod bilan kelsangiz — $coins nur sovg'a"
+        override val inviteFromLink = "Havoladan olindi"
 
         override val permissionsTitle = "Nimalarga ruxsat berasiz?"
         override val permissionsSubtitle = "Har birini keyin Profil bo'limidan o'zgartira olasiz."
@@ -283,6 +307,11 @@ object StringsUz : Strings {
         override val secretChat = "Maxfiy chat"
         override val insights = "Tahlillar"
         override val knowledge = "Bilim"
+
+        override val rewards = "Nur va streak"
+        override val shop = "Nur do'koni"
+        override val referral = "Do'stlarni taklif qilish"
+        override val homeLayout = "Bosh ekran tartibi"
 
         override val personalDetails = "Shaxsiy ma'lumotlar"
         override val goals = "Maqsadlar"
@@ -454,6 +483,7 @@ object StringsUz : Strings {
         override val kcal = "kkal"
         override val steps = "qadam"
         override val minutesShort = "daq"
+        override val daysWord = "kun"
         override fun days(count: Int) = "$count kun"
     }
 
@@ -620,6 +650,7 @@ object StringsUz : Strings {
         override fun cycleDayOf(day: Int, length: Int) = "Kun $day / $length"
         override fun pregnancyWeek(week: Int) = "$week-hafta"
 
+        override val customise = "Bosh ekranni sozlash"
         override val quickActions = "Tezkor amallar"
         override val journal = "Jurnal"
         override val meditation = "Meditatsiya"
@@ -1260,4 +1291,160 @@ object StringsUz : Strings {
         override val moodLabel = "Kayfiyat"
         override val allDoneToday = "Bugungi hamma narsa bajarildi 🌸"
     }
+
+    override val rewards = object : RewardStrings {
+        override val coinName = "Nur"
+        override fun coins(amount: String) = "$amount nur"
+        override fun coinsGained(amount: String) = "+$amount nur"
+
+        override fun streakDays(days: Int) = "$days kun ketma-ket"
+        override val streakStarted = "Streak boshlandi"
+        override val streakSubtitle = "Bugun ham keldingiz 🌸"
+        override fun milestoneReached(days: Int) = "$days kun! 🎉"
+        override fun daysToMilestone(days: Int, milestone: Int) =
+            "Yana $days kun — $milestone kunlik bosqich"
+        override val streakBeyondMilestones = "Barcha bosqichlar ortda qoldi"
+
+        override val walletTitle = "Nur hamyoni"
+        override val balance = "Balans"
+        override val earned = "Yig'ilgan"
+        override val spent = "Sarflangan"
+        override val currentStreak = "Joriy streak"
+        override val longestStreak = "Eng uzun"
+        override fun days(count: Int) = "$count kun"
+        override val history = "Harakatlar"
+        override val historyEmpty = "Hozircha harakat yo'q. Ilovadan foydalansangiz, nur yig'iladi."
+        override val howToEarn = "Nur qanday yig'iladi"
+        override fun perDay(times: Int) = "kuniga $times martagacha"
+        override fun earnReason(reason: String) = when (reason) {
+            CoinReasons.DAILY_OPEN -> "Kunda birinchi kirish"
+            CoinReasons.STREAK_MILESTONE -> "Streak bosqichi"
+            CoinReasons.CHECK_IN -> "Kayfiyatni belgilash"
+            CoinReasons.WATER_GOAL -> "Suv maqsadiga yetish"
+            CoinReasons.DOSE_TAKEN -> "Dori qabulini tasdiqlash"
+            CoinReasons.MEAL_LOGGED -> "Ovqat qo'shish"
+            CoinReasons.JOURNAL_ENTRY -> "Kundalikka yozuv"
+            CoinReasons.PRACTICE -> "Nafas yoki meditatsiya"
+            CoinReasons.ARTICLE_READ -> "Maqolani o'qish"
+            CoinReasons.REFERRAL_JOINED -> "Do'st taklif bo'yicha qo'shildi"
+            CoinReasons.REFERRAL_WELCOME -> "Taklif kodi bilan kelish"
+            CoinReasons.REDEMPTION -> "Do'kondan xarid"
+            CoinReasons.ADMIN_ADJUSTMENT -> "Qo'lda o'zgartirish"
+            else -> reason
+        }
+        override val openShop = "Nur do'koni"
+        override val inviteFriends = "Taklif qilish"
+
+        override val referralTitle = "Do'stlarni taklif qiling"
+        override val referralSubtitle =
+            "Havolangiz orqali kelgan har bir do'st uchun ikkalangiz ham nur olasiz."
+        override val yourCode = "Sizning kodingiz"
+        override val copyCode = "Nusxalash"
+        override val codeCopied = "Kod nusxalandi"
+        override val shareLink = "Havolani ulashish"
+        override fun shareMessage(link: String) =
+            "SADORA — ayollar salomatligi ilovasi. Mening taklif havolam orqali qo'shiling: $link"
+        override fun invitedCount(count: Int) = "$count ta do'st qo'shildi"
+        override fun referralEarned(amount: String) = "Taklifdan $amount nur"
+        override fun rewardPerJoin(amount: String) = "Har bir do'st uchun $amount nur"
+        override fun welcomeReward(amount: String) = "Do'stingiz $amount nur bilan boshlaydi"
+        override val referralHowTitle = "Qanday ishlaydi"
+        override val referralSteps = listOf(
+            "Havolani do'stingizga yuboring",
+            "U ilovani o'rnatib, ro'yxatdan o'tadi",
+            "Nur ikkalangizga ham tushadi",
+        )
+        override val referralFairUse =
+            "Har bir kod bir marta — faqat yangi hisob uchun ishlaydi. O'z kodingiz o'zingizga tushmaydi."
+    }
+
+    override val shop = object : ShopStrings {
+        override val title = "Nur do'koni"
+        override val subtitle = "Yig'gan nuringizni Premium, vitamin va qurilmalarga almashtiring"
+        override fun tab(kind: ShopKind) = when (kind) {
+            ShopKind.PREMIUM -> "Premium"
+            ShopKind.VITAMIN -> "Vitaminlar"
+            ShopKind.DEVICE -> "Qurilmalar"
+        }
+        override val empty = "Bu bo'limda hozircha mahsulot yo'q"
+        override val loading = "Do'kon yuklanmoqda…"
+
+        override fun discount(percent: Int) = "$percent% chegirma"
+        override fun priceWas(price: String) = price
+        override fun priceNow(price: String) = price
+        override fun saving(amount: String) = "$amount tejaysiz"
+        override fun premiumDays(days: Int) = "$days kun Premium"
+        override val outOfStock = "Tugadi"
+        override fun stockLeft(count: Int) = "$count ta qoldi"
+        override val notEnough = "Nur yetarli emas"
+        override fun shortBy(amount: String) = "Yana $amount nur kerak"
+
+        override val redeem = "Almashtirish"
+        override val redeeming = "Bajarilmoqda…"
+        override fun confirmTitle(product: String) = product
+        override fun confirmBody(cost: String) =
+            "$cost nur yechiladi va sizga chegirma kodi beriladi."
+        override val confirmPremiumBody = "Nur yechiladi va Premium darhol ochiladi."
+        override val cancel = "Bekor qilish"
+
+        override val issuedTitle = "Kodingiz tayyor"
+        override val issuedPremiumTitle = "Premium ochildi 🎉"
+        override val issuedBody = "Kodni sotuvchiga ko'rsating — chegirma o'sha yerda qo'llanadi."
+        override val issuedPremiumBody = "Obunangiz yangilandi. Hammasi shu zahoti ochiq."
+        override val yourCode = "Chegirma kodi"
+        override val copyCode = "Nusxalash"
+        override val codeCopied = "Kod nusxalandi"
+        override fun validUntil(date: String) = "$date gacha amal qiladi"
+        override val myCodes = "Mening kodlarim"
+        override val myCodesEmpty = "Hozircha kod yo'q"
+        override val statusIssued = "Faol"
+        override val statusUsed = "Ishlatilgan"
+        override val statusExpired = "Muddati tugagan"
+        override val statusCancelled = "Bekor qilingan"
+
+        override val partnerNote =
+            "Vitamin va qurilmalar hamkorlarnikida sotiladi. SADORA chegirma kodini beradi, " +
+                "mahsulotni sotmaydi va yetkazib bermaydi. Qo'shimcha qabul qilishdan oldin " +
+                "shifokor yoki farmatsevt bilan maslahatlashing."
+    }
+
+    override val homeLayout = object : HomeLayoutStrings {
+        override val title = "Bosh ekran"
+        override val subtitle = "Qaysi bloklar ko'rinsin va qanday tartibda tursin — o'zingiz tanlaysiz."
+        override val visible = "Ko'rinadi"
+        override val hidden = "Yashirilgan"
+        override val moveUp = "Yuqoriga"
+        override val moveDown = "Pastga"
+        override val reset = "Standart tartibga qaytarish"
+        override val alwaysOn = "Doim ko'rinadi"
+        override fun widget(key: String) = when (key) {
+            HomeWidgets.AI -> "AI xulosasi"
+            HomeWidgets.SCORE -> "Salomatlik ko'rsatkichi"
+            HomeWidgets.STREAK -> "Streak va nur"
+            HomeWidgets.STAGE -> "Sikl / bosqich"
+            HomeWidgets.PLAN -> "Bugungi reja"
+            HomeWidgets.SLEEP -> "Uyqu"
+            HomeWidgets.MEDICATIONS -> "Dorilar"
+            HomeWidgets.INSIGHTS -> "Tahlillar"
+            HomeWidgets.KNOWLEDGE -> "Bilim"
+            HomeWidgets.QUICK_ACTIONS -> "Tezkor amallar"
+            HomeWidgets.SUMMARY -> "Bugungi xulosa"
+            else -> key
+        }
+        override fun widgetNote(key: String) = when (key) {
+            HomeWidgets.AI -> "Kunning qisqacha tahlili"
+            HomeWidgets.SCORE -> "Uyqu, kayfiyat, suv va qadam"
+            HomeWidgets.STREAK -> "Ketma-ket kunlar va balans"
+            HomeWidgets.STAGE -> "Sikl kuni yoki hafta"
+            HomeWidgets.PLAN -> "Dorilar va suv"
+            HomeWidgets.SLEEP -> "Kechagi uyqu"
+            HomeWidgets.MEDICATIONS -> "Bugungi qabullar"
+            HomeWidgets.INSIGHTS -> "Oxirgi topilma"
+            HomeWidgets.KNOWLEDGE -> "Siz uchun maqola"
+            HomeWidgets.QUICK_ACTIONS -> "To'rtta yorliq"
+            HomeWidgets.SUMMARY -> "Raqamlar bo'yicha qisqacha"
+            else -> ""
+        }
+    }
+
 }

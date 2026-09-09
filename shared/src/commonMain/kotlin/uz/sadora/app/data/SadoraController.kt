@@ -79,6 +79,9 @@ class SadoraController(
         val repo = repository ?: return true
         val request = state.toOnboardingRequest(timezoneOrDefault())
         val profile = call { repo.completeOnboarding(request) } ?: return false
+        // The invite code travelled with the request and has been settled either way;
+        // keeping it would offer it again on the next profile save.
+        state.pendingInviteCode = null
         state.applyServerProfile(profile, repo.state.value.entitlementsOrNull() ?: return true)
         return true
     }

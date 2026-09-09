@@ -38,6 +38,13 @@ const groups: NavGroup[] = [
     ],
   },
   {
+    title: 'Nur',
+    entries: [
+      { to: '/rewards', label: 'Mukofotlar va streak', glyph: '✷', roles: ALL },
+      { to: '/shop', label: "Do'kon — chegirmalar", glyph: '⌘', roles: ['OWNER', 'ADMIN', 'ANALYST'] },
+    ],
+  },
+  {
     title: 'Sozlamalar',
     entries: [
       { to: '/billing', label: 'Obunalar va to‘lovlar', glyph: '₴', roles: ALL },
@@ -65,6 +72,8 @@ const titles: Record<string, string> = {
   '/billing': "Obunalar va to'lovlar",
   '/notifications': 'Bildirishnomalar',
   '/wearables': 'Wearable providerlar',
+  '/rewards': 'Nur — mukofotlar va streak',
+  '/shop': "Nur do'koni — mahsulot va chegirmalar",
   '/features': 'Entitlements va limitlar',
   '/flags': 'Feature flags',
   '/security': 'Hisobim va 2FA',

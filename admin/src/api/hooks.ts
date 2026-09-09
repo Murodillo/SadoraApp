@@ -2,6 +2,14 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { query, request } from './client'
 import type {
   AdminArticle,
+  AdminRedemption,
+  AdminRewardsCard,
+  AdminShopProduct,
+  CoinBalance,
+  CoinRule,
+  RedemptionStatus,
+  RewardsOverview,
+  SaveShopProductBody,
   AdminMe,
   AdminFlag,
   AdminPayment,
@@ -399,3 +407,99 @@ export const useDisableTotp = () =>
   useTotpMutation((input: { password: string; code: string }) =>
     request('/v1/admin/me/totp/disable', { method: 'POST', body: input }),
   )
+
+// ---------------------------------------------------------------- Nur
+
+export const useRewardsOverview = () =>
+  useQuery({
+    queryKey: ['rewards-overview'],
+    queryFn: () => request<RewardsOverview>('/v1/admin/rewards/overview'),
+    refetchInterval: 60_000,
+  })
+
+export const useCoinRules = () =>
+  useQuery({
+    queryKey: ['coin-rules'],
+    queryFn: () => request<CoinRule[]>('/v1/admin/rewards/rules'),
+  })
+
+export const useSaveCoinRule = () => {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: ({ reason, amount, dailyCap, enabled }: CoinRule) =>
+      request<CoinRule>(`/v1/admin/rewards/rules/${reason}`, {
+        method: 'PUT',
+        body: { amount, dailyCap: dailyCap ?? null, enabled },
+      }),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: ['coin-rules'] })
+      void client.invalidateQueries({ queryKey: ['rewards-overview'] })
+    },
+  })
+}
+
+export const useShopProducts = () =>
+  useQuery({
+    queryKey: ['shop-products'],
+    queryFn: () => request<AdminShopProduct[]>('/v1/admin/shop/products'),
+  })
+
+export const useCreateShopProduct = () => {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: ({ slug, product }: { slug: string; product: SaveShopProductBody }) =>
+      request<AdminShopProduct>('/v1/admin/shop/products', { method: 'POST', body: { slug, product } }),
+    onSuccess: () => void client.invalidateQueries({ queryKey: ['shop-products'] }),
+  })
+}
+
+export const useUpdateShopProduct = () => {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, product }: { id: string; product: SaveShopProductBody }) =>
+      request<AdminShopProduct>(`/v1/admin/shop/products/${id}`, { method: 'PUT', body: product }),
+    onSuccess: () => void client.invalidateQueries({ queryKey: ['shop-products'] }),
+  })
+}
+
+export const useDeleteShopProduct = () => {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => request(`/v1/admin/shop/products/${id}`, { method: 'DELETE' }),
+    onSuccess: () => void client.invalidateQueries({ queryKey: ['shop-products'] }),
+  })
+}
+
+export const useRedemptions = (limit = 50) =>
+  useQuery({
+    queryKey: ['redemptions', limit],
+    queryFn: () => request<AdminRedemption[]>(`/v1/admin/shop/redemptions${query({ limit })}`),
+  })
+
+export const useUpdateRedemption = () => {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, status }: { id: string; status: RedemptionStatus }) =>
+      request(`/v1/admin/shop/redemptions/${id}`, { method: 'PUT', body: { status } }),
+    onSuccess: () => void client.invalidateQueries({ queryKey: ['redemptions'] }),
+  })
+}
+
+/** The reward half of one user's card. */
+export const useUserRewards = (id: string) =>
+  useQuery({
+    queryKey: ['user-rewards', id],
+    queryFn: () => request<AdminRewardsCard>(`/v1/admin/rewards/users/${id}`),
+  })
+
+export const useAdjustCoins = (id: string) => {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: ({ amount, note }: { amount: number; note: string }) =>
+      request<CoinBalance>(`/v1/admin/rewards/users/${id}/adjust`, { method: 'POST', body: { amount, note } }),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: ['user-rewards', id] })
+      void client.invalidateQueries({ queryKey: ['rewards-overview'] })
+    },
+  })
+}

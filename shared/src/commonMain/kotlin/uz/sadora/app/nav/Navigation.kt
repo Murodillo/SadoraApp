@@ -56,6 +56,14 @@ sealed interface Route {
     data object Paywall : Route
     data object SecretChat : Route
 
+    // Nur — the wallet, the shop and the invite screen.
+    data object Rewards : Route
+    data object Shop : Route
+    data object Referral : Route
+
+    /** Which cards Today draws, and in what order. */
+    data object HomeLayout : Route
+
     // Settings
     data object PersonalDetails : Route
     data object GoalsSettings : Route

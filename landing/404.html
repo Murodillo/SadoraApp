@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SADORA — taklif</title>
+<meta name="description" content="SADORA — ayollar salomatligi ilovasi. Taklif havolasi orqali qo‘shiling.">
+<meta name="robots" content="noindex">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Figtree:wght@400;500;600&display=swap">
+<style>
+/* ============================================================
+   The page behind an invite link — and the site's 404.
+
+   One file does both because GitHub Pages has no rewrite rules: a request for
+   /r/K7M2QP has no file to serve, so Pages falls through to 404.html, and this
+   reads the code out of the path itself. Any other unknown path gets the
+   ordinary "not found" wording instead.
+
+   Tokens are the app's own (design/Colors.kt), matching index.html.
+   ============================================================ */
+:root {
+  --bg:        #F7F5FF;
+  --surface:   #FFFFFF;
+  --surface-2: #F1EDFF;
+  --primary:   #7B61FF;
+  --ink:       #6247E0;
+  --secondary: #FF6FB8;
+  --text:      #1A1630;
+  --muted:     #6F6A8A;
+  --muted-2:   #9590AD;
+  --line:      #EAE6FA;
+  --shadow:    rgba(123,97,255,.16);
+  --b1: #B06CFF; --b2: #8A8CFF; --b3: #F68CCB;
+  --r-md: 16px; --r-lg: 22px; --r-xl: 28px;
+  --ease: cubic-bezier(.2, 0, 0, 1);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: Figtree, -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  min-height: 100svh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  line-height: 1.55;
+}
+.card {
+  width: min(440px, 100%);
+  background: var(--surface);
+  border-radius: var(--r-xl);
+  border: 1px solid var(--line);
+  box-shadow: 0 24px 60px var(--shadow);
+  padding: 32px 26px 26px;
+  text-align: center;
+  animation: rise .5s var(--ease) both;
+}
+@keyframes rise { from { opacity: 0; transform: translateY(16px); } }
+@media (prefers-reduced-motion: reduce) { .card { animation: none; } }
+
+.mark { width: 64px; height: 64px; margin: 0 auto 14px; display: block; }
+h1 {
+  font-family: 'Bricolage Grotesque', Figtree, sans-serif;
+  font-size: clamp(24px, 6vw, 30px);
+  line-height: 1.15;
+  margin: 0 0 8px;
+  letter-spacing: -.01em;
+}
+p { margin: 0 0 18px; color: var(--muted); }
+
+.code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 30px;
+  font-weight: 600;
+  letter-spacing: .14em;
+  background: var(--surface-2);
+  border-radius: var(--r-md);
+  padding: 14px 10px;
+  margin: 0 0 8px;
+  color: var(--ink);
+  word-break: break-all;
+}
+.hint { font-size: 14px; color: var(--muted-2); margin-bottom: 20px; }
+
+.btn {
+  display: block;
+  width: 100%;
+  padding: 15px 18px;
+  border-radius: 999px;
+  border: 0;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  margin-bottom: 10px;
+  transition: transform .16s var(--ease);
+}
+.btn:active { transform: scale(.975); }
+.btn.primary { background: linear-gradient(120deg, var(--b1), var(--b2) 45%, var(--b3)); color: #fff; }
+.btn.ghost { background: var(--surface-2); color: var(--ink); }
+
+.langs { margin-top: 18px; display: flex; gap: 10px; justify-content: center; }
+.langs button {
+  background: none; border: 0; font: inherit; font-size: 14px;
+  color: var(--muted-2); cursor: pointer; padding: 4px 8px; border-radius: 999px;
+}
+.langs button[aria-current='true'] { color: var(--ink); background: var(--surface-2); font-weight: 600; }
+.foot { margin-top: 16px; font-size: 13px; color: var(--muted-2); }
+.foot a { color: var(--muted); }
+</style>
+</head>
+<body>
+<main class="card">
+  <!-- The mark, drawn rather than loaded: one request fewer on a phone opening a
+       shared link over mobile data, and crisp at any size. -->
+  <svg class="mark" viewBox="0 0 108 108" aria-label="SADORA" role="img">
+    <defs>
+      <linearGradient id="s" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#B06CFF"/>
+        <stop offset=".45" stop-color="#8A8CFF"/>
+        <stop offset="1" stop-color="#F68CCB"/>
+      </linearGradient>
+    </defs>
+    <rect width="108" height="108" rx="26" fill="#1A1630"/>
+    <text x="54" y="74" font-family="'Bricolage Grotesque', sans-serif" font-size="62"
+          font-weight="700" text-anchor="middle" fill="url(#s)">S</text>
+  </svg>
+
+  <h1 id="title"></h1>
+  <p id="lede"></p>
+
+  <div id="invite" hidden>
+    <div class="code" id="code"></div>
+    <div class="hint" id="hint"></div>
+    <a class="btn primary" id="open" href="#"></a>
+  </div>
+
+  <a class="btn ghost" href="/" id="home"></a>
+
+  <div class="langs" role="group">
+    <button type="button" data-lang="uz">O‘zbekcha</button>
+    <button type="button" data-lang="ru">Русский</button>
+    <button type="button" data-lang="en">English</button>
+  </div>
+
+  <p class="foot" id="foot"></p>
+</main>
+
+<script>
+/*
+ * The code out of the path.
+ *
+ * Only /r/<CODE> is an invite. Anything else that lands on this page is a genuine
+ * 404 and is worded as one — a "not found" that pretended to be an invitation
+ * would be worse than either.
+ *
+ * The code is validated the same way the app and the server validate it: letters
+ * and digits, 4 to 16 of them. A link with a tracking suffix therefore reads as a
+ * missing page rather than as an invite code nobody can use.
+ */
+const match = location.pathname.match(/^\/r\/([^/?#]+)\/?$/i);
+const raw = match ? decodeURIComponent(match[1]).toUpperCase().replace(/[^A-Z0-9]/g, '') : '';
+const code = raw.length >= 4 && raw.length <= 16 ? raw : '';
+
+const COPY = {
+  uz: {
+    inviteTitle: 'Sizni SADORA’ga taklif qilishdi',
+    inviteLede: 'Ilovani o‘rnating va ro‘yxatdan o‘tayotganda shu kodni kiriting — ikkalangiz ham nur olasiz.',
+    hint: 'Kod ro‘yxatdan o‘tish paytida so‘raladi',
+    open: 'Ilovani ochish',
+    home: 'SADORA haqida',
+    lostTitle: 'Sahifa topilmadi',
+    lostLede: 'Havola eskirgan yoki noto‘g‘ri yozilgan bo‘lishi mumkin.',
+    foot: 'Ilova hali o‘rnatilmagan bo‘lsa, avval uni o‘rnating — kod saqlanib qoladi.',
+  },
+  ru: {
+    inviteTitle: 'Вас пригласили в SADORA',
+    inviteLede: 'Установите приложение и введите этот код при регистрации — нур получите вы обе.',
+    hint: 'Код спросят во время регистрации',
+    open: 'Открыть приложение',
+    home: 'О SADORA',
+    lostTitle: 'Страница не найдена',
+    lostLede: 'Возможно, ссылка устарела или введена с ошибкой.',
+    foot: 'Если приложение ещё не установлено — сначала установите его, код сохранится.',
+  },
+  en: {
+    inviteTitle: 'You have been invited to SADORA',
+    inviteLede: 'Install the app and enter this code when you sign up — you both get nur.',
+    hint: 'The code is asked for during sign-up',
+    open: 'Open the app',
+    home: 'About SADORA',
+    lostTitle: 'Page not found',
+    lostLede: 'The link may be out of date or mistyped.',
+    foot: 'If the app is not installed yet, install it first — the code will keep.',
+  },
+};
+
+function render(lang) {
+  const t = COPY[lang] || COPY.uz;
+  document.documentElement.lang = lang;
+  document.getElementById('title').textContent = code ? t.inviteTitle : t.lostTitle;
+  document.getElementById('lede').textContent = code ? t.inviteLede : t.lostLede;
+  document.getElementById('invite').hidden = !code;
+  document.getElementById('home').textContent = t.home;
+  document.getElementById('foot').textContent = code ? t.foot : '';
+  if (code) {
+    document.getElementById('code').textContent = code;
+    document.getElementById('hint').textContent = t.hint;
+    const open = document.getElementById('open');
+    open.textContent = t.open;
+    // The app's own scheme. Tapping it is a no-op when the app is not installed,
+    // which is why the code is on screen as well — the page never depends on the
+    // deep link having worked.
+    open.href = 'sadora://invite/' + code;
+  }
+  for (const button of document.querySelectorAll('.langs button')) {
+    button.setAttribute('aria-current', String(button.dataset.lang === lang));
+  }
+}
+
+/* Uzbek unless the browser asks for one of the other two. */
+const preferred = (navigator.language || 'uz').slice(0, 2).toLowerCase();
+render(COPY[preferred] ? preferred : 'uz');
+
+for (const button of document.querySelectorAll('.langs button')) {
+  button.addEventListener('click', () => render(button.dataset.lang));
+}
+</script>
+</body>
+</html>

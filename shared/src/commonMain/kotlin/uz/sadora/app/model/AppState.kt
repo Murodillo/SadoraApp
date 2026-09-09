@@ -14,6 +14,7 @@ import kotlinx.datetime.daysUntil
 import kotlinx.datetime.minus
 import kotlinx.datetime.plus
 import kotlinx.datetime.todayIn
+import uz.sadora.contract.HomeLayout
 
 enum class AppLanguage(val code: String, val native: String, val english: String) {
     Uz("UZ", "O'zbekcha", "Uzbek"),
@@ -181,6 +182,53 @@ class AppState {
     /** When the plan ends, and whether it renews itself — the Profile card words it. */
     var premiumExpiresAt by mutableStateOf<LocalDate?>(null)
     var premiumAutoRenewing by mutableStateOf(false)
+
+    // ---- rewards ----
+    /**
+     * The Nur balance and the streak behind most of it.
+     *
+     * Mirrored from the server on every launch and never computed here: an app that
+     * added up its own coins would mint them on a reinstall. Zero until the first
+     * check-in answers, which is also what a signed-out prototype shows.
+     */
+    var coins by mutableStateOf(0)
+    var streakDays by mutableStateOf(0)
+    var longestStreak by mutableStateOf(0)
+    var streakOpenedToday by mutableStateOf(false)
+
+    /** Her invite code, once the referral screen has been opened at least once. */
+    var referralCode by mutableStateOf<String?>(null)
+
+    /**
+     * The code she arrived with, from a shared link or typed into onboarding.
+     *
+     * Held here rather than sent immediately because it is claimed as part of the
+     * onboarding request — the account has to exist before anything can be paid for it.
+     */
+    var pendingInviteCode by mutableStateOf<String?>(null)
+
+    /** "Do you wear a smart watch or band?" — null until answered, null when skipped. */
+    var hasWearable by mutableStateOf<Boolean?>(null)
+
+    /**
+     * Set only by the onboarding question, and cleared the moment the shell acts on it.
+     *
+     * Separate from [hasWearable] on purpose: that answer is permanent and lives on the
+     * profile, so routing off it would reopen the connect screen on every launch for
+     * everyone who owns a watch.
+     */
+    var pendingDeviceConnect by mutableStateOf(false)
+
+    /**
+     * How Today is arranged, as the server has it.
+     *
+     * Starts at the shipped default so the first frame is right; the saved layout
+     * replaces it when it loads, which is usually before the screen is even reached.
+     */
+    var homeLayout by mutableStateOf(HomeLayout())
+
+    /** The cards Today should draw, in order. */
+    fun homeWidgets(): List<String> = homeLayout.visible()
 
     // ---- appearance ----
     var darkTheme by mutableStateOf(false)

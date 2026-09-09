@@ -295,6 +295,8 @@ tiplarini bilmaydi, controller esa `busy`/`error` holatini bir joyda boshqaradi.
 bo'lmasa (`@Preview`, testlar) hamma amal lokal bajariladi va ilova prototip sifatida
 ishlayveradi.
 
+Nur — streak, tanga, do'kon va taklif — ham ulangan; batafsil pastdagi bo'limda.
+
 Hali yo'q:
 
 - **App Store / Google Play billing** — Payme va Click ulangan (narxlar serverda,
@@ -302,9 +304,78 @@ Hali yo'q:
   sozlanmagan holda har qanday chekni rad etadi
 - **Apple/Google kirish** — tugmalar bor va server `idToken`ni tekshiradi, lekin
   platforma SDK'si hali o'sha tokenni bermaydi
-- **Qurilma integratsiyasi** — Apple Health / Oura ma'lumotlari namuna
+- **Qurilma integratsiyasi** — Apple Health / Oura ma'lumotlari namuna. Onboarding
+  endi "aqlli soat bormi?" deb so'raydi va "ha" javobi oxirida ulash ekraniga olib
+  boradi, lekin ekranning ortidagi SDK hali yo'q
+- **iOS ikonkasi** — Androidda streakka qarab almashadi, iOS'da `AppIcons.None`
 
 ---
+
+## Nur — streak, tanga va do'kon
+
+Ilovaning o'z valyutasi bor: **Nur**. Nomi bitta i18n tokenida
+(`RewardStrings.coinName`) turadi, ya'ni uni o'zgartirish uch qatorlik ish.
+
+Bitta qoida hamma narsani belgilaydi: **nur salomatlik natijasi uchun berilmaydi**.
+Sakkiz soat uxlash to'rt soat uxlash bilan bir xil to'laydi. Aks holda ilova ayolga
+tanasi uchun pul taklif qilgan bo'lardi — va jurnal yolg'on gapirishni o'rganardi.
+Nur faqat *harakat* uchun: ilovani ochish, belgilash, o'qish.
+
+| Nima | Qayerda |
+|---|---|
+| Streak — ketma-ket kunlar | `POST /v1/rewards/check-in`, har ishga tushishda |
+| Hamyon va harakatlar tarixi | `GET /v1/rewards` |
+| Do'kon: Premium, vitamin, qurilma | `GET /v1/shop`, `POST /v1/shop/redeem` |
+| Taklif kodi va havola | `GET /v1/rewards/referral` |
+| Bosh ekran tartibi | `GET/PUT/DELETE /v1/me/home-layout` |
+
+Balansni server hisoblaydi va u har doim `SUM(coin_ledger.amount)` — keshlangan ustun
+yo'q, chunki keshlangan balans o'zini tushuntiruvchi qatorlardan uzoqlashadi. Kunlik
+mukofotlar `UNIQUE` indeks bilan qo'riqlanadi, ya'ni ikkita bir vaqtda kelgan so'rov
+ikki marta to'lay olmaydi. Streak esa foydalanuvchining **o'z vaqt mintaqasidagi**
+kunni sanaydi, serverning yarim tunini emas.
+
+Tariflar va do'kon admin panelda: `Nur → Mukofotlar va streak` va `Nur → Do'kon`.
+O'zgarish keyingi mukofotdan kuchga kiradi va relizni talab qilmaydi; allaqachon
+berilgan nur qayta hisoblanmaydi.
+
+**Premium** — serverning o'zi beradigan yagona narsa: nur yechiladi va obuna o'sha
+zahoti uzayadi. **Vitamin va qurilma** hamkorlarniki: nur *chegirma* sotib oladi va
+ilova `SDR-XXXX-XXXX` ko'rinishidagi kodni beradi. Ilova hech qachon mahsulotni sotdim
+yoki yetkazdim demaydi.
+
+**Taklif.** Havola — `https://sadora.uz/r/KOD`. Uni bosgan telefonda ilova bo'lsa,
+`landing/404.html` (GitHub Pages'da rewrite yo'q, shuning uchun 404 sahifa kodni
+yo'lning o'zidan o'qiydi) kodni ko'rsatadi va `sadora://invite/KOD` ni ochadi;
+onboardingdagi "Taklif kodi" qadami esa uni allaqachon to'ldirilgan holda oladi. Kod
+ro'yxatdan o'tish so'rovi bilan birga ketadi — hisob paydo bo'lgan lahzada ikkala
+tomon ham nur oladi, va bir kod bir hisob uchun bir marta ishlaydi.
+
+**Ilova ikonkasi streakka qarab o'zgaradi.** Androidda buni faqat `activity-alias`
+almashtirish orqali qilib bo'ladi (ikonkani "bo'yash" API'si yo'q), shuning uchun
+manifestda uchta alias bor va bir vaqtda bittasi yoqilgan: `Launcher` (issiq, streak
+≥ 7), `LauncherCalm` (streak davom etyapti), `LauncherCold` (uch kundan beri
+ochilmagan). Ikkita sovuqroq variant issiqdan generatsiya qilinadi — qo'lda ikkinchi
+nusxa vaqt o'tib brenddan uzoqlashadi:
+
+```bash
+python3 tools/gen_icon_moods.py
+```
+
+iOS'da `setAlternateIconName` bor, lekin ikonkalar Info.plist'da e'lon qilinishi
+kerak; hozircha `AppIcons.None` — hech narsa qilmaydi.
+
+**Bosh ekran o'ziniki.** Qaysi bloklar ko'rinishi va tartibi `Profil → Bosh ekran
+tartibi` da (yoki Bugun ekranining oxiridagi havolada) sozlanadi va serverda saqlanadi
+— yangi telefon o'sha tartib bilan ochiladi. Ilova katalogni, server esa joylashuvni
+biladi: yangi blok qo'shilgan reliz migratsiya talab qilmaydi, eski ilova tanimagan
+kalitni esa saqlashda tushirib qoldiradi.
+
+**Salomlashuv.** Ism ostidagi jumla har ochilishda boshqacha. Model bir chaqiruvda
+bir nechta variant yozadi, ular kesh'da turadi va bittalab beriladi; kalit bo'lmasa
+yoki `ai_model_enabled` o'chirilgan bo'lsa `GreetingPhrases` yozadi — u ham har safar
+boshqacha, ya'ni zaxira varianti "buzilgan" ko'rinmaydi. Jumla bepul, limitsiz va
+hech qachon maslahat yoki tashxis bermaydi.
 
 ## Huquqiy matnlar
 

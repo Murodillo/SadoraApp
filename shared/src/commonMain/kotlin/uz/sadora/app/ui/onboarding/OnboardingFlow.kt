@@ -75,6 +75,10 @@ enum class OnboardingStep {
     Symptoms,
     Feeling,
     Body,
+    /** Owning a watch or a band, which decides where the flow ends. */
+    Device,
+    /** The invite code she arrived with. Optional, and skippable to nowhere. */
+    Invite,
     Permissions,
     Phone,
     Otp,
@@ -101,9 +105,19 @@ private val questionSteps = listOf(
     OnboardingStep.Symptoms,
     OnboardingStep.Feeling,
     OnboardingStep.Body,
+    OnboardingStep.Device,
+    OnboardingStep.Invite,
     OnboardingStep.Permissions,
     OnboardingStep.Phone,
 )
+
+/**
+ * What the invited account is told it will receive.
+ *
+ * Matches the seeded `referral_welcome` rule. The server is the authority and an
+ * operator can change it; this is the sentence shown before there is a session to ask.
+ */
+private const val DefaultInviteWelcome = 100
 
 /** Steps the back gesture must not leave, because moving off them would loop or undo. */
 private val noWayBack = setOf(OnboardingStep.Analysing, OnboardingStep.Ready)
@@ -123,6 +137,10 @@ fun OnboardingFlow(
     modifier: Modifier = Modifier,
 ) {
     var step by remember { mutableStateOf(OnboardingStep.Welcome) }
+    // True when the code was already in the store before the question was reached —
+    // it came from a shared link, and the field says so rather than looking prefilled
+    // for no reason.
+    val arrivedWithCode = remember { state.pendingInviteCode?.isNotBlank() == true }
     val scope = rememberCoroutineScope()
     // Carried from the phone step to the OTP step.
     var challenge by remember { mutableStateOf<OtpChallenge?>(null) }
@@ -394,6 +412,31 @@ fun OnboardingFlow(
                         progress = progressAt(current),
                         onBack = ::back,
                         onSkip = ::advance,
+                        onNext = ::advance,
+                    )
+
+                    OnboardingStep.Device -> DeviceQuestion(
+                        state = state,
+                        progress = progressAt(current),
+                        onBack = ::back,
+                        onNext = ::advance,
+                    )
+
+                    OnboardingStep.Invite -> InviteCodeQuestion(
+                        state = state,
+                        // What the welcome is worth. The server owns the real number and
+                        // the app has not signed in yet, so the shipped default stands in
+                        // — it is a promise about a reward, not the reward itself.
+                        rewardCoins = DefaultInviteWelcome,
+                        fromLink = arrivedWithCode,
+                        progress = progressAt(current),
+                        onBack = ::back,
+                        onSkip = {
+                            // Skipping clears the field: an abandoned half-typed code
+                            // must not travel with the sign-up.
+                            state.pendingInviteCode = null
+                            advance()
+                        },
                         onNext = ::advance,
                     )
 

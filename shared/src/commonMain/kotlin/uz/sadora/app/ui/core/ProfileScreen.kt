@@ -106,6 +106,21 @@ fun ProfileScreen(
 
             item {
                 SadoraCard(padding = Spacing.xs) {
+                    // Nur sits above the modules rather than among the settings: it is
+                    // something she uses, not something she configures.
+                    SettingsRow(
+                        SadoraIcons.Bloom,
+                        t.rewards,
+                        value = if (state.coins > 0) uz.sadora.app.model.Fmt.int(state.coins) else null,
+                        iconTint = c.secondary,
+                    ) { onOpen(Route.Rewards) }
+                    SettingsRow(SadoraIcons.Bookmark, t.shop) { onOpen(Route.Shop) }
+                    SettingsRow(SadoraIcons.Share, t.referral) { onOpen(Route.Referral) }
+                }
+            }
+
+            item {
+                SadoraCard(padding = Spacing.xs) {
                     SettingsRow(SadoraIcons.Moon, t.sleep) { onOpen(Route.Sleep) }
                     SettingsRow(SadoraIcons.Pill, t.medications) { onOpen(Route.Medications) }
                     if (state.communityEnabled) {
@@ -135,6 +150,7 @@ fun ProfileScreen(
                     ) {
                         onOpen(Route.DataSources)
                     }
+                    SettingsRow(SadoraIcons.Home, t.homeLayout) { onOpen(Route.HomeLayout) }
                     SettingsRow(SadoraIcons.Bell, t.notifications) { onOpen(Route.Notifications) }
                     SettingsRow(SadoraIcons.Lock, t.privacyAndSecurity) { onOpen(Route.PrivacySecurity) }
                 }

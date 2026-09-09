@@ -47,6 +47,8 @@ object Users : Table("users") {
     val deletionRequestedAt = timestampWithTimeZone("deletion_requested_at").nullable()
     /** Null when the onboarding question was skipped. */
     val referredByDoctor = bool("referred_by_doctor").nullable()
+    /** "Do you wear a smart watch or band?", null when skipped or never asked. */
+    val hasWearable = bool("has_wearable").nullable()
 
     override val primaryKey = PrimaryKey(id)
 }

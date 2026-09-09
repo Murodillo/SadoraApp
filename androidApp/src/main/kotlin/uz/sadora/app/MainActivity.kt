@@ -1,11 +1,13 @@
 package uz.sadora.app
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
+import uz.sadora.app.data.AndroidAppIcons
 import uz.sadora.app.data.AndroidDeviceIdentity
 import uz.sadora.app.data.AndroidTokenStorage
 import uz.sadora.app.data.SadoraEnvironment
@@ -32,6 +34,9 @@ class MainActivity : ComponentActivity() {
                 SadoraEnvironment.Production
             },
             appVersion = BuildConfig.VERSION_NAME,
+            // The launcher icon follows the streak, which needs a Context to switch the
+            // manifest's aliases — so it is built here alongside the token storage.
+            icons = AndroidAppIcons(applicationContext),
         )
     }
 
@@ -40,8 +45,26 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         setContent {
-            App(graph)
+            App(graph, inviteCode = intent?.let(::inviteCodeOf))
         }
+    }
+
+    /**
+     * The code out of an invite link.
+     *
+     * Two shapes reach here: `https://sadora.uz/r/K7M2QP` from a shared link, and
+     * `sadora://invite/K7M2QP` from a channel that does not turn URLs into links. Both
+     * end with the code as the last path segment, so both are read the same way.
+     *
+     * Anything that is not a plausible code is dropped rather than passed on — a link
+     * with a tracking suffix on it must not become an invite code the server has to
+     * refuse.
+     */
+    private fun inviteCodeOf(intent: Intent): String? {
+        if (intent.action != Intent.ACTION_VIEW) return null
+        val segment = intent.data?.lastPathSegment ?: intent.data?.host ?: return null
+        val code = segment.uppercase().filter(Char::isLetterOrDigit)
+        return code.takeIf { it.length in 4..16 }
     }
 
     override fun onDestroy() {

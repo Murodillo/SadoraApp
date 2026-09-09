@@ -16,6 +16,8 @@ import uz.sadora.contract.Limits
 import uz.sadora.server.core.NotFoundException
 import uz.sadora.server.core.ValidationException
 import uz.sadora.server.core.dayIn
+import uz.sadora.contract.CoinReasons
+import uz.sadora.server.core.RewardHooks
 import uz.sadora.server.core.now
 
 /**
@@ -28,6 +30,13 @@ class MindService(
     private val mind: MindRepository,
     private val health: HealthRepository,
     private val access: HealthAccess,
+    /**
+     * The reward scheme, as one call it can ignore.
+     *
+     * Defaulted to the no-op so nothing in this service's tests has to know the scheme
+     * exists, and so a coin that cannot be written never costs a log entry.
+     */
+    private val rewards: RewardHooks = RewardHooks.None,
 ) {
 
     suspend fun summary(userId: Uuid): MindSummary {
@@ -80,6 +89,7 @@ class MindService(
                 note = existing?.note,
             ),
         )
+        rewards.logged(userId, CoinReasons.CHECK_IN)
         return checkIn
     }
 
@@ -98,6 +108,7 @@ class MindService(
             throw ValidationException("date", "Kelajakdagi sana bo'lishi mumkin emas")
         }
         val id = mind.addEntry(userId, request.date, request.body.trim())
+        rewards.logged(userId, CoinReasons.JOURNAL_ENTRY)
         return mind.entryById(userId, id) ?: throw NotFoundException("Yozuv topilmadi")
     }
 
@@ -122,7 +133,9 @@ class MindService(
         if (request.durationSeconds !in 1..MAX_PRACTICE_SECONDS) {
             throw ValidationException("durationSeconds", "1–$MAX_PRACTICE_SECONDS soniya oralig'ida")
         }
-        return mind.addPractice(userId, request.kind, request.durationSeconds)
+        val practice = mind.addPractice(userId, request.kind, request.durationSeconds)
+        rewards.logged(userId, CoinReasons.PRACTICE)
+        return practice
     }
 
     private fun validateScale(field: String, value: Int) {

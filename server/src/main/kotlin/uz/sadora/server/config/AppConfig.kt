@@ -28,6 +28,14 @@ data class AppConfig(
     val policyVersion: String,
     val minimumAppVersion: String?,
     /**
+     * Where an invite link points.
+     *
+     * Built here rather than in the app so the domain lives in one place: the code is
+     * appended to it, the landing page behind it sends the visitor to the right store,
+     * and a change of domain is a deploy rather than a release.
+     */
+    val referralLinkBase: String,
+    /**
      * How long a deletion request waits before the account is erased for real.
      *
      * A window for a person who changes her mind, or asks support to — not a soft delete
@@ -112,6 +120,7 @@ data class AppConfig(
                 // would make the record say she agreed to something she never saw.
                 policyVersion = env("POLICY_VERSION", "2026-09-03"),
                 minimumAppVersion = envOrNull("MINIMUM_APP_VERSION"),
+                referralLinkBase = env("REFERRAL_LINK_BASE", "https://sadora.uz/r").trimEnd('/'),
                 accountErasureGracePeriod = env("ACCOUNT_ERASURE_GRACE_DAYS", "30").toInt().days,
             )
             config.verifyProductionSafety()

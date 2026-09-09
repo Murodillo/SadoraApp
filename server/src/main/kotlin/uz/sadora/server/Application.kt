@@ -17,6 +17,8 @@ import uz.sadora.server.billing.billingRoutes
 import uz.sadora.server.billing.clickWebhook
 import uz.sadora.server.billing.paymeWebhook
 import uz.sadora.server.ai.aiRoutes
+import uz.sadora.server.rewards.adminRewardsRoutes
+import uz.sadora.server.rewards.rewardsRoutes
 import uz.sadora.server.community.adminCommunityRoutes
 import uz.sadora.server.community.communityRoutes
 import uz.sadora.server.admin.adminRoutes
@@ -118,7 +120,9 @@ fun Application.apiModule(component: AppComponent) {
             adminWearableRoutes(component.wearableService, component.wearableRepository, component.auditService)
             communityRoutes(component.communityService)
             adminCommunityRoutes(component.communityModerationService)
-            aiRoutes(component.aiService)
+            aiRoutes(component.aiService, component.greetingService)
+            rewardsRoutes(component.rewardsService, component.shopService, component.homeLayoutRepository)
+            adminRewardsRoutes(component.rewardsService, component.shopService, component.auditService)
             adminAiRoutes(component.aiService, component.adminService)
             insightsRoutes(component.insightsService)
             contentRoutes(component.contentService)

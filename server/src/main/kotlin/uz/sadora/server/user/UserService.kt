@@ -30,6 +30,7 @@ import uz.sadora.server.db.dbQuery
 import uz.sadora.server.entitlement.EntitlementService
 import uz.sadora.server.flags.FeatureFlagService
 import uz.sadora.server.flags.FlagContext
+import uz.sadora.server.rewards.RewardsService
 
 class UserService(
     private val users: UserRepository,
@@ -38,6 +39,15 @@ class UserService(
     private val refreshTokens: RefreshTokenService,
     private val audit: AuditService,
     private val config: AppConfig,
+    /**
+     * The reward scheme, for the one thing onboarding owes it: the invite code she
+     * arrived with.
+     *
+     * Claimed here rather than by a second call from the app so the reward lands in the
+     * same moment the account does — an app that dropped the connection between the two
+     * calls would owe somebody an invite nobody could prove.
+     */
+    private val rewards: RewardsService? = null,
 ) {
 
     suspend fun requireUser(userId: Uuid): UserRecord =
@@ -169,7 +179,13 @@ class UserService(
             cycleBaseline?.let { users.applyCycleBaseline(userId, it) }
             request.stage?.let { users.applyStageBaseline(userId, it) }
             users.applyConsents(userId, request.consents, config.policyVersion)
-            users.applyOnboarded(userId, request.referredByDoctor)
+            users.applyOnboarded(userId, request.referredByDoctor, request.hasWearable)
+        }
+
+        // Outside the transaction: an invite that could not be paid must not undo a
+        // sign-up, and the claim is idempotent, so the worst case is a missing reward.
+        request.inviteCode?.takeIf { it.isNotBlank() }?.let { code ->
+            runCatching { rewards?.claimReferral(userId, code) }
         }
 
         audit.record(
@@ -184,6 +200,7 @@ class UserService(
                     "notifications" to request.permissions.notifications.toString(),
                     "healthData" to request.permissions.healthData.toString(),
                     "referredByDoctor" to (request.referredByDoctor?.toString() ?: "skipped"),
+                    "hasWearable" to (request.hasWearable?.toString() ?: "skipped"),
                 ),
                 ip = context.ip,
                 userAgent = context.userAgent,

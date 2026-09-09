@@ -1,5 +1,11 @@
 package uz.sadora.app.ui.core
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -8,6 +14,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -37,12 +44,18 @@ import uz.sadora.app.model.deviceNow
 import uz.sadora.app.nav.Route
 import uz.sadora.app.nav.Tab
 import uz.sadora.app.nav.aiRoute
+import uz.sadora.app.data.HealthController
+import uz.sadora.app.data.InsightsController
+import uz.sadora.app.data.LearnController
 import uz.sadora.app.ui.components.AiSummaryCard
 import uz.sadora.app.ui.components.AnimatedNumber
 import uz.sadora.app.ui.components.ButtonTone
 import uz.sadora.app.ui.components.EmojiTile
 import uz.sadora.app.ui.components.EmptyState
+import uz.sadora.app.ui.components.CoinPill
 import uz.sadora.app.ui.components.GreetingHeader
+import uz.sadora.app.ui.components.Motion
+import uz.sadora.app.ui.components.StreakBadge
 import uz.sadora.app.ui.components.IconTile
 import uz.sadora.app.ui.components.PillButton
 import uz.sadora.app.ui.components.ProgressRing
@@ -53,6 +66,8 @@ import uz.sadora.app.ui.components.Skeleton
 import uz.sadora.app.ui.components.appearFromBelow
 import uz.sadora.app.ui.components.noRippleClickable
 import uz.sadora.app.ui.components.pressable
+import uz.sadora.app.ui.modules.StreakWidget
+import uz.sadora.contract.HomeWidgets
 import uz.sadora.app.model.DailyStepGoal
 import uz.sadora.app.model.DailySleepGoalMinutes
 
@@ -70,15 +85,18 @@ fun TodayScreen(
     onAddWater: () -> Unit,
     modifier: Modifier = Modifier,
     isLoading: Boolean = false,
+    /** The AI greeting, or null until it lands — the header has its own line for that. */
+    greeting: String? = null,
+    health: HealthController? = null,
+    insights: InsightsController? = null,
+    learn: LearnController? = null,
 ) {
     val t = strings.today
     Column(modifier) {
-        GreetingHeader(
-            greeting = t.greetingLine(strings.common.greeting(deviceNow().hour)),
-            name = state.name,
-            onAvatarClick = { onOpen(Route.PersonalDetails) },
-            onNotificationsClick = { onOpen(Route.Notifications) },
-            hasUnread = state.medications.any { it.status == MedStatus.Pending },
+        TodayHeader(
+            state = state,
+            greeting = greeting,
+            onOpen = onOpen,
         )
 
         if (isLoading) {
@@ -91,63 +109,139 @@ fun TodayScreen(
             return@Column
         }
 
-        // The deck reads top to bottom as: what the assistant makes of today, how today
-        // is going, and what is still to do. The cards arrive in that order too.
+        // The order is hers, not the app's: the arrangement screen writes it and the
+        // server keeps it, so this list is the layout rather than a hard-coded deck.
+        // Everything below is a `when` over that list and nothing else.
+        val widgets = state.homeWidgets()
         ScreenContent(stagger = false) {
-            item {
-                Box(Modifier.appearFromBelow(0)) {
-                    if (state.isPremium) {
-                        AiSummaryCard(
-                            body = premiumSummary(state, t, strings.common),
-                            showPremiumBadge = true,
-                            footnote = t.aiFootnote,
-                            onClick = { onOpen(state.aiRoute()) },
+            itemsIndexed(widgets, key = { _, key -> key }) { index, key ->
+                Box(Modifier.appearFromBelow(index.coerceAtMost(5))) {
+                    when (key) {
+                        HomeWidgets.AI -> AiWidget(state, t, onOpen)
+                        HomeWidgets.SCORE -> HealthScoreCard(
+                            state = state,
+                            onOpenMind = { onSelectTab(Tab.Mind) },
+                            onAddWater = onAddWater,
+                            onOpenBalance = { onOpen(Route.Balance) },
+                            onOpenSleep = { onOpen(Route.Sleep) },
                         )
-                    } else {
-                        AiSummaryCard(
-                            body = t.aiFreePrompt,
-                            onClick = { onOpen(state.aiRoute()) },
+                        HomeWidgets.STREAK -> StreakWidget(state, onOpen)
+                        HomeWidgets.STAGE -> StageCard(state, onOpen = { onSelectTab(Tab.Journey) })
+                        HomeWidgets.PLAN -> TodayPlanCard(
+                            state = state,
+                            onOpenMedications = { onOpen(Route.Medications) },
+                            onAddWater = onAddWater,
                         )
+                        // The four optional widgets need their controllers. Without one
+                        // — a preview, a test — the card is skipped rather than drawn
+                        // with numbers nobody supplied.
+                        HomeWidgets.SLEEP -> if (health != null && insights != null) {
+                            SleepWidget(state, health, insights, onOpen)
+                        }
+                        HomeWidgets.MEDICATIONS -> MedicationsWidget(state, onOpen)
+                        HomeWidgets.INSIGHTS -> if (insights != null) InsightsWidget(insights, onOpen)
+                        HomeWidgets.KNOWLEDGE -> if (learn != null) KnowledgeWidget(learn, onOpen)
+                        HomeWidgets.QUICK_ACTIONS -> QuickActions(onOpen = onOpen, onSelectTab = onSelectTab)
+                        HomeWidgets.SUMMARY -> RuleSummaryCard(state)
+                        // A key from a newer release than this app. Skipped rather than
+                        // dropped from her layout, so updating brings the card back.
+                        else -> Unit
                     }
                 }
             }
 
+            // The way into the arrangement screen, at the end of the deck rather than in
+            // the header: it is a thing she does once, and it should not compete with the
+            // day for the top of the screen.
             item {
-                Box(Modifier.appearFromBelow(1)) {
-                    HealthScoreCard(
-                        state = state,
-                        onOpenMind = { onSelectTab(Tab.Mind) },
-                        onAddWater = onAddWater,
-                        onOpenBalance = { onOpen(Route.Balance) },
-                        onOpenSleep = { onOpen(Route.Sleep) },
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .noRippleClickable { onOpen(Route.HomeLayout) }
+                        .padding(vertical = Spacing.xs),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    IconTile(SadoraIcons.Pencil, tint = Sadora.colors.muted, size = 26.dp, iconSize = 13.dp)
+                    Text(
+                        t.customise,
+                        style = Sadora.type.body,
+                        color = Sadora.colors.muted,
+                        modifier = Modifier.padding(start = Spacing.xs),
                     )
                 }
             }
-
-            item {
-                Box(Modifier.appearFromBelow(2)) {
-                    StageCard(state, onOpen = { onSelectTab(Tab.Journey) })
-                }
-            }
-
-            item {
-                Box(Modifier.appearFromBelow(3)) {
-                    TodayPlanCard(
-                        state = state,
-                        onOpenMedications = { onOpen(Route.Medications) },
-                        onAddWater = onAddWater,
-                    )
-                }
-            }
-
-            item {
-                Box(Modifier.appearFromBelow(4)) {
-                    QuickActions(onOpen = onOpen, onSelectTab = onSelectTab)
-                }
-            }
-
-            item { Box(Modifier.appearFromBelow(5)) { RuleSummaryCard(state) } }
         }
+    }
+}
+
+/**
+ * The header: her name, the AI's line for this moment, and the two things that change
+ * while she is looking at them — the streak and the balance.
+ *
+ * The greeting crossfades rather than swapping. It is written fresh on every open, so
+ * the change is the feature; a line that simply replaced itself would read as a glitch
+ * on the one screen she sees most.
+ */
+@Composable
+private fun TodayHeader(
+    state: AppState,
+    greeting: String?,
+    onOpen: (Route) -> Unit,
+) {
+    val t = strings.today
+    // Until the server's line arrives, the app's own greeting stands in — the same
+    // sentence the header has always shown, so nothing pops in a second late.
+    val line = greeting ?: t.greetingLine(strings.common.greeting(deviceNow().hour))
+
+    Column {
+        GreetingHeader(
+            greeting = "",
+            name = state.name,
+            onAvatarClick = { onOpen(Route.PersonalDetails) },
+            onNotificationsClick = { onOpen(Route.Notifications) },
+            hasUnread = state.medications.any { it.status == MedStatus.Pending },
+        )
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = Spacing.screen)
+                .padding(bottom = Spacing.xs),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+        ) {
+            AnimatedContent(
+                targetState = line,
+                transitionSpec = {
+                    (fadeIn(tween(Motion.Standard)) + slideInVertically { it / 3 })
+                        .togetherWith(fadeOut(tween(Motion.Quick)))
+                },
+                label = "greeting",
+                modifier = Modifier.weight(1f),
+            ) { shown ->
+                Text(shown, style = Sadora.type.body, color = Sadora.colors.muted)
+            }
+            StreakBadge(state.streakDays, onClick = { onOpen(Route.Rewards) })
+            CoinPill(state.coins, onClick = { onOpen(Route.Rewards) })
+        }
+    }
+}
+
+/** The assistant's card — the summary for Premium, the invitation for everyone else. */
+@Composable
+private fun AiWidget(state: AppState, t: TodayStrings, onOpen: (Route) -> Unit) {
+    if (state.isPremium) {
+        AiSummaryCard(
+            body = premiumSummary(state, t, strings.common),
+            showPremiumBadge = true,
+            footnote = t.aiFootnote,
+            onClick = { onOpen(state.aiRoute()) },
+        )
+    } else {
+        AiSummaryCard(
+            body = t.aiFreePrompt,
+            onClick = { onOpen(state.aiRoute()) },
+        )
     }
 }
 

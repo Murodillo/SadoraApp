@@ -45,6 +45,15 @@ object AuditActions {
     const val COMMUNITY_COMMENT_RESTORED = "community.comment_restored"
     const val COMMUNITY_REPORT_RESOLVED = "community.report_resolved"
     const val COMMUNITY_AUTHOR_RESTRICTED = "community.author_restricted"
+
+    // The reward scheme. A rate is a lever on the whole economy and a discount is a
+    // commitment to a partner, so both are answerable actions rather than settings.
+    const val REWARDS_RULE_UPDATED = "rewards.rule_updated"
+    const val REWARDS_COINS_ADJUSTED = "rewards.coins_adjusted"
+    const val SHOP_PRODUCT_CREATED = "shop.product_created"
+    const val SHOP_PRODUCT_UPDATED = "shop.product_updated"
+    const val SHOP_PRODUCT_DELETED = "shop.product_deleted"
+    const val SHOP_PRODUCT_DEACTIVATED = "shop.product_deactivated"
 }
 
 data class AuditEntry(

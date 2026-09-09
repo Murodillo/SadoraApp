@@ -22,6 +22,8 @@ import uz.sadora.contract.Limits
 import uz.sadora.server.core.NotFoundException
 import uz.sadora.server.core.ValidationException
 import uz.sadora.server.core.dayIn
+import uz.sadora.contract.CoinReasons
+import uz.sadora.server.core.RewardHooks
 import uz.sadora.server.core.now
 
 /**
@@ -35,6 +37,13 @@ import uz.sadora.server.core.now
 class MedicationService(
     private val repository: MedicationRepository,
     private val access: HealthAccess,
+    /**
+     * The reward scheme, as one call it can ignore.
+     *
+     * Defaulted to the no-op so nothing in this service's tests has to know the scheme
+     * exists, and so a coin that cannot be written never costs a log entry.
+     */
+    private val rewards: RewardHooks = RewardHooks.None,
 ) {
 
     suspend fun list(userId: Uuid, includeArchived: Boolean): List<Medication> {
@@ -138,6 +147,11 @@ class MedicationService(
                     else -> 0
                 }
                 if (delta != 0) repository.adjustStock(userId, id, delta)
+            }
+            // Only a confirmed dose pays, and only once per scheduled dose: the
+            // reference is the dose itself, so re-confirming it earns nothing.
+            if (request.status == DoseStatus.TAKEN) {
+                rewards.logged(userId, CoinReasons.DOSE_TAKEN, "$id:${request.dueOn}:${request.dueAt}")
             }
         }
         return day(userId, request.dueOn)

@@ -43,6 +43,7 @@ import androidx.compose.ui.graphics.Color
 import uz.sadora.app.i18n.strings
 import uz.sadora.app.model.AppLanguage
 import uz.sadora.app.model.AppState
+import uz.sadora.app.model.Fmt
 import uz.sadora.app.model.BirthControl
 import uz.sadora.app.model.ConceptionWindow
 import uz.sadora.app.model.MaxEnteredCycles
@@ -1340,3 +1341,134 @@ fun SymptomsQuestion(
         }
     }
 }
+
+
+/**
+ * "Do you wear a smart watch or band?"
+ *
+ * Asked at sign-up because the answer changes where the flow ends. A yes routes her
+ * into the connect screen the first time the app opens, and connecting on day one is
+ * the difference between a sleep tab with data in it and one that asks her to type
+ * every night.
+ *
+ * Answering is not optional in the sense of being skippable to nowhere: "no" is a real
+ * answer and it is the one that keeps the flow short.
+ */
+@Composable
+fun DeviceQuestion(
+    state: AppState,
+    progress: Float,
+    onBack: () -> Unit,
+    onNext: () -> Unit,
+) {
+    val entry = rememberPageEntry(800)
+    val t = strings.onboarding
+    val answer = state.hasWearable
+
+    QuestionScaffold(
+        title = t.deviceTitle,
+        subtitle = t.deviceSubtitle,
+        progress = progress,
+        onBack = onBack,
+        onSkip = null,
+        entry = entry,
+        footer = {
+            AnswerFooter(visible = answer != null) {
+                SadoraButton(t.continueLabel, onNext)
+            }
+        },
+    ) {
+        Reveal(entry.value, from = 0.30f) {
+            AnswerRow(
+                label = t.deviceYes,
+                icon = SadoraIcons.Watch,
+                note = t.deviceYesNote,
+                selected = answer == true,
+                noteAlwaysVisible = true,
+                onClick = {
+                    state.hasWearable = true
+                    // Consumed once by the tab shell, which opens the connect screen.
+                    state.pendingDeviceConnect = true
+                },
+            )
+        }
+        Reveal(entry.value, from = 0.38f) {
+            AnswerRow(
+                label = t.deviceNo,
+                icon = SadoraIcons.Pencil,
+                tint = Color(0xFF4FC3FF),
+                note = t.deviceNoNote,
+                selected = answer == false,
+                noteAlwaysVisible = true,
+                onClick = {
+                    state.hasWearable = false
+                    state.pendingDeviceConnect = false
+                },
+            )
+        }
+    }
+}
+
+/**
+ * "Do you have an invite code?"
+ *
+ * Optional, and it says so: the skip link is the same weight as the button. The field
+ * is prefilled when the app was opened from a shared link, and the note above it says
+ * where the code came from — a value that appeared in a field on its own is unsettling
+ * unless something explains it.
+ *
+ * Nothing is validated here. An unknown code is settled by the server when the account
+ * is created, silently, because a typo in an optional field must never block a sign-up.
+ */
+@Composable
+fun InviteCodeQuestion(
+    state: AppState,
+    rewardCoins: Int,
+    fromLink: Boolean,
+    progress: Float,
+    onBack: () -> Unit,
+    onSkip: () -> Unit,
+    onNext: () -> Unit,
+) {
+    val entry = rememberPageEntry()
+    val t = strings.onboarding
+    val focus = LocalFocusManager.current
+    val code = state.pendingInviteCode.orEmpty()
+
+    QuestionScaffold(
+        title = t.inviteTitle,
+        subtitle = t.inviteSubtitle,
+        progress = progress,
+        onBack = onBack,
+        onSkip = onSkip,
+        entry = entry,
+        footer = {
+            AnswerFooter(visible = code.isNotBlank()) {
+                SadoraButton(t.continueLabel, onNext)
+            }
+        },
+    ) {
+        Spacer(Modifier.height(Spacing.md))
+        Reveal(entry.value, from = 0.30f) {
+            SadoraTextField(
+                value = code,
+                // Upper-cased as she types: the codes are generated upper-case and a
+                // lower-case one would look like a different code on screen.
+                onValueChange = { typed ->
+                    state.pendingInviteCode = typed.uppercase().filter(Char::isLetterOrDigit).take(INVITE_CODE_MAX)
+                },
+                label = t.inviteLabel,
+                placeholder = t.inviteHint,
+                leadingIcon = SadoraIcons.Share,
+                imeAction = ImeAction.Done,
+                keyboardActions = KeyboardActions(onDone = { focus.clearFocus() }),
+            )
+        }
+        Reveal(entry.value, from = 0.42f) {
+            PrivacyNote(if (fromLink) t.inviteFromLink else t.inviteReward(Fmt.int(rewardCoins)))
+        }
+    }
+}
+
+/** Long enough for any code the server generates, short enough to refuse a paragraph. */
+private const val INVITE_CODE_MAX = 16

@@ -11,6 +11,9 @@ import uz.sadora.app.model.LifeStage
 import uz.sadora.app.model.Mood
 import uz.sadora.app.model.ReportReason
 import uz.sadora.contract.ArticleKind
+import uz.sadora.contract.CoinReasons
+import uz.sadora.contract.HomeWidgets
+import uz.sadora.contract.ShopKind
 import uz.sadora.contract.DoseStatus
 import uz.sadora.contract.FetalMovement
 import uz.sadora.contract.FoodRelation
@@ -134,6 +137,27 @@ object StringsRu : Strings {
         override val bodySubtitle = "По желанию. Никому не показывается и удаляется в любой момент."
         override val height = "Рост"
         override val weight = "Вес"
+
+        override val deviceTitle = "Есть умные часы или браслет?"
+        override val deviceSubtitle =
+            "Если есть, сон и шаги будут приходить сами — вручную вводить не придётся."
+        override val deviceYes = "Да, есть"
+        override val deviceYesNote = "Подключим на следующем шаге"
+        override val deviceNo = "Нет"
+        override val deviceNoNote = "Всё можно вводить и вручную"
+        override val deviceConnectTitle = "Подключим ваше устройство?"
+        override val deviceConnectBody =
+            "Подключите один раз — сон, пульс и шаги будут обновляться каждый день. " +
+                "Отключить можно в любой момент."
+        override val deviceConnectNow = "Подключить сейчас"
+        override val deviceConnectLater = "Позже"
+
+        override val inviteTitle = "Есть код приглашения?"
+        override val inviteSubtitle = "Если нет — просто пропустите этот шаг."
+        override val inviteLabel = "Код приглашения"
+        override val inviteHint = "Например, K7M2QP"
+        override fun inviteReward(coins: String) = "С кодом вы начнёте с $coins нур"
+        override val inviteFromLink = "Взят из ссылки"
 
         override val permissionsTitle = "Что вы разрешите?"
         override val permissionsSubtitle = "Каждое можно изменить позже в разделе «Профиль»."
@@ -286,6 +310,11 @@ object StringsRu : Strings {
         override val secretChat = "Секретный чат"
         override val insights = "Аналитика"
         override val knowledge = "Знания"
+
+        override val rewards = "Нур и серия"
+        override val shop = "Магазин Нур"
+        override val referral = "Пригласить подруг"
+        override val homeLayout = "Порядок на главной"
 
         override val personalDetails = "Личные данные"
         override val goals = "Цели"
@@ -457,6 +486,7 @@ object StringsRu : Strings {
         override val kcal = "ккал"
         override val steps = "шагов"
         override val minutesShort = "мин"
+        override val daysWord = "дн."
         override fun days(count: Int) = "$count дн."
     }
 
@@ -628,6 +658,7 @@ object StringsRu : Strings {
         override fun cycleDayOf(day: Int, length: Int) = "День $day / $length"
         override fun pregnancyWeek(week: Int) = "$week-я неделя"
 
+        override val customise = "Настроить главный экран"
         override val quickActions = "Быстрые действия"
         override val journal = "Дневник"
         override val meditation = "Медитация"
@@ -1267,4 +1298,159 @@ object StringsRu : Strings {
         override val moodLabel = "Настроение"
         override val allDoneToday = "На сегодня всё выполнено 🌸"
     }
+
+    override val rewards = object : RewardStrings {
+        override val coinName = "Нур"
+        override fun coins(amount: String) = "$amount нур"
+        override fun coinsGained(amount: String) = "+$amount нур"
+
+        override fun streakDays(days: Int) = "$days дней подряд"
+        override val streakStarted = "Серия началась"
+        override val streakSubtitle = "Вы снова здесь 🌸"
+        override fun milestoneReached(days: Int) = "$days дней! 🎉"
+        override fun daysToMilestone(days: Int, milestone: Int) =
+            "Ещё $days дней — рубеж $milestone дней"
+        override val streakBeyondMilestones = "Все рубежи уже позади"
+
+        override val walletTitle = "Кошелёк Нур"
+        override val balance = "Баланс"
+        override val earned = "Начислено"
+        override val spent = "Потрачено"
+        override val currentStreak = "Текущая серия"
+        override val longestStreak = "Самая длинная"
+        override fun days(count: Int) = "$count дн."
+        override val history = "История"
+        override val historyEmpty = "Пока пусто. Пользуйтесь приложением — нур будет копиться."
+        override val howToEarn = "Как копить нур"
+        override fun perDay(times: Int) = "до $times раз в день"
+        override fun earnReason(reason: String) = when (reason) {
+            CoinReasons.DAILY_OPEN -> "Первый вход за день"
+            CoinReasons.STREAK_MILESTONE -> "Рубеж серии"
+            CoinReasons.CHECK_IN -> "Отметить настроение"
+            CoinReasons.WATER_GOAL -> "Выполнить цель по воде"
+            CoinReasons.DOSE_TAKEN -> "Отметить приём"
+            CoinReasons.MEAL_LOGGED -> "Добавить еду"
+            CoinReasons.JOURNAL_ENTRY -> "Запись в дневнике"
+            CoinReasons.PRACTICE -> "Дыхание или медитация"
+            CoinReasons.ARTICLE_READ -> "Прочитать статью"
+            CoinReasons.REFERRAL_JOINED -> "Подруга присоединилась"
+            CoinReasons.REFERRAL_WELCOME -> "Приход по коду приглашения"
+            CoinReasons.REDEMPTION -> "Покупка в магазине"
+            CoinReasons.ADMIN_ADJUSTMENT -> "Ручная корректировка"
+            else -> reason
+        }
+        override val openShop = "Магазин Нур"
+        override val inviteFriends = "Пригласить"
+
+        override val referralTitle = "Пригласите подруг"
+        override val referralSubtitle =
+            "За каждую подругу, пришедшую по вашей ссылке, нур получаете вы обе."
+        override val yourCode = "Ваш код"
+        override val copyCode = "Копировать"
+        override val codeCopied = "Код скопирован"
+        override val shareLink = "Поделиться ссылкой"
+        override fun shareMessage(link: String) =
+            "SADORA — приложение о женском здоровье. Присоединяйтесь по моей ссылке: $link"
+        override fun invitedCount(count: Int) = "Присоединилось: $count"
+        override fun referralEarned(amount: String) = "За приглашения — $amount нур"
+        override fun rewardPerJoin(amount: String) = "$amount нур за каждую подругу"
+        override fun welcomeReward(amount: String) = "Подруга начнёт с $amount нур"
+        override val referralHowTitle = "Как это работает"
+        override val referralSteps = listOf(
+            "Отправьте ссылку подруге",
+            "Она устанавливает приложение и регистрируется",
+            "Нур приходит вам обеим",
+        )
+        override val referralFairUse =
+            "Код срабатывает один раз и только для нового аккаунта. Свой код себе не засчитывается."
+    }
+
+    override val shop = object : ShopStrings {
+        override val title = "Магазин Нур"
+        override val subtitle = "Обменяйте накопленный нур на Premium, витамины и устройства"
+        override fun tab(kind: ShopKind) = when (kind) {
+            ShopKind.PREMIUM -> "Premium"
+            ShopKind.VITAMIN -> "Витамины"
+            ShopKind.DEVICE -> "Устройства"
+        }
+        override val empty = "В этом разделе пока пусто"
+        override val loading = "Загружаем магазин…"
+
+        override fun discount(percent: Int) = "скидка $percent%"
+        override fun priceWas(price: String) = price
+        override fun priceNow(price: String) = price
+        override fun saving(amount: String) = "экономия $amount"
+        override fun premiumDays(days: Int) = "$days дней Premium"
+        override val outOfStock = "Закончилось"
+        override fun stockLeft(count: Int) = "осталось $count"
+        override val notEnough = "Не хватает нур"
+        override fun shortBy(amount: String) = "Нужно ещё $amount нур"
+
+        override val redeem = "Обменять"
+        override val redeeming = "Выполняем…"
+        override fun confirmTitle(product: String) = product
+        override fun confirmBody(cost: String) =
+            "Спишем $cost нур и выдадим код на скидку."
+        override val confirmPremiumBody = "Спишем нур и сразу откроем Premium."
+        override val cancel = "Отмена"
+
+        override val issuedTitle = "Код готов"
+        override val issuedPremiumTitle = "Premium открыт 🎉"
+        override val issuedBody = "Покажите код продавцу — скидку применят на месте."
+        override val issuedPremiumBody = "Подписка продлена. Всё открыто прямо сейчас."
+        override val yourCode = "Код на скидку"
+        override val copyCode = "Копировать"
+        override val codeCopied = "Код скопирован"
+        override fun validUntil(date: String) = "Действует до $date"
+        override val myCodes = "Мои коды"
+        override val myCodesEmpty = "Кодов пока нет"
+        override val statusIssued = "Активен"
+        override val statusUsed = "Использован"
+        override val statusExpired = "Истёк"
+        override val statusCancelled = "Отменён"
+
+        override val partnerNote =
+            "Витамины и устройства продают партнёры. SADORA выдаёт код на скидку, но не продаёт " +
+                "и не доставляет товар. Перед приёмом добавок посоветуйтесь с врачом или фармацевтом."
+    }
+
+    override val homeLayout = object : HomeLayoutStrings {
+        override val title = "Главный экран"
+        override val subtitle = "Выберите, какие блоки показывать и в каком порядке."
+        override val visible = "Показан"
+        override val hidden = "Скрыт"
+        override val moveUp = "Вверх"
+        override val moveDown = "Вниз"
+        override val reset = "Вернуть порядок по умолчанию"
+        override val alwaysOn = "Всегда показан"
+        override fun widget(key: String) = when (key) {
+            HomeWidgets.AI -> "Сводка AI"
+            HomeWidgets.SCORE -> "Показатель здоровья"
+            HomeWidgets.STREAK -> "Серия и нур"
+            HomeWidgets.STAGE -> "Цикл / этап"
+            HomeWidgets.PLAN -> "План на сегодня"
+            HomeWidgets.SLEEP -> "Сон"
+            HomeWidgets.MEDICATIONS -> "Лекарства"
+            HomeWidgets.INSIGHTS -> "Аналитика"
+            HomeWidgets.KNOWLEDGE -> "Знания"
+            HomeWidgets.QUICK_ACTIONS -> "Быстрые действия"
+            HomeWidgets.SUMMARY -> "Итоги дня"
+            else -> key
+        }
+        override fun widgetNote(key: String) = when (key) {
+            HomeWidgets.AI -> "Краткий разбор дня"
+            HomeWidgets.SCORE -> "Сон, настроение, вода и шаги"
+            HomeWidgets.STREAK -> "Дни подряд и баланс"
+            HomeWidgets.STAGE -> "День цикла или неделя"
+            HomeWidgets.PLAN -> "Лекарства и вода"
+            HomeWidgets.SLEEP -> "Прошлая ночь"
+            HomeWidgets.MEDICATIONS -> "Приёмы на сегодня"
+            HomeWidgets.INSIGHTS -> "Последняя находка"
+            HomeWidgets.KNOWLEDGE -> "Статья для вас"
+            HomeWidgets.QUICK_ACTIONS -> "Четыре ярлыка"
+            HomeWidgets.SUMMARY -> "Коротко по цифрам"
+            else -> ""
+        }
+    }
+
 }

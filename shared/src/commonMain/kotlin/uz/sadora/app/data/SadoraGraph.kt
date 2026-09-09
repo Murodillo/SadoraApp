@@ -13,6 +13,7 @@ import uz.sadora.app.data.api.AppointmentApi
 import uz.sadora.app.data.api.MindApi
 import uz.sadora.app.data.api.NotificationApi
 import uz.sadora.app.data.api.NutritionApi
+import uz.sadora.app.data.api.RewardsApi
 import uz.sadora.app.data.api.WearableApi
 
 /**
@@ -27,6 +28,13 @@ class SadoraGraph(
     val device: DeviceIdentity,
     val environment: SadoraEnvironment = SadoraEnvironment.Production,
     val appVersion: String? = null,
+    /**
+     * Changes the launcher icon with the streak.
+     *
+     * Built by the platform like the token storage is, and defaulting to the no-op so
+     * a test or a preview never touches the home screen.
+     */
+    val icons: AppIcons = AppIcons.None,
     engine: HttpClientEngine? = null,
 ) {
     private val client: HttpClient =
@@ -50,6 +58,7 @@ class SadoraGraph(
     val insightsApi: InsightsApi = InsightsApi(caller)
     val learnApi: LearnApi = LearnApi(caller)
     val billingApi: BillingApi = BillingApi(caller)
+    val rewardsApi: RewardsApi = RewardsApi(caller)
     val repository: SadoraRepository = SadoraRepository(api, session, device, appVersion)
 
     /**
@@ -70,6 +79,9 @@ class SadoraGraph(
     fun learnController(): LearnController = LearnController(learnApi)
 
     fun billingController(): BillingController = BillingController(billingApi)
+
+    fun rewardsController(state: uz.sadora.app.model.AppState): RewardsController =
+        RewardsController(rewardsApi, state, icons)
 
     fun close() = client.close()
 }

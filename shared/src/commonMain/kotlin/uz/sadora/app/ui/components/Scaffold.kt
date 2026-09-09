@@ -238,7 +238,11 @@ fun GreetingHeader(
                 style = Sadora.type.h1,
                 color = c.text,
             )
-            Text(greeting, style = Sadora.type.body, color = c.muted)
+            // Blank when the caller draws its own line under the header — Today does,
+            // because its greeting animates and this Column would clip the movement.
+            if (greeting.isNotEmpty()) {
+                Text(greeting, style = Sadora.type.body, color = c.muted)
+            }
         }
         // The deck puts the face next to the bell: the avatar is the way into the
         // profile, so the greeting itself is left as plain text.
