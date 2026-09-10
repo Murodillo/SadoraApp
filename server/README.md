@@ -299,6 +299,59 @@ TEST_DB_URL=jdbc:postgresql://localhost:5433/sadora_test ./gradlew :server:test
 
 CI'da u job'ning o'z Postgres'iga qarshi ishlaydi.
 
+## Serverga qo'yish (deploy)
+
+Backend — JVM jarayoni (Ktor) va u **PostgreSQL** talab qiladi: sxemada 91 ta
+`TIMESTAMPTZ`, 28 ta `gen_random_uuid()`, `jsonb`, regex `~` operatori va beshta
+qisman (`partial`) unikal indeks bor. Aynan o'sha qisman indekslar bir tangani ikki
+marta to'lab yuborishdan saqlaydi, va MySQL'da ularning ekvivalenti yo'q.
+
+Shuning uchun **umumiy (shared) cPanel xosting bunga yaramaydi**: u PHP uchun, uzluksiz
+JVM jarayonini ko'tarmaydi va MySQL beradi. Kerak bo'ladigan narsa — Docker o'rnatilgan
+VPS yoki shunga o'xshash xizmat. Statik narsalar (landing sahifasi, admin panelning
+yig'ilgan `dist`i) esa istalgan xostingda yashayveradi.
+
+`docker-compose.prod.yml` butun backendni bitta serverga ko'taradi — Postgres, Redis va
+API. Serverda Docker'dan boshqa hech narsa kerak emas: JDK ham, Gradle ham, manba
+daraxti ham API konteynerning ichida yig'iladi.
+
+```bash
+cp server/.env.prod.example server/.env.prod   # so'ng bo'sh qatorlarni to'ldiring
+docker compose -f docker-compose.prod.yml --env-file server/.env.prod up -d --build
+```
+
+`POSTGRES_PASSWORD` majburiy: usiz compose ishga tushmaydi, chunki namunadagi parol
+bilan jimgina ko'tarilgan prod bazasi — parolini kimdir baribir topadigan baza.
+
+Postgres va Redis hech qanday portni tashqariga chiqarmaydi; ular faqat compose tarmog'i
+ichidan ko'rinadi. API esa `127.0.0.1:8080` da turadi, ya'ni unga faqat shu mashinadagi
+proxy yetadi. Domen tayyor bo'lgach, TLS'ni Caddy oladi (sertifikatni o'zi yangilaydi):
+
+```bash
+SADORA_DOMAIN=api.sadora.uz docker compose -f docker-compose.prod.yml \
+  --env-file server/.env.prod --profile tls up -d
+```
+
+Ikki holatni farqlash kerak:
+
+| | **doimiy test serveri** | **haqiqiy prod** |
+|---|---|---|
+| `SADORA_ENV` | `DEV` | `PROD` |
+| SMS kodi | `123456` (`OTP_FIXED_CODE`) | haqiqiy provayder |
+| Ishlaydimi? | bugun | **yo'q — SMS provayder ulanmagan** |
+
+`AppConfig.verifyProductionSafety()` ataylab yo'l bermaydi: dev JWT kaliti, javobda
+qaytariladigan OTP yoki doimiy OTP kodi bilan `SADORA_ENV=PROD` **ko'tarilmaydi**. Ya'ni
+haqiqiy prod SMS provayderni kutadi; doimiy test serveri esa hozir ham ishlayveradi va
+tunnel bilan bog'liq muammolarni butunlay yo'q qiladi.
+
+Deploy'dan keyin tekshiruv — `/health/ready` bazani ham tekshiradi, `/health/live` esa
+yo'q (bazadagi qisqa uzilish konteynerni o'ldirmasligi uchun):
+
+```bash
+curl https://api.sadora.uz/health/ready
+```
+
 ## Nima hali yo'q
 App Store / Google Play cheklarini haqiqiy tekshirish (`StoreVerifier` interfeysi va
 grant yo'li tayyor, kalitlar yo'q) va ilovadagi billing SDK · SMS provayderi (`OtpSender` interfeysi

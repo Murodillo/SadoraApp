@@ -1,0 +1,25 @@
+# TLS in front of the API.
+#
+# Caddy obtains and renews the certificate itself, so nothing here holds a key and
+# nothing has to be remembered in ninety days. The domain comes from the environment
+# because a hostname is not a secret but it is different on every deployment.
+
+{$SADORA_DOMAIN} {
+	# The API is the only thing published. The admin panel is a separate static build
+	# and can live anywhere — including ordinary shared hosting — as long as it is
+	# allowed through CORS_ALLOWED_ORIGINS in server/.env.prod.
+	reverse_proxy api:8080
+
+	# The client IP the rate limiter and the audit log record. Ktor is configured to
+	# trust forwarded headers, and without these every request would look like it came
+	# from the proxy container.
+	header_up X-Forwarded-For {remote_host}
+	header_up X-Forwarded-Proto {scheme}
+
+	encode gzip
+
+	log {
+		output stdout
+		format console
+	}
+}
