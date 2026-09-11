@@ -153,13 +153,79 @@ doimiy SMS kodi yoqilgan, shuning uchun tugagach yopib qo'ying.
 
 ---
 
-## CI
+## CI/CD
 
-Har bir push GitHub Actions'da tekshiriladi: backend testlari va migratsiyalarning
-haqiqiy Postgres ustida ko'tarilishi, shared modul testlari, Android APK yig'ilishi,
-admin panelning typecheck va build'i. Kotlin/Native (iOS) faqat `dev` va `main` da hamda
-PR'larda — macOS runner'lari o'n barobar qimmat, lekin ish `dev` ga tushgani uchun
-Kotlin/Native xatosini merge kunigacha qoldirib bo'lmaydi.
+`dev` yoki `main` ga ochilgan har bir pull request va ularga har bir push GitHub
+Actions'da tekshiriladi. **`dev` ga ochilgan PR** — va merge'dan keyin `dev` ning o'zi —
+barcha tekshiruvlar o'tgach staging serverga avtomatik yetkaziladi. `main` ga PR faqat
+tekshiriladi: `main` do'kon relizi.
+
+```
+PR → dev                                                     (.github/workflows/ci.yml)
+ ├─ Backend          testlar, haqiqiy Postgres'da migratsiya, Kover coverage (pastki chegara 58%)
+ ├─ Android/shared   shared modul testlari
+ ├─ iOS shared       Kotlin/Native testlari — yetkazishni kutdirmaydi
+ ├─ Admin panel      typecheck, vitest + coverage chegaralari, build, npm audit
+ ├─ Deploy tooling   shellcheck, actionlint, gate testlari, compose va Caddyfile tekshiruvi
+ └─ Staging (hammasi o'tsa)                                  (.github/workflows/stage.yml)
+     ├─ API image     bir marta yig'iladi → GHCR, digest bo'yicha; SBOM va provenance bilan
+     ├─ Web bundle    admin panel + landing
+     ├─ Deploy        DB backup → almashtirish → /health/ready shu commit'ni aytguncha kutadi,
+     │                aytmasa o'zi oldingi relizga qaytadi
+     ├─ APK           staging URL bilan yig'iladi, imzosi tekshiriladi, landing'dagi
+     │                /download.html ga chiqadi (serverda saqlangani bayt-baayt solishtiriladi)
+     └─ Smoke test    tashqaridan: health va reliz, admin, CORS, landing, taklif sahifasi, APK
+```
+
+PR'da bitta izoh turadi va har run'da yangilanadi: joblar, testlar soni, coverage va
+staging natijasi.
+
+### Xavfsizlik
+
+- **CI kaliti shell olmaydi.** Serverda u faqat `/usr/local/bin/sadora-ci` ni ishga
+  tushiradi (`authorized_keys` da `command=`), jump host'da esa faqat serverning 22-portiga
+  ulana oladi. Gate buyruqlari: `url`, `deploy`, `publish-apk`, `rollback`, `status`.
+- **Infratuzilma CI'dan o'zgarmaydi.** Gate compose fayllari, Caddyfile va o'zini
+  o'zgartirmaydi — ular `tools/deploy_stage.sh` bilan qo'lda qo'llanadi. PR ularni
+  o'zgartirsa, run'da ogohlantirish chiqadi.
+- Host kalitlari secret'da qotirilgan (`StrictHostKeyChecking yes`); GHCR tokeni serverda
+  faqat bir martalik docker config'da yashaydi.
+- Repo public, loglari ham: server manzillari va tunnel URL'lari yashiriladi, staging
+  APK artifact sifatida yuklanmaydi. Fork PR'lari secret olmaydi va yetkazilmaydi.
+  Action'lar commit SHA bilan qotirilgan.
+
+### Bir martalik sozlash
+
+```bash
+cp deploy/stage/hosts.env.example deploy/stage/hosts.env   # manzillarni yozing
+./tools/deploy_stage.sh                                     # gate + CI kalitini bog'laydi
+./tools/ci_secrets.sh                                       # `staging` environment secret'lari
+```
+
+`ci_secrets.sh` kalit va keystore'ni fayldan o'qiydi, hech narsa terilmaydi va
+chiqarilmaydi. Staging APK shu kompyuterning `~/.android/debug.keystore` bilan
+imzolanadi — telefondagi eski yig'ma ustidan yangilanadi.
+
+### Qo'lda
+
+- **Qayta deploy yoki rollback:** Actions → Stage → Run workflow. `rollback_to` bo'sh
+  bo'lsa — oldingi sog'lom relizga.
+- **Smoke test:** `tools/ci/smoke.sh <app url> <landing url> <commit sha>`
+- **Testlar lokal:**
+  - gate — `docker run --rm -v "$PWD":/src -w /src ubuntu:24.04 bash deploy/stage/test/sadora-ci.test.sh`
+  - admin — `npm --prefix admin run test:coverage`
+  - server coverage — `TEST_DB_URL=… ./gradlew :server:koverHtmlReport`
+  - hisobot generatori — `python3 -m unittest discover -s tools/ci`
+
+### Cheklovlar
+
+- Staging bitta. `dev` ga ochiq ikki PR bir-birining ustiga deploy qiladi — oxirgisi
+  turadi; merge'dan keyin `dev` yana deploy bo'ladi.
+- Quick tunnel manzili cloudflared qayta ishga tushganda (masalan, server reboot)
+  o'zgaradi. Keyingi deploy CORS'ni va APK'ni yangi manzilga moslaydi, lekin eski APK'lar
+  ishlamay qoladi. Domen bu muammoni yo'qotadi.
+- Migratsiya orqaga qaytmaydi: rollback image'ni qaytaradi, schema'ni emas. Har
+  deploydan oldingi dump serverda `/opt/sadora/backups` da (oxirgi 10 ta).
 
 ## Arxitektura
 

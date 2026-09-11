@@ -1,0 +1,28 @@
+name: Staging SSH
+description: >
+  Key-only SSH to the staging server through its jump host, with pinned host keys, and a
+  `stage` command that runs one sadora-ci verb there, retrying a dropped connection.
+inputs:
+  key:
+    description: Private key bound to sadora-ci on the server (STAGE_SSH_KEY)
+    required: true
+  known-hosts:
+    description: Pinned host keys for the jump host and the server (STAGE_SSH_KNOWN_HOSTS)
+    required: true
+  jump:
+    description: user@host of the jump host (STAGE_JUMP)
+    required: true
+  host:
+    description: user@host of the server as the jump host sees it (STAGE_HOST)
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Configure SSH
+      shell: bash
+      env:
+        KEY: ${{ inputs.key }}
+        KNOWN_HOSTS: ${{ inputs.known-hosts }}
+        JUMP: ${{ inputs.jump }}
+        HOST: ${{ inputs.host }}
+      run: bash "$GITHUB_ACTION_PATH/setup.sh"

@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+#
+# Gives GitHub Actions what it needs to deliver to staging. Run once, by a person:
+#
+#   ./tools/ci_secrets.sh
+#
+# Stores five secrets in the repository's `staging` environment, read from files on this
+# machine — nothing is typed, and nothing is printed:
+#
+#   STAGE_SSH_KEY           ~/.config/sadora/ci/stage_ci_ed25519   the CI key; on the server it
+#                                                                   can run sadora-ci and nothing else
+#   STAGE_SSH_KNOWN_HOSTS   ~/.config/sadora/ci/known_hosts         pinned host keys of both machines
+#   STAGE_JUMP, STAGE_HOST  deploy/stage/hosts.env                  where the server is
+#   STAGE_KEYSTORE_B64      ~/.android/debug.keystore               the key staging APKs are signed
+#                                                                   with — this machine's, so a phone
+#                                                                   with a locally built APK updates in place
+#
+# Re-running replaces them. Rotating the CI key: generate a new pair at the same path, run
+# tools/deploy_stage.sh (it rebinds the key on both hosts), then run this again.
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+CI_DIR=${SADORA_CI_DIR:-$HOME/.config/sadora/ci}
+KEYSTORE=${SADORA_STAGE_KEYSTORE:-$HOME/.android/debug.keystore}
+ENV_NAME=staging
+
+need() { [[ -s $1 ]] || { echo "missing: $1 — $2" >&2; exit 1; }; }
+need "$CI_DIR/stage_ci_ed25519" "generate it with: ssh-keygen -t ed25519 -N '' -C sadora-ci@github-actions -f $CI_DIR/stage_ci_ed25519"
+need "$CI_DIR/known_hosts" "pin the host keys first (README → CI/CD)"
+need deploy/stage/hosts.env "copy deploy/stage/hosts.env.example and fill it in"
+need "$KEYSTORE" "build the app once with ./gradlew :androidApp:assembleDebug to create it"
+# shellcheck source=/dev/null
+source deploy/stage/hosts.env
+: "${SADORA_JUMP:?SADORA_JUMP is not set in deploy/stage/hosts.env}" "${SADORA_HOST:?SADORA_HOST is not set in deploy/stage/hosts.env}"
+
+REPO=$(gh repo view --json nameWithOwner --jq .nameWithOwner)
+echo "==> $REPO · environment '$ENV_NAME'"
+gh api --silent -X PUT "repos/$REPO/environments/$ENV_NAME"
+
+set_secret() { gh secret set "$1" --env "$ENV_NAME" --repo "$REPO" > /dev/null && echo "    $1"; }
+set_secret STAGE_SSH_KEY < "$CI_DIR/stage_ci_ed25519"
+set_secret STAGE_SSH_KNOWN_HOSTS < "$CI_DIR/known_hosts"
+printf '%s' "$SADORA_JUMP" | set_secret STAGE_JUMP
+printf '%s' "$SADORA_HOST" | set_secret STAGE_HOST
+base64 < "$KEYSTORE" | tr -d '\n' | set_secret STAGE_KEYSTORE_B64
+
+echo "==> done. Re-run the latest CI run of an open pull request into dev to deliver it:"
+echo "    gh run rerun \$(gh run list --workflow CI --limit 1 --json databaseId --jq '.[0].databaseId')"

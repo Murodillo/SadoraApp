@@ -32,3 +32,5 @@ androidApp/*.keystore
 
 # Addresses of the staging server — the repository is public.
 deploy/stage/hosts.env
+admin/coverage/
+__pycache__/

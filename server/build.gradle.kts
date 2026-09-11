@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.kotlinJvm)
     alias(libs.plugins.kotlinSerialization)
+    alias(libs.plugins.kover)
     application
 }
 
@@ -65,4 +66,21 @@ dependencies {
 
 tasks.test {
     useJUnitPlatform()
+}
+
+// Coverage, measured by Kover and reported on every pull request.
+//
+// The floor is a ratchet, not a target: the suite reached 60% of lines on 2026-09-11 with
+// ApiIntegrationTest running against Postgres, and a change that drops well below that is
+// a change that removed tests or added untested code. Raise it as coverage rises. On a
+// laptop without TEST_DB_URL the integration test skips itself, so `koverVerify` is a CI
+// check — run `koverHtmlReport` locally to look, not to gate.
+kover {
+    reports {
+        verify {
+            rule("line coverage") {
+                minBound(58)
+            }
+        }
+    }
 }
