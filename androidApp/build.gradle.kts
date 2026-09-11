@@ -46,6 +46,19 @@ val keystoreProperties: Properties? = file("keystore.properties")
     ?.let { file -> Properties().apply { file.inputStream().use(::load) } }
 
 /**
+ * The key debug builds are signed with, when `-Psadora.debugKeystore=<path>` names one.
+ *
+ * CI's staging APK has to be signed by the same key every time, or a phone refuses to
+ * update the installed build. The Android Gradle Plugin's own lookup of debug.keystore
+ * depends on environment variables a hosted runner sets differently, and silently makes
+ * a fresh key when it finds none — so staging names the file outright. It is a debug key
+ * with the standard debug credentials; the upload key above is a different matter.
+ */
+val debugKeystore: File? = (project.findProperty("sadora.debugKeystore") as String?)
+    ?.takeIf { it.isNotBlank() }
+    ?.let { path -> file(path).also { require(it.isFile) { "sadora.debugKeystore: no file at $path" } } }
+
+/**
  * Version, overridable from the command line so a release does not need a commit:
  * `-Psadora.versionCode=12 -Psadora.versionName=1.2.0`. Play rejects a versionCode it
  * has already seen, so it is the one number that has to move on every upload.
@@ -75,6 +88,14 @@ android {
         }
     }
     signingConfigs {
+        if (debugKeystore != null) {
+            getByName("debug") {
+                storeFile = debugKeystore
+                storePassword = "android"
+                keyAlias = "androiddebugkey"
+                keyPassword = "android"
+            }
+        }
         if (keystoreProperties != null) {
             create("release") {
                 storeFile = file(keystoreProperties.getProperty("storeFile"))

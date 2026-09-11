@@ -261,8 +261,11 @@ jobs:
           echo "url=$url" >> "$GITHUB_OUTPUT"
 
       # The same key every time, so a phone updates the app in place instead of refusing
-      # an APK signed by a runner's freshly generated debug key.
+      # an APK signed by a runner's freshly generated debug key. The path is handed to
+      # Gradle outright (-Psadora.debugKeystore): the plugin's own debug.keystore lookup
+      # ignored ~/.android on the runner once, and signed with a key of its own making.
       - name: Install the staging signing key
+        id: keystore
         env:
           KEYSTORE: ${{ secrets.STAGE_KEYSTORE_B64 }}
         run: |
@@ -270,27 +273,41 @@ jobs:
             echo "::warning title=Unstable signing key::STAGE_KEYSTORE_B64 is not set, so this APK is signed with a throwaway key — installed builds must be removed before it installs."
             exit 0
           fi
-          install -d -m 700 ~/.android
-          printf '%s' "$KEYSTORE" | base64 -d > ~/.android/debug.keystore
+          path="$RUNNER_TEMP/stage-debug.keystore"
+          ( umask 077 && printf '%s' "$KEYSTORE" | base64 -d > "$path" )
+          cert=$(keytool -list -v -keystore "$path" -storepass android -alias androiddebugkey | sed -n 's/^[[:space:]]*SHA256: //p' | tr -d ':' | tr 'A-F' 'a-f')
+          [[ $cert =~ ^[0-9a-f]{64}$ ]] || { echo "::error::STAGE_KEYSTORE_B64 is not a debug keystore with the standard alias and password"; exit 1; }
+          echo "path=$path" >> "$GITHUB_OUTPUT"
+          echo "cert=$cert" >> "$GITHUB_OUTPUT"
 
       - name: Build
         env:
           API: ${{ steps.api.outputs.url }}
           BUILD: ${{ github.run_number }}
+          KEYSTORE_PATH: ${{ steps.keystore.outputs.path }}
         run: >-
           ./gradlew :androidApp:assembleDebug --stacktrace
           -Psadora.devHost="$API"
           -Psadora.versionCode="$BUILD"
           -Psadora.versionName="1.0.$BUILD"
+          -Psadora.debugKeystore="$KEYSTORE_PATH"
 
       - name: Verify the APK
         id: verify
+        env:
+          EXPECTED_CERT: ${{ steps.keystore.outputs.cert }}
         run: |
           apk=androidApp/build/outputs/apk/debug/androidApp-debug.apk
           tools=$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 | sort -V | tail -1)
           "$tools/apksigner" verify --print-certs "$apk" | tee certs.txt
-          cert=$(sed -n 's/^Signer #1 certificate SHA-256 digest: //p' certs.txt)
+          # "Signer #1 certificate SHA-256 digest:" or "V2 Signer: certificate SHA-256 digest:",
+          # depending on the build-tools version — the first digest is the signer either way.
+          cert=$(grep -m1 -oE 'certificate SHA-256 digest: [0-9a-f]{64}' certs.txt | awk '{print $NF}')
           [[ -n $cert ]] || { echo "::error::apksigner found no signer"; exit 1; }
+          if [[ -n $EXPECTED_CERT && $cert != "$EXPECTED_CERT" ]]; then
+            echo "::error title=Wrong signing key::the APK is signed by $cert, the staging key is $EXPECTED_CERT — phones could not update to it"
+            exit 1
+          fi
           {
             echo "apk=$apk"
             echo "cert=$cert"
