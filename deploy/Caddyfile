@@ -8,13 +8,13 @@
 	# The API is the only thing published. The admin panel is a separate static build
 	# and can live anywhere — including ordinary shared hosting — as long as it is
 	# allowed through CORS_ALLOWED_ORIGINS in server/.env.prod.
+	#
+	# The client IP the rate limiter and the audit log record arrives as X-Forwarded-For.
+	# reverse_proxy sets it, and X-Forwarded-Proto, from the actual connection by itself,
+	# and replaces whatever a client sent in those headers — so there is nothing to add
+	# here, and nothing a caller can spoof. (`header_up` lines at this level are not valid
+	# Caddyfile; `caddy validate` in CI now says so before a server does.)
 	reverse_proxy api:8080
-
-	# The client IP the rate limiter and the audit log record. Ktor is configured to
-	# trust forwarded headers, and without these every request would look like it came
-	# from the proxy container.
-	header_up X-Forwarded-For {remote_host}
-	header_up X-Forwarded-Proto {scheme}
 
 	encode gzip
 

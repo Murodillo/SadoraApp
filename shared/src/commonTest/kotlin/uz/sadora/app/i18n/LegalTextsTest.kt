@@ -20,7 +20,7 @@ class LegalTextsTest {
     private val languages = listOf(LegalTextsUz, LegalTextsRu, LegalTextsEn)
 
     @Test
-    fun `every language carries the same documents, section for section`() {
+    fun `every language carries the same documents — section for section`() {
         val reference = LegalTextsUz
         languages.forEach { legal ->
             assertEquals(reference.terms.size, legal.terms.size, "terms sections in $legal")
