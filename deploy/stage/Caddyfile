@@ -33,16 +33,39 @@
 	}
 }
 
-# The landing page.
+# The landing page, and the staging APK beside it.
 #
 # Unknown paths get 404.html, which is also the invite page: it reads a code out of
 # /r/<CODE>, the same way it does on GitHub Pages, so an invite link works here too.
 :8082 {
 	encode gzip
-	root * /srv/landing
-	file_server
+
+	# /download/latest.json says which build is current; download.html and the landing
+	# page read it and show a button only when it exists — which on GitHub Pages it never
+	# does. Versioned APK names never change content, so they cache forever; the
+	# manifest and the stable alias must not cache at all.
+	handle /download/* {
+		root * /srv
+		@fresh path /download/latest.json /download/sadora-stage.apk
+		header @fresh Cache-Control "no-store"
+		@versioned path_regexp ^/download/sadora-stage-[0-9]+-[0-9a-f]{7,40}\.apk$
+		header @versioned Cache-Control "public, max-age=31536000, immutable"
+		@apk path *.apk
+		header @apk {
+			Content-Type application/vnd.android.package-archive
+			Content-Disposition attachment
+			X-Content-Type-Options nosniff
+		}
+		file_server
+	}
+
+	handle {
+		root * /srv/landing
+		file_server
+	}
 
 	handle_errors {
+		root * /srv/landing
 		rewrite * /404.html
 		file_server
 	}

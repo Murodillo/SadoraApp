@@ -32,6 +32,9 @@ services:
       - ./deploy/stage/Caddyfile:/etc/caddy/Caddyfile:ro
       - ./admin/dist:/srv/admin:ro
       - ./landing:/srv/landing:ro
+      # APKs published by CI (`sadora-ci publish-apk`). Outside the source tree, so a
+      # deploy that replaces the landing page never takes the download with it.
+      - ./downloads:/srv/download:ro
     # Loopback only: the tunnels reach it over the compose network, and these two
     # ports exist so the server itself can be checked with curl.
     ports:

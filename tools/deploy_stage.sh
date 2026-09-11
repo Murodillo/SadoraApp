@@ -14,6 +14,13 @@
 # Re-running it is safe. The environment file is generated once on the server and kept
 # — its database password is what the existing volume was initialised with, so
 # regenerating it would lock the API out of its own data.
+#
+# This is also how infrastructure changes reach staging. CI (stage.yml) deploys the API
+# image and the static files through /usr/local/bin/sadora-ci, and that script refuses to
+# touch compose files, the Caddyfile or itself — a person applies those, here. It installs
+# the gate, and when ~/.config/sadora/ci/stage_ci_ed25519.pub exists, binds that CI key to
+# it: on the server the key can run sadora-ci and nothing else, and on the jump host it can
+# open a connection to the server and nothing else.
 
 set -e
 cd "$(dirname "$0")/.."
@@ -38,7 +45,9 @@ SSH_OPTS=(
 )
 remote() { ssh "${SSH_OPTS[@]}" "$HOST" "$@"; }
 
-COMPOSE="SADORA_ENV_FILE=server/.env.stage docker compose -f docker-compose.prod.yml -f docker-compose.stage.yml --env-file server/.env.stage"
+CI_PUB=${SADORA_CI_PUB:-$HOME/.config/sadora/ci/stage_ci_ed25519.pub}
+# .release.env names the API image CI deployed last (see deploy/stage/sadora-ci).
+COMPOSE="SADORA_ENV_FILE=server/.env.stage docker compose -p sadora -f docker-compose.prod.yml -f docker-compose.stage.yml --env-file server/.env.stage --env-file .release.env"
 
 echo "==> access"
 remote true || { echo "No key access to $HOST through $JUMP (key: $KEY)."; exit 1; }
@@ -64,7 +73,9 @@ COPYFILE_DISABLE=1 tar -czf - \
   --exclude='./build' --exclude='*/build' --exclude='*/node_modules' \
   --exclude='./androidApp' --exclude='./iosApp' --exclude='./shared' --exclude='./design' \
   --exclude='./.env' --exclude='./server/.env.prod' --exclude='./server/.env.stage' \
-  --exclude='./local.properties' --exclude='.DS_Store' \
+  --exclude='./deploy/stage/hosts.env' --exclude='./local.properties' --exclude='.DS_Store' \
+  --exclude='./downloads' --exclude='./releases' --exclude='./backups' --exclude='./.release.env' \
+  --exclude='*/coverage' \
   . | remote "tar -xzf - -C $DIR"
 
 echo "==> environment"
@@ -86,8 +97,36 @@ else
   echo "    generated server/.env.stage"
 fi
 
+echo "==> deploy gate"
+remote "install -m 755 $DIR/deploy/stage/sadora-ci /usr/local/bin/sadora-ci && mkdir -p $DIR/downloads $DIR/releases && touch $DIR/.release.env"
+
+if [[ -f $CI_PUB ]]; then
+  echo "==> CI key ($(ssh-keygen -lf "$CI_PUB" | awk '{print $2}'))"
+  # Idempotent: any earlier line with this key is replaced, every other key is left alone,
+  # and the previous file is kept beside it.
+  bind_key() { # <ssh target> <options>
+    local target=$1 options=$2 body
+    body=$(awk '{print $2}' "$CI_PUB")
+    printf '%s %s\n' "$options" "$(cat "$CI_PUB")" | $target "umask 077 && mkdir -p ~/.ssh && touch ~/.ssh/authorized_keys \
+      && cp ~/.ssh/authorized_keys ~/.ssh/authorized_keys.before-sadora-ci \
+      && { grep -vF '$body' ~/.ssh/authorized_keys; cat; } > ~/.ssh/authorized_keys.new \
+      && mv ~/.ssh/authorized_keys.new ~/.ssh/authorized_keys"
+  }
+  jump() { ssh "${SSH_OPTS[@]:0:10}" "$JUMP" "$@"; }
+  bind_key jump "restrict,port-forwarding,permitopen=\"${HOST#*@}:22\",command=\"/bin/false\""
+  bind_key remote 'restrict,command="/usr/local/bin/sadora-ci"'
+  echo "    bound: jump host → ${HOST#*@}:22 only; server → sadora-ci only"
+fi
+
 echo "==> stack (the first build compiles the server and takes a few minutes)"
-remote "cd $DIR && $COMPOSE up -d --build --remove-orphans"
+if remote "grep -q '^SADORA_API_IMAGE=' $DIR/.release.env"; then
+  # CI has deployed an image; a manual run applies infrastructure around it, and never
+  # replaces it with one built from this laptop's checkout.
+  echo "    keeping the API image CI deployed: $(remote "sed -n 's/^SADORA_API_IMAGE=//p' $DIR/.release.env")"
+  remote "cd $DIR && $COMPOSE up -d --no-build --remove-orphans"
+else
+  remote "cd $DIR && $COMPOSE up -d --build --remove-orphans"
+fi
 
 echo "==> waiting for the API"
 for i in {1..120}; do
