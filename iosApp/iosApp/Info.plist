@@ -13,6 +13,13 @@
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
+	<!-- Only the system's HTTPS, which is exempt; without this every build waits on the
+	     export-compliance question in App Store Connect before testers can install it. -->
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+	<!-- Empty means production. A TestFlight build aimed at staging sets SADORA_API_HOST. -->
+	<key>SadoraApiHost</key>
+	<string>$(SADORA_API_HOST)</string>
 	<!-- The food scanner. iOS terminates the app on present without these. -->
 	<key>NSCameraUsageDescription</key>
 	<string>SADORA ovqat suratini o'qib, taxminiy kaloriya va makrolarni ko'rsatadi.</string>

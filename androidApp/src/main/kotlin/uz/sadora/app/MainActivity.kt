@@ -31,7 +31,11 @@ class MainActivity : ComponentActivity() {
                     ?.let(SadoraEnvironment::development)
                     ?: SadoraEnvironment.development()
             } else {
-                SadoraEnvironment.Production
+                // API_URL is empty unless the build passed -Psadora.apiUrl: a store test
+                // build aimed at staging while the production domain does not exist yet.
+                BuildConfig.API_URL.takeIf { it.isNotEmpty() }
+                    ?.let { SadoraEnvironment(baseUrl = it.trimEnd('/')) }
+                    ?: SadoraEnvironment.Production
             },
             appVersion = BuildConfig.VERSION_NAME,
             // The launcher icon follows the streak, which needs a Context to switch the

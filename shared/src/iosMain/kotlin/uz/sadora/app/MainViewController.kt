@@ -20,10 +20,21 @@ private val iosGraph: SadoraGraph by lazy {
     SadoraGraph(
         tokenStorage = storage,
         device = IosDeviceIdentity(storage),
-        environment = if (isDebugBuild()) SadoraEnvironment.development() else SadoraEnvironment.Production,
+        environment = if (isDebugBuild()) SadoraEnvironment.development() else releaseEnvironment(),
         appVersion = NSBundle.mainBundle.objectForInfoDictionaryKey("CFBundleShortVersionString") as? String,
     )
 }
+
+/**
+ * `SadoraApiHost` is empty unless the archive was built with `SADORA_API_HOST=<host>`:
+ * a TestFlight build aimed at staging while the production domain does not exist yet.
+ * It is a host rather than a URL because an xcconfig reads `//` as a comment.
+ */
+private fun releaseEnvironment(): SadoraEnvironment =
+    (NSBundle.mainBundle.objectForInfoDictionaryKey("SadoraApiHost") as? String)
+        ?.takeIf { it.isNotBlank() }
+        ?.let { SadoraEnvironment(baseUrl = "https://$it") }
+        ?: SadoraEnvironment.Production
 
 /**
  * Fully qualified: this module already has an `uz.sadora.app.Platform` interface,

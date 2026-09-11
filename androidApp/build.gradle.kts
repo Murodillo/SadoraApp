@@ -30,6 +30,13 @@ dependencies {
 val devHost: String = (project.findProperty("sadora.devHost") as String?).orEmpty()
 
 /**
+ * Set with `-Psadora.apiUrl=https://<host>` to point a release build somewhere other than
+ * production — a Play internal-testing build aimed at staging while the production
+ * domain does not exist yet. Empty means production.
+ */
+val apiUrl: String = (project.findProperty("sadora.apiUrl") as String?).orEmpty()
+
+/**
  * The upload key, read from `androidApp/keystore.properties` when that file exists.
  *
  * The file is gitignored: a signing key in the repository is a signing key anyone who
@@ -81,6 +88,7 @@ android {
         // emulator. Pass -Psadora.devHost=<host> to point it at this machine over Wi-Fi
         // instead, so the APK also works on a physical phone. Empty means "emulator".
         buildConfigField("String", "DEV_HOST", "\"$devHost\"")
+        buildConfigField("String", "API_URL", "\"$apiUrl\"")
     }
     packaging {
         resources {
