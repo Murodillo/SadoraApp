@@ -9,6 +9,9 @@ export default defineConfig({
     setupFiles: ['./src/test/setup.ts'],
     include: ['src/**/*.test.{ts,tsx}'],
     restoreMocks: true,
+    // JUnit beside the coverage, so the pull request comment counts these tests too.
+    reporters: ['default', 'junit'],
+    outputFile: { junit: 'coverage/junit/TEST-admin.xml' },
     unstubGlobals: true,
     coverage: {
       provider: 'v8',
