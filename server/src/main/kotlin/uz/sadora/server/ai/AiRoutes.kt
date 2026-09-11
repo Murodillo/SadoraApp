@@ -18,9 +18,21 @@ import uz.sadora.server.plugins.AdminRole
 import uz.sadora.server.plugins.RateLimits
 import uz.sadora.server.plugins.USER_AUTH
 
-fun Route.aiRoutes(ai: AiService) {
+fun Route.aiRoutes(ai: AiService, greetings: GreetingService) {
     authenticate(USER_AUTH) {
         route("/ai") {
+            /**
+             * The line under her name on the home screen.
+             *
+             * Not behind the chat's entitlement: the greeting is free, for everyone, on
+             * every open. It is also not rate-limited per IP — a household on one
+             * connection opening the app in the morning is not a flood, and the cost is
+             * bounded inside the service by the cached batch instead.
+             */
+            get("/greeting") {
+                call.respond(greetings.greeting(call.requireUserId()))
+            }
+
             /** What the chat screen shows before the first question. */
             get("/chat/quota") {
                 call.respond(ai.quota(call.requireUserId()))

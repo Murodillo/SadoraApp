@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+#
+# stage <sadora-ci verb and arguments> [< input]
+#
+# Runs one command of deploy/stage/sadora-ci on the staging server. The key is bound to
+# that script on the server, so these words are all it can ever send.
+#
+# ssh exits 255 only when the connection itself failed — the path through the jump host
+# does drop now and then. Those are retried with the same input, which is why stdin is
+# buffered first; every verb is safe to repeat. Any other exit is the gate's answer.
+set -uo pipefail
+
+input=$(mktemp)
+trap 'rm -f "$input"' EXIT
+if [[ ! -t 0 ]]; then cat > "$input"; fi
+
+for attempt in 1 2 3 4; do
+  # shellcheck disable=SC2029 # intended: the words become SSH_ORIGINAL_COMMAND for the gate
+  ssh stage "$*" < "$input"
+  status=$?
+  ((status != 255)) && exit "$status"
+  echo "::warning::SSH to staging failed (attempt $attempt of 4)" >&2
+  sleep $((attempt * 15))
+done
+exit 255

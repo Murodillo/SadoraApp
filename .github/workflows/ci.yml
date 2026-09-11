@@ -1,23 +1,66 @@
 name: CI
 
+# Every pull request into dev or main, and every push to either, is checked.
+#
+# A pull request into dev — and dev itself once it merges — is also delivered to staging
+# (stage.yml): the API image, the admin panel and the landing page, then an APK built
+# against the staging API and published beside the landing page, then smoke tests against
+# the public URLs. Pull requests into main are checked only: main is the store release.
 on:
-  push:
-    branches: ['**']
   pull_request:
-    branches: [main]
+    branches: [dev, main]
+    types: [opened, synchronize, reopened, ready_for_review]
+  push:
+    branches: [dev, main]
+  workflow_dispatch:
 
-# A newer push makes the running check irrelevant, so stop paying for it.
+# A newer push makes a running check irrelevant, so it is cancelled. That can cut a staging
+# deploy off mid-command; the gate on the server finishes what it started regardless.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ci-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
+
+permissions:
+  contents: read
 
 env:
   GRADLE_OPTS: -Dorg.gradle.jvmargs=-Xmx3g -Dorg.gradle.daemon=false
 
 jobs:
+  plan:
+    name: Plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    outputs:
+      deliver: ${{ steps.plan.outputs.deliver }}
+    steps:
+      - id: plan
+        env:
+          EVENT: ${{ github.event_name }}
+          REF: ${{ github.ref }}
+          BASE: ${{ github.base_ref }}
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          REPO: ${{ github.repository }}
+          DRAFT: ${{ github.event.pull_request.draft }}
+        run: |
+          deliver=false
+          case $EVENT in
+            pull_request)
+              if [[ $BASE != dev ]]; then why="a pull request into $BASE is checked, not delivered"
+              elif [[ $HEAD_REPO != "$REPO" ]]; then why="a pull request from a fork gets no secrets, so it is not delivered"
+              elif [[ $DRAFT == true ]]; then why="a draft is delivered once it is marked ready for review"
+              else deliver=true; why="pull request into dev"; fi ;;
+            *)
+              if [[ $REF == refs/heads/dev ]]; then deliver=true; why="dev"
+              else why="$REF is checked, not delivered"; fi ;;
+          esac
+          echo "deliver=$deliver" >> "$GITHUB_OUTPUT"
+          printf '### Plan\n\nStaging delivery: **%s** — %s\n' "$deliver" "$why" >> "$GITHUB_STEP_SUMMARY"
+
   backend:
     name: Backend
     runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     # The migrations are the part unit tests cannot check, so the job runs against a
     # real Postgres and boots the server against it below.
@@ -36,15 +79,19 @@ jobs:
           --health-retries 20
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       # Zulu is Azul, which is what gradle-daemon-jvm.properties asks for.
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
         with:
           distribution: zulu
           java-version: '21'
 
-      - uses: gradle/actions/setup-gradle@v4
+      # Only dev and main write the Gradle cache; pull requests read it. Otherwise every
+      # branch evicts the entries the long-lived ones rely on.
+      - uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+        with:
+          cache-read-only: ${{ github.ref != 'refs/heads/dev' && github.ref != 'refs/heads/main' }}
 
       # `ApiIntegrationTest` drives the whole API against this Postgres; without the
       # variable it skips itself, which is what a laptop without Docker gets.
@@ -53,7 +100,10 @@ jobs:
           TEST_DB_URL: jdbc:postgresql://localhost:5432/sadora
           TEST_DB_USER: sadora
           TEST_DB_PASSWORD: sadora
-        run: ./gradlew :contract:jvmTest :server:test --stacktrace
+        run: ./gradlew :contract:jvmTest :server:test :server:koverXmlReport :server:koverHtmlReport --stacktrace
+
+      - name: Hold the coverage floor
+        run: ./gradlew :server:koverVerify
 
       # Flyway either applies cleanly onto an empty database or it does not, and a unit
       # test cannot tell you which. Booting once is the only thing that can.
@@ -79,70 +129,92 @@ jobs:
           kill $SERVER_PID 2>/dev/null || true
           exit 1
 
-      - name: Publish test results
+      - name: Collect reports
         if: always()
-        uses: actions/upload-artifact@v4
+        run: |
+          mkdir -p reports/server reports/contract
+          cp -r server/build/test-results reports/server/ 2>/dev/null || true
+          cp -r contract/build/test-results reports/contract/ 2>/dev/null || true
+          cp server/build/reports/kover/report.xml reports/server/kover.xml 2>/dev/null || true
+          cp -r server/build/reports/kover/html reports/server/kover-html 2>/dev/null || true
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
         with:
-          name: backend-test-results
-          path: '**/build/test-results/**/*.xml'
+          name: reports-backend
+          path: reports/
+          retention-days: 14
           if-no-files-found: ignore
 
   android:
     name: Android and shared
+    needs: plan
     runs-on: ubuntu-latest
+    timeout-minutes: 40
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
         with:
           distribution: zulu
           java-version: '21'
 
-      - uses: android-actions/setup-android@v3
+      - uses: android-actions/setup-android@40fd30fb8d7440372e1316f5d1809ec01dcd3699 # v4.0.1
 
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+        with:
+          cache-read-only: ${{ github.ref != 'refs/heads/dev' && github.ref != 'refs/heads/main' }}
 
       # Kotlin/Native refuses a comma inside a backticked name, and the iOS job that
-      # would catch it only runs on the way into main. One grep here keeps a test name
-      # from breaking that job days after it was written.
+      # would catch it is the slowest one to report. One grep here says it in seconds.
       - name: Reject a comma in a test name
         run: |
+          # shellcheck disable=SC2016 # the backticks are the pattern, not a substitution
           if grep -rn 'fun `[^`]*,' shared/src/commonTest; then
-            echo "Kotlin/Native rejects a comma in a backticked name — use an em dash."
+            echo "::error::Kotlin/Native rejects a comma in a backticked name — use an em dash."
             exit 1
           fi
 
       - name: Test the shared module
         run: ./gradlew :shared:testAndroidHostTest --stacktrace
 
+      # When the run delivers, stage.yml builds the APK against the staging API instead,
+      # and building an unused one here would only double the wait.
       - name: Assemble the app
+        if: needs.plan.outputs.deliver != 'true'
         run: ./gradlew :androidApp:assembleDebug --stacktrace
 
-      - name: Publish test results
+      - name: Collect reports
         if: always()
-        uses: actions/upload-artifact@v4
+        run: |
+          mkdir -p reports/shared
+          cp -r shared/build/test-results reports/shared/ 2>/dev/null || true
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
         with:
-          name: android-test-results
-          path: '**/build/test-results/**/*.xml'
+          name: reports-android
+          path: reports/
+          retention-days: 14
           if-no-files-found: ignore
 
   ios:
     name: iOS shared
-    # macOS minutes bill at ten times the Linux rate, so the Kotlin/Native side is
-    # checked on the two branches that matter rather than on every feature branch. dev is
-    # one of them: it is where the work actually lands, and a Kotlin/Native break found
-    # only at the release merge is found on the worst possible day.
-    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev'
+    # macOS minutes bill at ten times the Linux rate, and nothing staging runs is built
+    # for iOS, so delivery does not wait for this job — it reports beside it.
     runs-on: macos-latest
+    timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
         with:
           distribution: zulu
           java-version: '21'
 
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+        with:
+          cache-read-only: ${{ github.ref != 'refs/heads/dev' && github.ref != 'refs/heads/main' }}
 
       - name: Test the shared module on the simulator target
         run: ./gradlew :shared:iosSimulatorArm64Test --stacktrace
@@ -150,13 +222,14 @@ jobs:
   admin:
     name: Admin panel
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     defaults:
       run:
         working-directory: admin
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: '22'
           cache: npm
@@ -167,9 +240,132 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
+      # Per-file floors live in vitest.config.ts; dropping below one fails this step.
+      - name: Test, with coverage
+        run: npm run test:coverage
+
       - name: Build
         run: npm run build
 
       # A vulnerable dependency is worth failing on rather than discovering later.
       - name: Audit
         run: npm audit --audit-level=high
+
+      - name: Collect reports
+        if: always()
+        working-directory: .
+        run: |
+          mkdir -p reports/admin/test-results
+          cp admin/coverage/coverage-summary.json reports/admin/ 2>/dev/null || true
+          cp admin/coverage/junit/TEST-admin.xml reports/admin/test-results/ 2>/dev/null || true
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: reports-admin
+          path: reports/
+          retention-days: 14
+          if-no-files-found: ignore
+
+  infra:
+    name: Deploy tooling
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Lint shell scripts
+        run: shellcheck deploy/stage/sadora-ci deploy/stage/test/*.sh .github/actions/stage-ssh/setup.sh .github/actions/stage-ssh/stage tools/ci/*.sh
+
+      - name: Lint workflows
+        run: docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:1.7.12 -color
+
+      # The gate decides what a CI key can do to the server; its tests are the proof.
+      - name: Test the deploy gate
+        run: |
+          mkdir -p reports/gate
+          bash deploy/stage/test/sadora-ci.test.sh | tee reports/gate/results.txt
+
+      - name: Test the report generator
+        run: python3 -m unittest discover -s tools/ci -v
+
+      - name: Validate the compose files
+        run: |
+          printf 'POSTGRES_PASSWORD=ci\n' > "$RUNNER_TEMP/ci.env"
+          SADORA_ENV_FILE="$RUNNER_TEMP/ci.env" docker compose \
+            -f docker-compose.prod.yml -f docker-compose.stage.yml \
+            --env-file "$RUNNER_TEMP/ci.env" config --quiet
+
+      - name: Validate the Caddyfiles
+        run: |
+          docker run --rm -v "$PWD/deploy/stage/Caddyfile:/etc/caddy/Caddyfile:ro" \
+            caddy:2-alpine caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+          docker run --rm -e SADORA_DOMAIN=api.example.com -v "$PWD/deploy/Caddyfile:/etc/caddy/Caddyfile:ro" \
+            caddy:2-alpine caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: reports-infra
+          path: reports/
+          retention-days: 14
+          if-no-files-found: ignore
+
+  stage:
+    name: Staging
+    needs: [plan, backend, android, admin, infra]
+    if: needs.plan.outputs.deliver == 'true'
+    uses: ./.github/workflows/stage.yml
+    permissions:
+      contents: read
+      packages: write
+    secrets: inherit
+
+  report:
+    name: Report
+    needs: [plan, backend, android, ios, admin, infra, stage]
+    if: always() && !cancelled()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          sparse-checkout: tools/ci
+
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: reports-*
+          merge-multiple: true
+          path: reports
+
+      - name: Write the report
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: |
+          python3 tools/ci/report.py \
+            --needs-json "$NEEDS" \
+            --junit 'reports/**/TEST-*.xml' \
+            --kover server=reports/server/kover.xml \
+            --vitest admin=reports/admin/coverage-summary.json \
+            --gate reports/gate/results.txt > report.md
+          cat report.md >> "$GITHUB_STEP_SUMMARY"
+
+      # One comment per pull request, edited in place on every run rather than piling up.
+      - name: Comment on the pull request
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const fs = require('fs')
+            const marker = '<!-- sadora-ci-report -->'
+            const run = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`
+            const body = `${marker}\n## CI · \`${context.sha.slice(0, 7)}\`\n\n${fs.readFileSync('report.md', 'utf8')}\n[Run details](${run})\n`
+            const { owner, repo } = context.repo
+            const issue_number = context.payload.pull_request.number
+            const comments = await github.paginate(github.rest.issues.listComments, { owner, repo, issue_number, per_page: 100 })
+            const previous = comments.find((c) => c.user?.type === 'Bot' && c.body?.startsWith(marker))
+            if (previous) await github.rest.issues.updateComment({ owner, repo, comment_id: previous.id, body })
+            else await github.rest.issues.createComment({ owner, repo, issue_number, body })

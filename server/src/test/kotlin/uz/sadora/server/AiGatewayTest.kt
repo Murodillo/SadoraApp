@@ -9,6 +9,7 @@ import kotlin.time.Duration.Companion.seconds
 import kotlin.uuid.Uuid
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.runTest
+import uz.sadora.contract.Language
 import uz.sadora.server.ai.AiContext
 import uz.sadora.server.ai.AiGateway
 import uz.sadora.server.ai.AiModel
@@ -17,7 +18,7 @@ import uz.sadora.server.ai.AiUsageEntry
 import uz.sadora.server.ai.AiUsageRecorder
 import uz.sadora.server.ai.ModelAnswer
 import uz.sadora.server.ai.ModelUnavailableException
-import uz.sadora.server.ai.RuleBasedAnswerer
+import uz.sadora.server.ai.AiPhrasesUz
 import uz.sadora.server.config.AiConfig
 
 /**
@@ -48,7 +49,8 @@ class AiGatewayTest {
 
     private fun model(block: suspend () -> ModelAnswer) = object : AiModel {
         override val name = "test-model"
-        override suspend fun answer(question: String, context: AiContext?): ModelAnswer = block()
+        override suspend fun answer(question: String, context: AiContext?, language: Language): ModelAnswer =
+            block()
     }
 
     @Test
@@ -60,7 +62,7 @@ class AiGatewayTest {
             model = model { ModelAnswer("Model javobi", "test-model", promptTokens = 100, completionTokens = 50) },
         )
 
-        val answer = gateway.answer(userId, "Nega charchayapman?", null, modelAllowed = true)
+        val answer = gateway.answer(userId, "Nega charchayapman?", null, modelAllowed = true, language = Language.UZ)
 
         assertEquals("Model javobi", answer.text)
         assertEquals(AiSource.MODEL, answer.source)
@@ -80,9 +82,9 @@ class AiGatewayTest {
             model = model { throw ModelUnavailableException("http_429", "quota") },
         )
 
-        val answer = gateway.answer(userId, "Nega charchayapman?", null, modelAllowed = true)
+        val answer = gateway.answer(userId, "Nega charchayapman?", null, modelAllowed = true, language = Language.UZ)
 
-        assertTrue(RuleBasedAnswerer.DISCLAIMER in answer.text, "she gets a real answer, not an error")
+        assertTrue(AiPhrasesUz.disclaimer in answer.text, "she gets a real answer, not an error")
         assertEquals(AiSource.FALLBACK, answer.source)
         val entry = recorder.entries.single()
         assertEquals("error", entry.outcome)
@@ -103,7 +105,7 @@ class AiGatewayTest {
             },
         )
 
-        val answer = gateway.answer(userId, "Savol", null, modelAllowed = true)
+        val answer = gateway.answer(userId, "Savol", null, modelAllowed = true, language = Language.UZ)
 
         assertEquals(AiSource.FALLBACK, answer.source)
         assertEquals("timeout", recorder.entries.single().errorCode)
@@ -122,7 +124,7 @@ class AiGatewayTest {
             },
         )
 
-        val answer = gateway.answer(userId, "Savol", null, modelAllowed = false)
+        val answer = gateway.answer(userId, "Savol", null, modelAllowed = false, language = Language.UZ)
 
         assertTrue(!called, "the switch is off, so nothing is spent finding that out")
         assertEquals(AiSource.RULES, answer.source)
@@ -139,7 +141,7 @@ class AiGatewayTest {
             model = model { ModelAnswer("unreachable", "test-model", null, null) },
         )
 
-        val answer = gateway.answer(userId, "Savol", null, modelAllowed = true)
+        val answer = gateway.answer(userId, "Savol", null, modelAllowed = true, language = Language.UZ)
 
         assertEquals(AiSource.RULES, answer.source)
         assertEquals("no_key", recorder.entries.single().errorCode)
@@ -164,6 +166,7 @@ class AiGatewayTest {
             "Suv ichishim kerakmi?",
             AiContext(waterMl = 500, waterGoalMl = 2000),
             modelAllowed = true,
+            language = Language.UZ,
         )
 
         assertTrue("0,5" in answer.text || "suv" in answer.text.lowercase(), answer.text)

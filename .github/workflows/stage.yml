@@ -1,0 +1,402 @@
+name: Stage
+
+# Delivers one commit to the staging server, through the gate in deploy/stage/sadora-ci.
+#
+#   preflight ─┬─ image  (API image → GHCR, by digest) ─┬─ deploy ── apk ── smoke
+#              └─ bundle (admin panel + landing page)  ──┘
+#
+# Called by ci.yml once the checks pass. Also runnable by hand — Actions → Stage → Run
+# workflow — to redeploy a branch or to roll staging back to an earlier release.
+#
+# The repository is public, and so are these logs: the server's addresses and the tunnel
+# URLs are masked, and the APK (which carries the staging URL) is not uploaded as an artifact.
+on:
+  workflow_call:
+    outputs:
+      ready:
+        value: ${{ jobs.preflight.outputs.ready }}
+      release:
+        value: ${{ jobs.deploy.outputs.release }}
+      image:
+        value: ${{ jobs.image.outputs.ref }}
+      build:
+        value: ${{ jobs.apk.outputs.build }}
+      apk_sha256:
+        value: ${{ jobs.apk.outputs.sha256 }}
+      apk_size:
+        value: ${{ jobs.apk.outputs.size }}
+      apk_cert:
+        value: ${{ jobs.apk.outputs.cert }}
+  workflow_dispatch:
+    inputs:
+      action:
+        description: Deploy this branch, or roll staging back
+        type: choice
+        options: [deploy, rollback]
+        default: deploy
+      rollback_to:
+        description: Full commit sha to roll back to (empty — the previous healthy release)
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+
+jobs:
+  preflight:
+    name: Preflight
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment: staging
+    outputs:
+      ready: ${{ steps.secrets.outputs.ready }}
+    steps:
+      # Without the secrets this is a clean skip with a pointer, not a red run: checks
+      # stay meaningful on a fork or before anybody has set staging up.
+      - id: secrets
+        env:
+          HAVE: ${{ secrets.STAGE_SSH_KEY != '' && secrets.STAGE_SSH_KNOWN_HOSTS != '' && secrets.STAGE_JUMP != '' && secrets.STAGE_HOST != '' }}
+        run: |
+          echo "ready=$HAVE" >> "$GITHUB_OUTPUT"
+          if [[ $HAVE != true ]]; then
+            echo "::warning title=Staging is not configured::The staging environment has no deploy secrets. Run tools/ci_secrets.sh once (README → CI/CD)."
+          fi
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: steps.secrets.outputs.ready == 'true'
+        with:
+          sparse-checkout: .github/actions
+
+      - uses: ./.github/actions/stage-ssh
+        if: steps.secrets.outputs.ready == 'true'
+        with:
+          key: ${{ secrets.STAGE_SSH_KEY }}
+          known-hosts: ${{ secrets.STAGE_SSH_KNOWN_HOSTS }}
+          jump: ${{ secrets.STAGE_JUMP }}
+          host: ${{ secrets.STAGE_HOST }}
+
+      - name: Reach the gate
+        if: steps.secrets.outputs.ready == 'true'
+        run: stage status
+
+  image:
+    name: API image
+    needs: preflight
+    if: needs.preflight.outputs.ready == 'true' && inputs.action != 'rollback'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      ref: ${{ steps.ref.outputs.ref }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
+
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - id: name
+        run: echo "name=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/sadora-api" >> "$GITHUB_OUTPUT"
+
+      # Built once, here, and the server runs exactly this image by digest — no compiler
+      # on a machine it shares with other people's services, and no "works on staging,
+      # built differently for production".
+      - id: build
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+        with:
+          context: .
+          file: server/Dockerfile
+          platforms: linux/amd64
+          push: true
+          build-args: SADORA_RELEASE=${{ github.sha }}
+          tags: |
+            ${{ steps.name.outputs.name }}:${{ github.sha }}
+            ${{ steps.name.outputs.name }}:stage
+          cache-from: type=gha,scope=sadora-api
+          cache-to: type=gha,mode=max,scope=sadora-api
+          provenance: mode=max
+          sbom: true
+
+      - id: ref
+        env:
+          NAME: ${{ steps.name.outputs.name }}
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: echo "ref=$NAME@$DIGEST" >> "$GITHUB_OUTPUT"
+
+  bundle:
+    name: Web bundle
+    needs: preflight
+    if: needs.preflight.outputs.ready == 'true' && inputs.action != 'rollback'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: admin/package-lock.json
+
+      - name: Build the admin panel
+        working-directory: admin
+        run: npm ci && npm run build
+
+      # Exactly what the gate accepts: admin/dist, landing, infra, RELEASE. The infra
+      # files are not applied by CI — the gate compares them with what the server runs
+      # and warns when a pull request changes them.
+      - name: Assemble the release bundle
+        run: |
+          b="$RUNNER_TEMP/bundle"
+          mkdir -p "$b/admin" "$b/infra"
+          cp -r admin/dist "$b/admin/dist"
+          cp -r landing "$b/landing"
+          cp docker-compose.prod.yml docker-compose.stage.yml deploy/stage/Caddyfile deploy/stage/sadora-ci "$b/infra/"
+          echo "$GITHUB_SHA" > "$b/RELEASE"
+          tar -czf bundle.tgz -C "$b" .
+          ls -l bundle.tgz
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: stage-bundle
+          path: bundle.tgz
+          retention-days: 1
+
+  deploy:
+    name: Deploy
+    needs: [image, bundle]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: staging
+    # Queued, never cancelled by another deploy; the gate also holds a lock on the server.
+    concurrency:
+      group: stage-deploy
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      packages: read
+    outputs:
+      release: ${{ steps.done.outputs.release }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          sparse-checkout: .github/actions
+
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: stage-bundle
+
+      - uses: ./.github/actions/stage-ssh
+        with:
+          key: ${{ secrets.STAGE_SSH_KEY }}
+          known-hosts: ${{ secrets.STAGE_SSH_KNOWN_HOSTS }}
+          jump: ${{ secrets.STAGE_JUMP }}
+          host: ${{ secrets.STAGE_HOST }}
+
+      # The first line of input is this job's token, which can read the package and
+      # expires when the job ends; the gate uses it in a throwaway docker config. The
+      # gate backs the database up, switches the API and the static files, waits for
+      # /health/ready to report this commit, and rolls back by itself if it never does.
+      - name: Deploy through the gate
+        env:
+          IMAGE: ${{ needs.image.outputs.ref }}
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          { printf '%s\n' "$TOKEN"; cat bundle.tgz; } | stage deploy "$GITHUB_SHA" "$IMAGE"
+
+      - id: done
+        run: |
+          echo "release=$GITHUB_SHA" >> "$GITHUB_OUTPUT"
+          { echo '### Staging server'; echo; echo '```'; stage status; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+
+  apk:
+    name: APK
+    needs: deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    environment: staging
+    concurrency:
+      group: stage-apk
+      cancel-in-progress: false
+    outputs:
+      build: ${{ steps.publish.outputs.build }}
+      sha256: ${{ steps.verify.outputs.sha256 }}
+      size: ${{ steps.verify.outputs.size }}
+      cert: ${{ steps.verify.outputs.cert }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: zulu
+          java-version: '21'
+
+      - uses: android-actions/setup-android@40fd30fb8d7440372e1316f5d1809ec01dcd3699 # v4.0.1
+
+      - uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+        with:
+          cache-read-only: ${{ github.ref != 'refs/heads/dev' }}
+
+      - uses: ./.github/actions/stage-ssh
+        with:
+          key: ${{ secrets.STAGE_SSH_KEY }}
+          known-hosts: ${{ secrets.STAGE_SSH_KNOWN_HOSTS }}
+          jump: ${{ secrets.STAGE_JUMP }}
+          host: ${{ secrets.STAGE_HOST }}
+
+      # Asked of the server, not configured: a quick tunnel's hostname is whatever
+      # cloudflared was given when it last started, and the APK has to carry that one.
+      - name: Find the API this APK will talk to
+        id: api
+        run: |
+          url=$(stage url | jq -r .app)
+          [[ $url =~ ^https://[a-z0-9-]+\.trycloudflare\.com$ ]] || { echo "::error::the app tunnel reports no URL"; exit 1; }
+          echo "::add-mask::$url"
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+
+      # The same key every time, so a phone updates the app in place instead of refusing
+      # an APK signed by a runner's freshly generated debug key. The path is handed to
+      # Gradle outright (-Psadora.debugKeystore): the plugin's own debug.keystore lookup
+      # ignored ~/.android on the runner once, and signed with a key of its own making.
+      - name: Install the staging signing key
+        id: keystore
+        env:
+          KEYSTORE: ${{ secrets.STAGE_KEYSTORE_B64 }}
+        run: |
+          if [[ -z $KEYSTORE ]]; then
+            echo "::warning title=Unstable signing key::STAGE_KEYSTORE_B64 is not set, so this APK is signed with a throwaway key — installed builds must be removed before it installs."
+            exit 0
+          fi
+          path="$RUNNER_TEMP/stage-debug.keystore"
+          ( umask 077 && printf '%s' "$KEYSTORE" | base64 -d > "$path" )
+          cert=$(keytool -list -v -keystore "$path" -storepass android -alias androiddebugkey | sed -n 's/^[[:space:]]*SHA256: //p' | tr -d ':' | tr 'A-F' 'a-f')
+          [[ $cert =~ ^[0-9a-f]{64}$ ]] || { echo "::error::STAGE_KEYSTORE_B64 is not a debug keystore with the standard alias and password"; exit 1; }
+          echo "path=$path" >> "$GITHUB_OUTPUT"
+          echo "cert=$cert" >> "$GITHUB_OUTPUT"
+
+      - name: Build
+        env:
+          API: ${{ steps.api.outputs.url }}
+          BUILD: ${{ github.run_number }}
+          KEYSTORE_PATH: ${{ steps.keystore.outputs.path }}
+        run: >-
+          ./gradlew :androidApp:assembleDebug --stacktrace
+          -Psadora.devHost="$API"
+          -Psadora.versionCode="$BUILD"
+          -Psadora.versionName="1.0.$BUILD"
+          -Psadora.debugKeystore="$KEYSTORE_PATH"
+
+      - name: Verify the APK
+        id: verify
+        env:
+          EXPECTED_CERT: ${{ steps.keystore.outputs.cert }}
+        run: |
+          apk=androidApp/build/outputs/apk/debug/androidApp-debug.apk
+          tools=$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 | sort -V | tail -1)
+          "$tools/apksigner" verify --print-certs "$apk" | tee certs.txt
+          # "Signer #1 certificate SHA-256 digest:" or "V2 Signer: certificate SHA-256 digest:",
+          # depending on the build-tools version — the first digest is the signer either way.
+          cert=$(grep -m1 -oE 'certificate SHA-256 digest: [0-9a-f]{64}' certs.txt | awk '{print $NF}')
+          [[ -n $cert ]] || { echo "::error::apksigner found no signer"; exit 1; }
+          if [[ -n $EXPECTED_CERT && $cert != "$EXPECTED_CERT" ]]; then
+            echo "::error title=Wrong signing key::the APK is signed by $cert, the staging key is $EXPECTED_CERT — phones could not update to it"
+            exit 1
+          fi
+          {
+            echo "apk=$apk"
+            echo "cert=$cert"
+            echo "sha256=$(sha256sum "$apk" | cut -d' ' -f1)"
+            echo "size=$(stat -c %s "$apk")"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Publish beside the landing page
+        id: publish
+        env:
+          APK: ${{ steps.verify.outputs.apk }}
+          BUILD: ${{ github.run_number }}
+          SHA256: ${{ steps.verify.outputs.sha256 }}
+        run: |
+          stage publish-apk "$GITHUB_SHA" "$BUILD" < "$APK" | tee publish.log
+          stored=$(grep '^{' publish.log | tail -1 | jq -r .sha256)
+          [[ $stored == "$SHA256" ]] || { echo "::error::the server stored $stored, the build produced $SHA256"; exit 1; }
+          echo "build=$BUILD" >> "$GITHUB_OUTPUT"
+
+      # A private repository can keep the APK with the run; a public one would be handing
+      # the staging URL to anyone who opens the Actions tab.
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: github.event.repository.private
+        with:
+          name: sadora-stage-apk
+          path: ${{ steps.verify.outputs.apk }}
+          retention-days: 7
+
+  smoke:
+    name: Smoke test
+    needs: [deploy, apk]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: staging
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          sparse-checkout: |
+            .github/actions
+            tools/ci
+
+      - uses: ./.github/actions/stage-ssh
+        with:
+          key: ${{ secrets.STAGE_SSH_KEY }}
+          known-hosts: ${{ secrets.STAGE_SSH_KNOWN_HOSTS }}
+          jump: ${{ secrets.STAGE_JUMP }}
+          host: ${{ secrets.STAGE_HOST }}
+
+      - name: Check staging from the outside
+        env:
+          BUILD: ${{ needs.apk.outputs.build }}
+          APK_SHA256: ${{ needs.apk.outputs.sha256 }}
+        run: |
+          urls=$(stage url)
+          app=$(jq -r .app <<<"$urls"); landing=$(jq -r .landing <<<"$urls")
+          echo "::add-mask::$app"; echo "::add-mask::$landing"
+          bash tools/ci/smoke.sh "$app" "$landing" "$GITHUB_SHA" "$BUILD" "$APK_SHA256"
+
+  rollback:
+    name: Roll back
+    needs: preflight
+    if: github.event_name == 'workflow_dispatch' && inputs.action == 'rollback' && needs.preflight.outputs.ready == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: staging
+    concurrency:
+      group: stage-deploy
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          sparse-checkout: .github/actions
+
+      - uses: ./.github/actions/stage-ssh
+        with:
+          key: ${{ secrets.STAGE_SSH_KEY }}
+          known-hosts: ${{ secrets.STAGE_SSH_KNOWN_HOSTS }}
+          jump: ${{ secrets.STAGE_JUMP }}
+          host: ${{ secrets.STAGE_HOST }}
+
+      - name: Roll back through the gate
+        env:
+          TO: ${{ inputs.rollback_to }}
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          [[ -z $TO || $TO =~ ^[0-9a-f]{40}$ ]] || { echo "::error::rollback_to must be a full 40-character sha"; exit 1; }
+          # shellcheck disable=SC2086 # empty TO means "the previous release", so no argument at all
+          printf '%s\n' "$TOKEN" | stage rollback $TO
+          { echo '### Staging server'; echo; echo '```'; stage status; echo '```'; } >> "$GITHUB_STEP_SUMMARY"

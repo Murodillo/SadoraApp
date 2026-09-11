@@ -53,9 +53,16 @@ def call(method, path, body=None, token=None, ok=(200, 201, 204)):
 
 # ---------------------------------------------------------------- sign in
 
-def sign_in(phone: str) -> tuple[str, str]:
+def sign_in(phone: str) -> tuple[str, str] | None:
+    """Signs one demo account in, or None when the server refuses it.
+
+    The refusal that actually happens is the blocked account this script creates on
+    purpose: on a second run it cannot sign in again, and the seeder used to die there
+    — taking the Bilim library with it. Its row is already in place from the first run,
+    which is all the demo needs, so it is skipped rather than fatal.
+    """
     challenge = call("POST", "/auth/otp/request", {"phone": phone, "language": "uz"})
-    session = call("POST", "/auth/otp/verify", {
+    session = call("POST", "/auth/otp/verify", ok=(200, 403), body={
         "challengeId": challenge["challengeId"],
         "code": challenge.get("devCode") or OTP_CODE,
         "device": {
@@ -67,6 +74,9 @@ def sign_in(phone: str) -> tuple[str, str]:
             "timezone": "Asia/Tashkent",
         },
     })
+    # `call` answers None for a tolerated non-2xx, which here means "blocked".
+    if session is None:
+        return None
     return session["tokens"]["accessToken"], session["user"]["id"]
 
 
@@ -126,6 +136,8 @@ USERS = [
         ],
         "ai": "Hayz vaqtida og'riqni kamaytirish uchun nima qilsam bo'ladi?",
         "premium_days": 365,
+        # What the demo account has in the wallet, so the shop is worth opening.
+        "coins": 3200,
     },
     {
         "phone": "+998900000002",
@@ -170,6 +182,8 @@ USERS = [
             ("pregnancy", "26-haftada bel og'rig'i uchun qanday mashqlar qilyapsizlar? Yoga yordam beradimi?"),
         ],
         "premium_days": 0,
+        # What the demo account has in the wallet, so the shop is worth opening.
+        "coins": 640,
     },
     {
         "phone": "+998900000003",
@@ -210,6 +224,8 @@ USERS = [
             ("wellbeing", "Tug'ruqdan keyin 6 hafta o'tdi, uyqusizlik hali ham qiynayapti. Qanday tiklandingiz?"),
         ],
         "premium_days": 0,
+        # What the demo account has in the wallet, so the shop is worth opening.
+        "coins": 1450,
     },
     {
         "phone": "+998900000004",
@@ -253,6 +269,8 @@ USERS = [
             ("body", "47 yoshdaman, issiq xurujlar boshlandi. Dori-darmonsiz yengillashtirish yo'llari bormi?"),
         ],
         "premium_days": 30,
+        # What the demo account has in the wallet, so the shop is worth opening.
+        "coins": 820,
     },
 ]
 
@@ -318,7 +336,14 @@ def seed_user(spec: dict, everyone: list) -> dict:
         except SystemExit as e:
             print("    (AI chat skipped:", str(e)[:80], ")")
 
-    entry = {"token": token, "id": user_id, "posts": posts, "name": spec["name"], "premium_days": spec["premium_days"]}
+    entry = {
+        "token": token,
+        "id": user_id,
+        "posts": posts,
+        "name": spec["name"],
+        "premium_days": spec["premium_days"],
+        "coins": spec["coins"],
+    }
     everyone.append(entry)
     return entry
 
@@ -358,6 +383,27 @@ def grant_premium(everyone: list):
         print(f"  Premium: {u['name']} until {until[:10]}")
 
 
+def seed_rewards(everyone: list, admin: str):
+    """Streaks, Nur balances and one accepted invite, so the shop is worth opening.
+
+    The streak is whatever one check-in makes it — a day — because the server counts
+    consecutive opens and there is no honest way for a seeder to fake a fortnight of
+    them. The balances are a manual adjustment, which is exactly how an operator would
+    grant them, and they land on the audit log saying so.
+    """
+    for u in everyone:
+        result = call("POST", "/rewards/check-in", None, u["token"])
+        call("POST", f"/admin/rewards/users/{u['id']}/adjust",
+             {"amount": u["coins"], "note": "Demo hisob — do'konni ko'rsatish uchun"}, admin)
+        print(f"  {u['name']:<20} streak {result['streak']['current']}  +{u['coins']} nur")
+
+    # One invite that actually paid, so the referral screen has a number on it.
+    inviter, invited = everyone[0], everyone[-1]
+    code = call("GET", "/rewards/referral", token=inviter["token"])["code"]
+    claim = call("POST", "/rewards/referral/claim", {"code": code}, invited["token"])
+    print(f"  Taklif: {inviter['name']} -> {invited['name']} ({code}), qabul {claim['accepted']}")
+
+
 # ---------------------------------------------------------------- the rest of the room
 
 # Accounts nobody walks through, there so the admin panel has a population rather than a
@@ -378,12 +424,20 @@ BACKGROUND = [
 
 BACKGROUND_MOODS = ["good", "ok", "great", "low", "ok", "good"]
 
+# The one account the demo shows as blocked. Fixed, so re-running the seeder does not
+# block a second person.
+BLOCKED_PHONE = "+998900000019"
+
 
 def seed_background(admin: str) -> list:
     """Quiet accounts: onboarded, a few days logged, nothing else."""
     seeded = []
     for index, (phone, name, stage, birth, premium) in enumerate(BACKGROUND):
-        token, user_id = sign_in(phone)
+        credentials = sign_in(phone)
+        if credentials is None:
+            print(f"  {name:<20} {phone}  (bloklangan — o'tkazib yuborildi)")
+            continue
+        token, user_id = credentials
         call("POST", "/me/onboarding", {
             "name": name,
             "language": "uz" if index % 4 else "ru",
@@ -417,12 +471,18 @@ def seed_background(admin: str) -> list:
             call("POST", f"/admin/users/{user_id}/premium",
                  {"expiresAt": until, "reason": "Dev muhiti uchun namuna obuna"}, admin)
 
-        seeded.append({"id": user_id, "name": name})
+        seeded.append({"id": user_id, "name": name, "phone": phone})
         print(f"  {name:<20} {phone}")
 
     # One blocked account: the users list filter and the card's unblock action need
     # something to act on, and a demo should not have to create it by hand.
-    victim = seeded[-1]
+    #
+    # Named rather than "the last one seeded": a blocked account cannot sign in, so on
+    # the next run it is skipped and "the last one" would be somebody else — each run
+    # would block one more person until the demo was all blocked accounts.
+    victim = next((u for u in seeded if u["phone"] == BLOCKED_PHONE), None)
+    if victim is None:
+        return seeded
     call("POST", f"/admin/users/{victim['id']}/block",
          {"blocked": True, "reason": "Dev muhiti: bloklangan hisob namunasi"}, admin)
     print(f"  blocked: {victim['name']}")
@@ -577,6 +637,9 @@ if __name__ == "__main__":
         seed_user(spec, everyone)
     cross_link(everyone)
     grant_premium(everyone)
+
+    print("\nNur va streak")
+    seed_rewards(everyone, admin)
 
     print("\nBackground accounts")
     seed_background(admin)

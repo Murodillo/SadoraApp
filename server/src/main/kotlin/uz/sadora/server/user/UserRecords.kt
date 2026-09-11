@@ -32,6 +32,7 @@ data class UserRecord(
     val lastActiveAt: Instant?,
     val deletionRequestedAt: Instant?,
     val referredByDoctor: Boolean? = null,
+    val hasWearable: Boolean? = null,
 ) {
     /**
      * Goals live in their own table, so the caller supplies them. Note what is absent:
@@ -53,6 +54,7 @@ data class UserRecord(
         onboardingCompleted = onboardingCompleted,
         status = status,
         createdAt = createdAt,
+        hasWearable = hasWearable,
         stage = stage,
     )
 }

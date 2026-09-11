@@ -1,0 +1,112 @@
+# The whole backend on one server: Postgres, Redis and the API.
+#
+#   docker compose -f docker-compose.prod.yml --env-file server/.env.prod up -d --build
+#
+# Deliberately different from docker-compose.yml, which only provides what a laptop's
+# Gradle run talks to. Here the API is a container as well, so a server needs nothing
+# installed but Docker — no JDK, no Gradle, no source tree.
+#
+# Postgres and Redis publish no ports. They are reachable only from the API container
+# over the compose network, which is the whole point: a database on a public IP with a
+# password is a database somebody will eventually guess the password of. The API is the
+# only thing exposed, and even that should sit behind the reverse proxy below rather
+# than answer on 8080 directly.
+
+name: sadora
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-sadora}
+      POSTGRES_USER: ${POSTGRES_USER:-sadora}
+      # No default. Compose refuses to start without it rather than quietly booting a
+      # production database with a password from an example file.
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      TZ: UTC
+      PGTZ: UTC
+    volumes:
+      - sadora-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-sadora} -d ${POSTGRES_DB:-sadora}"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    # No persistence: everything in here is a cache or a counter, and losing it costs a
+    # few extra queries. `Caches.create` falls back to an in-memory cache if Redis is
+    # missing entirely, so this service is a performance choice, not a dependency.
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  api:
+    # CI builds the image once, pushes it to GHCR, and the server runs exactly that image
+    # by digest (`SADORA_API_IMAGE=ghcr.io/…@sha256:…`). Without the variable, `--build`
+    # produces sadora-api:local from this checkout, as a manual deploy always has.
+    image: ${SADORA_API_IMAGE:-sadora-api:local}
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+    restart: unless-stopped
+    # The environment file carries the secrets; these two only point the app at the
+    # containers beside it, and they are not secrets, so they stay readable here.
+    env_file:
+      # Overridable so a staging box runs this same file with its own secrets —
+      # `SADORA_ENV_FILE=server/.env.stage` — instead of a second copy of the stack.
+      - ${SADORA_ENV_FILE:-server/.env.prod}
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-sadora}
+      DB_USER: ${POSTGRES_USER:-sadora}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      REDIS_URL: redis://redis:6379
+      HOST: 0.0.0.0
+      PORT: 8080
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    # Bound to loopback, so nothing reaches it except the proxy on this machine. Drop
+    # the `127.0.0.1:` prefix only to test on a server that has no proxy in front yet —
+    # and put one there before anybody real signs in.
+    ports:
+      - "127.0.0.1:8080:8080"
+
+  # TLS and a real hostname, with certificates Caddy renews by itself.
+  #
+  # Behind a profile because it needs a domain pointed at this server first: without
+  # one, `docker compose ... up -d` skips it and the API answers on 127.0.0.1:8080 for
+  # an SSH tunnel or a quick check. With one:
+  #
+  #   SADORA_DOMAIN=api.sadora.uz docker compose -f docker-compose.prod.yml \
+  #     --env-file server/.env.prod --profile tls up -d
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    profiles: [tls]
+    depends_on: [api]
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      # Plain rather than `:?required`: Compose interpolates the whole file before it
+      # applies profiles, so a required variable here would break the ordinary
+      # no-TLS start too. Caddy refuses an empty site address loudly enough.
+      SADORA_DOMAIN: ${SADORA_DOMAIN}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - sadora-caddy-data:/data
+      - sadora-caddy-config:/config
+
+volumes:
+  sadora-pgdata:
+  sadora-caddy-data:
+  sadora-caddy-config:

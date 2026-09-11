@@ -1,0 +1,54 @@
+# The staging server: the production stack plus what a box without a domain needs.
+#
+#   SADORA_ENV_FILE=server/.env.stage docker compose \
+#     -f docker-compose.prod.yml -f docker-compose.stage.yml \
+#     --env-file server/.env.stage up -d --build
+#
+# Layered on docker-compose.prod.yml rather than copied from it, so staging runs the
+# same Postgres, Redis and API definitions production will. What it adds is the part
+# that only exists because there is no domain yet:
+#
+#   web              one Caddy serving the admin panel, the landing page, and the API
+#                    behind them — on plain HTTP inside the compose network
+#   tunnel-app       a Cloudflare quick tunnel to the admin panel and API
+#   tunnel-landing   a second one for the landing page
+#
+# The admin panel and the API share an origin on purpose: the panel's client calls a
+# relative `/v1`, so it works with no build-time URL, and the phone uses that same origin
+# for its API. The browser still sends an Origin header on POSTs, so the API's CORS
+# allowlist has to name the tunnel URL; tools/deploy_stage.sh writes it in.
+#
+# The quick tunnels get a random hostname. On this server that is far less fragile than
+# on the laptop the demo used to run from — the machine does not change networks — and
+# `restart: unless-stopped` brings a dropped tunnel back. The hostname still changes if
+# the tunnel container is recreated, which is exactly the problem a domain removes.
+
+services:
+  web:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on: [api]
+    volumes:
+      - ./deploy/stage/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./admin/dist:/srv/admin:ro
+      - ./landing:/srv/landing:ro
+      # APKs published by CI (`sadora-ci publish-apk`). Outside the source tree, so a
+      # deploy that replaces the landing page never takes the download with it.
+      - ./downloads:/srv/download:ro
+    # Loopback only: the tunnels reach it over the compose network, and these two
+    # ports exist so the server itself can be checked with curl.
+    ports:
+      - "127.0.0.1:8081:8081"
+      - "127.0.0.1:8082:8082"
+
+  tunnel-app:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    depends_on: [web]
+    command: ["tunnel", "--no-autoupdate", "--url", "http://web:8081"]
+
+  tunnel-landing:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    depends_on: [web]
+    command: ["tunnel", "--no-autoupdate", "--url", "http://web:8082"]

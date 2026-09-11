@@ -38,3 +38,21 @@ data class AiChatQuota(
     val remainingThisMonth: Int?
         get() = monthlyLimit?.let { (it - usedThisMonth).coerceAtLeast(0) }
 }
+
+/**
+ * The line under "Salom, Malika!" on the home screen.
+ *
+ * Written for this moment: the hour, how long her streak is, where she is in her cycle,
+ * how she slept. It changes on every open, which is the whole point — a greeting that
+ * says the same thing twice is wallpaper, and she stops reading it on the third day.
+ *
+ * Cost is bounded the only way a per-open model call can be: the server asks for several
+ * lines at once and hands them out one at a time until the context behind them changes.
+ * [source] says which of the two wrote it — `model` or `rules` — so the admin page can
+ * see how often the model is actually reached.
+ */
+@Serializable
+data class AiGreeting(
+    val line: String,
+    val source: String = "rules",
+)

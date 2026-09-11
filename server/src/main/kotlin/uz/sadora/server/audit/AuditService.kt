@@ -24,11 +24,14 @@ object AuditActions {
     const val USER_PROFILE_UPDATED = "user.profile_updated"
     const val USER_CONSENT_CHANGED = "user.consent_changed"
     const val USER_DELETION_REQUESTED = "user.deletion_requested"
+    const val USER_ERASED = "user.erased"
     const val USER_BLOCKED = "user.blocked"
     const val USER_UNBLOCKED = "user.unblocked"
     const val REFRESH_TOKEN_REUSED = "security.refresh_token_reused"
     const val ADMIN_SIGNED_IN = "admin.signed_in"
     const val ADMIN_SIGN_IN_FAILED = "admin.sign_in_failed"
+    const val ADMIN_TOTP_ENABLED = "admin.totp_enabled"
+    const val ADMIN_TOTP_DISABLED = "admin.totp_disabled"
     const val ENTITLEMENT_DEFINITION_UPDATED = "entitlement.definition_updated"
     const val ENTITLEMENT_OVERRIDE_SET = "entitlement.override_set"
     const val ENTITLEMENT_OVERRIDE_CLEARED = "entitlement.override_cleared"
@@ -42,6 +45,15 @@ object AuditActions {
     const val COMMUNITY_COMMENT_RESTORED = "community.comment_restored"
     const val COMMUNITY_REPORT_RESOLVED = "community.report_resolved"
     const val COMMUNITY_AUTHOR_RESTRICTED = "community.author_restricted"
+
+    // The reward scheme. A rate is a lever on the whole economy and a discount is a
+    // commitment to a partner, so both are answerable actions rather than settings.
+    const val REWARDS_RULE_UPDATED = "rewards.rule_updated"
+    const val REWARDS_COINS_ADJUSTED = "rewards.coins_adjusted"
+    const val SHOP_PRODUCT_CREATED = "shop.product_created"
+    const val SHOP_PRODUCT_UPDATED = "shop.product_updated"
+    const val SHOP_PRODUCT_DELETED = "shop.product_deleted"
+    const val SHOP_PRODUCT_DEACTIVATED = "shop.product_deactivated"
 }
 
 data class AuditEntry(

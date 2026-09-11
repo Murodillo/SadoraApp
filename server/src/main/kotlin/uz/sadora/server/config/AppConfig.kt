@@ -23,9 +23,26 @@ data class AppConfig(
     val otp: OtpConfig,
     val social: SocialConfig,
     val ai: AiConfig,
+    val push: PushConfig,
     val billing: BillingConfig,
     val policyVersion: String,
     val minimumAppVersion: String?,
+    /**
+     * Where an invite link points.
+     *
+     * Built here rather than in the app so the domain lives in one place: the code is
+     * appended to it, the landing page behind it sends the visitor to the right store,
+     * and a change of domain is a deploy rather than a release.
+     */
+    val referralLinkBase: String,
+    /**
+     * How long a deletion request waits before the account is erased for real.
+     *
+     * A window for a person who changes her mind, or asks support to — not a soft delete
+     * kept "just in case". Thirty days is the ordinary support window; shorten it and a
+     * misplaced tap is unrecoverable, lengthen it and the promise stops being true.
+     */
+    val accountErasureGracePeriod: Duration,
 ) {
     companion object {
         fun fromEnvironment(): AppConfig {
@@ -79,6 +96,10 @@ data class AppConfig(
                     inputCostPerMillionMicros = env("AI_INPUT_COST_MICROS", "100000").toLong(),
                     outputCostPerMillionMicros = env("AI_OUTPUT_COST_MICROS", "400000").toLong(),
                 ),
+                push = PushConfig(
+                    projectId = envOrNull("FCM_PROJECT_ID"),
+                    serviceAccountPath = envOrNull("FCM_SERVICE_ACCOUNT_FILE"),
+                ),
                 billing = BillingConfig(
                     payme = PaymeConfig(
                         merchantId = envOrNull("PAYME_MERCHANT_ID"),
@@ -94,8 +115,13 @@ data class AppConfig(
                         checkoutUrl = env("CLICK_CHECKOUT_URL", "https://my.click.uz/services/pay"),
                     ),
                 ),
-                policyVersion = env("POLICY_VERSION", "2026-08-01"),
+                // The day the copy in the app's LegalScreen took effect. The consent row records
+                // this string, so a screen dated later than the version stored against it
+                // would make the record say she agreed to something she never saw.
+                policyVersion = env("POLICY_VERSION", "2026-09-03"),
                 minimumAppVersion = envOrNull("MINIMUM_APP_VERSION"),
+                referralLinkBase = env("REFERRAL_LINK_BASE", "https://sadora.uz/r").trimEnd('/'),
+                accountErasureGracePeriod = env("ACCOUNT_ERASURE_GRACE_DAYS", "30").toInt().days,
             )
             config.verifyProductionSafety()
             return config
@@ -197,6 +223,18 @@ data class AiConfig(
  * than failing at it: the catalogue asks [PaymeConfig.isConfigured] before listing a
  * button that would produce a link nobody can pay.
  */
+/**
+ * Firebase Cloud Messaging. Both fields or neither: with anything missing the server
+ * logs notifications instead of delivering them, which is what a laptop should do and
+ * what production must be noticed not doing.
+ */
+data class PushConfig(
+    val projectId: String?,
+    val serviceAccountPath: String?,
+) {
+    val isConfigured: Boolean get() = projectId != null && serviceAccountPath != null
+}
+
 data class BillingConfig(val payme: PaymeConfig, val click: ClickConfig)
 
 data class PaymeConfig(

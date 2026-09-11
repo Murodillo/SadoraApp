@@ -225,6 +225,14 @@ holat ham xato emas, javobdir; farqni faqat log biladi, va o'rni ham aynan shu.
 `thinkingLevel: minimal` bilan yuboriladi: o'ylash tokenlari `maxOutputTokens` ichidan
 yeyiladi va bitta javobni 3 soniyadan 16 soniyaga cho'zgan edi.
 
+**Javob foydalanuvchi tilida keladi.** `AiPhrases` — ilovadagi `Strings` bilan bir xil
+shakl: interfeys va uchta implementatsiya, ya'ni yangi jumla qo'shilsa, unga javob
+bermagan til kompilyatsiya xatosi bo'ladi. Model uchun bu prompt tili; qoidalar dvigateli
+uchun esa undan ham muhimi — u mavzuni savolning ichidagi so'zlardan topadi, va o'sha
+so'zlar tilga bog'liq. Ilgari ruscha "почему я устала" birorta o'zbekcha o'zakka
+tushmagani uchun umumiy javobga tushib ketardi. "Nimaga tayandim" qatori ham o'sha
+tilda yoziladi.
+
 **Suhbat saqlanmaydi, xarajat esa saqlanadi.** `ai_usage_log` — model, tokenlar, narx
 (USD mikro), kechikish, natija. Savol ham, javob ham yo'q, va jadvalda ularni qo'yadigan
 ustun ham yo'q: "xarajat logi" — bu va'da sezdirmay buziladigan eng ehtimolli joy.
@@ -248,6 +256,29 @@ yo'qotishi demakdir.
 rad etadi (`UnconfiguredStoreVerifier`). Bu ataylab: hammaga "ha" deydigan zaglushka
 testda ishlaydi va productionda paywall'ni butunlay ochib yuboradi.
 
+**"Hisobni o'chirish" ikki qadam, va ikkinchisini kimdir bajaradi.** `DELETE /v1/me`
+hisobni belgilaydi va barcha qurilmalarni darhol chiqaradi — refresh token o'ladi, ya'ni
+hech bir seans o'zini yangilay olmaydi. `AccountErasureJob` esa
+`ACCOUNT_ERASURE_GRACE_DAYS` (standart 30) o'tgach qatorni haqiqatan o'chiradi. Bitta
+`DELETE FROM users`: sxemada unga tegishli har bir jadval `ON DELETE CASCADE` bilan
+`users(id)` ga bog'langan, shuning uchun sikl, ovqat, kundalik, dorilar, postlar,
+qurilmalar va tokenlar u bilan birga ketadi — va kelasi sprintda qo'shilgan jadval ham
+o'z tashqi kaliti bilan qamrab olinadi. Ataylab qolgan ikki istisno `ON DELETE SET NULL`:
+audit jurnali va AI xarajat jurnali — tarix javob beradi, odam esa ichida qolmaydi.
+Muhlat "har ehtimolga qarshi" saqlash emas: u tugagach ma'lumot yo'q va uni ilova ichida
+qaytarib bo'lmaydi.
+
+**Bildirishnoma FCM orqali ketadi, sozlanmagan bo'lsa log'ga.** `FCM_PROJECT_ID` va
+`FCM_SERVICE_ACCOUNT_FILE` berilgan bo'lsa `FcmPushSender` ishlaydi — bitta Firebase
+loyihasi ikkala platformani ham qamraydi (Android to'g'ridan-to'g'ri, iOS o'sha loyihaga
+yuklangan APNs kaliti orqali). Berilmagan bo'lsa `LoggingPushSender`: bu store
+tekshiruvchisidan farqli o'laroq rad javob emas — faqat log'ga yozilgan bildirishnoma
+hech kimga zarar qilmaydi, faqat log'ga yozilgan to'lov esa mahsulotni bepul qilib
+qo'yadi. Kalit har bir token uchun alohida so'rov: FCM `UNREGISTERED` desa, o'sha token
+o'chiriladi — qurilma o'chirib tashlangan, va uni cheksiz sinash har bir
+bildirishnomaga kafolatlangan bitta xatolik qo'shadi. Bitta qurilmaning yiqilishi
+boshqasida yetib borgan eslatmani muvaffaqiyatsiz deb belgilamaydi.
+
 **Onboarding'dagi birinchi check-in health-gate ortida.** `firstCheckIn` profil bilan
 birga keladi, lekin `HealthService` orqali, `store_health` roziligi bo'lgandagina
 yoziladi — roziliksiz jimgina tashlab yuboriladi, so'rov muvaffaqiyatsiz bo'lmaydi.
@@ -268,10 +299,63 @@ TEST_DB_URL=jdbc:postgresql://localhost:5433/sadora_test ./gradlew :server:test
 
 CI'da u job'ning o'z Postgres'iga qarshi ishlaydi.
 
+## Serverga qo'yish (deploy)
+
+Backend — JVM jarayoni (Ktor) va u **PostgreSQL** talab qiladi: sxemada 91 ta
+`TIMESTAMPTZ`, 28 ta `gen_random_uuid()`, `jsonb`, regex `~` operatori va beshta
+qisman (`partial`) unikal indeks bor. Aynan o'sha qisman indekslar bir tangani ikki
+marta to'lab yuborishdan saqlaydi, va MySQL'da ularning ekvivalenti yo'q.
+
+Shuning uchun **umumiy (shared) cPanel xosting bunga yaramaydi**: u PHP uchun, uzluksiz
+JVM jarayonini ko'tarmaydi va MySQL beradi. Kerak bo'ladigan narsa — Docker o'rnatilgan
+VPS yoki shunga o'xshash xizmat. Statik narsalar (landing sahifasi, admin panelning
+yig'ilgan `dist`i) esa istalgan xostingda yashayveradi.
+
+`docker-compose.prod.yml` butun backendni bitta serverga ko'taradi — Postgres, Redis va
+API. Serverda Docker'dan boshqa hech narsa kerak emas: JDK ham, Gradle ham, manba
+daraxti ham API konteynerning ichida yig'iladi.
+
+```bash
+cp server/.env.prod.example server/.env.prod   # so'ng bo'sh qatorlarni to'ldiring
+docker compose -f docker-compose.prod.yml --env-file server/.env.prod up -d --build
+```
+
+`POSTGRES_PASSWORD` majburiy: usiz compose ishga tushmaydi, chunki namunadagi parol
+bilan jimgina ko'tarilgan prod bazasi — parolini kimdir baribir topadigan baza.
+
+Postgres va Redis hech qanday portni tashqariga chiqarmaydi; ular faqat compose tarmog'i
+ichidan ko'rinadi. API esa `127.0.0.1:8080` da turadi, ya'ni unga faqat shu mashinadagi
+proxy yetadi. Domen tayyor bo'lgach, TLS'ni Caddy oladi (sertifikatni o'zi yangilaydi):
+
+```bash
+SADORA_DOMAIN=api.sadora.uz docker compose -f docker-compose.prod.yml \
+  --env-file server/.env.prod --profile tls up -d
+```
+
+Ikki holatni farqlash kerak:
+
+| | **doimiy test serveri** | **haqiqiy prod** |
+|---|---|---|
+| `SADORA_ENV` | `DEV` | `PROD` |
+| SMS kodi | `123456` (`OTP_FIXED_CODE`) | haqiqiy provayder |
+| Ishlaydimi? | bugun | **yo'q — SMS provayder ulanmagan** |
+
+`AppConfig.verifyProductionSafety()` ataylab yo'l bermaydi: dev JWT kaliti, javobda
+qaytariladigan OTP yoki doimiy OTP kodi bilan `SADORA_ENV=PROD` **ko'tarilmaydi**. Ya'ni
+haqiqiy prod SMS provayderni kutadi; doimiy test serveri esa hozir ham ishlayveradi va
+tunnel bilan bog'liq muammolarni butunlay yo'q qiladi.
+
+Deploy'dan keyin tekshiruv — `/health/ready` bazani ham tekshiradi, `/health/live` esa
+yo'q (bazadagi qisqa uzilish konteynerni o'ldirmasligi uchun):
+
+```bash
+curl https://api.sadora.uz/health/ready
+```
+
 ## Nima hali yo'q
 App Store / Google Play cheklarini haqiqiy tekshirish (`StoreVerifier` interfeysi va
-grant yo'li tayyor, kalitlar yo'q) va ilovadagi billing SDK · hisobni haqiqiy o'chirish job'i · SMS provayderi (`OtpSender` interfeysi
-tayyor, hozircha log'ga yozadi) · admin 2FA enrolment ekrani · Health Connect /
+grant yo'li tayyor, kalitlar yo'q) va ilovadagi billing SDK · SMS provayderi (`OtpSender` interfeysi
+tayyor, hozircha log'ga yozadi) · Health Connect /
 HealthKit o'qish qatlami (server tomon `POST /v1/health-data/samples` tayyor, ilovada
 namuna yig'uvchi hali yo'q, shuning uchun uyqu va qadam ekranlari bo'sh holatini
 ko'rsatadi).

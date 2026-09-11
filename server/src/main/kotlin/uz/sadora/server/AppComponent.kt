@@ -17,6 +17,12 @@ import uz.sadora.server.ai.AiService
 import uz.sadora.server.ai.AiUsageRepository
 import uz.sadora.server.ai.GeminiAnswerer
 import uz.sadora.server.ai.GeminiFoodVision
+import uz.sadora.server.ai.GreetingService
+import uz.sadora.server.rewards.HomeLayoutRepository
+import uz.sadora.server.rewards.RewardsRepository
+import uz.sadora.server.rewards.RewardsService
+import uz.sadora.server.rewards.ShopRepository
+import uz.sadora.server.rewards.ShopService
 import uz.sadora.server.community.CommunityModerationService
 import uz.sadora.server.community.CommunityRepository
 import uz.sadora.server.community.CommunityService
@@ -53,10 +59,16 @@ import uz.sadora.server.health.NutritionService
 import uz.sadora.server.content.ContentRepository
 import uz.sadora.server.content.ContentService
 import uz.sadora.server.insights.InsightsService
+import java.io.File
+import uz.sadora.server.notify.FcmPushSender
+import uz.sadora.server.notify.GoogleAccessTokens
 import uz.sadora.server.notify.LoggingPushSender
+import uz.sadora.server.notify.PushSender
+import uz.sadora.server.notify.ServiceAccountKey
 import uz.sadora.server.notify.NotificationRepository
 import uz.sadora.server.notify.NotificationScheduler
 import uz.sadora.server.notify.NotificationService
+import uz.sadora.server.user.AccountErasureJob
 import uz.sadora.server.user.UserRepository
 import uz.sadora.server.wearable.WearableRepository
 import uz.sadora.server.wearable.WearableService
@@ -117,6 +129,26 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
         audit = auditService,
     )
 
+    // ---- rewards -------------------------------------------------------------
+    // Built before the AI services: the greeting reads the streak, so the reward layer
+    // has to exist first. Nothing flows the other way — the scheme never reads health.
+    val rewardsRepository = RewardsRepository()
+    val homeLayoutRepository = HomeLayoutRepository()
+    val shopRepository = ShopRepository()
+
+    val rewardsService = RewardsService(
+        repository = rewardsRepository,
+        users = userRepository,
+        referralLinkBase = config.referralLinkBase,
+    )
+
+    val shopService = ShopService(
+        shop = shopRepository,
+        rewards = rewardsRepository,
+        subscriptions = subscriptionRepository,
+        entitlements = entitlementService,
+    )
+
     val userService = UserService(
         users = userRepository,
         entitlements = entitlementService,
@@ -124,13 +156,14 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
         refreshTokens = refreshTokenService,
         audit = auditService,
         config = config,
+        rewards = rewardsService,
     )
 
     val aiUsageRepository = AiUsageRepository()
 
     val healthAccess = HealthAccess(userRepository, entitlementService)
     val healthService = HealthService(healthRepository, healthAccess)
-    val mindService = MindService(mindRepository, healthRepository, healthAccess)
+    val mindService = MindService(mindRepository, healthRepository, healthAccess, rewardsService)
     val appointmentService = AppointmentService(appointmentRepository, healthAccess)
     val nutritionService = NutritionService(
         nutrition = nutritionRepository,
@@ -140,17 +173,47 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
         vision = config.ai.apiKey?.let { GeminiFoodVision(outboundHttpClient, config.ai) },
         visionConfig = config.ai,
         usage = aiUsageRepository,
+        rewards = rewardsService,
     )
-    val medicationService = MedicationService(medicationRepository, healthAccess)
+    val medicationService = MedicationService(medicationRepository, healthAccess, rewardsService)
     val wearableService = WearableService(wearableRepository, healthAccess)
 
     val notificationRepository = NotificationRepository()
     val notificationService = NotificationService(notificationRepository)
+    /**
+     * FCM when it is configured, the log when it is not.
+     *
+     * Not a refusal like the store verifier: a notification that is only logged costs
+     * nobody anything, while a checkout that is only logged gives the product away. A
+     * laptop and a demo want the log; production wants the line below to say fcm, and
+     * the boot log says which one it got.
+     */
+    val pushSender: PushSender = if (config.push.isConfigured) {
+        FcmPushSender(
+            client = outboundHttpClient,
+            projectId = config.push.projectId!!,
+            tokens = GoogleAccessTokens(
+                client = outboundHttpClient,
+                credentials = ServiceAccountKey.parse(File(config.push.serviceAccountPath!!).readText()),
+                scope = FcmPushSender.SCOPE,
+            ),
+            onTokenRejected = { token -> userRepository.forgetPushToken(token) },
+        )
+    } else {
+        LoggingPushSender()
+    }
+
     val notificationScheduler = NotificationScheduler(
         notifications = notificationRepository,
         medications = medicationRepository,
         users = userRepository,
-        sender = LoggingPushSender(),
+        sender = pushSender,
+    )
+
+    val accountErasureJob = AccountErasureJob(
+        users = userRepository,
+        audit = auditService,
+        gracePeriod = config.accountErasureGracePeriod,
     )
 
     val communityRepository = CommunityRepository()
@@ -167,6 +230,7 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
         repository = contentRepository,
         users = userRepository,
         entitlements = entitlementService,
+        rewards = rewardsService,
     )
 
     val insightsService = InsightsService(
@@ -182,6 +246,28 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
         usage = aiUsageRepository,
         // No key means no model object at all, so the gateway cannot try and fail on
         // every question — it answers from the rules and says so in the log once.
+        model = config.ai.apiKey?.let { GeminiAnswerer(outboundHttpClient, config.ai) },
+    )
+
+    /**
+     * The home screen's greeting.
+     *
+     * Its own service rather than a method on [AiService]: it is not a question, it is
+     * not metered against her chat allowance, and it must answer for a free account.
+     * The only thing the two share is the model object and the cost log.
+     */
+    val greetingService = GreetingService(
+        users = userRepository,
+        flags = flagService,
+        environment = config.environment,
+        cache = cache,
+        config = config.ai,
+        health = healthService,
+        nutrition = nutritionService,
+        mind = mindService,
+        wearables = wearableService,
+        rewards = rewardsRepository,
+        usage = aiUsageRepository,
         model = config.ai.apiKey?.let { GeminiAnswerer(outboundHttpClient, config.ai) },
     )
 
@@ -232,6 +318,7 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
 
     override fun close() {
         notificationScheduler.stop()
+        accountErasureJob.stop()
         outboundHttpClient.close()
         cache.close()
         databaseFactory.close()

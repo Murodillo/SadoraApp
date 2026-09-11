@@ -27,6 +27,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
@@ -38,12 +39,36 @@ import kotlinx.serialization.json.int
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.serializer
+import org.jetbrains.exposed.v1.core.and
+import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.insert
+import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Assumptions.assumeTrue
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.TestInstance
 import uz.sadora.contract.AdminArticle
+import uz.sadora.contract.AdjustCoinsRequest
+import uz.sadora.contract.AiGreeting
+import uz.sadora.contract.AddWaterRequest
+import uz.sadora.contract.ClaimReferralRequest
+import uz.sadora.contract.ClaimReferralResult
+import uz.sadora.contract.CoinBalance
+import uz.sadora.contract.CoinReasons
+import uz.sadora.contract.DailyCheckInResult
+import uz.sadora.contract.HomeLayout
+import uz.sadora.contract.HomeWidget
+import uz.sadora.contract.HomeWidgets
+import uz.sadora.contract.NutritionGoals
+import uz.sadora.contract.RedeemRequest
+import uz.sadora.contract.RedeemResult
+import uz.sadora.contract.Redemption
+import uz.sadora.contract.ReferralStatus
+import uz.sadora.contract.RewardsSummary
+import uz.sadora.contract.SaveHomeLayoutRequest
+import uz.sadora.contract.ShopCatalog
+import uz.sadora.contract.ShopKind
+import uz.sadora.contract.WaterState
 import uz.sadora.contract.AiChatQuota
 import uz.sadora.contract.AiChatReply
 import uz.sadora.contract.AiChatRequest
@@ -75,6 +100,7 @@ import uz.sadora.contract.CycleStatus
 import uz.sadora.contract.FoodScanRequest
 import uz.sadora.contract.Limits
 import uz.sadora.contract.DailyLog
+import uz.sadora.contract.DeleteAccountRequest
 import uz.sadora.contract.DeviceInfo
 import uz.sadora.contract.Entitlements
 import uz.sadora.contract.ErrorCodes
@@ -89,6 +115,7 @@ import uz.sadora.contract.OnboardingRequest
 import uz.sadora.contract.OtpChallenge
 import uz.sadora.contract.OtpRequest
 import uz.sadora.contract.OtpVerifyRequest
+import uz.sadora.contract.RefreshRequest
 import uz.sadora.contract.Page
 import uz.sadora.contract.PaymentProvider
 import uz.sadora.contract.PaymentState
@@ -106,7 +133,12 @@ import uz.sadora.contract.UpdateProfileRequest
 import uz.sadora.contract.UserProfile
 import uz.sadora.contract.UzbekPhone
 import uz.sadora.server.admin.AdminSession
+import uz.sadora.server.admin.AdminMe
 import uz.sadora.server.admin.AdminSignInRequest
+import uz.sadora.server.admin.Totp
+import uz.sadora.server.admin.TotpConfirmRequest
+import uz.sadora.server.admin.TotpDisableRequest
+import uz.sadora.server.admin.TotpEnrolment
 import uz.sadora.server.admin.AdminStats
 import uz.sadora.server.auth.PasswordHasher
 import uz.sadora.server.billing.BillingService
@@ -125,11 +157,14 @@ import uz.sadora.server.config.Environment
 import uz.sadora.server.config.HttpConfig
 import uz.sadora.server.config.JwtConfig
 import uz.sadora.server.config.OtpConfig
+import uz.sadora.server.config.PushConfig
 import uz.sadora.server.config.RedisConfig
 import uz.sadora.server.config.SocialConfig
 import uz.sadora.server.core.now
+import uz.sadora.server.user.AccountErasureJob
 import uz.sadora.server.core.toOffsetDateTime
 import uz.sadora.server.db.AdminUsers
+import uz.sadora.server.db.AuditLog
 import uz.sadora.server.db.dbQuery
 
 /**
@@ -209,6 +244,375 @@ class ApiIntegrationTest {
         // Without this the app has no anchor and can only show a week it made up.
         val profile = get<UserProfile>("/v1/me", her.token)
         assertEquals(due, profile.stage?.dueDate)
+    }
+
+    // ---------------------------------------------------------------- Nur
+
+    /**
+     * The whole daily loop in one pass.
+     *
+     * What it pins is the idempotence: a launch is a `POST`, phones launch the app many
+     * times a day, and only the first one of a day may pay or celebrate. Without that
+     * the balance would grow with every return from the camera.
+     */
+    @Test
+    fun `the first open of a day pays and celebrates, the second does neither`() = api {
+        val user = signUp()
+        onboard(user)
+
+        val first = post<DailyCheckInResult>("/v1/rewards/check-in", user.token, Unit)
+        assertTrue(first.celebrate, "the first open of a day is worth a celebration")
+        assertEquals(1, first.streak.current)
+        assertTrue(first.streak.openedToday)
+        val earned = first.coins.balance
+        assertTrue(earned > 0, "the daily rule pays something: $earned")
+        assertTrue(first.awards.any { it.reason == CoinReasons.DAILY_OPEN })
+
+        val second = post<DailyCheckInResult>("/v1/rewards/check-in", user.token, Unit)
+        assertFalse(second.celebrate, "the same day again is not a new day")
+        assertTrue(second.awards.isEmpty())
+        assertEquals(earned, second.coins.balance, "nothing was paid twice")
+    }
+
+    /**
+     * The ledger is the balance's explanation, so the wallet has to be able to show one
+     * line per coin. A summary with a balance and an empty history would be a number the
+     * app is asking her to take on trust.
+     */
+    @Test
+    fun `the wallet explains its balance and lists what each action pays`() = api {
+        val user = signUp()
+        onboard(user)
+        post<DailyCheckInResult>("/v1/rewards/check-in", user.token, Unit)
+
+        val summary = get<RewardsSummary>("/v1/rewards", user.token)
+        assertEquals(summary.coins.balance, summary.history.sumOf { it.amount })
+        assertTrue(summary.history.any { it.reason == CoinReasons.DAILY_OPEN })
+        assertTrue(summary.earnRates.any { it.reason == CoinReasons.DAILY_OPEN && it.amount > 0 })
+        // Every row is worded by the server in her language; a blank title would leave
+        // the wallet showing an internal key.
+        assertTrue(summary.history.all { it.title.isNotBlank() })
+    }
+
+    /** Logging pays, and the cap in the rules is what stops it paying forever. */
+    @Test
+    fun `reaching the water goal pays once, and drinking more pays nothing further`() = api {
+        val user = signUp()
+        onboard(user)
+        val goal = get<NutritionGoals>("/v1/nutrition/goals", user.token).waterGoalMl
+
+        post<WaterState>("/v1/nutrition/water", user.token, AddWaterRequest(goal))
+        val afterGoal = get<CoinBalance>("/v1/rewards", user.token).let {
+            get<RewardsSummary>("/v1/rewards", user.token).coins
+        }
+        assertTrue(
+            afterGoal.balance > 0,
+            "the water goal pays: ${afterGoal.balance}",
+        )
+
+        post<WaterState>("/v1/nutrition/water", user.token, AddWaterRequest(250))
+        val afterMore = get<RewardsSummary>("/v1/rewards", user.token).coins
+        assertEquals(afterGoal.balance, afterMore.balance, "the goal is reached once a day, not per glass")
+    }
+
+    /**
+     * The invite pays both sides exactly once, and never for a code somebody typed at
+     * their own account. A referral scheme that can be pointed at itself is a mint.
+     */
+    @Test
+    fun `an invite code pays the inviter and the invited, and never the same person twice`() = api {
+        val inviter = signUp()
+        onboard(inviter)
+        val referral = get<ReferralStatus>("/v1/rewards/referral", inviter.token)
+        assertTrue(referral.code.isNotBlank())
+        assertTrue(referral.link.endsWith(referral.code))
+
+        val inviterBefore = get<RewardsSummary>("/v1/rewards", inviter.token).coins.balance
+
+        val invited = signUp()
+        val response = client.post("/v1/me/onboarding") {
+            auth(invited.token)
+            json(
+                OnboardingRequest(
+                    name = "Invited",
+                    language = Language.UZ,
+                    timezone = "Asia/Tashkent",
+                    lifeStage = LifeStage.CYCLE,
+                    consents = ConsentGrants(storeHealth = true),
+                    inviteCode = referral.code,
+                ),
+            )
+        }
+        assertEquals(HttpStatusCode.OK, response.status, response.bodyAsTextSafe())
+
+        val inviterAfter = get<RewardsSummary>("/v1/rewards", inviter.token).coins.balance
+        assertTrue(inviterAfter > inviterBefore, "the inviter is paid: $inviterBefore -> $inviterAfter")
+
+        val invitedWallet = get<RewardsSummary>("/v1/rewards", invited.token)
+        assertTrue(invitedWallet.coins.balance > 0, "the invited account starts with a welcome")
+
+        // Presenting the same code again changes nothing: the claim is keyed by account.
+        val again = post<ClaimReferralResult>(
+            "/v1/rewards/referral/claim",
+            invited.token,
+            ClaimReferralRequest(referral.code),
+        )
+        assertFalse(again.accepted)
+
+        // And her own code pays her nothing.
+        val own = get<ReferralStatus>("/v1/rewards/referral", invited.token)
+        val selfClaim = post<ClaimReferralResult>(
+            "/v1/rewards/referral/claim",
+            invited.token,
+            ClaimReferralRequest(own.code),
+        )
+        assertFalse(selfClaim.accepted)
+    }
+
+    /**
+     * Spending. The important half is the refusal: a balance that could go negative
+     * would be a shop giving product away.
+     */
+    @Test
+    fun `Nur buys Premium, and a balance that does not cover it buys nothing`() = api {
+        val user = signUp()
+        onboard(user)
+
+        val catalogue = get<ShopCatalog>("/v1/shop", user.token)
+        val premium = assertNotNull(
+            catalogue.products.firstOrNull { it.kind == ShopKind.PREMIUM },
+            "the seeded shop sells Premium",
+        )
+        assertFalse(premium.affordable, "a new account cannot afford a month of Premium")
+
+        val refused = client.post("/v1/shop/redeem") {
+            auth(user.token)
+            json(RedeemRequest(premium.id))
+        }
+        assertEquals(HttpStatusCode.BadRequest, refused.status, refused.bodyAsTextSafe())
+        assertEquals(SubscriptionTier.FREE, get<Entitlements>("/v1/entitlements", user.token).tier)
+
+        // Given the coins by an operator, the same purchase goes through and the
+        // entitlement moves — the server owns both sides of that trade.
+        val admin = adminToken()
+        val credited = post<CoinBalance>(
+            "/v1/admin/rewards/users/${user.userId}/adjust",
+            admin,
+            AdjustCoinsRequest(amount = premium.coinCost, note = "integration test"),
+        )
+        assertEquals(premium.coinCost, credited.balance)
+
+        val result = post<RedeemResult>("/v1/shop/redeem", user.token, RedeemRequest(premium.id))
+        assertTrue(result.premiumGranted)
+        assertEquals(0, result.coins.balance, "the coins were spent, not copied")
+        assertTrue(result.redemption.code.startsWith("SDR-"))
+        assertEquals(SubscriptionTier.PREMIUM, get<Entitlements>("/v1/entitlements", user.token).tier)
+    }
+
+    /** A partner item hands over a code and a discount, and never claims to have shipped. */
+    @Test
+    fun `a vitamin redemption issues a code carrying the discount`() = api {
+        val user = signUp()
+        onboard(user)
+        val admin = adminToken()
+
+        val catalogue = get<ShopCatalog>("/v1/shop", user.token)
+        val vitamin = assertNotNull(catalogue.products.firstOrNull { it.kind == ShopKind.VITAMIN })
+        post<CoinBalance>(
+            "/v1/admin/rewards/users/${user.userId}/adjust",
+            admin,
+            AdjustCoinsRequest(amount = vitamin.coinCost, note = "integration test"),
+        )
+
+        val result = post<RedeemResult>("/v1/shop/redeem", user.token, RedeemRequest(vitamin.id))
+        assertFalse(result.premiumGranted, "a partner product grants no entitlement")
+        assertEquals(vitamin.discountPercent, result.redemption.discountPercent)
+        assertNotNull(result.redemption.expiresAt, "a partner code carries an expiry")
+
+        val mine = get<List<Redemption>>("/v1/shop/redemptions", user.token)
+        assertTrue(mine.any { it.code == result.redemption.code })
+    }
+
+    /**
+     * The layout is a preference the account carries between phones, which is the whole
+     * reason it is on the server rather than in local storage.
+     */
+    @Test
+    fun `the home layout is saved whole and reconciled against the shipped catalogue`() = api {
+        val user = signUp()
+        onboard(user)
+
+        val defaults = get<HomeLayout>("/v1/me/home-layout", user.token)
+        assertEquals(HomeWidgets.keys.size, defaults.widgets.size)
+
+        val rearranged = listOf(
+            HomeWidget(HomeWidgets.STREAK, 0, true),
+            HomeWidget(HomeWidgets.AI, 1, true),
+            HomeWidget(HomeWidgets.SLEEP, 2, true),
+            // A key from a client the server has never heard of: dropped, not refused.
+            HomeWidget("something_new", 3, true),
+        )
+        val saved = put<HomeLayout>("/v1/me/home-layout", user.token, SaveHomeLayoutRequest(rearranged))
+        assertEquals(HomeWidgets.STREAK, saved.visible().first())
+        assertTrue(HomeWidgets.SLEEP in saved.visible(), "a widget she switched on stays on")
+        assertFalse(saved.widgets.any { it.key == "something_new" })
+
+        // It survives the round trip, which is the point of storing it at all.
+        val reread = get<HomeLayout>("/v1/me/home-layout", user.token)
+        assertEquals(HomeWidgets.STREAK, reread.visible().first())
+    }
+
+    /**
+     * The greeting is free, unmetered, and different on every open — that last part is
+     * the feature, and a cached line handed out twice would quietly undo it.
+     */
+    @Test
+    fun `the home greeting answers for a free account and does not repeat itself`() = api {
+        val user = signUp()
+        onboard(user)
+
+        val lines = (1..4).map { get<AiGreeting>("/v1/ai/greeting", user.token).line }
+        assertTrue(lines.all { it.isNotBlank() })
+        assertTrue(lines.toSet().size > 1, "four opens produced the same line every time: $lines")
+    }
+
+    // ---------------------------------------------------------------- admin 2FA
+
+    /**
+     * Sign-in has always demanded a TOTP code from an account with 2FA enabled, and
+     * nothing could enable it — so every operator account was, in practice, a password.
+     * This walks the enrolment the panel now offers, and then proves the code is really
+     * required.
+     */
+    @Test
+    fun `an operator can enrol in 2FA, and afterwards a password alone is not enough`() = api {
+        val admin = adminAccount()
+
+        val before = get<AdminMe>("/v1/admin/me", admin.token)
+        assertTrue(!before.totpEnabled)
+
+        val enrolment = client.post("/v1/admin/me/totp/start") { auth(admin.token) }.body<TotpEnrolment>()
+        assertTrue(enrolment.otpauthUri.startsWith("otpauth://totp/SADORA:"), enrolment.otpauthUri)
+
+        // Nothing is switched on until a code proves the authenticator holds the secret.
+        assertTrue(!get<AdminMe>("/v1/admin/me", admin.token).totpEnabled)
+        val wrong = client.post("/v1/admin/me/totp/confirm") {
+            auth(admin.token)
+            json(TotpConfirmRequest("000000"))
+        }
+        assertEquals(HttpStatusCode.Unauthorized, wrong.status)
+        assertTrue(!get<AdminMe>("/v1/admin/me", admin.token).totpEnabled)
+
+        val code = currentCodeFor(enrolment.secret)
+        val confirmed = client.post("/v1/admin/me/totp/confirm") {
+            auth(admin.token)
+            json(TotpConfirmRequest(code))
+        }
+        assertEquals(HttpStatusCode.OK, confirmed.status, confirmed.bodyAsTextSafe())
+        assertTrue(get<AdminMe>("/v1/admin/me", admin.token).totpEnabled)
+
+        // The point of the whole exercise.
+        val passwordOnly = client.post("/v1/admin/auth/login") {
+            json(AdminSignInRequest(admin.email, admin.password))
+        }
+        assertEquals(HttpStatusCode.Unauthorized, passwordOnly.status)
+
+        val withCode = client.post("/v1/admin/auth/login") {
+            json(AdminSignInRequest(admin.email, admin.password, currentCodeFor(enrolment.secret)))
+        }
+        assertEquals(HttpStatusCode.OK, withCode.status, withCode.bodyAsTextSafe())
+    }
+
+    @Test
+    fun `turning 2FA off needs the password as well, so a borrowed session cannot`() = api {
+        val admin = adminAccount()
+        val enrolment = client.post("/v1/admin/me/totp/start") { auth(admin.token) }.body<TotpEnrolment>()
+        client.post("/v1/admin/me/totp/confirm") {
+            auth(admin.token)
+            json(TotpConfirmRequest(currentCodeFor(enrolment.secret)))
+        }
+
+        val sessionOnly = client.post("/v1/admin/me/totp/disable") {
+            auth(admin.token)
+            json(TotpDisableRequest(password = "not-the-password", code = currentCodeFor(enrolment.secret)))
+        }
+        assertEquals(HttpStatusCode.Unauthorized, sessionOnly.status)
+        assertTrue(get<AdminMe>("/v1/admin/me", admin.token).totpEnabled, "still protected")
+
+        val proper = client.post("/v1/admin/me/totp/disable") {
+            auth(admin.token)
+            json(TotpDisableRequest(password = admin.password, code = currentCodeFor(enrolment.secret)))
+        }
+        assertEquals(HttpStatusCode.OK, proper.status, proper.bodyAsTextSafe())
+        assertTrue(!get<AdminMe>("/v1/admin/me", admin.token).totpEnabled)
+    }
+
+    /** What the operator's authenticator would be showing right now. */
+    private fun currentCodeFor(secret: String): String =
+        Totp.generate(Totp.decodeBase32(secret), now().epochSeconds / 30)
+
+    // ---------------------------------------------------------------- deletion
+
+    /**
+     * The half of "delete my account" that used to be missing: the row was marked and
+     * then stayed forever. Health data is exactly the kind a person deletes an account
+     * to be rid of, so this checks it is actually gone rather than hidden.
+     */
+    @Test
+    fun `the erasure job removes the account and everything the schema hangs off it`() = api {
+        val her = signUp()
+        onboard(her, storeHealth = true, mood = MoodLevel.LOW, symptoms = listOf("fatigue"))
+        val userId = Uuid.parse(her.userId)
+
+        assertEquals(1, countRowsFor(userId, "daily_logs"), "she logged a check-in")
+
+        val response = client.delete("/v1/me") {
+            auth(her.token)
+            json(DeleteAccountRequest(confirmation = "DELETE", reason = "no longer needed"))
+        }
+        assertEquals(HttpStatusCode.OK, response.status, response.bodyAsTextSafe())
+
+        // Every device is signed out the moment she asks: the refresh token is dead, so
+        // no session can renew itself past the access token it is already holding.
+        val renewed = client.post("/v1/auth/refresh") { json(RefreshRequest(her.refreshToken)) }
+        assertEquals(HttpStatusCode.Unauthorized, renewed.status, renewed.bodyAsTextSafe())
+        assertNotNull(component.userRepository.findById(userId), "still there during the grace period")
+
+        // At least hers: the suite shares one database, so a previous test's pending
+        // account may be due in the same tick.
+        assertTrue(component.accountErasureJob.runOnce() >= 1)
+
+        assertNull(component.userRepository.findById(userId), "the account is gone")
+        assertEquals(0, countRowsFor(userId, "daily_logs"), "and so is her health data")
+        assertEquals(0, countRowsFor(userId, "devices"))
+        assertEquals(0, countRowsFor(userId, "user_consents"))
+
+        // What is left is the record that it happened, with no one in it.
+        val erasures = dbQuery {
+            AuditLog.selectAll()
+                .where { (AuditLog.action eq "user.erased") and (AuditLog.entityId eq userId.toString()) }
+                .count()
+        }
+        assertEquals(1L, erasures, "an erased account still leaves a line saying so")
+    }
+
+    @Test
+    fun `an account still inside its grace period is left alone`() = api {
+        val her = signUp()
+        val userId = Uuid.parse(her.userId)
+        client.delete("/v1/me") {
+            auth(her.token)
+            json(DeleteAccountRequest(confirmation = "DELETE"))
+        }
+
+        // A day of grace is enough to make "asked just now" not yet due.
+        val job = AccountErasureJob(
+            users = component.userRepository,
+            audit = component.auditService,
+            gracePeriod = 1.days,
+        )
+        assertEquals(0, job.runOnce())
+        assertNotNull(component.userRepository.findById(userId))
     }
 
     // ---------------------------------------------------------------- appointments
@@ -871,7 +1275,7 @@ class ApiIntegrationTest {
 
     // ---------------------------------------------------------------- helpers
 
-    private class TestUser(val token: String, val userId: String)
+    private class TestUser(val token: String, val userId: String, val refreshToken: String)
 
     private val wireJson = Json { ignoreUnknownKeys = true; explicitNulls = false; encodeDefaults = true }
 
@@ -890,6 +1294,14 @@ class ApiIntegrationTest {
         Api(client).block()
     }
 
+    /** Rows a table holds for one account, by its user_id column. */
+    private suspend fun countRowsFor(userId: Uuid, table: String): Int = dbQuery {
+        exec("SELECT count(*) FROM $table WHERE user_id = '$userId'") { rows ->
+            rows.next()
+            rows.getInt(1)
+        } ?: 0
+    }
+
     private suspend fun Api.signUp(): TestUser {
         val phone = randomPhone()
         val challenge = client.post("/v1/auth/otp/request") { json(OtpRequest(phone)) }.body<OtpChallenge>()
@@ -898,7 +1310,7 @@ class ApiIntegrationTest {
             json(OtpVerifyRequest(challenge.challengeId, code, DeviceInfo("test-device", Platform.ANDROID, timezone = "Asia/Tashkent")))
         }.body<AuthSession>()
         assertTrue(session.isNewUser)
-        return TestUser(session.tokens.accessToken, session.user.id)
+        return TestUser(session.tokens.accessToken, session.user.id, session.tokens.refreshToken)
     }
 
     private suspend fun Api.onboard(
@@ -923,7 +1335,11 @@ class ApiIntegrationTest {
         assertEquals(HttpStatusCode.OK, response.status, response.bodyAsTextSafe())
     }
 
-    private suspend fun Api.adminToken(): String {
+    private suspend fun Api.adminToken(): String = adminAccount().token
+
+    private class TestAdmin(val token: String, val email: String, val password: String)
+
+    private suspend fun Api.adminAccount(): TestAdmin {
         val email = "test-${Uuid.random()}@sadora.test"
         val password = "Test12345"
         dbQuery {
@@ -940,7 +1356,9 @@ class ApiIntegrationTest {
                 it[updatedAt] = now().toOffsetDateTime()
             }
         }
-        return client.post("/v1/admin/auth/login") { json(AdminSignInRequest(email, password)) }.body<AdminSession>().accessToken
+        val token = client.post("/v1/admin/auth/login") { json(AdminSignInRequest(email, password)) }
+            .body<AdminSession>().accessToken
+        return TestAdmin(token, email, password)
     }
 
     private suspend fun Api.setFlag(admin: String, key: String, enabled: Boolean) {
@@ -1084,6 +1502,9 @@ class ApiIntegrationTest {
             inputCostPerMillionMicros = 100_000,
             outputCostPerMillionMicros = 400_000,
         ),
+        // Unconfigured, so notifications are logged rather than sent: the suite must not
+        // reach Firebase, and the scheduler's own behaviour is what it checks.
+        push = PushConfig(projectId = null, serviceAccountPath = null),
         // Provider credentials the tests sign with; a real deployment reads them from
         // the environment and refuses checkout when they are absent.
         billing = BillingConfig(
@@ -1103,5 +1524,8 @@ class ApiIntegrationTest {
         ),
         policyVersion = "2026-08-01",
         minimumAppVersion = null,
+        referralLinkBase = "https://sadora.uz/r",
+        // Zero, so the erasure test can tick the job instead of waiting thirty days.
+        accountErasureGracePeriod = Duration.ZERO,
     )
 }

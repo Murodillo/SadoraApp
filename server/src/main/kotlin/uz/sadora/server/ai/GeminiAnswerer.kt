@@ -11,6 +11,7 @@ import io.ktor.http.contentType
 import io.ktor.http.isSuccess
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import uz.sadora.contract.Language
 import uz.sadora.server.config.AiConfig
 
 /** What a model produced, and what it cost to produce. */
@@ -29,7 +30,23 @@ class ModelUnavailableException(val code: String, message: String) : Exception(m
  */
 interface AiModel {
     val name: String
-    suspend fun answer(question: String, context: AiContext?): ModelAnswer
+    suspend fun answer(question: String, context: AiContext?, language: Language): ModelAnswer
+
+    /**
+     * A free-form completion, for the one caller that is not a health question: the
+     * home screen's greeting.
+     *
+     * Kept separate from [answer] because [answer] carries the product's whole clinical
+     * boundary — the instruction, the disclaimer appended by code — and a two-line
+     * compliment needs none of it. A model that cannot do this says so and the caller
+     * falls back to its own phrases.
+     */
+    suspend fun complete(
+        instruction: String,
+        prompt: String,
+        temperature: Double,
+        maxOutputTokens: Int,
+    ): ModelAnswer = throw ModelUnavailableException("unsupported", "no completion support")
 }
 
 /**
@@ -48,7 +65,31 @@ class GeminiAnswerer(
 
     override val name: String get() = config.model
 
-    override suspend fun answer(question: String, context: AiContext?): ModelAnswer {
+    override suspend fun answer(question: String, context: AiContext?, language: Language): ModelAnswer {
+        val phrases = AiPhrases.of(language)
+        val answer = generate(
+            instruction = phrases.instruction(),
+            prompt = phrases.userTurn(question, context?.takeUnless { it.isEmpty }?.summary(phrases)),
+            temperature = 0.4,
+            maxOutputTokens = config.maxOutputTokens,
+        )
+        return answer.copy(text = withDisclaimer(answer.text, phrases))
+    }
+
+    override suspend fun complete(
+        instruction: String,
+        prompt: String,
+        temperature: Double,
+        maxOutputTokens: Int,
+    ): ModelAnswer = generate(instruction, prompt, temperature, maxOutputTokens)
+
+    /** One request to Gemini, with the response unwrapped and the failures named. */
+    private suspend fun generate(
+        instruction: String,
+        prompt: String,
+        temperature: Double,
+        maxOutputTokens: Int,
+    ): ModelAnswer {
         val apiKey = config.apiKey ?: throw ModelUnavailableException("no_key", "No API key configured")
 
         val response = runCatchingRequest {
@@ -57,11 +98,11 @@ class GeminiAnswerer(
                 contentType(ContentType.Application.Json)
                 setBody(
                     GeminiRequest(
-                        systemInstruction = GeminiContent(parts = listOf(GeminiPart(instruction()))),
-                        contents = listOf(GeminiContent(parts = listOf(GeminiPart(userTurn(question, context))))),
+                        systemInstruction = GeminiContent(parts = listOf(GeminiPart(instruction))),
+                        contents = listOf(GeminiContent(parts = listOf(GeminiPart(prompt)))),
                         generationConfig = GeminiGenerationConfig(
-                            temperature = 0.4,
-                            maxOutputTokens = config.maxOutputTokens,
+                            temperature = temperature,
+                            maxOutputTokens = maxOutputTokens,
                             // Thinking is billed and counted against maxOutputTokens, and
                             // for a four-sentence health answer it bought nothing: with it
                             // on, a reply took 16 seconds and spent 720 tokens thinking
@@ -103,7 +144,7 @@ class GeminiAnswerer(
         }
 
         return ModelAnswer(
-            text = withDisclaimer(text),
+            text = text,
             model = config.model,
             promptTokens = parsed.usageMetadata?.promptTokenCount,
             completionTokens = parsed.usageMetadata?.candidatesTokenCount,
@@ -114,34 +155,11 @@ class GeminiAnswerer(
      * The disclaimer is appended here rather than asked for in the prompt.
      *
      * A model can forget an instruction; the boundary line is a product promise and must
-     * be on every answer, so it is added by code that cannot forget.
+     * be on every answer, so it is added by code that cannot forget — and in the language
+     * the answer itself is written in.
      */
-    private fun withDisclaimer(text: String): String =
-        if (RuleBasedAnswerer.DISCLAIMER in text) text else "$text\n\n${RuleBasedAnswerer.DISCLAIMER}"
-
-    private fun instruction(): String = """
-        Sen SADORA ilovasidagi yordamchisan. Foydalanuvchi — o'zbek tilida yozadigan ayol.
-
-        Qoidalar:
-        - Faqat o'zbek tilida, sodda va iliq ohangda javob ber.
-        - Tashxis qo'yma, dori yozma, dozani aytma. Retseptli dori haqidagi savolga —
-          shifokorga murojaat qilishni ayt.
-        - Faqat berilgan raqamlarga tayan. Berilmagan raqamni o'ylab topma va
-          "sening ma'lumotingga ko'ra" deb boshqa hech narsani da'vo qilma.
-        - Sabab-oqishni qat'iy aytma: "bo'lishi mumkin", "ko'pincha bog'liq" kabi ayt.
-        - Qisqa yoz: eng ko'pi to'rt-besh jumla yoki qisqa ro'yxat.
-        - Xavfli belgilar (kuchli og'riq, ko'p qon ketishi, hushdan ketish) haqida
-          eshitsang — kechiktirmay shifokorga murojaat qilishni ayt.
-    """.trimIndent()
-
-    private fun userTurn(question: String, context: AiContext?): String {
-        val summary = context?.takeUnless { it.isEmpty }?.summary()
-        return if (summary != null) {
-            "Bugungi ma'lumotlari: $summary\n\nSavol: $question"
-        } else {
-            "Uning ma'lumotlari yo'q — umumiy javob ber va buni ayt.\n\nSavol: $question"
-        }
-    }
+    private fun withDisclaimer(text: String, phrases: AiPhrases): String =
+        if (phrases.disclaimer in text) text else "$text\n\n${phrases.disclaimer}"
 }
 
 /**

@@ -29,6 +29,8 @@ data class UserProfile(
     val onboardingCompleted: Boolean,
     val status: AccountStatus = AccountStatus.ACTIVE,
     val createdAt: Instant,
+    /** What she answered about owning a smart device; null when never asked. */
+    val hasWearable: Boolean? = null,
     /**
      * The stage anchor she gave at onboarding: a due date, a child's birth date, or a
      * last period.
@@ -127,6 +129,22 @@ data class OnboardingRequest(
     val consents: ConsentGrants = ConsentGrants(),
     /** "Did a doctor recommend SADORA?" — null when the question was skipped. */
     val referredByDoctor: Boolean? = null,
+    /**
+     * "Do you wear a smart watch or band?" — null when the question was skipped.
+     *
+     * Asked at sign-up because the answer changes where the flow ends: a yes lands on
+     * the connect screen instead of on Today, and connecting a device on day one is the
+     * difference between a sleep tab with data in it and one that asks her to type.
+     */
+    val hasWearable: Boolean? = null,
+    /**
+     * The invite code she arrived with, from a shared link or typed in.
+     *
+     * Sent with onboarding rather than claimed afterwards so the reward lands on the
+     * account the moment it exists, and so a code can only ever be used once — by the
+     * account it created.
+     */
+    val inviteCode: String? = null,
     /**
      * The check-in the flow takes before sign-up. It is health data and is stored only
      * with [ConsentGrants.storeHealth]; without it the server drops it silently rather

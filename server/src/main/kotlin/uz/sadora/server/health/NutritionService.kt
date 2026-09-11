@@ -18,6 +18,8 @@ import uz.sadora.contract.Limits
 import uz.sadora.server.core.NotFoundException
 import uz.sadora.server.core.ValidationException
 import uz.sadora.server.core.dayIn
+import uz.sadora.contract.CoinReasons
+import uz.sadora.server.core.RewardHooks
 import uz.sadora.server.core.now
 
 /**
@@ -34,6 +36,13 @@ class NutritionService(
     private val vision: uz.sadora.server.ai.FoodVision? = null,
     private val visionConfig: uz.sadora.server.config.AiConfig? = null,
     private val usage: uz.sadora.server.ai.AiUsageRecorder? = null,
+    /**
+     * The reward scheme, as one call it can ignore.
+     *
+     * Defaulted to the no-op so nothing in this service's tests has to know the scheme
+     * exists, and so a coin that cannot be written never costs a log entry.
+     */
+    private val rewards: RewardHooks = RewardHooks.None,
 ) {
 
     /** True when a photo could be read at all — the app asks before offering the camera. */
@@ -135,6 +144,9 @@ class NutritionService(
         validateAmount("carbsG", request.carbsG, MAX_MACRO)
 
         val id = nutrition.addMeal(userId, request)
+        // Referenced by the meal's own id, so the daily cap counts meals rather than
+        // taps: editing the same meal twice is not two meals.
+        rewards.logged(userId, CoinReasons.MEAL_LOGGED, id.toString())
         return nutrition.mealsOn(userId, request.date).firstOrNull { it.id == id.toString() }
             ?: throw NotFoundException("Ovqat topilmadi")
     }
@@ -153,7 +165,11 @@ class NutritionService(
         }
         val today = now().dayIn(user.timezone)
         val total = nutrition.addWater(userId, today, request.ml)
-        return WaterState(today, total, nutrition.goalsOf(userId).waterGoalMl)
+        val goal = nutrition.goalsOf(userId).waterGoalMl
+        // The coin is for reaching her own goal, once a day — not for each glass, or
+        // the reward would be for tapping rather than for drinking.
+        if (goal > 0 && total >= goal) rewards.logged(userId, CoinReasons.WATER_GOAL)
+        return WaterState(today, total, goal)
     }
 
     suspend fun goals(userId: Uuid): NutritionGoals {

@@ -11,7 +11,16 @@ import uz.sadora.server.db.FeatureFlagsTable
 import uz.sadora.server.db.dbQuery
 
 @Serializable
-data class HealthStatus(val status: String, val environment: String, val version: String)
+data class HealthStatus(
+    val status: String,
+    val environment: String,
+    val version: String,
+    /** The commit the image was built from; "local" outside CI. A deploy checks it switched. */
+    val release: String = SERVER_RELEASE,
+)
+
+/** Baked into the image by CI (`--build-arg SADORA_RELEASE`); absent on a laptop. */
+val SERVER_RELEASE: String = System.getenv("SADORA_RELEASE")?.takeIf { it.isNotBlank() } ?: "local"
 
 /**
  * `/health/live` answers "is the process up" and never touches the database, so a

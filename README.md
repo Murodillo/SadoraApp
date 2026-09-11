@@ -6,8 +6,8 @@ uchun bitta umumiy UI.
 
 > **Har bir ayol. Har bir lahza.**
 
-Interfeys tili — o'zbekcha. Ilova ichida uch til nazarda tutilgan (UZ / RU / EN),
-hozircha faqat o'zbekchasi yozilgan.
+Interfeys uch tilda — o'zbek, rus va ingliz. O'zbekchasi asl, qolgan ikkitasi undan
+tarjima; til `Profil → Til` da tanlanadi va AI javoblari ham o'sha tilda keladi.
 
 ---
 
@@ -65,7 +65,9 @@ Android ilovasi:
 ./gradlew :androidApp:assembleDebug
 ```
 
-iOS uchun `iosApp/iosApp.xcodeproj` faylini Xcode'da oching va ishga tushiring.
+iOS uchun `iosApp/iosApp.xcodeproj` faylini Xcode'da oching va ishga tushiring. Imzolash
+uchun `iosApp/Configuration/Config.xcconfig` faylidagi `TEAM_ID` ni to'ldiring — u
+hisobga bog'liq, shuning uchun repozitoriyda bo'sh turadi.
 
 Haqiqiy telefonda sinash uchun APK'ni shu kompyuterning nomiga qaratib yig'ing —
 emulyatordagi `10.0.2.2` telefonda mavjud emas:
@@ -85,6 +87,29 @@ qo'shilmaydi):
 ```
 sdk.dir=/Users/<siz>/Library/Android/sdk
 ```
+
+### Reliz uchun yig'ish
+
+Do'kon identifikatori — `uz.sadora.app`, ikkala platformada ham bir xil va serverning
+`APPLE_BUNDLE_IDS` sozlamasi ham shuni kutadi. U bir marta chiqqandan keyin
+o'zgartirilmaydi.
+
+Imzo kaliti `androidApp/keystore.properties` dan o'qiladi (git'ga qo'shilmaydi;
+`storeFile`, `storePassword`, `keyAlias`, `keyPassword`). Fayl bo'lmasa release turi
+imzosiz yig'iladi — Play baribir imzosiz yuklamani qabul qilmaydi, lekin toza klonda
+build buzilmaydi.
+
+Versiya buyruq qatoridan beriladi, ya'ni reliz uchun commit shart emas; Play bir marta
+ko'rgan `versionCode` ni ikkinchi marta qabul qilmaydi:
+
+```bash
+./gradlew :androidApp:bundleRelease -Psadora.versionCode=2 -Psadora.versionName=1.0.1
+```
+
+Release build R8 bilan qisqartiriladi va obfuskatsiya qilinadi. Wire format aks ettirish
+orqali topiladi, shuning uchun `androidApp/proguard-rules.pro` `:contract` DTO'larini va
+ularning serializatorlarini saqlaydi — bu qoidalarsiz ilova yig'iladi, o'rnatiladi va
+birinchi so'rovda yiqiladi. `bundleRelease` — o'sha qoidalarni tekshiradigan yagona narsa.
 
 Testlar:
 
@@ -128,13 +153,79 @@ doimiy SMS kodi yoqilgan, shuning uchun tugagach yopib qo'ying.
 
 ---
 
-## CI
+## CI/CD
 
-Har bir push GitHub Actions'da tekshiriladi: backend testlari va migratsiyalarning
-haqiqiy Postgres ustida ko'tarilishi, shared modul testlari, Android APK yig'ilishi,
-admin panelning typecheck va build'i. Kotlin/Native (iOS) faqat `dev` va `main` da hamda
-PR'larda — macOS runner'lari o'n barobar qimmat, lekin ish `dev` ga tushgani uchun
-Kotlin/Native xatosini merge kunigacha qoldirib bo'lmaydi.
+`dev` yoki `main` ga ochilgan har bir pull request va ularga har bir push GitHub
+Actions'da tekshiriladi. **`dev` ga ochilgan PR** — va merge'dan keyin `dev` ning o'zi —
+barcha tekshiruvlar o'tgach staging serverga avtomatik yetkaziladi. `main` ga PR faqat
+tekshiriladi: `main` do'kon relizi.
+
+```
+PR → dev                                                     (.github/workflows/ci.yml)
+ ├─ Backend          testlar, haqiqiy Postgres'da migratsiya, Kover coverage (pastki chegara 58%)
+ ├─ Android/shared   shared modul testlari
+ ├─ iOS shared       Kotlin/Native testlari — yetkazishni kutdirmaydi
+ ├─ Admin panel      typecheck, vitest + coverage chegaralari, build, npm audit
+ ├─ Deploy tooling   shellcheck, actionlint, gate testlari, compose va Caddyfile tekshiruvi
+ └─ Staging (hammasi o'tsa)                                  (.github/workflows/stage.yml)
+     ├─ API image     bir marta yig'iladi → GHCR, digest bo'yicha; SBOM va provenance bilan
+     ├─ Web bundle    admin panel + landing
+     ├─ Deploy        DB backup → almashtirish → /health/ready shu commit'ni aytguncha kutadi,
+     │                aytmasa o'zi oldingi relizga qaytadi
+     ├─ APK           staging URL bilan yig'iladi, imzosi tekshiriladi, landing'dagi
+     │                /download.html ga chiqadi (serverda saqlangani bayt-baayt solishtiriladi)
+     └─ Smoke test    tashqaridan: health va reliz, admin, CORS, landing, taklif sahifasi, APK
+```
+
+PR'da bitta izoh turadi va har run'da yangilanadi: joblar, testlar soni, coverage va
+staging natijasi.
+
+### Xavfsizlik
+
+- **CI kaliti shell olmaydi.** Serverda u faqat `/usr/local/bin/sadora-ci` ni ishga
+  tushiradi (`authorized_keys` da `command=`), jump host'da esa faqat serverning 22-portiga
+  ulana oladi. Gate buyruqlari: `url`, `deploy`, `publish-apk`, `rollback`, `status`.
+- **Infratuzilma CI'dan o'zgarmaydi.** Gate compose fayllari, Caddyfile va o'zini
+  o'zgartirmaydi — ular `tools/deploy_stage.sh` bilan qo'lda qo'llanadi. PR ularni
+  o'zgartirsa, run'da ogohlantirish chiqadi.
+- Host kalitlari secret'da qotirilgan (`StrictHostKeyChecking yes`); GHCR tokeni serverda
+  faqat bir martalik docker config'da yashaydi.
+- Repo public, loglari ham: server manzillari va tunnel URL'lari yashiriladi, staging
+  APK artifact sifatida yuklanmaydi. Fork PR'lari secret olmaydi va yetkazilmaydi.
+  Action'lar commit SHA bilan qotirilgan.
+
+### Bir martalik sozlash
+
+```bash
+cp deploy/stage/hosts.env.example deploy/stage/hosts.env   # manzillarni yozing
+./tools/deploy_stage.sh                                     # gate + CI kalitini bog'laydi
+./tools/ci_secrets.sh                                       # `staging` environment secret'lari
+```
+
+`ci_secrets.sh` kalit va keystore'ni fayldan o'qiydi, hech narsa terilmaydi va
+chiqarilmaydi. Staging APK shu kompyuterning `~/.android/debug.keystore` bilan
+imzolanadi — telefondagi eski yig'ma ustidan yangilanadi.
+
+### Qo'lda
+
+- **Qayta deploy yoki rollback:** Actions → Stage → Run workflow. `rollback_to` bo'sh
+  bo'lsa — oldingi sog'lom relizga.
+- **Smoke test:** `tools/ci/smoke.sh <app url> <landing url> <commit sha>`
+- **Testlar lokal:**
+  - gate — `docker run --rm -v "$PWD":/src -w /src ubuntu:24.04 bash deploy/stage/test/sadora-ci.test.sh`
+  - admin — `npm --prefix admin run test:coverage`
+  - server coverage — `TEST_DB_URL=… ./gradlew :server:koverHtmlReport`
+  - hisobot generatori — `python3 -m unittest discover -s tools/ci`
+
+### Cheklovlar
+
+- Staging bitta. `dev` ga ochiq ikki PR bir-birining ustiga deploy qiladi — oxirgisi
+  turadi; merge'dan keyin `dev` yana deploy bo'ladi.
+- Quick tunnel manzili cloudflared qayta ishga tushganda (masalan, server reboot)
+  o'zgaradi. Keyingi deploy CORS'ni va APK'ni yangi manzilga moslaydi, lekin eski APK'lar
+  ishlamay qoladi. Domen bu muammoni yo'qotadi.
+- Migratsiya orqaga qaytmaydi: rollback image'ni qaytaradi, schema'ni emas. Har
+  deploydan oldingi dump serverda `/opt/sadora/backups` da (oxirgi 10 ta).
 
 ## Arxitektura
 
@@ -148,7 +239,7 @@ iosApp/              SwiftUI ContentView — App() ni chaqiradi
 admin/               React + TS admin panel — admin/README.md
 contract/            Mobil va backend bo'lishadigan DTO'lar (KMP)
 server/              Ktor backend — server/README.md
-shared/src/commonMain/kotlin/org/example/project/
+shared/src/commonMain/kotlin/uz/sadora/app/
 ├── App.kt           Ildiz: AppState va Navigator shu yerda yashaydi
 ├── design/          Dizayn tokenlari (ranglar, tipografika, o'lchamlar, mavzu)
 ├── i18n/            Uch tildagi matnlar (UZ — asl, RU, EN)
@@ -270,6 +361,8 @@ tiplarini bilmaydi, controller esa `busy`/`error` holatini bir joyda boshqaradi.
 bo'lmasa (`@Preview`, testlar) hamma amal lokal bajariladi va ilova prototip sifatida
 ishlayveradi.
 
+Nur — streak, tanga, do'kon va taklif — ham ulangan; batafsil pastdagi bo'limda.
+
 Hali yo'q:
 
 - **App Store / Google Play billing** — Payme va Click ulangan (narxlar serverda,
@@ -277,12 +370,101 @@ Hali yo'q:
   sozlanmagan holda har qanday chekni rad etadi
 - **Apple/Google kirish** — tugmalar bor va server `idToken`ni tekshiradi, lekin
   platforma SDK'si hali o'sha tokenni bermaydi
-- **Qurilma integratsiyasi** — Apple Health / Oura ma'lumotlari namuna
-- **Huquqiy matnlar faqat o'zbekcha** — `LegalScreen.kt` ichidagi Foydalanish shartlari
-  va Maxfiylik siyosati tarjima qilinmagan. Bular yuristning ishi: bir noto'g'ri
-  tarjima qilingan band majburiyatni o'zgartiradi. Boshqa hamma ekran uch tilda
-- **AI javoblari faqat o'zbekcha** — chat promptida til so'ralmaydi. Ovqat skaneri esa
-  so'raydi: taom nomi foydalanuvchi tanlagan tilda qaytadi
+- **Qurilma integratsiyasi** — Apple Health / Oura ma'lumotlari namuna. Onboarding
+  endi "aqlli soat bormi?" deb so'raydi va "ha" javobi oxirida ulash ekraniga olib
+  boradi, lekin ekranning ortidagi SDK hali yo'q
+- **iOS ikonkasi** — Androidda streakka qarab almashadi, iOS'da `AppIcons.None`
+
+---
+
+## Nur — streak, tanga va do'kon
+
+Ilovaning o'z valyutasi bor: **Nur**. Nomi bitta i18n tokenida
+(`RewardStrings.coinName`) turadi, ya'ni uni o'zgartirish uch qatorlik ish.
+
+Bitta qoida hamma narsani belgilaydi: **nur salomatlik natijasi uchun berilmaydi**.
+Sakkiz soat uxlash to'rt soat uxlash bilan bir xil to'laydi. Aks holda ilova ayolga
+tanasi uchun pul taklif qilgan bo'lardi — va jurnal yolg'on gapirishni o'rganardi.
+Nur faqat *harakat* uchun: ilovani ochish, belgilash, o'qish.
+
+| Nima | Qayerda |
+|---|---|
+| Streak — ketma-ket kunlar | `POST /v1/rewards/check-in`, har ishga tushishda |
+| Hamyon va harakatlar tarixi | `GET /v1/rewards` |
+| Do'kon: Premium, vitamin, qurilma | `GET /v1/shop`, `POST /v1/shop/redeem` |
+| Taklif kodi va havola | `GET /v1/rewards/referral` |
+| Bosh ekran tartibi | `GET/PUT/DELETE /v1/me/home-layout` |
+
+Balansni server hisoblaydi va u har doim `SUM(coin_ledger.amount)` — keshlangan ustun
+yo'q, chunki keshlangan balans o'zini tushuntiruvchi qatorlardan uzoqlashadi. Kunlik
+mukofotlar `UNIQUE` indeks bilan qo'riqlanadi, ya'ni ikkita bir vaqtda kelgan so'rov
+ikki marta to'lay olmaydi. Streak esa foydalanuvchining **o'z vaqt mintaqasidagi**
+kunni sanaydi, serverning yarim tunini emas.
+
+Tariflar va do'kon admin panelda: `Nur → Mukofotlar va streak` va `Nur → Do'kon`.
+O'zgarish keyingi mukofotdan kuchga kiradi va relizni talab qilmaydi; allaqachon
+berilgan nur qayta hisoblanmaydi.
+
+**Premium** — serverning o'zi beradigan yagona narsa: nur yechiladi va obuna o'sha
+zahoti uzayadi. **Vitamin va qurilma** hamkorlarniki: nur *chegirma* sotib oladi va
+ilova `SDR-XXXX-XXXX` ko'rinishidagi kodni beradi. Ilova hech qachon mahsulotni sotdim
+yoki yetkazdim demaydi.
+
+**Taklif.** Havola — `https://sadora.uz/r/KOD`. Uni bosgan telefonda ilova bo'lsa,
+`landing/404.html` (GitHub Pages'da rewrite yo'q, shuning uchun 404 sahifa kodni
+yo'lning o'zidan o'qiydi) kodni ko'rsatadi va `sadora://invite/KOD` ni ochadi;
+onboardingdagi "Taklif kodi" qadami esa uni allaqachon to'ldirilgan holda oladi. Kod
+ro'yxatdan o'tish so'rovi bilan birga ketadi — hisob paydo bo'lgan lahzada ikkala
+tomon ham nur oladi, va bir kod bir hisob uchun bir marta ishlaydi.
+
+**Ilova ikonkasi streakka qarab o'zgaradi.** Androidda buni faqat `activity-alias`
+almashtirish orqali qilib bo'ladi (ikonkani "bo'yash" API'si yo'q), shuning uchun
+manifestda uchta alias bor va bir vaqtda bittasi yoqilgan: `Launcher` (issiq, streak
+≥ 7), `LauncherCalm` (streak davom etyapti), `LauncherCold` (uch kundan beri
+ochilmagan). Ikkita sovuqroq variant issiqdan generatsiya qilinadi — qo'lda ikkinchi
+nusxa vaqt o'tib brenddan uzoqlashadi:
+
+```bash
+python3 tools/gen_icon_moods.py
+```
+
+iOS'da `setAlternateIconName` bor, lekin ikonkalar Info.plist'da e'lon qilinishi
+kerak; hozircha `AppIcons.None` — hech narsa qilmaydi.
+
+**Bosh ekran o'ziniki.** Qaysi bloklar ko'rinishi va tartibi `Profil → Bosh ekran
+tartibi` da (yoki Bugun ekranining oxiridagi havolada) sozlanadi va serverda saqlanadi
+— yangi telefon o'sha tartib bilan ochiladi. Ilova katalogni, server esa joylashuvni
+biladi: yangi blok qo'shilgan reliz migratsiya talab qilmaydi, eski ilova tanimagan
+kalitni esa saqlashda tushirib qoldiradi.
+
+**Salomlashuv.** Ism ostidagi jumla har ochilishda boshqacha. Model bir chaqiruvda
+bir nechta variant yozadi, ular kesh'da turadi va bittalab beriladi; kalit bo'lmasa
+yoki `ai_model_enabled` o'chirilgan bo'lsa `GreetingPhrases` yozadi — u ham har safar
+boshqacha, ya'ni zaxira varianti "buzilgan" ko'rinmaydi. Jumla bepul, limitsiz va
+hech qachon maslahat yoki tashxis bermaydi.
+
+## Huquqiy matnlar
+
+Foydalanish shartlari va Maxfiylik siyosati `shared/.../i18n/LegalTexts*.kt` da, uch
+tilda. Asl matn o'zbekcha va yuridik kuchga ega bo'lgani ham o'sha — qolgan ikkitasi
+tarjima, va ekranning o'zi buni aytadi. Matn ilova ichida yashaydi, chunki onboarding
+rozilikni hisob paydo bo'lishidan oldin so'raydi: foydalanuvchi nimaga rozi
+bo'layotganini o'qish uchun oqimdan chiqmasligi yoki internetga ulanmasligi kerak.
+
+Do'konlar bir xil matnni ochiq havolada ham so'raydi. Ular o'sha Kotlin manbadan
+generatsiya qilinadi — qo'lda yozilgan ikkinchi nusxa vaqt o'tib boshqacha bo'lib
+qoladi, va aynan o'sha nusxani tekshiruvchi o'qiydi:
+
+```bash
+python3 tools/gen_legal_pages.py
+```
+
+`landing/privacy.html` va `landing/terms.html` — Play Console va App Store Connect'ga
+beriladigan manzillar (o'zbekcha); yonida `.ru` va `.en` variantlari.
+
+Ekrandagi sana va serverning `POLICY_VERSION` sozlamasi bitta kun bo'lishi shart:
+rozilik yozuvi versiyani saqlaydi, ya'ni ekran versiyadan kechroq sana ko'rsatsa,
+yozuv foydalanuvchi ko'rmagan matnga rozi bo'lgan deb turadi.
 
 ---
 

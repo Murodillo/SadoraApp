@@ -35,6 +35,19 @@ export interface Page<T> {
   offset: number
 }
 
+export interface AdminMe {
+  id: string
+  name: string
+  email: string
+  role: AdminRole
+  totpEnabled: boolean
+}
+
+export interface TotpEnrolment {
+  secret: string
+  otpauthUri: string
+}
+
 export interface AdminSession {
   accessToken: string
   expiresAt: string
@@ -395,4 +408,116 @@ export interface BillingSummary {
   revenueMinor: number
   byProvider: { provider: PaymentProvider; paidCount: number; revenueMinor: number }[]
   activeSubscriptions: number
+}
+
+// ---------------------------------------------------------------- Nur
+
+/** What each action pays, as the rewards page edits it. */
+export interface CoinRule {
+  reason: string
+  amount: number
+  dailyCap: number | null
+  enabled: boolean
+  description: string
+}
+
+export interface RewardsOverview {
+  coinsOutstanding: number
+  coinsEarnedTotal: number
+  coinsSpentTotal: number
+  redemptionsIssued: number
+  activeStreaks: number
+  longestStreak: number
+  referralsAccepted: number
+}
+
+export type ShopKind = 'premium' | 'vitamin' | 'device'
+export type RedemptionStatus = 'issued' | 'used' | 'expired' | 'cancelled'
+
+export interface AdminShopProduct {
+  id: string
+  slug: string
+  kind: ShopKind
+  title: string
+  brand?: string | null
+  description?: string | null
+  emoji?: string | null
+  priceUzs?: number | null
+  discountPercent: number
+  coinCost: number
+  premiumDays?: number | null
+  stock?: number | null
+  active: boolean
+  position: number
+  redeemed: number
+  updatedAt?: string | null
+}
+
+/** What the panel writes. The slug is set once at creation and never edited. */
+export interface SaveShopProductBody {
+  kind: ShopKind
+  title: string
+  brand?: string | null
+  description?: string | null
+  emoji?: string | null
+  priceUzs?: number | null
+  discountPercent: number
+  coinCost: number
+  premiumDays?: number | null
+  stock?: number | null
+  active: boolean
+  position: number
+}
+
+export interface AdminRedemption {
+  id: string
+  userId: string
+  userName: string
+  productTitle: string
+  kind: ShopKind
+  code: string
+  coinCost: number
+  discountPercent: number
+  status: RedemptionStatus
+  createdAt: string
+  usedAt?: string | null
+}
+
+export interface StreakStatus {
+  current: number
+  longest: number
+  lastOpenOn?: string | null
+  openedToday: boolean
+  totalDays: number
+}
+
+export interface CoinBalance {
+  balance: number
+  earned: number
+  spent: number
+}
+
+export interface CoinEntry {
+  id: string
+  amount: number
+  reason: string
+  title: string
+  createdAt: string
+}
+
+export interface ReferralStatus {
+  code: string
+  link: string
+  invited: number
+  coinsEarned: number
+  rewardPerJoin: number
+  welcomeReward: number
+}
+
+/** The reward half of a user card. */
+export interface AdminRewardsCard {
+  streak: StreakStatus
+  coins: CoinBalance
+  referral?: ReferralStatus | null
+  history: CoinEntry[]
 }

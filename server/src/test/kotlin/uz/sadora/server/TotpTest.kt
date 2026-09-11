@@ -3,6 +3,8 @@ package uz.sadora.server
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotEquals
+import kotlin.test.assertTrue
 import uz.sadora.server.admin.Totp
 
 /**
@@ -44,6 +46,35 @@ class TotpTest {
     @Test
     fun `a malformed secret fails closed`() {
         assertFalse(Totp.verify("not base32 at all!!", "123456"))
+    }
+
+    @Test
+    fun `base32 encoding is the inverse of decoding`() {
+        assertEquals(RFC_SECRET_BASE32, Totp.encodeBase32(secret))
+        // Twenty bytes is not a multiple of five bits, so the tail padding is the part
+        // worth pinning: a generated secret has to survive the round trip an
+        // authenticator will put it through.
+        repeat(20) {
+            val generated = Totp.newSecret()
+            assertEquals(generated, Totp.encodeBase32(Totp.decodeBase32(generated)))
+        }
+    }
+
+    @Test
+    fun `a generated secret is 160 bits, which is what an authenticator expects`() {
+        assertEquals(20, Totp.decodeBase32(Totp.newSecret()).size)
+        assertNotEquals(Totp.newSecret(), Totp.newSecret(), "a fresh secret every time")
+    }
+
+    /** The URI an authenticator reads: the app shows the label, so it has to be right. */
+    @Test
+    fun `the provisioning uri names the product and the account`() {
+        val uri = Totp.provisioningUri("GEZDGNBVGY3TQOJQ", "owner@sadora.uz")
+        assertTrue(uri.startsWith("otpauth://totp/SADORA:owner%40sadora.uz?"), uri)
+        assertTrue("secret=GEZDGNBVGY3TQOJQ" in uri, uri)
+        assertTrue("issuer=SADORA" in uri, uri)
+        assertTrue("digits=6" in uri, uri)
+        assertTrue("period=30" in uri, uri)
     }
 
     private companion object {

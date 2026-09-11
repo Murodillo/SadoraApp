@@ -74,12 +74,12 @@ class AiService(
             MODEL_FLAG,
             FlagContext(userId = userId, environment = environment, language = user.language, lifeStage = user.lifeStage),
         )
-        val answer = gateway.answer(userId, question, context, modelAllowed).text
+        val answer = gateway.answer(userId, question, context, modelAllowed, user.language).text
 
         val feature = entitlements.resolve(userId, user.timezone).feature(FeatureKeys.AI_CHAT)
         return AiChatReply(
             answer = answer,
-            basedOn = context?.takeUnless { it.isEmpty }?.summary().orEmpty(),
+            basedOn = context?.takeUnless { it.isEmpty }?.summary(AiPhrases.of(user.language)).orEmpty(),
             remainingToday = feature?.remainingToday,
             remainingThisMonth = feature?.remainingThisMonth,
         )

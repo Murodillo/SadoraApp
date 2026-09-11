@@ -21,6 +21,12 @@ RUN=$ROOT/build/demo
 mkdir -p "$RUN"
 
 echo "==> Postgres and Redis"
+# docker-compose reads SADORA_DB_PORT for the published port, and it lives in the
+# environment file rather than the shell. Without it compose falls back to 5432, which
+# on this machine belongs to another project — and the container is recreated bound to
+# a port it cannot have, leaving the demo with no database.
+SADORA_DB_PORT=$(grep -E '^SADORA_DB_PORT=' server/.env.dev | cut -d= -f2)
+export SADORA_DB_PORT=${SADORA_DB_PORT:-5432}
 docker compose up -d >/dev/null
 
 echo "==> tunnels"

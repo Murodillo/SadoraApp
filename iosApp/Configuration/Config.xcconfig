@@ -1,7 +1,12 @@
+# Set TEAM_ID to the Apple Developer team that will sign the build. Xcode needs it to
+# provision the app; it is left empty in the repository because it is account-specific
+# and not a secret worth committing.
 TEAM_ID=
 
 PRODUCT_NAME=Sadora
-PRODUCT_BUNDLE_IDENTIFIER=org.example.project.KotlinProject$(TEAM_ID)
+# The App Store identity. It matches the Android applicationId and the server's
+# APPLE_BUNDLE_IDS, and cannot be changed once the app has shipped.
+PRODUCT_BUNDLE_IDENTIFIER=uz.sadora.app
 
 CURRENT_PROJECT_VERSION=1
 MARKETING_VERSION=1.0

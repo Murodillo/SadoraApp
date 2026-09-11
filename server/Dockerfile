@@ -8,6 +8,12 @@ COPY server server
 RUN ./gradlew --no-daemon :server:installDist
 
 FROM eclipse-temurin:21-jre
+# The commit this image was built from. CI passes it; /health reports it, and the deploy
+# refuses to call itself done until the running API answers with the release it shipped.
+ARG SADORA_RELEASE=local
+ENV SADORA_RELEASE=${SADORA_RELEASE}
+LABEL org.opencontainers.image.source="https://github.com/Murodillo/SadoraApp" \
+      org.opencontainers.image.revision="${SADORA_RELEASE}"
 WORKDIR /app
 COPY --from=build /src/server/build/install/server ./
 ENV JAVA_OPTS="-XX:MaxRAMPercentage=75 -Duser.timezone=UTC"

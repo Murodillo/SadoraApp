@@ -1,0 +1,72 @@
+# Staging web front: the admin panel, the API behind it, and the landing page.
+#
+# Plain HTTP on two internal ports. TLS is terminated by the Cloudflare tunnels in
+# front, and once a domain arrives this file is replaced by deploy/Caddyfile, which
+# obtains real certificates itself.
+
+{
+	auto_https off
+	admin off
+}
+
+# The admin panel and the API, on one origin.
+#
+# The panel's client calls a relative `/v1`, and the phone is built against this same
+# origin — so the API is published here rather than on a URL of its own.
+:8081 {
+	encode gzip
+
+	handle /v1/* {
+		reverse_proxy api:8080
+	}
+
+	handle /health/* {
+		reverse_proxy api:8080
+	}
+
+	# A single-page app: /rewards or /users/… are routes in the browser, not files, so
+	# anything that is not an asset falls back to index.html.
+	handle {
+		root * /srv/admin
+		try_files {path} /index.html
+		file_server
+	}
+}
+
+# The landing page, and the staging APK beside it.
+#
+# Unknown paths get 404.html, which is also the invite page: it reads a code out of
+# /r/<CODE>, the same way it does on GitHub Pages, so an invite link works here too.
+:8082 {
+	encode gzip
+
+	# /download/latest.json says which build is current; download.html and the landing
+	# page read it and show a button only when it exists — which on GitHub Pages it never
+	# does. Versioned APK names never change content, so they cache forever; the
+	# manifest and the stable alias must not cache at all.
+	handle /download/* {
+		root * /srv
+		@fresh path /download/latest.json /download/sadora-stage.apk
+		header @fresh Cache-Control "no-store"
+		@versioned path_regexp ^/download/sadora-stage-[0-9]+-[0-9a-f]{7,40}\.apk$
+		header @versioned Cache-Control "public, max-age=31536000, immutable"
+		@apk path *.apk
+		header @apk {
+			Content-Type application/vnd.android.package-archive
+			Content-Disposition attachment
+			X-Content-Type-Options nosniff
+		}
+		file_server
+	}
+
+	handle {
+		root * /srv/landing
+		file_server
+	}
+
+	handle_errors {
+		root * /srv/landing
+		rewrite * /404.html
+		file_server
+	}
+}

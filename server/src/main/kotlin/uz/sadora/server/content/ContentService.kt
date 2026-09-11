@@ -11,7 +11,9 @@ import uz.sadora.contract.CreateArticleRequest
 import uz.sadora.contract.FeatureKeys
 import uz.sadora.contract.SaveArticleRequest
 import uz.sadora.server.core.ConflictException
+import uz.sadora.contract.CoinReasons
 import uz.sadora.server.core.NotFoundException
+import uz.sadora.server.core.RewardHooks
 import uz.sadora.contract.Limits
 import uz.sadora.server.core.ValidationException
 import uz.sadora.server.entitlement.EntitlementService
@@ -30,6 +32,11 @@ class ContentService(
     private val repository: ContentRepository,
     private val users: UserRepository,
     private val entitlements: EntitlementService,
+    /**
+     * The reward scheme, as one call this service can ignore. Defaulted to the no-op so
+     * the library's tests need know nothing about coins.
+     */
+    private val rewards: RewardHooks = RewardHooks.None,
 ) {
 
     // ---------------------------------------------------------------- app
@@ -62,6 +69,10 @@ class ContentService(
         val unlocked = hasPremiumLearn(userId)
         val labels = repository.categories().associate { it.key to it.label }
         val locked = record.premium && !unlocked
+
+        // Keyed by slug, so a piece pays once however often it is reopened — and only a
+        // body she can actually read pays at all.
+        if (!locked) rewards.logged(userId, CoinReasons.ARTICLE_READ, slug)
 
         return Article(
             summary = record.toSummary(labels, unlocked),
