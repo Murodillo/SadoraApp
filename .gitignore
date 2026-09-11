@@ -30,6 +30,13 @@ androidApp/keystore.properties
 androidApp/*.jks
 androidApp/*.keystore
 
+# Firebase: the app's config, and the key the server sends push with. The config is not
+# a credential by Firebase's own account, but it names the project and carries an API key
+# that secret scanning flags in a public repository; the service account key is one.
+androidApp/google-services.json
+iosApp/iosApp/GoogleService-Info.plist
+server/secrets/
+
 # Addresses of the staging server — the repository is public.
 deploy/stage/hosts.env
 admin/coverage/

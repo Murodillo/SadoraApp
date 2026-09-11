@@ -18,6 +18,10 @@
     -->
     <uses-feature android:name="android.hardware.camera" android:required="false" />
 
+    <!-- Android 13 and later post no notification at all without this, granted at runtime.
+         MainActivity asks once the user is past onboarding. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
@@ -26,6 +30,22 @@
         android:supportsRtl="true"
         android:networkSecurityConfig="@xml/network_security_config"
         android:theme="@style/Theme.Sadora">
+
+        <!-- Receives push while the app is open; in the background the system draws the
+             notification itself, with the icon and channel named below. -->
+        <service
+            android:name=".push.SadoraMessagingService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@drawable/ic_launcher_monochrome" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="@string/push_channel_id" />
 
         <!--
             The activity itself is NOT the launcher entry. The three aliases below are,

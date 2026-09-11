@@ -1,3 +1,6 @@
 <resources>
     <string name="app_name">Sadora</string>
+    <!-- Named once here for both the manifest's FCM default and PushNotifications. -->
+    <string name="push_channel_id" translatable="false">sadora_reminders</string>
+    <string name="push_channel_name">Reminders</string>
 </resources>

@@ -33,6 +33,14 @@ if [[ -z $GEMINI_API_KEY && -f .env ]]; then
   export GEMINI_API_KEY=$(grep '^GEMINI_API_KEY=' .env | tail -1 | cut -d= -f2-)
 fi
 
+# Push the same way: the service account key sits in server/secrets/ (gitignored) and the
+# untracked .env names it, so a clone without the key still boots and only logs.
+for name in FCM_PROJECT_ID FCM_SERVICE_ACCOUNT_FILE; do
+  if [[ -z ${(P)name} && -f .env ]]; then
+    export $name="$(grep "^$name=" .env | tail -1 | cut -d= -f2-)"
+  fi
+done
+
 # A caller that publishes the panel under a hostname the env file cannot know — a
 # tunnel, a preview deployment — adds its origin here instead of editing the file.
 if [[ -n $CORS_EXTRA ]]; then

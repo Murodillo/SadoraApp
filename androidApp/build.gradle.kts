@@ -6,6 +6,18 @@ plugins {
     alias(libs.plugins.composeCompiler)
 }
 
+/**
+ * Firebase's description of this app — project, sender id, API key — which the
+ * google-services plugin turns into resources the messaging library reads at start.
+ *
+ * The file is gitignored and the plugin applied only when it is there, so a fresh clone
+ * and CI still build. Such an APK simply has no push: `PushRegistration` finds no
+ * Firebase app at runtime and skips the token rather than crashing.
+ */
+if (file("google-services.json").exists()) {
+    apply(plugin = libs.plugins.googleServices.get().pluginId)
+}
+
 kotlin {
     compilerOptions {
         jvmTarget = JvmTarget.JVM_11
@@ -15,6 +27,9 @@ dependencies {
     implementation(project(":shared"))
 
     implementation(libs.androidx.activity.compose)
+
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.messaging)
 
     implementation(libs.compose.uiToolingPreview)
     debugImplementation(libs.compose.uiTooling)

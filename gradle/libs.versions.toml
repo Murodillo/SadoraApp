@@ -13,6 +13,8 @@ composeMultiplatform = "1.11.1"
 junit = "4.13.2"
 kotlin = "2.4.10"
 material3 = "1.11.0-alpha07"
+firebase-bom = "34.19.0"
+googleServices = "4.5.0"
 
 # --- backend / contract ---
 ktor = "3.5.2"
@@ -45,6 +47,8 @@ compose-material3 = { module = "org.jetbrains.compose.material3:material3", vers
 compose-ui = { module = "org.jetbrains.compose.ui:ui", version.ref = "composeMultiplatform" }
 compose-components-resources = { module = "org.jetbrains.compose.components:components-resources", version.ref = "composeMultiplatform" }
 compose-uiToolingPreview = { module = "org.jetbrains.compose.ui:ui-tooling-preview", version.ref = "composeMultiplatform" }
+firebase-bom = { module = "com.google.firebase:firebase-bom", version.ref = "firebase-bom" }
+firebase-messaging = { module = "com.google.firebase:firebase-messaging" }
 
 # --- contract (shared DTOs, KMP) ---
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
@@ -105,3 +109,4 @@ kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref =
 kotlinJvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 kotlinSerialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 kover = { id = "org.jetbrains.kotlinx.kover", version = "0.9.9" }
+googleServices = { id = "com.google.gms.google-services", version.ref = "googleServices" }

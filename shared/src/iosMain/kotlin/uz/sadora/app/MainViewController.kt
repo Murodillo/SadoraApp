@@ -6,13 +6,17 @@ import uz.sadora.app.data.KeychainTokenStorage
 import uz.sadora.app.data.SadoraEnvironment
 import uz.sadora.app.data.SadoraGraph
 import platform.Foundation.NSBundle
+import platform.UIKit.UIViewController
 
 /**
  * The iOS entry point builds the data layer and hands it to the shared UI, mirroring
  * what `MainActivity` does on Android.
  */
-fun MainViewController() = ComposeUIViewController {
-    App(iosGraph)
+fun MainViewController(): UIViewController {
+    IosPush.follow(iosGraph)
+    return ComposeUIViewController {
+        App(iosGraph)
+    }
 }
 
 private val iosGraph: SadoraGraph by lazy {
