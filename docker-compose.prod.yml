@@ -48,6 +48,10 @@ services:
       retries: 12
 
   api:
+    # CI builds the image once, pushes it to GHCR, and the server runs exactly that image
+    # by digest (`SADORA_API_IMAGE=ghcr.io/…@sha256:…`). Without the variable, `--build`
+    # produces sadora-api:local from this checkout, as a manual deploy always has.
+    image: ${SADORA_API_IMAGE:-sadora-api:local}
     build:
       context: .
       dockerfile: server/Dockerfile
