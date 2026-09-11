@@ -29,3 +29,6 @@ server/.env.stage
 androidApp/keystore.properties
 androidApp/*.jks
 androidApp/*.keystore
+
+# Addresses of the staging server — the repository is public.
+deploy/stage/hosts.env

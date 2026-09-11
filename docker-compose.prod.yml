@@ -55,7 +55,9 @@ services:
     # The environment file carries the secrets; these two only point the app at the
     # containers beside it, and they are not secrets, so they stay readable here.
     env_file:
-      - server/.env.prod
+      # Overridable so a staging box runs this same file with its own secrets —
+      # `SADORA_ENV_FILE=server/.env.stage` — instead of a second copy of the stack.
+      - ${SADORA_ENV_FILE:-server/.env.prod}
     environment:
       DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-sadora}
       DB_USER: ${POSTGRES_USER:-sadora}

@@ -1,0 +1,49 @@
+# Staging web front: the admin panel, the API behind it, and the landing page.
+#
+# Plain HTTP on two internal ports. TLS is terminated by the Cloudflare tunnels in
+# front, and once a domain arrives this file is replaced by deploy/Caddyfile, which
+# obtains real certificates itself.
+
+{
+	auto_https off
+	admin off
+}
+
+# The admin panel and the API, on one origin.
+#
+# The panel's client calls a relative `/v1`, and the phone is built against this same
+# origin — so the API is published here rather than on a URL of its own.
+:8081 {
+	encode gzip
+
+	handle /v1/* {
+		reverse_proxy api:8080
+	}
+
+	handle /health/* {
+		reverse_proxy api:8080
+	}
+
+	# A single-page app: /rewards or /users/… are routes in the browser, not files, so
+	# anything that is not an asset falls back to index.html.
+	handle {
+		root * /srv/admin
+		try_files {path} /index.html
+		file_server
+	}
+}
+
+# The landing page.
+#
+# Unknown paths get 404.html, which is also the invite page: it reads a code out of
+# /r/<CODE>, the same way it does on GitHub Pages, so an invite link works here too.
+:8082 {
+	encode gzip
+	root * /srv/landing
+	file_server
+
+	handle_errors {
+		rewrite * /404.html
+		file_server
+	}
+}
