@@ -102,6 +102,7 @@ p { margin: 0 0 18px; color: var(--muted); }
 .btn:active { transform: scale(.975); }
 .btn.primary { background: linear-gradient(120deg, var(--b1), var(--b2) 45%, var(--b3)); color: #fff; }
 .btn.ghost { background: var(--surface-2); color: var(--ink); }
+.btn[hidden] { display: none; }
 
 .langs { margin-top: 18px; display: flex; gap: 10px; justify-content: center; }
 .langs button {
@@ -137,6 +138,7 @@ p { margin: 0 0 18px; color: var(--muted); }
     <div class="code" id="code"></div>
     <div class="hint" id="hint"></div>
     <a class="btn primary" id="open" href="#"></a>
+    <a class="btn ghost" id="apk" href="/download.html" hidden></a>
   </div>
 
   <a class="btn ghost" href="/" id="home"></a>
@@ -172,6 +174,7 @@ const COPY = {
     inviteLede: 'Ilovani o‘rnating va ro‘yxatdan o‘tayotganda shu kodni kiriting — ikkalangiz ham nur olasiz.',
     hint: 'Kod ro‘yxatdan o‘tish paytida so‘raladi',
     open: 'Ilovani ochish',
+    apk: 'Android uchun APK yuklab olish',
     home: 'SADORA haqida',
     lostTitle: 'Sahifa topilmadi',
     lostLede: 'Havola eskirgan yoki noto‘g‘ri yozilgan bo‘lishi mumkin.',
@@ -182,6 +185,7 @@ const COPY = {
     inviteLede: 'Установите приложение и введите этот код при регистрации — нур получите вы обе.',
     hint: 'Код спросят во время регистрации',
     open: 'Открыть приложение',
+    apk: 'Скачать APK для Android',
     home: 'О SADORA',
     lostTitle: 'Страница не найдена',
     lostLede: 'Возможно, ссылка устарела или введена с ошибкой.',
@@ -192,6 +196,7 @@ const COPY = {
     inviteLede: 'Install the app and enter this code when you sign up — you both get nur.',
     hint: 'The code is asked for during sign-up',
     open: 'Open the app',
+    apk: 'Download the Android APK',
     home: 'About SADORA',
     lostTitle: 'Page not found',
     lostLede: 'The link may be out of date or mistyped.',
@@ -216,6 +221,9 @@ function render(lang) {
     // which is why the code is on screen as well — the page never depends on the
     // deep link having worked.
     open.href = 'sadora://invite/' + code;
+    const apk = document.getElementById('apk');
+    apk.textContent = t.apk;
+    apk.hidden = !apkAvailable;
   }
   for (const button of document.querySelectorAll('.langs button')) {
     button.setAttribute('aria-current', String(button.dataset.lang === lang));
@@ -224,10 +232,18 @@ function render(lang) {
 
 /* Uzbek unless the browser asks for one of the other two. */
 const preferred = (navigator.language || 'uz').slice(0, 2).toLowerCase();
-render(COPY[preferred] ? preferred : 'uz');
+let current = COPY[preferred] ? preferred : 'uz';
+let apkAvailable = false;
+render(current);
+
+/* On the staging server an invite can be followed by the APK itself, since there is no
+   store listing yet. GitHub Pages has no /download/, so the button stays hidden there. */
+fetch('/download/latest.json', { cache: 'no-store' })
+  .then((response) => { apkAvailable = response.ok; render(current); })
+  .catch(() => {});
 
 for (const button of document.querySelectorAll('.langs button')) {
-  button.addEventListener('click', () => render(button.dataset.lang));
+  button.addEventListener('click', () => { current = button.dataset.lang; render(current); });
 }
 </script>
 </body>

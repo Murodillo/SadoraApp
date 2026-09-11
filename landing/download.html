@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SADORA — Android sinov versiyasi</title>
+<meta name="description" content="SADORA ilovasining Android uchun sinov versiyasi.">
+<meta name="robots" content="noindex">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Figtree:wght@400;500;600&display=swap">
+<style>
+/* ============================================================
+   The staging APK.
+   Reads download/latest.json, which CI writes on the staging server after every
+   deploy (deploy/stage/sadora-ci publish-apk). GitHub Pages has no such file, so
+   there this page says there is nothing to download — and nothing links here.
+   Tokens match 404.html and the app (design/Colors.kt).
+   ============================================================ */
+:root {
+  --bg: #F7F5FF; --surface: #FFFFFF; --surface-2: #F1EDFF; --ink: #6247E0;
+  --text: #1A1630; --muted: #6F6A8A; --muted-2: #9590AD; --line: #EAE6FA;
+  --shadow: rgba(123,97,255,.16); --b1: #B06CFF; --b2: #8A8CFF; --b3: #F68CCB;
+  --warn-bg: #FFF4E5; --warn-ink: #8A5300;
+  --r-md: 16px; --r-xl: 28px; --ease: cubic-bezier(.2, 0, 0, 1);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0F0C1F; --surface: #19152E; --surface-2: #231D40; --ink: #B9A8FF;
+    --text: #F3F0FF; --muted: #B3ADCF; --muted-2: #8A84A8; --line: #2A2447;
+    --shadow: rgba(0,0,0,.4); --warn-bg: #2E2311; --warn-ink: #F2C27B;
+  }
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--bg); color: var(--text); min-height: 100svh;
+  font-family: Figtree, -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  display: grid; place-items: center; padding: 24px; line-height: 1.55;
+}
+.card {
+  width: min(460px, 100%); background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--r-xl); box-shadow: 0 24px 60px var(--shadow);
+  padding: 32px 26px 24px; animation: rise .5s var(--ease) both;
+}
+@keyframes rise { from { opacity: 0; transform: translateY(16px); } }
+@media (prefers-reduced-motion: reduce) { .card { animation: none; } }
+.mark { width: 64px; height: 64px; margin: 0 auto 14px; display: block; }
+h1 {
+  font-family: 'Bricolage Grotesque', Figtree, sans-serif; font-size: clamp(23px, 6vw, 28px);
+  line-height: 1.15; margin: 0 0 8px; letter-spacing: -.01em; text-align: center;
+}
+.lede { margin: 0 0 20px; color: var(--muted); text-align: center; }
+.btn {
+  display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%;
+  padding: 15px 18px; border-radius: 999px; font-weight: 600; text-decoration: none;
+  background: linear-gradient(120deg, var(--b1), var(--b2) 45%, var(--b3)); color: #fff;
+  transition: transform .16s var(--ease), box-shadow .16s var(--ease);
+  box-shadow: 0 14px 30px -14px var(--b2);
+}
+.btn:hover { transform: translateY(-2px); }
+.btn:active { transform: scale(.975); }
+.btn.ghost { background: var(--surface-2); color: var(--ink); box-shadow: none; margin-top: 10px; }
+.meta { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 18px 0 6px; }
+.meta div { background: var(--surface-2); border-radius: var(--r-md); padding: 10px 8px; text-align: center; min-width: 0; }
+.meta dt { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted-2); }
+.meta dd { margin: 2px 0 0; font-weight: 600; font-size: 14px; overflow-wrap: anywhere; }
+details { margin: 8px 0 0; font-size: 13px; color: var(--muted); }
+summary { cursor: pointer; color: var(--muted-2); }
+code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; overflow-wrap: anywhere; }
+.note { background: var(--warn-bg); color: var(--warn-ink); border-radius: var(--r-md); padding: 10px 14px; font-size: 13.5px; margin: 16px 0 0; }
+h2 { font-size: 15px; margin: 20px 0 8px; }
+ol { margin: 0; padding-left: 20px; color: var(--muted); font-size: 14.5px; }
+ol li + li { margin-top: 6px; }
+.langs { margin-top: 18px; display: flex; gap: 10px; justify-content: center; }
+.langs button {
+  background: none; border: 0; font: inherit; font-size: 14px; color: var(--muted-2);
+  cursor: pointer; padding: 4px 8px; border-radius: 999px;
+}
+.langs button[aria-current='true'] { color: var(--ink); background: var(--surface-2); font-weight: 600; }
+[hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<main class="card" aria-live="polite">
+  <svg class="mark" viewBox="0 0 108 108" aria-label="SADORA" role="img">
+    <defs>
+      <linearGradient id="s" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#B06CFF"/><stop offset=".45" stop-color="#8A8CFF"/><stop offset="1" stop-color="#F68CCB"/>
+      </linearGradient>
+    </defs>
+    <rect width="108" height="108" rx="26" fill="#1A1630"/>
+    <text x="54" y="74" font-family="'Bricolage Grotesque', sans-serif" font-size="62" font-weight="700" text-anchor="middle" fill="url(#s)">S</text>
+  </svg>
+  <h1 id="title"></h1>
+  <p class="lede" id="lede"></p>
+
+  <section id="ready" hidden>
+    <a class="btn" id="get" href="#" download>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0-5-5m5 5 5-5M5 21h14"/></svg>
+      <span id="getLabel"></span>
+    </a>
+    <dl class="meta">
+      <div><dt id="buildL"></dt><dd id="build"></dd></div>
+      <div><dt id="dateL"></dt><dd id="date"></dd></div>
+      <div><dt id="sizeL"></dt><dd id="size"></dd></div>
+    </dl>
+    <details><summary id="sumL"></summary><code id="sum"></code></details>
+    <p class="note" id="note"></p>
+    <h2 id="stepsL"></h2>
+    <ol id="steps"></ol>
+  </section>
+
+  <a class="btn ghost" href="./" id="home"></a>
+  <div class="langs" role="group">
+    <button type="button" data-lang="uz">O‘zbekcha</button>
+    <button type="button" data-lang="ru">Русский</button>
+    <button type="button" data-lang="en">English</button>
+  </div>
+</main>
+<script>
+const COPY = {
+  uz: {
+    title: 'Android sinov versiyasi', loading: 'Tekshirilmoqda…',
+    lede: 'Sinov serveriga ulangan eng so‘nggi yig‘ma. Har bir yangilanishdan keyin shu yerda avtomatik almashadi.',
+    none: 'Hozircha yuklab olish uchun sinov versiyasi yo‘q.',
+    get: 'APK yuklab olish', build: 'Yig‘ma', date: 'Sana', size: 'Hajmi', sum: 'SHA-256 nazorat summasi',
+    note: 'Bu sinov versiyasi. Haqiqiy shaxsiy ma’lumotlaringizni kiritmang.',
+    steps: 'Qanday o‘rnatiladi',
+    list: [
+      'APK faylni yuklab oling va oching.',
+      'Telefon noma’lum manbadan o‘rnatishga ruxsat so‘rasa — shu brauzer uchun ruxsat bering.',
+      'Sinov versiyasi o‘rnatilgan bo‘lsa, ustidan yangilanadi. “Ilova o‘rnatilmadi” desa, eskisini o‘chirib qayta o‘rnating.',
+    ],
+    home: 'SADORA haqida',
+  },
+  ru: {
+    title: 'Тестовая версия для Android', loading: 'Проверяем…',
+    lede: 'Последняя сборка, подключённая к тестовому серверу. Обновляется здесь автоматически.',
+    none: 'Сейчас тестовой версии для скачивания нет.',
+    get: 'Скачать APK', build: 'Сборка', date: 'Дата', size: 'Размер', sum: 'Контрольная сумма SHA-256',
+    note: 'Это тестовая версия. Не вводите настоящие личные данные.',
+    steps: 'Как установить',
+    list: [
+      'Скачайте APK и откройте файл.',
+      'Если телефон спросит разрешение на установку из неизвестного источника — разрешите для этого браузера.',
+      'Если тестовая версия уже стоит, она обновится. Если появится «Приложение не установлено», удалите старую и установите заново.',
+    ],
+    home: 'О SADORA',
+  },
+  en: {
+    title: 'Android test build', loading: 'Checking…',
+    lede: 'The latest build, connected to the test server. It is replaced here automatically after every update.',
+    none: 'There is no test build to download right now.',
+    get: 'Download the APK', build: 'Build', date: 'Date', size: 'Size', sum: 'SHA-256 checksum',
+    note: 'This is a test build. Do not enter real personal data.',
+    steps: 'How to install',
+    list: [
+      'Download the APK and open it.',
+      'If the phone asks to allow installs from an unknown source, allow it for this browser.',
+      'An installed test build is updated in place. If it says “App not installed”, remove the old one and install again.',
+    ],
+    home: 'About SADORA',
+  },
+};
+
+let lang = (navigator.language || 'uz').slice(0, 2).toLowerCase();
+if (!COPY[lang]) lang = 'uz';
+let build = null;      // latest.json once loaded; false when there is none
+const $ = (id) => document.getElementById(id);
+
+function render() {
+  const t = COPY[lang];
+  document.documentElement.lang = lang;
+  $('title').textContent = t.title;
+  $('lede').textContent = build === null ? t.loading : build ? t.lede : t.none;
+  $('ready').hidden = !build;
+  $('home').textContent = t.home;
+  if (build) {
+    $('getLabel').textContent = t.get;
+    $('buildL').textContent = t.build;
+    $('dateL').textContent = t.date;
+    $('sizeL').textContent = t.size;
+    $('sumL').textContent = t.sum;
+    $('note').textContent = t.note;
+    $('stepsL').textContent = t.steps;
+    $('steps').replaceChildren(...t.list.map((text) => Object.assign(document.createElement('li'), { textContent: text })));
+    $('build').textContent = '#' + build.build;
+    $('date').textContent = new Date(build.publishedAt).toLocaleDateString(lang, { day: 'numeric', month: 'short' });
+    $('size').textContent = (build.size / 1048576).toFixed(1) + ' MB';
+    $('sum').textContent = build.sha256;
+  }
+  for (const button of document.querySelectorAll('.langs button')) {
+    button.setAttribute('aria-current', String(button.dataset.lang === lang));
+  }
+}
+
+for (const button of document.querySelectorAll('.langs button')) {
+  button.addEventListener('click', () => { lang = button.dataset.lang; render(); });
+}
+render();
+
+// Only a path the server itself would have written is ever used as a link.
+const SAFE_PATH = /^\/download\/sadora-stage-\d+-[0-9a-f]{7,40}\.apk$/;
+fetch('download/latest.json', { cache: 'no-store' })
+  .then((response) => (response.ok ? response.json() : null))
+  .then((manifest) => {
+    build = manifest && SAFE_PATH.test(manifest.path) && /^[0-9a-f]{64}$/.test(manifest.sha256) ? manifest : false;
+    if (build) $('get').href = build.path;
+    render();
+  })
+  .catch(() => { build = false; render(); });
+</script>
+</body>
+</html>
