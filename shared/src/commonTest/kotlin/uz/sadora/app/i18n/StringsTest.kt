@@ -45,7 +45,7 @@ class StringsTest {
         add(t.tabs.today)
         add(t.tabs.mind)
         add(t.tabs.nutrition)
-        add(t.tabs.profile)
+        add(t.tabs.premium)
         LifeStage.entries.forEach { add(t.tabs.journey(it)) }
         LifeStage.entries.forEach { add(t.stages.title(it)); add(t.stages.subtitle(it)) }
 
@@ -103,7 +103,7 @@ class StringsTest {
                     privacyAndSecurity, language, theme, themeDark, themeLight, about,
                     signOut, signingOut, premiumBadge, premiumActive, premiumYearly,
                     premiumFeatureAi, premiumFeatureScanner, premiumFeatureInsights,
-                    upgradeTitle, upgradeSubtitle,
+                    upgradeTitle, upgradeSubtitle, shareProfile, shareProfileNote, devices,
                 ),
             )
         }
@@ -117,8 +117,8 @@ class StringsTest {
                     cycleReminderNote, waterReminder, waterReminderNote, aiSummary, aiSummaryNote,
                     privacyTitle, consentHealth, consentHealthNote, consentAi, consentAiNote,
                     consentAnalytics, consentAnalyticsNote, saveConsents, legalDocuments, terms,
-                    privacyPolicy, yourData, exportData, deleteAccount, deleteAccountConfirm,
-                    deleteAccountBody, medicalDisclaimer,
+                    privacyPolicy, yourData, exportData, exportReady, exportFailed, deleteAccount,
+                    deleteAccountConfirm, deleteAccountBody, medicalDisclaimer,
                 ),
             )
         }
@@ -197,6 +197,8 @@ class StringsTest {
                     journalEmptyBody, journalDeleteTitle, journalDeleteBody, journalDeleteAction,
                     sourcesTitle, sourcesConnected(2), lastSample("x"), noSampleYet, sourcesEmpty,
                     sourcesEmptyBody, sourcesNote, connected, notConnected, samples("12"),
+                    sleepManualBody, sleepHours, sleepMinutesLabel, sleepSaved, bodySignalsTitle,
+                    bodySignalsNote, vsLastWeek("+3"), strain, recovery,
                 ),
             )
             HealthMetric.entries.forEach { add(t.modules.metric(it)) }
@@ -304,6 +306,71 @@ class StringsTest {
             CommunityFilter.entries.forEach { add(filter(it)) }
             ReportReason.entries.forEach { add(reportReason(it)) }
         }
+        with(t.rewards) {
+            addAll(
+                listOf(
+                    coinName, coins("50"), coinsGained("50"), streakDays(7), streakStarted, streakSubtitle,
+                    milestoneReached(30), daysToMilestone(4, 30), streakBeyondMilestones, walletTitle,
+                    balance, earned, spent, currentStreak, longestStreak, days(3), history, historyEmpty,
+                    howToEarn, perDay(3), openShop, inviteFriends, referralTitle, referralSubtitle,
+                    yourCode, copyCode, codeCopied, shareLink, shareMessage("x"), invitedCount(2),
+                    referralEarned("200"), rewardPerJoin("200"), welcomeReward("100"), referralHowTitle,
+                    referralFairUse,
+                ),
+            )
+            addAll(referralSteps)
+        }
+        with(t.shop) {
+            addAll(
+                listOf(
+                    title, subtitle, empty, loading, discount(15), saving("x"), premiumDays(7), outOfStock,
+                    stockLeft(3), notEnough, shortBy("50"), redeem, redeeming, confirmTitle("x"),
+                    confirmBody("50"), confirmPremiumBody, cancel, issuedTitle, issuedPremiumTitle, issuedBody,
+                    issuedPremiumBody, yourCode, copyCode, codeCopied, validUntil("x"), myCodes, myCodesEmpty,
+                    statusIssued, statusUsed, statusExpired, statusCancelled, partnerNote,
+                ),
+            )
+            uz.sadora.contract.ShopKind.entries.forEach { add(tab(it)) }
+        }
+        with(t.homeLayout) {
+            addAll(listOf(title, subtitle, visible, hidden, moveUp, moveDown, reset, alwaysOn))
+            uz.sadora.contract.HomeWidgets.defaults.forEach { add(widget(it.key)); add(widgetNote(it.key)) }
+        }
+        with(t.share) {
+            addAll(
+                listOf(
+                    title, subtitle, intro, create, creating, regenerate, revoke, revoked, copyLink, linkCopied,
+                    shareLink, shareMessage("x"), showToDoctor, validFor, hours(6), days(3), expiresAt("x"),
+                    expired, viewedTimes(2), neverViewed, lastViewed("x"), includesTitle, excludesTitle,
+                    privacyNote, offline, failed,
+                ),
+            )
+            addAll(includes)
+            addAll(excludes)
+        }
+        with(t.premium) {
+            addAll(
+                listOf(
+                    tab, title, activeTitle, activeBody, inactiveTitle, inactiveBody, benefitsTitle,
+                    benefitAiTitle, benefitAiBody, benefitScannerTitle, benefitScannerBody, benefitInsightsTitle,
+                    benefitInsightsBody, benefitLibraryTitle, benefitLibraryBody, benefitDevicesTitle,
+                    benefitDevicesBody, compareTitle, seePlans, manage, buyWithCoins("Gul"), faqTitle, freeStays,
+                ),
+            )
+            faq.forEach { (question, answer) -> add(question); add(answer) }
+        }
+        with(t.devices) {
+            addAll(
+                listOf(
+                    title, subtitle, connectedSection, availableSection, plannedSection, connect, connecting,
+                    disconnect, disconnectConfirmTitle, disconnectConfirmBody, syncNow, syncing, synced,
+                    lastSync("x"), neverSynced, statusActive, statusExpired, statusError, reconnect,
+                    unavailable("not_configured"), unavailable("planned"), givesTitle, usedInTitle,
+                    openBrowserNote, returnedOk, returnedError, noStepsNote, manualTitle, manualBody, note,
+                ),
+            )
+            uz.sadora.contract.HealthProvider.entries.forEach { add(provider(it)); add(providerTagline(it)); addAll(usedIn(it)) }
+        }
         with(t.today) {
             addAll(
                 listOf(
@@ -343,7 +410,7 @@ class StringsTest {
     @Test
     fun `a tab label stays short enough for the bar`() {
         languages.forEach { t ->
-            val labels = listOf(t.tabs.today, t.tabs.mind, t.tabs.nutrition, t.tabs.profile) +
+            val labels = listOf(t.tabs.today, t.tabs.mind, t.tabs.nutrition, t.tabs.premium) +
                 LifeStage.entries.map { t.tabs.journey(it) }
             labels.forEach { assertTrue(it.length <= 12, "too long for the tab bar: $it") }
         }

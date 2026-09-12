@@ -251,7 +251,75 @@ private fun CycleJourney(state: AppState, health: HealthController, onOpen: (Rou
             }
         }
 
+        // Only for a woman with a device: a card of dashes would be a promise, not a reading.
+        if (state.hasDeviceData) {
+            item { BodySignalsCard(state, health) }
+        }
+
         item { DisclaimerNote(t.predictionDisclaimer) }
+    }
+}
+
+/**
+ * What the wearable says beside the cycle: resting pulse, HRV, skin temperature and
+ * recovery today, each against the previous seven days.
+ *
+ * The deltas are the reason the card exists. A resting pulse of 58 means little on its
+ * own; "+3 against last week", in the luteal phase, is the kind of thing she and her
+ * doctor can talk about. The note says what is commonly observed and stops there.
+ */
+@Composable
+private fun BodySignalsCard(state: AppState, health: HealthController) {
+    val m = strings.modules
+    val c = Sadora.colors
+    LaunchedEffect(Unit) { health.loadWearableRange(14) }
+    val range = health.wearableRange?.days.orEmpty()
+    val today = state.today
+    fun weekAverage(metric: uz.sadora.contract.HealthMetric, daysBack: IntRange): Double? =
+        range.filter { day -> today.daysUntil(day.date).let { -it in daysBack } }
+            .mapNotNull { it.value(metric) }
+            .takeIf { it.isNotEmpty() }
+            ?.average()
+    fun delta(metric: uz.sadora.contract.HealthMetric, decimals: Int): String? {
+        val recent = weekAverage(metric, 0..6) ?: return null
+        val before = weekAverage(metric, 7..13) ?: return null
+        val diff = recent - before
+        val sign = if (diff >= 0) "+" else "−"
+        val magnitude = if (decimals == 0) kotlin.math.abs(diff).toInt().toString() else Fmt.oneDecimal(kotlin.math.abs(diff).toFloat())
+        return m.vsLastWeek(sign + magnitude)
+    }
+
+    SadoraCard {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+            Text(m.bodySignalsTitle, style = Sadora.type.h3, color = c.text)
+            SadoraBadge(strings.journey.estimatedCaps, BadgeTone.Estimated, icon = SadoraIcons.Clock)
+        }
+        val signals = listOfNotNull(
+            state.restingHeartRate?.let { Triple(m.restingPulse(it).substringBefore(' ').ifBlank { "$it" }, m.metric(uz.sadora.contract.HealthMetric.RESTING_HEART_RATE), delta(uz.sadora.contract.HealthMetric.RESTING_HEART_RATE, 0)) },
+            state.hrvMs?.let { Triple("$it ms", "HRV", delta(uz.sadora.contract.HealthMetric.HRV, 0)) },
+            state.skinTemperature?.let { Triple("${Fmt.oneDecimal(it.toFloat())} °C", m.metric(uz.sadora.contract.HealthMetric.SKIN_TEMPERATURE), delta(uz.sadora.contract.HealthMetric.SKIN_TEMPERATURE, 1)) },
+            state.recovery?.let { Triple("$it%", m.recovery, delta(uz.sadora.contract.HealthMetric.RECOVERY, 0)) },
+        )
+        signals.chunked(2).forEach { pair ->
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                pair.forEach { (value, label, change) ->
+                    Column(
+                        Modifier
+                            .weight(1f)
+                            .clip(Radius.cardSmall)
+                            .background(c.surface2)
+                            .padding(Spacing.sm),
+                        verticalArrangement = Arrangement.spacedBy(2.dp),
+                    ) {
+                        Text(label, style = Sadora.type.caption, color = c.muted)
+                        Text(value, style = Sadora.type.h3, color = c.text)
+                        change?.let { Text(it, style = Sadora.type.caption, color = c.muted2) }
+                    }
+                }
+                if (pair.size == 1) androidx.compose.foundation.layout.Spacer(Modifier.weight(1f))
+            }
+        }
+        Text(m.bodySignalsNote, style = Sadora.type.caption, color = c.muted)
     }
 }
 
@@ -730,7 +798,11 @@ private fun PostpartumJourney(state: AppState, onOpen: (Route) -> Unit) {
                 SadoraCard(modifier = Modifier.weight(1f), padding = Spacing.sm) {
                     CardLabel(t.sleep)
                     Text(state.sleepLabel(format = strings.common::hoursMinutes), style = Sadora.type.h2, color = c.text)
-                    Text(t.brokenSleep, style = Sadora.type.body, color = c.muted)
+                    // "Broken sleep" is a reading, not a caption: it appears only for a
+                    // night the device measured short, never as a fixed line under any number.
+                    state.sleepMinutes?.takeIf { it in 1 until 6 * 60 }?.let {
+                        Text(t.brokenSleep, style = Sadora.type.body, color = c.muted)
+                    }
                 }
             }
         }
@@ -929,7 +1001,7 @@ private fun MenopauseJourney(state: AppState, health: HealthController, onOpen: 
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                 StatCard(t.sleep, state.sleepLabel(format = strings.common::hoursMinutes), Modifier.weight(1f))
-                StatCard(t.activity, Fmt.int(state.steps), Modifier.weight(1f))
+                StatCard(t.activity, state.stepsLabel(), Modifier.weight(1f))
             }
         }
 

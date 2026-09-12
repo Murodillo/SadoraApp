@@ -19,6 +19,8 @@ import uz.sadora.server.billing.paymeWebhook
 import uz.sadora.server.ai.aiRoutes
 import uz.sadora.server.rewards.adminRewardsRoutes
 import uz.sadora.server.rewards.rewardsRoutes
+import uz.sadora.server.share.publicShareRoutes
+import uz.sadora.server.share.shareRoutes
 import uz.sadora.server.community.adminCommunityRoutes
 import uz.sadora.server.community.communityRoutes
 import uz.sadora.server.admin.adminRoutes
@@ -37,6 +39,8 @@ import uz.sadora.server.notify.adminNotificationRoutes
 import uz.sadora.server.notify.notificationRoutes
 import uz.sadora.server.wearable.adminWearableRoutes
 import uz.sadora.server.wearable.wearableRoutes
+import uz.sadora.server.wearable.wearableConnectRoutes
+import uz.sadora.server.wearable.wearablePublicRoutes
 import uz.sadora.server.plugins.configureHttp
 import uz.sadora.server.plugins.configureMonitoring
 import uz.sadora.server.plugins.configureRateLimit
@@ -63,6 +67,9 @@ fun main() {
 
     // "Delete my account" is a promise about the future, so something has to keep it.
     component.accountErasureJob.start()
+
+    // Cloud wearables are pulled, not pushed: the job is the floor under the webhooks.
+    component.wearableSyncJob.start()
 
     Runtime.getRuntime().addShutdownHook(Thread { component.close() })
 
@@ -100,8 +107,13 @@ fun Application.apiModule(component: AppComponent) {
             swaggerUI(path = "docs", swaggerFile = "openapi/openapi.yaml")
         }
 
+        // The one page a person opens in a browser: the doctor's view behind a QR code.
+        // Outside the version prefix because it is a link on a screen, not an API call.
+        publicShareRoutes(component.shareService)
+
         route("/$API_VERSION") {
             authRoutes(component.authService, component.otpService)
+            shareRoutes(component.shareService)
             userRoutes(
                 userService = component.userService,
                 entitlementService = component.entitlementService,
@@ -117,6 +129,9 @@ fun Application.apiModule(component: AppComponent) {
             notificationRoutes(component.notificationService)
             adminNotificationRoutes(component.notificationService, component.auditService)
             wearableRoutes(component.wearableService)
+            wearableConnectRoutes(component.wearableConnectService)
+            // The provider's own doors: an OAuth return and a signed webhook, no app token.
+            wearablePublicRoutes(component.wearableConnectService, component.wearableSyncJob)
             adminWearableRoutes(component.wearableService, component.wearableRepository, component.auditService)
             communityRoutes(component.communityService)
             adminCommunityRoutes(component.communityModerationService)

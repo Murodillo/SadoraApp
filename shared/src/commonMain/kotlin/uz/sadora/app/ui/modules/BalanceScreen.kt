@@ -24,6 +24,8 @@ import uz.sadora.app.ui.components.SadoraCard
 import uz.sadora.app.ui.components.SadoraTopBar
 import uz.sadora.app.ui.components.ScreenContent
 import uz.sadora.app.model.DailyStepGoal
+import uz.sadora.app.model.NoValue
+import uz.sadora.app.model.goalRatio
 import uz.sadora.app.model.DailySleepGoalMinutes
 
 /**
@@ -43,21 +45,24 @@ fun BalanceScreen(
     val c = Sadora.colors
 
     // The same four signals Today scores, against the same goals. A second screen with
-    // its own idea of how the day went would only disagree with the first one.
-    fun ratio(value: Int, goal: Int): Float =
-        if (goal <= 0) 0f else (value / goal.toFloat()).coerceIn(0f, 1f)
-
+    // its own idea of how the day went would only disagree with the first one. A signal
+    // nobody measured is drawn empty and left out of the score, never counted as zero.
+    val activity = state.activityRatio()
+    val activityCaption = when {
+        state.steps != null -> t.ofSteps(Fmt.int(state.steps!!), Fmt.int(DailyStepGoal))
+        state.strain != null -> "${t.strain} ${Fmt.oneDecimal(state.strain!!.toFloat())} / ${Fmt.oneDecimal(uz.sadora.app.model.ModerateStrain.toFloat())}"
+        else -> t.ofSteps(NoValue, Fmt.int(DailyStepGoal))
+    }
     val directions = listOf(
-        Quad("🍽", t.food, ratio(state.caloriesEaten, state.calorieGoal), c.primary,
+        Quad("🍽", t.food, goalRatio(state.caloriesEaten, state.calorieGoal), c.primary,
             t.ofKcal(Fmt.int(state.caloriesEaten), Fmt.int(state.calorieGoal))),
-        Quad("💧", t.water, ratio(state.waterMl, state.waterGoalMl), c.accent,
+        Quad("💧", t.water, goalRatio(state.waterMl, state.waterGoalMl), c.accent,
             t.ofLitres(Fmt.litres(state.waterMl), Fmt.litres(state.waterGoalMl))),
-        Quad("👟", t.activity, ratio(state.steps, DailyStepGoal), c.secondary,
-            t.ofSteps(Fmt.int(state.steps), Fmt.int(DailyStepGoal))),
-        Quad("💤", t.sleep, ratio(state.sleepMinutes, DailySleepGoalMinutes), c.success,
+        Quad("👟", t.activity, activity, c.secondary, activityCaption),
+        Quad("💤", t.sleep, state.sleepMinutes?.let { goalRatio(it, DailySleepGoalMinutes) }, c.success,
             t.ofSleep(state.sleepLabel(format = strings.common::hoursMinutes))),
     )
-    val score = (directions.map { it.value }.average() * 100).toInt()
+    val score = state.balanceScore()
 
     Column(modifier) {
         SadoraTopBar(t.balanceTitle, onBack = onClose)
@@ -74,7 +79,7 @@ fun BalanceScreen(
                             progress = score / 100f,
                             size = 124.dp,
                             strokeWidth = 12.dp,
-                            segments = directions.map { it.value / 4f to it.color },
+                            segments = directions.map { (it.value ?: 0f) / 4f to it.color },
                         ) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Text("$score", style = Sadora.type.data, color = c.text)
@@ -100,7 +105,7 @@ fun BalanceScreen(
                             // next, and "60%" does not.
                             label = "${direction.emoji}  ${direction.label}",
                             value = direction.reading,
-                            progress = direction.value,
+                            progress = direction.value ?: 0f,
                             color = direction.color,
                         )
                     }
@@ -119,7 +124,8 @@ fun BalanceScreen(
 private data class Quad(
     val emoji: String,
     val label: String,
-    val value: Float,
+    /** Null when nothing measured it today — drawn empty, left out of the score. */
+    val value: Float?,
     val color: Color,
     /** What was measured against what, in the screen's own words. */
     val reading: String,
@@ -132,10 +138,12 @@ private data class Quad(
  * still available today, never as something owed.
  */
 private fun balanceNote(directions: List<Quad>, t: ModuleStrings): String {
-    val weakest = directions.minByOrNull { it.value } ?: return ""
+    val measured = directions.filter { it.value != null }
+    val weakest = measured.minByOrNull { it.value!! } ?: return ""
+    val value = weakest.value!!
     return when {
-        weakest.value >= 0.8f -> t.balanced
-        weakest.value >= 0.5f -> t.someRoomIn(weakest.label)
+        value >= 0.8f -> t.balanced
+        value >= 0.5f -> t.someRoomIn(weakest.label)
         else -> t.fallingBehind(weakest.label)
     }
 }

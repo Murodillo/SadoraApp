@@ -6,9 +6,9 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 /**
- * Nur — the app's own currency, and the streak that earns most of it.
+ * Gul — the app's own currency, and the streak that earns most of it.
  *
- * Two rules shape everything in this file. Nur is earned for *using* the app, never for
+ * Two rules shape everything in this file. Gul is earned for *using* the app, never for
  * a health number: a good night's sleep pays the same as a bad one, because paying for
  * outcomes would put a price on her body. And the server owns every balance — the app
  * displays what it is told and never adds up its own, or a reinstall would mint coins.
@@ -164,7 +164,7 @@ data class RewardsSummary(
     val earnRates: List<EarnRate> = emptyList(),
 )
 
-/** One line of the "how Nur is earned" list. */
+/** One line of the "how Gul is earned" list. */
 @Serializable
 data class EarnRate(
     val reason: String,

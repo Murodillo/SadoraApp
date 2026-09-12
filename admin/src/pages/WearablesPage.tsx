@@ -27,7 +27,15 @@ const metrics: HealthMetric[] = [
   'sleep_duration',
   'sleep_deep',
   'sleep_rem',
+  'sleep_light',
+  'sleep_awake',
+  'sleep_performance',
+  'sleep_efficiency',
   'weight',
+  'recovery',
+  'strain',
+  'spo2',
+  'skin_temperature',
 ]
 
 /**

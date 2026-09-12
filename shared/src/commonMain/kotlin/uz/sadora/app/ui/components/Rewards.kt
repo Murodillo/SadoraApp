@@ -30,18 +30,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
-import kotlin.math.PI
-import kotlin.math.cos
-import kotlin.math.sin
 import kotlinx.coroutines.delay
 import uz.sadora.app.design.Radius
 import uz.sadora.app.design.Sadora
@@ -53,7 +47,7 @@ import uz.sadora.contract.CoinAward
 import uz.sadora.contract.DailyCheckInResult
 
 /**
- * The Nur balance, as the home header and the shop draw it.
+ * The Gul balance, as the home header and the shop draw it.
  *
  * A pill rather than a plain number: the balance is spendable, so it should look like
  * something you can tap, and it always does open the wallet.
@@ -75,7 +69,9 @@ fun CoinPill(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(5.dp),
     ) {
-        NurMark(size = 18.dp)
+        // The flower opens again whenever the balance rises — a coin arriving is a
+        // bloom, and a spend is not.
+        GulMark(size = 18.dp, bloom = true, bloomKey = rememberGainKey(amount))
         // Counts up rather than appearing: the balance changes while she is looking at
         // it — after a check-in, after a purchase — and the movement is what says so.
         AnimatedNumber(
@@ -90,39 +86,6 @@ fun CoinPill(
             color = c.muted,
         )
     }
-}
-
-/**
- * The currency's mark: a small gradient disc with a light inside it.
- *
- * Drawn rather than an emoji or a bitmap, so it is crisp at any size and takes the
- * brand's own colours in both themes — the same reason the logo is drawn in [Brand].
- */
-@Composable
-fun NurMark(modifier: Modifier = Modifier, size: androidx.compose.ui.unit.Dp = 22.dp) {
-    val c = Sadora.colors
-    Box(
-        modifier
-            .size(size)
-            .drawBehind {
-                val radius = this.size.minDimension / 2f
-                drawCircle(
-                    brush = Brush.linearGradient(
-                        listOf(Color(0xFFFFC663), Color(0xFFFF8AA3)),
-                        start = Offset(0f, 0f),
-                        end = Offset(this.size.width, this.size.height),
-                    ),
-                    radius = radius,
-                )
-                // The "ray": a smaller pale disc set slightly high, so the mark reads as
-                // a light rather than as a coin with a face on it.
-                drawCircle(
-                    color = Color.White.copy(alpha = if (c.isDark) 0.55f else 0.75f),
-                    radius = radius * 0.34f,
-                    center = center.copy(y = center.y - radius * 0.06f),
-                )
-            },
-    )
 }
 
 /**
@@ -221,6 +184,9 @@ fun StreakCelebration(
                 .noRippleClickable(onClick = onDismiss),
             contentAlignment = Alignment.Center,
         ) {
+            // Petals drifting down the whole screen, only on a milestone: the days between
+            // milestones are meant to feel ordinary, and a shower every morning would not.
+            PetalShower(visible = shown.milestone != null)
             AnimatedVisibility(
                 visible = visible,
                 enter = scaleIn(Motion.Springy, initialScale = 0.72f) + fadeIn(tween(Motion.Quick)),
@@ -255,9 +221,9 @@ private fun StreakCard(result: DailyCheckInResult) {
         verticalArrangement = Arrangement.spacedBy(Spacing.sm),
     ) {
         Box(contentAlignment = Alignment.Center) {
-            // Rays fanning out behind the ring, only for a milestone: an ordinary day
-            // gets the ring alone, so the milestone still feels like more.
-            if (milestone != null) Burst(entry.value, Modifier.size(148.dp))
+            // Petals bursting out behind the ring. An ordinary day gets a small burst,
+            // a milestone a bigger one — so the milestone still feels like more.
+            PetalBurst(entry.value, Modifier.size(if (milestone != null) 200.dp else 150.dp), count = if (milestone != null) 18 else 10)
 
             ProgressRing(
                 progress = if (milestone != null) 1f else result.streak.milestoneProgress,
@@ -327,7 +293,7 @@ private fun AwardChip(award: CoinAward, modifier: Modifier = Modifier) {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        NurMark(size = 16.dp)
+        GulMark(size = 16.dp, bloom = true)
         Text(
             t.coinsGained(Fmt.int(award.amount)),
             style = Sadora.type.body.copy(fontWeight = FontWeight.SemiBold),
@@ -336,48 +302,6 @@ private fun AwardChip(award: CoinAward, modifier: Modifier = Modifier) {
         Text(award.title, style = Sadora.type.caption.copy(letterSpacing = TextUnit.Unspecified), color = c.muted)
     }
 }
-
-/**
- * The milestone burst: twelve rays that sweep out and fade.
- *
- * Drawn rather than animated as a sprite so it takes the theme's colours and costs one
- * draw call. It plays once, on the same clock as the rest of the card.
- */
-@Composable
-private fun Burst(progress: Float, modifier: Modifier = Modifier) {
-    val c = Sadora.colors
-    Box(
-        modifier.drawBehind {
-            val centre = center
-            val inner = size.minDimension * 0.30f
-            val reach = size.minDimension * 0.16f
-            repeat(RAYS) { index ->
-                val angle = (index.toFloat() / RAYS) * 2f * PI.toFloat()
-                // Each ray starts a little after the one before it, so the burst opens
-                // as a sweep rather than as twelve lines appearing at once.
-                val local = ((progress - index * 0.02f) / 0.7f).coerceIn(0f, 1f)
-                if (local <= 0f) return@repeat
-                val start = inner + reach * local * 0.4f
-                val end = start + reach * local
-                val alpha = (1f - local) * 0.8f
-                drawLine(
-                    color = (if (index % 2 == 0) c.secondary else c.primary).copy(alpha = alpha),
-                    start = Offset(
-                        centre.x + cos(angle) * start,
-                        centre.y + sin(angle) * start,
-                    ),
-                    end = Offset(
-                        centre.x + cos(angle) * end,
-                        centre.y + sin(angle) * end,
-                    ),
-                    strokeWidth = 3f,
-                )
-            }
-        },
-    )
-}
-
-private const val RAYS = 12
 
 /** How long the celebration stays before it takes itself away. */
 private const val HOLD_MILLIS = 2400L

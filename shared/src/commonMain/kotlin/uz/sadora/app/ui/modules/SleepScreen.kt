@@ -26,6 +26,17 @@ import uz.sadora.app.i18n.ModuleStrings
 import uz.sadora.app.i18n.strings
 import uz.sadora.app.model.AppState
 import uz.sadora.app.model.Fmt
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.text.input.KeyboardType
+import kotlinx.coroutines.launch
+import uz.sadora.app.ui.components.SadoraBottomSheet
+import uz.sadora.app.ui.components.SadoraButton
+import uz.sadora.app.ui.components.SadoraTextField
+import uz.sadora.app.ui.components.acceptDigits
 import uz.sadora.app.ui.components.BadgeTone
 import uz.sadora.app.ui.components.CardLabel
 import uz.sadora.app.ui.components.EmptyState
@@ -60,10 +71,13 @@ fun SleepScreen(
     health: HealthController,
     insights: InsightsController,
     onClose: () -> Unit,
+    onToast: (String) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val t = strings.modules
     val c = Sadora.colors
+    val scope = rememberCoroutineScope()
+    var showManual by remember { mutableStateOf(false) }
     val today = health.wearableToday
     val week = insights.summary(7)?.trend(TrendMetric.SLEEP_MINUTES)
     val minutes = today?.value(HealthMetric.SLEEP_DURATION)?.roundToInt()
@@ -122,10 +136,70 @@ fun SleepScreen(
 
             item {
                 SadoraCard(padding = Spacing.xs) {
-                    SettingsRow(SadoraIcons.Pencil, t.sleepManual, showChevron = false) {}
+                    SettingsRow(SadoraIcons.Pencil, t.sleepManual, showChevron = true) { showManual = true }
                 }
             }
         }
+    }
+
+    ManualSleepSheet(
+        visible = showManual,
+        busy = health.busy,
+        onDismiss = { showManual = false },
+        onSave = { total ->
+            scope.launch {
+                if (health.logSleep(total)) {
+                    showManual = false
+                    onToast(t.sleepSaved)
+                }
+            }
+        },
+    )
+}
+
+/**
+ * Hours and minutes for a night no device recorded.
+ *
+ * A sheet rather than a screen: it is two numbers, and it is answered from the sleep
+ * screen without leaving it. Saved through the same path a watch uses, so the night
+ * lands in the daily aggregate, the Balance ring and the doctor page alike.
+ */
+@Composable
+private fun ManualSleepSheet(
+    visible: Boolean,
+    busy: Boolean,
+    onDismiss: () -> Unit,
+    onSave: (minutes: Int) -> Unit,
+) {
+    val t = strings.modules
+    val c = Sadora.colors
+    var hours by remember { mutableStateOf("7") }
+    var minutes by remember { mutableStateOf("30") }
+    val total = (hours.toIntOrNull() ?: 0) * 60 + (minutes.toIntOrNull() ?: 0)
+    val valid = total in 1..(16 * 60) && (minutes.toIntOrNull() ?: 0) < 60
+    SadoraBottomSheet(visible = visible, title = t.sleepManual, onDismiss = onDismiss) {
+        Text(t.sleepManualBody, style = Sadora.type.body, color = c.muted)
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+            SadoraTextField(
+                hours,
+                { hours = acceptDigits(it, 2) },
+                label = t.sleepHours,
+                keyboardType = KeyboardType.Number,
+                modifier = Modifier.weight(1f),
+            )
+            SadoraTextField(
+                minutes,
+                { minutes = acceptDigits(it, 2) },
+                label = t.sleepMinutesLabel,
+                keyboardType = KeyboardType.Number,
+                modifier = Modifier.weight(1f),
+            )
+        }
+        SadoraButton(
+            if (busy) strings.common.saving else strings.common.save,
+            enabled = valid && !busy,
+            onClick = { onSave(total) },
+        )
     }
 }
 
@@ -138,7 +212,7 @@ private fun LastNightCard(minutes: Int, today: DailyHealth?) {
     val providers = today?.metrics
         ?.firstOrNull { it.metric == HealthMetric.SLEEP_DURATION }
         ?.providers
-        ?.map { it.name.lowercase().replace('_', ' ') }
+        ?.map { strings.devices.provider(it) }
         .orEmpty()
 
     SadoraCard {
@@ -159,7 +233,7 @@ private fun LastNightCard(minutes: Int, today: DailyHealth?) {
                 }
             }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text("Kecha", style = Sadora.type.body, color = c.muted)
+                Text(t.lastNight, style = Sadora.type.body, color = c.muted)
                 if (resting != null) {
                     Text(t.restingPulse(resting), style = Sadora.type.h3, color = c.text)
                 }
@@ -181,21 +255,29 @@ private fun LastNightCard(minutes: Int, today: DailyHealth?) {
 private fun stagesCard(today: DailyHealth?, totalMinutes: Int, t: ModuleStrings): (@Composable () -> Unit)? {
     val deep = today?.value(HealthMetric.SLEEP_DEEP)?.roundToInt() ?: return null
     val rem = today.value(HealthMetric.SLEEP_REM)?.roundToInt() ?: return null
-    val light = totalMinutes - deep - rem
+    // A strap that reports light sleep itself is believed; otherwise light is what the
+    // total has left after deep and REM.
+    val light = today.value(HealthMetric.SLEEP_LIGHT)?.roundToInt() ?: (totalMinutes - deep - rem)
+    val awake = today.value(HealthMetric.SLEEP_AWAKE)?.roundToInt()
+    val performance = today.value(HealthMetric.SLEEP_PERFORMANCE)?.roundToInt()
     if (light < 0) return null
 
     return {
         val c = Sadora.colors
-        val stages = listOf(
+        val stages = listOfNotNull(
             Triple(t.deep, deep, c.primary),
             Triple("REM", rem, c.secondary),
             Triple(t.light, light, c.accent),
+            awake?.takeIf { it > 0 }?.let { Triple(t.metric(HealthMetric.SLEEP_AWAKE), it, c.muted2) },
         )
         SadoraCard {
-            CardLabel(t.stages)
+            CardLabel(
+                t.stages,
+                trailing = performance?.let { { Text("${t.metric(HealthMetric.SLEEP_PERFORMANCE)} $it%", style = Sadora.type.body, color = c.muted) } },
+            )
             StackedBar(
                 segments = stages.map { (_, value, colour) ->
-                    (value.toFloat() / totalMinutes.coerceAtLeast(1)) to colour
+                    (value.toFloat() / (totalMinutes + (awake ?: 0)).coerceAtLeast(1)) to colour
                 },
                 height = 12.dp,
             )

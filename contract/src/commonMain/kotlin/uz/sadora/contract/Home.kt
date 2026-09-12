@@ -21,7 +21,7 @@ object HomeWidgets {
     /** The health score ring with its four signals. */
     const val SCORE = "score"
 
-    /** The streak and the Nur balance. */
+    /** The streak and the Gul balance. */
     const val STREAK = "streak"
 
     /** Cycle day, pregnancy week, recovery week — whatever the stage counts in. */

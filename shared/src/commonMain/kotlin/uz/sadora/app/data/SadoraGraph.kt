@@ -14,6 +14,7 @@ import uz.sadora.app.data.api.MindApi
 import uz.sadora.app.data.api.NotificationApi
 import uz.sadora.app.data.api.NutritionApi
 import uz.sadora.app.data.api.RewardsApi
+import uz.sadora.app.data.api.ShareApi
 import uz.sadora.app.data.api.WearableApi
 
 /**
@@ -35,6 +36,11 @@ class SadoraGraph(
      * a test or a preview never touches the home screen.
      */
     val icons: AppIcons = AppIcons.None,
+    /**
+     * Product analytics, off until she consents. Built by the platform because the
+     * SDK is; the shared code only decides what is worth recording.
+     */
+    val analytics: Analytics = Analytics.None,
     engine: HttpClientEngine? = null,
 ) {
     private val client: HttpClient =
@@ -59,6 +65,7 @@ class SadoraGraph(
     val learnApi: LearnApi = LearnApi(caller)
     val billingApi: BillingApi = BillingApi(caller)
     val rewardsApi: RewardsApi = RewardsApi(caller)
+    val shareApi: ShareApi = ShareApi(caller)
     val repository: SadoraRepository = SadoraRepository(api, session, device, appVersion)
 
     /**
@@ -82,6 +89,12 @@ class SadoraGraph(
 
     fun rewardsController(state: uz.sadora.app.model.AppState): RewardsController =
         RewardsController(rewardsApi, state, icons)
+
+    fun shareController(): ShareController = ShareController(shareApi, analytics)
+
+    fun wearableController(): WearableController = WearableController(wearableApi, analytics)
+
+    fun notificationsController(): NotificationsController = NotificationsController(notificationApi)
 
     fun close() = client.close()
 }

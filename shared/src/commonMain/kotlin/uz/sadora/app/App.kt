@@ -31,16 +31,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
-import uz.sadora.app.data.AiController
-import uz.sadora.app.data.CommunityController
+import uz.sadora.app.data.AnalyticsEvents
 import uz.sadora.app.data.CommunitySyncBridge
-import uz.sadora.app.data.HealthController
 import uz.sadora.app.data.HealthSync
-import uz.sadora.app.data.BillingController
-import uz.sadora.app.data.InsightsController
-import uz.sadora.app.data.LearnController
-import uz.sadora.app.data.RewardsController
-import uz.sadora.app.data.SadoraController
 import uz.sadora.app.data.SadoraGraph
 import uz.sadora.app.data.SessionState
 import uz.sadora.app.data.applyServerProfile
@@ -51,6 +44,8 @@ import uz.sadora.app.i18n.ProvideStrings
 import uz.sadora.app.i18n.strings
 import uz.sadora.app.model.AppState
 import uz.sadora.app.model.CommunityPost
+import uz.sadora.app.nav.AppLink
+import uz.sadora.app.nav.AppLinks
 import uz.sadora.app.nav.AppPhase
 import uz.sadora.app.nav.Navigator
 import uz.sadora.app.nav.Route
@@ -69,8 +64,9 @@ import uz.sadora.app.ui.core.AiChatScreen
 import uz.sadora.app.ui.core.AiFreePreviewScreen
 import uz.sadora.app.ui.core.CommentsSheetContent
 import uz.sadora.app.ui.core.ComposePostSheetContent
-import uz.sadora.app.ui.core.PostMenuSheetContent
 import uz.sadora.app.ui.core.NutritionScreen
+import uz.sadora.app.ui.core.PostMenuSheetContent
+import uz.sadora.app.ui.core.PremiumScreen
 import uz.sadora.app.ui.core.ProfileScreen
 import uz.sadora.app.ui.core.SecretChatScreen
 import uz.sadora.app.ui.core.TodayScreen
@@ -97,6 +93,7 @@ import uz.sadora.app.ui.modules.MindScreen
 import uz.sadora.app.ui.modules.PaywallScreen
 import uz.sadora.app.ui.modules.ReferralScreen
 import uz.sadora.app.ui.modules.RewardsScreen
+import uz.sadora.app.ui.modules.ShareProfileScreen
 import uz.sadora.app.ui.modules.ShopScreen
 import uz.sadora.app.ui.modules.SleepScreen
 import uz.sadora.app.ui.onboarding.LegalDocument
@@ -110,43 +107,32 @@ import uz.sadora.app.ui.settings.SettingsDetailScreen
 /**
  * SADORA — root composable.
  *
- * Owns the single [AppState] store and the [Navigator], and switches between the
- * pre-login phases and the five-tab shell.
+ * Owns the single [AppState] store, the [Navigator] and the [AppControllers], and
+ * switches between the pre-login phases and the five-tab shell. Everything the platform
+ * has to say arrives through the graph and through [AppLinks]; nothing here reaches
+ * for a singleton of its own.
  */
 @Composable
 @Preview
-fun App(
-    graph: SadoraGraph? = null,
-    /**
-     * The invite code the app was opened with, from a shared link.
-     *
-     * Passed in rather than read here because only the platform entry point sees the
-     * launch intent. It is only ever a prefill: the code is settled by the server when
-     * the account is created, and an existing account ignores it entirely.
-     */
-    inviteCode: String? = null,
-) {
+fun App(graph: SadoraGraph? = null) {
     val state = remember { AppState() }
     val navigator = remember { Navigator() }
-    // One controller for the whole app; with no graph it runs everything locally.
-    val controller = remember(graph, state) { SadoraController(graph?.repository, state) }
+    val controllers = remember(graph, state) { AppControllers.from(graph, state) }
 
-    // The health tabs get their own controller; it mirrors what it loads onto [state],
-    // so the screens keep reading the store they already read.
-    val health = remember(graph, state) {
-        graph?.healthController(state) ?: HealthController(null, null, null, null)
-    }
-    val community = remember(graph, state) { graph?.communityController(state) ?: CommunityController(null, state) }
-    val ai = remember(graph, state) { graph?.aiController(state) ?: AiController(null, state) }
-    val insights = remember(graph) { graph?.insightsController() ?: InsightsController(null) }
-    val learn = remember(graph) { graph?.learnController() ?: LearnController(null) }
-    val billing = remember(graph) { graph?.billingController() ?: BillingController(null) }
-    val rewards = remember(graph, state) { graph?.rewardsController(state) ?: RewardsController(null, state) }
+    LaunchedEffect(graph) { state.appVersion = graph?.appVersion }
 
-    // Only ever fills a blank: a code she has already typed is hers, not the link's.
-    LaunchedEffect(inviteCode) {
-        if (state.pendingInviteCode.isNullOrBlank()) {
-            state.pendingInviteCode = inviteCode?.takeIf { it.isNotBlank() }
+    // Analytics follows her consent, and nothing else: off until the box is ticked,
+    // off again the moment it is unticked.
+    LaunchedEffect(state.consentAnalytics) { controllers.analytics.setEnabled(state.consentAnalytics) }
+
+    // An invite link is only ever a prefill: the code is settled by the server when the
+    // account is created, and an existing account ignores it entirely. A wearable
+    // return is handled by the shell, where the devices screen can be reached.
+    val link = AppLinks.pending
+    LaunchedEffect(link) {
+        if (link is AppLink.Invite && state.pendingInviteCode.isNullOrBlank()) {
+            state.pendingInviteCode = link.code
+            AppLinks.consume()
         }
     }
 
@@ -168,21 +154,27 @@ fun App(
 
                     AppPhase.Onboarding -> OnboardingFlow(
                         state = state,
-                        controller = controller,
-                        onFinished = { navigator.goTo(AppPhase.Main) },
+                        controller = controllers.account,
+                        onFinished = {
+                            controllers.analytics.event(AnalyticsEvents.ONBOARDING_COMPLETED)
+                            navigator.goTo(AppPhase.Main)
+                        },
                         onSignInInstead = { navigator.goTo(AppPhase.SignIn) },
                     )
 
                     AppPhase.SignIn -> Box(Modifier.fillMaxSize().statusBarsPadding()) {
                         SignInScreen(
                             state = state,
-                            controller = controller,
-                            onSignedIn = { navigator.goTo(it) },
+                            controller = controllers.account,
+                            onSignedIn = {
+                                controllers.analytics.event(AnalyticsEvents.SIGNED_IN)
+                                navigator.goTo(it)
+                            },
                             onRegisterInstead = { navigator.goTo(AppPhase.Onboarding) },
                         )
                     }
 
-                    AppPhase.Main -> MainShell(state, navigator, controller, health, community, ai, insights, learn, billing, rewards)
+                    AppPhase.Main -> MainShell(state, navigator, controllers)
                 }
             }
         }
@@ -230,6 +222,35 @@ private fun SplashGate(
 }
 
 /**
+ * The sheets the shell can raise over any tab, and the one toast.
+ *
+ * Owned by the shell rather than by a screen so they cover the tab bar; screens get
+ * callbacks that open them and never see the state.
+ */
+private class ShellOverlays {
+    var showWaterSheet by mutableStateOf(false)
+    var commentsFor by mutableStateOf<CommunityPost?>(null)
+    var menuFor by mutableStateOf<CommunityPost?>(null)
+    var showCompose by mutableStateOf(false)
+    var showSymptomSheet by mutableStateOf(false)
+    var toast by mutableStateOf<String?>(null)
+    var lastWaterAdded by mutableStateOf(0)
+
+    val anyOpen: Boolean
+        get() = showWaterSheet || showSymptomSheet || commentsFor != null || menuFor != null || showCompose
+
+    /** Closes the topmost sheet. False when none was open. */
+    fun closeTop(): Boolean = when {
+        showWaterSheet -> { showWaterSheet = false; true }
+        showSymptomSheet -> { showSymptomSheet = false; true }
+        commentsFor != null -> { commentsFor = null; true }
+        menuFor != null -> { menuFor = null; true }
+        showCompose -> { showCompose = false; true }
+        else -> false
+    }
+}
+
+/**
  * The tab shell: content, bottom navigation, and the overlays (water sheet, toast)
  * that can be raised from any tab.
  */
@@ -237,18 +258,15 @@ private fun SplashGate(
 private fun MainShell(
     state: AppState,
     navigator: Navigator,
-    controller: SadoraController,
-    health: HealthController,
-    community: CommunityController,
-    ai: AiController,
-    insights: InsightsController,
-    learn: LearnController,
-    billing: BillingController,
-    rewards: RewardsController,
+    controllers: AppControllers,
 ) {
     val scope = rememberCoroutineScope()
     val waterStrings = strings.nutrition
     val communityStrings = strings.community
+    val overlays = remember { ShellOverlays() }
+    val health = controllers.health
+    val community = controllers.community
+    val rewards = controllers.rewards
 
     // One load on entering the shell. Failures are silent — a tab that could not reach
     // the server shows its empty state rather than a banner over the whole app.
@@ -258,7 +276,7 @@ private fun MainShell(
         state.sync = HealthSync(health, scope)
         state.communitySync = CommunitySyncBridge(community, scope)
         // The sections the server can close, before any of them is opened.
-        controller.refreshFlags()
+        controllers.account.refreshFlags()
         // Anything the onboarding calendar collected goes up before the first read, so
         // Today opens on a prediction built from her own cycles rather than on the
         // baseline's assumed one.
@@ -279,27 +297,39 @@ private fun MainShell(
         }
     }
 
-    var showWaterSheet by remember { mutableStateOf(false) }
-    // Owned here rather than by the chat screen so the sheets cover the tab bar.
-    var commentsFor by remember { mutableStateOf<CommunityPost?>(null) }
-    var menuFor by remember { mutableStateOf<CommunityPost?>(null) }
-    var showCompose by remember { mutableStateOf(false) }
-    var showSymptomSheet by remember { mutableStateOf(false) }
-    var toast by remember { mutableStateOf<String?>(null) }
-    var lastWaterAdded by remember { mutableStateOf(0) }
+    // The streak celebration is the one event worth an analytics row on its own:
+    // "how many people come back on day seven" is the question the scheme exists for.
+    LaunchedEffect(rewards.celebration) {
+        val result = rewards.celebration ?: return@LaunchedEffect
+        controllers.analytics.event(
+            AnalyticsEvents.STREAK_DAY,
+            mapOf("days" to result.streak.current.toString(), "milestone" to (result.milestone != null).toString()),
+        )
+    }
+
+    // The browser sent her back from a wearable provider's consent page. The devices
+    // screen shows the outcome, so it is opened if she is not already on it.
+    val link = AppLinks.pending
+    LaunchedEffect(link) {
+        if (link is AppLink.WearableReturn) {
+            AppLinks.consume()
+            controllers.wearables.onReturned(link.provider, link.ok)
+            if (navigator.current != Route.DataSources) navigator.push(Route.DataSources)
+        }
+    }
+
+    // A screen view per tab or route change, named by the route class — stable across
+    // releases and languages, and carrying nothing about what is on the screen.
+    val route = navigator.current
+    LaunchedEffect(navigator.tab, route) {
+        controllers.analytics.screen(route?.let { it::class.simpleName ?: "route" } ?: navigator.tab.name)
+    }
 
     // The system back button closes an open sheet, then pops the pushed screen, then
     // returns to Today; only from Today with nothing open does it leave the app.
-    SystemBackHandler(
-        enabled = showWaterSheet || showSymptomSheet || commentsFor != null || menuFor != null ||
-            showCompose || navigator.canGoBack || navigator.tab != Tab.Today,
-    ) {
+    SystemBackHandler(enabled = overlays.anyOpen || navigator.canGoBack || navigator.tab != Tab.Today) {
         when {
-            showWaterSheet -> showWaterSheet = false
-            showSymptomSheet -> showSymptomSheet = false
-            commentsFor != null -> commentsFor = null
-            menuFor != null -> menuFor = null
-            showCompose -> showCompose = false
+            overlays.closeTop() -> Unit
             navigator.canGoBack -> navigator.pop()
             else -> navigator.select(Tab.Today)
         }
@@ -307,12 +337,13 @@ private fun MainShell(
 
     fun addWater(ml: Int) {
         state.addWater(ml)
-        lastWaterAdded = ml
-        toast = waterStrings.waterAdded(ml)
-        showWaterSheet = false
+        overlays.lastWaterAdded = ml
+        overlays.toast = waterStrings.waterAdded(ml)
+        overlays.showWaterSheet = false
+        controllers.analytics.event(AnalyticsEvents.WATER_ADDED)
     }
 
-    val route = navigator.current
+    val toast: (String) -> Unit = { overlays.toast = it }
     val fullScreen = route?.isFullScreen == true
 
     Box(Modifier.fillMaxSize()) {
@@ -340,23 +371,7 @@ private fun MainShell(
                     label = "route",
                 ) { pushed ->
                     if (pushed != null) {
-                        PushedScreen(
-                            pushed,
-                            state,
-                            navigator,
-                            controller,
-                            health = health,
-                            community = community,
-                            ai = ai,
-                            insights = insights,
-                            learn = learn,
-                            billing = billing,
-                            rewards = rewards,
-                            onSymptomSheet = { showSymptomSheet = true },
-                            onOpenComments = { commentsFor = it },
-                            onOpenPostMenu = { menuFor = it },
-                            onCompose = { showCompose = true },
-                        )
+                        PushedScreen(pushed, state, navigator, controllers, overlays, toast)
                     } else {
                         AnimatedContent(
                             targetState = navigator.tab,
@@ -367,17 +382,7 @@ private fun MainShell(
                             modifier = Modifier.fillMaxSize(),
                             label = "tab",
                         ) { tab ->
-                            RootTab(
-                                tab,
-                                state,
-                                navigator,
-                                controller,
-                                onAddWater = { showWaterSheet = true },
-                                insights = insights,
-                                health = health,
-                                ai = ai,
-                                learn = learn,
-                            )
+                            RootTab(tab, state, navigator, controllers, onAddWater = { overlays.showWaterSheet = true })
                         }
                     }
                 }
@@ -402,13 +407,17 @@ private fun MainShell(
                 .padding(bottom = 96.dp),
         ) {
             SadoraToast(
-                message = toast,
-                actionText = waterStrings.undo,
+                message = overlays.toast,
+                actionText = if (overlays.lastWaterAdded > 0) waterStrings.undo else null,
                 onAction = {
-                    state.addWater(-lastWaterAdded)
-                    toast = null
+                    state.addWater(-overlays.lastWaterAdded)
+                    overlays.lastWaterAdded = 0
+                    overlays.toast = null
                 },
-                onTimeout = { toast = null },
+                onTimeout = {
+                    overlays.toast = null
+                    overlays.lastWaterAdded = 0
+                },
             )
         }
 
@@ -420,21 +429,21 @@ private fun MainShell(
         )
 
         SymptomSheet(
-            visible = showSymptomSheet,
+            visible = overlays.showSymptomSheet,
             state = state,
             health = health,
-            onDismiss = { showSymptomSheet = false },
+            onDismiss = { overlays.showSymptomSheet = false },
         )
 
         // Kept mounted through the exit animation so the sheet does not blank as it closes.
         val lastComments = remember { mutableStateOf<CommunityPost?>(null) }
-        commentsFor?.let { lastComments.value = it }
+        overlays.commentsFor?.let { lastComments.value = it }
         // The comments come from the server when the sheet opens, not with the feed.
-        LaunchedEffect(commentsFor?.id) { commentsFor?.let { community.loadComments(it.id) } }
+        LaunchedEffect(overlays.commentsFor?.id) { overlays.commentsFor?.let { community.loadComments(it.id) } }
         SadoraBottomSheet(
-            visible = commentsFor != null,
+            visible = overlays.commentsFor != null,
             title = communityStrings.comments,
-            onDismiss = { commentsFor = null },
+            onDismiss = { overlays.commentsFor = null },
         ) {
             lastComments.value?.let { post ->
                 // Read back from the store so the loaded comments replace the stale copy.
@@ -444,42 +453,42 @@ private fun MainShell(
         }
 
         val lastMenu = remember { mutableStateOf<CommunityPost?>(null) }
-        menuFor?.let { lastMenu.value = it }
+        overlays.menuFor?.let { lastMenu.value = it }
         SadoraBottomSheet(
-            visible = menuFor != null,
+            visible = overlays.menuFor != null,
             title = if (lastMenu.value?.isMine == true) communityStrings.yourOwnPost else communityStrings.reportPost,
-            onDismiss = { menuFor = null },
+            onDismiss = { overlays.menuFor = null },
         ) {
             lastMenu.value?.let { post ->
                 PostMenuSheetContent(
                     state = state,
                     post = post,
                     onDone = { message ->
-                        menuFor = null
-                        message?.let { toast = it }
+                        overlays.menuFor = null
+                        message?.let { overlays.toast = it }
                     },
                 )
             }
         }
 
         SadoraBottomSheet(
-            visible = showCompose,
+            visible = overlays.showCompose,
             title = communityStrings.newPost,
-            onDismiss = { showCompose = false },
+            onDismiss = { overlays.showCompose = false },
         ) {
             ComposePostSheetContent(
                 state = state,
                 onPosted = {
-                    showCompose = false
-                    toast = communityStrings.postSent
+                    overlays.showCompose = false
+                    overlays.toast = communityStrings.postSent
                 },
             )
         }
 
         SadoraBottomSheet(
-            visible = showWaterSheet,
+            visible = overlays.showWaterSheet,
             title = waterStrings.addWaterTitle,
-            onDismiss = { showWaterSheet = false },
+            onDismiss = { overlays.showWaterSheet = false },
         ) {
             Row(
                 Modifier.fillMaxWidth(),
@@ -503,39 +512,35 @@ private fun RootTab(
     tab: Tab,
     state: AppState,
     navigator: Navigator,
-    controller: SadoraController,
+    controllers: AppControllers,
     onAddWater: () -> Unit,
-    insights: InsightsController,
-    health: HealthController,
-    ai: AiController,
-    learn: LearnController,
 ) {
     when (tab) {
         Tab.Today -> {
             // A new line on every entry to the tab — that is the feature, so it is asked
             // for here rather than once per session.
-            LaunchedEffect(Unit) { ai.loadGreeting() }
+            LaunchedEffect(Unit) { controllers.ai.loadGreeting() }
             TodayScreen(
                 state = state,
                 onOpen = navigator::push,
                 onSelectTab = navigator::select,
                 onAddWater = onAddWater,
-                greeting = ai.greeting,
-                health = health,
-                insights = insights,
-                learn = learn,
+                greeting = controllers.ai.greeting,
+                health = controllers.health,
+                insights = controllers.insights,
+                learn = controllers.learn,
             )
         }
 
         Tab.Mind -> MindScreen(
             state = state,
-            insights = insights,
+            insights = controllers.insights,
             onClose = null,
             onOpenAi = { navigator.push(state.aiRoute()) },
             onOpenJournal = { navigator.push(Route.MindJournal) },
         )
 
-        Tab.Journey -> JourneyScreen(state = state, health = health, onOpen = navigator::push)
+        Tab.Journey -> JourneyScreen(state = state, health = controllers.health, onOpen = navigator::push)
 
         Tab.Nutrition -> NutritionScreen(
             state = state,
@@ -543,12 +548,13 @@ private fun RootTab(
             onAddWater = onAddWater,
         )
 
-        Tab.Profile -> ProfileScreen(
+        Tab.Premium -> PremiumScreen(
             state = state,
-            controller = controller,
-            health = health,
-            onOpen = navigator::push,
-            onSignedOut = { navigator.goTo(AppPhase.SignIn) },
+            controller = controllers.account,
+            onOpen = { route ->
+                if (route == Route.Paywall) controllers.analytics.event(AnalyticsEvents.PAYWALL_OPENED, mapOf("from" to "premium_tab"))
+                navigator.push(route)
+            },
         )
     }
 }
@@ -558,27 +564,23 @@ private fun PushedScreen(
     route: Route,
     state: AppState,
     navigator: Navigator,
-    controller: SadoraController,
-    health: HealthController,
-    community: CommunityController,
-    ai: AiController,
-    insights: InsightsController,
-    learn: LearnController,
-    billing: BillingController,
-    rewards: RewardsController,
-    onSymptomSheet: () -> Unit,
-    onOpenComments: (CommunityPost) -> Unit,
-    onOpenPostMenu: (CommunityPost) -> Unit,
-    onCompose: () -> Unit,
+    controllers: AppControllers,
+    overlays: ShellOverlays,
+    toast: (String) -> Unit,
 ) {
     val close = navigator::pop
-    val upgrade = { navigator.push(Route.Paywall) }
+    val upgrade = {
+        controllers.analytics.event(AnalyticsEvents.PAYWALL_OPENED, mapOf("from" to (route::class.simpleName ?: "route")))
+        navigator.push(Route.Paywall)
+    }
     val scope = rememberCoroutineScope()
+    val health = controllers.health
+    val insights = controllers.insights
 
     when (route) {
         // Cycle
         Route.CycleCalendar -> CycleCalendarScreen(state, health, navigator::push, close)
-        is Route.CycleDay -> CycleDayScreen(state, health, route.date, onSymptomSheet, close)
+        is Route.CycleDay -> CycleDayScreen(state, health, route.date, { overlays.showSymptomSheet = true }, close)
 
         // Pregnancy
         Route.PregnancyAppointments -> PregnancyAppointmentsScreen(health, close)
@@ -589,7 +591,7 @@ private fun PushedScreen(
         Route.StageSleepMood -> StageSleepMoodScreen(state, health, insights, onOpen = { navigator.push(it) }, onClose = close)
 
         // AI — the chat is drawn on the deck's navy whatever the app theme is.
-        Route.AiChat -> SadoraDarkSurface { AiChatScreen(state, ai, close) }
+        Route.AiChat -> SadoraDarkSurface { AiChatScreen(state, controllers.ai, close) }
         Route.AiPreview -> AiFreePreviewScreen(onUpgrade = upgrade, onDismiss = close)
 
         // Nutrition: camera -> analysing -> result is one linear flow, so each step
@@ -607,36 +609,53 @@ private fun PushedScreen(
         Route.Medications -> MedicationsScreen(state, close, navigator::push)
         Route.AddMedication -> AddMedicationScreen(health, close)
         Route.MedicationHistory -> MedicationHistoryScreen(health, close)
-        Route.Sleep -> SleepScreen(state, health, insights, close)
+        Route.Sleep -> SleepScreen(state, health, insights, close, onToast = toast)
         Route.Insights -> InsightsScreen(state, insights, close, upgrade)
-        Route.Knowledge -> KnowledgeScreen(state, learn, close, navigator::push)
-        is Route.Article -> ArticleScreen(route.slug, learn, close, upgrade)
-        Route.DataSources -> DataSourcesScreen(health, close)
+        Route.Knowledge -> KnowledgeScreen(state, controllers.learn, close, navigator::push)
+        is Route.Article -> ArticleScreen(route.slug, controllers.learn, close, upgrade)
+        Route.DataSources -> DataSourcesScreen(controllers.wearables, health, close, onToast = toast)
 
-        // Nur.
-        Route.Rewards -> RewardsScreen(state, rewards, close, navigator::push)
+        // Gul.
+        Route.Rewards -> RewardsScreen(state, controllers.rewards, close, navigator::push)
         Route.Shop -> ShopScreen(
             state = state,
-            rewards = rewards,
+            rewards = controllers.rewards,
             onClose = close,
             // Premium bought with coins changes the tier, and half the app reads it.
-            onPremiumGranted = { scope.launch { controller.refreshEntitlements() } },
+            onPremiumGranted = {
+                controllers.analytics.event(AnalyticsEvents.PREMIUM_GRANTED, mapOf("via" to "coins"))
+                scope.launch { controllers.account.refreshEntitlements() }
+            },
         )
-        Route.Referral -> ReferralScreen(rewards, close)
-        Route.HomeLayout -> HomeLayoutScreen(state, rewards, close)
+        Route.Referral -> ReferralScreen(controllers.rewards, close)
+        Route.HomeLayout -> HomeLayoutScreen(state, controllers.rewards, close)
         Route.SecretChat -> SecretChatScreen(
             state = state,
-            community = community,
-            onOpenComments = onOpenComments,
-            onOpenMenu = onOpenPostMenu,
-            onCompose = onCompose,
+            community = controllers.community,
+            onOpenComments = { overlays.commentsFor = it },
+            onOpenMenu = { overlays.menuFor = it },
+            onCompose = { overlays.showCompose = true },
             onClose = close,
         )
+
+        // Her account, behind the avatar in the home header.
+        Route.Profile -> ProfileScreen(
+            state = state,
+            controller = controllers.account,
+            health = health,
+            onOpen = { if (it == Route.Paywall) upgrade() else navigator.push(it) },
+            onSignedOut = {
+                state.clearDeviceData()
+                navigator.goTo(AppPhase.SignIn)
+            },
+            onClose = close,
+        )
+        Route.ShareProfile -> ShareProfileScreen(controllers.share, close, onToast = toast)
 
         // The same documents onboarding shows, reachable again from settings.
         Route.Terms -> LegalScreen(LegalDocument.Terms, close)
         Route.PrivacyPolicy -> LegalScreen(LegalDocument.Privacy, close)
-        Route.Paywall -> PaywallScreen(state, controller, billing, close)
+        Route.Paywall -> PaywallScreen(state, controllers.account, controllers.billing, close)
 
         // Settings detail screens reuse the existing surfaces they configure.
         Route.PersonalDetails,
@@ -649,10 +668,13 @@ private fun PushedScreen(
         -> SettingsDetailScreen(
             route = route,
             state = state,
-            controller = controller,
+            controller = controllers.account,
+            notifications = controllers.notifications,
+            share = controllers.share,
             onClose = close,
             onOpen = navigator::push,
             onSignedOut = { navigator.goTo(AppPhase.SignIn) },
+            onToast = toast,
         )
     }
 }

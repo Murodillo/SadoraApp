@@ -27,7 +27,7 @@ import uz.sadora.app.nav.Route
 import uz.sadora.app.ui.components.AnimatedNumber
 import uz.sadora.app.ui.components.ButtonTone
 import uz.sadora.app.ui.components.CardLabel
-import uz.sadora.app.ui.components.NurMark
+import uz.sadora.app.ui.components.GulMark
 import uz.sadora.app.ui.components.ProgressRing
 import uz.sadora.app.ui.components.SadoraButton
 import uz.sadora.app.ui.components.SadoraCard
@@ -42,7 +42,7 @@ import uz.sadora.contract.EarnRate
 import uz.sadora.contract.StreakStatus
 
 /**
- * The Nur wallet: what she has, how the streak is going, and every coin that moved.
+ * The Gul wallet: what she has, how the streak is going, and every coin that moved.
  *
  * The history is the important half. A currency whose balance cannot be explained is a
  * number the app is asking her to trust, and this screen is the answer to "where did
@@ -139,7 +139,7 @@ private fun BalanceCard(balance: Int, earned: Int, spent: Int) {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
         ) {
-            NurMark(size = 34.dp)
+            GulMark(size = 34.dp)
             AnimatedNumber(
                 value = balance,
                 style = Sadora.type.h1,
@@ -246,7 +246,7 @@ private fun EarnRatesCard(rates: List<EarnRate>) {
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
-                    NurMark(size = 14.dp)
+                    GulMark(size = 14.dp)
                     Text(
                         "+${Fmt.int(rate.amount)}",
                         style = Sadora.type.body.copy(fontWeight = FontWeight.SemiBold),
@@ -336,7 +336,7 @@ fun StreakWidget(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(5.dp),
             ) {
-                NurMark(size = 20.dp)
+                GulMark(size = 20.dp)
                 AnimatedNumber(
                     value = state.coins,
                     style = Sadora.type.h3,

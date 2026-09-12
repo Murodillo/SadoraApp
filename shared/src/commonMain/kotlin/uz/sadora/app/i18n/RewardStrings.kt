@@ -3,7 +3,7 @@ package uz.sadora.app.i18n
 import uz.sadora.contract.ShopKind
 
 /**
- * Nur, the streak, the shop and the invite screen.
+ * Gul, the streak, the shop and the invite screen.
  *
  * In its own file rather than in [Strings] because it is a whole section of the product
  * and the main file is already long — but under the same rule: these are interfaces, so
@@ -13,7 +13,7 @@ import uz.sadora.contract.ShopKind
  * everywhere the balance is drawn. Renaming the currency is an edit to three lines.
  */
 interface RewardStrings {
-    /** The currency's name — "Nur". Everything else reads off this. */
+    /** The currency's name — "Gul". Everything else reads off this. */
     val coinName: String
 
     /** "1 200 nur" — a balance with its unit, already formatted. */
@@ -82,7 +82,7 @@ interface RewardStrings {
     val referralFairUse: String
 }
 
-/** The Nur shop: Premium, vitamins and devices. */
+/** The Gul shop: Premium, vitamins and devices. */
 interface ShopStrings {
     val title: String
     val subtitle: String

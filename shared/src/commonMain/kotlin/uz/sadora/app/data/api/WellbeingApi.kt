@@ -4,7 +4,13 @@ import io.ktor.client.request.setBody
 import uz.sadora.app.data.ApiCaller
 import uz.sadora.app.data.ApiResult
 import uz.sadora.app.data.HttpMethodKind
+import uz.sadora.contract.Ack
+import uz.sadora.contract.ConnectStart
 import uz.sadora.contract.DailyHealth
+import uz.sadora.contract.HealthProvider
+import uz.sadora.contract.ProviderInfo
+import uz.sadora.contract.SyncResult
+import uz.sadora.contract.WearableConnection
 import uz.sadora.contract.DailyHealthRange
 import uz.sadora.contract.IngestResult
 import uz.sadora.contract.IngestSamplesRequest
@@ -44,4 +50,24 @@ class WearableApi(private val caller: ApiCaller) {
 
     suspend fun sources(): ApiResult<List<ProviderStatus>> =
         caller.authenticated("v1/health-data/sources", HttpMethodKind.GET)
+
+    // ---- cloud providers: an OAuth grant the server keeps, and pulls on
+
+    suspend fun providers(): ApiResult<List<ProviderInfo>> =
+        caller.authenticated("v1/wearables/providers", HttpMethodKind.GET)
+
+    suspend fun connections(): ApiResult<List<WearableConnection>> =
+        caller.authenticated("v1/wearables/connections", HttpMethodKind.GET)
+
+    /** The URL to open in the browser. The state inside it is the server's, checked on return. */
+    suspend fun connect(provider: HealthProvider): ApiResult<ConnectStart> =
+        caller.authenticated("v1/wearables/${provider.wirePath()}/connect", HttpMethodKind.POST)
+
+    suspend fun disconnect(provider: HealthProvider): ApiResult<Ack> =
+        caller.authenticated("v1/wearables/${provider.wirePath()}", HttpMethodKind.DELETE)
+
+    suspend fun sync(provider: HealthProvider): ApiResult<SyncResult> =
+        caller.authenticated("v1/wearables/${provider.wirePath()}/sync", HttpMethodKind.POST)
+
+    private fun HealthProvider.wirePath(): String = name.lowercase()
 }

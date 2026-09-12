@@ -66,7 +66,7 @@ export function UserCardPage() {
           [
             ['general', 'Umumiy'],
             ['subscription', 'Obuna'],
-            ['rewards', 'Nur'],
+            ['rewards', 'Gul'],
             ['technical', 'Texnik'],
           ] as [Tab, string][]
         ).map(([key, label]) => (
@@ -215,7 +215,7 @@ function Row({ label, value, mono }: { label: string; value: React.ReactNode; mo
 }
 
 /**
- * The Nur half of a user's card.
+ * The Gul half of a user's card.
  *
  * Loaded only when the tab is opened: most support conversations are not about coins,
  * and a card that fetched every domain up front would be four requests for one answer.

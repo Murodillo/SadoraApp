@@ -68,7 +68,7 @@ import uz.sadora.app.ui.components.noRippleClickable
 import uz.sadora.app.ui.components.pressable
 import uz.sadora.app.ui.modules.StreakWidget
 import uz.sadora.contract.HomeWidgets
-import uz.sadora.app.model.DailyStepGoal
+import uz.sadora.app.model.goalRatio
 import uz.sadora.app.model.DailySleepGoalMinutes
 
 /**
@@ -198,7 +198,7 @@ private fun TodayHeader(
         GreetingHeader(
             greeting = "",
             name = state.name,
-            onAvatarClick = { onOpen(Route.PersonalDetails) },
+            onAvatarClick = { onOpen(Route.Profile) },
             onNotificationsClick = { onOpen(Route.Notifications) },
             hasUnread = state.medications.any { it.status == MedStatus.Pending },
         )
@@ -394,8 +394,11 @@ internal fun ruleSummary(state: AppState, t: TodayStrings, common: CommonStrings
 }
 
 /** What the Premium card says on Today. Stands in for the AI daily summary. */
-private fun premiumSummary(state: AppState, t: TodayStrings, common: CommonStrings): String =
-    t.sleptAndEnergy(state.sleepLabel(format = common::hoursMinutes), state.energy >= 4) + " " + t.generalAdvice
+private fun premiumSummary(state: AppState, t: TodayStrings, common: CommonStrings): String {
+    // A night nobody measured is not "you slept —": the sentence is left out, not filled.
+    val sleep = state.sleepMinutes?.let { t.sleptAndEnergy(state.sleepLabel(it, common::hoursMinutes), state.energy >= 4) + " " }
+    return sleep.orEmpty() + t.generalAdvice
+}
 
 /**
  * t.plan — the deck's checklist of what today still asks for.
@@ -546,7 +549,13 @@ private fun HealthScoreCard(
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
                     SignalTile(t.water, "${Fmt.litres(state.waterMl)} ${strings.common.litres}", Modifier.weight(1f), onClick = onAddWater)
-                    SignalTile(t.steps, Fmt.int(state.steps), Modifier.weight(1f), onClick = onOpenBalance)
+                    // A strap that counts no steps shows its strain instead; a phone with
+                    // no device at all shows a dash rather than a number nobody measured.
+                    if (state.steps == null && state.strain != null) {
+                        SignalTile(strings.modules.strain, Fmt.oneDecimal(state.strain!!.toFloat()), Modifier.weight(1f), onClick = onOpenBalance)
+                    } else {
+                        SignalTile(t.steps, state.stepsLabel(), Modifier.weight(1f), onClick = onOpenBalance)
+                    }
                 }
             }
         }
@@ -598,15 +607,17 @@ private fun SignalTile(
  * is a summary of what was logged today.
  */
 internal fun healthScore(state: AppState): Int {
-    fun ratio(value: Int, goal: Int): Float =
-        if (goal <= 0) 0f else (value / goal.toFloat()).coerceIn(0f, 1f)
-
-    val sleep = ratio(state.sleepMinutes, DailySleepGoalMinutes)
-    val water = ratio(state.waterMl, state.waterGoalMl)
-    val steps = ratio(state.steps, DailyStepGoal)
     // Mood runs 1..5; a neutral day should not read as a failing quarter.
     val mood = ((state.mood.score - 1) / 4f).coerceIn(0f, 1f)
-    return ((sleep + water + steps + mood) / 4f * 100f).toInt().coerceIn(0, 100)
+    // Signals nobody measured are left out rather than counted as zero: a phone with
+    // no watch scores on water and mood, not on a night it knows nothing about.
+    val parts = listOfNotNull(
+        state.sleepMinutes?.let { goalRatio(it, DailySleepGoalMinutes) },
+        goalRatio(state.waterMl, state.waterGoalMl),
+        state.activityRatio(),
+        mood,
+    )
+    return (parts.average() * 100f).toInt().coerceIn(0, 100)
 }
 
 

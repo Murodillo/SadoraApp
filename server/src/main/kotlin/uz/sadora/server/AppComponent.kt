@@ -72,7 +72,14 @@ import uz.sadora.server.user.AccountErasureJob
 import uz.sadora.server.user.UserRepository
 import uz.sadora.server.wearable.WearableRepository
 import uz.sadora.server.wearable.WearableService
+import uz.sadora.server.wearable.ConnectionRepository
+import uz.sadora.server.wearable.WearableConnectService
+import uz.sadora.server.wearable.WearableSyncJob
+import uz.sadora.server.wearable.whoop.WhoopClient
+import uz.sadora.server.core.TokenCipher
 import uz.sadora.server.user.UserService
+import uz.sadora.server.share.ShareRepository
+import uz.sadora.server.share.ShareService
 
 /**
  * Wiring, by hand.
@@ -177,6 +184,23 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
     )
     val medicationService = MedicationService(medicationRepository, healthAccess, rewardsService)
     val wearableService = WearableService(wearableRepository, healthAccess)
+
+    /**
+     * Cloud wearables. WHOOP exists as a client only when its credentials do, the same
+     * rule as the payment providers: an unconfigured provider is listed as unavailable,
+     * never as a button that starts a flow with nowhere to return to.
+     */
+    val connectionRepository = ConnectionRepository()
+    val wearableConnectService = WearableConnectService(
+        connections = connectionRepository,
+        wearables = wearableService,
+        access = healthAccess,
+        audit = auditService,
+        cipher = TokenCipher.from(config.wearables.tokenKey, fallbackSecret = config.jwt.secret),
+        whoopConfig = config.wearables.whoop,
+        whoop = if (config.wearables.whoop.isConfigured) WhoopClient(outboundHttpClient, config.wearables.whoop) else null,
+    )
+    val wearableSyncJob = WearableSyncJob(wearableConnectService)
 
     val notificationRepository = NotificationRepository()
     val notificationService = NotificationService(notificationRepository)
@@ -283,6 +307,24 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
         usage = aiUsageRepository,
     )
 
+    /**
+     * The QR code she shows a doctor. Reads through the health services rather than the
+     * repositories, so the page is subject to exactly the same access rules as the app.
+     */
+    val shareRepository = ShareRepository()
+    val shareService = ShareService(
+        shares = shareRepository,
+        users = userRepository,
+        health = healthService,
+        mind = mindRepository,
+        medications = medicationService,
+        appointments = appointmentRepository,
+        nutrition = nutritionRepository,
+        wearables = wearableService,
+        audit = auditService,
+        publicBaseUrl = config.publicBaseUrl,
+    )
+
     val billingRepository = BillingRepository()
     val billingService = BillingService(
         repository = billingRepository,
@@ -318,6 +360,7 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
 
     override fun close() {
         notificationScheduler.stop()
+        wearableSyncJob.stop()
         accountErasureJob.stop()
         outboundHttpClient.close()
         cache.close()

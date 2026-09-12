@@ -8,15 +8,19 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import uz.sadora.app.design.SadoraIcons
 
 /**
- * The five root destinations, in the order the deck's tab bar draws them:
- * home, mind, cycle, nutrition, profile.
+ * The five root destinations, in the order the tab bar draws them:
+ * home, mind, cycle, nutrition, premium.
+ *
+ * Profile used to be the fifth tab. It is a settings screen — something she opens a
+ * few times a month — and it now sits behind the avatar in the home header, which gave
+ * the bar a slot for the one section the product is asking her to look at.
  */
 enum class Tab(val icon: ImageVector) {
     Today(SadoraIcons.Home),
     Mind(SadoraIcons.Heart),
     Journey(SadoraIcons.Journey),
     Nutrition(SadoraIcons.Apple),
-    Profile(SadoraIcons.Profile),
+    Premium(SadoraIcons.Sparkle),
 }
 
 /** Screens pushed on top of a tab. */
@@ -56,13 +60,17 @@ sealed interface Route {
     data object Paywall : Route
     data object SecretChat : Route
 
-    // Nur — the wallet, the shop and the invite screen.
+    // Gul — the wallet, the shop and the invite screen.
     data object Rewards : Route
     data object Shop : Route
     data object Referral : Route
 
     /** Which cards Today draws, and in what order. */
     data object HomeLayout : Route
+
+    // Her account: the screen that was the fifth tab, and the QR code for a doctor.
+    data object Profile : Route
+    data object ShareProfile : Route
 
     // Settings
     data object PersonalDetails : Route
@@ -91,6 +99,68 @@ val Route.isFullScreen: Boolean
  */
 fun uz.sadora.app.model.AppState.aiRoute(): Route =
     if (isPremium) Route.AiChat else Route.AiPreview
+
+/**
+ * A link the app was opened with, from outside.
+ *
+ * Two so far: an invite code from a shared link, and the return from a wearable
+ * provider's consent page. Parsed in one place so both platforms read a URL the same
+ * way, and so a wearable return can never be mistaken for an invite code — which the
+ * Android entry point used to do by taking the last path segment of anything.
+ */
+sealed interface AppLink {
+    data class Invite(val code: String) : AppLink
+    data class WearableReturn(val provider: String, val ok: Boolean) : AppLink
+
+    companion object {
+        /**
+         * `https://sadora.uz/r/K7M2QP`, `sadora://invite/K7M2QP`, and
+         * `sadora://wearables/whoop?status=ok`. Anything else is nothing.
+         */
+        fun parse(url: String): AppLink? {
+            val withoutQuery = url.substringBefore('?')
+            val query = url.substringAfter('?', "")
+            val path = withoutQuery.substringAfter("://", "").trimEnd('/')
+            val segments = path.split('/').filter { it.isNotBlank() }
+            if (segments.isEmpty()) return null
+            return when {
+                segments[0].equals("wearables", ignoreCase = true) && segments.size >= 2 -> AppLink.WearableReturn(
+                    provider = segments[1].lowercase(),
+                    ok = query.split('&').any { it.equals("status=ok", ignoreCase = true) },
+                )
+                segments[0].equals("invite", ignoreCase = true) || segments.getOrNull(1) == "r" ||
+                    (segments.size >= 2 && segments[segments.size - 2].equals("r", ignoreCase = true)) -> {
+                    val raw = segments.last().uppercase().filter(Char::isLetterOrDigit)
+                    raw.takeIf { it.length in 4..16 }?.let(AppLink::Invite)
+                }
+                else -> null
+            }
+        }
+    }
+}
+
+/**
+ * The link the platform received, waiting for the app to act on it.
+ *
+ * A single slot rather than a queue: a second link before the first is consumed replaces
+ * it, which is what she meant by tapping it. The platform writes, the shell reads and
+ * clears — and because it is Compose state, a link that arrives while the app is already
+ * open is acted on without a restart.
+ */
+object AppLinks {
+    var pending by mutableStateOf<AppLink?>(null)
+        private set
+
+    fun offer(url: String) {
+        AppLink.parse(url)?.let { pending = it }
+    }
+
+    fun offer(link: AppLink?) {
+        if (link != null) pending = link
+    }
+
+    fun consume(): AppLink? = pending.also { pending = null }
+}
 
 /** Where the app is before the main tabs take over. */
 sealed interface AppPhase {

@@ -94,7 +94,7 @@ fun SleepWidget(
             }
         }
         SadoraProgressBar(
-            progress = (minutes / uz.sadora.app.model.DailySleepGoalMinutes.toFloat()).coerceIn(0f, 1f),
+            progress = ((minutes ?: 0) / uz.sadora.app.model.DailySleepGoalMinutes.toFloat()).coerceIn(0f, 1f),
             height = 6.dp,
         )
     }

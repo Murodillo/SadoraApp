@@ -22,7 +22,7 @@ import uz.sadora.server.entitlement.EntitlementService
 import uz.sadora.server.entitlement.SubscriptionRepository
 
 /**
- * Spending Nur.
+ * Spending Gul.
  *
  * Premium is the only thing this server can actually deliver, and it does: the days are
  * granted the moment the coins are spent. A vitamin or a device belongs to a partner, so
@@ -54,7 +54,7 @@ class ShopService(
     /**
      * Takes the coins and issues the code.
      *
-     * Every refusal is its own error so the app can say which one it is: not enough Nur
+     * Every refusal is its own error so the app can say which one it is: not enough Gul
      * reads differently from a product that has just gone out of stock, and a paywall is
      * the wrong screen for both.
      */
@@ -64,7 +64,7 @@ class ShopService(
 
         val balance = rewards.balance(userId)
         if (balance.balance < product.coinCost) {
-            throw ValidationException("coins", "Nur yetarli emas")
+            throw ValidationException("coins", "Gul yetarli emas")
         }
 
         val expiresAt = if (product.kind == ShopKind.PREMIUM) null else now() + CODE_VALIDITY
@@ -76,7 +76,7 @@ class ShopService(
         val spent = rewards.spend(userId, product.coinCost, redemption.id)
         if (spent == null) {
             shop.setStatus(Uuid.parse(redemption.id), RedemptionStatus.CANCELLED)
-            throw ValidationException("coins", "Nur yetarli emas")
+            throw ValidationException("coins", "Gul yetarli emas")
         }
 
         var premiumGranted = false

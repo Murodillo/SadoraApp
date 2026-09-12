@@ -54,6 +54,16 @@ object AuditActions {
     const val SHOP_PRODUCT_UPDATED = "shop.product_updated"
     const val SHOP_PRODUCT_DELETED = "shop.product_deleted"
     const val SHOP_PRODUCT_DEACTIVATED = "shop.product_deactivated"
+
+    // A share is her health record leaving the app, so making, opening and revoking one
+    // are all answerable — she can see on her phone when a doctor opened it.
+    const val SHARE_CREATED = "share.created"
+    const val SHARE_VIEWED = "share.viewed"
+    const val SHARE_REVOKED = "share.revoked"
+
+    // A cloud wearable is a standing grant to pull data from a third party.
+    const val WEARABLE_CONNECTED = "wearable.connected"
+    const val WEARABLE_DISCONNECTED = "wearable.disconnected"
 }
 
 data class AuditEntry(

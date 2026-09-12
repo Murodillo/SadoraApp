@@ -1,7 +1,9 @@
 package uz.sadora.app.data
 
 import uz.sadora.app.model.AppLanguage
+import kotlinx.datetime.TimeZone
 import kotlinx.datetime.daysUntil
+import kotlinx.datetime.toLocalDateTime
 import uz.sadora.app.model.AppState
 import uz.sadora.app.model.deviceToday
 import uz.sadora.app.model.BirthControl
@@ -48,6 +50,7 @@ fun AppState.applyServerProfile(profile: UserProfile, entitlements: Entitlements
     profile.weightKg?.let { weightKg = it.toString() }
     profile.language.toAppLanguage()?.let { language = it }
     hasWearable = profile.hasWearable
+    memberSince = profile.createdAt.toLocalDateTime(TimeZone.currentSystemDefault()).date
     profile.lifeStage.toAppLifeStage()?.let { lifeStage = it }
 
     goals.clear()

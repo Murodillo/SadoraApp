@@ -53,7 +53,8 @@ private val BarSpring = spring<Float>(dampingRatio = 0.72f, stiffness = Spring.S
 private val BarSpringDp = spring<Dp>(dampingRatio = 0.72f, stiffness = Spring.StiffnessMediumLow)
 
 /**
- * The five-tab bar from the deck: a floating white pill with five icons on it.
+ * The five-tab bar from the deck: a floating white pill with five icons on it —
+ * home, mind, the stage, nutrition and Premium.
  *
  * The selected tab sits on a lavender pill that slides between slots on a spring, so
  * the movement itself says which way the selection went, and its label fades in under
@@ -121,7 +122,7 @@ fun SadoraBottomNav(
                             Tab.Mind -> t.tabs.mind
                             Tab.Journey -> journeyLabel
                             Tab.Nutrition -> t.tabs.nutrition
-                            Tab.Profile -> t.tabs.profile
+                            Tab.Premium -> t.tabs.premium
                         },
                         selected = selected == tab,
                         onClick = { onSelect(tab) },

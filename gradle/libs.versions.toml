@@ -14,6 +14,7 @@ junit = "4.13.2"
 kotlin = "2.4.10"
 material3 = "1.11.0-alpha07"
 firebase-bom = "34.19.0"
+qrose = "1.1.2"
 googleServices = "4.5.0"
 
 # --- backend / contract ---
@@ -49,6 +50,8 @@ compose-components-resources = { module = "org.jetbrains.compose.components:comp
 compose-uiToolingPreview = { module = "org.jetbrains.compose.ui:ui-tooling-preview", version.ref = "composeMultiplatform" }
 firebase-bom = { module = "com.google.firebase:firebase-bom", version.ref = "firebase-bom" }
 firebase-messaging = { module = "com.google.firebase:firebase-messaging" }
+firebase-analytics = { module = "com.google.firebase:firebase-analytics" }
+qrose = { module = "io.github.alexzhirkevich:qrose", version.ref = "qrose" }
 
 # --- contract (shared DTOs, KMP) ---
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }

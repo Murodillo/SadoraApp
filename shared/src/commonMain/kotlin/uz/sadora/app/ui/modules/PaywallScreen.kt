@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -42,7 +41,6 @@ import uz.sadora.app.model.AppState
 import uz.sadora.app.ui.components.CardLabel
 import uz.sadora.app.ui.components.PremiumCtaButton
 import uz.sadora.app.ui.components.SadoraCard
-import uz.sadora.app.ui.components.SadoraDivider
 import uz.sadora.app.ui.components.ScreenContent
 import uz.sadora.app.ui.components.Skeleton
 import uz.sadora.contract.BillingPeriod
@@ -50,20 +48,6 @@ import uz.sadora.contract.BillingPlan
 import uz.sadora.contract.PaymentProvider
 import uz.sadora.app.ui.components.noRippleClickable
 import uz.sadora.app.data.readable
-
-private data class PlanFeature(val name: String, val free: String, val premium: String)
-
-/** The comparison table, built per language because every row of it is read. */
-@Composable
-private fun planFeatures(): List<PlanFeature> = strings.modules.let {
-    listOf(
-        PlanFeature(it.featureCycleMood, "✓", "✓"),
-        PlanFeature(it.featureFoodDiary, "✓", "✓"),
-        PlanFeature(it.featureAiChat, "—", "20/kun"),
-        PlanFeature(it.featureScanner, "—", "30/oy"),
-        PlanFeature(it.featureLongInsights, "—", "✓"),
-    )
-}
 
 /**
  * t.premiumTitle.
@@ -155,60 +139,7 @@ fun PaywallScreen(
                 }
             }
 
-            item {
-                SadoraCard(padding = Spacing.sm) {
-                    Row(Modifier.fillMaxWidth()) {
-                        Text(
-                            t.featureCaps,
-                            style = Sadora.type.caption,
-                            color = c.muted,
-                            modifier = Modifier.weight(1f),
-                        )
-                        Text(
-                            t.freeCaps,
-                            style = Sadora.type.caption,
-                            color = c.muted,
-                            modifier = Modifier.width(64.dp),
-                            textAlign = TextAlign.Center,
-                        )
-                        Text(
-                            t.premiumCapsBadge,
-                            style = Sadora.type.caption,
-                            color = c.textAccent,
-                            modifier = Modifier.width(64.dp),
-                            textAlign = TextAlign.Center,
-                        )
-                    }
-                    SadoraDivider()
-                    planFeatures().forEach { feature ->
-                        Row(
-                            Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Text(
-                                feature.name,
-                                style = Sadora.type.body,
-                                color = c.text,
-                                modifier = Modifier.weight(1f),
-                            )
-                            Text(
-                                feature.free,
-                                style = Sadora.type.body,
-                                color = c.muted,
-                                modifier = Modifier.width(64.dp),
-                                textAlign = TextAlign.Center,
-                            )
-                            Text(
-                                feature.premium,
-                                style = Sadora.type.body.copy(fontWeight = FontWeight.SemiBold),
-                                color = c.text,
-                                modifier = Modifier.width(64.dp),
-                                textAlign = TextAlign.Center,
-                            )
-                        }
-                    }
-                }
-            }
+            item { PremiumComparison() }
 
             if (catalogue == null) {
                 item {

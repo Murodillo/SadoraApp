@@ -25,6 +25,8 @@ import uz.sadora.app.data.SadoraGraph
 import uz.sadora.app.data.SessionState
 import uz.sadora.app.push.PushNotifications
 import uz.sadora.app.push.PushRegistration
+import uz.sadora.app.analytics.FirebaseAnalyticsTracker
+import uz.sadora.app.nav.AppLinks
 
 class MainActivity : ComponentActivity() {
 
@@ -54,6 +56,7 @@ class MainActivity : ComponentActivity() {
             // The launcher icon follows the streak, which needs a Context to switch the
             // manifest's aliases — so it is built here alongside the token storage.
             icons = AndroidAppIcons(applicationContext),
+            analytics = FirebaseAnalyticsTracker(applicationContext),
         )
     }
 
@@ -73,9 +76,19 @@ class MainActivity : ComponentActivity() {
         PushNotifications.ensureChannel(this)
         followSessionForPush()
 
+        // The link the app was opened with, if any. Offered to the shared code rather
+        // than parsed here, so an invite and a wearable return are read by one rule.
+        intent?.dataString?.let(AppLinks::offer)
+
         setContent {
-            App(graph, inviteCode = intent?.let(::inviteCodeOf))
+            App(graph)
         }
+    }
+
+    /** A link tapped while the app is already open — the browser sending her back. */
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        if (intent.action == Intent.ACTION_VIEW) intent.dataString?.let(AppLinks::offer)
     }
 
     /**
@@ -100,24 +113,6 @@ class MainActivity : ComponentActivity() {
         val granted = ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) ==
             PackageManager.PERMISSION_GRANTED
         if (!granted) notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
-    }
-
-    /**
-     * The code out of an invite link.
-     *
-     * Two shapes reach here: `https://sadora.uz/r/K7M2QP` from a shared link, and
-     * `sadora://invite/K7M2QP` from a channel that does not turn URLs into links. Both
-     * end with the code as the last path segment, so both are read the same way.
-     *
-     * Anything that is not a plausible code is dropped rather than passed on — a link
-     * with a tracking suffix on it must not become an invite code the server has to
-     * refuse.
-     */
-    private fun inviteCodeOf(intent: Intent): String? {
-        if (intent.action != Intent.ACTION_VIEW) return null
-        val segment = intent.data?.lastPathSegment ?: intent.data?.host ?: return null
-        val code = segment.uppercase().filter(Char::isLetterOrDigit)
-        return code.takeIf { it.length in 4..16 }
     }
 
     override fun onDestroy() {

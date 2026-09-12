@@ -47,6 +47,17 @@
             android:name="com.google.firebase.messaging.default_notification_channel_id"
             android:value="@string/push_channel_id" />
 
+        <!-- Analytics collection starts off and is switched on in code only once she has
+             ticked the analytics consent. Screen views are logged by the shared code on
+             route changes, so Firebase's Activity-based automatic reporting is off — a
+             single-Activity app would otherwise report one screen forever. -->
+        <meta-data android:name="firebase_analytics_collection_enabled" android:value="false" />
+        <meta-data android:name="google_analytics_automatic_screen_reporting_enabled" android:value="false" />
+        <meta-data android:name="google_analytics_default_allow_ad_storage" android:value="false" />
+        <meta-data android:name="google_analytics_default_allow_ad_user_data" android:value="false" />
+        <meta-data android:name="google_analytics_default_allow_ad_personalization_signals" android:value="false" />
+        <meta-data android:name="google_analytics_default_allow_analytics_storage" android:value="false" />
+
         <!--
             The activity itself is NOT the launcher entry. The three aliases below are,
             exactly one of them enabled at a time, and that is what lets the icon change
@@ -58,6 +69,7 @@
         -->
         <activity
             android:exported="true"
+            android:launchMode="singleTop"
             android:name=".MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -83,6 +95,16 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="sadora" android:host="invite" />
+            </intent-filter>
+
+            <!-- The return from a wearable provider's consent page in the browser:
+                 sadora://wearables/whoop?status=ok. singleTop below is what makes it
+                 arrive in onNewIntent of the running app instead of a second copy. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="sadora" android:host="wearables" />
             </intent-filter>
         </activity>
 

@@ -39,7 +39,7 @@ import uz.sadora.app.ui.components.CoinPill
 import uz.sadora.app.ui.components.DisclaimerNote
 import uz.sadora.app.ui.components.EmojiTile
 import uz.sadora.app.ui.components.ErrorStrip
-import uz.sadora.app.ui.components.NurMark
+import uz.sadora.app.ui.components.GulMark
 import uz.sadora.app.ui.components.PillButton
 import uz.sadora.app.ui.components.SadoraBadge
 import uz.sadora.app.ui.components.SadoraBottomSheet
@@ -57,10 +57,10 @@ import uz.sadora.contract.ShopKind
 import uz.sadora.contract.ShopProduct
 
 /**
- * The Nur shop.
+ * The Gul shop.
  *
  * Three sections and one honest boundary. Premium is delivered by the app the moment
- * the coins are spent; a vitamin or a device is a partner's product and what Nur buys
+ * the coins are spent; a vitamin or a device is a partner's product and what Gul buys
  * is a discount on it. The card therefore shows the price twice — before and after —
  * because a "15%" with nothing to apply it to would be a number pretending to be an
  * offer.
@@ -266,7 +266,7 @@ fun ShopScreen(
  *
  * A Premium row says what it grants; a partner row says the retail price, strikes it
  * through, and puts the discounted one beside it. Both end in the same place: what it
- * costs in Nur, and whether she has that.
+ * costs in Gul, and whether she has that.
  */
 @Composable
 private fun ProductCard(
@@ -347,7 +347,7 @@ private fun ProductCard(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(5.dp),
                 ) {
-                    NurMark(size = 18.dp)
+                    GulMark(size = 18.dp)
                     Text(
                         Fmt.int(product.coinCost),
                         style = Sadora.type.h3,

@@ -31,7 +31,7 @@ const EMPTY: SaveShopProductBody = {
 }
 
 /**
- * The Nur shop's catalogue.
+ * The Gul shop's catalogue.
  *
  * Two shapes of row live in one table, and the form switches between them, because the
  * server refuses anything else: a Premium row grants days and has no price, a partner
@@ -111,7 +111,7 @@ export function ShopPage() {
     <div className="grid" style={{ gap: 16 }}>
       <div className="notice">
         Vitamin va qurilmalar hamkorlarda sotiladi — bu yerda faqat <b>chegirma foizi</b>{' '}
-        va u qancha nur turishi belgilanadi. Premium esa server tomonidan darhol
+        va u qancha gul turishi belgilanadi. Premium esa server tomonidan darhol
         beriladi, shuning uchun unga narx emas, <b>kunlar soni</b> yoziladi.
       </div>
 
@@ -137,7 +137,7 @@ export function ShopPage() {
                 <th>Turi</th>
                 <th>Narx</th>
                 <th>Chegirma</th>
-                <th>Nur</th>
+                <th>Gul</th>
                 <th>Qolgan</th>
                 <th>Olingan</th>
                 <th>Faol</th>
@@ -302,7 +302,7 @@ export function ShopPage() {
             </Field>
           )}
 
-          <Field label="Narxi (nur)">
+          <Field label="Narxi (gul)">
             <input
               type="number"
               min={0}
@@ -346,7 +346,7 @@ export function ShopPage() {
                 {Math.round(form.priceUzs - (form.priceUzs * form.discountPercent) / 100).toLocaleString('ru-RU')} so‘m
               </b>{' '}
               <span className="faint">({form.priceUzs.toLocaleString('ru-RU')} so‘m o‘rniga)</span> ·{' '}
-              {form.coinCost.toLocaleString('ru-RU')} nur
+              {form.coinCost.toLocaleString('ru-RU')} gul
             </div>
           ) : null}
 

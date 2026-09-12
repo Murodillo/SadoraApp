@@ -16,7 +16,7 @@ import uz.sadora.contract.SaveHomeLayoutRequest
 import uz.sadora.contract.ShopCatalog
 
 /**
- * Streaks, Nur, the shop and the home layout.
+ * Streaks, Gul, the shop and the home layout.
  *
  * `checkIn` is the only call the app makes without being asked to: it runs once on
  * entering the tab shell, and the server decides whether that open was worth anything.

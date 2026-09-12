@@ -24,6 +24,7 @@ import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -113,6 +114,14 @@ import uz.sadora.contract.MoodLevel
 import uz.sadora.contract.OnboardingCheckIn
 import uz.sadora.contract.OnboardingRequest
 import uz.sadora.contract.OtpChallenge
+import uz.sadora.contract.CreateShareRequest
+import uz.sadora.contract.DoctorSummary
+import uz.sadora.contract.ProfileShare
+import uz.sadora.contract.ProviderInfo
+import uz.sadora.contract.ProviderUnavailable
+import uz.sadora.contract.WearableConnection
+import uz.sadora.contract.HealthMetric
+import uz.sadora.contract.HealthProvider
 import uz.sadora.contract.OtpRequest
 import uz.sadora.contract.OtpVerifyRequest
 import uz.sadora.contract.RefreshRequest
@@ -160,6 +169,8 @@ import uz.sadora.server.config.OtpConfig
 import uz.sadora.server.config.PushConfig
 import uz.sadora.server.config.RedisConfig
 import uz.sadora.server.config.SocialConfig
+import uz.sadora.server.config.WearableConfig
+import uz.sadora.server.config.WhoopConfig
 import uz.sadora.server.core.now
 import uz.sadora.server.user.AccountErasureJob
 import uz.sadora.server.core.toOffsetDateTime
@@ -246,7 +257,94 @@ class ApiIntegrationTest {
         assertEquals(due, profile.stage?.dueDate)
     }
 
-    // ---------------------------------------------------------------- Nur
+    // ---------------------------------------------------------------- profile share
+
+    /**
+     * The QR code end to end: she makes a link, a stranger opens it without a token and
+     * sees her record as HTML, she revokes it, and the same link is then a 404 that says
+     * nothing about whether it ever existed.
+     */
+    @Test
+    fun `a share link opens the doctor page once made and stops once revoked`() = api {
+        val user = signUp()
+        onboard(user, mood = MoodLevel.GOOD, symptoms = listOf("headache"))
+
+        val created = post<ProfileShare>("/v1/me/shares", user.token, CreateShareRequest(ttlHours = 2))
+        val url = assertNotNull(created.url, "the creating response carries the link")
+        assertTrue(url.startsWith("http://localhost:8080/share/"), url)
+        val token = url.substringAfterLast('/')
+
+        val page = client.get("/share/$token")
+        assertEquals(HttpStatusCode.OK, page.status)
+        val html = page.bodyAsText()
+        assertTrue(html.contains("<title>SADORA"), html.take(200))
+        assertTrue(html.contains("Test"), "her name is on the page")
+        assertEquals("no-store", page.headers["Cache-Control"])
+
+        val json = client.get("/share/$token/json?lang=en")
+        assertEquals(HttpStatusCode.OK, json.status)
+        val summary = json.body<DoctorSummary>()
+        assertEquals("Test", summary.person.name)
+        assertEquals(Language.EN, summary.language)
+        assertTrue(summary.symptomCounts.any { it.key == "headache" })
+
+        val listed = get<List<ProfileShare>>("/v1/me/shares", user.token)
+        assertEquals(2, listed.first().viewCount, "both opens were counted")
+
+        val revoked = client.delete("/v1/me/shares/${created.id}") { auth(user.token) }
+        assertEquals(HttpStatusCode.OK, revoked.status)
+        assertEquals(HttpStatusCode.NotFound, client.get("/share/$token").status)
+        assertEquals(HttpStatusCode.NotFound, client.get("/share/not-a-token-at-all").status)
+    }
+
+    @Test
+    fun `a new share retires the previous one and a too-long life is refused`() = api {
+        val user = signUp()
+        onboard(user)
+        val first = post<ProfileShare>("/v1/me/shares", user.token, CreateShareRequest(ttlHours = 24))
+        val second = post<ProfileShare>("/v1/me/shares", user.token, CreateShareRequest(ttlHours = 24))
+        assertNotEquals(first.id, second.id)
+        val firstToken = first.url!!.substringAfterLast('/')
+        assertEquals(HttpStatusCode.NotFound, client.get("/share/$firstToken").status, "the older link stopped")
+
+        val tooLong = client.post("/v1/me/shares") { auth(user.token); json(CreateShareRequest(ttlHours = 24 * 30)) }
+        assertEquals(HttpStatusCode.BadRequest, tooLong.status)
+
+        val export = client.get("/v1/me/export") { auth(user.token) }
+        assertEquals(HttpStatusCode.OK, export.status)
+        assertTrue(export.headers["Content-Disposition"].orEmpty().contains("sadora-export.json"))
+    }
+
+    // ---------------------------------------------------------------- wearable connections
+
+    /**
+     * WHOOP is unconfigured in the suite, and that has to be a first-class answer: the
+     * provider is listed with a reason, and a connect attempt is a 503 rather than an
+     * OAuth flow with nowhere to return to.
+     */
+    @Test
+    fun `an unconfigured cloud wearable is listed as such and refuses to connect`() = api {
+        val user = signUp()
+        onboard(user)
+
+        val providers = get<List<ProviderInfo>>("/v1/wearables/providers", user.token)
+        val whoop = assertNotNull(providers.firstOrNull { it.provider == HealthProvider.WHOOP })
+        assertFalse(whoop.available)
+        assertEquals(ProviderUnavailable.NOT_CONFIGURED, whoop.unavailableReason)
+        assertTrue(whoop.metrics.contains(HealthMetric.RECOVERY))
+        assertEquals(HealthProvider.entries.size - 1, providers.size, "every provider but manual is listed")
+
+        val connect = client.post("/v1/wearables/whoop/connect") { auth(user.token) }
+        assertEquals(HttpStatusCode.ServiceUnavailable, connect.status)
+
+        // The provider's doors answer without a token, and refuse what is not theirs.
+        assertEquals(HttpStatusCode.BadRequest, client.get("/v1/wearables/whoop/callback?error=access_denied").status)
+        assertEquals(HttpStatusCode.ServiceUnavailable, client.post("/v1/wearables/whoop/webhook") { setBody("{}") }.status)
+
+        assertTrue(get<List<WearableConnection>>("/v1/wearables/connections", user.token).isEmpty())
+    }
+
+    // ---------------------------------------------------------------- Gul
 
     /**
      * The whole daily loop in one pass.
@@ -374,7 +472,7 @@ class ApiIntegrationTest {
      * would be a shop giving product away.
      */
     @Test
-    fun `Nur buys Premium, and a balance that does not cover it buys nothing`() = api {
+    fun `Gul buys Premium, and a balance that does not cover it buys nothing`() = api {
         val user = signUp()
         onboard(user)
 
@@ -1525,6 +1623,13 @@ class ApiIntegrationTest {
         policyVersion = "2026-08-01",
         minimumAppVersion = null,
         referralLinkBase = "https://sadora.uz/r",
+        publicBaseUrl = "http://localhost:8080",
+        // WHOOP pointed at nothing: the connect endpoint must say "not configured" and
+        // never reach a network from the suite.
+        wearables = WearableConfig(
+            tokenKey = null,
+            whoop = WhoopConfig(clientId = null, clientSecret = null, redirectUri = "http://localhost:8080/v1/wearables/whoop/callback", apiBaseUrl = "http://localhost"),
+        ),
         // Zero, so the erasure test can tick the job instead of waiting thirty days.
         accountErasureGracePeriod = Duration.ZERO,
     )

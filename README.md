@@ -252,6 +252,17 @@ shared/src/commonMain/kotlin/uz/sadora/app/
     ├── journey/     "Yo'l" tabi va hayot bosqichlari
     ├── modules/     Modullar (skaner, ong, dorilar, uyqu, bilim…)
     └── settings/    Profil ichidagi sozlama ekranlari
+
+Beshinchi tab — **Premium** (nima beradi, taqqoslash, savollar). Profil bosh ekran
+sarlavhasidagi avatar ortida (`Route.Profile`), undan QR kod (`Route.ShareProfile`)
+va Qurilmalar ochiladi. Kontrollerlar `AppControllers` to'plamida — `MainShell` va
+`PushedScreen` o'nta parametr o'rniga bittasini oladi. `AppLinks` — tashqi havolalar
+(taklif kodi, qurilmadan qaytish) ikkala platformada bitta qoida bilan o'qiladi.
+
+Analitika — `data/Analytics` interfeysi; Android'da Firebase Analytics, iOS'da hozircha
+`None`. Yig'ish rozilik berilgunga qadar o'chiq (manifest), rozilik olib tashlansa yana
+o'chadi; hech bir hodisa salomatlik qiymatini olib yurmaydi — faqat ekran nomi va
+provayder nomi kabi barqaror kalitlar (`AnalyticsEvents`).
 ```
 
 ### Qatlamlar
@@ -361,7 +372,7 @@ tiplarini bilmaydi, controller esa `busy`/`error` holatini bir joyda boshqaradi.
 bo'lmasa (`@Preview`, testlar) hamma amal lokal bajariladi va ilova prototip sifatida
 ishlayveradi.
 
-Nur — streak, tanga, do'kon va taklif — ham ulangan; batafsil pastdagi bo'limda.
+Gul — streak, tanga, do'kon va taklif — ham ulangan; batafsil pastdagi bo'limda.
 
 Hali yo'q:
 
@@ -370,22 +381,77 @@ Hali yo'q:
   sozlanmagan holda har qanday chekni rad etadi
 - **Apple/Google kirish** — tugmalar bor va server `idToken`ni tekshiradi, lekin
   platforma SDK'si hali o'sha tokenni bermaydi
-- **Qurilma integratsiyasi** — Apple Health / Oura ma'lumotlari namuna. Onboarding
-  endi "aqlli soat bormi?" deb so'raydi va "ha" javobi oxirida ulash ekraniga olib
-  boradi, lekin ekranning ortidagi SDK hali yo'q
+- **Telefondagi manbalar** — Apple Health va Health Connect hali o'qilmaydi
+  (ikkalasi ham telefonda o'qiladigan SDK; bulutli WHOOP esa ulangan — pastdagi
+  "Qurilmalar" bo'limi)
 - **iOS ikonkasi** — Androidda streakka qarab almashadi, iOS'da `AppIcons.None`
+- **iOS analitika** — Android'da Firebase Analytics rozilikdan keyin yoqiladi; iOS
+  bridge tayyor, lekin `FirebaseAnalytics` SPM mahsuloti hali qo'shilmagan
 
 ---
 
-## Nur — streak, tanga va do'kon
+## Shifokorga ko'rsatish — QR kod
 
-Ilovaning o'z valyutasi bor: **Nur**. Nomi bitta i18n tokenida
+Profil → "Shifokorga ko'rsatish" ekrani QR kod yaratadi. Shifokor uni kamerasi bilan
+skanerlaydi va `GET /share/{token}` — serverning o'zi chizadigan, skriptsiz HTML sahifa
+— ochiladi: yosh, bo'y, vazn, bosqich; sikl tarixi va bashorat; oxirgi 90 kunlik
+simptomlar, kayfiyat, energiya; dorilar va qabul foizi; ko'riklar; ovqatlanish
+o'rtachalari; qurilma ko'rsatkichlari kun-bakun. Til `?lang=uz|ru|en` bilan tanlanadi.
+
+Uch qoida: token tasodifiy va bazada faqat xeshi turadi (`profile_shares`, V21), har
+havola muddatli (sukut bo'yicha 24 soat, ko'pi bilan 7 kun) va istalgan vaqt bekor
+qilinadi, sahifa har ochilishda yozuvlardan yig'iladi — hech qayerda saqlanmaydi. Har
+ochilish sanaladi va audit jurnaliga tushadi. Kundalik matni, homiladorlik belgilaridagi
+shaxsiy izoh va maxfiy chat sahifaga chiqmaydi. Yangi kod eskisini darhol o'chiradi.
+
+`GET /v1/me/export` — o'sha hujjat JSON ko'rinishida; Maxfiylik → "Ma'lumotlarni
+eksport qilish" uni ulashish oynasiga uzatadi.
+
+---
+
+## Qurilmalar — WHOOP
+
+Bulutli qurilmalar (WHOOP, keyin Oura/Garmin/Fitbit) OAuth orqali ulanadi va serverning
+o'zi tortib oladi; telefondagi manbalar (HealthKit, Health Connect) telefonda o'qilib
+`POST /v1/health-data/samples` ga yuboriladi. Ikkalasi ham bitta normalizatsiya qatlami
+va `provider_metric_mappings` jadvalidan o'tadi.
+
+| Qadam | Qayerda |
+|---|---|
+| Provayderlar ro'yxati, holati | `GET /v1/wearables/providers` |
+| Ulash — brauzerda WHOOP rozilik sahifasi | `POST /v1/wearables/whoop/connect` → `authorizeUrl` |
+| Qaytish | `GET /v1/wearables/whoop/callback` → `sadora://wearables/whoop?status=ok` |
+| Uzish, qo'lda yangilash | `DELETE /v1/wearables/whoop`, `POST /v1/wearables/whoop/sync` |
+| Webhook (HMAC-SHA256, client secret bilan) | `POST /v1/wearables/whoop/webhook` |
+| Fon sinxroni | `WearableSyncJob` — har 5 daqiqada, 30 daqiqadan eski ulanishlar |
+
+Sozlash: WHOOP developer dashboard'da ilova yarating, `WHOOP_CLIENT_ID`,
+`WHOOP_CLIENT_SECRET` va `WHOOP_REDIRECT_URI` (`PUBLIC_BASE_URL/v1/wearables/whoop/callback`
+bilan bir xil) ni `.env` ga yozing, `WEARABLE_TOKEN_KEY` (`openssl rand -base64 32`) —
+tokenlar AES-GCM bilan shifrlanadi. Sozlanmagan bo'lsa provayder "hozircha ulanmaydi"
+deb ko'rinadi, tugma chizilmaydi. Tasdiqlanmagan ilova 10 ta WHOOP a'zosigacha ishlaydi;
+undan keyin dashboard'da "App approval" so'rovi kerak.
+
+WHOOP nima beradi va qayerda ishlatiladi: tiklanish, yuklama (strain), HRV, tinch puls,
+teri harorati, SpO₂, nafas, uyqu bosqichlari (chuqur/REM/yengil/uyg'oq), uyqu samarasi,
+energiya, vazn. Bugun — salomatlik ko'rsatkichi (qadam o'rniga strain), Balans, Uyqu
+ekrani (bosqichlar va samara), Sikl — "Tana signallari" kartasi (o'tgan haftaga nisbatan
+puls/HRV/harorat/tiklanish), shifokor sahifasi. WHOOP qadam sanamaydi — ilova buni aytadi.
+
+Soat yo'q bo'lsa uyqu Uyqu ekranidan qo'lda kiritiladi (`manual` provayder,
+`sleep_minutes` → `sleep_duration`).
+
+---
+
+## Gul — streak, tanga va do'kon
+
+Ilovaning o'z valyutasi bor: **Gul**. Nomi bitta i18n tokenida
 (`RewardStrings.coinName`) turadi, ya'ni uni o'zgartirish uch qatorlik ish.
 
-Bitta qoida hamma narsani belgilaydi: **nur salomatlik natijasi uchun berilmaydi**.
+Bitta qoida hamma narsani belgilaydi: **gul salomatlik natijasi uchun berilmaydi**.
 Sakkiz soat uxlash to'rt soat uxlash bilan bir xil to'laydi. Aks holda ilova ayolga
 tanasi uchun pul taklif qilgan bo'lardi — va jurnal yolg'on gapirishni o'rganardi.
-Nur faqat *harakat* uchun: ilovani ochish, belgilash, o'qish.
+Gul faqat *harakat* uchun: ilovani ochish, belgilash, o'qish.
 
 | Nima | Qayerda |
 |---|---|
@@ -401,12 +467,12 @@ mukofotlar `UNIQUE` indeks bilan qo'riqlanadi, ya'ni ikkita bir vaqtda kelgan so
 ikki marta to'lay olmaydi. Streak esa foydalanuvchining **o'z vaqt mintaqasidagi**
 kunni sanaydi, serverning yarim tunini emas.
 
-Tariflar va do'kon admin panelda: `Nur → Mukofotlar va streak` va `Nur → Do'kon`.
+Tariflar va do'kon admin panelda: `Gul → Mukofotlar va streak` va `Gul → Do'kon`.
 O'zgarish keyingi mukofotdan kuchga kiradi va relizni talab qilmaydi; allaqachon
-berilgan nur qayta hisoblanmaydi.
+berilgan gul qayta hisoblanmaydi.
 
-**Premium** — serverning o'zi beradigan yagona narsa: nur yechiladi va obuna o'sha
-zahoti uzayadi. **Vitamin va qurilma** hamkorlarniki: nur *chegirma* sotib oladi va
+**Premium** — serverning o'zi beradigan yagona narsa: gul yechiladi va obuna o'sha
+zahoti uzayadi. **Vitamin va qurilma** hamkorlarniki: gul *chegirma* sotib oladi va
 ilova `SDR-XXXX-XXXX` ko'rinishidagi kodni beradi. Ilova hech qachon mahsulotni sotdim
 yoki yetkazdim demaydi.
 
@@ -415,7 +481,7 @@ yoki yetkazdim demaydi.
 yo'lning o'zidan o'qiydi) kodni ko'rsatadi va `sadora://invite/KOD` ni ochadi;
 onboardingdagi "Taklif kodi" qadami esa uni allaqachon to'ldirilgan holda oladi. Kod
 ro'yxatdan o'tish so'rovi bilan birga ketadi — hisob paydo bo'lgan lahzada ikkala
-tomon ham nur oladi, va bir kod bir hisob uchun bir marta ishlaydi.
+tomon ham gul oladi, va bir kod bir hisob uchun bir marta ishlaydi.
 
 **Ilova ikonkasi streakka qarab o'zgaradi.** Androidda buni faqat `activity-alias`
 almashtirish orqali qilib bo'ladi (ikonkani "bo'yash" API'si yo'q), shuning uchun

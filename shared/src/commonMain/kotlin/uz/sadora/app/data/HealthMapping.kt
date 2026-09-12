@@ -127,10 +127,30 @@ fun AppState.applyMedications(day: MedicationDay, courses: List<Medication>) {
     )
 }
 
-/** Steps and sleep come from the wearable layer, already normalised and deduplicated. */
+/**
+ * Today's device metrics, already normalised and deduplicated by the server.
+ *
+ * Every field is replaced, present or not: a day the watch was off is a day with no
+ * steps, not yesterday's steps again. The source is the provider that sent the most
+ * metrics, worded by the screen.
+ */
 fun AppState.applyWearables(daily: DailyHealth) {
-    daily.value(HealthMetric.STEPS)?.let { steps = it.toInt() }
-    daily.value(HealthMetric.SLEEP_DURATION)?.let { sleepMinutes = it.toInt() }
+    steps = daily.value(HealthMetric.STEPS)?.toInt()
+    sleepMinutes = daily.value(HealthMetric.SLEEP_DURATION)?.toInt()
+    restingHeartRate = daily.value(HealthMetric.RESTING_HEART_RATE)?.toInt()
+    hrvMs = daily.value(HealthMetric.HRV)?.toInt()
+    recovery = daily.value(HealthMetric.RECOVERY)?.toInt()
+    strain = daily.value(HealthMetric.STRAIN)
+    skinTemperature = daily.value(HealthMetric.SKIN_TEMPERATURE)
+    spo2 = daily.value(HealthMetric.SPO2)?.toInt()
+    wearableSource = daily.metrics
+        .flatMap { it.providers }
+        .groupingBy { it }
+        .eachCount()
+        .maxByOrNull { it.value }
+        ?.key
+        ?.name
+        ?.lowercase()
 }
 
 private fun WirePhase.toAppPhase(): CyclePhase = when (this) {

@@ -27,11 +27,13 @@ import uz.sadora.app.design.SadoraIcons
 import uz.sadora.app.design.Spacing
 import uz.sadora.app.i18n.strings
 import uz.sadora.app.model.AppState
+import uz.sadora.app.model.Fmt
 import uz.sadora.app.nav.Route
 import uz.sadora.app.ui.components.Avatar
 import uz.sadora.app.ui.components.BadgeTone
 import uz.sadora.app.ui.components.ButtonTone
 import uz.sadora.app.ui.components.ChipFlowRow
+import uz.sadora.app.ui.components.IconTile
 import uz.sadora.app.ui.components.SadoraBadge
 import uz.sadora.app.ui.components.SadoraButton
 import uz.sadora.app.ui.components.SadoraCard
@@ -44,8 +46,10 @@ import uz.sadora.app.ui.components.noRippleClickable
  * "Profil" — account, subscription status, and the settings that change how the
  * rest of the app behaves.
  *
- * The subscription block states what the plan includes and when it renews; the
- * design deliberately avoids aggressive re-selling here.
+ * Opened from the avatar in the home header rather than from the tab bar: it is a
+ * settings screen, visited a few times a month, and the bar slot went to Premium. The
+ * subscription block states what the plan includes and when it renews; the design
+ * deliberately avoids aggressive re-selling here.
  */
 @Composable
 fun ProfileScreen(
@@ -54,6 +58,7 @@ fun ProfileScreen(
     health: HealthController,
     onOpen: (Route) -> Unit,
     onSignedOut: () -> Unit,
+    onClose: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val c = Sadora.colors
@@ -68,7 +73,7 @@ fun ProfileScreen(
     }
 
     Column(modifier) {
-        SadoraTopBar(t.title)
+        SadoraTopBar(t.title, onBack = onClose)
 
         ScreenContent {
             item {
@@ -90,12 +95,7 @@ fun ProfileScreen(
                             )
                             Text(state.email, style = Sadora.type.body, color = c.muted)
                         }
-                        Icon(
-    SadoraIcons.ChevronRight,
-    contentDescription = null,
-    Modifier.size(IconSize.md),
-    tint = c.muted2,
-)
+                        Icon(SadoraIcons.ChevronRight, contentDescription = null, Modifier.size(IconSize.md), tint = c.muted2)
                     }
                 }
             }
@@ -104,14 +104,33 @@ fun ProfileScreen(
                 if (state.isPremium) PremiumStatusCard(state) else UpgradeCard { onOpen(Route.Paywall) }
             }
 
+            // The QR code for a doctor, first among the actions: it is the one thing on
+            // this screen she opens while someone is waiting.
+            item {
+                SadoraCard(onClick = { onOpen(Route.ShareProfile) }) {
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                    ) {
+                        IconTile(SadoraIcons.Shield, tint = c.primary, size = 44.dp)
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Text(t.shareProfile, style = Sadora.type.h3, color = c.text)
+                            Text(t.shareProfileNote, style = Sadora.type.body, color = c.muted)
+                        }
+                        Icon(SadoraIcons.ChevronRight, contentDescription = null, Modifier.size(IconSize.md), tint = c.muted2)
+                    }
+                }
+            }
+
             item {
                 SadoraCard(padding = Spacing.xs) {
-                    // Nur sits above the modules rather than among the settings: it is
+                    // Gul sits above the modules rather than among the settings: it is
                     // something she uses, not something she configures.
                     SettingsRow(
                         SadoraIcons.Bloom,
                         t.rewards,
-                        value = if (state.coins > 0) uz.sadora.app.model.Fmt.int(state.coins) else null,
+                        value = if (state.coins > 0) Fmt.int(state.coins) else null,
                         iconTint = c.secondary,
                     ) { onOpen(Route.Rewards) }
                     SettingsRow(SadoraIcons.Bookmark, t.shop) { onOpen(Route.Shop) }
@@ -145,7 +164,7 @@ fun ProfileScreen(
                     val connected = health.sources.count { it.connected }
                     SettingsRow(
                         SadoraIcons.Watch,
-                        t.connectedDevices,
+                        t.devices,
                         value = if (health.sources.isEmpty()) null else "$connected",
                     ) {
                         onOpen(Route.DataSources)
@@ -273,12 +292,7 @@ private fun UpgradeCard(onUpgrade: () -> Unit) {
                     color = c.muted,
                 )
             }
-            Icon(
-    SadoraIcons.ChevronRight,
-    contentDescription = null,
-    Modifier.size(IconSize.md),
-    tint = c.muted2,
-)
+            Icon(SadoraIcons.ChevronRight, contentDescription = null, Modifier.size(IconSize.md), tint = c.muted2)
         }
     }
 }

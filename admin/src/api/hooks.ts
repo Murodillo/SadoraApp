@@ -408,7 +408,7 @@ export const useDisableTotp = () =>
     request('/v1/admin/me/totp/disable', { method: 'POST', body: input }),
   )
 
-// ---------------------------------------------------------------- Nur
+// ---------------------------------------------------------------- Gul
 
 export const useRewardsOverview = () =>
   useQuery({

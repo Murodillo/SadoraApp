@@ -148,7 +148,7 @@ class RewardsController(
      * Spends the coins.
      *
      * Not silent: this is the one call in the controller the user is waiting on, and
-     * "not enough Nur" or "out of stock" has to reach the sheet that asked.
+     * "not enough Gul" or "out of stock" has to reach the sheet that asked.
      */
     suspend fun redeem(productId: String): RedeemResult? {
         val api = api ?: return null

@@ -5,11 +5,11 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 /**
- * The Nur shop.
+ * The Gul shop.
  *
  * Three kinds of thing are sold here and only one of them is delivered by the app.
  * Premium is granted directly, because the server owns entitlements. A vitamin or a
- * device is a partner's product: Nur buys a *discount* on it, and what the app hands
+ * device is a partner's product: Gul buys a *discount* on it, and what the app hands
  * over is a code the partner honours. The app never claims to have shipped anything.
  *
  * Prices are in so'm and stay integers — there are no tiyin in practice, and a currency

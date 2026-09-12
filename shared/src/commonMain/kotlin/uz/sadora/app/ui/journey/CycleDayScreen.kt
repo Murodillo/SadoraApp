@@ -150,7 +150,7 @@ fun CycleDayScreen(
                                 Text(
                                     t.sleepAndSteps(
                                         state.sleepLabel(format = common::hoursMinutes),
-                                        Fmt.int(state.steps),
+                                        state.stepsLabel(),
                                     ),
                                     style = Sadora.type.h3,
                                     color = c.text,

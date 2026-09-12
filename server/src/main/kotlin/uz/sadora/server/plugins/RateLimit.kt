@@ -10,11 +10,17 @@ import uz.sadora.server.config.AppConfig
 import uz.sadora.server.plugins.RateLimits.AI
 import uz.sadora.server.plugins.RateLimits.AUTH
 import uz.sadora.server.plugins.RateLimits.OTP
+import uz.sadora.server.plugins.RateLimits.SHARE
+import uz.sadora.server.plugins.RateLimits.WEARABLE
 
 object RateLimits {
     val OTP = RateLimitName("otp")
     val AUTH = RateLimitName("auth")
     val AI = RateLimitName("ai")
+    /** The public doctor page: unguessable tokens, but the door still should not be hammered. */
+    val SHARE = RateLimitName("share")
+    /** OAuth callbacks and webhooks from wearable providers. */
+    val WEARABLE = RateLimitName("wearable")
 }
 
 /**
@@ -42,6 +48,14 @@ fun Application.configureRateLimit(config: AppConfig) {
         }
         register(AI) {
             rateLimiter(limit = 30 * relax, refillPeriod = 1.minutes)
+            requestKey { call -> call.request.origin.remoteHost }
+        }
+        register(SHARE) {
+            rateLimiter(limit = 20 * relax, refillPeriod = 1.minutes)
+            requestKey { call -> call.request.origin.remoteHost }
+        }
+        register(WEARABLE) {
+            rateLimiter(limit = 60 * relax, refillPeriod = 1.minutes)
             requestKey { call -> call.request.origin.remoteHost }
         }
     }

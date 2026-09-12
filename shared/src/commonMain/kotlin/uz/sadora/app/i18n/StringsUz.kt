@@ -18,6 +18,7 @@ import uz.sadora.contract.DoseStatus
 import uz.sadora.contract.FetalMovement
 import uz.sadora.contract.FoodRelation
 import uz.sadora.contract.HealthMetric
+import uz.sadora.contract.HealthProvider
 import uz.sadora.contract.MealSlot
 import uz.sadora.contract.ScheduleKind
 import uz.sadora.contract.SymptomCategory
@@ -33,7 +34,7 @@ object StringsUz : Strings {
         override val today = "Bugun"
         override val mind = "Ong"
         override val nutrition = "Ovqat"
-        override val profile = "Profil"
+        override val premium = "Premium"
         override fun journey(stage: LifeStage) = when (stage) {
             LifeStage.Cycle -> "Sikl"
             LifeStage.TryingToConceive -> "Reja"
@@ -153,7 +154,7 @@ object StringsUz : Strings {
         override val inviteSubtitle = "Bo'lmasa, bu qadamni o'tkazib yuboring."
         override val inviteLabel = "Taklif kodi"
         override val inviteHint = "Masalan, K7M2QP"
-        override fun inviteReward(coins: String) = "Kod bilan kelsangiz — $coins nur sovg'a"
+        override fun inviteReward(coins: String) = "Kod bilan kelsangiz — $coins gul sovg'a"
         override val inviteFromLink = "Havoladan olindi"
 
         override val permissionsTitle = "Nimalarga ruxsat berasiz?"
@@ -308,8 +309,8 @@ object StringsUz : Strings {
         override val insights = "Tahlillar"
         override val knowledge = "Bilim"
 
-        override val rewards = "Nur va streak"
-        override val shop = "Nur do'koni"
+        override val rewards = "Gul va streak"
+        override val shop = "Gul do'koni"
         override val referral = "Do'stlarni taklif qilish"
         override val homeLayout = "Bosh ekran tartibi"
 
@@ -340,6 +341,9 @@ object StringsUz : Strings {
         override val premiumFeatureInsights = "Kengaytirilgan tahlil"
         override val upgradeTitle = "SADORA Premium"
         override val upgradeSubtitle = "AI suhbat, ovqat skaneri va kengaytirilgan tahlillar"
+        override val shareProfile = "Shifokorga ko'rsatish"
+        override val shareProfileNote = "QR kod — shifokor skanerlab, yozuvlaringizni ko'radi"
+        override val devices = "Qurilmalar"
     }
 
     override val settings = object : SettingsStrings {
@@ -390,6 +394,8 @@ object StringsUz : Strings {
         override val privacyPolicy = "Maxfiylik siyosati"
         override val yourData = "Ma'lumotlaringiz"
         override val exportData = "Ma'lumotlarni eksport qilish"
+        override val exportReady = "Eksport tayyor — qayerga yuborishni tanlang"
+        override val exportFailed = "Eksport qilib bo'lmadi. Keyinroq urinib ko'ring."
         override val deleteAccount = "Hisobni o'chirish"
         override val deleteAccountConfirm = "Hisobni o'chirish?"
         override val deleteAccountBody = "Ma'lumotlaringiz butunlay o'chiriladi. " +
@@ -1016,6 +1022,15 @@ object StringsUz : Strings {
         override fun average(value: String) = "O'rtacha $value"
         override fun daysRecorded(withData: Int, total: Int) = "$withData / $total kun qayd etilgan"
         override val sleepManual = "Uyquni qo'lda kiritish"
+        override val sleepManualBody = "Soat bo'lmasa ham uyquni yozib qo'ying — Balans va tahlillar shuni hisobga oladi."
+        override val sleepHours = "Soat"
+        override val sleepMinutesLabel = "Daqiqa"
+        override val sleepSaved = "Uyqu saqlandi"
+        override val bodySignalsTitle = "Tana signallari"
+        override val bodySignalsNote = "Qurilmangiz o'lchagan ko'rsatkichlar. Lyuteal fazada harorat va puls ko'pincha biroz ko'tariladi — bu kuzatuv, tashxis emas."
+        override fun vsLastWeek(delta: String) = "$delta o'tgan haftaga nisbatan"
+        override val strain = "Yuklama"
+        override val recovery = "Tiklanish"
         override fun goalFrom(hours: Int) = "$hours soatdan"
         override val lastNight = "Kecha"
         override fun restingPulse(bpm: Int) = "Tinch puls $bpm bpm"
@@ -1254,6 +1269,14 @@ object StringsUz : Strings {
             HealthMetric.SLEEP_DURATION -> "Uyqu"
             HealthMetric.SLEEP_DEEP -> "Chuqur uyqu"
             HealthMetric.SLEEP_REM -> "REM"
+            HealthMetric.SLEEP_LIGHT -> "Yengil uyqu"
+            HealthMetric.SLEEP_AWAKE -> "Uyg'oqlik"
+            HealthMetric.SLEEP_PERFORMANCE -> "Uyqu samarasi"
+            HealthMetric.SLEEP_EFFICIENCY -> "Uyqu samaradorligi"
+            HealthMetric.RECOVERY -> "Tiklanish"
+            HealthMetric.STRAIN -> "Yuklama"
+            HealthMetric.SPO2 -> "SpO₂"
+            HealthMetric.SKIN_TEMPERATURE -> "Teri harorati"
             HealthMetric.WEIGHT -> "Vazn"
         }
 
@@ -1293,9 +1316,9 @@ object StringsUz : Strings {
     }
 
     override val rewards = object : RewardStrings {
-        override val coinName = "Nur"
-        override fun coins(amount: String) = "$amount nur"
-        override fun coinsGained(amount: String) = "+$amount nur"
+        override val coinName = "Gul"
+        override fun coins(amount: String) = "$amount gul"
+        override fun coinsGained(amount: String) = "+$amount gul"
 
         override fun streakDays(days: Int) = "$days kun ketma-ket"
         override val streakStarted = "Streak boshlandi"
@@ -1305,7 +1328,7 @@ object StringsUz : Strings {
             "Yana $days kun — $milestone kunlik bosqich"
         override val streakBeyondMilestones = "Barcha bosqichlar ortda qoldi"
 
-        override val walletTitle = "Nur hamyoni"
+        override val walletTitle = "Gul hamyoni"
         override val balance = "Balans"
         override val earned = "Yig'ilgan"
         override val spent = "Sarflangan"
@@ -1313,8 +1336,8 @@ object StringsUz : Strings {
         override val longestStreak = "Eng uzun"
         override fun days(count: Int) = "$count kun"
         override val history = "Harakatlar"
-        override val historyEmpty = "Hozircha harakat yo'q. Ilovadan foydalansangiz, nur yig'iladi."
-        override val howToEarn = "Nur qanday yig'iladi"
+        override val historyEmpty = "Hozircha harakat yo'q. Ilovadan foydalansangiz, gul yig'iladi."
+        override val howToEarn = "Gul qanday yig'iladi"
         override fun perDay(times: Int) = "kuniga $times martagacha"
         override fun earnReason(reason: String) = when (reason) {
             CoinReasons.DAILY_OPEN -> "Kunda birinchi kirish"
@@ -1332,12 +1355,12 @@ object StringsUz : Strings {
             CoinReasons.ADMIN_ADJUSTMENT -> "Qo'lda o'zgartirish"
             else -> reason
         }
-        override val openShop = "Nur do'koni"
+        override val openShop = "Gul do'koni"
         override val inviteFriends = "Taklif qilish"
 
         override val referralTitle = "Do'stlarni taklif qiling"
         override val referralSubtitle =
-            "Havolangiz orqali kelgan har bir do'st uchun ikkalangiz ham nur olasiz."
+            "Havolangiz orqali kelgan har bir do'st uchun ikkalangiz ham gul olasiz."
         override val yourCode = "Sizning kodingiz"
         override val copyCode = "Nusxalash"
         override val codeCopied = "Kod nusxalandi"
@@ -1345,22 +1368,22 @@ object StringsUz : Strings {
         override fun shareMessage(link: String) =
             "SADORA — ayollar salomatligi ilovasi. Mening taklif havolam orqali qo'shiling: $link"
         override fun invitedCount(count: Int) = "$count ta do'st qo'shildi"
-        override fun referralEarned(amount: String) = "Taklifdan $amount nur"
-        override fun rewardPerJoin(amount: String) = "Har bir do'st uchun $amount nur"
-        override fun welcomeReward(amount: String) = "Do'stingiz $amount nur bilan boshlaydi"
+        override fun referralEarned(amount: String) = "Taklifdan $amount gul"
+        override fun rewardPerJoin(amount: String) = "Har bir do'st uchun $amount gul"
+        override fun welcomeReward(amount: String) = "Do'stingiz $amount gul bilan boshlaydi"
         override val referralHowTitle = "Qanday ishlaydi"
         override val referralSteps = listOf(
             "Havolani do'stingizga yuboring",
             "U ilovani o'rnatib, ro'yxatdan o'tadi",
-            "Nur ikkalangizga ham tushadi",
+            "Gul ikkalangizga ham tushadi",
         )
         override val referralFairUse =
             "Har bir kod bir marta — faqat yangi hisob uchun ishlaydi. O'z kodingiz o'zingizga tushmaydi."
     }
 
     override val shop = object : ShopStrings {
-        override val title = "Nur do'koni"
-        override val subtitle = "Yig'gan nuringizni Premium, vitamin va qurilmalarga almashtiring"
+        override val title = "Gul do'koni"
+        override val subtitle = "Yig'gan gulingizni Premium, vitamin va qurilmalarga almashtiring"
         override fun tab(kind: ShopKind) = when (kind) {
             ShopKind.PREMIUM -> "Premium"
             ShopKind.VITAMIN -> "Vitaminlar"
@@ -1376,15 +1399,15 @@ object StringsUz : Strings {
         override fun premiumDays(days: Int) = "$days kun Premium"
         override val outOfStock = "Tugadi"
         override fun stockLeft(count: Int) = "$count ta qoldi"
-        override val notEnough = "Nur yetarli emas"
-        override fun shortBy(amount: String) = "Yana $amount nur kerak"
+        override val notEnough = "Gul yetarli emas"
+        override fun shortBy(amount: String) = "Yana $amount gul kerak"
 
         override val redeem = "Almashtirish"
         override val redeeming = "Bajarilmoqda…"
         override fun confirmTitle(product: String) = product
         override fun confirmBody(cost: String) =
-            "$cost nur yechiladi va sizga chegirma kodi beriladi."
-        override val confirmPremiumBody = "Nur yechiladi va Premium darhol ochiladi."
+            "$cost gul yechiladi va sizga chegirma kodi beriladi."
+        override val confirmPremiumBody = "Gul yechiladi va Premium darhol ochiladi."
         override val cancel = "Bekor qilish"
 
         override val issuedTitle = "Kodingiz tayyor"
@@ -1420,7 +1443,7 @@ object StringsUz : Strings {
         override fun widget(key: String) = when (key) {
             HomeWidgets.AI -> "AI xulosasi"
             HomeWidgets.SCORE -> "Salomatlik ko'rsatkichi"
-            HomeWidgets.STREAK -> "Streak va nur"
+            HomeWidgets.STREAK -> "Streak va gul"
             HomeWidgets.STAGE -> "Sikl / bosqich"
             HomeWidgets.PLAN -> "Bugungi reja"
             HomeWidgets.SLEEP -> "Uyqu"
@@ -1447,4 +1470,140 @@ object StringsUz : Strings {
         }
     }
 
+    override val share = object : ShareStrings {
+        override val title = "Shifokorga ko'rsatish"
+        override val subtitle = "QR kod orqali yozuvlaringiz shifokor ekranida ochiladi"
+        override val intro = "Qabulda telefoningizdagi QR kodni ko'rsating. Shifokor uni kamerasi bilan skanerlaydi va " +
+            "sikl, simptomlar, kayfiyat, dorilar, ko'riklar va qurilma ko'rsatkichlarini bitta sahifada ko'radi. " +
+            "Havola vaqtinchalik — o'zingiz tanlagan muddatdan keyin o'chadi."
+        override val create = "QR kod yaratish"
+        override val creating = "Tayyorlanmoqda…"
+        override val regenerate = "Yangi kod"
+        override val revoke = "O'chirish"
+        override val revoked = "Havola o'chirildi"
+        override val copyLink = "Havolani nusxalash"
+        override val linkCopied = "Havola nusxalandi"
+        override val shareLink = "Yuborish"
+        override fun shareMessage(link: String) = "SADORA — mening salomatlik yozuvlarim (vaqtinchalik havola): $link"
+        override val showToDoctor = "Shifokorga shu kodni ko'rsating"
+        override val validFor = "Amal qilish muddati"
+        override fun hours(count: Int) = "$count soat"
+        override fun days(count: Int) = "$count kun"
+        override fun expiresAt(at: String) = "$at gacha amal qiladi"
+        override val expired = "Muddati tugagan"
+        override fun viewedTimes(count: Int) = "$count marta ochilgan"
+        override val neverViewed = "Hali ochilmagan"
+        override fun lastViewed(ago: String) = "Oxirgi marta $ago"
+        override val includesTitle = "Sahifada nima bor"
+        override val includes = listOf(
+            "Yosh, bo'y, vazn va hayot bosqichi",
+            "Sikl tarixi, oxirgi hayz va bashorat",
+            "Oxirgi 90 kunlik simptomlar, kayfiyat va energiya",
+            "Dorilar, jadval va qabul foizi",
+            "Ko'riklar va tekshiruvlar",
+            "Uyqu, puls, HRV va boshqa qurilma ko'rsatkichlari",
+        )
+        override val excludesTitle = "Nima ko'rsatilmaydi"
+        override val excludes = listOf(
+            "Kundalik yozuvlaringiz matni",
+            "Homiladorlik belgilaridagi shaxsiy izohlar",
+            "Maxfiy chat",
+        )
+        override val privacyNote = "Havolada ismingiz yoki telefoningiz yo'q — faqat tasodifiy kod. Yangi kod yaratsangiz, eskisi darhol ishlamay qoladi."
+        override val offline = "QR kod yaratish uchun internet kerak"
+        override val failed = "Havola yaratilmadi. Qaytadan urinib ko'ring."
+    }
+
+    override val premium = object : PremiumStrings {
+        override val tab = "Premium"
+        override val title = "SADORA Premium"
+        override val activeTitle = "Premium faol"
+        override val activeBody = "Hammasi ochiq: AI suhbat, ovqat skaneri, uzoq muddatli tahlillar va butun kutubxona."
+        override val inactiveTitle = "Ko'proq tushunish uchun"
+        override val inactiveBody = "Bepul rejadagi hech narsa olib tashlanmaydi. Premium — chuqurroq tahlil va AI yordamchi."
+        override val benefitsTitle = "Premium nima beradi"
+        override val benefitAiTitle = "AI yordamchi"
+        override val benefitAiBody = "Kuniga 20 tagacha savol — sikl, uyqu va ovqatlanishingizni bilgan holda javob beradi."
+        override val benefitScannerTitle = "Ovqat skaneri"
+        override val benefitScannerBody = "Oyiga 30 ta surat: taomni suratga oling, kaloriya va tarkib o'zi hisoblanadi."
+        override val benefitInsightsTitle = "Tahlillar tarixi"
+        override val benefitInsightsBody = "30 va 90 kunlik oynalar va kuzatuvlar: nima nima bilan birga kelayotganini ko'rasiz."
+        override val benefitLibraryTitle = "Butun Bilim kutubxonasi"
+        override val benefitLibraryBody = "Shifokorlar tekshirgan barcha maqolalar, bosqichingizga mos."
+        override val benefitDevicesTitle = "Qurilma tahlili"
+        override val benefitDevicesBody = "WHOOP va boshqa qurilmalar ko'rsatkichlari sikl fazalari bilan solishtiriladi."
+        override val compareTitle = "Bepul va Premium"
+        override val seePlans = "Tariflarni ko'rish"
+        override val manage = "Obunani boshqarish"
+        override fun buyWithCoins(coinName: String) = "$coinName bilan olish"
+        override val faqTitle = "Ko'p so'raladigan savollar"
+        override val faq = listOf(
+            "Bepul rejada nima qoladi?" to "Hammasi: sikl, kayfiyat, ovqat kundaligi, dorilar, ko'riklar va 7 kunlik tahlillar. Premium faqat qo'shadi.",
+            "Istalgan vaqt bekor qila olamanmi?" to "Ha. Obuna tugagan kungacha Premium ochiq turadi, keyin bepul rejaga qaytasiz — ma'lumotlar saqlanadi.",
+            "Qanday to'lanadi?" to "Payme yoki Click orqali. To'lovni server tasdiqlaydi va Premium darhol ochiladi.",
+            "Gul bilan olsa bo'ladimi?" to "Ha — do'konda 7 va 30 kunlik Premium gul evaziga beriladi. Gul ilovani ochish va belgilash uchun yig'iladi.",
+        )
+        override val freeStays = "Bepul rejadagi hamma narsa qoladi"
+    }
+
+    override val devices = object : DeviceStrings {
+        override val title = "Qurilmalar"
+        override val subtitle = "Soat yoki bilaguzuk ulang — uyqu, puls va tiklanish o'zi keladi"
+        override val connectedSection = "Ulangan"
+        override val availableSection = "Ulash mumkin"
+        override val plannedSection = "Rejada"
+        override fun provider(provider: HealthProvider) = when (provider) {
+            HealthProvider.APPLE_HEALTH -> "Apple Health"
+            HealthProvider.HEALTH_CONNECT -> "Health Connect"
+            HealthProvider.OURA -> "Oura"
+            HealthProvider.GARMIN -> "Garmin"
+            HealthProvider.WHOOP -> "WHOOP"
+            HealthProvider.FITBIT -> "Fitbit"
+            HealthProvider.SAMSUNG_HEALTH -> "Samsung Health"
+            HealthProvider.MANUAL -> "Qo'lda kiritilgan"
+        }
+        override fun providerTagline(provider: HealthProvider) = when (provider) {
+            HealthProvider.WHOOP -> "Tiklanish, yuklama, HRV va teri harorati"
+            HealthProvider.APPLE_HEALTH -> "iPhone va Apple Watch"
+            HealthProvider.HEALTH_CONNECT -> "Android soatlari va bilaguzuklar"
+            HealthProvider.OURA -> "Uzuk: uyqu va tiklanish"
+            HealthProvider.GARMIN -> "Sport soatlari"
+            HealthProvider.FITBIT -> "Bilaguzuk va soatlar"
+            HealthProvider.SAMSUNG_HEALTH -> "Galaxy Watch"
+            HealthProvider.MANUAL -> "O'zingiz yozgan ko'rsatkichlar"
+        }
+        override val connect = "Ulash"
+        override val connecting = "Ulanmoqda…"
+        override val disconnect = "Uzish"
+        override val disconnectConfirmTitle = "Qurilmani uzasizmi?"
+        override val disconnectConfirmBody = "Yangi ma'lumotlar kelmay qoladi. Avval kelganlari saqlanadi."
+        override val syncNow = "Yangilash"
+        override val syncing = "Yangilanmoqda…"
+        override val synced = "Yangilandi"
+        override fun lastSync(ago: String) = "Oxirgi yangilanish: $ago"
+        override val neverSynced = "Hali yangilanmagan"
+        override val statusActive = "Faol"
+        override val statusExpired = "Qayta ulash kerak"
+        override val statusError = "Xatolik"
+        override val reconnect = "Qayta ulash"
+        override fun unavailable(reason: String) = when (reason) {
+            "not_configured" -> "Hozircha ulanmaydi"
+            "ios_only" -> "Faqat iPhone'da"
+            "android_only" -> "Faqat Android'da"
+            else -> "Tez orada"
+        }
+        override val givesTitle = "Nimalar keladi"
+        override val usedInTitle = "Qayerda ishlatiladi"
+        override fun usedIn(provider: HealthProvider) = when (provider) {
+            HealthProvider.WHOOP -> listOf("Uyqu ekrani", "Bugun — salomatlik ko'rsatkichi", "Balans", "Sikl — tana signallari", "Shifokor sahifasi")
+            else -> listOf("Uyqu ekrani", "Bugun — salomatlik ko'rsatkichi", "Balans", "Tahlillar")
+        }
+        override val openBrowserNote = "Brauzerda WHOOP sahifasi ochiladi. Ruxsat bergach, ilovaga qaytasiz — birinchi yuklab olish 30 kunlik va bir necha daqiqa oladi."
+        override val returnedOk = "WHOOP ulandi — ma'lumotlar kelmoqda"
+        override val returnedError = "WHOOP ulanmadi. Qaytadan urinib ko'ring."
+        override val noStepsNote = "WHOOP qadam sanamaydi — buning o'rniga yuklama (strain) ko'rsatiladi."
+        override val manualTitle = "Soat yo'qmi?"
+        override val manualBody = "Uyquni Uyqu ekranidan qo'lda kiriting — Balans va tahlillar shuni ishlatadi."
+        override val note = "SADORA qurilmadan faqat sanab o'tilgan ko'rsatkichlarni oladi va ularni sotmaydi. Ulanishni istalgan vaqt uzishingiz mumkin."
+    }
 }

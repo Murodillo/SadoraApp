@@ -5,7 +5,7 @@ import org.jetbrains.exposed.v1.datetime.date
 import org.jetbrains.exposed.v1.datetime.timestampWithTimeZone
 
 /**
- * Streaks, Nur, the shop and the home layout, as V20 created them.
+ * Streaks, Gul, the shop and the home layout, as V20 created them.
  *
  * As everywhere else in this package, Flyway owns the DDL and these objects only
  * describe it. Note what is absent: no column here joins to a health table, because

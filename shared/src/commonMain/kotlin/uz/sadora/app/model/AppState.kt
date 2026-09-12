@@ -185,7 +185,7 @@ class AppState {
 
     // ---- rewards ----
     /**
-     * The Nur balance and the streak behind most of it.
+     * The Gul balance and the streak behind most of it.
      *
      * Mirrored from the server on every launch and never computed here: an app that
      * added up its own coins would mint them on a reinstall. Zero until the first
@@ -291,8 +291,11 @@ class AppState {
     var carbsGoalG by mutableStateOf(210)
 
     /**
-     * True until the user has logged anything. Drives Today's empty state — the
-     * fourth Today state in the design, alongside free, premium and skeleton.
+     * True on the first day of an account with nothing logged yet. Drives Today's empty
+     * state — the fourth Today state in the design, alongside free, premium and skeleton.
+     *
+     * Set by the health controller after the first load, and cleared by the first thing
+     * she logs, so the screen turns into the ordinary deck the moment there is a day.
      */
     var isNewUser by mutableStateOf(false)
 
@@ -308,8 +311,36 @@ class AppState {
     var energy by mutableStateOf(4)
     var stress by mutableStateOf(2)
 
-    var steps by mutableStateOf(6420)
-    var sleepMinutes by mutableStateOf(400) // 6s 40d
+    /**
+     * What her device measured today. Null until a device — or her own hand, for sleep —
+     * has said anything: the app used to start every account at 6 420 steps and 6h 40m,
+     * and a phone that had never seen a watch showed them as if it had.
+     */
+    var steps by mutableStateOf<Int?>(null)
+    var sleepMinutes by mutableStateOf<Int?>(null)
+
+    // The recovery family the strap-style wearables speak in. Each is null until a
+    // device sends it; none is computed here, and none is a medical measure.
+    var restingHeartRate by mutableStateOf<Int?>(null)
+    var hrvMs by mutableStateOf<Int?>(null)
+    /** 0–100, the vendor's own readiness score for the day. */
+    var recovery by mutableStateOf<Int?>(null)
+    /** WHOOP's 0–21 cardiovascular load. Stands in for steps on a strap that counts none. */
+    var strain by mutableStateOf<Double?>(null)
+    var skinTemperature by mutableStateOf<Double?>(null)
+    var spo2 by mutableStateOf<Int?>(null)
+    /** Which device today's numbers came from, worded by the screen. Null when none did. */
+    var wearableSource by mutableStateOf<String?>(null)
+
+    /** True once anything above has arrived from a device. */
+    val hasDeviceData: Boolean
+        get() = wearableSource != null
+
+    /** The build she is running, for the About screen. Set by the platform entry point. */
+    var appVersion by mutableStateOf<String?>(null)
+
+    /** The day the account was made, in her zone. Decides whether Today is still "first day". */
+    var memberSince by mutableStateOf<LocalDate?>(null)
 
     /** Seconds of breathing and meditation practised today. */
     var practiceSecondsToday by mutableStateOf(0)
@@ -639,12 +670,14 @@ class AppState {
     }
 
     fun toggleSymptom(symptom: String) {
+        isNewUser = false
         val added = !symptoms.remove(symptom)
         if (added) symptoms.add(symptom)
         sync?.symptomToggled(symptom, added)
     }
 
     fun addWater(ml: Int) {
+        isNewUser = false
         waterMl = (waterMl + ml).coerceAtLeast(0)
         sync?.waterAdded(ml)
     }
@@ -656,16 +689,27 @@ class AppState {
      * fixed 72 next to real numbers, which made the real ones look invented too.
      */
     fun balanceScore(): Int {
-        fun ratio(value: Int, goal: Int): Float =
-            if (goal <= 0) 0f else (value / goal.toFloat()).coerceIn(0f, 1f)
-        val parts = listOf(
-            ratio(caloriesEaten, calorieGoal),
-            ratio(waterMl, waterGoalMl),
-            ratio(steps, DailyStepGoal),
-            ratio(sleepMinutes, DailySleepGoalMinutes),
+        val parts = listOfNotNull(
+            goalRatio(caloriesEaten, calorieGoal),
+            goalRatio(waterMl, waterGoalMl),
+            activityRatio(),
+            sleepMinutes?.let { goalRatio(it, DailySleepGoalMinutes) },
         )
-        return (parts.average() * 100).toInt()
+        // Only what was measured counts: a day without a watch is a day with fewer
+        // signals, not a day at half the score.
+        return if (parts.isEmpty()) 0 else (parts.average() * 100).toInt()
     }
+
+    /**
+     * Activity against its goal: steps against 8 000, or — on a strap that counts none —
+     * WHOOP's strain against a moderate day. Null when neither was measured.
+     */
+    fun activityRatio(): Float? =
+        steps?.let { goalRatio(it, DailyStepGoal) }
+            ?: strain?.let { (it / ModerateStrain).toFloat().coerceIn(0f, 1f) }
+
+    /** "6 420" for the tiles, or a dash when no device has counted. */
+    fun stepsLabel(): String = steps?.let { Fmt.int(it) } ?: NoValue
 
     /** Millilitres still to drink; never negative once the goal is passed. */
     val waterRemainingMl: Int get() = (waterGoalMl - waterMl).coerceAtLeast(0)
@@ -690,6 +734,7 @@ class AppState {
     val dosesDue: Int get() = medications.size
 
     fun logMeal(meal: Meal) {
+        isNewUser = false
         meals.add(meal)
         caloriesEaten += meal.calories
         proteinG += meal.protein
@@ -703,6 +748,7 @@ class AppState {
      * them sends all three — the server replaces the day's check-in wholesale.
      */
     fun setCheckIn(mood: Mood = this.mood, energy: Int = this.energy, stress: Int = this.stress) {
+        isNewUser = false
         this.mood = mood
         this.energy = energy.coerceIn(1, 5)
         this.stress = stress.coerceIn(1, 5)
@@ -743,10 +789,30 @@ class AppState {
      * arithmetic stays here because every screen that shows a night does it the same way.
      */
     fun sleepLabel(
-        minutes: Int = sleepMinutes,
+        minutes: Int? = sleepMinutes,
         format: (hours: Int, minutes: Int) -> String,
-    ): String = format(minutes / 60, minutes % 60)
+    ): String = minutes?.let { format(it / 60, it % 60) } ?: NoValue
+
+    /** Clears whatever a device said, on sign-out and on a new account. */
+    fun clearDeviceData() {
+        steps = null
+        sleepMinutes = null
+        restingHeartRate = null
+        hrvMs = null
+        recovery = null
+        strain = null
+        skinTemperature = null
+        spo2 = null
+        wearableSource = null
+    }
 }
+
+/** A value against its goal, clamped to one. Null goals are unanswerable. */
+internal fun goalRatio(value: Int, goal: Int): Float? =
+    if (goal <= 0) null else (value / goal.toFloat()).coerceIn(0f, 1f)
+
+/** What a tile shows when nothing was measured. Language-neutral on purpose. */
+const val NoValue: String = "—"
 
 /**
  * One journal entry as a screen shows it.
@@ -768,3 +834,6 @@ const val LOCAL_NOTE_ID: String = "local"
 /** The two goals the app sets itself, because nothing on the wire carries them yet. */
 const val DailyStepGoal = 8000
 const val DailySleepGoalMinutes = 480
+
+/** A moderate WHOOP day on its 0–21 scale; the activity ring fills at this. */
+const val ModerateStrain = 14.0

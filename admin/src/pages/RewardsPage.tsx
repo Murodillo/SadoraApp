@@ -12,7 +12,7 @@ import { useAuth } from '../auth/AuthContext'
 import { Card, ErrorNotice, Loading, Stat, formatDateTime } from '../components/ui'
 
 /**
- * The Nur economy, in one page.
+ * The Gul economy, in one page.
  *
  * The header is the number that matters before any rate is touched: coins outstanding
  * is what the app currently owes. Raising a rate raises that liability, and an operator
@@ -55,16 +55,16 @@ export function RewardsPage() {
     <div className="grid" style={{ gap: 16 }}>
       <div className="notice">
         Bu yerdagi o‘zgarish ilovani yangilamasdan kuchga kiradi va faqat keyingi
-        mukofotlarga ta’sir qiladi — allaqachon berilgan nur qayta hisoblanmaydi. Nur
+        mukofotlarga ta’sir qiladi — allaqachon berilgan gul qayta hisoblanmaydi. Gul
         faqat <b>harakat</b> uchun beriladi: ilovani ochish, belgilash, o‘qish. Uyqu yoki
-        boshqa salomatlik ko‘rsatkichi uchun nur berilmaydi.
+        boshqa salomatlik ko‘rsatkichi uchun gul berilmaydi.
       </div>
 
       {save.error && <ErrorNotice error={save.error} />}
 
       <div className="grid stat-row">
         <Stat
-          label="Muomaladagi nur"
+          label="Muomaladagi gul"
           value={(totals?.coinsOutstanding ?? 0).toLocaleString('ru-RU')}
           hint="Berilgan, lekin hali sarflanmagan"
         />
@@ -81,7 +81,7 @@ export function RewardsPage() {
             <thead>
               <tr>
                 <th>Harakat</th>
-                <th>Nur</th>
+                <th>Gul</th>
                 <th>Kunlik limit</th>
                 <th>Yoqilgan</th>
                 <th />
@@ -157,7 +157,7 @@ export function RewardsPage() {
                 <th>Foydalanuvchi</th>
                 <th>Mahsulot</th>
                 <th>Kod</th>
-                <th>Nur</th>
+                <th>Gul</th>
                 <th>Holat</th>
               </tr>
             </thead>
@@ -214,7 +214,7 @@ export function RewardsPage() {
  * The coin controls on a user card — the balance, the streak, and a manual correction.
  *
  * The note is required by the server and lands on the audit row, because "who gave this
- * account 5000 nur and why" is exactly the question a scheme like this eventually
+ * account 5000 gul and why" is exactly the question a scheme like this eventually
  * raises.
  */
 export function UserRewardsCard({ userId, card }: { userId: string; card: AdminRewardsCardProps }) {
@@ -226,7 +226,7 @@ export function UserRewardsCard({ userId, card }: { userId: string; card: AdminR
   if (!card) return null
 
   return (
-    <Card title="Nur va streak">
+    <Card title="Gul va streak">
       <div className="grid stat-row">
         <Stat label="Balans" value={card.coins.balance.toLocaleString('ru-RU')} />
         <Stat label="Streak" value={`${card.streak.current} kun`} hint={`Eng uzun — ${card.streak.longest}`} />
@@ -236,7 +236,7 @@ export function UserRewardsCard({ userId, card }: { userId: string; card: AdminR
       {can(['OWNER', 'ADMIN']) && (
         <div className="row" style={{ gap: 8, alignItems: 'flex-end' }}>
           <label style={{ flex: '0 0 120px' }}>
-            <span className="faint">Miqdor (± nur)</span>
+            <span className="faint">Miqdor (± gul)</span>
             <input
               type="number"
               value={amount}

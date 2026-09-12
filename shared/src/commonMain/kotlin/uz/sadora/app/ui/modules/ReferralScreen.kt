@@ -33,7 +33,7 @@ import uz.sadora.app.ui.components.ButtonTone
 import uz.sadora.app.ui.components.CardLabel
 import uz.sadora.app.ui.components.DisclaimerNote
 import uz.sadora.app.ui.components.IconTile
-import uz.sadora.app.ui.components.NurMark
+import uz.sadora.app.ui.components.GulMark
 import uz.sadora.app.ui.components.SadoraButton
 import uz.sadora.app.ui.components.SadoraCard
 import uz.sadora.app.ui.components.SadoraTopBar
@@ -125,7 +125,7 @@ fun ReferralScreen(
                                 color = c.text,
                                 modifier = Modifier.weight(1f),
                             )
-                            NurMark(size = 26.dp)
+                            GulMark(size = 26.dp)
                         }
                         Text(referral.link, style = Sadora.type.body, color = c.muted, maxLines = 1)
                         SadoraButton(
@@ -212,7 +212,7 @@ fun ReferralScreen(
     }
 }
 
-/** One half of the deal: the Nur mark and the sentence that says who gets what. */
+/** One half of the deal: the Gul mark and the sentence that says who gets what. */
 @Composable
 private fun RewardLine(text: String) {
     val c = Sadora.colors
@@ -221,7 +221,7 @@ private fun RewardLine(text: String) {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
     ) {
-        NurMark(size = 18.dp)
+        GulMark(size = 18.dp)
         Text(text, style = Sadora.type.body, color = c.text, modifier = Modifier.weight(1f))
     }
 }

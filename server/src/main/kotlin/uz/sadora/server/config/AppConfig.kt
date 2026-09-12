@@ -36,6 +36,14 @@ data class AppConfig(
      */
     val referralLinkBase: String,
     /**
+     * Where this server is reachable from outside — the base of every link it hands out:
+     * the doctor page behind a QR code, and the OAuth redirect a wearable provider sends
+     * a browser back to. The API's own address, not the landing page's, because both of
+     * those are served by this process.
+     */
+    val publicBaseUrl: String,
+    val wearables: WearableConfig,
+    /**
      * How long a deletion request waits before the account is erased for real.
      *
      * A window for a person who changes her mind, or asks support to — not a soft delete
@@ -47,6 +55,7 @@ data class AppConfig(
     companion object {
         fun fromEnvironment(): AppConfig {
             val environment = enumValueOf<Environment>(env("SADORA_ENV", "DEV").uppercase())
+            val publicBaseUrl = env("PUBLIC_BASE_URL", "http://localhost:8080").trimEnd('/')
             val config = AppConfig(
                 environment = environment,
                 http = HttpConfig(
@@ -121,6 +130,16 @@ data class AppConfig(
                 policyVersion = env("POLICY_VERSION", "2026-09-03"),
                 minimumAppVersion = envOrNull("MINIMUM_APP_VERSION"),
                 referralLinkBase = env("REFERRAL_LINK_BASE", "https://sadora.uz/r").trimEnd('/'),
+                publicBaseUrl = publicBaseUrl,
+                wearables = WearableConfig(
+                    tokenKey = envOrNull("WEARABLE_TOKEN_KEY"),
+                    whoop = WhoopConfig(
+                        clientId = envOrNull("WHOOP_CLIENT_ID"),
+                        clientSecret = envOrNull("WHOOP_CLIENT_SECRET"),
+                        redirectUri = env("WHOOP_REDIRECT_URI", "$publicBaseUrl/v1/wearables/whoop/callback"),
+                        apiBaseUrl = env("WHOOP_API_BASE_URL", "https://api.prod.whoop.com"),
+                    ),
+                ),
                 accountErasureGracePeriod = env("ACCOUNT_ERASURE_GRACE_DAYS", "30").toInt().days,
             )
             config.verifyProductionSafety()
@@ -140,6 +159,10 @@ data class AppConfig(
             require(jwt.secret.length >= 32) { "JWT_SECRET must be at least 32 characters." }
             require(!otp.exposeCode) { "OTP_EXPOSE_CODE must be false in production." }
             require(otp.fixedCode == null) { "OTP_FIXED_CODE must not be set in production." }
+            require(publicBaseUrl.startsWith("https://")) { "PUBLIC_BASE_URL must be an https URL in production." }
+            if (wearables.whoop.isConfigured) {
+                require(wearables.tokenKey != null) { "WEARABLE_TOKEN_KEY must be set when a cloud wearable is configured." }
+            }
         }
 
         private const val DEV_JWT_SECRET = "dev-only-secret-change-me-0123456789abcdef"
@@ -255,4 +278,32 @@ data class ClickConfig(
     val checkoutUrl: String,
 ) {
     val isConfigured: Boolean get() = serviceId != null && merchantId != null && secretKey != null
+}
+
+/**
+ * The cloud wearables the server pulls from, and the key their tokens rest under.
+ *
+ * [tokenKey] is 32 random bytes, base64: the refresh tokens a provider issues are
+ * long-lived credentials to someone's health data and are encrypted at rest with it.
+ * Without a key the server derives one from the JWT secret, which is fine on a laptop
+ * and refused in production by [AppConfig].
+ */
+data class WearableConfig(
+    val tokenKey: String?,
+    val whoop: WhoopConfig,
+)
+
+/**
+ * WHOOP's developer app. Both credentials or nothing: with either missing the provider
+ * is listed as "not configured" and the connect button is not drawn, rather than starting
+ * an OAuth flow that has nowhere to come back to.
+ */
+data class WhoopConfig(
+    val clientId: String?,
+    val clientSecret: String?,
+    /** Must match a redirect URI registered in the WHOOP dashboard, character for character. */
+    val redirectUri: String,
+    val apiBaseUrl: String,
+) {
+    val isConfigured: Boolean get() = clientId != null && clientSecret != null
 }

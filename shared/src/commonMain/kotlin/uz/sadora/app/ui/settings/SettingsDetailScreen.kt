@@ -19,7 +19,13 @@ import androidx.compose.ui.text.input.KeyboardType
 import uz.sadora.app.design.Sadora
 import uz.sadora.app.design.Spacing
 import uz.sadora.app.i18n.strings
+import uz.sadora.app.data.NotificationsController
 import uz.sadora.app.data.SadoraController
+import uz.sadora.app.data.ShareController
+import uz.sadora.app.ui.components.rememberShareAction
+import uz.sadora.contract.DoctorSummary
+import uz.sadora.contract.NotificationCategory
+import kotlinx.serialization.json.Json
 import uz.sadora.app.model.AppLanguage
 import uz.sadora.app.model.AppState
 import uz.sadora.app.model.Goal
@@ -59,9 +65,12 @@ fun SettingsDetailScreen(
     route: Route,
     state: AppState,
     controller: SadoraController,
+    notifications: NotificationsController,
+    share: ShareController,
     onClose: () -> Unit,
     onOpen: (Route) -> Unit,
     onSignedOut: () -> Unit,
+    onToast: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier) {
@@ -69,11 +78,13 @@ fun SettingsDetailScreen(
             Route.PersonalDetails -> PersonalDetails(state, controller, onClose)
             Route.GoalsSettings -> GoalsSettings(state, controller, onClose)
             Route.LifeStageSettings -> LifeStageSettings(state, controller, onClose)
-            Route.Notifications -> NotificationSettings(state, onClose)
-            Route.PrivacySecurity -> PrivacySettings(state, controller, onClose, onOpen, onSignedOut)
+            Route.Notifications -> NotificationSettings(notifications, onClose)
+            Route.PrivacySecurity -> PrivacySettings(state, controller, share, onClose, onOpen, onSignedOut, onToast)
             Route.LanguageSettings -> LanguageSettings(state, controller, onClose)
-            Route.About -> About(onClose)
-            else -> About(onClose)
+            Route.About -> About(state, onClose)
+            // Every settings route is listed above; an unknown one is a programming
+            // error worth seeing, not a screen to fall back to quietly.
+            else -> error("Not a settings route: $route")
         }
     }
 }
@@ -204,20 +215,27 @@ private fun LifeStageSettings(state: AppState, controller: SadoraController, onC
 }
 
 @Composable
-private fun NotificationSettings(state: AppState, onClose: () -> Unit) {
+private fun NotificationSettings(notifications: NotificationsController, onClose: () -> Unit) {
     val t = strings.settings
+    val scope = rememberCoroutineScope()
+    LaunchedEffect(Unit) { notifications.load() }
     SadoraTopBar(t.notificationsTitle, onBack = onClose)
     ScreenContent {
         item {
+            notifications.error?.let { ErrorStrip(it.readable()) }
             SadoraCard {
-                ToggleRow(t.medReminder, t.medReminderNote, state.notificationsAllowed) {
-                    state.notificationsAllowed = it
+                // Each switch is one category on the server — the same settings the
+                // scheduler reads before it sends — and saves the moment it moves.
+                listOf(
+                    Triple(t.medReminder, t.medReminderNote, NotificationCategory.MED_REMINDER),
+                    Triple(t.cycleReminder, t.cycleReminderNote, NotificationCategory.CYCLE),
+                    Triple(t.waterReminder, t.waterReminderNote, NotificationCategory.WATER),
+                    Triple(t.aiSummary, t.aiSummaryNote, NotificationCategory.INSIGHT),
+                ).forEach { (title, note, category) ->
+                    ToggleRow(title, note, notifications.isEnabled(category)) { enabled ->
+                        scope.launch { notifications.setCategory(category, enabled) }
+                    }
                 }
-                ToggleRow(t.cycleReminder, t.cycleReminderNote, state.notificationsAllowed) {
-                    state.notificationsAllowed = it
-                }
-                ToggleRow(t.waterReminder, t.waterReminderNote, false) {}
-                ToggleRow(t.aiSummary, t.aiSummaryNote, state.isPremium) {}
             }
         }
     }
@@ -248,12 +266,15 @@ private fun ToggleRow(
 private fun PrivacySettings(
     state: AppState,
     controller: SadoraController,
+    share: ShareController,
     onClose: () -> Unit,
     onOpen: (Route) -> Unit,
     onSignedOut: () -> Unit,
+    onToast: (String) -> Unit,
 ) {
     val t = strings.settings
     val scope = rememberCoroutineScope()
+    val shareAction = rememberShareAction()
     var confirmDelete by remember { mutableStateOf(false) }
 
     // Show what the server actually has, not what this device last set.
@@ -308,7 +329,24 @@ private fun PrivacySettings(
         item {
             SadoraCard {
                 CardLabel(t.yourData)
-                SadoraButton(t.exportData, {}, tone = ButtonTone.Secondary)
+                // Her export is the same document the doctor page renders, as JSON,
+                // handed to the system share sheet so she chooses where it goes.
+                SadoraButton(
+                    t.exportData,
+                    onClick = {
+                        scope.launch {
+                            val export = share.loadExport(state.language.code.lowercase())
+                            if (export == null) {
+                                onToast(t.exportFailed)
+                            } else {
+                                shareAction(exportJson.encodeToString(DoctorSummary.serializer(), export))
+                                onToast(t.exportReady)
+                            }
+                        }
+                    },
+                    tone = ButtonTone.Secondary,
+                    enabled = !share.busy,
+                )
                 SadoraButton(
                     t.deleteAccount,
                     { confirmDelete = true },
@@ -378,16 +416,20 @@ private fun LanguageSettings(state: AppState, controller: SadoraController, onCl
 }
 
 @Composable
-private fun About(onClose: () -> Unit) {
+private fun About(state: AppState, onClose: () -> Unit) {
     val c = Sadora.colors
     SadoraTopBar(strings.settings.aboutTitle, onBack = onClose)
     ScreenContent {
         item {
             SadoraCard {
                 Text("SADORA", style = Sadora.type.h1, color = c.text)
-                Text(strings.settings.version("1.0.0"), style = Sadora.type.body, color = c.muted)
+                // The build she is running, from the platform, never a string typed here.
+                Text(strings.settings.version(state.appVersion ?: "—"), style = Sadora.type.body, color = c.muted)
                 Text(strings.settings.medicalDisclaimer, style = Sadora.type.body, color = c.muted)
             }
         }
     }
 }
+
+/** Readable rather than compact: the export is for her, or for someone she hands it to. */
+private val exportJson = Json { prettyPrint = true; encodeDefaults = false; explicitNulls = false }

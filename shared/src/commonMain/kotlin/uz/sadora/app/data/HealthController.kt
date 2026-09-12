@@ -10,6 +10,8 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.minus
 import kotlinx.datetime.plus
 import kotlinx.datetime.todayIn
+import kotlinx.datetime.atTime
+import kotlinx.datetime.toInstant
 import uz.sadora.app.model.AppState
 import uz.sadora.app.data.api.CycleApi
 import uz.sadora.app.data.api.MedicationApi
@@ -147,6 +149,23 @@ class HealthController(
         refreshNutrition()
         refreshMedications()
         refreshWearables()
+        markNewUserIfNothingLogged()
+    }
+
+    /**
+     * The empty Today, for the first day only.
+     *
+     * A new account with nothing logged sees the invitation rather than a deck of
+     * dashes; anything she records, and any later day, turns the ordinary deck on. The
+     * flag is computed here rather than set by onboarding because the server is the one
+     * that knows whether anything was logged, on this phone or another.
+     */
+    private fun markNewUserIfNothingLogged() {
+        val store = state ?: return
+        val nothingToday = (day?.isEmpty ?: true) && (nutrition?.meals.isNullOrEmpty()) &&
+            medications.isEmpty() && (wearableToday?.metrics.isNullOrEmpty()) && (nutrition?.waterMl ?: 0) == 0
+        val firstDay = store.memberSince?.let { it == (cycle?.today ?: Clock.System.todayIn(TimeZone.currentSystemDefault())) } ?: false
+        store.isNewUser = nothingToday && firstDay
     }
 
     suspend fun refreshWearables() {
@@ -155,6 +174,51 @@ class HealthController(
             wearableToday = it
             state?.applyWearables(it)
         }
+    }
+
+    /** The last [days] days of device metrics, oldest first. The body-signals card reads it. */
+    var wearableRange by mutableStateOf<uz.sadora.contract.DailyHealthRange?>(null)
+        private set
+
+    suspend fun loadWearableRange(days: Int = 14) {
+        val api = wearableApi ?: return
+        val to = cycle?.today ?: selectedDate ?: Clock.System.todayIn(TimeZone.currentSystemDefault())
+        val from = to.minus(days - 1, DateTimeUnit.DAY)
+        calls.run(silent = true) { api.daily(from, to) }?.let { wearableRange = it }
+    }
+
+    /**
+     * Sleep she typed in herself, for a night no device recorded.
+     *
+     * Posted through the same ingest as a watch would use, under the manual provider,
+     * so it takes the same path to the daily aggregate and the doctor page — and so a
+     * watch that later reports the same night outranks it, because a typed value is
+     * what the priority list puts first only when the two disagree by intent.
+     */
+    suspend fun logSleep(minutes: Int): Boolean {
+        val api = wearableApi ?: run { state?.sleepMinutes = minutes; return true }
+        val date = selectedDate ?: cycle?.today ?: Clock.System.todayIn(TimeZone.currentSystemDefault())
+        val zone = TimeZone.currentSystemDefault()
+        val wakeAt = date.atTime(8, 0).toInstant(zone)
+        val result = calls.run {
+            api.ingest(
+                uz.sadora.contract.IngestSamplesRequest(
+                    samples = listOf(
+                        uz.sadora.contract.HealthSampleInput(
+                            provider = uz.sadora.contract.HealthProvider.MANUAL,
+                            externalId = "manual-sleep:$date",
+                            metric = "sleep_minutes",
+                            value = minutes.toDouble(),
+                            startedAt = wakeAt,
+                            sourceDevice = "manual",
+                        ),
+                    ),
+                    timezone = zone.id,
+                ),
+            )
+        } ?: return false
+        if (result.accepted + result.updated > 0) refreshWearables()
+        return true
     }
 
     /**

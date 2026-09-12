@@ -384,7 +384,7 @@ def grant_premium(everyone: list):
 
 
 def seed_rewards(everyone: list, admin: str):
-    """Streaks, Nur balances and one accepted invite, so the shop is worth opening.
+    """Streaks, Gul balances and one accepted invite, so the shop is worth opening.
 
     The streak is whatever one check-in makes it — a day — because the server counts
     consecutive opens and there is no honest way for a seeder to fake a fortnight of
@@ -395,7 +395,7 @@ def seed_rewards(everyone: list, admin: str):
         result = call("POST", "/rewards/check-in", None, u["token"])
         call("POST", f"/admin/rewards/users/{u['id']}/adjust",
              {"amount": u["coins"], "note": "Demo hisob — do'konni ko'rsatish uchun"}, admin)
-        print(f"  {u['name']:<20} streak {result['streak']['current']}  +{u['coins']} nur")
+        print(f"  {u['name']:<20} streak {result['streak']['current']}  +{u['coins']} gul")
 
     # One invite that actually paid, so the referral screen has a number on it.
     inviter, invited = everyone[0], everyone[-1]

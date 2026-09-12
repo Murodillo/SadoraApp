@@ -260,7 +260,15 @@ export type HealthMetric =
   | 'sleep_duration'
   | 'sleep_deep'
   | 'sleep_rem'
+  | 'sleep_light'
+  | 'sleep_awake'
+  | 'sleep_performance'
+  | 'sleep_efficiency'
   | 'weight'
+  | 'recovery'
+  | 'strain'
+  | 'spo2'
+  | 'skin_temperature'
 
 export interface ProviderHealth {
   provider: HealthProvider
@@ -410,7 +418,7 @@ export interface BillingSummary {
   activeSubscriptions: number
 }
 
-// ---------------------------------------------------------------- Nur
+// ---------------------------------------------------------------- Gul
 
 /** What each action pays, as the rewards page edits it. */
 export interface CoinRule {

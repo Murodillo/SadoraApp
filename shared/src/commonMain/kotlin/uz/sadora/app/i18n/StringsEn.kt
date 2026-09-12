@@ -18,6 +18,7 @@ import uz.sadora.contract.DoseStatus
 import uz.sadora.contract.FetalMovement
 import uz.sadora.contract.FoodRelation
 import uz.sadora.contract.HealthMetric
+import uz.sadora.contract.HealthProvider
 import uz.sadora.contract.MealSlot
 import uz.sadora.contract.ScheduleKind
 import uz.sadora.contract.SymptomCategory
@@ -33,7 +34,7 @@ object StringsEn : Strings {
         override val today = "Today"
         override val mind = "Mind"
         override val nutrition = "Food"
-        override val profile = "Profile"
+        override val premium = "Premium"
         override fun journey(stage: LifeStage) = when (stage) {
             LifeStage.Cycle -> "Cycle"
             LifeStage.TryingToConceive -> "Plan"
@@ -153,7 +154,7 @@ object StringsEn : Strings {
         override val inviteSubtitle = "If not, just skip this step."
         override val inviteLabel = "Invite code"
         override val inviteHint = "For example, K7M2QP"
-        override fun inviteReward(coins: String) = "With a code you start with $coins nur"
+        override fun inviteReward(coins: String) = "With a code you start with $coins gul"
         override val inviteFromLink = "Taken from your link"
 
         override val permissionsTitle = "What will you allow?"
@@ -308,8 +309,8 @@ object StringsEn : Strings {
         override val insights = "Insights"
         override val knowledge = "Knowledge"
 
-        override val rewards = "Nur and streak"
-        override val shop = "Nur shop"
+        override val rewards = "Gul and streak"
+        override val shop = "Gul shop"
         override val referral = "Invite friends"
         override val homeLayout = "Home screen layout"
 
@@ -340,6 +341,9 @@ object StringsEn : Strings {
         override val premiumFeatureInsights = "Advanced insights"
         override val upgradeTitle = "SADORA Premium"
         override val upgradeSubtitle = "AI chat, food scanner and advanced insights"
+        override val shareProfile = "Show my doctor"
+        override val shareProfileNote = "A QR code your doctor scans to see your records"
+        override val devices = "Devices"
     }
 
     override val settings = object : SettingsStrings {
@@ -390,6 +394,8 @@ object StringsEn : Strings {
         override val privacyPolicy = "Privacy policy"
         override val yourData = "Your data"
         override val exportData = "Export my data"
+        override val exportReady = "Export ready — choose where to send it"
+        override val exportFailed = "Could not export. Try again later."
         override val deleteAccount = "Delete account"
         override val deleteAccountConfirm = "Delete your account?"
         override val deleteAccountBody = "Your data will be deleted for good. " +
@@ -1012,6 +1018,15 @@ object StringsEn : Strings {
         override fun average(value: String) = "Average $value"
         override fun daysRecorded(withData: Int, total: Int) = "$withData / $total days recorded"
         override val sleepManual = "Enter sleep by hand"
+        override val sleepManualBody = "No watch? Enter last night by hand — Balance and Insights will use it."
+        override val sleepHours = "Hours"
+        override val sleepMinutesLabel = "Minutes"
+        override val sleepSaved = "Sleep saved"
+        override val bodySignalsTitle = "Body signals"
+        override val bodySignalsNote = "What your device measured. In the luteal phase temperature and pulse often sit a little higher — an observation, not a diagnosis."
+        override fun vsLastWeek(delta: String) = "$delta vs last week"
+        override val strain = "Strain"
+        override val recovery = "Recovery"
         override fun goalFrom(hours: Int) = "from $hours hours"
         override val lastNight = "Last night"
         override fun restingPulse(bpm: Int) = "Resting pulse $bpm bpm"
@@ -1250,6 +1265,14 @@ object StringsEn : Strings {
             HealthMetric.SLEEP_DURATION -> "Sleep"
             HealthMetric.SLEEP_DEEP -> "Deep sleep"
             HealthMetric.SLEEP_REM -> "REM"
+            HealthMetric.SLEEP_LIGHT -> "Light sleep"
+            HealthMetric.SLEEP_AWAKE -> "Awake"
+            HealthMetric.SLEEP_PERFORMANCE -> "Sleep performance"
+            HealthMetric.SLEEP_EFFICIENCY -> "Sleep efficiency"
+            HealthMetric.RECOVERY -> "Recovery"
+            HealthMetric.STRAIN -> "Strain"
+            HealthMetric.SPO2 -> "SpO₂"
+            HealthMetric.SKIN_TEMPERATURE -> "Skin temperature"
             HealthMetric.WEIGHT -> "Weight"
         }
 
@@ -1288,9 +1311,9 @@ object StringsEn : Strings {
     }
 
     override val rewards = object : RewardStrings {
-        override val coinName = "Nur"
-        override fun coins(amount: String) = "$amount nur"
-        override fun coinsGained(amount: String) = "+$amount nur"
+        override val coinName = "Gul"
+        override fun coins(amount: String) = "$amount gul"
+        override fun coinsGained(amount: String) = "+$amount gul"
 
         override fun streakDays(days: Int) = "$days days running"
         override val streakStarted = "Streak started"
@@ -1300,7 +1323,7 @@ object StringsEn : Strings {
             "$days more days — the $milestone-day mark"
         override val streakBeyondMilestones = "Every milestone is behind you"
 
-        override val walletTitle = "Nur wallet"
+        override val walletTitle = "Gul wallet"
         override val balance = "Balance"
         override val earned = "Earned"
         override val spent = "Spent"
@@ -1308,8 +1331,8 @@ object StringsEn : Strings {
         override val longestStreak = "Longest"
         override fun days(count: Int) = "$count days"
         override val history = "Activity"
-        override val historyEmpty = "Nothing yet. Use the app and nur will add up."
-        override val howToEarn = "How nur is earned"
+        override val historyEmpty = "Nothing yet. Use the app and gul will add up."
+        override val howToEarn = "How gul is earned"
         override fun perDay(times: Int) = "up to $times a day"
         override fun earnReason(reason: String) = when (reason) {
             CoinReasons.DAILY_OPEN -> "First open of the day"
@@ -1327,12 +1350,12 @@ object StringsEn : Strings {
             CoinReasons.ADMIN_ADJUSTMENT -> "Manual adjustment"
             else -> reason
         }
-        override val openShop = "Nur shop"
+        override val openShop = "Gul shop"
         override val inviteFriends = "Invite"
 
         override val referralTitle = "Invite your friends"
         override val referralSubtitle =
-            "For every friend who joins through your link, you both get nur."
+            "For every friend who joins through your link, you both get gul."
         override val yourCode = "Your code"
         override val copyCode = "Copy"
         override val codeCopied = "Code copied"
@@ -1340,22 +1363,22 @@ object StringsEn : Strings {
         override fun shareMessage(link: String) =
             "SADORA — a women's health app. Join through my link: $link"
         override fun invitedCount(count: Int) = "$count friends joined"
-        override fun referralEarned(amount: String) = "$amount nur from invites"
-        override fun rewardPerJoin(amount: String) = "$amount nur per friend"
-        override fun welcomeReward(amount: String) = "Your friend starts with $amount nur"
+        override fun referralEarned(amount: String) = "$amount gul from invites"
+        override fun rewardPerJoin(amount: String) = "$amount gul per friend"
+        override fun welcomeReward(amount: String) = "Your friend starts with $amount gul"
         override val referralHowTitle = "How it works"
         override val referralSteps = listOf(
             "Send the link to a friend",
             "She installs the app and signs up",
-            "Nur reaches you both",
+            "Gul reaches you both",
         )
         override val referralFairUse =
             "A code counts once, and only for a new account. Your own code never pays you."
     }
 
     override val shop = object : ShopStrings {
-        override val title = "Nur shop"
-        override val subtitle = "Turn the nur you've earned into Premium, vitamins and devices"
+        override val title = "Gul shop"
+        override val subtitle = "Turn the gul you've earned into Premium, vitamins and devices"
         override fun tab(kind: ShopKind) = when (kind) {
             ShopKind.PREMIUM -> "Premium"
             ShopKind.VITAMIN -> "Vitamins"
@@ -1371,15 +1394,15 @@ object StringsEn : Strings {
         override fun premiumDays(days: Int) = "$days days of Premium"
         override val outOfStock = "Out of stock"
         override fun stockLeft(count: Int) = "$count left"
-        override val notEnough = "Not enough nur"
-        override fun shortBy(amount: String) = "$amount nur short"
+        override val notEnough = "Not enough gul"
+        override fun shortBy(amount: String) = "$amount gul short"
 
         override val redeem = "Redeem"
         override val redeeming = "Redeeming…"
         override fun confirmTitle(product: String) = product
         override fun confirmBody(cost: String) =
-            "$cost nur will be taken and you'll get a discount code."
-        override val confirmPremiumBody = "The nur is taken and Premium opens straight away."
+            "$cost gul will be taken and you'll get a discount code."
+        override val confirmPremiumBody = "The gul is taken and Premium opens straight away."
         override val cancel = "Cancel"
 
         override val issuedTitle = "Your code is ready"
@@ -1415,7 +1438,7 @@ object StringsEn : Strings {
         override fun widget(key: String) = when (key) {
             HomeWidgets.AI -> "AI summary"
             HomeWidgets.SCORE -> "Health score"
-            HomeWidgets.STREAK -> "Streak and nur"
+            HomeWidgets.STREAK -> "Streak and gul"
             HomeWidgets.STAGE -> "Cycle / stage"
             HomeWidgets.PLAN -> "Today's plan"
             HomeWidgets.SLEEP -> "Sleep"
@@ -1442,4 +1465,140 @@ object StringsEn : Strings {
         }
     }
 
+    override val share = object : ShareStrings {
+        override val title = "Show my doctor"
+        override val subtitle = "A QR code opens your records on the doctor's screen"
+        override val intro = "At the appointment, show the QR code on your phone. The doctor scans it with a camera and sees " +
+            "your cycle, symptoms, mood, medications, appointments and device readings on one page. The link is " +
+            "temporary and disappears after the time you choose."
+        override val create = "Create QR code"
+        override val creating = "Preparing…"
+        override val regenerate = "New code"
+        override val revoke = "Revoke"
+        override val revoked = "Link revoked"
+        override val copyLink = "Copy link"
+        override val linkCopied = "Link copied"
+        override val shareLink = "Send"
+        override fun shareMessage(link: String) = "SADORA — my health records (temporary link): $link"
+        override val showToDoctor = "Show this code to your doctor"
+        override val validFor = "Valid for"
+        override fun hours(count: Int) = "$count h"
+        override fun days(count: Int) = "$count days"
+        override fun expiresAt(at: String) = "Valid until $at"
+        override val expired = "Expired"
+        override fun viewedTimes(count: Int) = "Opened $count times"
+        override val neverViewed = "Not opened yet"
+        override fun lastViewed(ago: String) = "Last opened $ago"
+        override val includesTitle = "What the page shows"
+        override val includes = listOf(
+            "Age, height, weight and life stage",
+            "Cycle history, last period and the forecast",
+            "Symptoms, mood and energy over 90 days",
+            "Medications, schedule and adherence",
+            "Appointments and tests",
+            "Sleep, heart rate, HRV and other device readings",
+        )
+        override val excludesTitle = "What it never shows"
+        override val excludes = listOf(
+            "The text of your journal entries",
+            "Private notes on pregnancy check-ins",
+            "The secret chat",
+        )
+        override val privacyNote = "The link carries no name or phone number — only a random code. Make a new code and the old one stops at once."
+        override val offline = "Creating a QR code needs an internet connection"
+        override val failed = "Could not create the link. Try again."
+    }
+
+    override val premium = object : PremiumStrings {
+        override val tab = "Premium"
+        override val title = "SADORA Premium"
+        override val activeTitle = "Premium is active"
+        override val activeBody = "Everything is open: AI chat, the food scanner, long-range insights and the whole library."
+        override val inactiveTitle = "To understand more"
+        override val inactiveBody = "Nothing is taken from the free plan. Premium adds deeper insights and an AI assistant."
+        override val benefitsTitle = "What Premium gives you"
+        override val benefitAiTitle = "AI assistant"
+        override val benefitAiBody = "Up to 20 questions a day, answered with your cycle, sleep and food in mind."
+        override val benefitScannerTitle = "Food scanner"
+        override val benefitScannerBody = "30 photos a month: snap a dish and the calories and nutrients are worked out for you."
+        override val benefitInsightsTitle = "Insights history"
+        override val benefitInsightsBody = "30- and 90-day windows and observations: see what tends to come together."
+        override val benefitLibraryTitle = "The whole Knowledge library"
+        override val benefitLibraryBody = "Every clinician-reviewed article, matched to your stage."
+        override val benefitDevicesTitle = "Device insights"
+        override val benefitDevicesBody = "WHOOP and other device readings set against your cycle phases."
+        override val compareTitle = "Free and Premium"
+        override val seePlans = "See plans"
+        override val manage = "Manage subscription"
+        override fun buyWithCoins(coinName: String) = "Get it with $coinName"
+        override val faqTitle = "Common questions"
+        override val faq = listOf(
+            "What stays free?" to "Everything: cycle, mood, food diary, medications, appointments and 7-day insights. Premium only adds.",
+            "Can I cancel any time?" to "Yes. Premium stays open until the paid period ends, then you return to the free plan — your data stays.",
+            "How do I pay?" to "Through Payme or Click. The server confirms the payment and Premium opens immediately.",
+            "Can I get it with gul?" to "Yes — the shop offers 7 and 30 days of Premium for gul. Gul is earned by opening the app and logging.",
+        )
+        override val freeStays = "Everything on the free plan stays"
+    }
+
+    override val devices = object : DeviceStrings {
+        override val title = "Devices"
+        override val subtitle = "Connect a watch or band — sleep, heart rate and recovery arrive on their own"
+        override val connectedSection = "Connected"
+        override val availableSection = "Available to connect"
+        override val plannedSection = "Planned"
+        override fun provider(provider: HealthProvider) = when (provider) {
+            HealthProvider.APPLE_HEALTH -> "Apple Health"
+            HealthProvider.HEALTH_CONNECT -> "Health Connect"
+            HealthProvider.OURA -> "Oura"
+            HealthProvider.GARMIN -> "Garmin"
+            HealthProvider.WHOOP -> "WHOOP"
+            HealthProvider.FITBIT -> "Fitbit"
+            HealthProvider.SAMSUNG_HEALTH -> "Samsung Health"
+            HealthProvider.MANUAL -> "Entered by hand"
+        }
+        override fun providerTagline(provider: HealthProvider) = when (provider) {
+            HealthProvider.WHOOP -> "Recovery, strain, HRV and skin temperature"
+            HealthProvider.APPLE_HEALTH -> "iPhone and Apple Watch"
+            HealthProvider.HEALTH_CONNECT -> "Android watches and bands"
+            HealthProvider.OURA -> "A ring: sleep and recovery"
+            HealthProvider.GARMIN -> "Sports watches"
+            HealthProvider.FITBIT -> "Bands and watches"
+            HealthProvider.SAMSUNG_HEALTH -> "Galaxy Watch"
+            HealthProvider.MANUAL -> "Readings you typed yourself"
+        }
+        override val connect = "Connect"
+        override val connecting = "Connecting…"
+        override val disconnect = "Disconnect"
+        override val disconnectConfirmTitle = "Disconnect this device?"
+        override val disconnectConfirmBody = "New data stops arriving. What has already arrived is kept."
+        override val syncNow = "Sync now"
+        override val syncing = "Syncing…"
+        override val synced = "Synced"
+        override fun lastSync(ago: String) = "Last sync: $ago"
+        override val neverSynced = "Not synced yet"
+        override val statusActive = "Active"
+        override val statusExpired = "Needs reconnecting"
+        override val statusError = "Error"
+        override val reconnect = "Reconnect"
+        override fun unavailable(reason: String) = when (reason) {
+            "not_configured" -> "Not available yet"
+            "ios_only" -> "iPhone only"
+            "android_only" -> "Android only"
+            else -> "Coming soon"
+        }
+        override val givesTitle = "What it brings"
+        override val usedInTitle = "Where it is used"
+        override fun usedIn(provider: HealthProvider) = when (provider) {
+            HealthProvider.WHOOP -> listOf("Sleep screen", "Today — health score", "Balance", "Cycle — body signals", "Doctor page")
+            else -> listOf("Sleep screen", "Today — health score", "Balance", "Insights")
+        }
+        override val openBrowserNote = "WHOOP's page opens in the browser. Once you allow access you return to the app — the first pull covers 30 days and takes a few minutes."
+        override val returnedOk = "WHOOP connected — data is on its way"
+        override val returnedError = "WHOOP did not connect. Try again."
+        override val noStepsNote = "WHOOP does not count steps — strain is shown instead."
+        override val manualTitle = "No watch?"
+        override val manualBody = "Enter sleep by hand on the Sleep screen — Balance and Insights will use it."
+        override val note = "SADORA takes only the readings listed from a device and never sells them. You can disconnect at any time."
+    }
 }

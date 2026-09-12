@@ -30,6 +30,8 @@ dependencies {
 
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.messaging)
+    // Analytics collection starts off (see the manifest) and follows her consent.
+    implementation(libs.firebase.analytics)
 
     implementation(libs.compose.uiToolingPreview)
     debugImplementation(libs.compose.uiTooling)

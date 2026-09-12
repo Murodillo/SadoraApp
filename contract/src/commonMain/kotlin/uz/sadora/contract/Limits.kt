@@ -54,6 +54,11 @@ object Limits {
     const val ARTICLE_DISCLAIMER_MAX = 500
     val ARTICLE_READ_MINUTES = 1..120
 
+    // ---- profile share (the QR code a doctor scans)
+    const val SHARE_DEFAULT_HOURS = 24
+    const val SHARE_MAX_HOURS = 24 * 7
+    val SHARE_TTL_HOURS = 1..SHARE_MAX_HOURS
+
     // ---- secret chat
     const val POST_MIN = 2
     const val POST_MAX = 2000

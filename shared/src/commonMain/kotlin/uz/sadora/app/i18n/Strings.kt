@@ -57,6 +57,9 @@ interface Strings {
     val rewards: RewardStrings
     val shop: ShopStrings
     val homeLayout: HomeLayoutStrings
+    val share: ShareStrings
+    val premium: PremiumStrings
+    val devices: DeviceStrings
     val errors: ErrorStrings
 }
 
@@ -347,7 +350,8 @@ interface TabStrings {
     val today: String
     val mind: String
     val nutrition: String
-    val profile: String
+    /** The fifth tab. Profile moved to the home header; this is where Premium lives now. */
+    val premium: String
 
     /**
      * The second tab is named after the stage she is in — a pregnant user reads
@@ -631,6 +635,11 @@ interface ProfileStrings {
     val premiumFeatureInsights: String
     val upgradeTitle: String
     val upgradeSubtitle: String
+
+    /** The QR code row, above the settings: it is a thing she does at the clinic. */
+    val shareProfile: String
+    val shareProfileNote: String
+    val devices: String
 }
 
 interface SettingsStrings {
@@ -695,6 +704,8 @@ interface SettingsStrings {
     val legal: LegalTexts
     val yourData: String
     val exportData: String
+    val exportReady: String
+    val exportFailed: String
     val deleteAccount: String
     val deleteAccountConfirm: String
     val deleteAccountBody: String
@@ -989,6 +1000,18 @@ interface ModuleStrings {
     fun average(value: String): String
     fun daysRecorded(withData: Int, total: Int): String
     val sleepManual: String
+    val sleepManualBody: String
+    val sleepHours: String
+    val sleepMinutesLabel: String
+    val sleepSaved: String
+
+    // ---- the body-signals card: what the wearable says beside the cycle
+    val bodySignalsTitle: String
+    val bodySignalsNote: String
+    /** "+0,3 °C o'tgan haftaga nisbatan" — a delta against the previous seven days. */
+    fun vsLastWeek(delta: String): String
+    val strain: String
+    val recovery: String
     fun goalFrom(hours: Int): String
     val lastNight: String
     fun restingPulse(bpm: Int): String
