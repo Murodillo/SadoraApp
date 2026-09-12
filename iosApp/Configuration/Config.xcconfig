@@ -1,7 +1,8 @@
-// Set TEAM_ID to the Apple Developer team that will sign the build. Xcode needs it to
-// provision the app; it is left empty in the repository because it is account-specific
-// and not a secret worth committing.
-TEAM_ID=
+// The Apple Developer team that signs the build: "Ziyodulla Samatov", the account the
+// App Store listing lives under. A team identifier is not a secret — it is printed in
+// every signed binary — and pinning it here is what lets a plain Xcode build sign itself.
+// Override on the xcodebuild command line to sign with another team.
+TEAM_ID=WAAR6RJ42C
 
 PRODUCT_NAME=Sadora
 // The App Store identity. It matches the Android applicationId and the server's
@@ -13,5 +14,11 @@ PRODUCT_BUNDLE_IDENTIFIER=uz.sadora.app
 // command line.
 SADORA_API_HOST=
 
-CURRENT_PROJECT_VERSION=1
+// The host a DEBUG build talks to; empty means the simulator's own loopback. A build
+// meant for a phone on the desk sets it to the development machine — `macbook.local`,
+// or a whole `https://` URL for a tunnel. The release knob above is a separate one,
+// mirroring Android's `sadora.devHost` and `sadora.apiUrl`.
+SADORA_DEV_HOST=
+
+CURRENT_PROJECT_VERSION=2
 MARKETING_VERSION=1.0

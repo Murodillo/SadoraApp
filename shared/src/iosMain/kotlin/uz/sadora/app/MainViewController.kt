@@ -24,10 +24,20 @@ private val iosGraph: SadoraGraph by lazy {
     SadoraGraph(
         tokenStorage = storage,
         device = IosDeviceIdentity(storage),
-        environment = if (isDebugBuild()) SadoraEnvironment.development() else releaseEnvironment(),
+        environment = if (isDebugBuild()) debugEnvironment() else releaseEnvironment(),
         appVersion = NSBundle.mainBundle.objectForInfoDictionaryKey("CFBundleShortVersionString") as? String,
     )
 }
+
+/**
+ * `SadoraDevHost` is empty unless the build was made with `SADORA_DEV_HOST=<host>`, so the
+ * ordinary debug build still points at the simulator's own loopback. A build installed on a
+ * phone cannot reach that, and names the development machine instead.
+ */
+private fun debugEnvironment(): SadoraEnvironment =
+    bundleString("SadoraDevHost")
+        ?.let { SadoraEnvironment.development(it) }
+        ?: SadoraEnvironment.development()
 
 /**
  * `SadoraApiHost` is empty unless the archive was built with `SADORA_API_HOST=<host>`:
@@ -35,10 +45,13 @@ private val iosGraph: SadoraGraph by lazy {
  * It is a host rather than a URL because an xcconfig reads `//` as a comment.
  */
 private fun releaseEnvironment(): SadoraEnvironment =
-    (NSBundle.mainBundle.objectForInfoDictionaryKey("SadoraApiHost") as? String)
-        ?.takeIf { it.isNotBlank() }
+    bundleString("SadoraApiHost")
         ?.let { SadoraEnvironment(baseUrl = "https://$it") }
         ?: SadoraEnvironment.Production
+
+/** An Info.plist string, or null when the build left the setting empty. */
+private fun bundleString(key: String): String? =
+    (NSBundle.mainBundle.objectForInfoDictionaryKey(key) as? String)?.takeIf { it.isNotBlank() }
 
 /**
  * Fully qualified: this module already has an `uz.sadora.app.Platform` interface,
