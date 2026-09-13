@@ -178,6 +178,12 @@ jobs:
       - name: Test the shared module
         run: ./gradlew :shared:testAndroidHostTest --stacktrace
 
+      # Only a release build runs lint's fatal checks, and nothing else here builds one:
+      # a dependency that dragged in an old Fragment broke `assembleRelease` while every
+      # debug build stayed green. This is those checks without the signing key.
+      - name: Lint the release build
+        run: ./gradlew :androidApp:lintVitalRelease --stacktrace
+
       # When the run delivers, stage.yml builds the APK against the staging API instead,
       # and building an unused one here would only double the wait.
       - name: Assemble the app

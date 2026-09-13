@@ -17,6 +17,7 @@ firebase-bom = "34.19.0"
 qrose = "1.1.2"
 googleServices = "4.5.0"
 healthConnect = "1.1.0"
+androidx-fragment = "1.8.9"
 
 # --- backend / contract ---
 ktor = "3.5.2"
@@ -54,6 +55,7 @@ firebase-messaging = { module = "com.google.firebase:firebase-messaging" }
 firebase-analytics = { module = "com.google.firebase:firebase-analytics" }
 qrose = { module = "io.github.alexzhirkevich:qrose", version.ref = "qrose" }
 androidx-health-connect = { module = "androidx.health.connect:connect-client", version.ref = "healthConnect" }
+androidx-fragment = { module = "androidx.fragment:fragment", version.ref = "androidx-fragment" }
 
 # --- contract (shared DTOs, KMP) ---
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }

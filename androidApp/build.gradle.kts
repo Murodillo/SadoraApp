@@ -29,6 +29,10 @@ dependencies {
     implementation(libs.androidx.activity.compose)
 
     implementation(platform(libs.firebase.bom))
+    // Firebase's play-services-base still brings Fragment 1.1.0, and the Activity Result
+    // API behind the permission prompts needs 1.3 or later — lint refuses a release
+    // build otherwise. Named here so the newer one wins the resolution.
+    implementation(libs.androidx.fragment)
     implementation(libs.firebase.messaging)
     // Analytics collection starts off (see the manifest) and follows her consent.
     implementation(libs.firebase.analytics)
