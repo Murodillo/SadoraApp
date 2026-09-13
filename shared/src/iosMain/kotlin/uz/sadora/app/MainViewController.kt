@@ -5,6 +5,8 @@ import uz.sadora.app.data.IosDeviceIdentity
 import uz.sadora.app.data.KeychainTokenStorage
 import uz.sadora.app.data.SadoraEnvironment
 import uz.sadora.app.data.SadoraGraph
+import uz.sadora.app.data.health.HealthKitPlatform
+import uz.sadora.app.data.health.IosHealthSyncPrefs
 import platform.Foundation.NSBundle
 import platform.UIKit.UIViewController
 
@@ -26,6 +28,8 @@ private val iosGraph: SadoraGraph by lazy {
         device = IosDeviceIdentity(storage),
         environment = if (isDebugBuild()) debugEnvironment() else releaseEnvironment(),
         appVersion = NSBundle.mainBundle.objectForInfoDictionaryKey("CFBundleShortVersionString") as? String,
+        healthPlatform = HealthKitPlatform(),
+        healthPrefs = IosHealthSyncPrefs(),
     )
 }
 

@@ -75,18 +75,18 @@ class WearableConnectService(
                 metrics = WHOOP_METRICS,
                 connection = connected[HealthProvider.WHOOP]?.toDto(),
             ),
+            // The phone's own stores are read on the phone, so the server always offers
+            // both; the app greys out the one its platform cannot read.
             ProviderInfo(
                 provider = HealthProvider.APPLE_HEALTH,
                 kind = ProviderKind.ON_DEVICE,
-                available = false,
-                unavailableReason = ProviderUnavailable.PLANNED,
+                available = true,
                 metrics = PLATFORM_METRICS,
             ),
             ProviderInfo(
                 provider = HealthProvider.HEALTH_CONNECT,
                 kind = ProviderKind.ON_DEVICE,
-                available = false,
-                unavailableReason = ProviderUnavailable.PLANNED,
+                available = true,
                 metrics = PLATFORM_METRICS,
             ),
             ProviderInfo(HealthProvider.OURA, ProviderKind.CLOUD, false, ProviderUnavailable.PLANNED, RING_METRICS),
@@ -283,9 +283,10 @@ class WearableConnectService(
             HealthMetric.ACTIVE_ENERGY, HealthMetric.HEART_RATE, HealthMetric.WEIGHT,
         )
         val PLATFORM_METRICS = listOf(
-            HealthMetric.STEPS, HealthMetric.ACTIVE_ENERGY, HealthMetric.DISTANCE, HealthMetric.HEART_RATE,
-            HealthMetric.RESTING_HEART_RATE, HealthMetric.HRV, HealthMetric.RESPIRATORY_RATE,
-            HealthMetric.BODY_TEMPERATURE, HealthMetric.SLEEP_DURATION, HealthMetric.WEIGHT,
+            HealthMetric.STEPS, HealthMetric.SLEEP_DURATION, HealthMetric.SLEEP_DEEP, HealthMetric.SLEEP_REM,
+            HealthMetric.HEART_RATE, HealthMetric.RESTING_HEART_RATE, HealthMetric.HRV, HealthMetric.SKIN_TEMPERATURE,
+            HealthMetric.BODY_TEMPERATURE, HealthMetric.SPO2, HealthMetric.RESPIRATORY_RATE,
+            HealthMetric.ACTIVE_ENERGY, HealthMetric.DISTANCE, HealthMetric.WEIGHT,
         )
         val RING_METRICS = listOf(
             HealthMetric.RECOVERY, HealthMetric.HRV, HealthMetric.RESTING_HEART_RATE, HealthMetric.SKIN_TEMPERATURE,

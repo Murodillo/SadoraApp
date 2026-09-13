@@ -334,6 +334,14 @@ class ApiIntegrationTest {
         assertTrue(whoop.metrics.contains(HealthMetric.RECOVERY))
         assertEquals(HealthProvider.entries.size - 1, providers.size, "every provider but manual is listed")
 
+        // The phone's stores need nothing configured on the server: the phone reads them.
+        listOf(HealthProvider.APPLE_HEALTH, HealthProvider.HEALTH_CONNECT).forEach { provider ->
+            val store = assertNotNull(providers.firstOrNull { it.provider == provider })
+            assertTrue(store.available, "$provider is offered")
+            assertEquals(uz.sadora.contract.ProviderKind.ON_DEVICE, store.kind)
+            assertTrue(store.metrics.contains(HealthMetric.SKIN_TEMPERATURE))
+        }
+
         val connect = client.post("/v1/wearables/whoop/connect") { auth(user.token) }
         assertEquals(HttpStatusCode.ServiceUnavailable, connect.status)
 
@@ -342,6 +350,43 @@ class ApiIntegrationTest {
         assertEquals(HttpStatusCode.ServiceUnavailable, client.post("/v1/wearables/whoop/webhook") { setBody("{}") }.status)
 
         assertTrue(get<List<WearableConnection>>("/v1/wearables/connections", user.token).isEmpty())
+    }
+
+    /**
+     * The names the phone readers send beyond the first set — sleep stages, oxygen,
+     * wrist and skin temperature — each have a mapping row, so none comes back unmapped.
+     */
+    @Test
+    fun `the phone readers' sleep stages, oxygen and temperatures are all mapped`() = api {
+        val user = signUp()
+        onboard(user)
+        val at = kotlin.time.Clock.System.now() - kotlin.time.Duration.parse("2h")
+        fun sample(provider: HealthProvider, metric: String, value: Double) = uz.sadora.contract.HealthSampleInput(
+            provider = provider,
+            externalId = "test:$metric",
+            metric = metric,
+            value = value,
+            startedAt = at,
+        )
+
+        val result = post<uz.sadora.contract.IngestResult>(
+            "/v1/health-data/samples",
+            user.token,
+            uz.sadora.contract.IngestSamplesRequest(
+                samples = listOf(
+                    sample(HealthProvider.HEALTH_CONNECT, "SkinTemperature", 33.9),
+                    sample(HealthProvider.HEALTH_CONNECT, "OxygenSaturation", 97.0),
+                    sample(HealthProvider.HEALTH_CONNECT, "SleepDeep", 3_600.0),
+                    sample(HealthProvider.HEALTH_CONNECT, "BasalBodyTemperature", 36.4),
+                    sample(HealthProvider.APPLE_HEALTH, "HKQuantityTypeIdentifierAppleSleepingWristTemperature", 34.1),
+                    sample(HealthProvider.APPLE_HEALTH, "HKQuantityTypeIdentifierOxygenSaturation", 98.0),
+                    sample(HealthProvider.APPLE_HEALTH, "HKCategoryValueSleepAnalysisAsleepREM", 5_400.0),
+                ),
+            ),
+        )
+
+        assertTrue(result.unmapped.isEmpty(), "unmapped: ${result.unmapped}")
+        assertEquals(7, result.accepted + result.updated + result.rejected)
     }
 
     // ---------------------------------------------------------------- Gul

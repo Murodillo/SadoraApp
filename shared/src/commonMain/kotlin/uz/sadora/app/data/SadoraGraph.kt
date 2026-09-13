@@ -16,6 +16,11 @@ import uz.sadora.app.data.api.NutritionApi
 import uz.sadora.app.data.api.RewardsApi
 import uz.sadora.app.data.api.ShareApi
 import uz.sadora.app.data.api.WearableApi
+import uz.sadora.app.data.health.ApiDeviceHealthBackend
+import uz.sadora.app.data.health.DeviceHealthSync
+import uz.sadora.app.data.health.HealthPlatform
+import uz.sadora.app.data.health.HealthSyncPrefs
+import uz.sadora.app.data.health.InMemoryHealthSyncPrefs
 
 /**
  * The data layer, assembled.
@@ -41,6 +46,12 @@ class SadoraGraph(
      * SDK is; the shared code only decides what is worth recording.
      */
     val analytics: Analytics = Analytics.None,
+    /**
+     * HealthKit or Health Connect, built by the platform because Health Connect needs a
+     * `Context`. The no-op by default, so a test or a preview reads nothing.
+     */
+    healthPlatform: HealthPlatform = HealthPlatform.None,
+    healthPrefs: HealthSyncPrefs = InMemoryHealthSyncPrefs(),
     engine: HttpClientEngine? = null,
 ) {
     private val client: HttpClient =
@@ -68,6 +79,10 @@ class SadoraGraph(
     val shareApi: ShareApi = ShareApi(caller)
     val repository: SadoraRepository = SadoraRepository(api, session, device, appVersion)
 
+    /** One per process: its lock is what keeps a resume and a tap from reading twice at once. */
+    val deviceHealth: DeviceHealthSync =
+        DeviceHealthSync(healthPlatform, healthPrefs, ApiDeviceHealthBackend(wearableApi, cycleApi))
+
     /**
      * Built per session rather than eagerly, because it mirrors into the [AppState] the
      * UI owns and there is exactly one of those.
@@ -92,7 +107,12 @@ class SadoraGraph(
 
     fun shareController(): ShareController = ShareController(shareApi, analytics)
 
-    fun wearableController(): WearableController = WearableController(wearableApi, analytics)
+    fun wearableController(): WearableController = WearableController(
+        api = wearableApi,
+        analytics = analytics,
+        device = deviceHealth,
+        currentUserId = { (session.state.value as? SessionState.SignedIn)?.user?.id },
+    )
 
     fun notificationsController(): NotificationsController = NotificationsController(notificationApi)
 

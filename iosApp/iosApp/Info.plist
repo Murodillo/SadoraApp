@@ -42,5 +42,11 @@
 	<string>SADORA ovqat suratini o'qib, taxminiy kaloriya va makrolarni ko'rsatadi.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Galereyadan ovqat suratini tanlab, uni skanerdan o'tkazishingiz mumkin.</string>
+	<!-- HealthKit. SADORA only reads; the update string is there because App Review
+	     rejects a HealthKit app that lacks it, whether or not it writes. -->
+	<key>NSHealthShareUsageDescription</key>
+	<string>SADORA uyqu, qadam, puls, harorat va hayz kunlarini o'qib, sikl prognozi, Balans va Uyqu ekranlarini to'ldiradi. Ma'lumotlar sotilmaydi.</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>SADORA Salomatlik ilovasiga hech narsa yozmaydi; faqat siz ruxsat bergan ko'rsatkichlarni o'qiydi.</string>
 </dict>
 </plist>

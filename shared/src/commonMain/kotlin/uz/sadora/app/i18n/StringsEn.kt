@@ -1585,12 +1585,15 @@ object StringsEn : Strings {
             "not_configured" -> "Not available yet"
             "ios_only" -> "iPhone only"
             "android_only" -> "Android only"
+            "unsupported" -> "Not supported on this phone"
             else -> "Coming soon"
         }
         override val givesTitle = "What it brings"
         override val usedInTitle = "Where it is used"
         override fun usedIn(provider: HealthProvider) = when (provider) {
             HealthProvider.WHOOP -> listOf("Sleep screen", "Today — health score", "Balance", "Cycle — body signals", "Doctor page")
+            HealthProvider.APPLE_HEALTH, HealthProvider.HEALTH_CONNECT ->
+                listOf("Sleep screen", "Today — health score", "Balance", "Cycle — period days and body temperature", "Insights")
             else -> listOf("Sleep screen", "Today — health score", "Balance", "Insights")
         }
         override val openBrowserNote = "WHOOP's page opens in the browser. Once you allow access you return to the app — the first pull covers 30 days and takes a few minutes."
@@ -1600,5 +1603,17 @@ object StringsEn : Strings {
         override val manualTitle = "No watch?"
         override val manualBody = "Enter sleep by hand on the Sleep screen — Balance and Insights will use it."
         override val note = "SADORA takes only the readings listed from a device and never sells them. You can disconnect at any time."
+        override fun onDeviceNote(provider: HealthProvider) = when (provider) {
+            HealthProvider.APPLE_HEALTH ->
+                "The Health sheet opens: choose what SADORA may read. Data refreshes when you open the app — the first read brings 30 days of readings and 6 months of period days."
+            else ->
+                "Health Connect opens: allow access. Whatever Samsung Health, Mi Fitness, Zepp and other apps write to Health Connect comes through. It refreshes when you open the app."
+        }
+        override val installHealthConnect = "Install Health Connect"
+        override val healthConnectMissing = "Health Connect is missing or out of date on this phone. Install it from Google Play, then come back here."
+        override fun deviceConnected(name: String) = "$name connected — data is on its way"
+        override val accessDenied = "Access was not given — nothing was read"
+        override fun periodsImported(count: Int) = if (count == 1) "1 period added" else "$count periods added"
+        override val appleHealthManage = "Change what is read in the Health app: Profile → Apps → SADORA."
     }
 }

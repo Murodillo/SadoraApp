@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <!-- Without this the app cannot reach the backend at all, and every call fails as a
          connection error that looks exactly like a flaky network. -->
@@ -21,6 +22,39 @@
     <!-- Android 13 and later post no notification at all without this, granted at runtime.
          MainActivity asks once the user is past onboarding. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!--
+        Health Connect: read only, and only these. Each is asked for on the devices
+        screen, never at launch, and the list must match RecordTypes in
+        HealthConnectPlatform — a permission requested but not declared here is refused
+        without a dialog. Google Play also wants every one of them justified in the
+        Health apps declaration before the release is reviewed.
+    -->
+    <uses-permission android:name="android.permission.health.READ_STEPS" />
+    <uses-permission android:name="android.permission.health.READ_DISTANCE" />
+    <uses-permission android:name="android.permission.health.READ_ACTIVE_CALORIES_BURNED" />
+    <uses-permission android:name="android.permission.health.READ_HEART_RATE" />
+    <uses-permission android:name="android.permission.health.READ_RESTING_HEART_RATE" />
+    <uses-permission android:name="android.permission.health.READ_HEART_RATE_VARIABILITY" />
+    <uses-permission android:name="android.permission.health.READ_RESPIRATORY_RATE" />
+    <uses-permission android:name="android.permission.health.READ_OXYGEN_SATURATION" />
+    <uses-permission android:name="android.permission.health.READ_BODY_TEMPERATURE" />
+    <uses-permission android:name="android.permission.health.READ_BASAL_BODY_TEMPERATURE" />
+    <uses-permission android:name="android.permission.health.READ_SKIN_TEMPERATURE" />
+    <uses-permission android:name="android.permission.health.READ_WEIGHT" />
+    <uses-permission android:name="android.permission.health.READ_SLEEP" />
+    <uses-permission android:name="android.permission.health.READ_MENSTRUATION" />
+    <!-- Periods older than the 30 days before the first grant; the cycle wants several. -->
+    <uses-permission android:name="android.permission.health.READ_HEALTH_DATA_HISTORY" />
+
+    <!-- The client library needs Android 8; the app installs on 7 and checks the version
+         before touching it (HealthConnectPlatform). -->
+    <uses-sdk tools:overrideLibrary="androidx.health.connect.client" />
+
+    <!-- Android 11+ hides other packages; without this Health Connect looks uninstalled. -->
+    <queries>
+        <package android:name="com.google.android.apps.healthdata" />
+    </queries>
 
     <application
         android:allowBackup="true"
@@ -107,6 +141,28 @@
                 <data android:scheme="sadora" android:host="wearables" />
             </intent-filter>
         </activity>
+
+        <!-- The privacy policy behind Health Connect's permission screen. Android 13 and
+             older open it with the androidx action; 14 and later through the alias below,
+             which only the system may start. -->
+        <activity
+            android:name=".HealthPermissionsRationaleActivity"
+            android:exported="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar">
+            <intent-filter>
+                <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />
+            </intent-filter>
+        </activity>
+        <activity-alias
+            android:name="ViewPermissionUsageActivity"
+            android:exported="true"
+            android:targetActivity=".HealthPermissionsRationaleActivity"
+            android:permission="android.permission.START_VIEW_PERMISSION_USAGE">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW_PERMISSION_USAGE" />
+                <category android:name="android.intent.category.HEALTH_PERMISSIONS" />
+            </intent-filter>
+        </activity-alias>
 
         <!-- Warm: a streak of a week or more. The one enabled on a fresh install, so a
              new phone starts at the brand's own colours rather than at a cold icon. -->

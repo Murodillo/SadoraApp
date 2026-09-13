@@ -105,4 +105,15 @@ interface DeviceStrings {
     val manualTitle: String
     val manualBody: String
     val note: String
+
+    // ---- the phone's own store: HealthKit, Health Connect
+    /** Under the connect button: what the sheet will ask and when data arrives. */
+    fun onDeviceNote(provider: HealthProvider): String
+    val installHealthConnect: String
+    val healthConnectMissing: String
+    fun deviceConnected(name: String): String
+    val accessDenied: String
+    fun periodsImported(count: Int): String
+    /** HealthKit gives an app no way to change its own permissions, so she is told where. */
+    val appleHealthManage: String
 }

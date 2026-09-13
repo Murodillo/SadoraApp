@@ -1596,12 +1596,15 @@ object StringsRu : Strings {
             "not_configured" -> "Пока недоступно"
             "ios_only" -> "Только на iPhone"
             "android_only" -> "Только на Android"
+            "unsupported" -> "Не поддерживается на этом телефоне"
             else -> "Скоро"
         }
         override val givesTitle = "Что приходит"
         override val usedInTitle = "Где используется"
         override fun usedIn(provider: HealthProvider) = when (provider) {
             HealthProvider.WHOOP -> listOf("Экран сна", "Сегодня — показатель здоровья", "Баланс", "Цикл — сигналы тела", "Страница для врача")
+            HealthProvider.APPLE_HEALTH, HealthProvider.HEALTH_CONNECT ->
+                listOf("Экран сна", "Сегодня — показатель здоровья", "Баланс", "Цикл — дни менструации и температура тела", "Аналитика")
             else -> listOf("Экран сна", "Сегодня — показатель здоровья", "Баланс", "Аналитика")
         }
         override val openBrowserNote = "В браузере откроется страница WHOOP. После разрешения вы вернётесь в приложение — первая загрузка за 30 дней займёт несколько минут."
@@ -1611,5 +1614,17 @@ object StringsRu : Strings {
         override val manualTitle = "Нет часов?"
         override val manualBody = "Введите сон вручную на экране Сна — Баланс и аналитика будут его использовать."
         override val note = "SADORA берёт с устройства только перечисленные показатели и не продаёт их. Отключить можно в любой момент."
+        override fun onDeviceNote(provider: HealthProvider) = when (provider) {
+            HealthProvider.APPLE_HEALTH ->
+                "Откроется окно «Здоровье»: отметьте, что SADORA может читать. Данные обновляются при открытии приложения — в первый раз показатели за 30 дней и дни менструации за 6 месяцев."
+            else ->
+                "Откроется Health Connect: дайте доступ. Придёт всё, что Samsung Health, Mi Fitness, Zepp и другие приложения записали в Health Connect. Обновляется при открытии приложения."
+        }
+        override val installHealthConnect = "Установить Health Connect"
+        override val healthConnectMissing = "На этом телефоне нет Health Connect или он устарел. Установите его из Google Play и вернитесь сюда."
+        override fun deviceConnected(name: String) = "$name подключён — данные загружаются"
+        override val accessDenied = "Доступ не дан — ничего не прочитано"
+        override fun periodsImported(count: Int) = "Добавлено периодов: $count"
+        override val appleHealthManage = "Что читается, меняется в приложении «Здоровье»: Профиль → Приложения → SADORA."
     }
 }

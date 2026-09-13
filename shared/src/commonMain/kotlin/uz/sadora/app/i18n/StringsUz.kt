@@ -1590,12 +1590,15 @@ object StringsUz : Strings {
             "not_configured" -> "Hozircha ulanmaydi"
             "ios_only" -> "Faqat iPhone'da"
             "android_only" -> "Faqat Android'da"
+            "unsupported" -> "Bu telefonda ishlamaydi"
             else -> "Tez orada"
         }
         override val givesTitle = "Nimalar keladi"
         override val usedInTitle = "Qayerda ishlatiladi"
         override fun usedIn(provider: HealthProvider) = when (provider) {
             HealthProvider.WHOOP -> listOf("Uyqu ekrani", "Bugun — salomatlik ko'rsatkichi", "Balans", "Sikl — tana signallari", "Shifokor sahifasi")
+            HealthProvider.APPLE_HEALTH, HealthProvider.HEALTH_CONNECT ->
+                listOf("Uyqu ekrani", "Bugun — salomatlik ko'rsatkichi", "Balans", "Sikl — hayz kunlari va tana harorati", "Tahlillar")
             else -> listOf("Uyqu ekrani", "Bugun — salomatlik ko'rsatkichi", "Balans", "Tahlillar")
         }
         override val openBrowserNote = "Brauzerda WHOOP sahifasi ochiladi. Ruxsat bergach, ilovaga qaytasiz — birinchi yuklab olish 30 kunlik va bir necha daqiqa oladi."
@@ -1605,5 +1608,17 @@ object StringsUz : Strings {
         override val manualTitle = "Soat yo'qmi?"
         override val manualBody = "Uyquni Uyqu ekranidan qo'lda kiriting — Balans va tahlillar shuni ishlatadi."
         override val note = "SADORA qurilmadan faqat sanab o'tilgan ko'rsatkichlarni oladi va ularni sotmaydi. Ulanishni istalgan vaqt uzishingiz mumkin."
+        override fun onDeviceNote(provider: HealthProvider) = when (provider) {
+            HealthProvider.APPLE_HEALTH ->
+                "Salomatlik oynasi ochiladi: SADORA o'qishi mumkin bo'lgan ko'rsatkichlarni belgilang. Ma'lumotlar ilova ochilganda yangilanadi — birinchi marta 30 kunlik ko'rsatkichlar va 6 oylik hayz kunlari olinadi."
+            else ->
+                "Health Connect oynasi ochiladi: ruxsat bering. Samsung Health, Mi Fitness, Zepp va boshqa ilovalar Health Connect'ga yozgan ma'lumotlar keladi. Ilova ochilganda yangilanadi."
+        }
+        override val installHealthConnect = "Health Connect'ni o'rnatish"
+        override val healthConnectMissing = "Bu telefonda Health Connect yo'q yoki eskirgan. Play Market'dan o'rnating, so'ng shu yerga qayting."
+        override fun deviceConnected(name: String) = "$name ulandi — ma'lumotlar kelmoqda"
+        override val accessDenied = "Ruxsat berilmadi — hech narsa o'qilmadi"
+        override fun periodsImported(count: Int) = "$count ta hayz davri qo'shildi"
+        override val appleHealthManage = "Qaysi ko'rsatkichlar o'qilishini Salomatlik ilovasida o'zgartirasiz: Profil → Ilovalar → SADORA."
     }
 }

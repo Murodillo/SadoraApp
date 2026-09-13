@@ -23,10 +23,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import kotlin.time.Clock
 import kotlinx.coroutines.launch
 import uz.sadora.app.data.HealthController
 import uz.sadora.app.data.WearableController
+import uz.sadora.app.data.health.DeviceSyncOutcome
 import uz.sadora.app.data.readable
 import uz.sadora.app.design.Radius
 import uz.sadora.app.design.Sadora
@@ -50,9 +52,11 @@ import uz.sadora.app.ui.components.SadoraTopBar
 import uz.sadora.app.ui.components.ScreenContent
 import uz.sadora.app.ui.components.appearFromBelow
 import uz.sadora.app.ui.components.noRippleClickable
+import uz.sadora.app.ui.components.rememberHealthAccessRequest
 import uz.sadora.contract.ConnectionStatus
 import uz.sadora.contract.HealthProvider
 import uz.sadora.contract.ProviderInfo
+import uz.sadora.contract.ProviderKind
 import uz.sadora.contract.ProviderStatus
 
 /**
@@ -75,6 +79,8 @@ fun DataSourcesScreen(
     modifier: Modifier = Modifier,
 ) {
     val t = strings.devices
+    // Read here, not inside the coroutines below: the language lives in composition.
+    val errors = strings.errors
     val c = Sadora.colors
     val scope = rememberCoroutineScope()
     val uriHandler = LocalUriHandler.current
@@ -84,6 +90,38 @@ fun DataSourcesScreen(
     LaunchedEffect(Unit) {
         wearables.load()
         health.loadSources()
+    }
+
+    // Back from Health Connect's own screen or from the Play Store: the phone's side may
+    // have changed while the app was behind them.
+    LifecycleResumeEffect(Unit) {
+        val job = scope.launch { wearables.refreshDevice() }
+        onPauseOrDispose { job.cancel() }
+    }
+
+    // What a sync of the phone's store changed, carried on to the screens that show it.
+    val afterDeviceSync: suspend (DeviceSyncOutcome) -> Unit = { outcome ->
+        if (outcome.changedMetrics) health.refreshWearables()
+        health.loadSources()
+        if (outcome.periodsAdded > 0) {
+            health.refreshCycle()
+            onToast(t.periodsImported(outcome.periodsAdded))
+        }
+    }
+
+    val requestDeviceAccess = rememberHealthAccessRequest(wearables.devicePlatform) { granted ->
+        scope.launch {
+            val outcome = wearables.onDeviceAccess(granted)
+            val failure = outcome?.failure
+            when {
+                !granted -> onToast(t.accessDenied)
+                failure != null -> onToast(failure.readable(errors))
+                else -> {
+                    wearables.devicePlatform.provider?.let { onToast(t.deviceConnected(t.provider(it))) }
+                    outcome?.let { afterDeviceSync(it) }
+                }
+            }
+        }
     }
 
     // The return from the provider's page, once: a toast, then the list reloads itself.
@@ -113,22 +151,40 @@ fun DataSourcesScreen(
                 item { SectionLabel(t.connectedSection) }
                 itemsIndexed(wearables.connected) { index, info ->
                     Box(Modifier.appearFromBelow(index)) {
+                        val onPhone = info.kind == ProviderKind.ON_DEVICE
                         ConnectedCard(
                             info = info,
                             samples = samplesBy[info.provider],
-                            busy = wearables.busy,
+                            busy = wearables.busy || wearables.deviceSyncing,
+                            footnote = if (info.provider == HealthProvider.APPLE_HEALTH) t.appleHealthManage else null,
                             onSync = {
                                 scope.launch {
-                                    wearables.syncNow(info.provider)?.let { result ->
-                                        onToast(t.synced)
-                                        if (result.accepted + result.updated > 0) health.refreshWearables()
+                                    if (onPhone) {
+                                        val outcome = wearables.syncDevice(force = true)
+                                        val failure = outcome?.failure
+                                        if (failure != null) {
+                                            onToast(failure.readable(errors))
+                                        } else {
+                                            onToast(t.synced)
+                                            outcome?.let { afterDeviceSync(it) }
+                                        }
+                                    } else {
+                                        wearables.syncNow(info.provider)?.let { result ->
+                                            onToast(t.synced)
+                                            if (result.accepted + result.updated > 0) health.refreshWearables()
+                                        }
                                     }
                                 }
                             },
                             onDisconnect = { confirmDisconnect = info.provider },
                             onReconnect = {
-                                scope.launch {
-                                    wearables.startConnect(info.provider)?.let(uriHandler::openUri)
+                                // A store's access is given back on the phone, not through a browser.
+                                if (onPhone) {
+                                    requestDeviceAccess()
+                                } else {
+                                    scope.launch {
+                                        wearables.startConnect(info.provider)?.let(uriHandler::openUri)
+                                    }
                                 }
                             },
                         )
@@ -146,18 +202,34 @@ fun DataSourcesScreen(
                             expanded = expanded == info.provider,
                             onToggle = { expanded = if (expanded == info.provider) null else info.provider },
                             action = {
-                                SadoraButton(
-                                    if (wearables.connectStarted == info.provider) t.connecting else t.connect,
-                                    enabled = !wearables.busy,
-                                    onClick = {
-                                        scope.launch {
-                                            wearables.startConnect(info.provider)?.let(uriHandler::openUri)
+                                when {
+                                    info.kind == ProviderKind.ON_DEVICE && wearables.deviceNeedsInstall -> {
+                                        SadoraButton(t.installHealthConnect, onClick = { wearables.devicePlatform.openStore() })
+                                        Text(t.healthConnectMissing, style = Sadora.type.caption, color = c.muted)
+                                    }
+                                    info.kind == ProviderKind.ON_DEVICE -> {
+                                        SadoraButton(
+                                            if (wearables.deviceSyncing) t.connecting else t.connect,
+                                            enabled = !wearables.deviceSyncing,
+                                            onClick = requestDeviceAccess,
+                                        )
+                                        Text(t.onDeviceNote(info.provider), style = Sadora.type.caption, color = c.muted)
+                                    }
+                                    else -> {
+                                        SadoraButton(
+                                            if (wearables.connectStarted == info.provider) t.connecting else t.connect,
+                                            enabled = !wearables.busy,
+                                            onClick = {
+                                                scope.launch {
+                                                    wearables.startConnect(info.provider)?.let(uriHandler::openUri)
+                                                }
+                                            },
+                                        )
+                                        Text(t.openBrowserNote, style = Sadora.type.caption, color = c.muted)
+                                        if (info.provider == HealthProvider.WHOOP) {
+                                            Text(t.noStepsNote, style = Sadora.type.caption, color = c.muted)
                                         }
-                                    },
-                                )
-                                Text(t.openBrowserNote, style = Sadora.type.caption, color = c.muted)
-                                if (info.provider == HealthProvider.WHOOP) {
-                                    Text(t.noStepsNote, style = Sadora.type.caption, color = c.muted)
+                                    }
                                 }
                             },
                         )
@@ -229,6 +301,7 @@ private fun ConnectedCard(
     info: ProviderInfo,
     samples: ProviderStatus?,
     busy: Boolean,
+    footnote: String?,
     onSync: () -> Unit,
     onDisconnect: () -> Unit,
     onReconnect: () -> Unit,
@@ -270,6 +343,7 @@ private fun ConnectedCard(
                 color = c.muted2,
             )
         }
+        footnote?.let { Text(it, style = Sadora.type.caption, color = c.muted) }
         if (info.metrics.isNotEmpty()) {
             ChipFlowRow(horizontalGap = Spacing.xxs, verticalGap = Spacing.xxs) {
                 info.metrics.take(8).forEach { metric -> SadoraBadge(m.metric(metric), BadgeTone.Neutral) }

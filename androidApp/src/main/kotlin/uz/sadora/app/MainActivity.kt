@@ -23,6 +23,8 @@ import uz.sadora.app.data.AndroidTokenStorage
 import uz.sadora.app.data.SadoraEnvironment
 import uz.sadora.app.data.SadoraGraph
 import uz.sadora.app.data.SessionState
+import uz.sadora.app.data.health.AndroidHealthSyncPrefs
+import uz.sadora.app.data.health.HealthConnectPlatform
 import uz.sadora.app.push.PushNotifications
 import uz.sadora.app.push.PushRegistration
 import uz.sadora.app.analytics.FirebaseAnalyticsTracker
@@ -57,6 +59,8 @@ class MainActivity : ComponentActivity() {
             // manifest's aliases — so it is built here alongside the token storage.
             icons = AndroidAppIcons(applicationContext),
             analytics = FirebaseAnalyticsTracker(applicationContext),
+            healthPlatform = HealthConnectPlatform(applicationContext),
+            healthPrefs = AndroidHealthSyncPrefs(applicationContext),
         )
     }
 

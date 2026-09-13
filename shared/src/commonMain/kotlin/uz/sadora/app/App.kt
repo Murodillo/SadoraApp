@@ -30,6 +30,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import kotlinx.coroutines.launch
 import uz.sadora.app.data.AnalyticsEvents
 import uz.sadora.app.data.CommunitySyncBridge
@@ -295,6 +296,21 @@ private fun MainShell(
             state.pendingDeviceConnect = false
             navigator.push(Route.DataSources)
         }
+    }
+
+    // The phone's health store, read each time the app comes to the front. The sync rests
+    // a quarter hour between runs by itself, so switching apps back and forth reads
+    // nothing; a run is left to finish on pause, since the upload is already under way.
+    LifecycleResumeEffect(controllers.wearables) {
+        scope.launch {
+            val wearables = controllers.wearables
+            wearables.refreshDevice()
+            val outcome = wearables.syncDevice(force = false) ?: return@launch
+            if (outcome.failure != null) return@launch
+            if (outcome.changedMetrics) health.refreshWearables()
+            if (outcome.periodsAdded > 0) health.refreshCycle()
+        }
+        onPauseOrDispose { }
     }
 
     // The streak celebration is the one event worth an analytics row on its own:

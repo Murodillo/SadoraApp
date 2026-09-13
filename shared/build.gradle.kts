@@ -46,6 +46,8 @@ kotlin {
             implementation(libs.compose.uiToolingPreview)
             implementation(libs.compose.uiTooling)
             implementation(libs.ktor.client.okhttp)
+            // Health Connect: sleep, steps, temperature and period days from Android watches.
+            implementation(libs.androidx.health.connect)
         }
         iosMain.dependencies {
             implementation(libs.ktor.client.darwin)
