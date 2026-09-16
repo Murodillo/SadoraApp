@@ -74,6 +74,7 @@ class MainActivity : ComponentActivity() {
         registerForActivityResult(ActivityResultContracts.RequestPermission()) {}
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        AndroidAppIcons.watch(application)
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
 
