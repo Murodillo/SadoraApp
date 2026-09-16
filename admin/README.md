@@ -39,7 +39,7 @@ rad etardi.
 
 Panelning o'z sozlamasi yo'q — u qaysi backend'ga ulansa, o'sha muhitda ishlaydi
 (`SADORA_API`). Dev backend uchun [server/README.md](../server/README.md) ga qarang;
-prod panel `https://admin.sadora.uz` da turadi va faqat prod backend'ga ulanadi.
+prod panel `https://admin.sadora.app` da turadi va faqat prod backend'ga ulanadi.
 
 Birinchi Owner hisobi backend birinchi marta ko'tarilganda yaratiladi —
 `ADMIN_BOOTSTRAP_EMAIL` va `ADMIN_BOOTSTRAP_PASSWORD` ga qarang

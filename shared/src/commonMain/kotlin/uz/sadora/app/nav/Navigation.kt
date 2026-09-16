@@ -146,7 +146,7 @@ sealed interface AppLink {
 
     companion object {
         /**
-         * `https://sadora.uz/r/K7M2QP`, `sadora://invite/K7M2QP`, and
+         * `https://sadora.app/r/K7M2QP`, `sadora://invite/K7M2QP`, and
          * `sadora://wearables/whoop?status=ok`. Anything else is nothing.
          */
         fun parse(url: String): AppLink? {

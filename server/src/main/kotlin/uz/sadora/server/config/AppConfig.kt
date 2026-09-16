@@ -129,7 +129,7 @@ data class AppConfig(
                 // would make the record say she agreed to something she never saw.
                 policyVersion = env("POLICY_VERSION", "2026-09-03"),
                 minimumAppVersion = envOrNull("MINIMUM_APP_VERSION"),
-                referralLinkBase = env("REFERRAL_LINK_BASE", "https://sadora.uz/r").trimEnd('/'),
+                referralLinkBase = env("REFERRAL_LINK_BASE", "https://sadora.app/r").trimEnd('/'),
                 publicBaseUrl = publicBaseUrl,
                 wearables = WearableConfig(
                     tokenKey = envOrNull("WEARABLE_TOKEN_KEY"),

@@ -15,9 +15,9 @@ info:
 servers:
   - url: http://localhost:8080
     description: Local
-  - url: https://api.stage.sadora.uz
+  - url: https://dev-api.sadora.app
     description: Stage
-  - url: https://api.sadora.uz
+  - url: https://api.sadora.app
     description: Production
 
 tags:

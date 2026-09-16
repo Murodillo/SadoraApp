@@ -97,7 +97,7 @@ object LegalTextsEn : LegalTexts {
         LegalSection(
             "9. Contact",
             listOf(
-                "Questions: support@sadora.uz",
+                "Questions: support@sadora.app",
             ),
         ),
     )
@@ -160,7 +160,7 @@ object LegalTextsEn : LegalTexts {
         LegalSection(
             "7. Contact",
             listOf(
-                "Privacy questions: privacy@sadora.uz",
+                "Privacy questions: privacy@sadora.app",
             ),
         ),
     )

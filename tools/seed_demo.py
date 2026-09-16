@@ -12,6 +12,7 @@ sees on the phone is exactly what this produced — no rows are written directly
 Safe to run twice: signing in an existing phone returns the same account, and the
 health writes are per-day upserts.
 """
+import urllib.parse
 import json
 import sys
 import time
@@ -302,17 +303,27 @@ def seed_user(spec: dict, everyone: list) -> dict:
     for ago, log in spec["logs"].items():
         call("PUT", f"/days/{d(ago)}", {"symptoms": [], **log}, token)
 
-    for ago, body in spec["journal"]:
+    # Her posts double as the "already seeded" mark. Journal, meals, water, practices and
+    # doses are appends with no natural key, so a second run leaves them alone rather than
+    # writing a second copy of the same day.
+    alias = call("GET", "/community/me", token=token)["alias"]
+    profile = call("GET", f"/community/profiles/{urllib.parse.quote(alias)}", token=token)
+    written = {p["body"]: p["id"] for p in profile.get("posts", [])}
+    fresh = not written
+    if not fresh:
+        print("    already seeded: personal entries skipped")
+
+    for ago, body in (spec["journal"] if fresh else []):
         call("POST", "/mind/journal", {"date": d(ago), "body": body}, token)
-    for kind, seconds in spec["practices"]:
+    for kind, seconds in (spec["practices"] if fresh else []):
         call("POST", "/mind/practices", {"kind": kind, "durationSeconds": seconds}, token)
 
-    for slot, at, desc, kcal, p, f, c in spec["meals"]:
+    for slot, at, desc, kcal, p, f, c in (spec["meals"] if fresh else []):
         call("POST", "/nutrition/meals", {
             "date": d(0), "slot": slot, "eatenAt": at, "description": desc,
             "kcal": kcal, "proteinG": p, "fatG": f, "carbsG": c,
         }, token)
-    for ml in spec["water"]:
+    for ml in (spec["water"] if fresh else []):
         call("POST", "/nutrition/water", {"ml": ml}, token)
 
     existing = {m["name"] for m in (call("GET", "/meds", token=token) or [])}
@@ -323,14 +334,17 @@ def seed_user(spec: dict, everyone: list) -> dict:
         created = call("POST", "/meds", {**med, "remindersEnabled": True, "startedOn": d(20)}, token)
         meds[med["name"]] = created["id"]
     for name, at in spec["doses_taken"]:
-        if name in meds:
+        if fresh and name in meds:
             call("POST", f"/meds/{meds[name]}/doses", {"dueOn": d(0), "dueAt": at, "status": "taken"}, token)
 
     posts = []
     for topic, body in spec["posts"]:
+        if body in written:
+            posts.append(written[body])
+            continue
         posts.append(call("POST", "/community/posts", {"topic": topic, "body": body}, token)["id"])
 
-    if spec.get("ai"):
+    if fresh and spec.get("ai"):
         try:
             call("POST", "/ai/chat", {"question": spec["ai"]}, token)
         except SystemExit as e:
@@ -343,6 +357,7 @@ def seed_user(spec: dict, everyone: list) -> dict:
         "name": spec["name"],
         "premium_days": spec["premium_days"],
         "coins": spec["coins"],
+        "fresh": fresh,
     }
     everyone.append(entry)
     return entry
@@ -365,7 +380,7 @@ def cross_link(everyone: list):
             for post_id in other["posts"]:
                 call("PUT", f"/community/posts/{post_id}/like", token=me["token"])
         others = [p for j, o in enumerate(everyone) if j != i for p in o["posts"]]
-        if others:
+        if others and me["fresh"]:
             call("POST", f"/community/posts/{others[i % len(others)]}/comments", {"body": COMMENTS[i % len(COMMENTS)]}, me["token"])
     # One open report for the moderation page — from the last woman on the first post.
     first = everyone[0]["posts"][0]
@@ -393,12 +408,17 @@ def seed_rewards(everyone: list, admin: str):
     """
     for u in everyone:
         result = call("POST", "/rewards/check-in", None, u["token"])
+        if not u["fresh"]:
+            print(f"  {u['name']:<20} streak {result['streak']['current']}  (balance already granted)")
+            continue
         call("POST", f"/admin/rewards/users/{u['id']}/adjust",
              {"amount": u["coins"], "note": "Demo hisob — do'konni ko'rsatish uchun"}, admin)
         print(f"  {u['name']:<20} streak {result['streak']['current']}  +{u['coins']} gul")
 
     # One invite that actually paid, so the referral screen has a number on it.
     inviter, invited = everyone[0], everyone[-1]
+    if not invited["fresh"]:
+        return
     code = call("GET", "/rewards/referral", token=inviter["token"])["code"]
     claim = call("POST", "/rewards/referral/claim", {"code": code}, invited["token"])
     print(f"  Taklif: {inviter['name']} -> {invited['name']} ({code}), qabul {claim['accepted']}")

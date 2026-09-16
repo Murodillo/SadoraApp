@@ -1781,7 +1781,7 @@ class ApiIntegrationTest {
         ),
         policyVersion = "2026-08-01",
         minimumAppVersion = null,
-        referralLinkBase = "https://sadora.uz/r",
+        referralLinkBase = "https://sadora.app/r",
         publicBaseUrl = "http://localhost:8080",
         // WHOOP pointed at nothing: the connect endpoint must say "not configured" and
         // never reach a network from the suite.

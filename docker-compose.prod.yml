@@ -86,7 +86,7 @@ services:
   # one, `docker compose ... up -d` skips it and the API answers on 127.0.0.1:8080 for
   # an SSH tunnel or a quick check. With one:
   #
-  #   SADORA_DOMAIN=api.sadora.uz docker compose -f docker-compose.prod.yml \
+  #   SADORA_DOMAIN=api.sadora.app docker compose -f docker-compose.prod.yml \
   #     --env-file server/.env.prod --profile tls up -d
   caddy:
     image: caddy:2-alpine

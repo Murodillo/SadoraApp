@@ -93,7 +93,7 @@ object LegalTextsUz : LegalTexts {
         LegalSection(
             "9. Bog'lanish",
             listOf(
-                "Savollar bo'yicha: support@sadora.uz",
+                "Savollar bo'yicha: support@sadora.app",
             ),
         ),
     )
@@ -159,7 +159,7 @@ object LegalTextsUz : LegalTexts {
         LegalSection(
             "7. Bog'lanish",
             listOf(
-                "Maxfiylik bo'yicha savollar: privacy@sadora.uz",
+                "Maxfiylik bo'yicha savollar: privacy@sadora.app",
             ),
         ),
     )

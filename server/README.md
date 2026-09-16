@@ -328,7 +328,7 @@ ichidan ko'rinadi. API esa `127.0.0.1:8080` da turadi, ya'ni unga faqat shu mash
 proxy yetadi. Domen tayyor bo'lgach, TLS'ni Caddy oladi (sertifikatni o'zi yangilaydi):
 
 ```bash
-SADORA_DOMAIN=api.sadora.uz docker compose -f docker-compose.prod.yml \
+SADORA_DOMAIN=api.sadora.app docker compose -f docker-compose.prod.yml \
   --env-file server/.env.prod --profile tls up -d
 ```
 
@@ -349,7 +349,7 @@ Deploy'dan keyin tekshiruv — `/health/ready` bazani ham tekshiradi, `/health/l
 yo'q (bazadagi qisqa uzilish konteynerni o'ldirmasligi uchun):
 
 ```bash
-curl https://api.sadora.uz/health/ready
+curl https://api.sadora.app/health/ready
 ```
 
 ## Nima hali yo'q

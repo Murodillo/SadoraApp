@@ -110,7 +110,7 @@
             </intent-filter>
 
             <!--
-                An invite link: https://sadora.uz/r/K7M2QP, and the app's own scheme for
+                An invite link: https://sadora.app/r/K7M2QP, and the app's own scheme for
                 a share sent through a channel that does not linkify URLs.
 
                 The https filter is not verified with assetlinks.json yet, so Android
@@ -122,7 +122,7 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="https" android:host="sadora.uz" android:pathPrefix="/r/" />
+                <data android:scheme="https" android:host="sadora.app" android:pathPrefix="/r/" />
             </intent-filter>
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />

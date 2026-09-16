@@ -476,7 +476,7 @@ zahoti uzayadi. **Vitamin va qurilma** hamkorlarniki: gul *chegirma* sotib oladi
 ilova `SDR-XXXX-XXXX` ko'rinishidagi kodni beradi. Ilova hech qachon mahsulotni sotdim
 yoki yetkazdim demaydi.
 
-**Taklif.** Havola — `https://sadora.uz/r/KOD`. Uni bosgan telefonda ilova bo'lsa,
+**Taklif.** Havola — `https://sadora.app/r/KOD`. Uni bosgan telefonda ilova bo'lsa,
 `landing/404.html` (GitHub Pages'da rewrite yo'q, shuning uchun 404 sahifa kodni
 yo'lning o'zidan o'qiydi) kodni ko'rsatadi va `sadora://invite/KOD` ni ochadi;
 onboardingdagi "Taklif kodi" qadami esa uni allaqachon to'ldirilgan holda oladi. Kod

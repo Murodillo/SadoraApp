@@ -154,8 +154,8 @@ footer {{ margin-top: 44px; padding-top: 20px; border-top: 1px solid var(--line)
 {chr(10).join(body)}
 <footer>
   <a href="{other_doc}.{language}.html">{html.escape(other_name)}</a> ·
-  <a href="index.html">sadora.uz</a> ·
-  <a href="mailto:privacy@sadora.uz">privacy@sadora.uz</a>
+  <a href="index.html">sadora.app</a> ·
+  <a href="mailto:privacy@sadora.app">privacy@sadora.app</a>
 </footer>
 </div>
 </body>

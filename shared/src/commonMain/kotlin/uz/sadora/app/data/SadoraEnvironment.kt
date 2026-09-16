@@ -34,8 +34,8 @@ data class SadoraEnvironment(
             return SadoraEnvironment(baseUrl = url, verboseLogging = true)
         }
 
-        val Stage: SadoraEnvironment = SadoraEnvironment("https://api.stage.sadora.uz")
-        val Production: SadoraEnvironment = SadoraEnvironment("https://api.sadora.uz")
+        val Stage: SadoraEnvironment = SadoraEnvironment("https://dev-api.sadora.app")
+        val Production: SadoraEnvironment = SadoraEnvironment("https://api.sadora.app")
     }
 }
 
