@@ -143,7 +143,7 @@ fun ProfileScreen(
                     SettingsRow(SadoraIcons.Moon, t.sleep) { onOpen(Route.Sleep) }
                     SettingsRow(SadoraIcons.Pill, t.medications) { onOpen(Route.Medications) }
                     if (state.communityEnabled) {
-                        SettingsRow(SadoraIcons.Lock, t.secretChat, iconTint = c.secondary) { onOpen(Route.SecretChat) }
+                        SettingsRow(SadoraIcons.Chats, t.secretChat, iconTint = c.secondary) { onOpen(Route.SecretChat) }
                     }
                     SettingsRow(SadoraIcons.Chart, t.insights) { onOpen(Route.Insights) }
                     SettingsRow(SadoraIcons.Book, t.knowledge) { onOpen(Route.Knowledge) }

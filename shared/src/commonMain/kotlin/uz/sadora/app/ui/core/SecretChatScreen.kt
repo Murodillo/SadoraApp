@@ -293,7 +293,7 @@ private fun EmptyFeed(filter: CommunityFilter, onCompose: () -> Unit) {
         ) {
             Icon(
                 when (filter) {
-                    CommunityFilter.Feed -> SadoraIcons.Lock
+                    CommunityFilter.Feed -> SadoraIcons.Chats
                     CommunityFilter.Saved -> SadoraIcons.Bookmark
                     CommunityFilter.Mine -> SadoraIcons.Pencil
                 },
