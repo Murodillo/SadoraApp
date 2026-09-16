@@ -79,6 +79,11 @@ services:
     # and put one there before anybody real signs in.
     ports:
       - "127.0.0.1:8080:8080"
+    # Credential files the env file points at — today the Firebase service account for
+    # push. Read-only, and a directory rather than one file, so a server without the key
+    # still starts: FCM_SERVICE_ACCOUNT_FILE stays blank there and push goes to the log.
+    volumes:
+      - ${SADORA_SECRETS_DIR:-./server/secrets}:/run/secrets/sadora:ro
 
   # TLS and a real hostname, with certificates Caddy renews by itself.
   #
