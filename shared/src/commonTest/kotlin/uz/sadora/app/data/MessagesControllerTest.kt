@@ -93,7 +93,7 @@ class MessagesControllerTest {
     }
 
     @Test
-    fun `a profile carries its badges, a block re-reads it, and a bio edit is a PUT on me`() = runTest {
+    fun `a profile carries its badges and a block re-reads it and a bio edit is a PUT on me`() = runTest {
         var blocked = false
         val recording = RecordingEngine { request ->
             val path = request.url.encodedPath
