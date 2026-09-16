@@ -1,11 +1,19 @@
 package uz.sadora.app.data
 
+import uz.sadora.app.model.AliasProfile
+import uz.sadora.app.model.CommunityBadge
 import uz.sadora.app.model.CommunityComment
 import uz.sadora.app.model.CommunityPost
 import uz.sadora.app.model.CommunityTopic
+import uz.sadora.app.model.Conversation
+import uz.sadora.app.model.DirectMessage
+import uz.sadora.contract.CommunityBadge as WireBadge
 import uz.sadora.contract.CommunityComment as WireComment
 import uz.sadora.contract.CommunityPost as WirePost
+import uz.sadora.contract.CommunityProfile as WireProfile
 import uz.sadora.contract.CommunityTopic as WireTopic
+import uz.sadora.contract.Conversation as WireConversation
+import uz.sadora.contract.DirectMessage as WireMessage
 
 /**
  * Wire posts onto the store's posts.
@@ -25,6 +33,7 @@ fun WirePost.toAppPost(): CommunityPost = CommunityPost(
     comments = emptyList(),
     commentCount = commentCount,
     isMine = isMine,
+    badges = badges.map { it.toAppBadge() },
 )
 
 fun WireComment.toAppComment(): CommunityComment = CommunityComment(
@@ -33,7 +42,45 @@ fun WireComment.toAppComment(): CommunityComment = CommunityComment(
     createdAt = createdAt,
     body = body,
     isMine = isMine,
+    badges = badges.map { it.toAppBadge() },
 )
+
+fun WireBadge.toAppBadge(): CommunityBadge = when (this) {
+    WireBadge.NEWCOMER -> CommunityBadge.Newcomer
+    WireBadge.EARLY -> CommunityBadge.Early
+    WireBadge.WRITER -> CommunityBadge.Writer
+    WireBadge.HELPER -> CommunityBadge.Helper
+    WireBadge.LOVED -> CommunityBadge.Loved
+    WireBadge.VETERAN -> CommunityBadge.Veteran
+}
+
+fun WireProfile.toAppProfile(): AliasProfile = AliasProfile(
+    alias = alias,
+    tint = tint,
+    bio = bio,
+    badges = badges.map { it.toAppBadge() },
+    postCount = postCount,
+    commentCount = commentCount,
+    likesReceived = likesReceived,
+    memberSince = memberSince,
+    isMe = isMe,
+    canMessage = canMessage,
+    blocked = blocked,
+    posts = posts.map { it.toAppPost() },
+)
+
+fun WireConversation.toAppConversation(): Conversation = Conversation(
+    id = id,
+    alias = alias,
+    tint = tint,
+    badges = badges.map { it.toAppBadge() },
+    lastMessage = lastMessage,
+    lastMessageAt = lastMessageAt,
+    unread = unread,
+    blocked = blocked,
+)
+
+fun WireMessage.toAppMessage(): DirectMessage = DirectMessage(id, body, createdAt, isMine)
 
 fun WireTopic.toAppTopic(): CommunityTopic = when (this) {
     WireTopic.CYCLE -> CommunityTopic.Cycle

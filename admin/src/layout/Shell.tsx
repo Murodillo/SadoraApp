@@ -30,7 +30,7 @@ const groups: NavGroup[] = [
   {
     title: 'Kontent',
     entries: [
-      { to: '/community', label: 'Maxfiy chat', glyph: '◉', roles: ALL },
+      { to: '/community', label: 'Chat', glyph: '◉', roles: ALL },
       { to: '/content', label: 'Bilim — maqolalar', glyph: '❑', roles: ALL },
       { to: '/ai', label: 'AI xarajati', glyph: '✦', roles: ['OWNER', 'ADMIN', 'ANALYST'] },
       { to: '/notifications', label: 'Bildirishnomalar', glyph: '◔', roles: ['OWNER', 'ADMIN', 'ANALYST'] },
@@ -66,7 +66,7 @@ const groups: NavGroup[] = [
 const titles: Record<string, string> = {
   '/': 'Dashboard',
   '/users': 'Foydalanuvchilar',
-  '/community': 'Maxfiy chat — moderatsiya',
+  '/community': 'Chat — moderatsiya',
   '/content': 'Bilim — maqolalar',
   '/ai': 'AI xarajati',
   '/billing': "Obunalar va to'lovlar",

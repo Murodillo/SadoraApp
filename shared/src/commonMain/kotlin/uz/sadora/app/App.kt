@@ -44,7 +44,9 @@ import uz.sadora.app.design.Spacing
 import uz.sadora.app.i18n.ProvideStrings
 import uz.sadora.app.i18n.strings
 import uz.sadora.app.model.AppState
+import uz.sadora.app.model.CommunityFilter
 import uz.sadora.app.model.CommunityPost
+import uz.sadora.app.model.CommunitySort
 import uz.sadora.app.nav.AppLink
 import uz.sadora.app.nav.AppLinks
 import uz.sadora.app.nav.AppPhase
@@ -63,7 +65,13 @@ import uz.sadora.app.ui.components.StreakCelebration
 import uz.sadora.app.ui.components.SystemBackHandler
 import uz.sadora.app.ui.core.AiChatScreen
 import uz.sadora.app.ui.core.AiFreePreviewScreen
-import uz.sadora.app.ui.core.CommentsSheetContent
+import uz.sadora.app.ui.core.AliasProfileScreen
+import uz.sadora.app.ui.core.CommunityRulesSheetContent
+import uz.sadora.app.ui.core.ConversationMenuSheetContent
+import uz.sadora.app.ui.core.ConversationScreen
+import uz.sadora.app.ui.core.ConversationsScreen
+import uz.sadora.app.ui.core.EditBioSheetContent
+import uz.sadora.app.ui.core.PostDetailScreen
 import uz.sadora.app.ui.core.ComposePostSheetContent
 import uz.sadora.app.ui.core.NutritionScreen
 import uz.sadora.app.ui.core.PostMenuSheetContent
@@ -90,6 +98,7 @@ import uz.sadora.app.ui.modules.KnowledgeScreen
 import uz.sadora.app.ui.modules.MedicationHistoryScreen
 import uz.sadora.app.ui.modules.MedicationsScreen
 import uz.sadora.app.ui.modules.MindJournalScreen
+import uz.sadora.app.ui.modules.MindNutritionScreen
 import uz.sadora.app.ui.modules.MindScreen
 import uz.sadora.app.ui.modules.PaywallScreen
 import uz.sadora.app.ui.modules.ReferralScreen
@@ -230,23 +239,28 @@ private fun SplashGate(
  */
 private class ShellOverlays {
     var showWaterSheet by mutableStateOf(false)
-    var commentsFor by mutableStateOf<CommunityPost?>(null)
     var menuFor by mutableStateOf<CommunityPost?>(null)
     var showCompose by mutableStateOf(false)
+    var showCommunityRules by mutableStateOf(false)
+    var showEditBio by mutableStateOf(false)
+    var showConversationMenu by mutableStateOf(false)
     var showSymptomSheet by mutableStateOf(false)
     var toast by mutableStateOf<String?>(null)
     var lastWaterAdded by mutableStateOf(0)
 
     val anyOpen: Boolean
-        get() = showWaterSheet || showSymptomSheet || commentsFor != null || menuFor != null || showCompose
+        get() = showWaterSheet || showSymptomSheet || menuFor != null || showCompose || showCommunityRules ||
+            showEditBio || showConversationMenu
 
     /** Closes the topmost sheet. False when none was open. */
     fun closeTop(): Boolean = when {
         showWaterSheet -> { showWaterSheet = false; true }
         showSymptomSheet -> { showSymptomSheet = false; true }
-        commentsFor != null -> { commentsFor = null; true }
         menuFor != null -> { menuFor = null; true }
         showCompose -> { showCompose = false; true }
+        showCommunityRules -> { showCommunityRules = false; true }
+        showEditBio -> { showEditBio = false; true }
+        showConversationMenu -> { showConversationMenu = false; true }
         else -> false
     }
 }
@@ -334,6 +348,13 @@ private fun MainShell(
         }
     }
 
+    // Premium swaps the bar's last slot. Bought while standing on the Premium tab, that
+    // tab is gone from under her; Today is the one place that is always there.
+    val tabs = Tab.bar(state.isPremium)
+    LaunchedEffect(tabs) {
+        if (navigator.tab !in tabs) navigator.select(Tab.Today)
+    }
+
     // A screen view per tab or route change, named by the route class — stable across
     // releases and languages, and carrying nothing about what is on the screen.
     val route = navigator.current
@@ -398,7 +419,7 @@ private fun MainShell(
                             modifier = Modifier.fillMaxSize(),
                             label = "tab",
                         ) { tab ->
-                            RootTab(tab, state, navigator, controllers, onAddWater = { overlays.showWaterSheet = true })
+                            RootTab(tab, state, navigator, controllers, overlays, onAddWater = { overlays.showWaterSheet = true })
                         }
                     }
                 }
@@ -408,9 +429,11 @@ private fun MainShell(
             // steps aside only for the screens that take the whole display.
             if (!fullScreen) {
                 SadoraBottomNav(
+                    tabs = tabs,
                     selected = navigator.tab,
                     onSelect = navigator::select,
                     journeyLabel = strings.tabs.journey(state.lifeStage),
+                    mindLabel = if (state.isPremium) strings.tabs.mind else strings.tabs.mindAndNutrition,
                 )
             }
         }
@@ -452,22 +475,6 @@ private fun MainShell(
         )
 
         // Kept mounted through the exit animation so the sheet does not blank as it closes.
-        val lastComments = remember { mutableStateOf<CommunityPost?>(null) }
-        overlays.commentsFor?.let { lastComments.value = it }
-        // The comments come from the server when the sheet opens, not with the feed.
-        LaunchedEffect(overlays.commentsFor?.id) { overlays.commentsFor?.let { community.loadComments(it.id) } }
-        SadoraBottomSheet(
-            visible = overlays.commentsFor != null,
-            title = communityStrings.comments,
-            onDismiss = { overlays.commentsFor = null },
-        ) {
-            lastComments.value?.let { post ->
-                // Read back from the store so the loaded comments replace the stale copy.
-                val current = state.communityPosts.firstOrNull { it.id == post.id } ?: post
-                CommentsSheetContent(state, current)
-            }
-        }
-
         val lastMenu = remember { mutableStateOf<CommunityPost?>(null) }
         overlays.menuFor?.let { lastMenu.value = it }
         SadoraBottomSheet(
@@ -497,6 +504,49 @@ private fun MainShell(
                 onPosted = {
                     overlays.showCompose = false
                     overlays.toast = communityStrings.postSent
+                    // Whatever the feed was showing, the post she just wrote is now the
+                    // first thing on it — not hidden behind "saved" or an activity sort.
+                    state.communityFilter = CommunityFilter.Feed
+                    state.communitySort = CommunitySort.Newest
+                },
+            )
+        }
+
+        SadoraBottomSheet(
+            visible = overlays.showCommunityRules,
+            title = communityStrings.rulesTitle,
+            onDismiss = { overlays.showCommunityRules = false },
+        ) {
+            CommunityRulesSheetContent(state, onDone = { overlays.showCommunityRules = false })
+        }
+
+        SadoraBottomSheet(
+            visible = overlays.showEditBio,
+            title = communityStrings.editBio,
+            onDismiss = { overlays.showEditBio = false },
+        ) {
+            EditBioSheetContent(
+                state = state,
+                community = community,
+                onSaved = {
+                    overlays.showEditBio = false
+                    overlays.toast = communityStrings.profileSaved
+                },
+            )
+        }
+
+        SadoraBottomSheet(
+            visible = overlays.showConversationMenu,
+            title = communityStrings.conversationMenu,
+            onDismiss = { overlays.showConversationMenu = false },
+        ) {
+            ConversationMenuSheetContent(
+                messages = controllers.messages,
+                community = community,
+                onOpenProfile = { navigator.push(Route.AliasProfile(it)) },
+                onDone = { message ->
+                    overlays.showConversationMenu = false
+                    message?.let { overlays.toast = it }
                 },
             )
         }
@@ -529,6 +579,7 @@ private fun RootTab(
     state: AppState,
     navigator: Navigator,
     controllers: AppControllers,
+    overlays: ShellOverlays,
     onAddWater: () -> Unit,
 ) {
     when (tab) {
@@ -548,12 +599,37 @@ private fun RootTab(
             )
         }
 
-        Tab.Mind -> MindScreen(
+        // Free accounts keep the food diary inside this tab; Premium gives it the fifth slot.
+        Tab.Mind -> if (state.isPremium) {
+            MindScreen(
+                state = state,
+                insights = controllers.insights,
+                onClose = null,
+                onOpenAi = { navigator.push(state.aiRoute()) },
+                onOpenJournal = { navigator.push(Route.MindJournal) },
+            )
+        } else {
+            MindNutritionScreen(
+                section = navigator.mindSection,
+                onSection = { navigator.mindSection = it },
+                state = state,
+                insights = controllers.insights,
+                onOpenAi = { navigator.push(state.aiRoute()) },
+                onOpenJournal = { navigator.push(Route.MindJournal) },
+                onOpen = navigator::push,
+                onAddWater = onAddWater,
+            )
+        }
+
+        Tab.SecretChat -> SecretChatScreen(
             state = state,
-            insights = controllers.insights,
-            onClose = null,
-            onOpenAi = { navigator.push(state.aiRoute()) },
-            onOpenJournal = { navigator.push(Route.MindJournal) },
+            community = controllers.community,
+            onOpenPost = { navigator.push(Route.Post(it.id)) },
+            onOpenProfile = { navigator.push(Route.AliasProfile(it)) },
+            onOpenMessages = { navigator.push(Route.Messages) },
+            onOpenMenu = { overlays.menuFor = it },
+            onCompose = { overlays.showCompose = true },
+            onOpenRules = { overlays.showCommunityRules = true },
         )
 
         Tab.Journey -> JourneyScreen(state = state, health = controllers.health, onOpen = navigator::push)
@@ -645,12 +721,52 @@ private fun PushedScreen(
         )
         Route.Referral -> ReferralScreen(controllers.rewards, close)
         Route.HomeLayout -> HomeLayoutScreen(state, controllers.rewards, close)
+        // Kept for a link into it; the tab is where it lives now.
         Route.SecretChat -> SecretChatScreen(
             state = state,
             community = controllers.community,
-            onOpenComments = { overlays.commentsFor = it },
+            onOpenPost = { navigator.push(Route.Post(it.id)) },
+            onOpenProfile = { navigator.push(Route.AliasProfile(it)) },
+            onOpenMessages = { navigator.push(Route.Messages) },
             onOpenMenu = { overlays.menuFor = it },
             onCompose = { overlays.showCompose = true },
+            onOpenRules = { overlays.showCommunityRules = true },
+            onClose = close,
+        )
+        is Route.Post -> PostDetailScreen(
+            postId = route.id,
+            state = state,
+            community = controllers.community,
+            onOpenMenu = { overlays.menuFor = it },
+            onOpenProfile = { navigator.push(Route.AliasProfile(it)) },
+            onClose = close,
+        )
+        is Route.AliasProfile -> AliasProfileScreen(
+            alias = route.alias,
+            state = state,
+            community = controllers.community,
+            onOpenPost = { navigator.push(Route.Post(it.id)) },
+            onOpenMenu = { overlays.menuFor = it },
+            onMessage = { alias ->
+                // An existing thread with her is reused; the list knows which.
+                val existing = controllers.messages.conversations.firstOrNull { it.alias == alias }
+                navigator.push(Route.Conversation(existing?.id, alias))
+            },
+            onEditBio = { overlays.showEditBio = true },
+            onClose = close,
+            onToast = toast,
+        )
+        Route.Messages -> ConversationsScreen(
+            messages = controllers.messages,
+            onOpen = { navigator.push(Route.Conversation(it.id, it.alias)) },
+            onClose = close,
+        )
+        is Route.Conversation -> ConversationScreen(
+            conversationId = route.id,
+            alias = route.alias,
+            messages = controllers.messages,
+            onOpenProfile = { navigator.push(Route.AliasProfile(it)) },
+            onOpenMenu = { overlays.showConversationMenu = true },
             onClose = close,
         )
 
@@ -659,7 +775,14 @@ private fun PushedScreen(
             state = state,
             controller = controllers.account,
             health = health,
-            onOpen = { if (it == Route.Paywall) upgrade() else navigator.push(it) },
+            onOpen = {
+                when (it) {
+                    Route.Paywall -> upgrade()
+                    // A tab, not a screen over Profile: selecting it also clears the stack.
+                    Route.SecretChat -> navigator.select(Tab.SecretChat)
+                    else -> navigator.push(it)
+                }
+            },
             onSignedOut = {
                 state.clearDeviceData()
                 navigator.goTo(AppPhase.SignIn)

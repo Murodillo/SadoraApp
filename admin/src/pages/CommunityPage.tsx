@@ -493,7 +493,7 @@ function ReportRow({ report, editable }: { report: ModerationReport; editable: b
       </td>
       <td>
         <span className="badge warn">{reasonLabels[report.reason]}</span>
-        <div className="faint">{report.commentId ? 'izoh' : 'post'}</div>
+        <div className="faint">{report.messageId ? 'xabar' : report.commentId ? 'izoh' : 'post'}</div>
       </td>
       <td>{report.excerpt}</td>
       <td className="muted">{report.note ?? ''}</td>

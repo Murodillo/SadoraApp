@@ -8,20 +8,44 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import uz.sadora.app.design.SadoraIcons
 
 /**
- * The five root destinations, in the order the tab bar draws them:
- * home, mind, cycle, nutrition, premium.
+ * The root destinations. The bar shows five of them, and which five depends on the
+ * account — see [bar].
  *
  * Profile used to be the fifth tab. It is a settings screen — something she opens a
- * few times a month — and it now sits behind the avatar in the home header, which gave
- * the bar a slot for the one section the product is asking her to look at.
+ * few times a month — and it now sits behind the avatar in the home header. The secret
+ * chat took a slot of its own because it is the one place she comes back to daily
+ * without being asked.
  */
 enum class Tab(val icon: ImageVector) {
     Today(SadoraIcons.Home),
+    /** Mind, and for a free account the food diary too, behind a switch at the top. */
     Mind(SadoraIcons.Heart),
+    SecretChat(SadoraIcons.Chats),
     Journey(SadoraIcons.Journey),
+    /** The food diary on its own — only once Premium has freed the fifth slot. */
     Nutrition(SadoraIcons.Apple),
     Premium(SadoraIcons.Sparkle),
+    ;
+
+    companion object {
+        /**
+         * The five slots, in order.
+         *
+         * The last one sells Premium until she has it; after that the pitch would be
+         * a dead tab, so the food diary moves out of the Mind tab and takes the slot.
+         */
+        fun bar(isPremium: Boolean): List<Tab> = listOf(
+            Today,
+            Mind,
+            SecretChat,
+            Journey,
+            if (isPremium) Nutrition else Premium,
+        )
+    }
 }
+
+/** What the Mind tab is showing for a free account: mind, or the food diary. */
+enum class MindSection { Mind, Nutrition }
 
 /** Screens pushed on top of a tab. */
 sealed interface Route {
@@ -59,6 +83,14 @@ sealed interface Route {
     data object DataSources : Route
     data object Paywall : Route
     data object SecretChat : Route
+    /** One post in full, with its comments, over the chat tab. */
+    data class Post(val id: String) : Route
+    /** An alias's page — her own when the alias is hers. */
+    data class AliasProfile(val alias: String) : Route
+    /** Her private threads. */
+    data object Messages : Route
+    /** One thread. [id] is null until the first line to [alias] has been sent. */
+    data class Conversation(val id: String?, val alias: String) : Route
 
     // Gul — the wallet, the shop and the invite screen.
     data object Rewards : Route
@@ -182,6 +214,12 @@ class Navigator {
 
     var tab by mutableStateOf(Tab.Today)
         private set
+
+    /**
+     * Which half of the free account's Mind tab is up. Kept here rather than in the
+     * screen so that leaving the tab and coming back finds the same half.
+     */
+    var mindSection by mutableStateOf(MindSection.Mind)
 
     private val stack = mutableStateListOf<Route>()
 

@@ -4,6 +4,7 @@ import uz.sadora.app.data.AiController
 import uz.sadora.app.data.Analytics
 import uz.sadora.app.data.BillingController
 import uz.sadora.app.data.CommunityController
+import uz.sadora.app.data.MessagesController
 import uz.sadora.app.data.HealthController
 import uz.sadora.app.data.InsightsController
 import uz.sadora.app.data.LearnController
@@ -29,6 +30,7 @@ class AppControllers(
     val account: SadoraController,
     val health: HealthController,
     val community: CommunityController,
+    val messages: MessagesController,
     val ai: AiController,
     val insights: InsightsController,
     val learn: LearnController,
@@ -44,6 +46,7 @@ class AppControllers(
             account = SadoraController(graph?.repository, state),
             health = graph?.healthController(state) ?: HealthController(null, null, null, null, state = state),
             community = graph?.communityController(state) ?: CommunityController(null, state),
+            messages = graph?.messagesController() ?: MessagesController(null),
             ai = graph?.aiController(state) ?: AiController(null, state),
             insights = graph?.insightsController() ?: InsightsController(null),
             learn = graph?.learnController() ?: LearnController(null),

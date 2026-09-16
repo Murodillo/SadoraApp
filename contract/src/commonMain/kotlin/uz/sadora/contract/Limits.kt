@@ -64,4 +64,8 @@ object Limits {
     const val POST_MAX = 2000
     const val COMMENT_MAX = 1000
     const val REPORT_NOTE_MAX = 500
+    /** The line under an alias on its profile. */
+    const val BIO_MAX = 160
+    /** One private message. */
+    const val MESSAGE_MAX = 1000
 }

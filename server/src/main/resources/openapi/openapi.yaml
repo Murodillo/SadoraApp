@@ -1438,7 +1438,7 @@ paths:
     get:
       tags: [Community]
       security: [{ bearerAuth: [] }]
-      summary: Maxfiy chatdagi taxallus
+      summary: Chatdagi taxallus
       description: |
         Birinchi murojaatda beriladi va hech qachon o'zgarmaydi. Serverdan tashqarida
         taxallusni hisobga bog'laydigan hech narsa yo'q — admin API ham buni qaytarmaydi.
@@ -1724,7 +1724,7 @@ paths:
     get:
       tags: [Admin]
       security: [{ adminAuth: [] }]
-      summary: Maxfiy chat ko'rsatkichlari
+      summary: Chat ko'rsatkichlari
       responses:
         "200":
           description: OK

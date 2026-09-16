@@ -6,11 +6,14 @@ import androidx.compose.runtime.setValue
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import uz.sadora.app.data.api.CommunityApi
+import uz.sadora.app.model.AliasProfile
 import uz.sadora.app.model.AppState
 import uz.sadora.app.model.CommunitySync
 import uz.sadora.app.model.CommunityTopic
 import uz.sadora.app.model.ReportReason
+import uz.sadora.contract.CommunityIdentity
 import uz.sadora.contract.ReportReason as WireReason
+import uz.sadora.contract.UpdateIdentityRequest
 
 /**
  * The secret chat's data, mirrored onto the store the screen already reads.
@@ -40,11 +43,56 @@ class CommunityController(
 
     suspend fun load() {
         val api = api ?: return
-        calls.run(silent = true) { api.identity() }?.let {
-            state.communityAlias = it.alias
-            state.communityTint = it.tint
-        }
+        calls.run(silent = true) { api.identity() }?.let(::applyIdentity)
         refreshFeed()
+    }
+
+    private fun applyIdentity(identity: CommunityIdentity) {
+        state.communityAlias = identity.alias
+        state.communityTint = identity.tint
+        state.communityBio = identity.bio
+        state.communityDmOpen = identity.dmOpen
+        state.communityBadges = identity.badges.map { it.toAppBadge() }
+        state.communityUnread = identity.unreadMessages
+    }
+
+    /** Re-reads her identity alone: the unread count, after a thread was opened. */
+    suspend fun refreshIdentity() {
+        val api = api ?: return
+        calls.run(silent = true) { api.identity() }?.let(::applyIdentity)
+    }
+
+    // ---------------------------------------------------------------- profiles
+
+    /** The alias page on screen. Null until loaded, and replaced on every open. */
+    var profile by mutableStateOf<AliasProfile?>(null)
+        private set
+
+    suspend fun loadProfile(alias: String) {
+        val api = api ?: return
+        if (profile?.alias != alias) profile = null
+        calls.run(silent = true) { api.profile(alias) }?.let { profile = it.toAppProfile() }
+    }
+
+    /** Her bio and her door. Null leaves a field as it is. */
+    suspend fun updateProfile(bio: String?, dmOpen: Boolean?): Boolean {
+        val api = api ?: run {
+            bio?.let { state.communityBio = it.trim().ifEmpty { null } }
+            dmOpen?.let { state.communityDmOpen = it }
+            return true
+        }
+        val updated = calls.run { api.updateIdentity(UpdateIdentityRequest(bio = bio, dmOpen = dmOpen)) } ?: return false
+        applyIdentity(updated)
+        // Her own page, if it is open, shows the new line.
+        profile?.takeIf { it.isMe }?.let { loadProfile(it.alias) }
+        return true
+    }
+
+    suspend fun setBlocked(alias: String, blocked: Boolean): Boolean {
+        val api = api ?: return true
+        calls.run { api.setBlocked(alias, blocked) } ?: return false
+        loadProfile(alias)
+        return true
     }
 
     suspend fun refreshFeed() {

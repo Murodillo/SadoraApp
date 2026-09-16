@@ -53,8 +53,7 @@ private val BarSpring = spring<Float>(dampingRatio = 0.72f, stiffness = Spring.S
 private val BarSpringDp = spring<Dp>(dampingRatio = 0.72f, stiffness = Spring.StiffnessMediumLow)
 
 /**
- * The five-tab bar from the deck: a floating white pill with five icons on it —
- * home, mind, the stage, nutrition and Premium.
+ * The five-tab bar from the deck: a floating white pill with five icons on it.
  *
  * The selected tab sits on a lavender pill that slides between slots on a spring, so
  * the movement itself says which way the selection went, and its label fades in under
@@ -64,15 +63,18 @@ private val BarSpringDp = spring<Dp>(dampingRatio = 0.72f, stiffness = Spring.St
  */
 @Composable
 fun SadoraBottomNav(
+    /** The five to draw, from [Tab.bar]: the last slot differs between free and Premium. */
+    tabs: List<Tab>,
     selected: Tab,
     onSelect: (Tab) -> Unit,
     modifier: Modifier = Modifier,
-    /** The second tab's label — it is named after the life stage, so the caller says it. */
+    /** The stage tab's label — it is named after the life stage, so the caller says it. */
     journeyLabel: String,
+    /** "Ong" alone, or "Ong · Ovqat" while the food diary lives inside the Mind tab. */
+    mindLabel: String,
 ) {
     val c = Sadora.colors
     val t = strings
-    val tabs = Tab.entries
 
     Box(
         modifier
@@ -95,7 +97,9 @@ fun SadoraBottomNav(
                 .background(c.surface),
         ) {
             val slot = maxWidth / tabs.size
-            val selectedIndex = tabs.indexOf(selected)
+            // A tab that just left the bar (Premium, once bought) has no slot; the
+            // pill parks on the first one until the shell moves the selection.
+            val selectedIndex = tabs.indexOf(selected).coerceAtLeast(0)
             val pillX by animateDpAsState(
                 targetValue = slot * selectedIndex + PillInset,
                 animationSpec = BarSpringDp,
@@ -119,7 +123,8 @@ fun SadoraBottomNav(
                         icon = tab.icon,
                         label = when (tab) {
                             Tab.Today -> t.tabs.today
-                            Tab.Mind -> t.tabs.mind
+                            Tab.Mind -> mindLabel
+                            Tab.SecretChat -> t.tabs.secretChat
                             Tab.Journey -> journeyLabel
                             Tab.Nutrition -> t.tabs.nutrition
                             Tab.Premium -> t.tabs.premium

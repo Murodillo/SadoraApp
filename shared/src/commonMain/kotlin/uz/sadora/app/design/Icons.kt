@@ -451,6 +451,34 @@ object SadoraIcons {
         }
     }
 
+    /** Chat — two overlapping speech bubbles: a room, not a private line. */
+    val Chats: ImageVector = icon("Chats") {
+        stroke {
+            moveTo(3.6f, 7.6f)
+            quadTo(3.6f, 5.2f, 6f, 5.2f)
+            lineTo(13.2f, 5.2f)
+            quadTo(15.6f, 5.2f, 15.6f, 7.6f)
+            lineTo(15.6f, 12.4f)
+            quadTo(15.6f, 14.8f, 13.2f, 14.8f)
+            lineTo(8.4f, 14.8f)
+            lineTo(5.2f, 17.6f)
+            lineTo(5.2f, 14.8f)
+            quadTo(3.6f, 14.6f, 3.6f, 12.4f)
+            close()
+        }
+        stroke {
+            moveTo(15.6f, 9.2f)
+            lineTo(18f, 9.2f)
+            quadTo(20.4f, 9.2f, 20.4f, 11.6f)
+            lineTo(20.4f, 16f)
+            quadTo(20.4f, 18.2f, 18.8f, 18.4f)
+            lineTo(18.8f, 21f)
+            lineTo(15.8f, 18.4f)
+            lineTo(11.6f, 18.4f)
+            quadTo(9.6f, 18.4f, 9.4f, 16.6f)
+        }
+    }
+
     /** SADORA haqida. */
     val Info: ImageVector = icon("Info") {
         stroke {

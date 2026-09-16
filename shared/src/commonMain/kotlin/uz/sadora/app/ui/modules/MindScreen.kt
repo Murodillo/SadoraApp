@@ -95,6 +95,8 @@ fun MindScreen(
     onOpenAi: () -> Unit,
     onOpenJournal: () -> Unit,
     modifier: Modifier = Modifier,
+    /** Drawn between the top bar and the content: the Mind / Food switch on a free account. */
+    underBar: (@Composable () -> Unit)? = null,
 ) {
     val t = strings.mind
     val c = Sadora.colors
@@ -106,6 +108,7 @@ fun MindScreen(
     Box(modifier) {
         Column {
             SadoraTopBar(t.title, onBack = onClose, centered = true)
+            underBar?.invoke()
 
             ScreenContent {
                 item {

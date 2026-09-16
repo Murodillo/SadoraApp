@@ -6,7 +6,9 @@ import kotlinx.datetime.daysUntil
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import uz.sadora.app.model.BirthControl
+import uz.sadora.app.model.CommunityBadge
 import uz.sadora.app.model.CommunityFilter
+import uz.sadora.app.model.CommunitySort
 import uz.sadora.app.model.CommunityTopic
 import uz.sadora.app.model.ConceptionWindow
 import uz.sadora.app.model.CyclePhase
@@ -220,12 +222,31 @@ interface CommunityStrings {
     val saved: String
     fun topic(topic: CommunityTopic): String
     fun filter(filter: CommunityFilter): String
+    fun sort(sort: CommunitySort): String
     fun reportReason(reason: ReportReason): String
+
+    // ---- the header: who she is here, and the rules behind the info button
+    /** "Anonim · siz: Lola" — her alias, so she knows the name her posts carry. */
+    fun anonymousAs(alias: String): String
+    val anonymous: String
+    val rulesTitle: String
+    val rulesIntro: String
+    /** Same length in every language; drawn as bullets. */
+    val rules: List<String>
+    val rulesButton: String
 
     val nothingSaved: String
     val nothingHere: String
+    val nothingMine: String
     val nothingSavedBody: String
     val nothingHereBody: String
+    val nothingMineBody: String
+    /** Appended inline where a long post is cut: "…ko'proq". */
+    val readMore: String
+    /** The post page's title. */
+    val postTitle: String
+    /** "3 izoh" — the heading over the comments on the post page. */
+    fun commentsCount(count: Int): String
     val write: String
     val you: String
     fun youParenthesised(alias: String): String
@@ -248,6 +269,51 @@ interface CommunityStrings {
     val sendReport: String
     val reportSent: String
     val shareSuffix: String
+    // ---- badges
+    fun badge(badge: CommunityBadge): String
+    /** One line on the profile explaining how the badge is earned. */
+    fun badgeHint(badge: CommunityBadge): String
+
+    // ---- the alias profile
+    val profileTitle: String
+    val myProfileTitle: String
+    val noBio: String
+    val editBio: String
+    val bioHint: String
+    /** The switch: whether strangers may write to her. */
+    val acceptMessages: String
+    val acceptMessagesHint: String
+    val saveProfile: String
+    val profileSaved: String
+    val statPosts: String
+    val statComments: String
+    val statLikes: String
+    fun memberSince(date: String): String
+    val badgesTitle: String
+    val noBadges: String
+    val herPosts: String
+    val noPostsYet: String
+    val messageButton: String
+    val messagesClosed: String
+    val block: String
+    val unblock: String
+    val blockConfirmTitle: String
+    val blockConfirmBody: String
+    val blocked: String
+    val unblocked: String
+    val viewProfile: String
+
+    // ---- private messages
+    val messagesTitle: String
+    val messagesSubtitle: String
+    val noMessages: String
+    val noMessagesBody: String
+    val messageHint: String
+    val conversationBlocked: String
+    val conversationMenu: String
+    val reportConversation: String
+    val newConversation: String
+    fun unreadCount(count: Int): String
 }
 
 /**
@@ -349,6 +415,9 @@ interface LanguageNames {
 interface TabStrings {
     val today: String
     val mind: String
+    /** The Mind tab while the food diary lives inside it — every free account. */
+    val mindAndNutrition: String
+    val secretChat: String
     val nutrition: String
     /** The fifth tab. Profile moved to the home header; this is where Premium lives now. */
     val premium: String

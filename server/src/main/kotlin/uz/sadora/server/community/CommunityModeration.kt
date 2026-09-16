@@ -73,6 +73,8 @@ data class ModerationReportView(
     val id: String,
     val postId: String? = null,
     val commentId: String? = null,
+    /** A private message; the queue shows its text, never the thread. */
+    val messageId: String? = null,
     val reason: ReportReason,
     val note: String? = null,
     val excerpt: String,
@@ -121,6 +123,7 @@ data class RestrictAuthorRequest(
 class CommunityModerationService(
     private val repository: CommunityRepository,
     private val audit: AuditService,
+    private val messaging: MessagingRepository,
 ) {
 
     suspend fun posts(
@@ -184,20 +187,25 @@ class CommunityModerationService(
         val report = repository.reportById(reportId) ?: throw NotFoundException("Shikoyat topilmadi")
         if (report.resolvedAt != null) throw ValidationException("id", "Bu shikoyat allaqachon ko'rib chiqilgan")
         when (request.action) {
-            ACTION_DISMISS -> repository.resolveReportsOn(report.postId, report.commentId, RESOLUTION_DISMISSED, admin.adminId)
+            ACTION_DISMISS -> repository.resolveReportsOn(report.postId, report.commentId, RESOLUTION_DISMISSED, admin.adminId, report.messageId)
             ACTION_HIDE -> {
                 val reason = request.reason?.trim()?.takeIf { it.isNotEmpty() } ?: "Shikoyat bo'yicha yashirildi"
                 report.postId?.let { repository.setPostStatus(it, ContentStatus.HIDDEN, reason) }
                 report.commentId?.let { repository.setCommentStatus(it, ContentStatus.HIDDEN, reason) }
-                repository.resolveReportsOn(report.postId, report.commentId, RESOLUTION_HIDDEN, admin.adminId)
+                report.messageId?.let { messaging.setMessageStatus(it, ContentStatus.HIDDEN, reason) }
+                repository.resolveReportsOn(report.postId, report.commentId, RESOLUTION_HIDDEN, admin.adminId, report.messageId)
             }
             else -> throw ValidationException("action", "dismiss yoki hide")
         }
         audit.record(
             admin.entry(
                 action = AuditActions.COMMUNITY_REPORT_RESOLVED,
-                entityType = if (report.postId != null) "community_post" else "community_comment",
-                entityId = (report.postId ?: report.commentId).toString(),
+                entityType = when {
+                    report.postId != null -> "community_post"
+                    report.commentId != null -> "community_comment"
+                    else -> "community_message"
+                },
+                entityId = (report.postId ?: report.commentId ?: report.messageId).toString(),
                 reason = request.reason,
                 metadata = mapOf("reportId" to reportId.toString(), "resolution" to request.action),
                 context = context,
@@ -263,6 +271,7 @@ class CommunityModerationService(
         id = id.toString(),
         postId = postId?.toString(),
         commentId = commentId?.toString(),
+        messageId = messageId?.toString(),
         reason = reason,
         note = note,
         excerpt = excerpt,

@@ -88,8 +88,17 @@ import uz.sadora.contract.AuthSession
 import uz.sadora.contract.BillingCatalogue
 import uz.sadora.contract.CheckoutRequest
 import uz.sadora.contract.CheckoutSession
+import uz.sadora.contract.BlockState
+import uz.sadora.contract.CommunityBadge
 import uz.sadora.contract.CommunityComment
 import uz.sadora.contract.CommunityIdentity
+import uz.sadora.contract.CommunityProfile
+import uz.sadora.contract.Conversation
+import uz.sadora.contract.ConversationThread
+import uz.sadora.contract.DirectMessage
+import uz.sadora.contract.SendMessageRequest
+import uz.sadora.contract.StartConversationRequest
+import uz.sadora.contract.UpdateIdentityRequest
 import uz.sadora.contract.CommunityPost
 import uz.sadora.contract.CommunityTopic
 import uz.sadora.contract.ConsentGrants
@@ -151,6 +160,7 @@ import uz.sadora.server.admin.TotpEnrolment
 import uz.sadora.server.admin.AdminStats
 import uz.sadora.server.auth.PasswordHasher
 import uz.sadora.server.billing.BillingService
+import uz.sadora.server.community.CommunityBadges
 import uz.sadora.server.community.HideRequest
 import uz.sadora.server.community.ModerationPostView
 import uz.sadora.server.community.ModerationReportView
@@ -1049,6 +1059,110 @@ class ApiIntegrationTest {
         // The author can still take her own post down; the reader cannot.
         assertEquals(HttpStatusCode.NotFound, raw { client.delete("/v1/community/posts/${created.id}") { auth(reader.token) } }.status)
         assertEquals(HttpStatusCode.OK, raw { client.delete("/v1/community/posts/${created.id}") { auth(author.token) } }.status)
+    }
+
+    /**
+     * Profiles and private messages. The alias is the only handle on the wire; a block
+     * or a closed door reads as the same refusal; and moderation sees a reported
+     * message as text with an alias, like everything else in the room.
+     */
+    @Test
+    fun `an alias has a profile with a bio and badges, and two aliases can message each other`() = api {
+        val her = signUp().also { onboard(it) }
+        val him = signUp().also { onboard(it) }
+        val third = signUp().also { onboard(it) }
+        val admin = adminToken()
+
+        val me = get<CommunityIdentity>("/v1/community/me", her.token)
+        assertTrue(CommunityBadge.NEWCOMER in me.badges, "a fresh alias is a newcomer: ${me.badges}")
+        assertEquals(0, me.unreadMessages)
+
+        // Bio: trimmed, capped, cleared by blank.
+        val withBio = put<CommunityIdentity>("/v1/community/me", her.token, UpdateIdentityRequest(bio = "  Ikki bola, perimenopauza  "))
+        assertEquals("Ikki bola, perimenopauza", withBio.bio)
+        val tooLong = raw { client.put("/v1/community/me") { auth(her.token); json(UpdateIdentityRequest(bio = "x".repeat(Limits.BIO_MAX + 1))) } }
+        assertEquals(HttpStatusCode.BadRequest, tooLong.status)
+
+        // Her profile as he sees it, and as she sees it.
+        val post = post<CommunityPost>("/v1/community/posts", her.token, CreatePostRequest(CommunityTopic.WELLBEING, "Profil test ${Uuid.random()}"))
+        val encoded = me.alias.replace(" ", "%20")
+        val seen = get<CommunityProfile>("/v1/community/profiles/$encoded", him.token)
+        assertEquals(me.alias, seen.alias)
+        assertEquals("Ikki bola, perimenopauza", seen.bio)
+        assertEquals(1, seen.postCount)
+        assertEquals(listOf(post.id), seen.posts.map { it.id })
+        assertFalse(seen.isMe)
+        assertTrue(seen.canMessage)
+        assertTrue(CommunityBadge.NEWCOMER in seen.badges)
+        val own = get<CommunityProfile>("/v1/community/profiles/$encoded", her.token)
+        assertTrue(own.isMe)
+        assertFalse(own.canMessage, "nobody messages herself")
+        assertEquals(HttpStatusCode.NotFound, raw { client.get("/v1/community/profiles/Yoq%20Taxallus") { auth(him.token) } }.status)
+        assertFalse(her.userId in rawGet("/v1/community/profiles/$encoded", him.token), "a profile never carries the account id")
+
+        // He writes to her; she has one unread; opening it reads it.
+        val started = post<ConversationThread>("/v1/community/conversations", him.token, StartConversationRequest(me.alias, "Salom, savolim bor"))
+        assertEquals(me.alias, started.conversation.alias)
+        assertEquals(1, started.messages.size)
+        assertTrue(started.messages.single().isMine)
+        assertEquals(1, get<CommunityIdentity>("/v1/community/me", her.token).unreadMessages)
+        val hers = get<List<Conversation>>("/v1/community/conversations", her.token)
+        assertEquals(1, hers.single().unread)
+        assertEquals("Salom, savolim bor", hers.single().lastMessage)
+        val thread = get<ConversationThread>("/v1/community/conversations/${started.conversation.id}", her.token)
+        assertFalse(thread.messages.single().isMine)
+        assertEquals(0, get<CommunityIdentity>("/v1/community/me", her.token).unreadMessages, "opening the thread reads it")
+
+        // A second start from either side lands in the same thread. From his thread the
+        // alias on the conversation is hers; hers names him by his own identity.
+        val hisAlias = get<CommunityIdentity>("/v1/community/me", him.token).alias
+        val again = post<ConversationThread>("/v1/community/conversations", her.token, StartConversationRequest(hisAlias, "Marhamat"))
+        assertEquals(hisAlias, again.conversation.alias)
+        assertEquals(started.conversation.id, again.conversation.id)
+        assertEquals(2, again.messages.size)
+        val reply = post<DirectMessage>("/v1/community/conversations/${started.conversation.id}/messages", him.token, SendMessageRequest("Rahmat"))
+        assertTrue(reply.isMine)
+        assertEquals(1, get<List<Conversation>>("/v1/community/conversations", her.token).single().unread)
+
+        // Refusals: yourself, a stranger's thread, an empty line, a closed door, a block.
+        assertEquals(HttpStatusCode.BadRequest, raw { client.post("/v1/community/conversations") { auth(her.token); json(StartConversationRequest(me.alias, "o'zimga")) } }.status)
+        assertEquals(HttpStatusCode.NotFound, raw { client.get("/v1/community/conversations/${started.conversation.id}") { auth(third.token) } }.status)
+        assertEquals(HttpStatusCode.BadRequest, raw { client.post("/v1/community/conversations/${started.conversation.id}/messages") { auth(him.token); json(SendMessageRequest("   ")) } }.status)
+        put<CommunityIdentity>("/v1/community/me", her.token, UpdateIdentityRequest(dmOpen = false))
+        assertFalse(get<CommunityProfile>("/v1/community/profiles/$encoded", third.token).canMessage)
+        assertEquals(HttpStatusCode.Forbidden, raw { client.post("/v1/community/conversations") { auth(third.token); json(StartConversationRequest(me.alias, "salom")) } }.status)
+        put<CommunityIdentity>("/v1/community/me", her.token, UpdateIdentityRequest(dmOpen = true))
+
+        val hisEncoded = hisAlias.replace(" ", "%20")
+        assertEquals(BlockState(true), put<BlockState>("/v1/community/profiles/$hisEncoded/block", her.token))
+        assertTrue(get<CommunityProfile>("/v1/community/profiles/$hisEncoded", her.token).blocked)
+        assertFalse(get<CommunityProfile>("/v1/community/profiles/$encoded", him.token).canMessage, "a block closes the door from his side too")
+        assertEquals(HttpStatusCode.Forbidden, raw { client.post("/v1/community/conversations/${started.conversation.id}/messages") { auth(him.token); json(SendMessageRequest("hali ham")) } }.status)
+        assertTrue(get<List<Conversation>>("/v1/community/conversations", him.token).single().blocked)
+        val unblocked = raw { client.delete("/v1/community/profiles/$hisEncoded/block") { auth(her.token) } }
+        assertEquals(HttpStatusCode.OK, unblocked.status)
+        assertTrue(get<CommunityProfile>("/v1/community/profiles/$encoded", him.token).canMessage)
+
+        // Reporting a thread reports his latest line; the queue shows it as a message.
+        postAck("/v1/community/conversations/${started.conversation.id}/report", her.token, ReportRequest(ReportReason.ABUSE, "test"))
+        assertEquals(HttpStatusCode.Conflict, raw { client.post("/v1/community/conversations/${started.conversation.id}/report") { auth(her.token); json(ReportRequest(ReportReason.SPAM)) } }.status)
+        val reports = get<Page<ModerationReportView>>("/v1/admin/community/reports?open=true&limit=200", admin)
+        val open = assertNotNull(reports.items.firstOrNull { it.messageId == reply.id })
+        assertEquals("Rahmat", open.excerpt)
+        assertFalse(him.userId in rawGet("/v1/admin/community/reports?open=true&limit=200", admin))
+        postAck("/v1/admin/community/reports/${open.id}/resolve", admin, ResolveReportRequest("hide", "integration test"))
+        val afterHide = get<ConversationThread>("/v1/community/conversations/${started.conversation.id}", her.token)
+        assertTrue(afterHide.messages.none { it.id == reply.id }, "a hidden message leaves the thread")
+        val auditRow = rawGet("/v1/admin/audit?action=community.report_resolved&entityId=${reply.id}&limit=5", admin)
+        assertTrue("\"entityType\":\"community_message\"" in auditRow, "the audit log names the message, not a null comment: $auditRow")
+
+        // The badge rules, exercised at their thresholds rather than assumed.
+        repeat(CommunityBadges.WRITER_POSTS - 1) { index ->
+            post<CommunityPost>("/v1/community/posts", her.token, CreatePostRequest(CommunityTopic.BODY, "Yozuvchi $index ${Uuid.random()}"))
+        }
+        assertTrue(CommunityBadge.WRITER in get<CommunityIdentity>("/v1/community/me", her.token).badges)
+        val feed = get<Page<CommunityPost>>("/v1/community/posts?limit=100", him.token)
+        assertTrue(feed.items.first { it.alias == me.alias }.badges.contains(CommunityBadge.WRITER), "badges ride on the feed's cards")
     }
 
     @Test

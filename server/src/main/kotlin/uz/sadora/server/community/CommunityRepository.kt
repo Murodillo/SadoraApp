@@ -15,6 +15,7 @@ import org.jetbrains.exposed.v1.core.greaterEq
 import org.jetbrains.exposed.v1.core.inList
 import org.jetbrains.exposed.v1.core.isNotNull
 import org.jetbrains.exposed.v1.core.isNull
+import org.jetbrains.exposed.v1.core.or
 import org.jetbrains.exposed.v1.jdbc.andWhere
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insert
@@ -28,8 +29,10 @@ import uz.sadora.contract.ReportReason
 import uz.sadora.server.core.now
 import uz.sadora.server.core.toKotlinInstant
 import uz.sadora.server.core.toOffsetDateTime
+import uz.sadora.server.db.CommunityBlocks
 import uz.sadora.server.db.CommunityComments
 import uz.sadora.server.db.CommunityIdentities
+import uz.sadora.server.db.CommunityMessages
 import uz.sadora.server.db.CommunityPostLikes
 import uz.sadora.server.db.CommunityPostSaves
 import uz.sadora.server.db.CommunityPosts
@@ -40,7 +43,24 @@ import uz.sadora.server.db.dbQuery
 import uz.sadora.server.db.dbValue
 import uz.sadora.server.db.enumFromDb
 
-data class IdentityRecord(val userId: Uuid, val alias: String, val tint: Int)
+data class IdentityRecord(
+    val userId: Uuid,
+    val alias: String,
+    val tint: Int,
+    val createdAt: Instant,
+    val bio: String? = null,
+    val dmOpen: Boolean = true,
+)
+
+/** What a badge is decided from: the counts behind one alias, and when she arrived. */
+data class ActivityStats(
+    val posts: Int = 0,
+    val comments: Int = 0,
+    val likesReceived: Int = 0,
+    val memberSince: Instant,
+    /** Whether her alias is among the room's first [CommunityBadges.EARLY_ALIASES]. */
+    val early: Boolean = false,
+)
 
 data class PostRecord(
     val id: Uuid,
@@ -101,6 +121,7 @@ data class ReportRecord(
     /** The reported text, so the queue can be read without a second request. */
     val excerpt: String,
     val targetStatus: ContentStatus,
+    val messageId: Uuid? = null,
 )
 
 data class RestrictionRecord(val reason: String, val until: Instant?)
@@ -137,14 +158,122 @@ class CommunityRepository {
         CommunityIdentities.selectAll().where { CommunityIdentities.alias eq alias }.count() > 0
     }
 
+    /** The account behind an alias — kept inside the server; the routes speak alias only. */
+    suspend fun identityByAlias(alias: String): IdentityRecord? = dbQuery {
+        CommunityIdentities.selectAll()
+            .where { CommunityIdentities.alias eq alias }
+            .singleOrNull()
+            ?.toIdentity()
+    }
+
+    suspend fun updateIdentity(userId: Uuid, bio: String?, keepBio: Boolean, dmOpen: Boolean?): Boolean = dbQuery {
+        CommunityIdentities.update({ CommunityIdentities.userId eq userId }) {
+            if (!keepBio) it[CommunityIdentities.bio] = bio
+            dmOpen?.let { open -> it[CommunityIdentities.dmOpen] = open }
+        } > 0
+    }
+
+    /**
+     * The counts a badge and a profile are read from, for a batch of accounts in four
+     * queries whatever the batch size — the feed asks for a page of authors at once.
+     */
+    suspend fun activityFor(userIds: Collection<Uuid>): Map<Uuid, ActivityStats> = dbQuery {
+        val ids = userIds.distinct()
+        if (ids.isEmpty()) return@dbQuery emptyMap()
+        val identities = identitiesIn(ids)
+        val visible = ContentStatus.VISIBLE.dbValue()
+
+        val postCounter = CommunityPosts.id.count()
+        val posts = CommunityPosts.select(CommunityPosts.userId, postCounter)
+            .where { (CommunityPosts.userId inList ids) and (CommunityPosts.status eq visible) }
+            .groupBy(CommunityPosts.userId)
+            .associate { it[CommunityPosts.userId] to it[postCounter].toInt() }
+
+        val commentCounter = CommunityComments.id.count()
+        val comments = CommunityComments.select(CommunityComments.userId, commentCounter)
+            .where { (CommunityComments.userId inList ids) and (CommunityComments.status eq visible) }
+            .groupBy(CommunityComments.userId)
+            .associate { it[CommunityComments.userId] to it[commentCounter].toInt() }
+
+        val likeCounter = CommunityPostLikes.userId.count()
+        val likes = (CommunityPostLikes innerJoin CommunityPosts)
+            .select(CommunityPosts.userId, likeCounter)
+            .where { (CommunityPosts.userId inList ids) and (CommunityPosts.status eq visible) }
+            .groupBy(CommunityPosts.userId)
+            .associate { it[CommunityPosts.userId] to it[likeCounter].toInt() }
+
+        // The moment the room stopped being new: whoever arrived before it is early.
+        val earlyUntil = CommunityIdentities.select(CommunityIdentities.createdAt)
+            .orderBy(CommunityIdentities.createdAt to SortOrder.ASC)
+            .limit(1)
+            .offset((CommunityBadges.EARLY_ALIASES - 1).toLong())
+            .singleOrNull()
+            ?.get(CommunityIdentities.createdAt)
+            ?.toKotlinInstant()
+
+        identities.mapValues { (userId, identity) ->
+            ActivityStats(
+                posts = posts[userId] ?: 0,
+                comments = comments[userId] ?: 0,
+                likesReceived = likes[userId] ?: 0,
+                memberSince = identity.createdAt,
+                early = earlyUntil == null || identity.createdAt <= earlyUntil,
+            )
+        }
+    }
+
+    /** Her visible posts, newest first, for the profile page. */
+    suspend fun postsBy(userId: Uuid, limit: Int): List<PostRecord> = dbQuery {
+        CommunityPosts.selectAll()
+            .where { (CommunityPosts.userId eq userId) and (CommunityPosts.status eq ContentStatus.VISIBLE.dbValue()) }
+            .orderBy(CommunityPosts.createdAt to SortOrder.DESC)
+            .limit(limit)
+            .map { it.toPost() }
+    }
+
+    // ---------------------------------------------------------------- blocks
+
+    suspend fun setBlocked(blockerId: Uuid, blockedId: Uuid, blocked: Boolean): Unit = dbQuery {
+        if (blocked) {
+            CommunityBlocks.insertIgnore {
+                it[CommunityBlocks.blockerId] = blockerId
+                it[CommunityBlocks.blockedId] = blockedId
+                it[createdAt] = now().toOffsetDateTime()
+            }
+        } else {
+            CommunityBlocks.deleteWhere {
+                (CommunityBlocks.blockerId eq blockerId) and (CommunityBlocks.blockedId eq blockedId)
+            }
+        }
+    }
+
+    /** True when [a] blocked [b]. */
+    suspend fun isBlocked(a: Uuid, b: Uuid): Boolean = dbQuery {
+        CommunityBlocks.selectAll()
+            .where { (CommunityBlocks.blockerId eq a) and (CommunityBlocks.blockedId eq b) }
+            .count() > 0
+    }
+
+    /** True when either has blocked the other. */
+    suspend fun blockedEitherWay(a: Uuid, b: Uuid): Boolean = dbQuery {
+        CommunityBlocks.selectAll()
+            .where {
+                ((CommunityBlocks.blockerId eq a) and (CommunityBlocks.blockedId eq b)) or
+                    ((CommunityBlocks.blockerId eq b) and (CommunityBlocks.blockedId eq a))
+            }
+            .count() > 0
+    }
+
     suspend fun createIdentity(userId: Uuid, alias: String, tint: Int): IdentityRecord = dbQuery {
+        val timestamp = now()
         CommunityIdentities.insert {
             it[CommunityIdentities.userId] = userId
             it[CommunityIdentities.alias] = alias
             it[CommunityIdentities.tint] = tint
-            it[createdAt] = now().toOffsetDateTime()
+            it[createdAt] = timestamp.toOffsetDateTime()
+            it[dmOpen] = true
         }
-        IdentityRecord(userId, alias, tint)
+        IdentityRecord(userId, alias, tint, timestamp)
     }
 
     private fun identitiesIn(userIds: Collection<Uuid>): Map<Uuid, IdentityRecord> {
@@ -338,11 +467,16 @@ class CommunityRepository {
         commentId: Uuid?,
         reason: ReportReason,
         note: String?,
+        messageId: Uuid? = null,
     ): Boolean = dbQuery {
         val duplicate = CommunityReports.selectAll()
             .where {
                 (CommunityReports.reporterId eq reporterId) and
-                    (if (postId != null) CommunityReports.postId eq postId else CommunityReports.commentId eq commentId)
+                    when {
+                        postId != null -> CommunityReports.postId eq postId
+                        commentId != null -> CommunityReports.commentId eq commentId
+                        else -> CommunityReports.messageId eq messageId
+                    }
             }
             .count() > 0
         if (duplicate) return@dbQuery false
@@ -351,6 +485,7 @@ class CommunityRepository {
             it[CommunityReports.reporterId] = reporterId
             it[CommunityReports.postId] = postId
             it[CommunityReports.commentId] = commentId
+            it[CommunityReports.messageId] = messageId
             it[CommunityReports.reason] = reason.dbValue()
             it[CommunityReports.note] = note
             it[createdAt] = now().toOffsetDateTime()
@@ -514,21 +649,30 @@ class CommunityRepository {
         val comments = if (commentIds.isEmpty()) emptyMap() else CommunityComments.selectAll()
             .where { CommunityComments.id inList commentIds }
             .associate { it[CommunityComments.id] to it.toComment() }
+        val messageIds = rows.mapNotNull { it[CommunityReports.messageId] }
+        val messages = if (messageIds.isEmpty()) emptyMap() else CommunityMessages
+            .select(CommunityMessages.id, CommunityMessages.body, CommunityMessages.status)
+            .where { CommunityMessages.id inList messageIds }
+            .associate {
+                it[CommunityMessages.id] to (it[CommunityMessages.body] to enumFromDb(it[CommunityMessages.status], ContentStatus.VISIBLE))
+            }
 
         rows.map { row ->
             val post = row[CommunityReports.postId]?.let { posts[it] }
             val comment = row[CommunityReports.commentId]?.let { comments[it] }
+            val message = row[CommunityReports.messageId]?.let { messages[it] }
             ReportRecord(
                 id = row[CommunityReports.id],
                 postId = row[CommunityReports.postId],
                 commentId = row[CommunityReports.commentId],
+                messageId = row[CommunityReports.messageId],
                 reason = enumFromDb(row[CommunityReports.reason], ReportReason.OTHER),
                 note = row[CommunityReports.note],
                 createdAt = row[CommunityReports.createdAt].toKotlinInstant(),
                 resolvedAt = row[CommunityReports.resolvedAt]?.toKotlinInstant(),
                 resolution = row[CommunityReports.resolution],
-                excerpt = (post?.body ?: comment?.body).orEmpty().take(EXCERPT_LENGTH),
-                targetStatus = post?.status ?: comment?.status ?: ContentStatus.HIDDEN,
+                excerpt = (post?.body ?: comment?.body ?: message?.first).orEmpty().take(EXCERPT_LENGTH),
+                targetStatus = post?.status ?: comment?.status ?: message?.second ?: ContentStatus.HIDDEN,
             )
         } to total
     }
@@ -542,25 +686,36 @@ class CommunityRepository {
         val comment = row[CommunityReports.commentId]?.let { commentId ->
             CommunityComments.selectAll().where { CommunityComments.id eq commentId }.singleOrNull()?.toComment()
         }
+        val message = row[CommunityReports.messageId]?.let { messageId ->
+            CommunityMessages.select(CommunityMessages.body, CommunityMessages.status)
+                .where { CommunityMessages.id eq messageId }
+                .singleOrNull()
+                ?.let { it[CommunityMessages.body] to enumFromDb(it[CommunityMessages.status], ContentStatus.VISIBLE) }
+        }
         ReportRecord(
             id = row[CommunityReports.id],
             postId = row[CommunityReports.postId],
             commentId = row[CommunityReports.commentId],
+            messageId = row[CommunityReports.messageId],
             reason = enumFromDb(row[CommunityReports.reason], ReportReason.OTHER),
             note = row[CommunityReports.note],
             createdAt = row[CommunityReports.createdAt].toKotlinInstant(),
             resolvedAt = row[CommunityReports.resolvedAt]?.toKotlinInstant(),
             resolution = row[CommunityReports.resolution],
-            excerpt = (post?.body ?: comment?.body).orEmpty().take(EXCERPT_LENGTH),
-            targetStatus = post?.status ?: comment?.status ?: ContentStatus.HIDDEN,
+            excerpt = (post?.body ?: comment?.body ?: message?.first).orEmpty().take(EXCERPT_LENGTH),
+            targetStatus = post?.status ?: comment?.status ?: message?.second ?: ContentStatus.HIDDEN,
         )
     }
 
     /** Resolves every open report on the same target at once, so the queue empties as one. */
-    suspend fun resolveReportsOn(postId: Uuid?, commentId: Uuid?, resolution: String, by: Uuid): Int = dbQuery {
+    suspend fun resolveReportsOn(postId: Uuid?, commentId: Uuid?, resolution: String, by: Uuid, messageId: Uuid? = null): Int = dbQuery {
         CommunityReports.update({
             CommunityReports.resolvedAt.isNull() and
-                (if (postId != null) CommunityReports.postId eq postId else CommunityReports.commentId eq commentId)
+                when {
+                    postId != null -> CommunityReports.postId eq postId
+                    commentId != null -> CommunityReports.commentId eq commentId
+                    else -> CommunityReports.messageId eq messageId
+                }
         }) {
             it[resolvedAt] = now().toOffsetDateTime()
             it[resolvedBy] = by
@@ -586,6 +741,9 @@ class CommunityRepository {
         userId = this[CommunityIdentities.userId],
         alias = this[CommunityIdentities.alias],
         tint = this[CommunityIdentities.tint],
+        createdAt = this[CommunityIdentities.createdAt].toKotlinInstant(),
+        bio = this[CommunityIdentities.bio],
+        dmOpen = this[CommunityIdentities.dmOpen],
     )
 
     private fun ResultRow.toPost() = PostRecord(

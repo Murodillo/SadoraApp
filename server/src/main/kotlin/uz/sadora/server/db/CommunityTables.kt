@@ -18,6 +18,10 @@ object CommunityIdentities : Table("community_identities") {
     val alias = text("alias")
     val tint = integer("tint")
     val createdAt = timestampWithTimeZone("created_at")
+    /** A line under the alias, 160 characters at most. */
+    val bio = text("bio").nullable()
+    /** Whether strangers may open a conversation with her. */
+    val dmOpen = bool("dm_open")
 
     override val primaryKey = PrimaryKey(userId)
 }
@@ -68,6 +72,7 @@ object CommunityReports : Table("community_reports") {
     val reporterId = uuid("reporter_id").references(Users.id)
     val postId = uuid("post_id").references(CommunityPosts.id).nullable()
     val commentId = uuid("comment_id").references(CommunityComments.id).nullable()
+    val messageId = uuid("message_id").references(CommunityMessages.id).nullable()
     val reason = text("reason")
     val note = text("note").nullable()
     val createdAt = timestampWithTimeZone("created_at")
@@ -86,6 +91,39 @@ object CommunityRestrictions : Table("community_restrictions") {
     val createdAt = timestampWithTimeZone("created_at")
 
     override val primaryKey = PrimaryKey(userId)
+}
+
+/** One private thread between two accounts, ids in a fixed order so a pair is one row. */
+object CommunityConversations : Table("community_conversations") {
+    val id = uuid("id")
+    val userA = uuid("user_a").references(Users.id)
+    val userB = uuid("user_b").references(Users.id)
+    val createdAt = timestampWithTimeZone("created_at")
+    val lastMessageAt = timestampWithTimeZone("last_message_at")
+    val aReadAt = timestampWithTimeZone("a_read_at").nullable()
+    val bReadAt = timestampWithTimeZone("b_read_at").nullable()
+
+    override val primaryKey = PrimaryKey(id)
+}
+
+object CommunityMessages : Table("community_messages") {
+    val id = uuid("id")
+    val conversationId = uuid("conversation_id").references(CommunityConversations.id)
+    val senderId = uuid("sender_id").references(Users.id)
+    val body = text("body")
+    val status = text("status")
+    val hiddenReason = text("hidden_reason").nullable()
+    val createdAt = timestampWithTimeZone("created_at")
+
+    override val primaryKey = PrimaryKey(id)
+}
+
+object CommunityBlocks : Table("community_blocks") {
+    val blockerId = uuid("blocker_id").references(Users.id)
+    val blockedId = uuid("blocked_id").references(Users.id)
+    val createdAt = timestampWithTimeZone("created_at")
+
+    override val primaryKey = PrimaryKey(blockerId, blockedId)
 }
 
 /** The two states content can be in. Stored lowercase, like every other enum. */

@@ -26,6 +26,8 @@ import uz.sadora.server.rewards.ShopService
 import uz.sadora.server.community.CommunityModerationService
 import uz.sadora.server.community.CommunityRepository
 import uz.sadora.server.community.CommunityService
+import uz.sadora.server.community.MessagingRepository
+import uz.sadora.server.community.MessagingService
 import uz.sadora.server.admin.AdminService
 import uz.sadora.server.admin.AdminStatsRepository
 import uz.sadora.server.audit.AuditRepository
@@ -241,13 +243,21 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
     )
 
     val communityRepository = CommunityRepository()
+    val messagingRepository = MessagingRepository()
     val communityService = CommunityService(
         repository = communityRepository,
         users = userRepository,
         flags = flagService,
         environment = config.environment,
+        messaging = messagingRepository,
     )
-    val communityModerationService = CommunityModerationService(communityRepository, auditService)
+    val messagingService = MessagingService(
+        messages = messagingRepository,
+        community = communityService,
+        identities = communityRepository,
+        notifications = notificationRepository,
+    )
+    val communityModerationService = CommunityModerationService(communityRepository, auditService, messagingRepository)
 
     val contentRepository = ContentRepository()
     val contentService = ContentService(

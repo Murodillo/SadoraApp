@@ -7,7 +7,9 @@ import kotlin.test.assertTrue
 import kotlinx.datetime.LocalDate
 import uz.sadora.app.model.AppLanguage
 import uz.sadora.app.model.BirthControl
+import uz.sadora.app.model.CommunityBadge
 import uz.sadora.app.model.CommunityFilter
+import uz.sadora.app.model.CommunitySort
 import uz.sadora.app.model.CommunityTopic
 import uz.sadora.app.model.ConceptionWindow
 import uz.sadora.app.model.CyclePhase
@@ -300,10 +302,21 @@ class StringsTest {
                     deletePost, postDeleted, newPost, postSent, comments, reportPost,
                     reportReasonTitle, reportNote, sendReport,
                     reportSent, shareSuffix,
+                    anonymousAs("X"), anonymous, rulesTitle, rulesIntro, rulesButton,
+                    nothingMine, nothingMineBody, readMore, postTitle, commentsCount(0), commentsCount(3),
+                    profileTitle, myProfileTitle, noBio, editBio, bioHint, acceptMessages, acceptMessagesHint,
+                    saveProfile, profileSaved, statPosts, statComments, statLikes, memberSince("X"),
+                    badgesTitle, noBadges, herPosts, noPostsYet, messageButton, messagesClosed, block, unblock,
+                    blockConfirmTitle, blockConfirmBody, blocked, unblocked, viewProfile, messagesTitle,
+                    messagesSubtitle, noMessages, noMessagesBody, messageHint, conversationBlocked,
+                    conversationMenu, reportConversation, newConversation, unreadCount(2),
                 ),
             )
+            addAll(rules)
             CommunityTopic.entries.forEach { add(topic(it)) }
             CommunityFilter.entries.forEach { add(filter(it)) }
+            CommunitySort.entries.forEach { add(sort(it)) }
+            CommunityBadge.entries.forEach { add(badge(it)); add(badgeHint(it)) }
             ReportReason.entries.forEach { add(reportReason(it)) }
         }
         with(t.rewards) {

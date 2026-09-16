@@ -93,6 +93,8 @@ class SadoraGraph(
     fun communityController(state: uz.sadora.app.model.AppState): CommunityController =
         CommunityController(communityApi, state)
 
+    fun messagesController(): MessagesController = MessagesController(communityApi)
+
     fun aiController(state: uz.sadora.app.model.AppState): AiController =
         AiController(aiApi, state)
 

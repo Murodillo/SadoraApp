@@ -2,7 +2,9 @@ package uz.sadora.app.i18n
 
 import kotlinx.datetime.LocalDate
 import uz.sadora.app.model.BirthControl
+import uz.sadora.app.model.CommunityBadge
 import uz.sadora.app.model.CommunityFilter
+import uz.sadora.app.model.CommunitySort
 import uz.sadora.app.model.CommunityTopic
 import uz.sadora.app.model.ConceptionWindow
 import uz.sadora.app.model.CyclePhase
@@ -36,6 +38,8 @@ object StringsRu : Strings {
     override val tabs = object : TabStrings {
         override val today = "Сегодня"
         override val mind = "Разум"
+        override val mindAndNutrition = "Разум · Еда"
+        override val secretChat = "Чат"
         override val nutrition = "Питание"
         override val premium = "Premium"
         override fun journey(stage: LifeStage) = when (stage) {
@@ -308,7 +312,7 @@ object StringsRu : Strings {
 
         override val sleep = "Сон"
         override val medications = "Лекарства"
-        override val secretChat = "Секретный чат"
+        override val secretChat = "Чат"
         override val insights = "Аналитика"
         override val knowledge = "Знания"
 
@@ -573,7 +577,7 @@ object StringsRu : Strings {
     }
 
     override val community = object : CommunityStrings {
-        override val title = "Секретный чат"
+        override val title = "Чат"
         override val compose = "Написать"
         override val more = "Ещё"
         override val saved = "Сохранённые"
@@ -587,7 +591,24 @@ object StringsRu : Strings {
         override fun filter(filter: CommunityFilter) = when (filter) {
             CommunityFilter.Feed -> "Лента"
             CommunityFilter.Saved -> "Сохранённые"
+            CommunityFilter.Mine -> "Мои"
         }
+        override fun sort(sort: CommunitySort) = when (sort) {
+            CommunitySort.Newest -> "Новые"
+            CommunitySort.Active -> "Активные"
+        }
+        override fun anonymousAs(alias: String) = "Анонимно · вы: $alias"
+        override val anonymous = "Анонимно — вашего имени никто не видит"
+        override val rulesTitle = "Как устроен чат"
+        override val rulesIntro = "Здесь все пишут под псевдонимом. Ваши посты не связаны с профилем, номером телефона или именем — даже команда SADORA не видит, кто что написал в ленте."
+        override val rules = listOf(
+            "Пишите с уважением — каждая здесь пришла со своим вопросом.",
+            "Не оставляйте личные данные: имя, номер, адрес, фото.",
+            "Это не совет врача. Боль, кровотечение, температура — к врачу.",
+            "Реклама и продажи запрещены.",
+            "Пост, нарушающий правила, отметьте флажком — его проверят.",
+        )
+        override val rulesButton = "Понятно"
         override fun reportReason(reason: ReportReason) = when (reason) {
             ReportReason.Spam -> "Спам или реклама"
             ReportReason.Abuse -> "Оскорбление или угроза"
@@ -600,6 +621,63 @@ object StringsRu : Strings {
         override val nothingHere = "Здесь пока нет постов"
         override val nothingSavedBody = "Отметьте пост, который вам близок — он останется здесь."
         override val nothingHereBody = "Напишите первой — ваш вопрос выйдет под псевдонимом."
+        override val nothingMine = "Вы ещё ничего не писали"
+        override val nothingMineBody = "Ваши посты собираются здесь. Остальные видят только псевдоним."
+        override val readMore = "…ещё"
+        override val postTitle = "Пост"
+        override fun commentsCount(count: Int) = if (count == 0) "Комментарии" else "Комментариев: $count"
+        override fun badge(badge: CommunityBadge) = when (badge) {
+            CommunityBadge.Newcomer -> "Новичок"
+            CommunityBadge.Early -> "Из первых"
+            CommunityBadge.Writer -> "Автор"
+            CommunityBadge.Helper -> "Помощница"
+            CommunityBadge.Loved -> "Любимица"
+            CommunityBadge.Veteran -> "Ветеран"
+        }
+        override fun badgeHint(badge: CommunityBadge) = when (badge) {
+            CommunityBadge.Newcomer -> "Присоединилась на этой неделе"
+            CommunityBadge.Early -> "Среди первых 500 участниц чата"
+            CommunityBadge.Writer -> "Написала 5 и больше постов"
+            CommunityBadge.Helper -> "Ответила 20 и больше комментариями"
+            CommunityBadge.Loved -> "Её посты собрали больше 50 лайков"
+            CommunityBadge.Veteran -> "В чате уже 3 месяца"
+        }
+        override val profileTitle = "Профиль"
+        override val myProfileTitle = "Мой псевдоним"
+        override val noBio = "О себе пока ничего не написала"
+        override val editBio = "Изменить био"
+        override val bioHint = "Одна строка о себе — возраст, этап, что волнует. Без имён и номеров."
+        override val acceptMessages = "Принимать сообщения"
+        override val acceptMessagesHint = "Если выключить, никто не сможет написать вам лично"
+        override val saveProfile = "Сохранить"
+        override val profileSaved = "Профиль сохранён"
+        override val statPosts = "Посты"
+        override val statComments = "Комментарии"
+        override val statLikes = "Лайки"
+        override fun memberSince(date: String) = "С $date"
+        override val badgesTitle = "Значки"
+        override val noBadges = "Значков пока нет — пишите, отвечайте, они появятся сами"
+        override val herPosts = "Посты"
+        override val noPostsYet = "Постов пока нет"
+        override val messageButton = "Написать"
+        override val messagesClosed = "Не принимает сообщения"
+        override val block = "Заблокировать"
+        override val unblock = "Разблокировать"
+        override val blockConfirmTitle = "Заблокировать?"
+        override val blockConfirmBody = "Ни она вам, ни вы ей писать не сможете. Её посты останутся в ленте. Разблокировать можно в любой момент."
+        override val blocked = "Заблокирована"
+        override val unblocked = "Разблокирована"
+        override val viewProfile = "Открыть профиль"
+        override val messagesTitle = "Сообщения"
+        override val messagesSubtitle = "Под псевдонимами, только между вами двумя"
+        override val noMessages = "Сообщений пока нет"
+        override val noMessagesBody = "Нажмите на автора поста в ленте — написать ей можно из профиля."
+        override val messageHint = "Напишите сообщение"
+        override val conversationBlocked = "Этот разговор закрыт — сообщения не отправляются"
+        override val conversationMenu = "Разговор"
+        override val reportConversation = "Пожаловаться на разговор"
+        override val newConversation = "Новый разговор"
+        override fun unreadCount(count: Int) = "Непрочитанных: $count"
         override val write = "Написать"
         override val you = "вы"
         override fun youParenthesised(alias: String) = "$alias (вы)"
@@ -621,7 +699,7 @@ object StringsRu : Strings {
         override val reportNote = "Жалоба уйдёт модератору. Кто её отправил, не видно."
         override val sendReport = "Отправить жалобу"
         override val reportSent = "Жалоба отправлена"
-        override val shareSuffix = "SADORA — Секретный чат"
+        override val shareSuffix = "SADORA — Чат"
     }
 
     override val errors = object : ErrorStrings {
@@ -1513,7 +1591,7 @@ object StringsRu : Strings {
         override val excludes = listOf(
             "Текст ваших записей в дневнике",
             "Личные заметки в отметках беременности",
-            "Секретный чат",
+            "Переписка в чате",
         )
         override val privacyNote = "В ссылке нет вашего имени или телефона — только случайный код. Создадите новый — старый сразу перестанет работать."
         override val offline = "Для QR-кода нужен интернет"

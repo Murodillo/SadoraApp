@@ -27,18 +27,123 @@ enum class ReportReason {
 }
 
 /**
+ * What an alias has earned in the room. Computed from her activity every time it is
+ * read, never stored, so nothing has to be recounted when a post is deleted.
+ *
+ * The thresholds live on the server; the app only draws them.
+ */
+@Serializable
+enum class CommunityBadge {
+    /** Joined in the last week. */
+    @SerialName("newcomer") NEWCOMER,
+    /** Among the first few hundred aliases the room ever had. */
+    @SerialName("early") EARLY,
+    /** Has written several posts. */
+    @SerialName("writer") WRITER,
+    /** Answers others: many comments. */
+    @SerialName("helper") HELPER,
+    /** Her posts have gathered many likes. */
+    @SerialName("loved") LOVED,
+    /** Around for months. */
+    @SerialName("veteran") VETERAN,
+}
+
+/**
  * The name she posts under.
  *
  * Generated once per account and never chosen, so it cannot be a real name, and never
  * changed, so a thread stays readable. Nothing in it or around it links back to the
  * account: the wire carries the alias, the server keeps the join to itself.
+ *
+ * [unreadMessages] rides along so the chat header can show a count without a second
+ * request on every open.
  */
 @Serializable
 data class CommunityIdentity(
     val alias: String,
     /** Which of the app's avatar tints to draw behind the initial. */
     val tint: Int,
+    val bio: String? = null,
+    /** Whether other aliases may open a conversation with her. */
+    val dmOpen: Boolean = true,
+    val badges: List<CommunityBadge> = emptyList(),
+    val unreadMessages: Int = 0,
 )
+
+/** Edits to her own alias profile. A null field is left as it is; an empty bio clears it. */
+@Serializable
+data class UpdateIdentityRequest(
+    val bio: String? = null,
+    val dmOpen: Boolean? = null,
+)
+
+/**
+ * An alias as others see her: the page behind a name in the feed.
+ *
+ * Addressed by alias, which is unique and permanent. [canMessage] folds every reason a
+ * conversation could be refused — her own profile, a block either way, her door closed
+ * — so the button is drawn or not, and the tap is never a surprise.
+ */
+@Serializable
+data class CommunityProfile(
+    val alias: String,
+    val tint: Int,
+    val bio: String? = null,
+    val badges: List<CommunityBadge> = emptyList(),
+    val postCount: Int = 0,
+    val commentCount: Int = 0,
+    val likesReceived: Int = 0,
+    val memberSince: Instant,
+    val isMe: Boolean = false,
+    val canMessage: Boolean = false,
+    /** True when the viewer has blocked this alias; the button then offers to unblock. */
+    val blocked: Boolean = false,
+    /** Her recent visible posts, newest first. */
+    val posts: List<CommunityPost> = emptyList(),
+)
+
+/** One thread as the list shows it: who, the last line, and how much is unread. */
+@Serializable
+data class Conversation(
+    val id: String,
+    val alias: String,
+    val tint: Int,
+    val badges: List<CommunityBadge> = emptyList(),
+    val lastMessage: String? = null,
+    val lastMessageAt: Instant,
+    val unread: Int = 0,
+    /** Blocked by either side; the thread stays readable but takes no more messages. */
+    val blocked: Boolean = false,
+)
+
+@Serializable
+data class DirectMessage(
+    val id: String,
+    val body: String,
+    val createdAt: Instant,
+    val isMine: Boolean,
+)
+
+/** A thread opened: the conversation and its messages, oldest first. Reading marks it read. */
+@Serializable
+data class ConversationThread(
+    val conversation: Conversation,
+    val messages: List<DirectMessage> = emptyList(),
+)
+
+/** Opens a conversation with an alias, or finds the existing one, and sends the first line. */
+@Serializable
+data class StartConversationRequest(
+    val alias: String,
+    val body: String,
+)
+
+@Serializable
+data class SendMessageRequest(val body: String)
+
+/** The viewer's block on an alias, as the block and unblock calls return it. */
+@Serializable
+data class BlockState(val blocked: Boolean)
 
 /**
  * One post as the reader sees it.
@@ -60,6 +165,8 @@ data class CommunityPost(
     val liked: Boolean = false,
     val saved: Boolean = false,
     val isMine: Boolean = false,
+    /** The author's badges, so the card can show one or two next to the alias. */
+    val badges: List<CommunityBadge> = emptyList(),
 )
 
 @Serializable
@@ -71,6 +178,7 @@ data class CommunityComment(
     val body: String,
     val createdAt: Instant,
     val isMine: Boolean = false,
+    val badges: List<CommunityBadge> = emptyList(),
 )
 
 @Serializable

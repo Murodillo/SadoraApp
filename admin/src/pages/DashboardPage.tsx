@@ -55,7 +55,7 @@ export function DashboardPage() {
       </div>
 
       <div className="grid stat-row">
-        <Stat label="Maxfiy chat — 24 soatda post" value={data.communityPostsToday} />
+        <Stat label="Chat — 24 soatda post" value={data.communityPostsToday} />
         <Stat
           label="Ochiq shikoyatlar"
           value={data.communityOpenReports}

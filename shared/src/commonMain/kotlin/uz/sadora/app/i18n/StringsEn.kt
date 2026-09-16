@@ -2,7 +2,9 @@ package uz.sadora.app.i18n
 
 import kotlinx.datetime.LocalDate
 import uz.sadora.app.model.BirthControl
+import uz.sadora.app.model.CommunityBadge
 import uz.sadora.app.model.CommunityFilter
+import uz.sadora.app.model.CommunitySort
 import uz.sadora.app.model.CommunityTopic
 import uz.sadora.app.model.ConceptionWindow
 import uz.sadora.app.model.CyclePhase
@@ -33,6 +35,8 @@ object StringsEn : Strings {
     override val tabs = object : TabStrings {
         override val today = "Today"
         override val mind = "Mind"
+        override val mindAndNutrition = "Mind · Food"
+        override val secretChat = "Chat"
         override val nutrition = "Food"
         override val premium = "Premium"
         override fun journey(stage: LifeStage) = when (stage) {
@@ -305,7 +309,7 @@ object StringsEn : Strings {
 
         override val sleep = "Sleep"
         override val medications = "Medications"
-        override val secretChat = "Secret chat"
+        override val secretChat = "Chat"
         override val insights = "Insights"
         override val knowledge = "Knowledge"
 
@@ -564,7 +568,7 @@ object StringsEn : Strings {
     }
 
     override val community = object : CommunityStrings {
-        override val title = "Secret chat"
+        override val title = "Chat"
         override val compose = "Write"
         override val more = "More"
         override val saved = "Saved"
@@ -578,7 +582,24 @@ object StringsEn : Strings {
         override fun filter(filter: CommunityFilter) = when (filter) {
             CommunityFilter.Feed -> "Feed"
             CommunityFilter.Saved -> "Saved"
+            CommunityFilter.Mine -> "Mine"
         }
+        override fun sort(sort: CommunitySort) = when (sort) {
+            CommunitySort.Newest -> "New"
+            CommunitySort.Active -> "Active"
+        }
+        override fun anonymousAs(alias: String) = "Anonymous · you: $alias"
+        override val anonymous = "Anonymous — nobody sees your name"
+        override val rulesTitle = "How the chat works"
+        override val rulesIntro = "Everyone here writes under an alias. Your posts are never tied to your profile, phone number or name — not even the SADORA team can see who wrote what in the feed."
+        override val rules = listOf(
+            "Be kind — everyone here came with a question of her own.",
+            "Leave no personal details: names, numbers, addresses, photos.",
+            "This is not medical advice. Pain, bleeding or fever means a doctor.",
+            "No advertising or selling.",
+            "Flag a post that breaks a rule — it will be reviewed.",
+        )
+        override val rulesButton = "Got it"
         override fun reportReason(reason: ReportReason) = when (reason) {
             ReportReason.Spam -> "Spam or advertising"
             ReportReason.Abuse -> "Abuse or a threat"
@@ -591,6 +612,67 @@ object StringsEn : Strings {
         override val nothingHere = "No posts here yet"
         override val nothingSavedBody = "Save a post that speaks to you and it will wait here."
         override val nothingHereBody = "Be the first — your question goes out under an alias."
+        override val nothingMine = "You haven't posted yet"
+        override val nothingMineBody = "Posts you write collect here. Others only ever see the alias."
+        override val readMore = "…more"
+        override val postTitle = "Post"
+        override fun commentsCount(count: Int) = when (count) {
+            0 -> "Comments"
+            1 -> "1 comment"
+            else -> "$count comments"
+        }
+        override fun badge(badge: CommunityBadge) = when (badge) {
+            CommunityBadge.Newcomer -> "New"
+            CommunityBadge.Early -> "Early member"
+            CommunityBadge.Writer -> "Writer"
+            CommunityBadge.Helper -> "Helper"
+            CommunityBadge.Loved -> "Loved"
+            CommunityBadge.Veteran -> "Veteran"
+        }
+        override fun badgeHint(badge: CommunityBadge) = when (badge) {
+            CommunityBadge.Newcomer -> "Joined this week"
+            CommunityBadge.Early -> "One of the chat's first 500 members"
+            CommunityBadge.Writer -> "Has written 5 or more posts"
+            CommunityBadge.Helper -> "Has answered with 20 or more comments"
+            CommunityBadge.Loved -> "Her posts have earned over 50 likes"
+            CommunityBadge.Veteran -> "In the chat for 3 months or more"
+        }
+        override val profileTitle = "Profile"
+        override val myProfileTitle = "My alias"
+        override val noBio = "Nothing written about herself yet"
+        override val editBio = "Edit bio"
+        override val bioHint = "One line about you — age, stage, what you care about. No names or numbers."
+        override val acceptMessages = "Accept messages"
+        override val acceptMessagesHint = "Off, and nobody can send you a private message"
+        override val saveProfile = "Save"
+        override val profileSaved = "Profile saved"
+        override val statPosts = "Posts"
+        override val statComments = "Comments"
+        override val statLikes = "Likes"
+        override fun memberSince(date: String) = "Since $date"
+        override val badgesTitle = "Badges"
+        override val noBadges = "No badges yet — write, answer, and they come on their own"
+        override val herPosts = "Posts"
+        override val noPostsYet = "No posts yet"
+        override val messageButton = "Message"
+        override val messagesClosed = "Not accepting messages"
+        override val block = "Block"
+        override val unblock = "Unblock"
+        override val blockConfirmTitle = "Block this alias?"
+        override val blockConfirmBody = "Neither of you can message the other. Her posts stay in the feed. You can unblock at any time."
+        override val blocked = "Blocked"
+        override val unblocked = "Unblocked"
+        override val viewProfile = "View profile"
+        override val messagesTitle = "Messages"
+        override val messagesSubtitle = "Under aliases, between the two of you only"
+        override val noMessages = "No messages yet"
+        override val noMessagesBody = "Tap a post's author in the feed — you can message her from her profile."
+        override val messageHint = "Write a message"
+        override val conversationBlocked = "This conversation is closed — messages cannot be sent"
+        override val conversationMenu = "Conversation"
+        override val reportConversation = "Report conversation"
+        override val newConversation = "New conversation"
+        override fun unreadCount(count: Int) = if (count == 1) "1 unread" else "$count unread"
         override val write = "Write"
         override val you = "you"
         override fun youParenthesised(alias: String) = "$alias (you)"
@@ -612,7 +694,7 @@ object StringsEn : Strings {
         override val reportNote = "The report goes to a moderator. Who sent it is never shown."
         override val sendReport = "Send the report"
         override val reportSent = "The report was sent"
-        override val shareSuffix = "SADORA — Secret chat"
+        override val shareSuffix = "SADORA — Chat"
     }
 
     override val errors = object : ErrorStrings {
@@ -1502,7 +1584,7 @@ object StringsEn : Strings {
         override val excludes = listOf(
             "The text of your journal entries",
             "Private notes on pregnancy check-ins",
-            "The secret chat",
+            "Chat conversations",
         )
         override val privacyNote = "The link carries no name or phone number — only a random code. Make a new code and the old one stops at once."
         override val offline = "Creating a QR code needs an internet connection"

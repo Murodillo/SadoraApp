@@ -1,14 +1,20 @@
 package uz.sadora.app.data.api
 
 import io.ktor.client.request.setBody
+import io.ktor.http.encodeURLPathPart
 import uz.sadora.app.data.ApiCaller
 import uz.sadora.app.data.ApiResult
 import uz.sadora.app.data.HttpMethodKind
 import uz.sadora.contract.Ack
+import uz.sadora.contract.BlockState
 import uz.sadora.contract.CommunityComment
 import uz.sadora.contract.CommunityIdentity
 import uz.sadora.contract.CommunityPost
+import uz.sadora.contract.CommunityProfile
 import uz.sadora.contract.CommunityTopic
+import uz.sadora.contract.Conversation
+import uz.sadora.contract.ConversationThread
+import uz.sadora.contract.DirectMessage
 import uz.sadora.contract.CreateCommentRequest
 import uz.sadora.contract.CreatePostRequest
 import uz.sadora.contract.LikeState
@@ -16,12 +22,55 @@ import uz.sadora.contract.Page
 import uz.sadora.contract.ReportReason
 import uz.sadora.contract.ReportRequest
 import uz.sadora.contract.SaveState
+import uz.sadora.contract.SendMessageRequest
+import uz.sadora.contract.StartConversationRequest
+import uz.sadora.contract.UpdateIdentityRequest
 
 /** The secret chat. Every call is the caller's own view: her alias, her reactions, her posts. */
 class CommunityApi(private val caller: ApiCaller) {
 
     suspend fun identity(): ApiResult<CommunityIdentity> =
         caller.authenticated("v1/community/me", HttpMethodKind.GET)
+
+    suspend fun updateIdentity(request: UpdateIdentityRequest): ApiResult<CommunityIdentity> =
+        caller.authenticated("v1/community/me", HttpMethodKind.PUT) { setBody(request) }
+
+    // ---- profiles, addressed by alias
+
+    suspend fun profile(alias: String): ApiResult<CommunityProfile> =
+        caller.authenticated("v1/community/profiles/${alias.encodePath()}", HttpMethodKind.GET)
+
+    suspend fun setBlocked(alias: String, blocked: Boolean): ApiResult<BlockState> =
+        caller.authenticated(
+            "v1/community/profiles/${alias.encodePath()}/block",
+            if (blocked) HttpMethodKind.PUT else HttpMethodKind.DELETE,
+        )
+
+    // ---- private messages
+
+    suspend fun conversations(): ApiResult<List<Conversation>> =
+        caller.authenticated("v1/community/conversations", HttpMethodKind.GET)
+
+    suspend fun thread(conversationId: String): ApiResult<ConversationThread> =
+        caller.authenticated("v1/community/conversations/$conversationId", HttpMethodKind.GET)
+
+    suspend fun startConversation(alias: String, body: String): ApiResult<ConversationThread> =
+        caller.authenticated("v1/community/conversations", HttpMethodKind.POST) {
+            setBody(StartConversationRequest(alias, body))
+        }
+
+    suspend fun sendMessage(conversationId: String, body: String): ApiResult<DirectMessage> =
+        caller.authenticated("v1/community/conversations/$conversationId/messages", HttpMethodKind.POST) {
+            setBody(SendMessageRequest(body))
+        }
+
+    suspend fun reportConversation(conversationId: String, reason: ReportReason, note: String?): ApiResult<Ack> =
+        caller.authenticated("v1/community/conversations/$conversationId/report", HttpMethodKind.POST) {
+            setBody(ReportRequest(reason, note))
+        }
+
+    /** An alias has spaces; a path segment may not. */
+    private fun String.encodePath(): String = encodeURLPathPart()
 
     suspend fun feed(
         topic: CommunityTopic? = null,

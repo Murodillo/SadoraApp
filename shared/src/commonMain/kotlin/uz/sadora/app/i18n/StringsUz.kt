@@ -2,7 +2,9 @@ package uz.sadora.app.i18n
 
 import kotlinx.datetime.LocalDate
 import uz.sadora.app.model.BirthControl
+import uz.sadora.app.model.CommunityBadge
 import uz.sadora.app.model.CommunityFilter
+import uz.sadora.app.model.CommunitySort
 import uz.sadora.app.model.CommunityTopic
 import uz.sadora.app.model.ConceptionWindow
 import uz.sadora.app.model.CyclePhase
@@ -33,6 +35,8 @@ object StringsUz : Strings {
     override val tabs = object : TabStrings {
         override val today = "Bugun"
         override val mind = "Ong"
+        override val mindAndNutrition = "Ong · Ovqat"
+        override val secretChat = "Chat"
         override val nutrition = "Ovqat"
         override val premium = "Premium"
         override fun journey(stage: LifeStage) = when (stage) {
@@ -305,7 +309,7 @@ object StringsUz : Strings {
 
         override val sleep = "Uyqu"
         override val medications = "Dorilar"
-        override val secretChat = "Maxfiy chat"
+        override val secretChat = "Chat"
         override val insights = "Tahlillar"
         override val knowledge = "Bilim"
 
@@ -565,7 +569,7 @@ object StringsUz : Strings {
     }
 
     override val community = object : CommunityStrings {
-        override val title = "Maxfiy chat"
+        override val title = "Chat"
         override val compose = "Yozish"
         override val more = "Yana"
         override val saved = "Saqlangan"
@@ -579,7 +583,24 @@ object StringsUz : Strings {
         override fun filter(filter: CommunityFilter) = when (filter) {
             CommunityFilter.Feed -> "Lenta"
             CommunityFilter.Saved -> "Saqlangan"
+            CommunityFilter.Mine -> "Meniki"
         }
+        override fun sort(sort: CommunitySort) = when (sort) {
+            CommunitySort.Newest -> "Yangi"
+            CommunitySort.Active -> "Faol"
+        }
+        override fun anonymousAs(alias: String) = "Anonim · siz: $alias"
+        override val anonymous = "Anonim — ismingiz hech kimga ko'rinmaydi"
+        override val rulesTitle = "Chat qanday ishlaydi"
+        override val rulesIntro = "Bu yerda hamma taxallus ostida. Postlaringiz profilingizga, telefon raqamingizga yoki ismingizga bog'lanmaydi — hatto SADORA jamoasi ham lentada kim yozganini ko'rmaydi."
+        override val rules = listOf(
+            "Hurmat bilan yozing — bu yerda hamma o'z savoli bilan kelgan.",
+            "Shaxsiy ma'lumot qoldirmang: ism, raqam, manzil, surat.",
+            "Bu shifokor maslahati emas. Og'riq, qon ketish, isitma bo'lsa — shifokorga.",
+            "Reklama va sotuv taqiqlanadi.",
+            "Qoidani buzgan postni bayroqcha orqali xabar qiling — u tekshiriladi.",
+        )
+        override val rulesButton = "Tushunarli"
         override fun reportReason(reason: ReportReason) = when (reason) {
             ReportReason.Spam -> "Spam yoki reklama"
             ReportReason.Abuse -> "Haqorat yoki tahdid"
@@ -590,8 +611,65 @@ object StringsUz : Strings {
 
         override val nothingSaved = "Saqlangan post yo'q"
         override val nothingHere = "Bu bo'limda hozircha post yo'q"
+        override val nothingMine = "Siz hali yozmagansiz"
         override val nothingSavedBody = "Yoqqan postni belgilab qo'ying — u shu yerda turadi."
         override val nothingHereBody = "Birinchi bo'lib yozing — savolingiz taxallus ostida chiqadi."
+        override val nothingMineBody = "Yozgan postlaringiz shu yerda yig'iladi. Boshqalar faqat taxallusni ko'radi."
+        override val readMore = "…ko'proq"
+        override val postTitle = "Post"
+        override fun commentsCount(count: Int) = if (count == 0) "Izohlar" else "$count izoh"
+        override fun badge(badge: CommunityBadge) = when (badge) {
+            CommunityBadge.Newcomer -> "Yangi"
+            CommunityBadge.Early -> "Birinchilardan"
+            CommunityBadge.Writer -> "Yozuvchi"
+            CommunityBadge.Helper -> "Yordamchi"
+            CommunityBadge.Loved -> "Sevimli"
+            CommunityBadge.Veteran -> "Tajribali"
+        }
+        override fun badgeHint(badge: CommunityBadge) = when (badge) {
+            CommunityBadge.Newcomer -> "Bu hafta qo'shildi"
+            CommunityBadge.Early -> "Chatning ilk 500 a'zosidan"
+            CommunityBadge.Writer -> "5 va undan ko'p post yozgan"
+            CommunityBadge.Helper -> "20 va undan ko'p izoh bilan javob bergan"
+            CommunityBadge.Loved -> "Postlari 50 dan ko'p yoqtirish olgan"
+            CommunityBadge.Veteran -> "3 oydan beri chatda"
+        }
+        override val profileTitle = "Profil"
+        override val myProfileTitle = "Mening taxallusim"
+        override val noBio = "Hali o'zi haqida yozmagan"
+        override val editBio = "Bio tahrirlash"
+        override val bioHint = "O'zingiz haqingizda bir qator — yosh, bosqich, nima qiziqtiradi. Ism va raqam yozmang."
+        override val acceptMessages = "Xabarlarni qabul qilish"
+        override val acceptMessagesHint = "O'chirilsa, boshqalar sizga shaxsiy xabar yoza olmaydi"
+        override val saveProfile = "Saqlash"
+        override val profileSaved = "Profil saqlandi"
+        override val statPosts = "Postlar"
+        override val statComments = "Izohlar"
+        override val statLikes = "Yoqtirish"
+        override fun memberSince(date: String) = "$date dan beri"
+        override val badgesTitle = "Belgilar"
+        override val noBadges = "Hali belgi yo'q — yozing, javob bering, ular o'zi keladi"
+        override val herPosts = "Postlari"
+        override val noPostsYet = "Hali post yozmagan"
+        override val messageButton = "Xabar yozish"
+        override val messagesClosed = "Xabarlarni qabul qilmaydi"
+        override val block = "Bloklash"
+        override val unblock = "Blokdan chiqarish"
+        override val blockConfirmTitle = "Bloklaysizmi?"
+        override val blockConfirmBody = "U sizga xabar yoza olmaydi, siz ham unga. Postlari lentada qoladi. Istalgan vaqt blokdan chiqarish mumkin."
+        override val blocked = "Bloklandi"
+        override val unblocked = "Blokdan chiqarildi"
+        override val viewProfile = "Profilni ko'rish"
+        override val messagesTitle = "Xabarlar"
+        override val messagesSubtitle = "Taxallus ostida, faqat ikkingiz o'rtasida"
+        override val noMessages = "Hali xabar yo'q"
+        override val noMessagesBody = "Lentada postning muallifini bosing — profilidan xabar yozish mumkin."
+        override val messageHint = "Xabar yozing"
+        override val conversationBlocked = "Bu suhbat yopilgan — xabar yuborib bo'lmaydi"
+        override val conversationMenu = "Suhbat"
+        override val reportConversation = "Suhbatga shikoyat"
+        override val newConversation = "Yangi suhbat"
+        override fun unreadCount(count: Int) = "$count ta o'qilmagan"
         override val write = "Yozish"
         override val you = "siz"
         override fun youParenthesised(alias: String) = "$alias (siz)"
@@ -613,7 +691,7 @@ object StringsUz : Strings {
         override val reportNote = "Shikoyat moderatorga boradi. Kim yuborgani ko'rinmaydi."
         override val sendReport = "Shikoyat yuborish"
         override val reportSent = "Shikoyat yuborildi"
-        override val shareSuffix = "SADORA — Maxfiy chat"
+        override val shareSuffix = "SADORA — Chat"
     }
 
     override val errors = object : ErrorStrings {
@@ -1507,7 +1585,7 @@ object StringsUz : Strings {
         override val excludes = listOf(
             "Kundalik yozuvlaringiz matni",
             "Homiladorlik belgilaridagi shaxsiy izohlar",
-            "Maxfiy chat",
+            "Chatdagi yozishmalar",
         )
         override val privacyNote = "Havolada ismingiz yoki telefoningiz yo'q — faqat tasodifiy kod. Yangi kod yaratsangiz, eskisi darhol ishlamay qoladi."
         override val offline = "QR kod yaratish uchun internet kerak"

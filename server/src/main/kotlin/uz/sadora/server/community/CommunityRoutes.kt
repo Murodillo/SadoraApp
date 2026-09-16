@@ -15,6 +15,9 @@ import uz.sadora.contract.CommunityTopic
 import uz.sadora.contract.CreateCommentRequest
 import uz.sadora.contract.CreatePostRequest
 import uz.sadora.contract.ReportRequest
+import uz.sadora.contract.SendMessageRequest
+import uz.sadora.contract.StartConversationRequest
+import uz.sadora.contract.UpdateIdentityRequest
 import uz.sadora.server.api.enumParameter
 import uz.sadora.server.api.intParameter
 import uz.sadora.server.api.requireUserId
@@ -26,12 +29,56 @@ import uz.sadora.server.plugins.USER_AUTH
  * feed with her reactions folded in, and writes under her alias. No route takes or
  * returns a user id.
  */
-fun Route.communityRoutes(community: CommunityService) {
+fun Route.communityRoutes(community: CommunityService, messaging: MessagingService) {
     authenticate(USER_AUTH) {
         route("/community") {
 
             get("/me") {
                 call.respond(community.identity(call.requireUserId()))
+            }
+
+            /** Her bio and whether her door is open. */
+            put("/me") {
+                val request = call.receive<UpdateIdentityRequest>()
+                call.respond(community.updateIdentity(call.requireUserId(), request))
+            }
+
+            // An alias's page, and the viewer's block on it. Addressed by alias — the
+            // one public, permanent name an account has in the room.
+            route("/profiles/{alias}") {
+                get {
+                    call.respond(community.profile(call.requireUserId(), call.alias()))
+                }
+                put("/block") {
+                    call.respond(community.setBlocked(call.requireUserId(), call.alias(), blocked = true))
+                }
+                delete("/block") {
+                    call.respond(community.setBlocked(call.requireUserId(), call.alias(), blocked = false))
+                }
+            }
+
+            route("/conversations") {
+                get {
+                    call.respond(messaging.conversations(call.requireUserId()))
+                }
+                post {
+                    val request = call.receive<StartConversationRequest>()
+                    call.respond(HttpStatusCode.Created, messaging.start(call.requireUserId(), request))
+                }
+                route("/{id}") {
+                    get {
+                        call.respond(messaging.thread(call.requireUserId(), call.conversationId()))
+                    }
+                    post("/messages") {
+                        val request = call.receive<SendMessageRequest>()
+                        call.respond(HttpStatusCode.Created, messaging.send(call.requireUserId(), call.conversationId(), request))
+                    }
+                    post("/report") {
+                        val request = call.receive<ReportRequest>()
+                        messaging.report(call.requireUserId(), call.conversationId(), request)
+                        call.respond(Ack())
+                    }
+                }
             }
 
             route("/posts") {
@@ -116,3 +163,10 @@ fun Route.communityRoutes(community: CommunityService) {
 
 private fun io.ktor.server.application.ApplicationCall.postId() = parseUuid(parameters["id"].orEmpty(), "id")
 private fun io.ktor.server.application.ApplicationCall.commentId() = parseUuid(parameters["id"].orEmpty(), "id")
+private fun io.ktor.server.application.ApplicationCall.conversationId() = parseUuid(parameters["id"].orEmpty(), "id")
+
+private fun io.ktor.server.application.ApplicationCall.alias(): String {
+    val alias = parameters["alias"].orEmpty().trim()
+    if (alias.isEmpty() || alias.length > 64) throw uz.sadora.server.core.ValidationException("alias", "Taxallus noto'g'ri")
+    return alias
+}

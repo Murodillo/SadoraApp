@@ -202,6 +202,7 @@ export interface ModerationReport {
   id: string
   postId?: string | null
   commentId?: string | null
+  messageId?: string | null
   reason: ReportReason
   note?: string | null
   excerpt: string

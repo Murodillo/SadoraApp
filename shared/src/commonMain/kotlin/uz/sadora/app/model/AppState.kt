@@ -378,10 +378,17 @@ class AppState {
 
     var communityTopic by mutableStateOf(CommunityTopic.All)
     var communityFilter by mutableStateOf(CommunityFilter.Feed)
+    var communitySort by mutableStateOf(CommunitySort.Newest)
 
     /** The alias she posts under, once the server has assigned one. */
     var communityAlias by mutableStateOf<String?>(null)
     var communityTint by mutableStateOf(0)
+    /** The line under her alias, and whether strangers may write to her. */
+    var communityBio by mutableStateOf<String?>(null)
+    var communityDmOpen by mutableStateOf(true)
+    var communityBadges by mutableStateOf<List<CommunityBadge>>(emptyList())
+    /** Unread private messages, for the badge on the chat header. */
+    var communityUnread by mutableStateOf(0)
 
     /** Set once there is a backend; every community edit below reports through it. */
     var communitySync: CommunitySync? = null
@@ -488,10 +495,25 @@ class AppState {
     }
 
     /** The posts the feed should show, given the room and the saved filter. */
-    fun visiblePosts(): List<CommunityPost> = communityPosts.filter { post ->
-        val inTopic = communityTopic == CommunityTopic.All || post.topic == communityTopic
-        val inFilter = communityFilter == CommunityFilter.Feed || post.id in savedPosts
-        inTopic && inFilter
+    fun visiblePosts(): List<CommunityPost> {
+        val shown = communityPosts.filter { post ->
+            val inTopic = communityTopic == CommunityTopic.All || post.topic == communityTopic
+            val inFilter = when (communityFilter) {
+                CommunityFilter.Feed -> true
+                CommunityFilter.Saved -> post.id in savedPosts
+                CommunityFilter.Mine -> post.isMine
+            }
+            inTopic && inFilter
+        }
+        // Sorted here, not trusted from the server: a post she just wrote is appended
+        // to the list optimistically and still has to come out on top.
+        return when (communitySort) {
+            CommunitySort.Newest -> shown.sortedByDescending { it.createdAt }
+            CommunitySort.Active -> shown.sortedWith(
+                compareByDescending<CommunityPost> { likeCount(it) + commentCountOf(it) * 2 }
+                    .thenByDescending { it.createdAt },
+            )
+        }
     }
 
     /**

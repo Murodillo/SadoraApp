@@ -133,7 +133,7 @@ fun Application.apiModule(component: AppComponent) {
             // The provider's own doors: an OAuth return and a signed webhook, no app token.
             wearablePublicRoutes(component.wearableConnectService, component.wearableSyncJob)
             adminWearableRoutes(component.wearableService, component.wearableRepository, component.auditService)
-            communityRoutes(component.communityService)
+            communityRoutes(component.communityService, component.messagingService)
             adminCommunityRoutes(component.communityModerationService)
             aiRoutes(component.aiService, component.greetingService)
             rewardsRoutes(component.rewardsService, component.shopService, component.homeLayoutRepository)

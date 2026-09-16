@@ -55,6 +55,8 @@ fun NutritionScreen(
     onOpen: (Route) -> Unit,
     onAddWater: () -> Unit,
     modifier: Modifier = Modifier,
+    /** Drawn between the top bar and the content: the Mind / Food switch on a free account. */
+    underBar: (@Composable () -> Unit)? = null,
 ) {
     val t = strings.nutrition
     val c = Sadora.colors
@@ -68,6 +70,7 @@ fun NutritionScreen(
                 CircleIconButton(SadoraIcons.Calendar, contentDescription = t.insights) { onOpen(Route.Insights) }
             },
         )
+        underBar?.invoke()
 
         ScreenContent {
             item { TodayRingCard(state) }

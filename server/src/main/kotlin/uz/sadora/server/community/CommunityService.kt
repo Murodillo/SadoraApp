@@ -4,9 +4,11 @@ import kotlin.random.Random
 import kotlin.time.Duration.Companion.hours
 import kotlin.uuid.Uuid
 import uz.sadora.contract.AccountStatus
+import uz.sadora.contract.BlockState
 import uz.sadora.contract.CommunityComment
 import uz.sadora.contract.CommunityIdentity
 import uz.sadora.contract.CommunityPost
+import uz.sadora.contract.CommunityProfile
 import uz.sadora.contract.CommunityTopic
 import uz.sadora.contract.CreateCommentRequest
 import uz.sadora.contract.CreatePostRequest
@@ -15,6 +17,7 @@ import uz.sadora.contract.LikeState
 import uz.sadora.contract.Page
 import uz.sadora.contract.ReportRequest
 import uz.sadora.contract.SaveState
+import uz.sadora.contract.UpdateIdentityRequest
 import uz.sadora.contract.Limits
 import uz.sadora.server.config.Environment
 import uz.sadora.server.core.ConflictException
@@ -45,6 +48,8 @@ class CommunityService(
     private val flags: FeatureFlagService,
     private val environment: Environment,
     private val random: Random = Random.Default,
+    /** Null in tests that never touch messages; the unread count is then zero. */
+    private val messaging: MessagingRepository? = null,
 ) {
 
     // ---------------------------------------------------------------- identity
@@ -58,7 +63,66 @@ class CommunityService(
      */
     suspend fun identity(userId: Uuid): CommunityIdentity {
         requireOpen(userId)
-        return ensureIdentity(userId).toDto()
+        val identity = ensureIdentity(userId)
+        val stats = repository.activityFor(listOf(userId))[userId]
+        return identity.toDto(
+            badges = stats?.let { CommunityBadges.of(it, now()) }.orEmpty(),
+            unread = messaging?.unreadTotal(userId) ?: 0,
+        )
+    }
+
+    /** Her bio and her door. The bio is trimmed; blank clears it. */
+    suspend fun updateIdentity(userId: Uuid, request: UpdateIdentityRequest): CommunityIdentity {
+        requireOpen(userId)
+        ensureIdentity(userId)
+        val bio = request.bio?.trim()
+        if (bio != null && bio.length > Limits.BIO_MAX) throw ValidationException("bio", "Eng ko'pi ${Limits.BIO_MAX} belgi")
+        repository.updateIdentity(
+            userId = userId,
+            bio = bio?.takeIf { it.isNotEmpty() },
+            keepBio = request.bio == null,
+            dmOpen = request.dmOpen,
+        )
+        return identity(userId)
+    }
+
+    // ---------------------------------------------------------------- profiles
+
+    /**
+     * An alias's page. Her own reads the same way, with [CommunityProfile.isMe] set so
+     * the app draws "edit" where it would draw "message".
+     */
+    suspend fun profile(viewer: Uuid, alias: String): CommunityProfile {
+        requireOpen(viewer)
+        val identity = repository.identityByAlias(alias) ?: throw NotFoundException("Taxallus topilmadi")
+        val stats = repository.activityFor(listOf(identity.userId))[identity.userId]
+            ?: ActivityStats(memberSince = identity.createdAt)
+        val isMe = identity.userId == viewer
+        val blocked = !isMe && repository.isBlocked(viewer, identity.userId)
+        val blockedEitherWay = !isMe && (blocked || repository.isBlocked(identity.userId, viewer))
+        val posts = repository.postsBy(identity.userId, PROFILE_POSTS)
+        return CommunityProfile(
+            alias = identity.alias,
+            tint = identity.tint,
+            bio = identity.bio,
+            badges = CommunityBadges.of(stats, now()),
+            postCount = stats.posts,
+            commentCount = stats.comments,
+            likesReceived = stats.likesReceived,
+            memberSince = identity.createdAt,
+            isMe = isMe,
+            canMessage = !isMe && identity.dmOpen && !blockedEitherWay,
+            blocked = blocked,
+            posts = project(viewer, posts),
+        )
+    }
+
+    suspend fun setBlocked(viewer: Uuid, alias: String, blocked: Boolean): BlockState {
+        requireOpen(viewer)
+        val identity = repository.identityByAlias(alias) ?: throw NotFoundException("Taxallus topilmadi")
+        if (identity.userId == viewer) throw ValidationException("alias", "O'zingizni bloklab bo'lmaydi")
+        repository.setBlocked(viewer, identity.userId, blocked)
+        return BlockState(blocked)
     }
 
     private suspend fun ensureIdentity(userId: Uuid): IdentityRecord {
@@ -97,6 +161,7 @@ class CommunityService(
         if (posts.isEmpty()) return emptyList()
         val identities = repository.identitiesFor(posts.map { it.userId })
         val reactions = repository.reactionsFor(viewer, posts.map { it.id })
+        val badges = badgesFor(posts.map { it.userId })
         return posts.map { post ->
             val identity = identities[post.userId]
             CommunityPost(
@@ -111,8 +176,14 @@ class CommunityService(
                 liked = post.id in reactions.liked,
                 saved = post.id in reactions.saved,
                 isMine = post.userId == viewer,
+                badges = badges[post.userId].orEmpty(),
             )
         }
+    }
+
+    private suspend fun badgesFor(userIds: List<Uuid>): Map<Uuid, List<uz.sadora.contract.CommunityBadge>> {
+        val at = now()
+        return repository.activityFor(userIds).mapValues { (_, stats) -> CommunityBadges.of(stats, at) }
     }
 
     // ---------------------------------------------------------------- posting
@@ -142,7 +213,8 @@ class CommunityService(
         requireVisiblePost(postId)
         val comments = repository.commentsOf(postId)
         val identities = repository.identitiesFor(comments.map { it.userId })
-        return comments.map { it.toDto(identities[it.userId], viewer = userId) }
+        val badges = badgesFor(comments.map { it.userId })
+        return comments.map { it.toDto(identities[it.userId], viewer = userId, badges = badges[it.userId].orEmpty()) }
     }
 
     suspend fun addComment(userId: Uuid, postId: Uuid, request: CreateCommentRequest): CommunityComment {
@@ -235,7 +307,7 @@ class CommunityService(
         val restriction = repository.restrictionOf(userId) ?: return
         val until = restriction.until
         if (until == null || until > now()) {
-            throw ForbiddenException(message = "Maxfiy chatda yozish vaqtincha cheklangan")
+            throw ForbiddenException(message = "Chatda yozish vaqtincha cheklangan")
         }
     }
 
@@ -248,9 +320,20 @@ class CommunityService(
         if (body.length > max) throw ValidationException("body", "Eng ko'pi $max belgi")
     }
 
-    private fun IdentityRecord.toDto() = CommunityIdentity(alias, tint)
+    private fun IdentityRecord.toDto(badges: List<uz.sadora.contract.CommunityBadge>, unread: Int) = CommunityIdentity(
+        alias = alias,
+        tint = tint,
+        bio = bio,
+        dmOpen = dmOpen,
+        badges = badges,
+        unreadMessages = unread,
+    )
 
-    private fun CommentRecord.toDto(identity: IdentityRecord?, viewer: Uuid) = CommunityComment(
+    private fun CommentRecord.toDto(
+        identity: IdentityRecord?,
+        viewer: Uuid,
+        badges: List<uz.sadora.contract.CommunityBadge> = emptyList(),
+    ) = CommunityComment(
         id = id.toString(),
         postId = postId.toString(),
         alias = identity?.alias ?: FALLBACK_ALIAS,
@@ -258,7 +341,16 @@ class CommunityService(
         body = body,
         createdAt = createdAt,
         isMine = userId == viewer,
+        badges = badges,
     )
+
+    /** For the messaging service, which shares the gates and the alias. */
+    internal suspend fun openIdentity(userId: Uuid): IdentityRecord {
+        requireOpen(userId)
+        return ensureIdentity(userId)
+    }
+
+    internal suspend fun requireCanWrite(userId: Uuid) = requireNotRestricted(userId)
 
     companion object {
         const val COMMUNITY_FLAG = "community"
@@ -271,6 +363,7 @@ class CommunityService(
         const val AUTO_HIDE_REPORTS = 5
         const val AUTO_HIDE_REASON = "auto_reports"
         const val FALLBACK_ALIAS = "Anonim"
+        const val PROFILE_POSTS = 20
         private const val MAX_ALIAS_ATTEMPTS = 12
     }
 }
