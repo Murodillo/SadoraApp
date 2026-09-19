@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -19,6 +20,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import uz.sadora.app.design.MinTouchTarget
@@ -53,7 +56,7 @@ fun OptionRow(
             .background(bg)
             .border(if (selected) 1.5.dp else 1.dp, border, Radius.card)
             .defaultMinSize(minHeight = MinTouchTarget)
-            .noRippleClickable(onClick = onClick)
+            .noRippleSelectable(selected, role = Role.RadioButton, onClick = onClick)
             .padding(horizontal = Spacing.md, vertical = Spacing.sm),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
@@ -79,33 +82,57 @@ fun OptionRow(
         }
         when {
             trailing != null -> trailing()
-            selected -> Text("✓", style = Sadora.type.h3, color = c.textAccent)
+            // The row already says "selected"; the tick is only for the eye.
+            selected -> Text(
+                "✓",
+                style = Sadora.type.h3,
+                color = c.textAccent,
+                modifier = Modifier.clearAndSetSemantics {},
+            )
         }
     }
 }
 
-/** Square checkbox used by consent lists and "Eslab qolish". */
+/**
+ * Square checkbox used by consent lists and "Eslab qolish".
+ *
+ * On its own it is a 44dp target around the 22dp box, announced as a checkbox with its
+ * state. Inside a row that toggles as a whole, pass a null [onCheckedChange] and it is
+ * drawn only — the row carries the semantics, so the reader hears one control, not two.
+ */
 @Composable
 fun SadoraCheckbox(
     checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit,
+    onCheckedChange: ((Boolean) -> Unit)?,
     modifier: Modifier = Modifier,
 ) {
     val c = Sadora.colors
     val bg by animateColorAsState(if (checked) c.primary else Color.Transparent)
-    val border by animateColorAsState(if (checked) c.primary else c.line)
-    Box(
-        modifier
-            .size(22.dp)
-            .clip(RoundedCornerShape(7.dp))
-            .background(bg)
-            .border(1.5.dp, border, RoundedCornerShape(7.dp))
-            .noRippleClickable { onCheckedChange(!checked) },
-        contentAlignment = Alignment.Center,
-    ) {
-        if (checked) {
-            Text("✓", style = Sadora.type.caption, color = c.onPrimary)
+    // The unchecked outline is the control's only edge, so it needs 3:1 — [c.line] was 1.2.
+    val border by animateColorAsState(if (checked) c.primary else c.muted)
+    val box = @Composable {
+        Box(
+            Modifier
+                .size(22.dp)
+                .clip(RoundedCornerShape(7.dp))
+                .background(bg)
+                .border(1.5.dp, border, RoundedCornerShape(7.dp)),
+            contentAlignment = Alignment.Center,
+        ) {
+            if (checked) {
+                Text("✓", style = Sadora.type.caption, color = c.onPrimary, modifier = Modifier.clearAndSetSemantics {})
+            }
         }
+    }
+    if (onCheckedChange == null) {
+        Box(modifier) { box() }
+    } else {
+        Box(
+            modifier
+                .size(MinTouchTarget)
+                .noRippleToggleable(checked, role = Role.Checkbox, onValueChange = onCheckedChange),
+            contentAlignment = Alignment.Center,
+        ) { box() }
     }
 }
 
@@ -124,11 +151,11 @@ fun ConsentRow(
         modifier = modifier
             .fillMaxWidth()
             .defaultMinSize(minHeight = MinTouchTarget)
-            .noRippleClickable(enabled = !required) { onCheckedChange(!checked) }
+            .noRippleToggleable(checked, role = Role.Checkbox, enabled = !required, onValueChange = onCheckedChange)
             .padding(vertical = Spacing.xs),
         horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
     ) {
-        SadoraCheckbox(checked, onCheckedChange)
+        SadoraCheckbox(checked, onCheckedChange = null)
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(title, style = Sadora.type.h3, color = c.text)
             Text(body, style = Sadora.type.body, color = c.muted)
@@ -150,7 +177,7 @@ fun SadoraSwitch(
             .size(width = 46.dp, height = 28.dp)
             .clip(Radius.chip)
             .background(track)
-            .noRippleClickable { onCheckedChange(!checked) }
+            .noRippleToggleable(checked, role = Role.Switch, onValueChange = onCheckedChange)
             .padding(3.dp),
         contentAlignment = if (checked) Alignment.CenterEnd else Alignment.CenterStart,
     ) {
@@ -173,13 +200,13 @@ fun TabSwitch(
 ) {
     val c = Sadora.colors
     Row(
-        modifier.fillMaxWidth(),
+        modifier.fillMaxWidth().selectableGroup(),
         horizontalArrangement = Arrangement.spacedBy(Spacing.lg),
     ) {
         options.forEachIndexed { index, option ->
             val selected = index == selectedIndex
             Column(
-                Modifier.noRippleClickable { onSelect(index) },
+                Modifier.noRippleSelectable(selected, role = Role.Tab) { onSelect(index) },
                 verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
                 Text(

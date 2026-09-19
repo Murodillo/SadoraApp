@@ -34,10 +34,15 @@ data class SadoraColors(
     val accentText: Color,
     val text: Color,
     val muted: Color,
-    /** Dimmer than [muted] — timestamps, footnotes. */
+    /**
+     * Dimmer than [muted] — timestamps, footnotes, tab labels. Still real text, so it
+     * clears 4.5:1 on every surface; the two differ by a step, not by legibility.
+     */
     val muted2: Color,
     val line: Color,
     val success: Color,
+    /** [success] as text — the fill colour is 3.1:1 on white, too light to read. */
+    val successText: Color,
     val warning: Color,
     val danger: Color,
     /** Content colour for filled primary buttons and gradient surfaces. */
@@ -46,9 +51,14 @@ data class SadoraColors(
     val shadow: Color,
     val isDark: Boolean,
 ) {
-    /** The two brand colours in gradient order: purple first, pink second. */
+    /**
+     * The brand gradient in order, purple first, pink second — a step deeper than
+     * [primary] and [secondary], because nearly everything drawn on it is white text:
+     * buttons, the Premium and AI cards, the avatar. On the lighter pair white fell to
+     * 2.6:1 at the pink end; on these it holds 4.7:1 or better across the whole sweep.
+     */
     val heroColors: List<Color>
-        get() = listOf(primary, secondary)
+        get() = listOf(HeroStart, HeroEnd)
 
     /**
      * The hero gradient. The design restricts it to a handful of places: hero
@@ -77,10 +87,11 @@ val SadoraLightColors = SadoraColors(
     accent = Color(0xFF4FC3FF),
     accentText = Color(0xFF1B7FB0),
     text = Color(0xFF1A1630),
-    muted = Color(0xFF6F6A8A),
-    muted2 = Color(0xFF9590AD),
+    muted = Color(0xFF66617F),
+    muted2 = Color(0xFF6C6787),
     line = Color(0xFFEAE6FA),
     success = Color(0xFF2BA57A),
+    successText = Color(0xFF1E7A5A),
     warning = Color(0xFF9A6200),
     danger = Color(0xFFD8404A),
     onPrimary = Color(0xFFFFFFFF),
@@ -99,15 +110,20 @@ val SadoraDarkColors = SadoraColors(
     accentText = Color(0xFF63D8FF),
     text = Color(0xFFF3F0FA),
     muted = Color(0xFFA39DBF),
-    muted2 = Color(0xFF7E789A),
+    muted2 = Color(0xFF948EB0),
     line = Color(0xFF2E2A52),
     success = Color(0xFF3FCF98),
+    successText = Color(0xFF3FCF98),
     warning = Color(0xFFFFB020),
     danger = Color(0xFFFF5C64),
     onPrimary = Color(0xFFFFFFFF),
     shadow = Color(0xFF000000),
     isDark = true,
 )
+
+/** The deepened brand pair behind [SadoraColors.heroColors]; the same in both themes. */
+private val HeroStart = Color(0xFF6A4FF0)
+private val HeroEnd = Color(0xFFC93C88)
 
 val LocalSadoraColors = staticCompositionLocalOf { SadoraLightColors }
 

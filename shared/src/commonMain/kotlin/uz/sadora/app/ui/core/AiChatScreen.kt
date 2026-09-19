@@ -331,7 +331,7 @@ private fun ChatBubble(message: ChatMessage) {
                 .clip(shape)
                 .background(
                     when {
-                        message.fromUser -> c.primary
+                        message.fromUser -> c.heroColors.first() // white text holds 5.3:1 here; on primary it was 4.2
                         message.isNotice -> c.warningSoft.copy(alpha = if (c.isDark) 0.18f else 0.14f)
                         else -> c.surface2
                     },
@@ -347,7 +347,7 @@ private fun ChatBubble(message: ChatMessage) {
             Text(
                 message.time,
                 style = Sadora.type.caption.copy(letterSpacing = 0.02.em),
-                color = if (message.fromUser) c.onPrimary.copy(alpha = 0.7f) else c.muted2,
+                color = if (message.fromUser) c.onPrimary else c.muted2,
                 modifier = Modifier.align(Alignment.End),
             )
         }

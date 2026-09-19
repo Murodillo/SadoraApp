@@ -189,7 +189,7 @@ fun PaywallScreen(
                         Text(
                             t.paymentAccepted,
                             style = Sadora.type.h3,
-                            color = c.success,
+                            color = c.successText,
                         )
                     }
 
@@ -276,7 +276,7 @@ private fun PlanOption(
                             .background(c.success.copy(alpha = 0.16f))
                             .padding(horizontal = 6.dp, vertical = 2.dp),
                     ) {
-                        Text(discount, style = Sadora.type.caption, color = c.success)
+                        Text(discount, style = Sadora.type.caption, color = c.successText)
                     }
                 }
             }

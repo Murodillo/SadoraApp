@@ -137,7 +137,7 @@ fun ReferralScreen(
                             icon = SadoraIcons.Share,
                         )
                         if (shared) {
-                            Text(t.codeCopied, style = Sadora.type.body, color = c.success)
+                            Text(t.codeCopied, style = Sadora.type.body, color = c.successText)
                         }
                     }
                 }

@@ -1,5 +1,10 @@
 package uz.sadora.app.ui.journey
 
+import uz.sadora.app.ui.components.CircleIconButton
+import uz.sadora.app.design.StagePalettes
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -133,19 +138,9 @@ private fun MonthGrid(state: AppState, onDayClick: (LocalDate) -> Unit) {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
-            Icon(
-                SadoraIcons.ChevronLeft,
-                contentDescription = t.previousMonth,
-                Modifier.size(IconSize.lg).noRippleClickable { offset-- },
-                tint = c.muted,
-            )
+            CircleIconButton(SadoraIcons.ChevronLeft, contentDescription = t.previousMonth) { offset-- }
             Text(strings.dates.monthYear(first.year, first.month.ordinal + 1), style = Sadora.type.h3, color = c.text)
-            Icon(
-                SadoraIcons.ChevronRight,
-                contentDescription = t.nextMonth,
-                Modifier.size(IconSize.lg).noRippleClickable { offset++ },
-                tint = c.muted,
-            )
+            CircleIconButton(SadoraIcons.ChevronRight, contentDescription = t.nextMonth) { offset++ }
         }
 
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -197,11 +192,24 @@ private fun DayCell(
     onClick: () -> Unit,
 ) {
     val c = Sadora.colors
+    val t = strings.journey
     val phaseColor = when (phase) {
         CyclePhase.Period -> PhaseColors.period
         CyclePhase.Fertile -> PhaseColors.fertile
         else -> null
     }
+    // Period and fertile pink sit 1.15:1 apart, and a reader hears only a number, so each
+    // day says what it is in words, and fertile days carry a dot as well as a colour.
+    val description = listOfNotNull(
+        "$day",
+        when (phase) {
+            CyclePhase.Period -> t.keyPeriod
+            CyclePhase.Fertile -> t.keyFertile
+            else -> null
+        },
+        if (phaseColor != null && predicted) t.keyPredicted else null,
+        if (isToday) strings.tabs.today else null,
+    ).joinToString(", ")
 
     Box(
         modifier
@@ -218,7 +226,8 @@ private fun DayCell(
                 },
             )
             .then(if (isToday) Modifier.border(2.dp, c.primary, RoundedCornerShape(Radius.sm)) else Modifier)
-            .noRippleClickable(enabled = !outside, onClick = onClick),
+            .noRippleClickable(enabled = !outside, role = Role.Button, onClick = onClick)
+            .clearAndSetSemantics { contentDescription = description },
         contentAlignment = Alignment.Center,
     ) {
         Text(
@@ -228,10 +237,21 @@ private fun DayCell(
             ),
             color = when {
                 outside -> c.muted2.copy(alpha = 0.5f)
-                phaseColor != null && !predicted -> c.onPrimary
+                // Dark ink on the fills: white was 3.1:1 on period pink, 2.7:1 on fertile.
+                phaseColor != null && !predicted -> StagePalettes.warmInk
                 else -> c.text
             },
         )
+        if (phase == CyclePhase.Fertile) {
+            Box(
+                Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 4.dp)
+                    .size(4.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(if (predicted) PhaseColors.fertile else StagePalettes.warmInk),
+            )
+        }
     }
 }
 

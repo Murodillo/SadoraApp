@@ -274,14 +274,14 @@ private fun Bubble(message: DirectMessage) {
             Modifier
                 .widthIn(max = 300.dp)
                 .clip(shape)
-                .background(if (mine) c.primary else c.surface)
+                .background(if (mine) c.heroColors.first() else c.surface)
                 .padding(horizontal = Spacing.sm, vertical = 10.dp),
         ) {
             Text(message.body, style = Sadora.type.body, color = if (mine) c.onPrimary else c.text)
             Text(
                 strings.dates.ago(message.createdAt, Clock.System.now()),
                 style = Sadora.type.caption.copy(letterSpacing = TextUnit.Unspecified),
-                color = if (mine) c.onPrimary.copy(alpha = 0.7f) else c.muted2,
+                color = if (mine) c.onPrimary else c.muted2,
                 modifier = Modifier.align(Alignment.End).padding(top = 2.dp),
             )
         }

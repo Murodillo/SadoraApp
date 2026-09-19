@@ -245,7 +245,7 @@ private fun PremiumStatusCard(state: AppState) {
             state.premiumAutoRenewing -> t.premiumRenewsOn(dates.dayMonth(until) + " " + until.year)
             else -> t.premiumUntil(dates.dayMonth(until) + " " + until.year)
         }
-        Text(renewal, style = Sadora.type.body, color = onGradient.copy(alpha = 0.85f))
+        Text(renewal, style = Sadora.type.body, color = onGradient)
         // Flow, not a fixed row — the longest feature name would otherwise wrap mid-chip.
         ChipFlowRow(horizontalGap = Spacing.xs, verticalGap = Spacing.xs) {
             listOf(t.premiumFeatureAi, t.premiumFeatureScanner, t.premiumFeatureInsights).forEach { feature ->

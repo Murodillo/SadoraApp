@@ -254,7 +254,7 @@ fun ShopScreen(
                     icon = SadoraIcons.Share,
                 )
                 if (copied) {
-                    Text(t.codeCopied, style = Sadora.type.body, color = c.success)
+                    Text(t.codeCopied, style = Sadora.type.body, color = c.successText)
                 }
             }
         }
@@ -329,7 +329,7 @@ private fun ProductCard(
                     color = c.text,
                 )
                 product.savingUzs?.takeIf { it > 0 }?.let {
-                    Text(t.saving(soum(it)), style = Sadora.type.body, color = c.success)
+                    Text(t.saving(soum(it)), style = Sadora.type.body, color = c.successText)
                 }
             }
         }

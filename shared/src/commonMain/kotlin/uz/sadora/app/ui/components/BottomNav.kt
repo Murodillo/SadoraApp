@@ -5,7 +5,6 @@ import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -21,6 +20,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -32,8 +32,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
@@ -117,7 +116,7 @@ fun SadoraBottomNav(
                     .background(c.primary.copy(alpha = if (c.isDark) 0.20f else 0.11f)),
             )
 
-            Row(Modifier.fillMaxSize()) {
+            Row(Modifier.fillMaxSize().selectableGroup()) {
                 tabs.forEach { tab ->
                     NavItem(
                         icon = tab.icon,
@@ -167,18 +166,12 @@ private fun NavItem(
         animationSpec = BarSpring,
         label = "tab-lift",
     )
-    // An unselected label is legible but recedes; the selected one comes fully forward.
-    val labelAlpha by animateFloatAsState(
-        targetValue = if (selected) 1f else 0.75f,
-        animationSpec = tween(Motion.Standard),
-        label = "tab-label-alpha",
-    )
     val liftPx = with(LocalDensity.current) { lift.dp.toPx() }
 
     Box(
         modifier
-            .semantics { contentDescription = label }
-            .noRippleClickable(onClick = onClick),
+            // One element per tab: "Bugun, tab, selected", not an icon and a word.
+            .noRippleSelectable(selected, role = Role.Tab, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         Column(
@@ -202,7 +195,6 @@ private fun NavItem(
                 style = Sadora.type.caption.copy(letterSpacing = TextUnit.Unspecified),
                 color = labelColor,
                 maxLines = 1,
-                modifier = Modifier.graphicsLayer { alpha = labelAlpha },
             )
         }
     }

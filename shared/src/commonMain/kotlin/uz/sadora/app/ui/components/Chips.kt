@@ -3,6 +3,7 @@ package uz.sadora.app.ui.components
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -19,9 +20,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import uz.sadora.app.design.MinTouchTarget
 import uz.sadora.app.design.Radius
 import uz.sadora.app.design.Sadora
 import uz.sadora.app.design.Spacing
@@ -47,8 +51,8 @@ fun SelectChip(
             .clip(Radius.chip)
             .background(bg)
             .border(1.dp, border, Radius.chip)
-            .defaultMinSize(minHeight = 38.dp)
-            .noRippleClickable(onClick = onClick)
+            .defaultMinSize(minHeight = MinTouchTarget)
+            .noRippleToggleable(selected, role = Role.Checkbox) { onClick() }
             .padding(horizontal = 14.dp, vertical = Spacing.xs),
         contentAlignment = Alignment.Center,
     ) {
@@ -58,7 +62,7 @@ fun SelectChip(
         ) {
             if (leading != null) Text(leading, style = Sadora.type.body, color = fg)
             Text(label, style = Sadora.type.body.copy(fontWeight = FontWeight.Medium), color = fg)
-            if (selected) Text("✓", style = Sadora.type.body, color = fg)
+            if (selected) Text("✓", style = Sadora.type.body, color = fg, modifier = Modifier.clearAndSetSemantics {})
         }
     }
 }
@@ -142,7 +146,8 @@ fun SegmentedControl(
             .fillMaxWidth()
             .clip(Radius.chip)
             .background(c.surface2)
-            .padding(4.dp),
+            .padding(4.dp)
+            .selectableGroup(),
         horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         options.forEachIndexed { index, option ->
@@ -153,7 +158,8 @@ fun SegmentedControl(
                     .weight(1f)
                     .clip(Radius.chip)
                     .background(if (selected) c.surface else Color.Transparent)
-                    .noRippleClickable(enabled = !locked) { onSelect(index) }
+                    // A locked segment reads as a disabled tab; the padlock is for the eye.
+                    .noRippleSelectable(selected, role = Role.Tab, enabled = !locked) { onSelect(index) }
                     .padding(vertical = Spacing.xs),
                 contentAlignment = Alignment.Center,
             ) {
@@ -172,7 +178,7 @@ fun SegmentedControl(
                             else -> c.muted
                         },
                     )
-                    if (locked) Text("🔒", style = Sadora.type.caption, color = c.muted2)
+                    if (locked) Text("🔒", style = Sadora.type.caption, color = c.muted2, modifier = Modifier.clearAndSetSemantics {})
                 }
             }
         }

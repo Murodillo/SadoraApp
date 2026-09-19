@@ -166,7 +166,7 @@ private fun StatusHero(state: AppState, onOpen: (Route) -> Unit) {
                 state.premiumAutoRenewing -> p.premiumRenewsOn(dates.dayMonth(until) + " " + until.year)
                 else -> p.premiumUntil(dates.dayMonth(until) + " " + until.year)
             }
-            Text(renewal, style = Sadora.type.body, color = onGradient.copy(alpha = 0.85f))
+            Text(renewal, style = Sadora.type.body, color = onGradient)
             ChipFlowRow(horizontalGap = Spacing.xs, verticalGap = Spacing.xs) {
                 listOf(p.premiumFeatureAi, p.premiumFeatureScanner, p.premiumFeatureInsights).forEach { feature ->
                     Box(
@@ -186,7 +186,7 @@ private fun StatusHero(state: AppState, onOpen: (Route) -> Unit) {
                 modifier = Modifier.noRippleClickable { onOpen(Route.Paywall) },
             )
         } else {
-            Text(t.inactiveBody, style = Sadora.type.body, color = onGradient.copy(alpha = 0.9f))
+            Text(t.inactiveBody, style = Sadora.type.body, color = onGradient)
         }
     }
 }

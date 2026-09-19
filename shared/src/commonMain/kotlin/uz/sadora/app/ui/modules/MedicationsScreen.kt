@@ -226,7 +226,7 @@ private fun MedicationRow(medication: Medication) {
                 }
             }
             when (medication.status) {
-                MedStatus.Taken -> Text("✓", style = Sadora.type.h2, color = c.success)
+                MedStatus.Taken -> Text("✓", style = Sadora.type.h2, color = c.successText)
                 MedStatus.Pending -> SadoraBadge(t.pending, BadgeTone.Neutral)
                 MedStatus.Skipped -> SadoraBadge(t.skipped, BadgeTone.Neutral)
             }

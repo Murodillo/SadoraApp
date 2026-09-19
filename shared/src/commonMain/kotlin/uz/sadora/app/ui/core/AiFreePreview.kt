@@ -105,7 +105,7 @@ fun AiFreePreviewScreen(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
                         ) {
-                            Text("✓", style = Sadora.type.h3, color = c.success)
+                            Text("✓", style = Sadora.type.h3, color = c.successText)
                             Text(feature, style = Sadora.type.body, color = c.text)
                         }
                     }

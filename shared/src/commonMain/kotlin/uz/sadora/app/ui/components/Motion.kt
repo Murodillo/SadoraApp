@@ -20,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -69,6 +70,7 @@ object Motion {
 fun Modifier.pressable(
     enabled: Boolean = true,
     pressedScale: Float = 0.975f,
+    role: Role? = null,
     onClick: () -> Unit,
 ): Modifier = composed {
     val source = remember { MutableInteractionSource() }
@@ -85,6 +87,7 @@ fun Modifier.pressable(
         interactionSource = source,
         indication = null,
         enabled = enabled,
+        role = role,
         onClick = onClick,
     )
 }
