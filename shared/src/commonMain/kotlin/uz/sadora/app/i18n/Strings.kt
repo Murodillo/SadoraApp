@@ -57,6 +57,7 @@ interface Strings {
     val ai: AiStrings
     val community: CommunityStrings
     val rewards: RewardStrings
+    val pregnancyWeeks: PregnancyWeekStrings
     val shop: ShopStrings
     val homeLayout: HomeLayoutStrings
     val share: ShareStrings
@@ -940,7 +941,6 @@ interface JourneyStrings {
     fun dueOn(date: String, daysLeft: Int): String
     fun dueOnPast(date: String): String
     val babyDevelopment: String
-    val babyDevelopmentBody: String
     val todaysSymptoms: String
     val addSymptom: String
     val upcomingAppointments: String

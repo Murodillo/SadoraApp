@@ -611,22 +611,7 @@ private fun PregnancyJourney(state: AppState, health: HealthController, onOpen: 
         }
 
         item {
-            SadoraCard {
-                ImagePlaceholder(
-                    Modifier.fillMaxWidth().aspectRatio(2.1f),
-                    emoji = "🤰",
-                    colors = listOf(palette.start.copy(alpha = 0.35f), palette.end.copy(alpha = 0.35f)),
-                )
-                Text(t.babyDevelopment, style = Sadora.type.h3, color = c.text)
-                // The app carries no week-by-week medical table of its own, and inventing
-                // one is not an option — the library the clinicians write is where this
-                // belongs, so the card leads there rather than stating a size.
-                Text(
-                    t.babyDevelopmentBody,
-                    style = Sadora.type.body,
-                    color = c.muted,
-                )
-            }
+            BabyWeekCard(state.pregnancyWeek, listOf(palette.start, palette.end))
         }
 
         item {

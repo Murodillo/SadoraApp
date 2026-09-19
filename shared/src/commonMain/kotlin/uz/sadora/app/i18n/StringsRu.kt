@@ -228,9 +228,9 @@ object StringsRu : Strings {
         }
         override fun birthControlNote(option: BirthControl) = when (option) {
             BirthControl.Pill, BirthControl.Iud ->
-                "После гормонального метода цикл восстанавливается несколько месяцев — прогнозы будем давать осторожно."
+                "После таблеток или спирали цикл может восстанавливаться несколько месяцев — прогнозы будем давать осторожно."
             BirthControl.StillUsing ->
-                "Во время гормонального метода овуляции нет, поэтому фертильные дни мы не показываем."
+                "Пока вы пользуетесь контрацепцией, прогноз фертильных дней ненадёжен, поэтому мы его не показываем."
             else -> null
         }
 
@@ -958,8 +958,6 @@ object StringsRu : Strings {
         override fun dueOn(date: String, daysLeft: Int) = "Дата родов — $date · осталось $daysLeft дн."
         override fun dueOnPast(date: String) = "Дата родов — $date"
         override val babyDevelopment = "Развитие ребёнка"
-        override val babyDevelopmentBody =
-            "О том, что меняется на этой неделе, читайте в библиотеке «Знания»."
         override val todaysSymptoms = "Симптомы сегодня"
         override val addSymptom = "+ Добавить"
         override val upcomingAppointments = "Ближайшие визиты"
@@ -1399,6 +1397,8 @@ object StringsRu : Strings {
         override val moodLabel = "Настроение"
         override val allDoneToday = "На сегодня всё выполнено 🌸"
     }
+
+    override val pregnancyWeeks: PregnancyWeekStrings = PregnancyWeeksRu
 
     override val rewards = object : RewardStrings {
         override val coinName = "Гул"

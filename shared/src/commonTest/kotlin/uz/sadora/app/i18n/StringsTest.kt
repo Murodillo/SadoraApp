@@ -217,7 +217,7 @@ class StringsTest {
                     today, daysToNextPeriod(5), symptoms, change, averageCycle, averagePeriod,
                     day, daysValue(28), pregnancyTitle, trimester(8), trimester(20), trimester(35),
                     weekCaps, weekAndDay(26, 3), weekOnly(26), dueOn("12-dekabr", 112),
-                    dueOnPast("12-dekabr"), babyDevelopment, babyDevelopmentBody, todaysSymptoms,
+                    dueOnPast("12-dekabr"), babyDevelopment, todaysSymptoms,
                     addSymptom, upcomingAppointments, all, noAppointments, noAppointmentsBody,
                     logToday, aiAdvice, aiBadge, postpartumTitle, recoveryWeeks, recoveryNote,
                     mood, sleep, brokenSleep, feedingAndWater, water, calories, moodWatch,

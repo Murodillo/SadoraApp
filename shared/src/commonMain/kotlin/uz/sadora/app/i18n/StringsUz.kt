@@ -225,9 +225,9 @@ object StringsUz : Strings {
         }
         override fun birthControlNote(option: BirthControl) = when (option) {
             BirthControl.Pill, BirthControl.Iud ->
-                "Gormonal usuldan keyin sikl bir necha oy tiklanadi — bashoratlarni ehtiyotkorlik bilan beramiz."
+                "Tabletka yoki spiraldan keyin sikl bir necha oyda tiklanishi mumkin — bashoratlarni ehtiyotkorlik bilan beramiz."
             BirthControl.StillUsing ->
-                "Gormonal usul davomida ovulyatsiya bo'lmaydi, shuning uchun unumdor kunlarni ko'rsatmaymiz."
+                "Kontratsepsiya davomida unumdor kunlar bashorati ishonchli emas, shuning uchun ularni ko'rsatmaymiz."
             else -> null
         }
 
@@ -951,8 +951,6 @@ object StringsUz : Strings {
         override fun dueOn(date: String, daysLeft: Int) = "Tug'ish sanasi — $date · $daysLeft kun qoldi"
         override fun dueOnPast(date: String) = "Tug'ish sanasi — $date"
         override val babyDevelopment = "Bolaning rivojlanishi"
-        override val babyDevelopmentBody =
-            "Bu haftada nima o'zgarayotgani haqida Bilim kutubxonasida o'qing."
         override val todaysSymptoms = "Bugungi simptomlar"
         override val addSymptom = "+ Qo'shish"
         override val upcomingAppointments = "Yaqin uchrashuvlar"
@@ -1392,6 +1390,8 @@ object StringsUz : Strings {
         override val moodLabel = "Kayfiyat"
         override val allDoneToday = "Bugungi hamma narsa bajarildi 🌸"
     }
+
+    override val pregnancyWeeks: PregnancyWeekStrings = PregnancyWeeksUz
 
     override val rewards = object : RewardStrings {
         override val coinName = "Gul"

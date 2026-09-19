@@ -225,9 +225,9 @@ object StringsEn : Strings {
         }
         override fun birthControlNote(option: BirthControl) = when (option) {
             BirthControl.Pill, BirthControl.Iud ->
-                "A cycle takes a few months to settle after a hormonal method — we will be careful with predictions."
+                "After the pill or an IUD a cycle can take a few months to settle — we will be careful with predictions."
             BirthControl.StillUsing ->
-                "There is no ovulation on a hormonal method, so we do not show fertile days."
+                "Fertile-day predictions are not reliable while you use contraception, so we do not show them."
             else -> null
         }
 
@@ -952,8 +952,6 @@ object StringsEn : Strings {
         override fun dueOn(date: String, daysLeft: Int) = "Due $date · $daysLeft days to go"
         override fun dueOnPast(date: String) = "Due $date"
         override val babyDevelopment = "Your baby's development"
-        override val babyDevelopmentBody =
-            "Read about what changes this week in the Knowledge library."
         override val todaysSymptoms = "Today's symptoms"
         override val addSymptom = "+ Add"
         override val upcomingAppointments = "Upcoming appointments"
@@ -1391,6 +1389,8 @@ object StringsEn : Strings {
         override val moodLabel = "Mood"
         override val allDoneToday = "Everything for today is done 🌸"
     }
+
+    override val pregnancyWeeks: PregnancyWeekStrings = PregnancyWeeksEn
 
     override val rewards = object : RewardStrings {
         override val coinName = "Gul"
