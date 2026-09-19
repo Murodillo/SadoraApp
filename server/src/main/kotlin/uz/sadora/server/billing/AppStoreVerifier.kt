@@ -45,7 +45,8 @@ class AppStoreVerifier(
             transactionId = payload.transactionId,
             expiresAt = expiresAt,
             autoRenewing = payload.type == "Auto-Renewable Subscription",
-            accountId = payload.appAccountToken,
+            // A UUID: Swift writes it upper-case, Kotlin lower-case. Same id either way.
+            accountId = payload.appAccountToken?.lowercase(),
         )
     }
 

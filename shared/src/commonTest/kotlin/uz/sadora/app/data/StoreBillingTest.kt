@@ -65,7 +65,7 @@ class StoreBillingTest {
     }
 
     @Test
-    fun `a purchase is verified by the server, then finished with the store`() = runTest {
+    fun `a purchase is verified by the server and then finished with the store`() = runTest {
         val store = FakeStore(outcome = StoreOutcome.Purchased(StoreReceipt("premium_month", "tok-1", needsFinish = true)))
         val billing = controller(serverAccepts, store)
         var refreshed = false

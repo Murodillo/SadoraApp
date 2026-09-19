@@ -19,7 +19,7 @@ class WearableReturnTest {
     )
 
     @Test
-    fun `the return link carries the code and state back, decoded`() {
+    fun `the return link carries the code and state back decoded`() {
         val link = assertIs<AppLink.WearableReturn>(
             AppLink.parse("sadora://wearables/whoop?status=ok&code=a%2Fb%3D&state=xYz_1"),
         )
