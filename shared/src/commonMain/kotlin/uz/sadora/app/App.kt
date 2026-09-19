@@ -344,7 +344,7 @@ private fun MainShell(
     LaunchedEffect(link) {
         if (link is AppLink.WearableReturn) {
             AppLinks.consume()
-            controllers.wearables.onReturned(link.provider, link.ok)
+            controllers.wearables.onReturned(link.provider, link.ok, link.code, link.state)
             if (navigator.current != Route.DataSources) navigator.push(Route.DataSources)
         }
     }

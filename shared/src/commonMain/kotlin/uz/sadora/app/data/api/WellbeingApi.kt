@@ -63,6 +63,12 @@ class WearableApi(private val caller: ApiCaller) {
     suspend fun connect(provider: HealthProvider): ApiResult<ConnectStart> =
         caller.authenticated("v1/wearables/${provider.wirePath()}/connect", HttpMethodKind.POST)
 
+    /** Hands the consent page's code and state back; the server checks they are hers. */
+    suspend fun complete(provider: HealthProvider, state: String, code: String): ApiResult<Ack> =
+        caller.authenticated("v1/wearables/${provider.wirePath()}/complete", HttpMethodKind.POST) {
+            setBody(uz.sadora.contract.CompleteConnectRequest(state, code))
+        }
+
     suspend fun disconnect(provider: HealthProvider): ApiResult<Ack> =
         caller.authenticated("v1/wearables/${provider.wirePath()}", HttpMethodKind.DELETE)
 

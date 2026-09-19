@@ -144,7 +144,13 @@ fun uz.sadora.app.model.AppState.aiRoute(): Route =
  */
 sealed interface AppLink {
     data class Invite(val code: String) : AppLink
-    data class WearableReturn(val provider: String, val ok: Boolean) : AppLink
+    /** [code] and [state] come back only on success; the app hands them to the server. */
+    data class WearableReturn(
+        val provider: String,
+        val ok: Boolean,
+        val code: String? = null,
+        val state: String? = null,
+    ) : AppLink
 
     companion object {
         /**
@@ -158,10 +164,18 @@ sealed interface AppLink {
             val segments = path.split('/').filter { it.isNotBlank() }
             if (segments.isEmpty()) return null
             return when {
-                segments[0].equals("wearables", ignoreCase = true) && segments.size >= 2 -> AppLink.WearableReturn(
-                    provider = segments[1].lowercase(),
-                    ok = query.split('&').any { it.equals("status=ok", ignoreCase = true) },
-                )
+                segments[0].equals("wearables", ignoreCase = true) && segments.size >= 2 -> {
+                    val params = query.split('&').mapNotNull { pair ->
+                        val key = pair.substringBefore('=', "")
+                        if (key.isEmpty()) null else key.lowercase() to percentDecode(pair.substringAfter('='))
+                    }.toMap()
+                    AppLink.WearableReturn(
+                        provider = segments[1].lowercase(),
+                        ok = params["status"].equals("ok", ignoreCase = true),
+                        code = params["code"]?.takeIf { it.isNotBlank() },
+                        state = params["state"]?.takeIf { it.isNotBlank() },
+                    )
+                }
                 segments[0].equals("invite", ignoreCase = true) || segments.getOrNull(1) == "r" ||
                     (segments.size >= 2 && segments[segments.size - 2].equals("r", ignoreCase = true)) -> {
                     val raw = segments.last().uppercase().filter(Char::isLetterOrDigit)
@@ -259,4 +273,28 @@ class Navigator {
     fun popToRoot() {
         stack.clear()
     }
+}
+
+/** `%2F` → `/`, `+` stays `+` — the server encodes with URLEncoder, whose only oddity is spaces. */
+private fun percentDecode(value: String): String {
+    val bytes = ArrayList<Byte>(value.length)
+    var i = 0
+    while (i < value.length) {
+        val ch = value[i]
+        if (ch == '%' && i + 2 < value.length) {
+            val hex = value.substring(i + 1, i + 3).toIntOrNull(16)
+            if (hex != null) {
+                bytes.add(hex.toByte())
+                i += 3
+                continue
+            }
+        }
+        if (ch == '+') {
+            bytes.add(' '.code.toByte())
+        } else {
+            ch.toString().encodeToByteArray().forEach { bytes.add(it) }
+        }
+        i++
+    }
+    return bytes.toByteArray().decodeToString()
 }

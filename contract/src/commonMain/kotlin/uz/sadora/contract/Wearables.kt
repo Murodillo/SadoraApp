@@ -222,6 +222,19 @@ data class ConnectStart(
     val authorizeUrl: String,
 )
 
+/**
+ * The provider's code and state, handed back to the server by the signed-in app.
+ *
+ * The browser that finishes the consent is not necessarily the account that started
+ * it — a consent link can be forwarded — so the exchange happens only when the account
+ * sending this is the one the state was issued to.
+ */
+@Serializable
+data class CompleteConnectRequest(
+    val state: String,
+    val code: String,
+)
+
 /** What a manual sync did. */
 @Serializable
 data class SyncResult(

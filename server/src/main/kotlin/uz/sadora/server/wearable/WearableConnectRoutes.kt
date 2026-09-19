@@ -1,5 +1,7 @@
 package uz.sadora.server.wearable
 
+import uz.sadora.contract.CompleteConnectRequest
+import io.ktor.server.request.receive
 import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.auth.authenticate
@@ -29,7 +31,7 @@ import uz.sadora.server.wearable.whoop.WhoopWebhookEvent
 private const val APP_RETURN_LINK = "sadora://wearables/whoop"
 
 /** The device list, the OAuth start, disconnect and sync — all behind her token. */
-fun Route.wearableConnectRoutes(service: WearableConnectService) {
+fun Route.wearableConnectRoutes(service: WearableConnectService, job: WearableSyncJob) {
     authenticate(USER_AUTH) {
         route("/wearables") {
             get("/providers") {
@@ -43,6 +45,15 @@ fun Route.wearableConnectRoutes(service: WearableConnectService) {
             route("/{provider}") {
                 post("/connect") {
                     call.respond(service.startConnect(call.requireUserId(), call.provider()))
+                }
+
+                /** The app hands back what the browser brought; see [CompleteConnectRequest]. */
+                post("/complete") {
+                    val request = call.receive<CompleteConnectRequest>()
+                    val userId = service.completeConnect(call.provider(), request.state, request.code, call.requireUserId())
+                    // The first pull is thirty days and a few pages; it does not hold the call.
+                    job.syncInBackground { service.dueForSyncOf(userId)?.let { service.sync(it) } }
+                    call.respond(Ack())
                 }
 
                 delete {
@@ -68,6 +79,8 @@ fun Route.wearableConnectRoutes(service: WearableConnectService) {
 fun Route.wearablePublicRoutes(service: WearableConnectService, job: WearableSyncJob) {
     rateLimit(RateLimits.WEARABLE) {
         route("/wearables/whoop") {
+            // The browser only carries the code back to the app. Exchanging it here would
+            // save the grant to whoever started the flow, not whoever is holding the phone.
             get("/callback") {
                 val error = call.request.queryParameters["error"]
                 val code = call.request.queryParameters["code"]
@@ -76,14 +89,7 @@ fun Route.wearablePublicRoutes(service: WearableConnectService, job: WearableSyn
                     call.respondText(ReturnPage.render(ok = false), ContentType.Text.Html, HttpStatusCode.BadRequest)
                     return@get
                 }
-                val userId = runCatching { service.completeConnect(HealthProvider.WHOOP, state, code) }.getOrNull()
-                if (userId == null) {
-                    call.respondText(ReturnPage.render(ok = false), ContentType.Text.Html, HttpStatusCode.BadRequest)
-                    return@get
-                }
-                // The first pull is thirty days and a few pages; it does not hold the page.
-                job.syncInBackground { service.dueForSyncOf(userId)?.let { service.sync(it) } }
-                call.respondText(ReturnPage.render(ok = true), ContentType.Text.Html)
+                call.respondText(ReturnPage.render(ok = true, code = code, state = state), ContentType.Text.Html)
             }
 
             post("/webhook") {
@@ -133,26 +139,32 @@ object WebhookSignature {
 
 /** The page after the provider's consent screen. Three languages, one line each, and a button back. */
 private object ReturnPage {
-    fun render(ok: Boolean): String {
-        val title = if (ok) "Ulandi ✓ · Подключено · Connected" else "Ulanmadi · Не удалось · Not connected"
+    fun render(ok: Boolean, code: String? = null, state: String? = null): String {
+        val title = if (ok) "Deyarli tayyor · Почти готово · Almost done" else "Ulanmadi · Не удалось · Not connected"
         val body = if (ok) {
-            "WHOOP SADORA'ga ulandi. Ilovaga qayting — ma'lumotlar bir necha daqiqada keladi.<br>" +
-                "WHOOP подключён. Вернитесь в приложение — данные появятся через несколько минут.<br>" +
-                "WHOOP is connected. Return to the app; data arrives within a few minutes."
+            "Ruxsat berildi. Ulanishni tugatish uchun SADORA ilovasiga qayting.<br>" +
+                "Доступ получен. Вернитесь в приложение SADORA, чтобы завершить подключение.<br>" +
+                "Access granted. Return to the SADORA app to finish connecting."
         } else {
             "Ruxsat berilmadi yoki havola eskirgan. Ilovada qaytadan urinib ko'ring.<br>" +
                 "Доступ не был дан, или ссылка устарела. Попробуйте ещё раз из приложения.<br>" +
                 "Access was not granted, or the link is stale. Try again from the app."
         }
         val status = if (ok) "ok" else "error"
+        val params = buildString {
+            append("status=").append(status)
+            if (code != null) append("&code=").append(java.net.URLEncoder.encode(code, Charsets.UTF_8))
+            if (state != null) append("&state=").append(java.net.URLEncoder.encode(state, Charsets.UTF_8))
+        }
+        val link = "$APP_RETURN_LINK?$params".replace("&", "&amp;")
         return """
             <!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
             <meta name="robots" content="noindex"><title>SADORA</title>
-            ${if (ok) "<meta http-equiv=\"refresh\" content=\"2;url=$APP_RETURN_LINK?status=$status\">" else ""}
+            ${if (ok) "<meta http-equiv=\"refresh\" content=\"2;url=$link\">" else ""}
             <style>body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#f7f5ff;color:#1a1630;font:16px/1.5 -apple-system,Segoe UI,Roboto,sans-serif}
             .card{background:#fff;border-radius:20px;padding:28px;max-width:420px;margin:16px;box-shadow:0 8px 30px rgba(123,97,255,.12);text-align:center}
             h1{font-size:20px;margin:0 0 10px}p{color:#6f6a8a;margin:0 0 18px}a{display:inline-block;background:linear-gradient(90deg,#7b61ff,#ff6fb8);color:#fff;text-decoration:none;padding:12px 22px;border-radius:999px;font-weight:600}</style></head>
-            <body><div class="card"><h1>$title</h1><p>$body</p><a href="$APP_RETURN_LINK?status=$status">SADORA</a></div></body></html>
+            <body><div class="card"><h1>$title</h1><p>$body</p><a href="$link">SADORA</a></div></body></html>
         """.trimIndent()
     }
 }

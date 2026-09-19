@@ -1543,6 +1543,43 @@ class ApiIntegrationTest {
      */
     private class Api(val client: HttpClient)
 
+    /**
+     * A consent link is a URL, and URLs get forwarded. One started by one account and
+     * approved in someone else's browser must not land the second person's WHOOP data in
+     * the first account — nor in the second, which never asked. The state is spent, too.
+     */
+    @Test
+    fun `a WHOOP consent started by one account cannot be completed by another`() = api {
+        val starter = Uuid.parse(signUp().userId)
+        val other = Uuid.parse(signUp().userId)
+        // Configured, but pointed at a closed port: the check must refuse before any call.
+        val whoop = uz.sadora.server.config.WhoopConfig(
+            clientId = "id",
+            clientSecret = "secret",
+            redirectUri = "http://localhost:8080/v1/wearables/whoop/callback",
+            apiBaseUrl = "http://127.0.0.1:1",
+        )
+        val service = uz.sadora.server.wearable.WearableConnectService(
+            connections = component.connectionRepository,
+            wearables = component.wearableService,
+            access = component.healthAccess,
+            audit = component.auditService,
+            cipher = uz.sadora.server.core.TokenCipher.from(null, fallbackSecret = "x".repeat(40)),
+            whoopConfig = whoop,
+            whoop = uz.sadora.server.wearable.whoop.WhoopClient(io.ktor.client.HttpClient(), whoop),
+        )
+        component.connectionRepository.saveState("forwarded-state", starter, HealthProvider.WHOOP, now() + 10.minutes)
+
+        kotlin.test.assertFailsWith<uz.sadora.server.core.ValidationException> {
+            service.completeConnect(HealthProvider.WHOOP, "forwarded-state", "code", caller = other)
+        }
+        kotlin.test.assertFailsWith<uz.sadora.server.core.ValidationException> {
+            service.completeConnect(HealthProvider.WHOOP, "forwarded-state", "code", caller = starter)
+        }
+        assertEquals(null, component.connectionRepository.find(starter, HealthProvider.WHOOP))
+        assertEquals(null, component.connectionRepository.find(other, HealthProvider.WHOOP))
+    }
+
     private fun api(block: suspend Api.() -> Unit) = testApplication {
         application { apiModule(component) }
         val client = createClient {

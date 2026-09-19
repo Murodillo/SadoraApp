@@ -1,5 +1,6 @@
 package uz.sadora.server.plugins
 
+import io.ktor.server.request.path
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.Application
 import io.ktor.server.application.install
@@ -70,7 +71,8 @@ fun Application.configureStatusPages() {
         }
 
         exception<Throwable> { call, cause ->
-            logger.error("Unhandled failure on {} {}", call.request.local.method.value, call.request.local.uri, cause)
+            // The path, masked — not the URI, whose query can hold an OAuth code.
+            logger.error("Unhandled failure on {} {}", call.request.local.method.value, redactPath(call.request.path()), cause)
             call.respond(
                 HttpStatusCode.InternalServerError,
                 ApiErrorResponse(

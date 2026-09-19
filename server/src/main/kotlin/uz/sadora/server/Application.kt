@@ -129,7 +129,7 @@ fun Application.apiModule(component: AppComponent) {
             notificationRoutes(component.notificationService)
             adminNotificationRoutes(component.notificationService, component.auditService)
             wearableRoutes(component.wearableService)
-            wearableConnectRoutes(component.wearableConnectService)
+            wearableConnectRoutes(component.wearableConnectService, component.wearableSyncJob)
             // The provider's own doors: an OAuth return and a signed webhook, no app token.
             wearablePublicRoutes(component.wearableConnectService, component.wearableSyncJob)
             adminWearableRoutes(component.wearableService, component.wearableRepository, component.auditService)

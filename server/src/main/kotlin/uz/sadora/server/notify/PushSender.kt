@@ -17,13 +17,8 @@ class LoggingPushSender : PushSender {
     private val logger = LoggerFactory.getLogger(LoggingPushSender::class.java)
 
     override suspend fun send(record: OutboxRecord, pushTokens: List<String>): Boolean {
-        logger.info(
-            "PUSH [{}] to {} device(s): {} — {}",
-            record.category,
-            pushTokens.size,
-            record.title,
-            record.body,
-        )
+        // The category only: a title and body are a medicine's name or a line of a DM.
+        logger.info("PUSH [{}] to {} device(s), not sent: FCM is not configured", record.category, pushTokens.size)
         return true
     }
 }

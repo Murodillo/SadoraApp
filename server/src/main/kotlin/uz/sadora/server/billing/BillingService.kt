@@ -131,21 +131,30 @@ class BillingService(
         if (transaction.state == PaymentState.PAID) return transaction.subscriptionId
 
         val plan = repository.plan(transaction.planId) ?: return null
-        val current = entitlements.subscriptionStatus(transaction.userId)
-        // Renewing before the old one lapses extends it rather than throwing the rest
-        // away; anything expired starts from now.
-        val startsFrom = current.expiresAt?.takeIf { it > now() } ?: now()
-        val expiresAt = startsFrom + plan.period.duration()
+        // The claim, not the state read above, decides who grants: a second delivery
+        // racing this one loses here and returns what the winner recorded.
+        if (!repository.claimPaid(transaction.id)) {
+            return repository.transaction(transaction.id)?.subscriptionId
+        }
 
-        val subscriptionId = subscriptions.grant(
-            userId = transaction.userId,
-            source = transaction.provider.asSubscriptionSource(),
-            expiresAt = expiresAt,
-            productId = plan.id,
-            externalId = transaction.externalId,
-            reason = "payment ${transaction.id}",
-        )
-        repository.markPaid(transaction.id, subscriptionId)
+        val subscriptionId = try {
+            val current = entitlements.subscriptionStatus(transaction.userId)
+            // Renewing before the old one lapses extends it rather than throwing the rest
+            // away; anything expired starts from now.
+            val startsFrom = current.expiresAt?.takeIf { it > now() } ?: now()
+            subscriptions.grant(
+                userId = transaction.userId,
+                source = transaction.provider.asSubscriptionSource(),
+                expiresAt = startsFrom + plan.period.duration(),
+                productId = plan.id,
+                externalId = transaction.externalId,
+                reason = "payment ${transaction.id}",
+            )
+        } catch (e: Throwable) {
+            repository.releasePaid(transaction.id, transaction.state)
+            throw e
+        }
+        repository.attachSubscription(transaction.id, subscriptionId)
         return subscriptionId
     }
 

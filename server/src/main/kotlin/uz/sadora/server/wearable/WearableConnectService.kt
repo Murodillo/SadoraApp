@@ -114,13 +114,21 @@ class WearableConnectService(
     }
 
     /**
-     * The browser has come back with a code. Returns the user it was for, so the page
-     * can send her back into the app; throws for a state that is not ours or has aged.
+     * The app has come back with the provider's code. [caller] is the account that sent
+     * it; the state must have been issued to that same account, or nothing is saved.
+     *
+     * The exchange used to run in the browser callback, trusting the state alone — so a
+     * consent link started by one account and approved in someone else's browser put
+     * the second person's WHOOP data into the first person's account. The state is spent
+     * either way, so a forwarded link cannot be tried twice.
      */
-    suspend fun completeConnect(provider: HealthProvider, state: String, code: String): Uuid {
+    suspend fun completeConnect(provider: HealthProvider, state: String, code: String, caller: Uuid): Uuid {
         val client = clientFor(provider)
         val userId = connections.consumeState(state, provider)
             ?: throw ValidationException("state", "Noma'lum yoki eskirgan so'rov")
+        if (userId != caller) {
+            throw ValidationException("state", "Bu ulanish boshqa hisob uchun boshlangan")
+        }
         val tokens = try {
             client.exchange(code)
         } catch (e: WhoopUnauthorizedException) {

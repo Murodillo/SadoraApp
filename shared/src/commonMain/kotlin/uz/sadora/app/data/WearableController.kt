@@ -183,10 +183,18 @@ class WearableController(
     }
 
     /** The link brought her back. Reloads the list so the new connection is drawn. */
-    suspend fun onReturned(provider: String, ok: Boolean) {
-        returned = ok
+    /**
+     * Back from the provider's consent page. Success there is only half of it: the code
+     * it brought is sent from here, signed in as her, and the connection exists once the
+     * server accepts it.
+     */
+    suspend fun onReturned(provider: String, ok: Boolean, code: String? = null, state: String? = null) {
         connectStarted = null
-        if (ok) analytics.event(AnalyticsEvents.DEVICE_CONNECTED, mapOf("provider" to provider))
+        val known = HealthProvider.entries.firstOrNull { it.name.equals(provider, ignoreCase = true) }
+        val completed = ok && code != null && state != null && known != null &&
+            api?.let { calls.run { it.complete(known, state, code) } } != null
+        returned = completed
+        if (completed) analytics.event(AnalyticsEvents.DEVICE_CONNECTED, mapOf("provider" to provider))
         load()
     }
 

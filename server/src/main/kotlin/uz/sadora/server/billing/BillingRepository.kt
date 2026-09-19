@@ -7,6 +7,9 @@ import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.or
+import org.jetbrains.exposed.v1.core.neq
+import org.jetbrains.exposed.v1.core.isNull
 import org.jetbrains.exposed.v1.core.greaterEq
 import org.jetbrains.exposed.v1.jdbc.andWhere
 import org.jetbrains.exposed.v1.jdbc.insert
@@ -134,20 +137,50 @@ class BillingRepository {
         externalId: String,
         providerCreatedAt: Long?,
     ): Boolean = dbQuery {
-        val existing = PaymentTransactions.selectAll()
-            .where { PaymentTransactions.id eq id }
-            .limit(1)
-            .firstOrNull()
-            ?: return@dbQuery false
-        val current = existing[PaymentTransactions.externalId]
-        if (current != null && current != externalId) return@dbQuery false
-
-        PaymentTransactions.update({ PaymentTransactions.id eq id }) {
+        // One conditional UPDATE rather than read-then-write, so two providers' ids
+        // racing for the same order cannot both see it free and both write.
+        PaymentTransactions.update({
+            (PaymentTransactions.id eq id) and
+                (PaymentTransactions.externalId.isNull() or (PaymentTransactions.externalId eq externalId))
+        }) {
             it[PaymentTransactions.externalId] = externalId
             it[PaymentTransactions.providerCreatedAt] = providerCreatedAt
             it[updatedAt] = now().toOffsetDateTime()
+        } > 0
+    }
+
+    /**
+     * Moves a transaction to PAID if nothing else has, and says whether this call did.
+     *
+     * Providers retry, and two deliveries of the same "paid" can arrive together; both
+     * used to see PENDING and both granted a month. The state change is now the claim —
+     * exactly one caller gets true, and only that one grants.
+     */
+    suspend fun claimPaid(id: Uuid): Boolean = dbQuery {
+        val timestamp = now().toOffsetDateTime()
+        PaymentTransactions.update({
+            (PaymentTransactions.id eq id) and (PaymentTransactions.state neq PaymentState.PAID.dbValue())
+        }) {
+            it[state] = PaymentState.PAID.dbValue()
+            it[paidAt] = timestamp
+            it[updatedAt] = timestamp
+        } > 0
+    }
+
+    /** Hands a claimed payment back when the grant after it failed, so a retry can finish. */
+    suspend fun releasePaid(id: Uuid, previous: PaymentState): Unit = dbQuery {
+        PaymentTransactions.update({ PaymentTransactions.id eq id }) {
+            it[state] = previous.dbValue()
+            it[paidAt] = null
+            it[updatedAt] = now().toOffsetDateTime()
         }
-        true
+    }
+
+    suspend fun attachSubscription(id: Uuid, subscriptionId: Uuid): Unit = dbQuery {
+        PaymentTransactions.update({ PaymentTransactions.id eq id }) {
+            it[PaymentTransactions.subscriptionId] = subscriptionId
+            it[updatedAt] = now().toOffsetDateTime()
+        }
     }
 
     suspend fun markPaid(id: Uuid, subscriptionId: Uuid?): Unit = dbQuery {

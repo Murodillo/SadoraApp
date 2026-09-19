@@ -18,8 +18,15 @@
 
 	encode gzip
 
+	# The access log would otherwise keep two bearer secrets in plain sight: a doctor-share
+	# token in /share/<token>, and WHOOP's code and state in the OAuth return's query.
 	log {
 		output stdout
-		format console
+		format filter {
+			wrap console
+			fields {
+				request>uri regexp "(/share/)[^/?]+|([?&](?:code|state)=)[^&]+" "${1}${2}***"
+			}
+		}
 	}
 }

@@ -6,6 +6,8 @@ import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.greater
 import org.jetbrains.exposed.v1.core.isNull
+import org.jetbrains.exposed.v1.core.less
+import org.jetbrains.exposed.v1.core.plus
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.update
@@ -109,8 +111,20 @@ class OtpService(
             throw ApiOtpException(ErrorCodes.OTP_EXPIRED, "Kod muddati tugadi")
         }
 
-        val attempts = challenge[OtpChallenges.attempts]
-        if (attempts >= challenge[OtpChallenges.maxAttempts]) {
+        // Spend the attempt before looking at the code, in one conditional UPDATE. Read,
+        // compare, then write "attempts + 1" let a burst of parallel guesses all read the
+        // same count and all get checked — N guesses for the price of one. Here the
+        // database hands out attempts one at a time, and the last one is simply refused.
+        val claimed = dbQuery {
+            OtpChallenges.update({
+                (OtpChallenges.id eq id) and
+                    OtpChallenges.consumedAt.isNull() and
+                    (OtpChallenges.attempts less OtpChallenges.maxAttempts)
+            }) {
+                it[OtpChallenges.attempts] = OtpChallenges.attempts + 1
+            }
+        }
+        if (claimed == 0) {
             throw ApiOtpException(
                 ErrorCodes.OTP_TOO_MANY_ATTEMPTS,
                 "Juda ko'p urinish. Yangi kod so'rang.",
@@ -118,18 +132,18 @@ class OtpService(
         }
 
         if (challenge[OtpChallenges.codeHash] != sha256(code)) {
-            dbQuery {
-                OtpChallenges.update({ OtpChallenges.id eq id }) {
-                    it[OtpChallenges.attempts] = attempts + 1
-                }
-            }
             throw ApiOtpException(ErrorCodes.OTP_INVALID, "Kod noto'g'ri")
         }
 
-        dbQuery {
-            OtpChallenges.update({ OtpChallenges.id eq id }) {
+        // The same for spending the code: of two requests carrying it at once, one
+        // consumes it and the other finds it already used.
+        val consumed = dbQuery {
+            OtpChallenges.update({ (OtpChallenges.id eq id) and OtpChallenges.consumedAt.isNull() }) {
                 it[consumedAt] = now().toOffsetDateTime()
             }
+        }
+        if (consumed == 0) {
+            throw ApiOtpException(ErrorCodes.OTP_EXPIRED, "Bu kod allaqachon ishlatilgan")
         }
         return challenge[OtpChallenges.phone]
     }

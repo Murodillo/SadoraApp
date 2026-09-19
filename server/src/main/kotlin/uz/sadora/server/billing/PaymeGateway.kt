@@ -39,7 +39,10 @@ class PaymeGateway(
             java.util.Base64.getDecoder().decode(encoded).decodeToString()
         }.getOrNull() ?: return false
         val (login, secret) = decoded.split(":", limit = 2).takeIf { it.size == 2 } ?: return false
-        return login == config.login && secret == key
+        // Compared in constant time, so the response time says nothing about how much
+        // of a guessed key was right.
+        return login == config.login &&
+            java.security.MessageDigest.isEqual(secret.encodeToByteArray(), key.encodeToByteArray())
     }
 
     suspend fun handle(request: JsonObject): JsonObject {
