@@ -463,6 +463,10 @@ interface WelcomeStrings {
  * language question itself changes under her hand as she taps.
  */
 interface OnboardingStrings {
+    /** What a screen reader says for the six code boxes, read as one: "Kod, 6 tadan 3". */
+    fun otpEntered(entered: Int, length: Int): String
+    /** The keypad's ⌫ key, spoken. */
+    val deleteDigit: String
     val languageTitle: String
     val languageSubtitle: String
     val continueLabel: String

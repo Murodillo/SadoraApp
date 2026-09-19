@@ -1,5 +1,6 @@
 package uz.sadora.app.ui.onboarding
 
+import uz.sadora.app.ui.components.animateFloatUnlessReduced
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
@@ -186,7 +187,7 @@ private fun ProgressRing(progress: Float, modifier: Modifier = Modifier) {
     val c = Sadora.colors
     val t = strings.onboarding
     val shimmer = rememberInfiniteTransition(label = "ring-shimmer")
-    val spin by shimmer.animateFloat(
+    val spin by shimmer.animateFloatUnlessReduced(
         initialValue = 0f,
         targetValue = 360f,
         animationSpec = infiniteRepeatable(

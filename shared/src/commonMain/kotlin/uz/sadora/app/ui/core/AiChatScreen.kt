@@ -1,5 +1,6 @@
 package uz.sadora.app.ui.core
 
+import uz.sadora.app.ui.components.animateFloatUnlessReduced
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -289,7 +290,7 @@ private fun quotaLabel(ai: AiController, t: uz.sadora.app.i18n.AiStrings): Strin
 private fun TypingBubble() {
     val c = Sadora.colors
     val transition = rememberInfiniteTransition()
-    val phase by transition.animateFloat(
+    val phase by transition.animateFloatUnlessReduced(
         initialValue = 0f,
         targetValue = 3f,
         animationSpec = infiniteRepeatable(tween(900, easing = LinearEasing)),

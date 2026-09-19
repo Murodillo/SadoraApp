@@ -1,5 +1,6 @@
 package uz.sadora.app.ui.onboarding
 
+import uz.sadora.app.ui.components.animateFloatUnlessReduced
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
@@ -112,7 +113,7 @@ private fun ShieldIllustration(entry: Float, modifier: Modifier = Modifier) {
     }
 
     val turn = rememberInfiniteTransition(label = "cog-turn")
-    val phase by turn.animateFloat(
+    val phase by turn.animateFloatUnlessReduced(
         initialValue = 0f,
         targetValue = 1f,
         animationSpec = infiniteRepeatable(

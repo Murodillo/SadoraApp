@@ -1,5 +1,6 @@
 package uz.sadora.app.ui.journey
 
+import uz.sadora.app.ui.components.animateFloatUnlessReduced
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -351,7 +352,7 @@ private fun CycleDial(state: AppState, modifier: Modifier = Modifier) {
     val reveal = animatedProgress(1f, durationMillis = Motion.Reveal)
     // Today's bead keeps breathing after the ring has settled, so the eye returns to it.
     val transition = rememberInfiniteTransition()
-    val pulse by transition.animateFloat(
+    val pulse by transition.animateFloatUnlessReduced(
         initialValue = 1f,
         targetValue = 1.18f,
         animationSpec = infiniteRepeatable(tween(1800, easing = Motion.Gentle), RepeatMode.Reverse),

@@ -45,6 +45,8 @@ import uz.sadora.app.nav.Tab
 
 private val BarHeight = 66.dp
 private val PillHeight = 50.dp
+/** One line of the tab label at the default font size. */
+private val LabelLine = 14.dp
 private val PillInset = 6.dp
 
 /** One spring for everything that moves on the bar, so nothing arrives out of step. */
@@ -85,7 +87,9 @@ fun SadoraBottomNav(
         BoxWithConstraints(
             Modifier
                 .fillMaxWidth()
-                .height(BarHeight)
+                // The label is one line of caption text; at a large system font that line
+                // is taller, and a fixed 66dp bar cut it off. The bar grows with it.
+                .height(BarHeight + LabelLine * (LocalDensity.current.fontScale - 1f).coerceAtLeast(0f))
                 .shadow(
                     elevation = 18.dp,
                     shape = Radius.chip,

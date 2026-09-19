@@ -402,17 +402,17 @@ fun AiOrb(
     mark: Boolean = true,
 ) {
     val transition = rememberInfiniteTransition()
-    val breath by transition.animateFloat(
+    val breath by transition.animateFloatUnlessReduced(
         initialValue = 1f,
         targetValue = 1.05f,
         animationSpec = infiniteRepeatable(tween(1600), RepeatMode.Reverse),
     )
-    val halo by transition.animateFloat(
+    val halo by transition.animateFloatUnlessReduced(
         initialValue = 1f,
         targetValue = 1.12f,
         animationSpec = infiniteRepeatable(tween(1600), RepeatMode.Reverse),
     )
-    val spin by transition.animateFloat(
+    val spin by transition.animateFloatUnlessReduced(
         initialValue = 0f,
         targetValue = 360f,
         animationSpec = infiniteRepeatable(tween(8000, easing = LinearEasing)),
@@ -500,12 +500,12 @@ private fun DrawScope.drawOrb(breath: Float, halo: Float, spin: Float) {
 @Composable
 fun SadoraLoader(modifier: Modifier = Modifier, size: Dp = 56.dp) {
     val transition = rememberInfiniteTransition()
-    val spin by transition.animateFloat(
+    val spin by transition.animateFloatUnlessReduced(
         initialValue = 0f,
         targetValue = 360f,
         animationSpec = infiniteRepeatable(tween(1000, easing = LinearEasing)),
     )
-    val breath by transition.animateFloat(
+    val breath by transition.animateFloatUnlessReduced(
         initialValue = 0.94f,
         targetValue = 1f,
         animationSpec = infiniteRepeatable(tween(800), RepeatMode.Reverse),

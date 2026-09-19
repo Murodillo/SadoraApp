@@ -85,6 +85,8 @@ object StringsEn : Strings {
     }
 
     override val onboarding = object : OnboardingStrings {
+        override fun otpEntered(entered: Int, length: Int) = "Verification code: $entered of $length digits entered"
+        override val deleteDigit = "Delete the last digit"
         override val languageTitle = "Choose your language"
         override val languageSubtitle = "You can change this later in settings."
         override val continueLabel = "Continue"

@@ -1,5 +1,9 @@
 package uz.sadora.app.ui.onboarding
 
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -147,12 +151,16 @@ internal fun NumberPad(onDigit: (String) -> Unit, onDelete: () -> Unit) {
                     Box(
                         Modifier
                             .weight(1f)
-                            .height(52.dp)
+                            // A floor, not a fixed height, so a large system font grows the key.
+                            .heightIn(min = 52.dp)
                             .clip(Radius.field)
                             .background(if (key.isEmpty()) androidx.compose.ui.graphics.Color.Transparent else c.surface)
-                            .noRippleClickable(enabled = key.isNotEmpty()) {
+                            .noRippleClickable(enabled = key.isNotEmpty(), role = Role.Button) {
                                 if (key == "⌫") onDelete() else onDigit(key)
-                            },
+                            }
+                            .then(
+                                if (key == "⌫") Modifier.clearAndSetSemantics { contentDescription = t.deleteDigit } else Modifier,
+                            ),
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(key, style = Sadora.type.h2, color = c.text)

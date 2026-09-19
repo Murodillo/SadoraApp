@@ -1,5 +1,6 @@
 package uz.sadora.app.ui.components
 
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -70,7 +71,10 @@ fun ProgressRing(
     // grows as a single stroke instead of its parts appearing out of step.
     val grow = if (animate) animatedProgress(1f, delayMillis = delayMillis) else 1f
 
-    Box(modifier.size(size), contentAlignment = Alignment.Center) {
+    // The number inside is text and grows with the system font; the ring grows with it
+    // so a 44sp score does not spill out of a ring drawn for the default size.
+    val scaled = size * LocalDensity.current.fontScale.coerceAtLeast(1f)
+    Box(modifier.size(scaled), contentAlignment = Alignment.Center) {
         Canvas(Modifier.fillMaxWidth().fillMaxHeight()) {
             val stroke = strokeWidth.toPx()
             val inset = stroke / 2f
@@ -392,7 +396,7 @@ fun Skeleton(
     shape: androidx.compose.ui.graphics.Shape = Radius.cardSmall,
 ) {
     val transition = rememberInfiniteTransition()
-    val alpha by transition.animateFloat(
+    val alpha by transition.animateFloatUnlessReduced(
         initialValue = 0.35f,
         targetValue = 0.7f,
         animationSpec = infiniteRepeatable(tween(900), RepeatMode.Reverse),

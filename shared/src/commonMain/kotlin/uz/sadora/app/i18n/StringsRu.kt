@@ -88,6 +88,8 @@ object StringsRu : Strings {
     }
 
     override val onboarding = object : OnboardingStrings {
+        override fun otpEntered(entered: Int, length: Int) = "Код подтверждения: введено $entered из $length"
+        override val deleteDigit = "Удалить последнюю цифру"
         override val languageTitle = "Выберите язык"
         override val languageSubtitle = "Позже это можно изменить в настройках."
         override val continueLabel = "Продолжить"

@@ -1,5 +1,8 @@
 package uz.sadora.app.ui.components
 
+import uz.sadora.app.i18n.strings
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -186,7 +189,13 @@ fun OtpInput(
     modifier: Modifier = Modifier,
 ) {
     val c = Sadora.colors
-    Row(modifier = modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+    val description = strings.onboarding.otpEntered(code.length, length)
+    // One element for the reader: six separate one-digit texts said nothing about how
+    // far along she was, and read out the code a digit at a time.
+    Row(
+        modifier = modifier.fillMaxWidth().clearAndSetSemantics { contentDescription = description },
+        horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+    ) {
         repeat(length) { index ->
             val char = code.getOrNull(index)?.toString() ?: ""
             val active = index == code.length

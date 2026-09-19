@@ -85,6 +85,8 @@ object StringsUz : Strings {
     }
 
     override val onboarding = object : OnboardingStrings {
+        override fun otpEntered(entered: Int, length: Int) = "Tasdiqlash kodi: $length tadan $entered ta raqam kiritildi"
+        override val deleteDigit = "Oxirgi raqamni o'chirish"
         override val languageTitle = "Tilni tanlang"
         override val languageSubtitle = "Keyin sozlamalardan o'zgartira olasiz."
         override val continueLabel = "Davom etish"

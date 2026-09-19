@@ -1,5 +1,6 @@
 package uz.sadora.app.ui.components
 
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -116,7 +117,10 @@ fun SadoraButton(
                 text = text,
                 color = content,
                 style = Sadora.type.h3.copy(fontWeight = FontWeight.SemiBold),
-                maxLines = 1,
+                // Two lines rather than one: at a large system font a single line was cut
+                // off mid-word with nothing to say so. The button grows to fit.
+                maxLines = 2,
+                textAlign = TextAlign.Center,
             )
         }
     }

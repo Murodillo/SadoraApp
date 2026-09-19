@@ -104,7 +104,7 @@ fun StreakBadge(
     val breathing = rememberInfiniteTransition(label = "streak-breath")
     // Only a live streak breathes. A zero is a resting state, and a pulsing zero would
     // read as an alarm about something she has not done.
-    val pulse by breathing.animateFloat(
+    val pulse by breathing.animateFloatUnlessReduced(
         initialValue = if (days > 0) 0.92f else 1f,
         targetValue = 1f,
         animationSpec = infiniteRepeatable(

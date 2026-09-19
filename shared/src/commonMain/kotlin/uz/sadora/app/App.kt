@@ -1,5 +1,8 @@
 package uz.sadora.app
 
+import uz.sadora.app.ui.components.systemReducesMotion
+import uz.sadora.app.ui.components.LocalReduceMotion
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.core.tween
@@ -151,44 +154,47 @@ fun App(graph: SadoraGraph? = null) {
         // One language for the whole tree: a change to it recomposes every screen at
         // once, which is what changing language is.
         ProvideStrings(state.language) {
-            AnimatedContent(
-                targetState = navigator.phase,
-                transitionSpec = { fadeIn() togetherWith fadeOut() },
-                modifier = Modifier.fillMaxSize(),
-            ) { phase ->
-                when (phase) {
-                    AppPhase.Splash -> SplashGate(
-                        graph = graph,
-                        state = state,
-                        onResolved = navigator::goTo,
-                    )
+            // The phone's "less motion" setting, read once for every endless animation.
+            CompositionLocalProvider(LocalReduceMotion provides systemReducesMotion()) {
+                AnimatedContent(
+                    targetState = navigator.phase,
+                    transitionSpec = { fadeIn() togetherWith fadeOut() },
+                    modifier = Modifier.fillMaxSize(),
+                ) { phase ->
+                    when (phase) {
+                        AppPhase.Splash -> SplashGate(
+                            graph = graph,
+                            state = state,
+                            onResolved = navigator::goTo,
+                        )
 
-                    AppPhase.Onboarding -> OnboardingFlow(
-                        state = state,
-                        controller = controllers.account,
-                        onFinished = {
-                            controllers.analytics.event(AnalyticsEvents.ONBOARDING_COMPLETED)
-                            navigator.goTo(AppPhase.Main)
-                        },
-                        onSignInInstead = { navigator.goTo(AppPhase.SignIn) },
-                    )
-
-                    AppPhase.SignIn -> Box(Modifier.fillMaxSize().statusBarsPadding()) {
-                        SignInScreen(
+                        AppPhase.Onboarding -> OnboardingFlow(
                             state = state,
                             controller = controllers.account,
-                            onSignedIn = {
-                                controllers.analytics.event(AnalyticsEvents.SIGNED_IN)
-                                navigator.goTo(it)
+                            onFinished = {
+                                controllers.analytics.event(AnalyticsEvents.ONBOARDING_COMPLETED)
+                                navigator.goTo(AppPhase.Main)
                             },
-                            onRegisterInstead = { navigator.goTo(AppPhase.Onboarding) },
+                            onSignInInstead = { navigator.goTo(AppPhase.SignIn) },
                         )
-                    }
 
-                    AppPhase.Main -> MainShell(state, navigator, controllers)
+                        AppPhase.SignIn -> Box(Modifier.fillMaxSize().statusBarsPadding()) {
+                            SignInScreen(
+                                state = state,
+                                controller = controllers.account,
+                                onSignedIn = {
+                                    controllers.analytics.event(AnalyticsEvents.SIGNED_IN)
+                                    navigator.goTo(it)
+                                },
+                                onRegisterInstead = { navigator.goTo(AppPhase.Onboarding) },
+                            )
+                        }
+
+                        AppPhase.Main -> MainShell(state, navigator, controllers)
+                    }
                 }
             }
-        }
+            }
     }
 }
 

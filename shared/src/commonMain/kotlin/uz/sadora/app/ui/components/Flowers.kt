@@ -183,7 +183,7 @@ fun PetalShower(visible: Boolean, modifier: Modifier = Modifier, count: Int = 18
     if (!visible) return
     val c = Sadora.colors
     val transition = rememberInfiniteTransition(label = "petal-shower")
-    val clock by transition.animateFloat(
+    val clock by transition.animateFloatUnlessReduced(
         initialValue = 0f,
         targetValue = 1f,
         animationSpec = infiniteRepeatable(tween(7000, easing = LinearEasing), RepeatMode.Restart),

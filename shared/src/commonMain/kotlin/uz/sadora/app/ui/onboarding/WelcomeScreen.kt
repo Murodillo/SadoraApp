@@ -1,5 +1,6 @@
 package uz.sadora.app.ui.onboarding
 
+import uz.sadora.app.ui.components.animateFloatUnlessReduced
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -158,7 +159,7 @@ fun BloomField(
     }
 
     val drift = rememberInfiniteTransition(label = "bloom-drift")
-    val phase by drift.animateFloat(
+    val phase by drift.animateFloatUnlessReduced(
         initialValue = 0f,
         targetValue = 1f,
         animationSpec = infiniteRepeatable(
