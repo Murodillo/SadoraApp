@@ -16,6 +16,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -23,6 +24,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -36,16 +40,22 @@ import uz.sadora.app.design.Spacing
 import uz.sadora.app.i18n.strings
 import uz.sadora.app.model.AppState
 import uz.sadora.app.ui.components.ButtonTone
+import uz.sadora.app.ui.components.CameraAccess
+import uz.sadora.app.ui.components.CameraShutter
+import uz.sadora.app.ui.components.CapturedPhoto
 import uz.sadora.app.ui.components.EmptyState
+import uz.sadora.app.ui.components.LiveCamera
 import uz.sadora.app.ui.components.SadoraButton
 import uz.sadora.app.ui.components.SadoraLoader
 import uz.sadora.app.ui.components.SadoraTopBar
 import uz.sadora.app.ui.components.noRippleClickable
+import uz.sadora.app.ui.components.pressable
+import uz.sadora.app.ui.components.rememberOpenAppSettings
 import uz.sadora.app.ui.components.rememberPhotoCapture
 import uz.sadora.contract.FoodScanResult
 
 /**
- * "Ovqat skaneri" — camera, the wait, and the result, in one screen.
+ * "Ovqat skaneri" — a live viewfinder, the wait, and the result, in one screen.
  *
  * It is one screen because it is one action: the three routes it replaced were stitched
  * together by a timer, which is why the middle one could show a ticking list of steps
@@ -68,10 +78,16 @@ fun FoodScannerScreen(
     val scope = rememberCoroutineScope()
 
     var stage by remember { mutableStateOf<ScanStage>(ScanStage.Framing) }
-    val capture = rememberPhotoCapture { photo ->
+    // Both roads — the page's own camera and the gallery — join here, before the upload.
+    // Which photo the page is waiting on. Cancelling moves it on, so an answer to a
+    // photo she gave up on cannot land over the next one she takes.
+    var attempt by remember { mutableIntStateOf(0) }
+    val read: (CapturedPhoto) -> Unit = { photo ->
+        val mine = ++attempt
         stage = ScanStage.Reading
         scope.launch {
             val result = health.scanFood(photo.base64, photo.mimeType)
+            if (mine != attempt) return@launch
             stage = when {
                 result == null -> ScanStage.Failed
                 !result.isFood -> ScanStage.NotFood(result.message)
@@ -79,17 +95,24 @@ fun FoodScannerScreen(
             }
         }
     }
+    val picker = rememberPhotoCapture(read)
 
     when (val current = stage) {
         ScanStage.Framing -> Viewfinder(
-            capture = capture::takePhoto,
-            gallery = capture::pickFromGallery,
+            onCaptured = read,
+            gallery = picker::pickFromGallery,
             onManualEntry = onManualEntry,
             onClose = onClose,
             modifier = modifier,
         )
 
-        ScanStage.Reading -> ReadingPhoto(onCancel = { stage = ScanStage.Framing }, modifier = modifier)
+        ScanStage.Reading -> ReadingPhoto(
+            onCancel = {
+                attempt++
+                stage = ScanStage.Framing
+            },
+            modifier = modifier,
+        )
 
         ScanStage.Failed -> ScanProblem(
             title = t.scanFailed,
@@ -129,7 +152,7 @@ private sealed interface ScanStage {
 
 @Composable
 private fun Viewfinder(
-    capture: () -> Unit,
+    onCaptured: (CapturedPhoto) -> Unit,
     gallery: () -> Unit,
     onManualEntry: () -> Unit,
     onClose: () -> Unit,
@@ -137,6 +160,9 @@ private fun Viewfinder(
 ) {
     val c = Sadora.colors
     val t = strings.modules
+    val shutter = remember { CameraShutter() }
+    var access by remember { mutableStateOf(CameraAccess.Starting) }
+    val live = access == CameraAccess.Live
 
     Column(modifier.fillMaxSize().navigationBarsPadding()) {
         SadoraTopBar(t.scannerTitle, onBack = onClose, centered = true)
@@ -153,27 +179,44 @@ private fun Viewfinder(
                 textAlign = TextAlign.Center,
             )
 
-            // The framing guide. The camera itself is the system's, so this is the
-            // instruction rather than a preview pretending to be one.
+            // The camera itself, in the page. Black in both themes: it is a viewfinder,
+            // and the frame before the first image should look like one.
             Box(
                 Modifier
                     .fillMaxWidth()
-                    .aspectRatio(0.85f)
+                    .weight(1f)
                     .clip(Radius.card)
-                    .background(c.text.copy(alpha = 0.9f))
-                    .noRippleClickable(onClick = capture),
+                    .background(Color.Black),
                 contentAlignment = Alignment.Center,
             ) {
-                Box(
-                    Modifier
-                        .fillMaxWidth(0.78f)
-                        .aspectRatio(1f)
-                        .border(2.dp, c.primary, Radius.card),
+                LiveCamera(
+                    shutter = shutter,
+                    onAccess = { access = it },
+                    onCaptured = onCaptured,
+                    modifier = Modifier.fillMaxSize(),
                 )
-                Text("🍽️", style = Sadora.type.display)
+                when (access) {
+                    CameraAccess.Live -> Box(
+                        Modifier
+                            .fillMaxWidth(0.78f)
+                            .aspectRatio(1f)
+                            .border(2.dp, Color.White.copy(alpha = 0.85f), Radius.card),
+                    )
+
+                    CameraAccess.Starting -> SadoraLoader(size = 36.dp)
+
+                    CameraAccess.Denied -> CameraNotice(
+                        title = t.cameraDenied,
+                        body = t.cameraDeniedBody,
+                        actionText = t.cameraOpenSettings,
+                        onAction = rememberOpenAppSettings(),
+                    )
+
+                    CameraAccess.Missing -> CameraNotice(title = null, body = t.cameraMissing)
+                }
             }
 
-            Text(t.scannerLightHint, style = Sadora.type.body, color = c.muted)
+            Text(t.scannerLightHint, style = Sadora.type.body, color = c.muted, textAlign = TextAlign.Center)
         }
 
         Column(
@@ -188,12 +231,15 @@ private fun Viewfinder(
             ) {
                 CaptureSideAction(SadoraIcons.Document, t.scannerGallery, onClick = gallery)
 
+                // Dimmed until frames arrive: a shutter that looks ready and does nothing
+                // is the button this page used to have.
                 Box(
                     Modifier
                         .size(76.dp)
+                        .graphicsLayer { alpha = if (live) 1f else 0.4f }
                         .clip(Radius.chip)
                         .background(c.heroGradient)
-                        .noRippleClickable(onClick = capture),
+                        .pressable(enabled = live, pressedScale = 0.92f, role = Role.Button, onClick = shutter::fire),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
@@ -206,6 +252,29 @@ private fun Viewfinder(
 
                 CaptureSideAction(SadoraIcons.Pencil, t.scannerManual, onClick = onManualEntry)
             }
+        }
+    }
+}
+
+/** What the viewfinder says when there is no picture to show in it. */
+@Composable
+private fun CameraNotice(
+    title: String?,
+    body: String,
+    actionText: String? = null,
+    onAction: () -> Unit = {},
+) {
+    Column(
+        Modifier.padding(Spacing.lg),
+        verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        if (title != null) {
+            Text(title, style = Sadora.type.h3, color = Color.White, textAlign = TextAlign.Center)
+        }
+        Text(body, style = Sadora.type.body, color = Color.White.copy(alpha = 0.8f), textAlign = TextAlign.Center)
+        if (actionText != null) {
+            SadoraButton(actionText, onAction, tone = ButtonTone.Secondary)
         }
     }
 }

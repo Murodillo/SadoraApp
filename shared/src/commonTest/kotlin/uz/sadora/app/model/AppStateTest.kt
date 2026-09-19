@@ -152,14 +152,15 @@ class AppStateTest {
         override fun doseTaken(doseId: String) { events += "taken:$doseId" }
         override fun doseSkipped(doseId: String) { events += "skipped:$doseId" }
         override fun mealLogged(meal: Meal) { events += "meal:${meal.slot}" }
-        override fun checkInChanged(mood: Mood, energy: Int, stress: Int) { events += "checkin:${mood.name}:$energy:$stress" }
+        override fun mealDeleted(id: String) { events += "meal-deleted:$id" }
+        override fun checkInChanged(mood: Mood?, energy: Int?, stress: Int?) { events += "checkin:${mood?.name}:$energy:$stress" }
         override fun practiceLogged(kind: PracticeKind, seconds: Int) { events += "practice:${kind.name}:$seconds" }
         override fun journalSaved(body: String) { events += "journal:$body" }
         override fun journalDeleted(id: String) { events += "journal-deleted:$id" }
     }
 
     @Test
-    fun `a check-in sends all three dials and clamps them`() {
+    fun `a check-in sends only the dials she has set and clamps them`() {
         val sync = RecordingSync()
         val s = state().apply { this.sync = sync }
 
@@ -171,7 +172,8 @@ class AppStateTest {
         assertEquals(5, s.energy)
         assertEquals(1, s.stress)
         assertEquals(
-            listOf("checkin:Great:4:2", "checkin:Great:5:2", "checkin:Great:5:1"),
+            // Never the defaults: 4 and 2 are what the store holds, not what she said.
+            listOf("checkin:Great:null:null", "checkin:Great:5:null", "checkin:Great:5:1"),
             sync.events,
         )
     }
@@ -233,6 +235,62 @@ class AppStateTest {
 
     private fun LocalDate.minus(days: Int): LocalDate =
         kotlinx.datetime.LocalDate.fromEpochDays(toEpochDays() - days)
+
+    @Test
+    fun `a new day starts with nothing eaten or drunk`() {
+        // These opened at 1.2 l and 1 240 kcal, which a slow first load showed as her day.
+        val s = state()
+        assertEquals(0, s.waterMl)
+        assertEquals(0, s.caloriesEaten)
+        assertEquals(0, s.proteinG + s.fatG + s.carbsG)
+    }
+
+    @Test
+    fun `deleting a meal takes its totals back and tells the server which one`() {
+        val sync = RecordingSync()
+        val s = state().apply { this.sync = sync }
+        val eggs = Meal("m-1", MealSlot.DINNER, "20:13", "Qovurilgan tuxum", 180, 13, 14, 2)
+        s.logMeal(eggs)
+
+        s.deleteMeal(eggs)
+
+        assertTrue(s.meals.isEmpty())
+        assertEquals(0, s.caloriesEaten)
+        assertEquals(0, s.proteinG + s.fatG + s.carbsG)
+        assertEquals("meal-deleted:m-1", sync.events.last())
+        // A second delete of the same row is a no-op, not a second request.
+        s.deleteMeal(eggs)
+        assertEquals(1, sync.events.count { it.startsWith("meal-deleted") })
+    }
+
+    @Test
+    fun `a dial she has not set today is not shown as set`() {
+        val s = state()
+        assertFalse(s.energyLoggedToday)
+        assertFalse(s.stressLoggedToday)
+
+        s.setCheckIn(stress = 3)
+
+        assertTrue(s.stressLoggedToday)
+        assertFalse(s.energyLoggedToday)
+        assertFalse(s.moodLoggedToday)
+    }
+
+    @Test
+    fun `a comment the server refused is taken back off the post`() {
+        val s = state()
+        s.addComment("p1", "salom")
+        s.addComment("p1", "ikkinchi")
+
+        s.dropOwnComment("p1", "salom")
+
+        val post = CommunityPost(
+            id = "p1", alias = "a", tint = 0, topic = CommunityTopic.All, body = "b",
+            likes = 0, createdAt = kotlin.time.Clock.System.now(),
+        )
+        assertEquals(listOf("ikkinchi"), s.commentsOf(post).map { it.body })
+    }
+
 }
 
 class CycleAnchorTest {
@@ -279,7 +337,7 @@ class AppStateJournalTest {
         override fun doseTaken(doseId: String) {}
         override fun doseSkipped(doseId: String) {}
         override fun mealLogged(meal: Meal) {}
-        override fun checkInChanged(mood: Mood, energy: Int, stress: Int) {}
+        override fun checkInChanged(mood: Mood?, energy: Int?, stress: Int?) {}
         override fun practiceLogged(kind: PracticeKind, seconds: Int) {}
         override fun journalSaved(body: String) { events += "journal:$body" }
         override fun journalDeleted(id: String) { events += "journal-deleted:$id" }

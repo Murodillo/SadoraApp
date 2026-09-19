@@ -1,8 +1,10 @@
 package uz.sadora.app.ui.components
 
+import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Matrix
+import android.media.ExifInterface
 import android.net.Uri
 import android.util.Base64
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -15,45 +17,26 @@ import androidx.compose.ui.platform.LocalContext
 import java.io.ByteArrayOutputStream
 
 /**
- * The camera's own thumbnail preview and the system photo picker.
+ * The system photo picker.
  *
- * `TakePicturePreview` hands back a bitmap directly, which avoids a FileProvider and a
- * writable path for one throwaway frame. It is a small image — that is the point: the
- * model only needs to see what the food is, and a 12-megapixel frame is several
- * megabytes of upload for no extra accuracy.
- *
- * Neither needs a runtime permission, and the manifest deliberately declares none:
- * ACTION_IMAGE_CAPTURE is served by the camera app, and `PickVisualMedia` returns only
- * the image the user picked. See the note in AndroidManifest.xml — declaring CAMERA is
- * what *creates* a permission problem here rather than solving one.
+ * It needs no runtime permission: `PickVisualMedia` returns only the image the user
+ * picked. The camera is not here — it is [LiveCamera], which draws its preview in the page.
  */
 @Composable
 actual fun rememberPhotoCapture(onCaptured: (CapturedPhoto) -> Unit): PhotoCapture {
     val context = LocalContext.current
     val callback = rememberUpdatedState(onCaptured)
 
-    val camera = rememberLauncherForActivityResult(ActivityResultContracts.TakePicturePreview()) { bitmap ->
-        bitmap?.encode()?.let { callback.value(it) }
-    }
     val gallery = rememberLauncherForActivityResult(
         ActivityResultContracts.PickVisualMedia(),
     ) { uri: Uri? ->
         uri ?: return@rememberLauncherForActivityResult
-        val bitmap = runCatching {
-            context.contentResolver.openInputStream(uri).use { BitmapFactory.decodeStream(it) }
-        }.getOrNull()
-        bitmap?.encode()?.let { callback.value(it) }
+        context.decodeSampled(uri)?.let { (bitmap, rotation) -> bitmap.encode(rotation) }?.let { callback.value(it) }
     }
 
-    return remember(camera, gallery) {
+    return remember(gallery) {
         object : PhotoCapture {
             override val available = true
-
-            // A device with no camera app at all throws rather than returning nothing,
-            // and a scanner that crashes is worse than one that quietly does nothing.
-            override fun takePhoto() {
-                runCatching { camera.launch(null) }
-            }
 
             override fun pickFromGallery() {
                 runCatching {
@@ -66,16 +49,52 @@ actual fun rememberPhotoCapture(onCaptured: (CapturedPhoto) -> Unit): PhotoCaptu
     }
 }
 
-/** Scaled to fit [MaxEdge] and encoded as JPEG, because that is what the endpoint takes. */
-private fun Bitmap.encode(): CapturedPhoto? {
-    val scale = MaxEdge.toFloat() / maxOf(width, height).coerceAtLeast(1)
-    val scaled = if (scale >= 1f) this else Bitmap.createBitmap(
+/**
+ * The picked image, decoded no larger than it needs to be, with the turn its EXIF asks for.
+ *
+ * Decoding at full size first is what this avoids: a 200-megapixel frame from an S23
+ * Ultra is 800 MB as a bitmap, and the endpoint wants a 1024-pixel edge. `decodeStream`
+ * also ignores EXIF, so a portrait photo reached the model lying on its side.
+ */
+private fun Context.decodeSampled(uri: Uri): Pair<Bitmap, Int>? = runCatching {
+    val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+    contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, bounds) }
+    var sample = 1
+    while (maxOf(bounds.outWidth, bounds.outHeight) / (sample * 2) >= MaxEdge) sample *= 2
+
+    val bitmap = contentResolver.openInputStream(uri)?.use {
+        BitmapFactory.decodeStream(it, null, BitmapFactory.Options().apply { inSampleSize = sample })
+    } ?: return null
+    val orientation = contentResolver.openInputStream(uri)?.use {
+        ExifInterface(it).getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)
+    }
+    val rotation = when (orientation) {
+        ExifInterface.ORIENTATION_ROTATE_90 -> 90
+        ExifInterface.ORIENTATION_ROTATE_180 -> 180
+        ExifInterface.ORIENTATION_ROTATE_270 -> 270
+        else -> 0
+    }
+    bitmap to rotation
+}.getOrNull()
+
+/**
+ * Scaled to fit [MaxEdge] and encoded as JPEG, because that is what the endpoint takes.
+ *
+ * [rotationDegrees] is what the sensor says the frame needs to stand upright; a camera
+ * frame arrives sideways and a gallery pick does not.
+ */
+internal fun Bitmap.encode(rotationDegrees: Int = 0): CapturedPhoto? {
+    val scale = minOf(1f, MaxEdge.toFloat() / maxOf(width, height).coerceAtLeast(1))
+    val scaled = if (scale >= 1f && rotationDegrees == 0) this else Bitmap.createBitmap(
         this,
         0,
         0,
         width,
         height,
-        Matrix().apply { postScale(scale, scale) },
+        Matrix().apply {
+            postScale(scale, scale)
+            postRotate(rotationDegrees.toFloat())
+        },
         true,
     )
     val bytes = ByteArrayOutputStream()

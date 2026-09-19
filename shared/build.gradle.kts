@@ -50,6 +50,11 @@ kotlin {
             implementation(libs.androidx.health.connect)
             // Google Play subscriptions, for the build installed from Play.
             implementation(libs.play.billing)
+            // The food scanner's own viewfinder: a preview in the page and a frame in memory.
+            implementation(libs.androidx.camera.core)
+            implementation(libs.androidx.camera.camera2)
+            implementation(libs.androidx.camera.lifecycle)
+            implementation(libs.androidx.camera.view)
         }
         iosMain.dependencies {
             implementation(libs.ktor.client.darwin)

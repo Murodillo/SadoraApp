@@ -38,6 +38,7 @@ fun MindNutritionScreen(
     onOpen: (Route) -> Unit,
     onAddWater: () -> Unit,
     modifier: Modifier = Modifier,
+    onQuickWater: (Int) -> Unit = { onAddWater() },
 ) {
     val t = strings.tabs
     val switch: @Composable () -> Unit = {
@@ -69,6 +70,7 @@ fun MindNutritionScreen(
                 state = state,
                 onOpen = onOpen,
                 onAddWater = onAddWater,
+                onQuickWater = onQuickWater,
                 underBar = switch,
             )
         }

@@ -9,13 +9,17 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.graphics.Color
@@ -25,6 +29,8 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import kotlin.math.roundToInt
+import kotlin.time.TimeSource
+import kotlinx.coroutines.flow.first
 
 /**
  * The app's motion vocabulary.
@@ -151,10 +157,50 @@ fun AnimatedNumber(
 }
 
 /**
+ * Whether a screen is still opening.
+ *
+ * The rise-and-fade is an entrance, and an entrance happens once: a card that a fling
+ * brings into view a second later is not arriving, it was always there. A lazy list
+ * composes such a card fresh, though, so without this every one of them started
+ * transparent and spent [Motion.Standard] fading in — at speed the list read as blank
+ * cards catching up with the finger. The gate closes at the first scroll or when the
+ * opening has had its time, whichever is sooner, and everything after that is simply drawn.
+ */
+class EntranceGate {
+    private val born = TimeSource.Monotonic.markNow()
+
+    /** Set at the first drag or fling; deliberately not snapshot state, nothing redraws on it. */
+    var scrolled = false
+
+    val open: Boolean
+        get() = !scrolled && born.elapsedNow().inWholeMilliseconds <= OpeningMillis
+
+    private companion object {
+        /** How long after a screen opens its entries still count as the opening. */
+        const val OpeningMillis = 900L
+    }
+}
+
+/** Null outside a scrolling list — a lone card on a static screen always plays its entrance. */
+val LocalEntranceGate = staticCompositionLocalOf<EntranceGate?> { null }
+
+/** Provides an [EntranceGate] that closes the first time [listState] moves. */
+@Composable
+fun EntranceGated(listState: LazyListState, content: @Composable () -> Unit) {
+    val gate = remember { EntranceGate() }
+    LaunchedEffect(listState) {
+        snapshotFlow { listState.isScrollInProgress }.first { it }
+        gate.scrolled = true
+    }
+    CompositionLocalProvider(LocalEntranceGate provides gate, content = content)
+}
+
+/**
  * Fade-and-rise entrance, played once when the element is first composed.
  *
  * [index] staggers a group so a screen's cards arrive in reading order rather than
- * all at once; pass the card's position in the group.
+ * all at once; pass the card's position in the group. Inside a list whose
+ * [EntranceGate] has closed it does nothing at all.
  */
 fun Modifier.appearFromBelow(
     index: Int = 0,
@@ -162,7 +208,13 @@ fun Modifier.appearFromBelow(
     durationMillis: Int = Motion.Standard,
     /** Overrides the stagger [index] implies — for an item that arrives on its own. */
     delayMillis: Int = index * Motion.Stagger,
+    /** False draws the element in place — a chat's history, as opposed to its newest line. */
+    animate: Boolean = true,
 ): Modifier = composed {
+    val gate = LocalEntranceGate.current
+    // Decided once, at first composition: an entrance already under way finishes.
+    val plays = remember { animate && gate?.open != false }
+    if (!plays) return@composed this
     var started by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { started = true }
     val spec = tween<Float>(durationMillis, delayMillis, Motion.Emphasized)

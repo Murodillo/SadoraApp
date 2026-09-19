@@ -75,7 +75,7 @@ fun InsightsScreen(
         ScreenContent {
             item {
                 SegmentedControl(
-                    options = listOf("7 kun", "30 kun", "90 kun"),
+                    options = listOf(7, 30, 90).map { strings.common.days(it) },
                     selectedIndex = range,
                     onSelect = { range = it },
                     lockedIndices = locked,
@@ -160,8 +160,7 @@ private fun LazyListScope.insightsContent(
                         color = Sadora.colors.text,
                     )
                     Text(
-                        "Kamida sakkiz kunlik yozuv kerak, va farq sezilarli bo'lishi shart — " +
-                            "aks holda hech narsa yozmaymiz.",
+                        t.noCorrelationBody,
                         style = Sadora.type.body,
                         color = Sadora.colors.muted,
                     )

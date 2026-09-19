@@ -172,7 +172,8 @@ fun AiChatScreen(
                 }
             }
 
-            items(messages.size) { index -> ChatBubble(messages[index]) }
+            // Only the newest line arrives; history scrolled back into view is simply there.
+            items(messages.size) { index -> ChatBubble(messages[index], arrives = index == messages.lastIndex) }
 
             if (ai.busy) {
                 item { TypingBubble() }
@@ -315,7 +316,7 @@ private fun TypingBubble() {
 }
 
 @Composable
-private fun ChatBubble(message: ChatMessage) {
+private fun ChatBubble(message: ChatMessage, arrives: Boolean) {
     val c = Sadora.colors
     val shape = if (message.fromUser) {
         RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp, bottomStart = 20.dp, bottomEnd = 6.dp)
@@ -323,7 +324,7 @@ private fun ChatBubble(message: ChatMessage) {
         RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp, bottomStart = 6.dp, bottomEnd = 20.dp)
     }
     Row(
-        Modifier.fillMaxWidth().appearFromBelow(distance = 10.dp),
+        Modifier.fillMaxWidth().appearFromBelow(distance = 10.dp, animate = arrives),
         horizontalArrangement = if (message.fromUser) Arrangement.End else Arrangement.Start,
     ) {
         Column(

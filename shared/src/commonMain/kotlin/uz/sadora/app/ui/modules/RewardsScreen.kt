@@ -75,7 +75,8 @@ fun RewardsScreen(
         ScreenContent {
             item {
                 BalanceCard(
-                    balance = summary?.coins?.balance ?: state.coins,
+                    // The store's figure: a purchase updates it at once, the summary only on reload.
+                    balance = state.coins,
                     earned = summary?.coins?.earned ?: 0,
                     spent = summary?.coins?.spent ?: 0,
                 )

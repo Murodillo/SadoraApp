@@ -71,7 +71,8 @@ class CommunityController(
     suspend fun loadProfile(alias: String) {
         val api = api ?: return
         if (profile?.alias != alias) profile = null
-        calls.run(silent = true) { api.profile(alias) }?.let { profile = it.toAppProfile() }
+        // Loud while there is nothing to show: the skeleton used to sit there for good.
+        calls.run(silent = profile != null) { api.profile(alias) }?.let { profile = it.toAppProfile() }
     }
 
     /** Her bio and her door. Null leaves a field as it is. */
@@ -97,7 +98,9 @@ class CommunityController(
 
     suspend fun refreshFeed() {
         val api = api ?: return
-        calls.run(silent = true) { api.feed(limit = FEED_LIMIT) }?.let { page ->
+        // Quiet once there is a feed to keep showing. The first read is not: offline it
+        // failed without a word, and the screen said "hali post yo'q — birinchisini yozing".
+        calls.run(silent = loaded) { api.feed(limit = FEED_LIMIT) }?.let { page ->
             state.replaceCommunityFeed(
                 posts = page.items.map { it.toAppPost() },
                 liked = page.items.filter { it.liked }.map { it.id }.toSet(),
@@ -118,16 +121,17 @@ class CommunityController(
 
     suspend fun setLiked(postId: String, liked: Boolean): Boolean {
         val api = api ?: return true
-        // Silent: a like that failed is undone by the refresh, not announced.
+        // Silent: a like that failed is undone, not announced. Undone here and not by a
+        // refresh — offline the refresh fails too, and the heart and its count stayed wrong.
         val result = calls.run(silent = true) { api.setLiked(postId, liked) }
-        if (result == null) refreshFeed()
+        if (result == null) state.revertLike(postId, liked)
         return result != null
     }
 
     suspend fun setSaved(postId: String, saved: Boolean): Boolean {
         val api = api ?: return true
         val result = calls.run(silent = true) { api.setSaved(postId, saved) }
-        if (result == null) refreshFeed()
+        if (result == null) state.revertSaved(postId, saved)
         return result != null
     }
 
@@ -138,6 +142,9 @@ class CommunityController(
         refreshFeed()
         return true
     }
+
+    /** The store's optimistic copy of a comment the server refused. */
+    fun dropComment(postId: String, body: String) = state.dropOwnComment(postId, body)
 
     suspend fun createPost(topic: CommunityTopic, body: String): Boolean {
         val api = api ?: return true
@@ -151,6 +158,8 @@ class CommunityController(
         val api = api ?: return true
         calls.run { api.deletePost(postId) } ?: return false
         refreshFeed()
+        // Her own profile lists it too; it stayed there, and opened as "o'chirilgan".
+        profile?.let { shown -> loadProfile(shown.alias) }
         return true
     }
 
@@ -193,7 +202,7 @@ class CommunitySyncBridge(
     }
 
     override fun commentAdded(postId: String, body: String) {
-        scope.launch { community.addComment(postId, body) }
+        scope.launch { if (!community.addComment(postId, body)) community.dropComment(postId, body) }
     }
 
     override fun postCreated(topic: CommunityTopic, body: String) {

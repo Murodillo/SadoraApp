@@ -1,5 +1,6 @@
 package uz.sadora.app.ui.modules
 
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -84,6 +85,11 @@ fun PaywallScreen(
             selectedPlan = plans.firstOrNull { it.highlighted }?.id ?: plans.firstOrNull()?.id
         }
     }
+
+    // The wait below runs in this screen's scope, so leaving cancels it — and used to
+    // leave `pending` set on a controller that lives all session: every later visit found
+    // both pay buttons reading "kutilmoqda" and disabled until the app was restarted.
+    DisposableEffect(Unit) { onDispose { billing.cancelPending() } }
 
     /** Opens the provider's page, then waits for its callback to reach the server. */
     fun pay(provider: PaymentProvider) {
@@ -218,7 +224,9 @@ fun PaywallScreen(
                         )
                     }
 
-                    payable.forEach { provider ->
+                    // Paid is the end of this screen. The buttons used to come back under
+                    // "To'lov qabul qilindi", one tap from a second checkout.
+                    if (!billing.paid && !state.isPremium) payable.forEach { provider ->
                         PremiumCtaButton(
                             when {
                                 waiting -> t.paymentPending

@@ -41,7 +41,9 @@ import uz.sadora.contract.CyclePhase as WirePhase
  */
 
 fun AppState.applyCycle(status: CycleStatus) {
+    val dayMoved = today != status.today
     today = status.today
+    if (dayMoved) recountStageWeeks()
     status.cycleDay?.let { cycleDay = it }
     status.prediction.averageCycleLength?.let { averageCycleLength = it }
     status.prediction.averagePeriodLength?.let { averagePeriodLength = it }
@@ -67,6 +69,8 @@ fun AppState.applyDay(log: DailyLog, catalogue: List<SymptomDefinition>) {
     moodLoggedToday = log.mood != null
     log.energy?.let { energy = it.coerceIn(1, 5) }
     log.stress?.let { stress = it.coerceIn(1, 5) }
+    energyLoggedToday = log.energy != null
+    stressLoggedToday = log.stress != null
     val labels = catalogue.associate { it.key to it.label }
     symptoms.clear()
     symptoms.addAll(log.symptoms.mapNotNull { labels[it.key] })

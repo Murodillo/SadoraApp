@@ -1,5 +1,10 @@
 package uz.sadora.app.ui.modules
 
+import androidx.compose.foundation.layout.widthIn
+import uz.sadora.app.design.MinTouchTarget
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -138,7 +143,9 @@ fun FoodScanScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween,
                     ) {
-                        Column {
+                        // Weighted, so the hint wraps instead of pushing "+" off the card —
+                        // on an S23 only "−" was left on screen and "1,0" broke in two.
+                        Column(Modifier.weight(1f)) {
                             Text(t.portion, style = Sadora.type.h3, color = c.text)
                             Text(t.portionHint, style = Sadora.type.body, color = c.muted)
                         }
@@ -146,9 +153,17 @@ fun FoodScanScreen(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                         ) {
-                            StepperButton("−") { portion = (portion - 0.5f).coerceAtLeast(0.5f) }
-                            Text(Fmt.oneDecimal(portion), style = Sadora.type.h2, color = c.text)
-                            StepperButton("+") { portion = (portion + 0.5f).coerceAtMost(5f) }
+                            StepperButton("−", t.portionLess) { portion = (portion - 0.5f).coerceAtLeast(0.5f) }
+                            Text(
+                                Fmt.oneDecimal(portion),
+                                style = Sadora.type.h2,
+                                color = c.text,
+                                maxLines = 1,
+                                softWrap = false,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.widthIn(min = 44.dp),
+                            )
+                            StepperButton("+", t.portionMore) { portion = (portion + 0.5f).coerceAtMost(5f) }
                         }
                     }
                 }
@@ -199,14 +214,16 @@ private fun NutrientLine(label: String, value: String) {
 }
 
 @Composable
-private fun StepperButton(glyph: String, onClick: () -> Unit) {
+private fun StepperButton(glyph: String, label: String, onClick: () -> Unit) {
     val c = Sadora.colors
     Box(
         Modifier
-            .size(36.dp)
+            .size(MinTouchTarget)
             .clip(Radius.chip)
             .background(c.surface2)
-            .noRippleClickable(onClick = onClick),
+            .noRippleClickable(role = Role.Button, onClick = onClick)
+            // The glyph is read as "minus" or not at all; the label says what it does.
+            .clearAndSetSemantics { contentDescription = label },
         contentAlignment = Alignment.Center,
     ) {
         Text(glyph, style = Sadora.type.h2, color = c.text)

@@ -25,8 +25,8 @@ private fun planFeatures(): List<PlanFeature> = strings.modules.let {
     listOf(
         PlanFeature(it.featureCycleMood, "✓", "✓"),
         PlanFeature(it.featureFoodDiary, "✓", "✓"),
-        PlanFeature(it.featureAiChat, "—", "20/kun"),
-        PlanFeature(it.featureScanner, "—", "30/oy"),
+        PlanFeature(it.featureAiChat, "—", it.perDayCount(20)),
+        PlanFeature(it.featureScanner, "—", it.perMonthCount(30)),
         PlanFeature(it.featureLongInsights, "—", "✓"),
     )
 }

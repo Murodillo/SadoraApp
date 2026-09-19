@@ -701,6 +701,7 @@ object StringsRu : Strings {
         override val postsAnonymously = "Пост выйдет под псевдонимом — вашего имени не будет видно."
         override val yourOwnPost = "Это ваш пост."
         override val deletePost = "Удалить пост"
+        override val deletePostConfirm = "Да, удалить навсегда"
         override val newPost = "Новый пост"
         override val postSent = "Пост отправлен"
         override val comments = "Комментарии"
@@ -804,6 +805,9 @@ object StringsRu : Strings {
         override val stress = "Стресс"
         override val energy = "Энергия"
         override val levels = listOf("Очень низкий", "Низкий", "Средний", "Высокий", "Очень высокий")
+        override val moodNotLogged = "Как вы себя чувствуете сегодня?"
+        override val moodNotLoggedCaption = "Выберите одно из лиц ниже."
+        override val dialNotSet = "Выберите"
 
         override val journal = "Дневник"
         override val journalPrompt = "Как вы себя чувствуете?"
@@ -842,6 +846,9 @@ object StringsRu : Strings {
         override val addMeal = "Добавить приём пищи"
         override val emptyTitle = "Сегодня приёмов пищи ещё нет"
         override val emptyBody = "Добавьте первое блюдо — калории и макросы соберутся здесь."
+        override val deleteMealTitle = "Удалить блюдо"
+        override val deleteMealBody = "Блюдо будет убрано из сегодняшнего подсчёта."
+        override val nothingLoggedNote = "Сегодня ещё ничего не записано. После первого блюда здесь появится, чего не хватает."
 
         override val water = "Вода"
         override fun waterOfGoal(drunk: String, goal: String) = "$drunk л / $goal л"
@@ -902,6 +909,11 @@ object StringsRu : Strings {
         override val history = "История"
         override val predictedNote = "Дни в контуре — это расчёт, а не медицинская гарантия."
         override val markPeriodDay = "Отметить менструацию"
+        override val periodCardTitle = "Месячные"
+        override val periodCardBody = "Отметьте, если месячные начались в этот день — от этого считается прогноз следующего цикла."
+        override fun periodRunningSince(date: String) = "Месячные начались $date и ещё продолжаются."
+        override val periodStartedThisDay = "Начались в этот день"
+        override val periodEndedThisDay = "Закончились в этот день"
         override val phaseNotColouredYet = "Как только появятся даты менструации, фазы здесь окрасятся."
         override val previousMonth = "Предыдущий месяц"
         override val nextMonth = "Следующий месяц"
@@ -1194,6 +1206,9 @@ object StringsRu : Strings {
         override val featureAiChat = "Разговор с ИИ"
         override val featureScanner = "Сканер еды"
         override val featureLongInsights = "Аналитика за 30/90 дней"
+        override fun perDayCount(count: Int) = "$count/день"
+        override fun perMonthCount(count: Int) = "$count/мес."
+        override fun soum(amount: String) = "$amount сум"
         override val premiumTitle = "SADORA Premium"
         override val premiumBody =
             "Разговор с ИИ, сканер еды и расширенная аналитика. Всё из бесплатного " +
@@ -1203,6 +1218,13 @@ object StringsRu : Strings {
         override val paymentAccepted = "Оплата принята. Premium открыт."
         override val paymentPending = "Ожидаем оплату…"
         override val noPaymentMethod = "Способов оплаты пока нет."
+        override val subscribe = "Оформить подписку"
+        override val storePending = "Ждём подтверждения оплаты. Когда оно придёт, Premium включится сам."
+        override fun storeRenewalTerms(store: String) =
+            "Подписка продлевается автоматически в конце выбранного периода, оплата списывается с аккаунта $store. " +
+                "Отменить её можно в любой момент в настройках $store."
+        override val nothingToRestore = "Покупок для восстановления не найдено"
+        override fun storePlansUnavailable(store: String) = "Тарифы пока недоступны в $store. Попробуйте чуть позже."
         override val cancelAnytime = "Отменить можно в любой момент"
         override val restorePurchase = "Восстановить покупку"
         override fun priceFor(sum: String, monthly: Boolean) =
@@ -1218,18 +1240,11 @@ object StringsRu : Strings {
         override val searchTabAll = "Все"
         override val searchTabFrequent = "Частые"
         override val searchTabRecipes = "Рецепты"
-        override val subscribe = "Оформить подписку"
-        override val storePending = "Ждём подтверждения оплаты. Когда оно придёт, Premium включится сам."
-        override fun storeRenewalTerms(store: String) =
-            "Подписка продлевается автоматически в конце выбранного периода, оплата списывается с аккаунта $store. " +
-                "Отменить её можно в любой момент в настройках $store."
-        override val nothingToRestore = "Покупок для восстановления не найдено"
-        override fun storePlansUnavailable(store: String) = "Тарифы пока недоступны в $store. Попробуйте чуть позже."
         override val typeADishName = "Введите название блюда"
         override fun nothingFoundFor(query: String) = "По запросу «$query» ничего не найдено"
         override val catalogueNote = "Каталог приходит с сервера — узбекские блюда идут первыми."
         override val portionLabel = "Порция"
-        override val pieces = "шт. × 100"
+        override val pieces = "шт."
         override val grams = "граммов"
         override fun bowls(count: Int) = "$count " + ru(count, "миска", "миски", "мисок")
         override val total = "Итого"
@@ -1316,6 +1331,10 @@ object StringsRu : Strings {
         override val scannerGallery = "Галерея"
         override val scannerShutter = "Снять"
         override val scannerManual = "Вручную"
+        override val cameraDenied = "Нет доступа к камере"
+        override val cameraDeniedBody = "Чтобы снимать блюдо прямо здесь, включите камеру в настройках. Выбрать фото из галереи или ввести вручную можно и без доступа."
+        override val cameraOpenSettings = "Открыть настройки"
+        override val cameraMissing = "Камера не открылась. Выберите фото из галереи или введите вручную."
         override val scannerPremium = "Сканер работает в подписке Premium."
         override val scannerUnavailable = "Сканер сейчас недоступен"
         override val scannerUnavailableBody = "Блюдо можно найти и добавить вручную."
@@ -1334,6 +1353,8 @@ object StringsRu : Strings {
         override val sodium = "Натрий"
         override val portion = "Порция"
         override val portionHint = "Оценка ИИ приблизительна — поправьте сами"
+        override val portionLess = "Уменьшить порцию"
+        override val portionMore = "Увеличить порцию"
         override val didYouEatIt = "Вы это съели?"
         override val yesIAte = "Да, съела"
         override val planningToEat = "Собираюсь съесть"

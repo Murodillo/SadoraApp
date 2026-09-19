@@ -81,7 +81,9 @@ fun ShopScreen(
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
-        rewards.loadCatalog()
+        // Forced: the cached catalogue carries `affordable` from whenever it was first
+        // read — another account's, even — and gul earned since never reached it.
+        rewards.loadCatalog(force = true)
         rewards.loadRedemptions()
     }
 
@@ -198,7 +200,9 @@ fun ShopScreen(
                             }
                         }
                     },
-                    enabled = !rewards.busy && product.affordable,
+                    // The balance on screen, not the flag from the last catalogue read: the pill
+                    // said "Olish" while this stayed dead until the app was restarted.
+                    enabled = !rewards.busy && !product.outOfStock && state.coins >= product.coinCost,
                     modifier = Modifier.weight(1f),
                 )
             }
@@ -375,7 +379,7 @@ private fun ProductCard(
                     else -> t.redeem
                 },
                 onClick = onRedeem,
-                tone = if (product.affordable) ButtonTone.Primary else ButtonTone.Ghost,
+                tone = if (short == 0 && !product.outOfStock) ButtonTone.Primary else ButtonTone.Ghost,
             )
         }
     }
@@ -410,8 +414,9 @@ private fun RedemptionRow(redemption: Redemption) {
     }
 }
 
-/** "145 000 so'm" — the app's one way of writing a price. */
-private fun soum(amount: Long): String = "${Fmt.int(amount.toInt())} so'm"
+/** "145 000 so'm" — the app's one way of writing a price, in the language the app is in. */
+@Composable
+private fun soum(amount: Long): String = strings.modules.soum(Fmt.int(amount.toInt()))
 
 @Composable
 private fun ShopSkeleton() {

@@ -62,18 +62,28 @@ fun AppState.applyServerProfile(profile: UserProfile, entitlements: Entitlements
     profile.stage?.let { stage ->
         dueDate = stage.dueDate
         childBirthDate = stage.birthDate
-        val today = deviceToday()
-        stage.dueDate?.let { due ->
-            // Forty weeks from conception to the due date, counted backwards from it.
-            val daysToDue = today.daysUntil(due)
-            pregnancyWeek = ((PregnancyDays - daysToDue) / 7).coerceIn(1, 42)
-        }
-        stage.birthDate?.let { born ->
-            postpartumWeek = (born.daysUntil(today) / 7).coerceAtLeast(0)
-        }
+        recountStageWeeks()
     }
 
     isPremium = entitlements.tier == SubscriptionTier.PREMIUM
+}
+
+/**
+ * The pregnancy and postpartum weeks, counted from their anchors to [AppState.today].
+ *
+ * Called when the profile lands and again whenever the day moves: counted once at login,
+ * the week stood still across a midnight while the day-in-week beside it, read from
+ * `today`, moved on — "26-hafta, 1-kun" on the first day of week 27.
+ */
+fun AppState.recountStageWeeks() {
+    dueDate?.let { due ->
+        // Forty weeks from conception to the due date, counted backwards from it.
+        val daysToDue = today.daysUntil(due)
+        pregnancyWeek = ((PregnancyDays - daysToDue) / 7).coerceIn(1, 42)
+    }
+    childBirthDate?.let { born ->
+        postpartumWeek = (born.daysUntil(today) / 7).coerceAtLeast(0)
+    }
 }
 
 /** A full-term pregnancy, in days — the constant the week count is measured against. */

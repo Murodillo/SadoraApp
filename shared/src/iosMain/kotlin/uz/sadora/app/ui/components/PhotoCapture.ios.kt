@@ -23,14 +23,14 @@ import platform.UIKit.UINavigationControllerDelegateProtocol
 import platform.darwin.NSObject
 
 /**
- * `UIImagePickerController` for both the camera and the library.
+ * `UIImagePickerController` for the library. The camera is [LiveCamera].
  *
  * The delegate is held by the returned object rather than by the picker, because
  * UIKit's delegate reference is weak and a delegate that is only referenced by the
  * presentation would be collected before the user finishes choosing.
  *
- * Info.plist must carry `NSCameraUsageDescription` and
- * `NSPhotoLibraryUsageDescription`; without them iOS terminates the app on present.
+ * Info.plist must carry `NSPhotoLibraryUsageDescription`; without it iOS terminates
+ * the app on present.
  */
 @OptIn(ExperimentalForeignApi::class)
 @Composable
@@ -59,9 +59,6 @@ actual fun rememberPhotoCapture(onCaptured: (CapturedPhoto) -> Unit): PhotoCaptu
 
             override val available = true
 
-            override fun takePhoto() =
-                present(UIImagePickerControllerSourceType.UIImagePickerControllerSourceTypeCamera)
-
             override fun pickFromGallery() =
                 present(UIImagePickerControllerSourceType.UIImagePickerControllerSourceTypePhotoLibrary)
 
@@ -79,7 +76,7 @@ actual fun rememberPhotoCapture(onCaptured: (CapturedPhoto) -> Unit): PhotoCaptu
 
 /** Scaled to fit [MaxEdge] and encoded as JPEG, matching what the endpoint accepts. */
 @OptIn(ExperimentalForeignApi::class)
-private fun UIImage.encode(): CapturedPhoto? {
+internal fun UIImage.encode(): CapturedPhoto? {
     val width = size.useContents { width }
     val height = size.useContents { height }
     val longest = maxOf(width, height)

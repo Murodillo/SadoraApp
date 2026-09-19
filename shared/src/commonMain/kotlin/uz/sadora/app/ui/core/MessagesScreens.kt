@@ -66,12 +66,14 @@ fun ConversationsScreen(
     val errors = strings.errors
 
     LaunchedEffect(messages) { messages.load() }
+    val retryScope = rememberCoroutineScope()
 
     Column(modifier) {
         SadoraTopBar(t.messagesTitle, onBack = onClose, subtitle = t.messagesSubtitle)
         ScreenContent {
             messages.error?.let { failure ->
-                item { ErrorStrip(failure.readable(errors), onRetry = messages::clearError) }
+                // "Retry" retries. It used to clear the banner and ask for nothing.
+                item { ErrorStrip(failure.readable(errors), onRetry = { retryScope.launch { messages.load() } }) }
             }
             if (!messages.loaded && messages.busy) {
                 items(3) {
@@ -85,6 +87,8 @@ fun ConversationsScreen(
                         }
                     }
                 }
+            } else if (messages.conversations.isEmpty() && !messages.loaded && messages.error != null) {
+                // The strip above says why; "no messages" would be a second, false, answer.
             } else if (messages.conversations.isEmpty()) {
                 item {
                     Column(
@@ -244,7 +248,7 @@ fun ConversationScreen(
             )
         } else {
             CommentInput(
-                onSend = { body -> scope.launch { messages.send(body) } },
+                onSend = { body -> messages.send(body) },
                 placeholder = t.messageHint,
                 modifier = Modifier
                     .background(c.surface)

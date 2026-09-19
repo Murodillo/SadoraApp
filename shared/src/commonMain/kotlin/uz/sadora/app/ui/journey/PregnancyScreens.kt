@@ -1,5 +1,7 @@
 package uz.sadora.app.ui.journey
 
+import uz.sadora.app.data.readable
+import uz.sadora.app.ui.components.ErrorStrip
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -189,13 +191,18 @@ fun PregnancyAppointmentsScreen(
             composing = false
             editing = null
         },
+        failure = health.error?.readable(),
         onSave = { request ->
             scope.launch {
-                if (sheetFor != null) health.updateAppointment(sheetFor.id, request)
+                val saved = if (sheetFor != null) health.updateAppointment(sheetFor.id, request)
                 else health.addAppointment(request)
+                // Closed only once it is kept: the sheet used to shut before the request
+                // had gone, and an appointment entered offline was simply gone.
+                if (saved) {
+                    composing = false
+                    editing = null
+                }
             }
-            composing = false
-            editing = null
         },
         onDelete = sheetFor?.let { existing ->
             {
@@ -296,6 +303,8 @@ private fun AppointmentSheet(
     onDismiss: () -> Unit,
     onSave: (SaveAppointmentRequest) -> Unit,
     onDelete: (() -> Unit)?,
+    /** Why the last save did not go through, shown over the buttons while the sheet stays open. */
+    failure: String? = null,
 ) {
     val c = Sadora.colors
     val t = strings.journey
@@ -365,6 +374,8 @@ private fun AppointmentSheet(
             }
         }
 
+        if (failure != null) ErrorStrip(failure)
+
         Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
             if (onDelete != null) {
                 SadoraButton(
@@ -433,9 +444,11 @@ fun PregnancyCheckInScreen(
     val chosen = remember(today) {
         mutableStateListOf<String>().apply { addAll(today?.symptoms.orEmpty().map { it.key }) }
     }
-    var movement by remember(today) {
-        mutableStateOf(today?.fetalMovement ?: FetalMovement.USUAL)
-    }
+    // Both start from what the day already holds, or from nothing. They used to start at
+    // "usual" and "Xotirjam", and Save on an untouched form recorded two answers she had
+    // not given — one of them about whether her baby was moving.
+    var movement by remember(today) { mutableStateOf(today?.fetalMovement) }
+    var mood by remember(today) { mutableStateOf(state.mood.takeIf { state.moodLoggedToday }) }
     var note by remember(today) { mutableStateOf(today?.note.orEmpty()) }
     var saving by remember { mutableStateOf(false) }
 
@@ -453,12 +466,14 @@ fun PregnancyCheckInScreen(
                         Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
                     ) {
-                        Mood.entries.forEach { mood ->
+                        Mood.entries.forEach { option ->
                             MoodCell(
-                                emoji = mood.emoji,
-                                label = strings.common.mood(mood),
-                                selected = state.mood == mood,
-                                onClick = { state.mood = mood },
+                                emoji = option.emoji,
+                                label = strings.common.mood(option),
+                                selected = mood == option,
+                                // Held here until Save: writing the store directly changed
+                                // the mood on every other screen even when she backed out.
+                                onClick = { mood = option },
                                 modifier = Modifier.weight(1f),
                             )
                         }
@@ -522,6 +537,8 @@ fun PregnancyCheckInScreen(
                 )
             }
 
+            health.error?.let { failure -> item { ErrorStrip(failure.readable()) } }
+
             item {
                 SadoraButton(
                     if (saving) strings.common.saving else strings.common.save,
@@ -529,15 +546,17 @@ fun PregnancyCheckInScreen(
                     onClick = {
                         saving = true
                         scope.launch {
-                            health.saveDay(
+                            val saved = health.saveDay(
                                 date = state.today,
-                                mood = state.mood.toWire(),
+                                mood = mood?.toWire(),
                                 symptomKeys = chosen.map { SymptomEntry(it) },
                                 note = note.trim().takeIf { it.isNotEmpty() },
                                 fetalMovement = movement,
                             )
                             saving = false
-                            onClose()
+                            // Offline, the form stays with everything she entered and the
+                            // reason above the button; it used to close as if it had saved.
+                            if (saved) onClose()
                         }
                     },
                 )

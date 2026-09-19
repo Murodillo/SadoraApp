@@ -10,8 +10,12 @@ import uz.sadora.contract.CheckoutSession
 import uz.sadora.contract.PaymentProvider
 import uz.sadora.contract.PaymentState
 
-/** How long to keep asking whether a payment landed, and how often. */
-private const val PollAttempts = 20
+/**
+ * How long to keep asking whether a payment landed, and how often: five minutes. It was
+ * one — a card number and an SMS code on Payme's page routinely take longer, and she came
+ * back having paid to an app that had stopped looking.
+ */
+private const val PollAttempts = 100
 private const val PollIntervalMillis = 3_000L
 
 /**

@@ -120,8 +120,15 @@ class HealthController(
     var doseHistory by mutableStateOf<List<uz.sadora.contract.MedicationDay>>(emptyList())
         private set
 
-    /** Completed cycles, oldest first. The regularity view is built from their lengths. */
+    /** Completed cycles, newest first. The regularity view is built from their lengths. */
     var history by mutableStateOf<uz.sadora.contract.CycleHistory?>(null)
+        private set
+
+    /**
+     * True once [loadAll] has finished, whether or not it got anything. Until then Today
+     * draws its skeleton, because the store still holds zeros that are not her day.
+     */
+    var loaded by mutableStateOf(false)
         private set
 
     // ---------------------------------------------------------------- loading
@@ -133,6 +140,16 @@ class HealthController(
      * a banner over a screen the user has not opened yet.
      */
     suspend fun loadAll() {
+        try {
+            loadEverything()
+        } finally {
+            // Also when it failed or was cancelled: offline, Today shows its dashes
+            // rather than a skeleton that never resolves.
+            loaded = true
+        }
+    }
+
+    private suspend fun loadEverything() {
         val api = cycleApi ?: return
         calls.run(silent = true) { api.status() }?.let {
             cycle = it
@@ -474,8 +491,12 @@ class HealthController(
                 ),
             )
         } ?: return false
-        day = saved
-        state?.applyDay(saved, symptoms)
+        // Only today's record is the store's. A past day edited from the calendar used
+        // to land here too and repaint Today with last Tuesday's mood and symptoms.
+        if (date == (selectedDate ?: date)) {
+            day = saved
+            state?.applyDay(saved, symptoms)
+        }
         refreshCycle()
         loadCalendarAroundToday()
         return true
@@ -496,6 +517,7 @@ class HealthController(
     suspend fun saveCheckIn(mood: MoodLevel?, energy: Int?, stress: Int?): Boolean {
         val api = mindApi ?: return true
         calls.run { api.saveCheckIn(MindCheckIn(mood, energy, stress)) } ?: return false
+        state?.let { it.checkInsSaved++ }
         refreshMind()
         selectedDate?.let { loadDay(it) }
         return true

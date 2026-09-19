@@ -1,5 +1,9 @@
 package uz.sadora.app.ui.core
 
+import androidx.compose.ui.semantics.Role
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+import uz.sadora.app.ui.components.EmptyState
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -24,6 +28,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -70,6 +75,7 @@ import uz.sadora.app.ui.components.SadoraTopBar
 import uz.sadora.app.ui.components.SegmentedControl
 import uz.sadora.app.ui.components.SelectChip
 import uz.sadora.app.ui.components.Skeleton
+import uz.sadora.app.ui.components.EntranceGated
 import uz.sadora.app.ui.components.appearFromBelow
 import uz.sadora.app.ui.components.noRippleClickable
 import uz.sadora.app.ui.components.rememberShareAction
@@ -204,7 +210,8 @@ fun SecretChatScreen(
                 )
             }
 
-            if (community.error != null) {
+            // Over a feed that is showing; with no feed the error is the state below.
+            if (community.error != null && (community.loaded || posts.isNotEmpty())) {
                 Text(
                     community.error?.readable().orEmpty(),
                     style = Sadora.type.body,
@@ -217,35 +224,51 @@ fun SecretChatScreen(
                 // The first load: the shape of a feed rather than a blank, so the screen
                 // does not flash "nothing here" at someone whose feed is on its way.
                 FeedSkeleton()
+            } else if (posts.isEmpty() && !community.loaded && community.error != null) {
+                // Not an empty feed — a feed that did not arrive. The way on is to ask
+                // again, not to "write the first post" into a community of thousands.
+                val retryScope = rememberCoroutineScope()
+                EmptyState(
+                    title = community.error?.readable().orEmpty(),
+                    body = "",
+                    actionText = strings.common.retry,
+                    onAction = { retryScope.launch { community.load() } },
+                    glyph = "📡",
+                )
             } else if (posts.isEmpty()) {
                 EmptyFeed(filter = state.communityFilter, onCompose = onCompose)
             } else {
-                LazyColumn(
-                    Modifier.fillMaxSize(),
-                    contentPadding = androidx.compose.foundation.layout.PaddingValues(
-                        start = Spacing.screen,
-                        end = Spacing.screen,
-                        top = Spacing.xs,
-                        // Room for the raised centre button on the tab bar.
-                        bottom = 96.dp,
-                    ),
-                    verticalArrangement = Arrangement.spacedBy(Spacing.sm),
-                ) {
-                    itemsIndexed(posts, key = { _, post -> post.id }) { index, post ->
-                        Box(Modifier.appearFromBelow(index.coerceAtMost(6))) {
-                            PostCard(
-                                post = post,
-                                liked = post.id in state.likedPosts,
-                                saved = post.id in state.savedPosts,
-                                likes = state.likeCount(post),
-                                comments = state.commentCountOf(post),
-                                onLike = { state.toggleLike(post.id) },
-                                onSave = { state.toggleSaved(post.id) },
-                                onOpen = { onOpenPost(post) },
-                                onOpenAuthor = { onOpenProfile(post.alias) },
-                                onShare = { share("${post.body}\n\n" + t.shareSuffix) },
-                                onMore = { onOpenMenu(post) },
-                            )
+                // A fling through the feed draws posts in place; only the first screenful rises.
+                val feedState = rememberLazyListState()
+                EntranceGated(feedState) {
+                    LazyColumn(
+                        Modifier.fillMaxSize(),
+                        state = feedState,
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                            start = Spacing.screen,
+                            end = Spacing.screen,
+                            top = Spacing.xs,
+                            // Room for the raised centre button on the tab bar.
+                            bottom = 96.dp,
+                        ),
+                        verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+                    ) {
+                        itemsIndexed(posts, key = { _, post -> post.id }) { index, post ->
+                            Box(Modifier.appearFromBelow(index.coerceAtMost(6))) {
+                                PostCard(
+                                    post = post,
+                                    liked = post.id in state.likedPosts,
+                                    saved = post.id in state.savedPosts,
+                                    likes = state.likeCount(post),
+                                    comments = state.commentCountOf(post),
+                                    onLike = { state.toggleLike(post.id) },
+                                    onSave = { state.toggleSaved(post.id) },
+                                    onOpen = { onOpenPost(post) },
+                                    onOpenAuthor = { onOpenProfile(post.alias) },
+                                    onShare = { share("${post.body}\n\n" + t.shareSuffix) },
+                                    onMore = { onOpenMenu(post) },
+                                )
+                            }
                         }
                     }
                 }
@@ -347,7 +370,8 @@ internal fun PostCard(
     comments: Int,
     onLike: () -> Unit,
     onSave: () -> Unit,
-    onOpen: () -> Unit,
+    /** Null on the post's own page, where there is nowhere further to open it to. */
+    onOpen: (() -> Unit)?,
     onOpenAuthor: () -> Unit,
     onShare: () -> Unit,
     onMore: () -> Unit,
@@ -429,7 +453,7 @@ internal fun PostCard(
             PostAction(
                 icon = SadoraIcons.Message,
                 label = comments.toString(),
-                onClick = onOpen,
+                onClick = onOpen ?: {},
             )
             PostAction(icon = SadoraIcons.Share, onClick = onShare)
             Spacer(Modifier.weight(1f))
@@ -573,7 +597,8 @@ internal fun UnreadIconButton(count: Int, onClick: () -> Unit, contentDescriptio
 /** The comment field with its send button, which appears only once there is something to send. */
 @Composable
 internal fun CommentInput(
-    onSend: (String) -> Unit,
+    /** False when it did not go: the text then stays in the field instead of being lost. */
+    onSend: suspend (String) -> Boolean,
     modifier: Modifier = Modifier,
     placeholder: String = strings.community.commentHint,
     maxLength: Int = Limits.COMMENT_MAX,
@@ -581,6 +606,8 @@ internal fun CommentInput(
     val c = Sadora.colors
     val t = strings.community
     var draft by remember { mutableStateOf("") }
+    var sending by remember { mutableStateOf(false) }
+    val sendScope = rememberCoroutineScope()
     Row(
         modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
@@ -602,9 +629,15 @@ internal fun CommentInput(
                     .size(MinTouchTarget)
                     .clip(Radius.chip)
                     .background(c.primary)
-                    .noRippleClickable {
-                        onSend(draft)
-                        draft = ""
+                    .noRippleClickable(enabled = !sending, role = Role.Button) {
+                        val text = draft
+                        sending = true
+                        sendScope.launch {
+                            // Cleared only once it is sent. It used to be cleared first,
+                            // and a message that failed offline took its text with it.
+                            if (onSend(text) && draft == text) draft = ""
+                            sending = false
+                        }
                     },
                 contentAlignment = Alignment.Center,
             ) {

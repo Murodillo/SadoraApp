@@ -262,6 +262,8 @@ interface CommunityStrings {
     val postsAnonymously: String
     val yourOwnPost: String
     val deletePost: String
+    /** The second tap: deleting a post is not undoable, so one tap only arms it. */
+    val deletePostConfirm: String
     val postDeleted: String
     val newPost: String
     val postSent: String
@@ -811,6 +813,10 @@ interface MindStrings {
     val energy: String
     /** The five rungs of a dial, from lowest to highest. */
     val levels: List<String>
+    /** Over the mood faces and the dials on a day she has not described yet. */
+    val moodNotLogged: String
+    val moodNotLoggedCaption: String
+    val dialNotSet: String
 
     val journal: String
     val journalPrompt: String
@@ -850,6 +856,10 @@ interface NutritionStrings {
     val addMeal: String
     val emptyTitle: String
     val emptyBody: String
+    val deleteMealTitle: String
+    val deleteMealBody: String
+    /** The AI card on a day with nothing logged: there is no gap to name yet. */
+    val nothingLoggedNote: String
 
     val water: String
     fun waterOfGoal(drunk: String, goal: String): String
@@ -909,6 +919,11 @@ interface JourneyStrings {
     val history: String
     val predictedNote: String
     val markPeriodDay: String
+    val periodCardTitle: String
+    val periodCardBody: String
+    fun periodRunningSince(date: String): String
+    val periodStartedThisDay: String
+    val periodEndedThisDay: String
     val phaseNotColouredYet: String
     val previousMonth: String
     val nextMonth: String
@@ -1164,6 +1179,11 @@ interface ModuleStrings {
     val featureAiChat: String
     val featureScanner: String
     val featureLongInsights: String
+    /** A limit in the plan table: "20/kun", "30/oy". */
+    fun perDayCount(count: Int): String
+    fun perMonthCount(count: Int): String
+    /** A price in the shop: "145 000 so'm". */
+    fun soum(amount: String): String
     val premiumTitle: String
     val premiumBody: String
     val plansFailed: String
@@ -1171,6 +1191,15 @@ interface ModuleStrings {
     val paymentAccepted: String
     val paymentPending: String
     val noPaymentMethod: String
+    /** The store build's one button. */
+    val subscribe: String
+    /** A store purchase paid with a method that clears later. */
+    val storePending: String
+    /** The auto-renewal terms both stores require next to the button. [store] is "Google Play" or "App Store". */
+    fun storeRenewalTerms(store: String): String
+    val nothingToRestore: String
+    /** The store listed none of the plans — not a connection problem. */
+    fun storePlansUnavailable(store: String): String
     val cancelAnytime: String
     val restorePurchase: String
     fun priceFor(sum: String, monthly: Boolean): String
@@ -1191,15 +1220,6 @@ interface ModuleStrings {
     val catalogueNote: String
     val portionLabel: String
     val pieces: String
-    /** The store build's one button. */
-    val subscribe: String
-    /** A store purchase paid with a method that clears later. */
-    val storePending: String
-    /** The auto-renewal terms both stores require next to the button. [store] is "Google Play" or "App Store". */
-    fun storeRenewalTerms(store: String): String
-    val nothingToRestore: String
-    /** The store listed none of the plans — not a connection problem. */
-    fun storePlansUnavailable(store: String): String
     val grams: String
     fun bowls(count: Int): String
     val total: String
@@ -1268,6 +1288,10 @@ interface ModuleStrings {
     val scannerGallery: String
     val scannerShutter: String
     val scannerManual: String
+    val cameraDenied: String
+    val cameraDeniedBody: String
+    val cameraOpenSettings: String
+    val cameraMissing: String
     val scannerPremium: String
     val scannerUnavailable: String
     val scannerUnavailableBody: String
@@ -1285,6 +1309,8 @@ interface ModuleStrings {
     val sodium: String
     val portion: String
     val portionHint: String
+    val portionLess: String
+    val portionMore: String
     val didYouEatIt: String
     val yesIAte: String
     val planningToEat: String

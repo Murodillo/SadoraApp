@@ -59,6 +59,9 @@ fun SleepWidget(
     val c = Sadora.colors
     val common = strings.common
     val minutes = health.wearableToday?.value(HealthMetric.SLEEP_DURATION)?.toInt() ?: state.sleepMinutes
+    // Loaded here for the same reason as in the Insights widget: the week's average was
+    // blank until she had happened to open Ong or Uyqu in the same session.
+    LaunchedEffect(Unit) { insights.load(7) }
     val week = insights.summary(7)?.trend(TrendMetric.SLEEP_MINUTES)
 
     SadoraCard(modifier, onClick = { onOpen(Route.Sleep) }) {
@@ -179,7 +182,12 @@ fun InsightsWidget(
     // window rather than relying on the Insights screen having been opened first — a
     // card that said "nothing yet" only because nobody had visited that screen would be
     // lying about her data.
-    LaunchedEffect(Unit) { insights.load(INSIGHT_WINDOW_DAYS) }
+    // A free account is refused the long window, so the week is asked for when the
+    // month does not come: the fallback below was reading a summary nobody had loaded.
+    LaunchedEffect(Unit) {
+        insights.load(INSIGHT_WINDOW_DAYS)
+        if (insights.summary(INSIGHT_WINDOW_DAYS) == null) insights.load(7)
+    }
     val summary = insights.summary(INSIGHT_WINDOW_DAYS) ?: insights.summary(7)
     val finding = summary?.findings?.firstOrNull()
 

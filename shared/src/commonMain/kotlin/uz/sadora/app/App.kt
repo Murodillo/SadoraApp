@@ -53,6 +53,7 @@ import uz.sadora.app.model.CommunitySort
 import uz.sadora.app.nav.AppLink
 import uz.sadora.app.nav.AppLinks
 import uz.sadora.app.nav.AppPhase
+import uz.sadora.app.nav.MindSection
 import uz.sadora.app.nav.Navigator
 import uz.sadora.app.nav.Route
 import uz.sadora.app.nav.Tab
@@ -129,9 +130,30 @@ import uz.sadora.app.ui.settings.SettingsDetailScreen
 @Composable
 @Preview
 fun App(graph: SadoraGraph? = null) {
-    val state = remember { AppState() }
+    // One store per signed-in session, not per process. It used to be one for good, and
+    // signing out cleared only the wearable numbers: the next account on the same phone
+    // opened onto the last one's name, meals, journal, anonymous alias and message list,
+    // and kept them for as long as its own loads took — or for the whole session, offline.
+    // The controllers are keyed on the store, so their caches go with it.
+    var store by remember { mutableStateOf(AppState()) }
+    val state = store
     val navigator = remember { Navigator() }
     val controllers = remember(graph, state) { AppControllers.from(graph, state) }
+
+    var wasInside by remember { mutableStateOf(false) }
+    LaunchedEffect(navigator.phase) {
+        val inside = navigator.phase == AppPhase.Main
+        if (wasInside && !inside) {
+            navigator.select(Tab.Today)
+            // What belongs to the phone rather than to her account is carried over.
+            store = AppState().also {
+                it.language = state.language
+                it.darkTheme = state.darkTheme
+                it.appVersion = state.appVersion
+            }
+        }
+        wasInside = inside
+    }
 
     LaunchedEffect(graph) { state.appVersion = graph?.appVersion }
 
@@ -252,6 +274,9 @@ private class ShellOverlays {
     var showEditBio by mutableStateOf(false)
     var showConversationMenu by mutableStateOf(false)
     var showSymptomSheet by mutableStateOf(false)
+
+    /** The day the symptom sheet writes; null is today. Set by the calendar's day page. */
+    var symptomSheetDate by mutableStateOf<kotlinx.datetime.LocalDate?>(null)
     var toast by mutableStateOf<String?>(null)
     var lastWaterAdded by mutableStateOf(0)
 
@@ -371,7 +396,7 @@ private fun MainShell(
     // tab is gone from under her; Today is the one place that is always there.
     val tabs = Tab.bar(state.isPremium)
     LaunchedEffect(tabs) {
-        if (navigator.tab !in tabs) navigator.select(Tab.Today)
+        if (navigator.tab !in tabs) navigator.retarget(Tab.Today)
     }
 
     // A screen view per tab or route change, named by the route class — stable across
@@ -438,7 +463,11 @@ private fun MainShell(
                             modifier = Modifier.fillMaxSize(),
                             label = "tab",
                         ) { tab ->
-                            RootTab(tab, state, navigator, controllers, overlays, onAddWater = { overlays.showWaterSheet = true })
+                            RootTab(
+                                tab, state, navigator, controllers, overlays,
+                                onAddWater = { overlays.showWaterSheet = true },
+                                onQuickWater = ::addWater,
+                            )
                         }
                     }
                 }
@@ -491,6 +520,7 @@ private fun MainShell(
             state = state,
             health = health,
             onDismiss = { overlays.showSymptomSheet = false },
+            date = overlays.symptomSheetDate ?: state.today,
         )
 
         // Kept mounted through the exit animation so the sheet does not blank as it closes.
@@ -504,6 +534,7 @@ private fun MainShell(
             lastMenu.value?.let { post ->
                 PostMenuSheetContent(
                     state = state,
+                    community = community,
                     post = post,
                     onDone = { message ->
                         overlays.menuFor = null
@@ -520,6 +551,7 @@ private fun MainShell(
         ) {
             ComposePostSheetContent(
                 state = state,
+                community = community,
                 onPosted = {
                     overlays.showCompose = false
                     overlays.toast = communityStrings.postSent
@@ -600,6 +632,7 @@ private fun RootTab(
     controllers: AppControllers,
     overlays: ShellOverlays,
     onAddWater: () -> Unit,
+    onQuickWater: (Int) -> Unit,
 ) {
     when (tab) {
         Tab.Today -> {
@@ -609,12 +642,20 @@ private fun RootTab(
             TodayScreen(
                 state = state,
                 onOpen = navigator::push,
-                onSelectTab = navigator::select,
+                // Today's shortcuts to Ong mean the mind half. A free account keeps the
+                // food diary in the same tab, and the segment she last left it on is
+                // sticky — "Nafas" used to open the diary.
+                onSelectTab = { target ->
+                    if (target == Tab.Mind) navigator.mindSection = MindSection.Mind
+                    navigator.select(target)
+                },
                 onAddWater = onAddWater,
+                onQuickWater = onQuickWater,
                 greeting = controllers.ai.greeting,
                 health = controllers.health,
                 insights = controllers.insights,
                 learn = controllers.learn,
+                isLoading = !controllers.health.loaded,
             )
         }
 
@@ -637,6 +678,7 @@ private fun RootTab(
                 onOpenJournal = { navigator.push(Route.MindJournal) },
                 onOpen = navigator::push,
                 onAddWater = onAddWater,
+                onQuickWater = onQuickWater,
             )
         }
 
@@ -657,6 +699,7 @@ private fun RootTab(
             state = state,
             onOpen = navigator::push,
             onAddWater = onAddWater,
+            onQuickWater = onQuickWater,
         )
 
         Tab.Premium -> PremiumScreen(
@@ -693,7 +736,17 @@ private fun PushedScreen(
     when (route) {
         // Cycle
         Route.CycleCalendar -> CycleCalendarScreen(state, health, navigator::push, close)
-        is Route.CycleDay -> CycleDayScreen(state, health, route.date, { overlays.showSymptomSheet = true }, close)
+        is Route.CycleDay -> CycleDayScreen(
+            state = state,
+            health = health,
+            date = route.date,
+            onOpenSymptomSheet = { day ->
+                overlays.symptomSheetDate = day
+                overlays.showSymptomSheet = true
+            },
+            onClose = close,
+            sheetOpen = overlays.showSymptomSheet,
+        )
 
         // Pregnancy
         Route.PregnancyAppointments -> PregnancyAppointmentsScreen(health, close)

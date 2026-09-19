@@ -374,7 +374,11 @@ private fun CycleStatsRow(state: AppState) {
 private fun CycleHistoryCards(health: HealthController) {
     val c = Sadora.colors
     val t = strings.journey
-    val cycles = health.history?.cycles.orEmpty().takeLast(6)
+    // The server sends completed cycles newest first. This took the *last* six — the six
+    // oldest — so after half a year the recent ones never appeared at all.
+    val recent = health.history?.cycles.orEmpty().take(6)
+    // A chart reads left to right in time; the list below it reads newest first.
+    val cycles = recent.reversed()
 
     if (cycles.isEmpty()) {
         SadoraCard {
@@ -402,7 +406,7 @@ private fun CycleHistoryCards(health: HealthController) {
 
     SadoraCard {
         CardLabel(t.previousCycles)
-        cycles.reversed().forEachIndexed { index, cycle ->
+        recent.forEach { cycle ->
             Row(
                 Modifier.fillMaxWidth().padding(vertical = 6.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -418,19 +422,14 @@ private fun CycleHistoryCards(health: HealthController) {
                     Text(
                         listOfNotNull(
                             t.daysValue(cycle.cycleLength),
-                            if (index == 0) t.currentCycle else null,
+                            // No "current cycle" tag: every row is a finished cycle —
+                            // the server leaves the running one out of the history.
                             cycle.periodLength?.let { t.periodOfDays(it) },
                         ).joinToString(" · "),
                         style = Sadora.type.body,
                         color = c.muted,
                     )
                 }
-                Icon(
-                    SadoraIcons.ChevronRight,
-                    contentDescription = null,
-                    Modifier.size(IconSize.md),
-                    tint = c.muted2,
-                )
             }
         }
     }

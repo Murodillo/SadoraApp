@@ -78,6 +78,7 @@ import uz.sadora.app.ui.components.noRippleClickable
 import uz.sadora.app.ui.components.pressable
 import kotlin.math.PI
 import kotlin.math.cos
+import kotlin.math.roundToInt
 import kotlin.math.sin
 import uz.sadora.contract.SymptomDefinition
 
@@ -159,7 +160,11 @@ private fun CycleJourney(state: AppState, health: HealthController, onOpen: (Rou
 
         item {
             if (state.hasCyclePrediction) {
-                CycleDial(state, Modifier.fillMaxWidth(0.92f).aspectRatio(1f).align(Alignment.CenterHorizontally))
+                // Centred by a box: `align` below is a stand-in that does nothing, and the
+                // dial sat a little left of the month header above it.
+                Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    CycleDial(state, Modifier.fillMaxWidth(0.92f).aspectRatio(1f))
+                }
             } else {
                 SadoraCard {
                     Text(t.noPredictionTitle, style = Sadora.type.h3, color = c.text)
@@ -168,14 +173,18 @@ private fun CycleJourney(state: AppState, health: HealthController, onOpen: (Rou
                         style = Sadora.type.body,
                         color = c.muted,
                     )
-                    SadoraButton(t.markPeriod, onClick = { onOpen(Route.CycleCalendar) }, tone = ButtonTone.Secondary)
+                    // Straight to the page that can record it; the calendar was one screen further from it.
+                    SadoraButton(t.markPeriod, onClick = { onOpen(Route.CycleDay(state.today.toString())) }, tone = ButtonTone.Secondary)
                 }
             }
         }
 
-        item { PhaseLegend() }
+        // The legend, the phase and the countdown all describe a prediction. With none —
+        // no period on record, or a stage just switched to — the store still holds day 14
+        // of 28, and this card told her she was fertile with 15 days to go.
+        if (state.hasCyclePrediction) item { PhaseLegend() }
 
-        item {
+        if (state.hasCyclePrediction) item {
             SadoraCard {
                 Row(
                     Modifier.fillMaxWidth(),
@@ -245,7 +254,8 @@ private fun CycleJourney(state: AppState, health: HealthController, onOpen: (Rou
             }
         }
 
-        item {
+        // 28 and 5 are the store's defaults until the server has her own averages.
+        if (state.hasCyclePrediction) item {
             Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                 StatCard(t.averageCycle, t.daysValue(state.averageCycleLength), Modifier.weight(1f))
                 StatCard(t.averagePeriod, t.daysValue(state.averagePeriodLength), Modifier.weight(1f))
@@ -286,7 +296,7 @@ private fun BodySignalsCard(state: AppState, health: HealthController) {
         val before = weekAverage(metric, 7..13) ?: return null
         val diff = recent - before
         val sign = if (diff >= 0) "+" else "−"
-        val magnitude = if (decimals == 0) kotlin.math.abs(diff).toInt().toString() else Fmt.oneDecimal(kotlin.math.abs(diff).toFloat())
+        val magnitude = if (decimals == 0) kotlin.math.abs(diff).roundToInt().toString() else Fmt.oneDecimal(kotlin.math.abs(diff).toFloat())
         return m.vsLastWeek(sign + magnitude)
     }
 
@@ -296,7 +306,8 @@ private fun BodySignalsCard(state: AppState, health: HealthController) {
             SadoraBadge(strings.journey.estimatedCaps, BadgeTone.Estimated, icon = SadoraIcons.Clock)
         }
         val signals = listOfNotNull(
-            state.restingHeartRate?.let { Triple(m.restingPulse(it).substringBefore(' ').ifBlank { "$it" }, m.metric(uz.sadora.contract.HealthMetric.RESTING_HEART_RATE), delta(uz.sadora.contract.HealthMetric.RESTING_HEART_RATE, 0)) },
+            // The number. This cut the sentence "Tinch puls 58 bpm" at its first space and showed "Tinch".
+            state.restingHeartRate?.let { Triple("$it", m.metric(uz.sadora.contract.HealthMetric.RESTING_HEART_RATE), delta(uz.sadora.contract.HealthMetric.RESTING_HEART_RATE, 0)) },
             state.hrvMs?.let { Triple("$it ms", "HRV", delta(uz.sadora.contract.HealthMetric.HRV, 0)) },
             state.skinTemperature?.let { Triple("${Fmt.oneDecimal(it.toFloat())} °C", m.metric(uz.sadora.contract.HealthMetric.SKIN_TEMPERATURE), delta(uz.sadora.contract.HealthMetric.SKIN_TEMPERATURE, 1)) },
             state.recovery?.let { Triple("$it%", m.recovery, delta(uz.sadora.contract.HealthMetric.RECOVERY, 0)) },
@@ -842,7 +853,8 @@ private fun PerimenopauseJourney(state: AppState, health: HealthController, onOp
                 // A regularity chart replaces prediction entirely at this stage: the
                 // value is in seeing the spread, and its bars are the lengths of her own
                 // last six cycles rather than a shape drawn to look like variation.
-                val cycles = health.history?.cycles.orEmpty().takeLast(6)
+                // Newest first on the wire; oldest first on a chart.
+                val cycles = health.history?.cycles.orEmpty().take(6).reversed()
                 CardLabel(
                     t.cycleRegularity,
                     trailing = {
@@ -902,7 +914,7 @@ private fun PerimenopauseJourney(state: AppState, health: HealthController, onOp
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                 StatCard(t.sleep, state.sleepLabel(format = strings.common::hoursMinutes), Modifier.weight(1f))
-                StatCard(t.energy, "${state.energy} / 5", Modifier.weight(1f))
+                StatCard(t.energy, if (state.energyLoggedToday) "${state.energy} / 5" else "—", Modifier.weight(1f))
             }
         }
 
@@ -1010,8 +1022,6 @@ private fun MenopauseJourney(state: AppState, health: HealthController, onOpen: 
     }
 }
 
-/** Keeps [Modifier.align] usable inside a LazyColumn item. */
-private fun Modifier.align(alignment: Alignment.Horizontal): Modifier = this
 
 
 /** How many symptom tiles fit the cycle card's row. */

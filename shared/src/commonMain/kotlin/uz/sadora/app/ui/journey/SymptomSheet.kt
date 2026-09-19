@@ -1,5 +1,9 @@
 package uz.sadora.app.ui.journey
 
+import kotlinx.datetime.LocalDate
+import uz.sadora.contract.DailyLog
+import uz.sadora.app.ui.components.ErrorStrip
+import uz.sadora.app.data.readable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -85,19 +89,28 @@ fun SymptomSheet(
     state: AppState,
     health: HealthController,
     onDismiss: () -> Unit,
+    /**
+     * The day being written. The calendar opens this sheet for any day up to today, and
+     * it used to load and save today whichever one she had tapped.
+     */
+    date: LocalDate = state.today,
 ) {
     val c = Sadora.colors
     val t = strings.journey
     val scope = rememberCoroutineScope()
+    val isToday = date == state.today
 
-    LaunchedEffect(visible) {
+    // Another day's record is held here, not in the controller: `health.day` is today's,
+    // and the rest of the app reads it as such.
+    var otherDay by remember(date) { mutableStateOf<DailyLog?>(null) }
+    LaunchedEffect(visible, date) {
         if (!visible) return@LaunchedEffect
         health.loadSymptoms(null)
-        health.loadDay(state.today)
+        if (isToday) health.loadDay(date) else otherDay = health.dayAt(date)
     }
 
     val catalogue = health.symptoms
-    val today = health.day
+    val today = if (isToday) health.day else otherDay
     // Re-keyed on the day so reopening the sheet shows what is on the server now, and
     // editing it removes as well as adds.
     val selected = remember(visible, today) {
@@ -110,7 +123,7 @@ fun SymptomSheet(
     var saving by remember { mutableStateOf(false) }
 
     SadoraBottomSheet(visible = visible, title = t.symptomSheetTitle, onDismiss = onDismiss) {
-        Text(strings.dates.dayMonth(state.today), style = Sadora.type.body, color = c.muted)
+        Text(strings.dates.dayMonth(date), style = Sadora.type.body, color = c.muted)
 
         if (catalogue.isEmpty()) {
             Text(t.catalogueLoading, style = Sadora.type.body, color = c.muted2)
@@ -165,6 +178,8 @@ fun SymptomSheet(
             singleLine = false,
         )
 
+        health.error?.let { ErrorStrip(it.readable()) }
+
         Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
             SadoraButton(
                 strings.common.cancel,
@@ -177,13 +192,22 @@ fun SymptomSheet(
                 onClick = {
                     saving = true
                     scope.launch {
-                        health.saveDay(
-                            date = state.today,
+                        // Everything the sheet does not edit is passed through from the
+                        // day it loaded: the save replaces the record wholesale, and the
+                        // defaults would otherwise fill a past day with today's values.
+                        val saved = health.saveDay(
+                            date = date,
+                            flow = today?.flow,
+                            mood = today?.mood,
+                            energy = today?.energy,
+                            stress = today?.stress,
                             symptomKeys = selected.map { SymptomEntry(it, severity.toSeverity()) },
                             note = note.trim().takeIf { it.isNotEmpty() },
+                            fetalMovement = today?.fetalMovement,
                         )
                         saving = false
-                        onDismiss()
+                        // A failed save keeps the sheet, and what she typed, on screen.
+                        if (saved) onDismiss()
                     }
                 },
                 enabled = !saving,

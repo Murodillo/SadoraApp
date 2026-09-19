@@ -91,11 +91,12 @@ fun AliasProfileScreen(
 
         ScreenContent {
             community.error?.let { failure ->
-                item { ErrorStrip(failure.readable(errors), onRetry = community::clearError) }
+                item { ErrorStrip(failure.readable(errors), onRetry = { scope.launch { community.loadProfile(alias) } }) }
             }
 
             if (profile == null) {
-                item { ProfileSkeleton() }
+                // A skeleton promises content; after a failure the strip above is the content.
+                if (community.error == null) item { ProfileSkeleton() }
                 return@ScreenContent
             }
 

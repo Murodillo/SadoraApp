@@ -84,6 +84,8 @@ fun TodayScreen(
     onSelectTab: (Tab) -> Unit,
     onAddWater: () -> Unit,
     modifier: Modifier = Modifier,
+    /** Adds exactly what the plan's pill says it adds; [onAddWater] opens the sheet of sizes. */
+    onQuickWater: (Int) -> Unit = { onAddWater() },
     isLoading: Boolean = false,
     /** The AI greeting, or null until it lands — the header has its own line for that. */
     greeting: String? = null,
@@ -131,6 +133,7 @@ fun TodayScreen(
                             state = state,
                             onOpenMedications = { onOpen(Route.Medications) },
                             onAddWater = onAddWater,
+                            onQuickWater = onQuickWater,
                         )
                         // The four optional widgets need their controllers. Without one
                         // — a preview, a test — the card is skipped rather than drawn
@@ -197,10 +200,13 @@ private fun TodayHeader(
     Column {
         GreetingHeader(
             greeting = "",
-            name = state.name,
+            // The given name: the full one wrapped the greeting onto a second 32sp line.
+            name = state.name.trim().substringBefore(' '),
             onAvatarClick = { onOpen(Route.Profile) },
             onNotificationsClick = { onOpen(Route.NotificationInbox) },
-            hasUnread = state.medications.any { it.status == MedStatus.Pending },
+            // No dot: the inbox has no read state yet, and a dot tied to pending doses
+            // could not be cleared by opening what the bell opens.
+            hasUnread = false,
         )
         Row(
             Modifier
@@ -282,6 +288,8 @@ private fun StageCard(state: AppState, onOpen: () -> Unit) {
                     when {
                         // The eyebrow above already names the stage; the headline says
                         // what it is about.
+                        // The week is the fact; the stage's blurb is the caption under it.
+                        stage == LifeStage.Pregnancy || stage == LifeStage.Postpartum -> t.pregnancyWeek(weeks)
                         !cycle -> strings.stages.subtitle(stage)
                         !state.hasCyclePrediction -> t.notEnoughForPrediction
                         else -> strings.common.phase(phase)
@@ -291,10 +299,11 @@ private fun StageCard(state: AppState, onOpen: () -> Unit) {
                 )
                 val caption = when {
                     cycle -> t.cycleDayOf(state.cycleDay, state.averageCycleLength)
-                    stage == LifeStage.Pregnancy || stage == LifeStage.Postpartum -> t.pregnancyWeek(weeks)
-                    else -> strings.stages.subtitle(stage)
+                    stage == LifeStage.Pregnancy || stage == LifeStage.Postpartum -> strings.stages.subtitle(stage)
+                    // The headline is already the subtitle for these two; saying it twice is noise.
+                    else -> null
                 }
-                Text(caption, style = Sadora.type.body, color = c.muted)
+                if (caption != null) Text(caption, style = Sadora.type.body, color = c.muted)
             }
             ProgressRing(
                 progress = progress.coerceIn(0f, 1f),
@@ -396,7 +405,10 @@ internal fun ruleSummary(state: AppState, t: TodayStrings, common: CommonStrings
 /** What the Premium card says on Today. Stands in for the AI daily summary. */
 private fun premiumSummary(state: AppState, t: TodayStrings, common: CommonStrings): String {
     // A night nobody measured is not "you slept —": the sentence is left out, not filled.
-    val sleep = state.sleepMinutes?.let { t.sleptAndEnergy(state.sleepLabel(it, common::hoursMinutes), state.energy >= 4) + " " }
+    // The same goes for an energy dial she never set: the sentence has no form without
+    // one, and "energiyangiz yaxshi" was being read off the store's default of 4.
+    val sleep = state.sleepMinutes?.takeIf { state.energyLoggedToday }
+        ?.let { t.sleptAndEnergy(state.sleepLabel(it, common::hoursMinutes), state.energy >= 4) + " " }
     return sleep.orEmpty() + t.generalAdvice
 }
 
@@ -412,6 +424,7 @@ private fun TodayPlanCard(
     state: AppState,
     onOpenMedications: () -> Unit,
     onAddWater: () -> Unit,
+    onQuickWater: (Int) -> Unit,
 ) {
     val t = strings.today
     val c = Sadora.colors
@@ -457,14 +470,18 @@ private fun TodayPlanCard(
                     caption = t.waterLeft(waterLeft),
                     time = null,
                     tint = c.accent,
-                    actionText = t.addWater(250),
-                    onAction = onAddWater,
+                    // The pill does what it says; the row is the way to the other sizes.
+                    actionText = t.addWater(QuickWaterMl),
+                    onAction = { onQuickWater(QuickWaterMl) },
                     onClick = onAddWater,
                 )
             }
         }
     }
 }
+
+/** One glass. What the plan's water pill adds without asking. */
+private const val QuickWaterMl = 250
 
 /** One line of the plan: what it is, when it is due, and the one action that clears it. */
 @Composable
@@ -487,12 +504,13 @@ private fun PlanRow(
     ) {
         EmojiTile(emoji, tint = tint, size = 38.dp)
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(title, style = Sadora.type.h3, color = c.text, maxLines = 1)
+            Text(title, style = Sadora.type.h3, color = c.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text(
                 listOfNotNull(time, caption.takeIf { it.isNotBlank() }).joinToString(" \u00B7 "),
                 style = Sadora.type.body,
                 color = c.muted,
                 maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
         }
         PillButton(actionText, onAction, tone = ButtonTone.Primary)
@@ -551,7 +569,15 @@ private fun HealthScoreCard(
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
                     SignalTile(t.sleep, state.sleepLabel(format = strings.common::hoursMinutes), Modifier.weight(1f), onClick = onOpenSleep)
-                    SignalTile(t.mood, strings.common.mood(state.mood), Modifier.weight(1f), emoji = state.mood.emoji, onClick = onOpenMind)
+                    // A mood is a default until she picks one; the score above already ignores it,
+                    // and the tile said "Xotirjam" beside a card asking her to log a mood.
+                    SignalTile(
+                        t.mood,
+                        if (state.moodLoggedToday) strings.common.mood(state.mood) else "—",
+                        Modifier.weight(1f),
+                        emoji = state.mood.emoji.takeIf { state.moodLoggedToday },
+                        onClick = onOpenMind,
+                    )
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
                     SignalTile(t.water, "${Fmt.litres(state.waterMl)} ${strings.common.litres}", Modifier.weight(1f), onClick = onAddWater)

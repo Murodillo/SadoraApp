@@ -1,5 +1,7 @@
 package uz.sadora.app.ui.core
 
+import uz.sadora.app.data.readable
+import uz.sadora.app.ui.components.ErrorStrip
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -86,7 +88,8 @@ fun PostDetailScreen(
                     comments = state.commentCountOf(post),
                     onLike = { state.toggleLike(post.id) },
                     onSave = { state.toggleSaved(post.id) },
-                    onOpen = {},
+                    // Already open. Null, so the card does not dip under a tap that goes nowhere.
+                    onOpen = null,
                     onOpenAuthor = { onOpenProfile(post.alias) },
                     onShare = { share("${post.body}\n\n" + t.shareSuffix) },
                     onMore = { onOpenMenu(post) },
@@ -101,11 +104,19 @@ fun PostDetailScreen(
             }
         }
 
+        // Why a comment did not go: the daily limit, a restricted account, no network.
+        // This page had nowhere to say so, and the comment sat there looking posted.
+        community.error?.let { failure ->
+            ErrorStrip(failure.readable(), modifier = Modifier.padding(horizontal = Spacing.screen))
+        }
+
         CommentInput(
             onSend = { body ->
+                community.clearError()
                 state.addComment(post.id, body)
                 // Her comment is appended; the list follows it down.
                 scope.launch { list.animateScrollToItem(comments.size + 2) }
+                true
             },
             modifier = Modifier
                 .background(c.surface)

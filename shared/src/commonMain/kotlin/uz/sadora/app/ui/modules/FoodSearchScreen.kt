@@ -39,7 +39,6 @@ import uz.sadora.app.ui.components.SadoraCard
 import uz.sadora.app.ui.components.SadoraSearchField
 import uz.sadora.app.ui.components.SadoraTopBar
 import uz.sadora.app.ui.components.ScreenContent
-import uz.sadora.app.ui.components.SegmentedControl
 import uz.sadora.app.ui.components.SelectChip
 import uz.sadora.app.ui.components.noRippleClickable
 import uz.sadora.contract.MealSlot
@@ -78,9 +77,11 @@ fun FoodSearchScreen(
     val c = Sadora.colors
     val t = strings.modules
     var query by remember { mutableStateOf("") }
-    var tab by remember { mutableStateOf(0) }
     var selected by remember { mutableStateOf<FoodItem?>(null) }
-    var grams by remember { mutableStateOf(250) }
+    var grams by remember { mutableStateOf(DefaultGrams) }
+    // A food sold by the piece is counted, not weighed: "250 dona tuxum" at a hundredth
+    // of an egg each is what this screen said before the two were told apart.
+    var pieces by remember { mutableStateOf(1) }
     var results by remember { mutableStateOf<List<FoodItem>>(emptyList()) }
 
     // The catalogue is the server's, and a keystroke does not send a request: the
@@ -94,7 +95,13 @@ fun FoodSearchScreen(
     }
 
     val chosen = selected
-    val factor = grams / 100f
+    // The catalogue's numbers are per piece or per 100 g, and the multiplier follows.
+    val factor = if (chosen?.perPiece == true) pieces.toFloat() else grams / 100f
+    // A new dish starts from its own sensible amount, not the last dish's.
+    LaunchedEffect(chosen) {
+        grams = DefaultGrams
+        pieces = 1
+    }
 
     Column(modifier) {
         SadoraTopBar(strings.nutrition.mealSlot(slot), onBack = onClose)
@@ -104,13 +111,8 @@ fun FoodSearchScreen(
                 SadoraSearchField(query, { query = it }, placeholder = t.searchFood)
             }
 
-            item {
-                SegmentedControl(
-                    options = listOf(t.searchTabAll, t.searchTabFrequent, t.searchTabRecipes),
-                    selectedIndex = tab,
-                    onSelect = { tab = it },
-                )
-            }
+            // There was an All / Frequent / Recipes switch here. Nothing read it: the
+            // catalogue has one list, and a control that changes nothing is a broken one.
 
             if (results.isEmpty()) {
                 item {
@@ -147,22 +149,29 @@ fun FoodSearchScreen(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                         ) {
-                            Stepper("−") { grams = (grams - 50).coerceAtLeast(50) }
+                            Stepper("−") {
+                                if (chosen.perPiece) pieces = (pieces - 1).coerceAtLeast(1)
+                                else grams = (grams - 50).coerceAtLeast(50)
+                            }
                             Column(
                                 Modifier.weight(1f),
                                 horizontalAlignment = Alignment.CenterHorizontally,
                             ) {
-                                Text("$grams", style = Sadora.type.h1, color = c.text)
+                                Text("${if (chosen.perPiece) pieces else grams}", style = Sadora.type.h1, color = c.text)
                                 Text(
                                     if (chosen.perPiece) t.pieces else t.grams,
                                     style = Sadora.type.body,
                                     color = c.muted,
                                 )
                             }
-                            Stepper("+") { grams = (grams + 50).coerceAtMost(2000) }
+                            Stepper("+") {
+                                if (chosen.perPiece) pieces = (pieces + 1).coerceAtMost(MaxPieces)
+                                else grams = (grams + 50).coerceAtMost(2000)
+                            }
                         }
                         // Quick presets sit next to the numeric stepper, not instead of it.
-                        ChipFlowRow {
+                        // They are weights, so a counted food has none.
+                        if (!chosen.perPiece) ChipFlowRow {
                             listOf(100 to t.perHundredGrams, 250 to t.bowls(1), 500 to t.bowls(2))
                                 .forEach { (value, label) ->
                                     SelectChip(
@@ -281,3 +290,9 @@ private fun Stepper(glyph: String, onClick: () -> Unit) {
         Text(glyph, style = Sadora.type.h2, color = c.text)
     }
 }
+
+/** A bowl. Where the gram stepper starts for every weighed dish. */
+private const val DefaultGrams = 250
+
+/** Nobody eats more somsa than this in one sitting, and the server caps kcal at 10 000. */
+private const val MaxPieces = 30

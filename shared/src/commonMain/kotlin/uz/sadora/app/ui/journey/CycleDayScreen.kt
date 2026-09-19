@@ -1,5 +1,9 @@
 package uz.sadora.app.ui.journey
 
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+import uz.sadora.app.ui.components.ErrorStrip
+import uz.sadora.app.data.readable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -54,9 +58,12 @@ fun CycleDayScreen(
     state: AppState,
     health: HealthController,
     date: String,
-    onOpenSymptomSheet: () -> Unit,
+    /** Opens the symptom sheet for the day this page shows, not for today. */
+    onOpenSymptomSheet: (LocalDate) -> Unit,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
+    /** True while that sheet is up; the record is read again when it closes. */
+    sheetOpen: Boolean = false,
 ) {
     val c = Sadora.colors
     val t = strings.journey
@@ -67,11 +74,20 @@ fun CycleDayScreen(
     val phase = if (isToday) state.currentPhase() else state.phaseForDate(day)
 
     var log by remember(day) { mutableStateOf<DailyLog?>(null) }
-    LaunchedEffect(day) {
+    // Read again when the sheet closes: the card under it kept showing the record from
+    // before the edit.
+    LaunchedEffect(day, sheetOpen) {
+        if (sheetOpen) return@LaunchedEffect
         health.loadSymptoms(null)
         log = health.dayAt(day)
     }
     val entry = log
+    val scope = rememberCoroutineScope()
+    // Nothing can be recorded about a day that has not happened.
+    val editable = day <= state.today
+    // The period that is still running, if this day falls inside it.
+    val openPeriod = health.cycle?.currentPeriod?.takeIf { it.isOngoing && day >= it.startedOn }
+    var savingPeriod by remember { mutableStateOf(false) }
 
     Column(modifier) {
         SadoraTopBar("", onBack = onClose)
@@ -162,19 +178,59 @@ fun CycleDayScreen(
                 }
             }
 
-            item {
-                Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-                    SadoraButton(
-                        t.editEntry,
-                        onClick = onOpenSymptomSheet,
-                        tone = ButtonTone.Secondary,
-                        modifier = Modifier.weight(1f),
-                    )
-                    SadoraButton(
-                        t.addSymptom,
-                        onClick = onOpenSymptomSheet,
-                        modifier = Modifier.weight(1f),
-                    )
+            // The one thing the cycle is predicted from. After onboarding nothing in the
+            // app could record it: "Hayzni belgilash" led here, and here there were only
+            // symptoms. Only for the stages that have a cycle to predict.
+            if (editable && state.lifeStage.predictsCycle) {
+                item {
+                    SadoraCard {
+                        Text(t.periodCardTitle, style = Sadora.type.h3, color = c.text)
+                        Text(
+                            if (openPeriod != null) {
+                                t.periodRunningSince(strings.dates.dayMonth(openPeriod.startedOn))
+                            } else {
+                                t.periodCardBody
+                            },
+                            style = Sadora.type.body,
+                            color = c.muted,
+                        )
+                        health.error?.let { ErrorStrip(it.readable()) }
+                        SadoraButton(
+                            when {
+                                savingPeriod -> strings.common.saving
+                                openPeriod != null -> t.periodEndedThisDay
+                                else -> t.periodStartedThisDay
+                            },
+                            onClick = {
+                                savingPeriod = true
+                                scope.launch {
+                                    if (openPeriod != null) health.endPeriod(openPeriod.id, day)
+                                    else health.logPeriodStart(day)
+                                    savingPeriod = false
+                                }
+                            },
+                            enabled = !savingPeriod,
+                            tone = if (openPeriod != null) ButtonTone.Secondary else ButtonTone.Primary,
+                        )
+                    }
+                }
+            }
+
+            if (editable) {
+                item {
+                    Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                        SadoraButton(
+                            t.editEntry,
+                            onClick = { onOpenSymptomSheet(day) },
+                            tone = ButtonTone.Secondary,
+                            modifier = Modifier.weight(1f),
+                        )
+                        SadoraButton(
+                            t.addSymptom,
+                            onClick = { onOpenSymptomSheet(day) },
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
                 }
             }
         }

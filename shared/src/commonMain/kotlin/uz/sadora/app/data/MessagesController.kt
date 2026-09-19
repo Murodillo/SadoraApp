@@ -47,7 +47,7 @@ class MessagesController(
 
     suspend fun load() {
         val api = api ?: return
-        calls.run(silent = true) { api.conversations() }?.let {
+        calls.run(silent = loaded) { api.conversations() }?.let {
             conversations = it.map { thread -> thread.toAppConversation() }
             loaded = true
         }
@@ -103,7 +103,9 @@ class MessagesController(
             return true
         }
         val sent = calls.run { api.sendMessage(thread.id, body) } ?: return false
-        messages = messages + sent.toAppMessage()
+        // The four-second poll can bring this message back before the send returns. The
+        // list is keyed by id, and the same id twice is a crash, not a duplicate bubble.
+        if (messages.none { it.id == sent.id }) messages = messages + sent.toAppMessage()
         conversations = conversations.map {
             if (it.id == thread.id) it.copy(lastMessage = sent.body, lastMessageAt = sent.createdAt) else it
         }

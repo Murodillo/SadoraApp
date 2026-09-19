@@ -7,16 +7,17 @@
     <uses-permission android:name="android.permission.INTERNET" />
 
     <!--
-        The food scanner deliberately does NOT declare android.permission.CAMERA.
-        It never opens the camera itself — it sends ACTION_IMAGE_CAPTURE to the system
-        camera app, which holds the permission. Declaring it flips that: Android then
-        requires the *sender* to hold it too, and since it is revoked by default the
-        intent throws a SecurityException the moment the shutter is tapped. That is
-        exactly what happened on an S23 the first time this was tried.
+        The food scanner draws its own viewfinder (CameraX, LiveCamera.android.kt), so it
+        holds the camera permission itself and asks for it on that page, never at launch.
 
-        The gallery needs no permission either: PickVisualMedia returns the one image
-        the user picked. The camera itself is optional so the app installs without one.
+        Nothing in the app sends ACTION_IMAGE_CAPTURE any more, and nothing should start
+        to: once CAMERA is declared, Android requires the *sender* of that intent to hold
+        it too and throws a SecurityException when it is not granted.
+
+        The gallery needs no permission: PickVisualMedia returns the one image the user
+        picked. The camera itself is optional so the app installs without one.
     -->
+    <uses-permission android:name="android.permission.CAMERA" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
 
     <!-- Android 13 and later post no notification at all without this, granted at runtime.

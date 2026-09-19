@@ -1,5 +1,13 @@
 package uz.sadora.app.ui.modules
 
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.layout.defaultMinSize
+import uz.sadora.app.design.MinTouchTarget
+import uz.sadora.app.ui.components.noRippleSelectable
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
@@ -103,7 +111,9 @@ fun MindScreen(
     var running by remember { mutableStateOf<Practice?>(null) }
     val moodWeek = insights.summary(7)?.trend(TrendMetric.MOOD)
 
-    LaunchedEffect(Unit) { insights.load(7) }
+    // Re-read after every check-in the server accepts: the window is cached, and today's
+    // bar stayed empty for the whole session however many moods she picked.
+    LaunchedEffect(state.checkInsSaved) { insights.load(7, force = state.checkInsSaved > 0) }
 
     Box(modifier) {
         Column {
@@ -127,7 +137,7 @@ fun MindScreen(
                     Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                         DialCard(
                             label = t.stress,
-                            level = state.stress,
+                            level = state.stress.takeIf { state.stressLoggedToday },
                             words = t.levels,
                             color = c.primary,
                             modifier = Modifier.weight(1f),
@@ -135,7 +145,7 @@ fun MindScreen(
                         )
                         DialCard(
                             label = t.energy,
-                            level = state.energy,
+                            level = state.energy.takeIf { state.energyLoggedToday },
                             words = t.levels,
                             color = c.primary,
                             modifier = Modifier.weight(1f),
@@ -202,7 +212,7 @@ fun MindScreen(
                         } else {
                             t.assistantFree
                         },
-                        showPremiumBadge = true,
+                        showPremiumBadge = !state.isPremium,
                         onClick = onOpenAi,
                     )
                 }
@@ -232,17 +242,24 @@ private fun MoodCard(state: AppState) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(Spacing.xxs),
         ) {
-            Text(state.mood.emoji, style = TextStyle(fontSize = 64.sp))
-            Text(strings.common.mood(state.mood), style = Sadora.type.h2, color = c.text)
-            Text(strings.common.moodCaption(state.mood), style = Sadora.type.body, color = c.muted)
+            // The store always holds a mood; until she picks one it is the default, and
+            // the card asked nothing — it told her she was "Xotirjam".
+            if (state.moodLoggedToday) {
+                Text(state.mood.emoji, style = TextStyle(fontSize = 64.sp))
+                Text(strings.common.mood(state.mood), style = Sadora.type.h2, color = c.text)
+                Text(strings.common.moodCaption(state.mood), style = Sadora.type.body, color = c.muted)
+            } else {
+                Text(strings.mind.moodNotLogged, style = Sadora.type.h2, color = c.text, textAlign = TextAlign.Center)
+                Text(strings.mind.moodNotLoggedCaption, style = Sadora.type.body, color = c.muted, textAlign = TextAlign.Center)
+            }
         }
         Row(
-            Modifier.fillMaxWidth().padding(top = Spacing.xs),
+            Modifier.fillMaxWidth().padding(top = Spacing.xs).selectableGroup(),
             horizontalArrangement = Arrangement.SpaceEvenly,
         ) {
             // Best first, as the deck orders them; each face sits on its own colour.
             Mood.entries.reversed().forEach { mood ->
-                MoodFace(mood, selected = state.mood == mood, onClick = { state.setCheckIn(mood = mood) })
+                MoodFace(mood, selected = state.moodLoggedToday && state.mood == mood, onClick = { state.setCheckIn(mood = mood) })
             }
         }
     }
@@ -272,8 +289,13 @@ private fun MoodFace(mood: Mood, selected: Boolean, onClick: () -> Unit) {
         label = "mood-dot",
     )
 
+    val name = strings.common.mood(mood)
     Column(
-        Modifier.pressable(onClick = onClick),
+        Modifier
+            .defaultMinSize(minWidth = MinTouchTarget, minHeight = MinTouchTarget)
+            .noRippleSelectable(selected = selected, role = Role.RadioButton, onClick = onClick)
+            // An emoji is read as its Unicode name, in English, or skipped.
+            .clearAndSetSemantics { contentDescription = name },
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
@@ -297,7 +319,8 @@ private fun MoodFace(mood: Mood, selected: Boolean, onClick: () -> Unit) {
 @Composable
 private fun DialCard(
     label: String,
-    level: Int,
+    /** Null until she sets it today: an empty ring, not the default drawn as an answer. */
+    level: Int?,
     words: List<String>,
     color: Color,
     modifier: Modifier = Modifier,
@@ -305,7 +328,7 @@ private fun DialCard(
 ) {
     val t = strings.mind
     val c = Sadora.colors
-    val fraction = level / 5f
+    val fraction = (level ?: 0) / 5f
     SadoraCard(modifier = modifier, padding = Spacing.sm) {
         Text(label, style = Sadora.type.body, color = c.muted)
         Row(
@@ -313,25 +336,45 @@ private fun DialCard(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
-            Text(words[level - 1], style = Sadora.type.h3, color = c.text, modifier = Modifier.weight(1f))
+            Text(
+                level?.let { words[it - 1] } ?: t.dialNotSet,
+                style = Sadora.type.h3,
+                color = if (level != null) c.text else c.muted,
+                modifier = Modifier.weight(1f),
+            )
             ProgressRing(progress = fraction, size = 44.dp, strokeWidth = 5.dp, color = color) {
                 Text(
-                    "${(fraction * 100).toInt()}%",
+                    if (level != null) "${(fraction * 100).toInt()}%" else "—",
                     style = Sadora.type.caption.copy(letterSpacing = TextUnit.Unspecified),
                     color = c.text,
                 )
             }
         }
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+        // The bar is the only input these two have. Each step keeps its 6dp look inside a
+        // finger-sized cell: at 6dp tall it could barely be hit, and it told a screen
+        // reader nothing at all.
+        Row(
+            Modifier.fillMaxWidth().selectableGroup(),
+            horizontalArrangement = Arrangement.spacedBy(3.dp),
+        ) {
             (1..5).forEach { step ->
+                val word = words[step - 1]
                 Box(
                     Modifier
                         .weight(1f)
-                        .height(6.dp)
-                        .clip(Radius.chip)
-                        .background(if (step <= level) color else c.surface2)
-                        .noRippleClickable { onLevel(step) },
-                )
+                        .height(MinTouchTarget)
+                        .noRippleSelectable(selected = step == level, role = Role.RadioButton) { onLevel(step) }
+                        .semantics { contentDescription = "$label: $word" },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Box(
+                        Modifier
+                            .fillMaxWidth()
+                            .height(6.dp)
+                            .clip(Radius.chip)
+                            .background(if (level != null && step <= level) color else c.surface2),
+                    )
+                }
             }
         }
     }

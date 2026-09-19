@@ -1,5 +1,8 @@
 package uz.sadora.app.ui.core
 
+import androidx.compose.runtime.LaunchedEffect
+import uz.sadora.app.data.readable
+import uz.sadora.app.ui.components.ErrorStrip
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -54,9 +57,15 @@ import uz.sadora.contract.Limits
 fun ComposePostSheetContent(
     state: AppState,
     onPosted: () -> Unit,
+    /** Null in a preview; with it, "sent" is said only once the server has the post. */
+    community: CommunityController? = null,
 ) {
     val c = Sadora.colors
     val t = strings.community
+    val scope = rememberCoroutineScope()
+    var sending by remember { mutableStateOf(false) }
+    // A failure left over from the feed is not this sheet's failure.
+    LaunchedEffect(Unit) { community?.clearError() }
     val rooms = remember { CommunityTopic.entries.filter { it != CommunityTopic.All } }
     var topic by remember {
         mutableStateOf(state.communityTopic.takeIf { it != CommunityTopic.All } ?: rooms.first())
@@ -93,7 +102,8 @@ fun ComposePostSheetContent(
             }
             BasicTextField(
                 value = body,
-                onValueChange = { if (it.length <= MaxPostLength) body = it },
+                // Trimmed to fit, not refused: a paste one character over used to do nothing.
+                onValueChange = { body = it.take(MaxPostLength) },
                 textStyle = Sadora.type.body.copy(color = c.text),
                 cursorBrush = SolidColor(c.primary),
                 modifier = Modifier.fillMaxWidth(),
@@ -104,13 +114,26 @@ fun ComposePostSheetContent(
             Text("${body.length} / $MaxPostLength", style = Sadora.type.body, color = c.muted2)
         }
 
+        // The daily limit, a restricted account, no network: the reason, with her text
+        // still in the field. The sheet used to close on "Yuborildi" and the draft with it.
+        community?.error?.let { ErrorStrip(it.readable()) }
+
         SadoraButton(
-            t.send,
+            if (sending) strings.common.saving else t.send,
             onClick = {
-                state.createPost(topic, body)
-                onPosted()
+                if (community == null) {
+                    state.createPost(topic, body)
+                    onPosted()
+                } else {
+                    sending = true
+                    scope.launch {
+                        val sent = community.createPost(topic, body.trim())
+                        sending = false
+                        if (sent) onPosted()
+                    }
+                }
             },
-            enabled = canPost,
+            enabled = canPost && !sending,
         )
     }
 }
@@ -282,20 +305,44 @@ fun PostMenuSheetContent(
     state: AppState,
     post: CommunityPost,
     onDone: (message: String?) -> Unit,
+    /** Null in a preview; with it, the toast waits for the server's answer. */
+    community: CommunityController? = null,
 ) {
     val c = Sadora.colors
     val t = strings.community
+    val scope = rememberCoroutineScope()
     var reason by remember { mutableStateOf<ReportReason?>(null) }
+    var armed by remember { mutableStateOf(false) }
+    var working by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { community?.clearError() }
 
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
         if (post.isMine) {
             Text(t.yourOwnPost, style = Sadora.type.body, color = c.muted)
+            community?.error?.let { ErrorStrip(it.readable()) }
             SadoraButton(
-                t.deletePost,
+                // Two taps: it cannot be undone, and one stray tap used to be enough.
+                if (armed) t.deletePostConfirm else t.deletePost,
                 onClick = {
-                    state.deletePost(post.id)
-                    onDone(t.postDeleted)
+                    when {
+                        !armed -> armed = true
+                        community == null -> {
+                            state.deletePost(post.id)
+                            onDone(t.postDeleted)
+                        }
+                        else -> {
+                            working = true
+                            scope.launch {
+                                // Said only once it is gone: a delete that failed used to
+                                // toast "o'chirildi" and the post came back on refresh.
+                                val gone = community.deletePost(post.id)
+                                working = false
+                                if (gone) onDone(t.postDeleted)
+                            }
+                        }
+                    }
                 },
+                enabled = !working,
                 tone = ButtonTone.Destructive,
             )
             return@Column
@@ -324,13 +371,25 @@ fun PostMenuSheetContent(
                 )
             }
         }
+        community?.error?.let { ErrorStrip(it.readable()) }
         SadoraButton(
             t.sendReport,
             onClick = {
-                reason?.let { state.reportPost(post.id, it, null) }
-                onDone(t.reportSent)
+                val chosen = reason ?: return@SadoraButton
+                if (community == null) {
+                    state.reportPost(post.id, chosen, null)
+                    onDone(t.reportSent)
+                } else {
+                    working = true
+                    scope.launch {
+                        // "Already reported" is a refusal with a reason, not a success.
+                        val sent = community.reportPost(post.id, chosen, null)
+                        working = false
+                        if (sent) onDone(t.reportSent)
+                    }
+                }
             },
-            enabled = reason != null,
+            enabled = reason != null && !working,
         )
     }
 }

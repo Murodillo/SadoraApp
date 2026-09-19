@@ -105,6 +105,9 @@ fun SadoraBottomSheet(
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val c = Sadora.colors
+    // Back closes the sheet. Without this it reached the shell's handler, which switched
+    // to Today — throwing away a breathing session mid-count and whatever was typed.
+    SystemBackHandler(enabled = visible, onBack = onDismiss)
     AnimatedVisibility(visible, enter = fadeIn(), exit = fadeOut()) {
         Box(
             Modifier

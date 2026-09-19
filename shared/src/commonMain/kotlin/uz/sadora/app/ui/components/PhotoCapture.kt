@@ -10,18 +10,17 @@ data class CapturedPhoto(
 )
 
 /**
- * The two ways a photo of a meal gets into the app.
+ * The gallery road into the scanner. The camera is [LiveCamera], drawn in the page.
  *
- * Both are handles rather than a screen: the camera and the gallery belong to the
- * platform, and the flow around them — the framing hint, the limit, what happens to the
- * estimate — belongs to the shared code that calls this.
+ * A handle rather than a screen: the picker belongs to the platform, and the flow around
+ * it — the framing hint, the limit, what happens to the estimate — belongs to the shared
+ * code that calls this.
  *
- * [available] is false where neither is wired up, so the flow can say so plainly rather
+ * [available] is false where it is not wired up, so the flow can say so plainly rather
  * than offering a button that does nothing.
  */
 interface PhotoCapture {
     val available: Boolean
-    fun takePhoto()
     fun pickFromGallery()
 }
 

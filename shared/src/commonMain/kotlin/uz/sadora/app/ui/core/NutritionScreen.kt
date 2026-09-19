@@ -1,5 +1,13 @@
 package uz.sadora.app.ui.core
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.text.style.TextOverflow
+import uz.sadora.app.ui.components.ButtonTone
+import uz.sadora.app.ui.components.SadoraBottomSheet
+import uz.sadora.app.ui.components.SadoraButton
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -55,14 +63,18 @@ fun NutritionScreen(
     onOpen: (Route) -> Unit,
     onAddWater: () -> Unit,
     modifier: Modifier = Modifier,
+    /** What the "+250 ml" pill does; the sheet of other sizes stays behind [onAddWater]. */
+    onQuickWater: (Int) -> Unit = { onAddWater() },
     /** Drawn between the top bar and the content: the Mind / Food switch on a free account. */
     underBar: (@Composable () -> Unit)? = null,
 ) {
     val t = strings.nutrition
     val c = Sadora.colors
     val scanRoute = if (state.isPremium) Route.FoodScanCamera else Route.Paywall
+    var pendingDelete by remember { mutableStateOf<Meal?>(null) }
 
-    Column(modifier) {
+    Box(modifier) {
+    Column {
         SadoraTopBar(
             t.title,
             centered = true,
@@ -92,7 +104,10 @@ fun NutritionScreen(
                     }
                 }
             } else {
-                items(state.meals.size) { index -> MealRow(state.meals[index]) }
+                items(state.meals.size) { index ->
+                    val meal = state.meals[index]
+                    MealRow(meal, onClick = { pendingDelete = meal })
+                }
             }
 
             item {
@@ -111,7 +126,7 @@ fun NutritionScreen(
                                 color = c.text,
                             )
                         }
-                        PillButton(t.addWater(250), onAddWater)
+                        PillButton(t.addWater(250), { onQuickWater(250) })
                     }
                 }
             }
@@ -167,6 +182,46 @@ fun NutritionScreen(
                 }
             }
         }
+    }
+
+    // Kept mounted through the exit animation so the sheet does not blank as it closes.
+    val lastPending = remember { mutableStateOf<Meal?>(null) }
+    pendingDelete?.let { lastPending.value = it }
+    SadoraBottomSheet(
+        visible = pendingDelete != null,
+        title = t.deleteMealTitle,
+        onDismiss = { pendingDelete = null },
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+            Text(t.deleteMealBody, style = Sadora.type.body, color = c.muted)
+            lastPending.value?.let { meal ->
+                Text(
+                    "${meal.description} · ${t.kcal(meal.calories)}",
+                    style = Sadora.type.body,
+                    color = c.text,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                SadoraButton(
+                    strings.common.cancel,
+                    onClick = { pendingDelete = null },
+                    tone = ButtonTone.Secondary,
+                    modifier = Modifier.weight(1f),
+                )
+                SadoraButton(
+                    strings.common.delete,
+                    onClick = {
+                        pendingDelete?.let(state::deleteMeal)
+                        pendingDelete = null
+                    },
+                    tone = ButtonTone.Destructive,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+        }
+    }
     }
 }
 
@@ -235,6 +290,10 @@ private fun macroNote(state: AppState, t: NutritionStrings): String {
     ).maxBy { it.second }
     val kcalLeft = (state.calorieGoal - state.caloriesEaten).coerceAtLeast(0)
 
+    // With nothing eaten every gap is 100%, and "protein is what you are short of" is
+    // only the first item of a three-way tie.
+    if (state.meals.isEmpty()) return t.nothingLoggedNote
+
     return if (largest < 0.1f) {
         t.balanced(kcalLeft)
     } else {
@@ -242,12 +301,17 @@ private fun macroNote(state: AppState, t: NutritionStrings): String {
     }
 }
 
-/** One meal: photo tile, slot, "08:30 • 450 kkal", and the macros as coloured letters. */
+/**
+ * One meal: photo tile, what it was, "Kechki ovqat • 20:13 • 180 kkal", and the macros
+ * as coloured letters. The title is the dish — it used to be the slot, so a scanned
+ * "Qovurilgan tuxum" and a typed "Osh" were both just "Kechki ovqat". Tapping offers
+ * to delete it, which nothing on the screen could do before.
+ */
 @Composable
-private fun MealRow(meal: Meal) {
+private fun MealRow(meal: Meal, onClick: () -> Unit) {
     val t = strings.nutrition
     val c = Sadora.colors
-    SadoraCard(padding = Spacing.sm) {
+    SadoraCard(padding = Spacing.sm, onClick = onClick) {
         Row(
             Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
@@ -255,16 +319,26 @@ private fun MealRow(meal: Meal) {
         ) {
             MealThumb(meal.emoji, size = 64.dp)
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(t.mealSlot(meal.slot), style = Sadora.type.h3, color = c.text)
                 Text(
-                    listOf(meal.time, t.kcal(meal.calories)).filter { it.isNotBlank() }.joinToString(" • "),
+                    meal.description.ifBlank { t.mealSlot(meal.slot) },
+                    style = Sadora.type.h3,
+                    color = c.text,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    listOf(
+                        t.mealSlot(meal.slot).takeIf { meal.description.isNotBlank() }.orEmpty(),
+                        meal.time,
+                        t.kcal(meal.calories),
+                    ).filter { it.isNotBlank() }.joinToString(" • "),
                     style = Sadora.type.body,
                     color = c.muted,
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(Spacing.md)) {
-                    MacroLetter("O", meal.protein, c.protein)
-                    MacroLetter("Y", meal.fat, c.fat)
-                    MacroLetter("U", meal.carbs, c.carbs)
+                    MacroLetter(strings.modules.proteinInitial, meal.protein, c.protein)
+                    MacroLetter(strings.modules.fatInitial, meal.fat, c.fat)
+                    MacroLetter(strings.modules.carbsInitial, meal.carbs, c.carbs)
                 }
             }
         }

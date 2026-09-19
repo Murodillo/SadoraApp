@@ -278,16 +278,19 @@ class AppState {
     var hasCyclePrediction by mutableStateOf(true)
 
     // ---- daily data ----
-    var waterMl by mutableStateOf(1200)
+    // What she has logged starts at nothing, never at a plausible number: these used to
+    // open at 1.2 l and 1 240 kcal, and a cold start on a slow network showed her a day
+    // she had not had until the server answered. The goals are defaults, not claims.
+    var waterMl by mutableStateOf(0)
     var waterGoalMl by mutableStateOf(2000)
 
-    var caloriesEaten by mutableStateOf(1240)
+    var caloriesEaten by mutableStateOf(0)
     var calorieGoal by mutableStateOf(1850)
-    var proteinG by mutableStateOf(61)
+    var proteinG by mutableStateOf(0)
     var proteinGoalG by mutableStateOf(85)
-    var fatG by mutableStateOf(38)
+    var fatG by mutableStateOf(0)
     var fatGoalG by mutableStateOf(62)
-    var carbsG by mutableStateOf(132)
+    var carbsG by mutableStateOf(0)
     var carbsGoalG by mutableStateOf(210)
 
     /**
@@ -316,6 +319,21 @@ class AppState {
     /** 1–5, the Mind tab's second and third dials. Stress 5 is the most stressed. */
     var energy by mutableStateOf(4)
     var stress by mutableStateOf(2)
+
+    /**
+     * Whether she set each dial today. Like [mood], both always hold a number, and the
+     * Mind tab used to draw "Stress: past 40%, Energiya: yuqori 80%" for a day she had
+     * said nothing about — then sent those two numbers up as her answers the first time
+     * she tapped a mood.
+     */
+    /**
+     * Counts check-ins the server has accepted. The week's mood chart is a cached window,
+     * and this is what tells it that today's bar has changed.
+     */
+    var checkInsSaved by mutableStateOf(0)
+
+    var energyLoggedToday by mutableStateOf(false)
+    var stressLoggedToday by mutableStateOf(false)
 
     /**
      * What her device measured today. Null until a device — or her own hand, for sleep —
@@ -438,6 +456,25 @@ class AppState {
                 ),
             )
         communitySync?.commentAdded(postId, text)
+    }
+
+    /**
+     * Takes back a comment the server refused — the daily limit, a restricted account, no
+     * network. It stayed on the page as if posted, with its +1, until some later load
+     * quietly dropped it.
+     */
+    fun dropOwnComment(postId: String, body: String) {
+        val mine = ownComments[postId] ?: return
+        mine.indexOfLast { it.body == body }.takeIf { it >= 0 }?.let(mine::removeAt)
+    }
+
+    /** Undoes a like or a save the server did not take, so the heart is not left lying. */
+    fun revertLike(postId: String, liked: Boolean) {
+        if (liked) likedPosts.remove(postId) else if (postId !in likedPosts) likedPosts.add(postId)
+    }
+
+    fun revertSaved(postId: String, saved: Boolean) {
+        if (saved) savedPosts.remove(postId) else if (postId !in savedPosts) savedPosts.add(postId)
     }
 
     /**
@@ -772,16 +809,43 @@ class AppState {
     }
 
     /**
-     * The Mind check-in. The three dials are saved as one record, so changing any of
-     * them sends all three — the server replaces the day's check-in wholesale.
+     * Takes a meal out of today. The totals come down with it at once; the server's own
+     * totals replace them when the delete returns. A meal added seconds ago still has
+     * the store's provisional id, which the server never saw, so nothing is sent for it.
      */
-    fun setCheckIn(mood: Mood = this.mood, energy: Int = this.energy, stress: Int = this.stress) {
+    fun deleteMeal(meal: Meal) {
+        if (!meals.remove(meal)) return
+        caloriesEaten = (caloriesEaten - meal.calories).coerceAtLeast(0)
+        proteinG = (proteinG - meal.protein).coerceAtLeast(0)
+        fatG = (fatG - meal.fat).coerceAtLeast(0)
+        carbsG = (carbsG - meal.carbs).coerceAtLeast(0)
+        sync?.mealDeleted(meal.id)
+    }
+
+    /**
+     * The Mind check-in. The three dials are saved as one record — the server replaces
+     * the day's check-in wholesale — so every dial she has set goes up each time, and a
+     * dial she has not touched goes up as null rather than as its default.
+     */
+    fun setCheckIn(mood: Mood? = null, energy: Int? = null, stress: Int? = null) {
         isNewUser = false
-        this.mood = mood
-        moodLoggedToday = true
-        this.energy = energy.coerceIn(1, 5)
-        this.stress = stress.coerceIn(1, 5)
-        sync?.checkInChanged(this.mood, this.energy, this.stress)
+        if (mood != null) {
+            this.mood = mood
+            moodLoggedToday = true
+        }
+        if (energy != null) {
+            this.energy = energy.coerceIn(1, 5)
+            energyLoggedToday = true
+        }
+        if (stress != null) {
+            this.stress = stress.coerceIn(1, 5)
+            stressLoggedToday = true
+        }
+        sync?.checkInChanged(
+            this.mood.takeIf { moodLoggedToday },
+            this.energy.takeIf { energyLoggedToday },
+            this.stress.takeIf { stressLoggedToday },
+        )
     }
 
     fun logPractice(kind: PracticeKind, seconds: Int) {

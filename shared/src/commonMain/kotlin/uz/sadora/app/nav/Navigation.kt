@@ -125,7 +125,10 @@ sealed interface Route {
  * on its own dark ground in the deck, and a camera viewfinder has nowhere to put a bar.
  */
 val Route.isFullScreen: Boolean
-    get() = this == Route.AiChat || this == Route.FoodScanCamera || this == Route.Paywall
+    get() = this == Route.AiChat || this == Route.FoodScanCamera || this == Route.Paywall ||
+        // A thread and a post end in a text field. Above the tab bar it was padded for the
+        // system bar a second time, and with the keyboard up it floated a bar's height over it.
+        this is Route.Post || this is Route.Conversation
 
 /**
  * Where an AI entry point leads. The chat runs for Premium only; a free account sees
@@ -252,8 +255,21 @@ class Navigator {
         this.tab = tab
     }
 
+    /**
+     * Moves the tab underneath whatever is open, leaving the stack alone.
+     *
+     * For when the bar itself changes — Premium bought, and the Premium tab with it gone.
+     * [select] clears the stack, which is right for a tap on the bar and wrong here: it
+     * tore down the "Premium ochildi" sheet and the paywall's "To'lov qabul qilindi" the
+     * instant the purchase succeeded, and dropped her on Today without a word.
+     */
+    fun retarget(tab: Tab) {
+        this.tab = tab
+    }
+
     fun push(route: Route) {
-        stack.add(route)
+        // A double-tap on a card is one intention; it used to stack the screen twice.
+        if (stack.lastOrNull() != route) stack.add(route)
     }
 
     fun pop() {

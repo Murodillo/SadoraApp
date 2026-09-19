@@ -19,8 +19,11 @@ interface AppStateSync {
     fun doseSkipped(doseId: String)
     fun mealLogged(meal: Meal)
 
-    /** The Mind check-in: mood, energy and stress go up together as one record. */
-    fun checkInChanged(mood: Mood, energy: Int, stress: Int)
+    /** A meal removed from today. Only ever called with an id the server issued. */
+    fun mealDeleted(id: String) {}
+
+    /** The Mind check-in: mood, energy and stress go up together; null is a dial not set today. */
+    fun checkInChanged(mood: Mood?, energy: Int?, stress: Int?)
 
     /** A finished breathing or meditation session. */
     fun practiceLogged(kind: PracticeKind, seconds: Int)
