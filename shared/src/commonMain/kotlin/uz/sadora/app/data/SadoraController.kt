@@ -57,6 +57,10 @@ class SadoraController(
         return session.user.destination()
     }
 
+    /** Who is signed in, for stamping a store purchase with its account. */
+    val currentUserId: String?
+        get() = (repository?.state?.value as? SessionState.SignedIn)?.user?.id
+
     suspend fun signInWithSocial(provider: AuthProvider, idToken: String): AuthDestination? {
         val repo = repository ?: return AuthDestination.Onboarding
         val session = call { repo.signInWithSocial(provider, idToken) } ?: return null

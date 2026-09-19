@@ -68,10 +68,14 @@ fun PaywallScreen(
     val scope = rememberCoroutineScope()
     val uriHandler = LocalUriHandler.current
     val catalogue = billing.catalogue
-    val plans = catalogue?.plans.orEmpty()
+    // A store build sells only what the store lists, at the store's price.
+    val inStore = billing.store != null
+    val plans = catalogue?.plans.orEmpty().filter { !inStore || billing.storePrices.containsKey(billing.storeProductId(it)) }
     var selectedPlan by remember { mutableStateOf<String?>(null) }
+    var restoreNote by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) { billing.loadCatalogue() }
+    LaunchedEffect(catalogue) { if (catalogue != null) billing.loadStorePrices() }
 
     // The highlighted plan is the server's recommendation; until the catalogue arrives
     // there is nothing selected, because there is nothing to select.
@@ -163,13 +167,30 @@ fun PaywallScreen(
                 }
             }
 
+            // The store answered with nothing to sell — the products are not live in the
+            // console yet, or Play does not know this build. Say so instead of a blank.
+            if (inStore && catalogue != null && plans.isEmpty() && !billing.busy) {
+                item {
+                    SadoraCard {
+                        Text(t.plansFailed, style = Sadora.type.h3, color = c.text)
+                        Text(
+                            t.storePlansUnavailable(if (billing.store?.provider == PaymentProvider.APP_STORE) "App Store" else "Google Play"),
+                            style = Sadora.type.body,
+                            color = c.muted,
+                        )
+                    }
+                }
+            }
+
             items(plans.size) { index ->
                 val plan = plans[index]
                 PlanOption(
                     title = plan.title,
-                    price = plan.priceLabel(t),
-                    note = plan.monthlyNote(t),
-                    discount = plan.savingLabel(plans, t),
+                    // The store's own localized price; the server's so'm figure and its
+                    // savings maths describe a different price list.
+                    price = if (inStore) billing.storePrices[billing.storeProductId(plan)].orEmpty() else plan.priceLabel(t),
+                    note = if (inStore) null else plan.monthlyNote(t),
+                    discount = if (inStore) null else plan.savingLabel(plans, t),
                     selected = plan.id == selectedPlan,
                     onClick = { selectedPlan = plan.id },
                 )
@@ -182,8 +203,12 @@ fun PaywallScreen(
                     verticalArrangement = Arrangement.spacedBy(Spacing.xs),
                 ) {
                     val waiting = billing.pending != null
-                    val payable = catalogue?.providers.orEmpty()
-                        .filter { it == PaymentProvider.PAYME || it == PaymentProvider.CLICK }
+                    val payable = if (inStore) {
+                        emptyList()
+                    } else {
+                        catalogue?.providers.orEmpty().filter { it == PaymentProvider.PAYME || it == PaymentProvider.CLICK }
+                    }
+                    val storeName = if (billing.store?.provider == PaymentProvider.APP_STORE) "App Store" else "Google Play"
 
                     if (billing.paid) {
                         Text(
@@ -204,7 +229,24 @@ fun PaywallScreen(
                         )
                     }
 
-                    if (payable.isEmpty() && catalogue != null) {
+                    if (inStore && !billing.paid && !state.isPremium) {
+                        val plan = plans.firstOrNull { it.id == selectedPlan }
+                        PremiumCtaButton(
+                            if (billing.storePending) t.paymentPending else t.subscribe,
+                            enabled = plan != null && !billing.busy && !billing.storePending,
+                            onClick = {
+                                val userId = controller.currentUserId ?: return@PremiumCtaButton
+                                plan ?: return@PremiumCtaButton
+                                scope.launch { billing.buyInStore(plan, userId) { controller.refreshEntitlements() } }
+                            },
+                        )
+                        if (billing.storePending) {
+                            Text(t.storePending, style = Sadora.type.body, color = c.muted, textAlign = TextAlign.Center)
+                        }
+                        Text(t.storeRenewalTerms(storeName), style = Sadora.type.body, color = c.muted, textAlign = TextAlign.Center)
+                    }
+
+                    if (!inStore && payable.isEmpty() && catalogue != null) {
                         // The store flow needs the platform billing SDK, which the app
                         // does not carry yet; saying so is better than a button that
                         // cannot do anything.
@@ -231,10 +273,18 @@ fun PaywallScreen(
                         t.restorePurchase,
                         style = Sadora.type.body.copy(fontWeight = FontWeight.SemiBold),
                         color = c.textAccent,
-                        modifier = Modifier.noRippleClickable(enabled = !controller.busy) {
-                            scope.launch { controller.refreshEntitlements() }
+                        modifier = Modifier.noRippleClickable(enabled = !controller.busy && !billing.busy) {
+                            scope.launch {
+                                restoreNote = null
+                                // In a store build, the store is asked first: purchases it
+                                // holds for this phone's account go to the server to verify.
+                                val granted = billing.reconcileStore { controller.refreshEntitlements() }
+                                if (!granted) controller.refreshEntitlements()
+                                if (inStore && !granted && !state.isPremium) restoreNote = t.nothingToRestore
+                            }
                         },
                     )
+                    restoreNote?.let { Text(it, style = Sadora.type.body, color = c.muted, textAlign = TextAlign.Center) }
                 }
             }
         }

@@ -9,6 +9,11 @@ data class VerifiedPurchase(
     val transactionId: String,
     val expiresAt: Instant?,
     val autoRenewing: Boolean,
+    /**
+     * The account the app said it was buying for — Play's obfuscatedAccountId, Apple's
+     * appAccountToken — as the store recorded it. The app sets it to the user id.
+     */
+    val accountId: String? = null,
 )
 
 /**

@@ -51,6 +51,11 @@ class SadoraGraph(
      * `Context`. The no-op by default, so a test or a preview reads nothing.
      */
     healthPlatform: HealthPlatform = HealthPlatform.None,
+    /**
+     * The store's purchase sheet, when the app was installed from a store. Null for a
+     * direct build, which keeps Payme and Click.
+     */
+    private val storeBilling: StoreBilling? = null,
     healthPrefs: HealthSyncPrefs = InMemoryHealthSyncPrefs(),
     engine: HttpClientEngine? = null,
 ) {
@@ -102,7 +107,7 @@ class SadoraGraph(
 
     fun learnController(): LearnController = LearnController(learnApi)
 
-    fun billingController(): BillingController = BillingController(billingApi)
+    fun billingController(): BillingController = BillingController(billingApi, storeBilling)
 
     fun rewardsController(state: uz.sadora.app.model.AppState): RewardsController =
         RewardsController(rewardsApi, state, icons)

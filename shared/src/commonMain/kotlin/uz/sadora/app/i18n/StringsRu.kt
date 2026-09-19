@@ -1218,6 +1218,13 @@ object StringsRu : Strings {
         override val searchTabAll = "Все"
         override val searchTabFrequent = "Частые"
         override val searchTabRecipes = "Рецепты"
+        override val subscribe = "Оформить подписку"
+        override val storePending = "Ждём подтверждения оплаты. Когда оно придёт, Premium включится сам."
+        override fun storeRenewalTerms(store: String) =
+            "Подписка продлевается автоматически в конце выбранного периода, оплата списывается с аккаунта $store. " +
+                "Отменить её можно в любой момент в настройках $store."
+        override val nothingToRestore = "Покупок для восстановления не найдено"
+        override fun storePlansUnavailable(store: String) = "Тарифы пока недоступны в $store. Попробуйте чуть позже."
         override val typeADishName = "Введите название блюда"
         override fun nothingFoundFor(query: String) = "По запросу «$query» ничего не найдено"
         override val catalogueNote = "Каталог приходит с сервера — узбекские блюда идут первыми."

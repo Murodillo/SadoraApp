@@ -42,6 +42,12 @@ class StorePurchaseService(
             throw ValidationException("token", rejected.message ?: "Chek tasdiqlanmadi")
         }
 
+        // A purchase belongs to the account the app bought it for. Without this, one paid
+        // receipt could be posted from any number of accounts, each getting Premium.
+        if (verified.accountId != userId.toString()) {
+            throw ValidationException("token", "Bu xarid boshqa hisobga tegishli")
+        }
+
         // The store's transaction id is the idempotency key: the same receipt sent twice
         // — a reinstall, a restore, a retry — must not buy a second subscription.
         repository.byExternalId(request.provider, verified.transactionId)?.let { existing ->

@@ -1191,6 +1191,15 @@ interface ModuleStrings {
     val catalogueNote: String
     val portionLabel: String
     val pieces: String
+    /** The store build's one button. */
+    val subscribe: String
+    /** A store purchase paid with a method that clears later. */
+    val storePending: String
+    /** The auto-renewal terms both stores require next to the button. [store] is "Google Play" or "App Store". */
+    fun storeRenewalTerms(store: String): String
+    val nothingToRestore: String
+    /** The store listed none of the plans — not a connection problem. */
+    fun storePlansUnavailable(store: String): String
     val grams: String
     fun bowls(count: Int): String
     val total: String

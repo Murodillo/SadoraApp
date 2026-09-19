@@ -1389,6 +1389,46 @@ class ApiIntegrationTest {
         )
     }
 
+    /**
+     * A verified receipt still belongs to one account: the one the app bought it for. The
+     * same receipt posted from a second account is refused, and posted again from its own
+     * account it changes nothing.
+     */
+    @Test
+    fun `a store purchase grants Premium only to the account it was bought for, once`() = api {
+        val buyer = signUp().also { onboard(it) }
+        val other = signUp().also { onboard(it) }
+        val verifier = uz.sadora.server.billing.StoreVerifier { _, productId, _ ->
+            uz.sadora.server.billing.VerifiedPurchase(
+                productId = productId,
+                transactionId = "GPA.test-${buyer.userId}",
+                expiresAt = now() + 30.minutes,
+                autoRenewing = true,
+                accountId = buyer.userId,
+            )
+        }
+        val store = uz.sadora.server.billing.StorePurchaseService(
+            component.billingRepository,
+            component.subscriptionRepository,
+            component.entitlementService,
+            verifier,
+        )
+        val request = StorePurchaseRequest(PaymentProvider.GOOGLE_PLAY, "premium_month", "token")
+
+        kotlin.test.assertFailsWith<uz.sadora.server.core.ValidationException> {
+            store.verifyAndGrant(Uuid.parse(other.userId), request)
+        }
+        assertEquals(SubscriptionTier.FREE, get<Entitlements>("/v1/entitlements", other.token).tier)
+
+        val buyerId = Uuid.parse(buyer.userId)
+        store.verifyAndGrant(buyerId, request)
+        assertEquals(SubscriptionTier.PREMIUM, get<Entitlements>("/v1/entitlements", buyer.token).tier)
+        val firstExpiry = component.entitlementService.subscriptionStatus(buyerId).expiresAt
+        store.verifyAndGrant(buyerId, request)
+        assertEquals(firstExpiry, component.entitlementService.subscriptionStatus(buyerId).expiresAt, "a replayed receipt adds nothing")
+        assertEquals(1, countRowsFor(buyerId, "payment_transactions"))
+    }
+
     @Test
     fun `another account cannot read a payment it did not make`() = api {
         val user = signUp().also { onboard(it) }

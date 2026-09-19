@@ -1211,6 +1211,13 @@ object StringsUz : Strings {
         override val searchTabAll = "Barchasi"
         override val searchTabFrequent = "Tez-tez"
         override val searchTabRecipes = "Retseptlar"
+        override val subscribe = "Obuna bo'lish"
+        override val storePending = "To'lov tasdiqlanishi kutilmoqda. Tasdiqlangach Premium o'zi yoqiladi."
+        override fun storeRenewalTerms(store: String) =
+            "Obuna tanlangan davr tugashi bilan avtomatik yangilanadi va $store hisobingizdan yechiladi. " +
+                "Uni istalgan vaqtda $store sozlamalarida bekor qilishingiz mumkin."
+        override val nothingToRestore = "Bu hisobda tiklanadigan xarid topilmadi"
+        override fun storePlansUnavailable(store: String) = "Tariflar hozircha $store'da mavjud emas. Birozdan keyin qayta urinib ko'ring."
         override val typeADishName = "Taom nomini yozing"
         override fun nothingFoundFor(query: String) = "\"$query\" bo'yicha topilmadi"
         override val catalogueNote = "Katalog serverdan keladi — o'zbek taomlari birinchi o'rinda."

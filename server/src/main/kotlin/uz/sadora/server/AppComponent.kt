@@ -12,7 +12,9 @@ import uz.sadora.server.billing.BillingService
 import uz.sadora.server.billing.ClickGateway
 import uz.sadora.server.billing.PaymeGateway
 import uz.sadora.server.billing.StorePurchaseService
-import uz.sadora.server.billing.UnconfiguredStoreVerifier
+import uz.sadora.server.billing.AppStoreVerifier
+import uz.sadora.server.billing.GooglePlayVerifier
+import uz.sadora.server.billing.StoreVerifiers
 import uz.sadora.server.ai.AiService
 import uz.sadora.server.ai.AiUsageRepository
 import uz.sadora.server.ai.GeminiAnswerer
@@ -352,9 +354,18 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
         repository = billingRepository,
         subscriptions = subscriptionRepository,
         entitlements = entitlementService,
-        // No App Store key and no Play service account yet, so receipts are refused
-        // rather than believed.
-        verifier = UnconfiguredStoreVerifier,
+        // Play needs a service account; without one its receipts are refused. The App
+        // Store needs nothing but Apple's pinned root, so it is always on.
+        verifier = StoreVerifiers(
+            googlePlay = config.billing.googlePlay.takeIf { it.isConfigured }?.let {
+                GooglePlayVerifier(
+                    http = outboundHttpClient,
+                    packageName = it.packageName,
+                    serviceAccount = GooglePlayVerifier.ServiceAccount.fromFile(it.serviceAccountFile!!),
+                )
+            },
+            appStore = AppStoreVerifier(bundleIds = config.social.appleBundleIds.toSet()),
+        ),
     )
 
     val adminAuthService = AdminAuthService(jwtService, auditService)

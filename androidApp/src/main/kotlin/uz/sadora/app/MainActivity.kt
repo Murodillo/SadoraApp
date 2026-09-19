@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import uz.sadora.app.data.AndroidAppIcons
 import uz.sadora.app.data.AndroidDeviceIdentity
+import uz.sadora.app.data.AndroidStoreBilling
 import uz.sadora.app.data.AndroidTokenStorage
 import uz.sadora.app.data.SadoraEnvironment
 import uz.sadora.app.data.SadoraGraph
@@ -61,7 +62,36 @@ class MainActivity : ComponentActivity() {
             analytics = FirebaseAnalyticsTracker(applicationContext),
             healthPlatform = HealthConnectPlatform(applicationContext),
             healthPrefs = AndroidHealthSyncPrefs(applicationContext),
+            storeBilling = storeBilling,
         )
+    }
+
+    /**
+     * Play's billing, when Play installed the app (or the build asked for it). Both
+     * stores require their own billing for a digital subscription, so a Play install
+     * never shows Payme or Click; a sideloaded APK has no Play purchase to make and keeps
+     * them.
+     */
+    private val storeBilling: AndroidStoreBilling? by lazy {
+        if (BuildConfig.STORE_BILLING || installedFromPlay()) AndroidStoreBilling(applicationContext) else null
+    }
+
+    private fun installedFromPlay(): Boolean {
+        val installer = runCatching {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                packageManager.getInstallSourceInfo(packageName).installingPackageName
+            } else {
+                @Suppress("DEPRECATION")
+                packageManager.getInstallerPackageName(packageName)
+            }
+        }.getOrNull()
+        return installer == "com.android.vending"
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // The purchase sheet is shown over whichever activity is in front.
+        storeBilling?.attach(this)
     }
 
     private val push by lazy { PushRegistration(applicationContext, graph.repository) }

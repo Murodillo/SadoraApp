@@ -1211,6 +1211,13 @@ object StringsEn : Strings {
         override val searchTabAll = "All"
         override val searchTabFrequent = "Frequent"
         override val searchTabRecipes = "Recipes"
+        override val subscribe = "Subscribe"
+        override val storePending = "Waiting for the payment to clear. Premium turns on by itself once it does."
+        override fun storeRenewalTerms(store: String) =
+            "The subscription renews automatically at the end of each period and is charged to your $store account. " +
+                "Cancel any time in your $store settings."
+        override val nothingToRestore = "No purchases to restore on this account"
+        override fun storePlansUnavailable(store: String) = "The plans are not available in $store yet. Try again a little later."
         override val typeADishName = "Type a dish name"
         override fun nothingFoundFor(query: String) = "Nothing found for \"$query\""
         override val catalogueNote = "The catalogue comes from the server — Uzbek dishes come first."

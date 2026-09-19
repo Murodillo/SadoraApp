@@ -97,7 +97,7 @@ fun PremiumScreen(
                 item {
                     Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
                         PremiumCtaButton(t.seePlans, onClick = { onOpen(Route.Paywall) })
-                        cheapestMonthlyMinor(billing)?.let {
+                        cheapestMonthlyMinor(billing)?.takeIf { billing.store == null }?.let {
                             Text(
                                 t.fromPerMonth(sumLabel(it)),
                                 style = Sadora.type.body,

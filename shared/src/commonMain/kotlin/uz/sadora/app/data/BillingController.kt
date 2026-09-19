@@ -22,7 +22,11 @@ private const val PollIntervalMillis = 3_000L
  * provider, and not itself — whether the money arrived. That polling is what turns "she
  * closed the browser" into a real answer instead of a guess.
  */
-class BillingController(private val api: BillingApi?) {
+class BillingController(
+    private val api: BillingApi?,
+    /** The store's sheet when the app was installed from one; null for a direct build. */
+    val store: StoreBilling? = null,
+) {
     private val calls = ApiCallState()
 
     val busy: Boolean get() = calls.busy
@@ -114,5 +118,83 @@ class BillingController(private val api: BillingApi?) {
 
     fun cancelPending() {
         pending = null
+    }
+
+    // ---------------------------------------------------------------- store builds
+
+    /** The store's localized prices by product id, once [loadStorePrices] has run. */
+    var storePrices by mutableStateOf<Map<String, String>>(emptyMap())
+        private set
+
+    /** A purchase the store accepted but has not settled yet — paid in cash, say. */
+    var storePending by mutableStateOf(false)
+        private set
+
+    /** The product id this store sells [plan] under, or null when it does not sell it. */
+    fun storeProductId(plan: uz.sadora.contract.BillingPlan): String? = when (store?.provider) {
+        PaymentProvider.GOOGLE_PLAY -> plan.googlePlayProductId
+        PaymentProvider.APP_STORE -> plan.appStoreProductId
+        else -> null
+    }
+
+    suspend fun loadStorePrices() {
+        val store = store ?: return
+        val ids = catalogue?.plans.orEmpty().mapNotNull(::storeProductId)
+        if (ids.isNotEmpty()) storePrices = runCatching { store.prices(ids) }.getOrDefault(emptyMap())
+    }
+
+    /**
+     * Buys [plan] through the store's sheet, then has the server verify it before the
+     * store is told it was delivered. A verification that fails — no connection — leaves
+     * the purchase unfinished, and [reconcileStore] picks it up on the next launch.
+     */
+    suspend fun buyInStore(plan: uz.sadora.contract.BillingPlan, accountId: String, onPaid: suspend () -> Unit) {
+        val store = store ?: return
+        val productId = storeProductId(plan) ?: return
+        paid = false
+        storePending = false
+        error = null
+        when (val outcome = store.purchase(productId, accountId)) {
+            is StoreOutcome.Purchased -> if (deliver(outcome.receipt)) {
+                paid = true
+                onPaid()
+            }
+            StoreOutcome.Pending -> storePending = true
+            StoreOutcome.Cancelled -> Unit
+            is StoreOutcome.Failed -> error = ApiFailure.PaymentFailed
+        }
+    }
+
+    /**
+     * Sends every purchase the store still holds to the server. "Restore purchases" on a
+     * new phone, and the safety net for one bought while the server could not be reached.
+     * Returns whether anything was granted.
+     */
+    suspend fun reconcileStore(onPaid: suspend () -> Unit = {}): Boolean {
+        val store = store ?: return false
+        val receipts = runCatching { store.owned() }.getOrDefault(emptyList())
+        var granted = false
+        receipts.forEach { if (deliver(it)) granted = true }
+        if (granted) {
+            storePending = false
+            onPaid()
+        }
+        return granted
+    }
+
+    /** Server first, store second: a purchase is finished only once it is ours. */
+    private suspend fun deliver(receipt: StoreReceipt): Boolean {
+        val api = api ?: return false
+        val store = store ?: return false
+        var refusal: ApiFailure? = null
+        val status = calls.run(silent = true) {
+            api.verifyStorePurchase(store.provider, receipt.productId, receipt.token).onFailure { refusal = it }
+        }
+        if (status == null) {
+            error = refusal
+            return false
+        }
+        if (receipt.needsFinish) runCatching { store.finish(receipt) }
+        return true
     }
 }

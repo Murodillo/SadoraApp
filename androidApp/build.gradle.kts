@@ -58,6 +58,14 @@ val devHost: String = (project.findProperty("sadora.devHost") as String?).orEmpt
 val apiUrl: String = (project.findProperty("sadora.apiUrl") as String?).orEmpty()
 
 /**
+ * Forces Google Play Billing on for a build that Play did not install — a release APK
+ * sideloaded onto a license tester's phone. `-Psadora.storeBilling=true`. Otherwise the
+ * app decides from its installer: Play-installed buys through Play, anything else keeps
+ * Payme and Click.
+ */
+val storeBilling: Boolean = (project.findProperty("sadora.storeBilling") as String?).toBoolean()
+
+/**
  * The upload key, read from `androidApp/keystore.properties` when that file exists.
  *
  * The file is gitignored: a signing key in the repository is a signing key anyone who
@@ -110,6 +118,7 @@ android {
         // instead, so the APK also works on a physical phone. Empty means "emulator".
         buildConfigField("String", "DEV_HOST", "\"$devHost\"")
         buildConfigField("String", "API_URL", "\"$apiUrl\"")
+        buildConfigField("boolean", "STORE_BILLING", "$storeBilling")
     }
     packaging {
         resources {

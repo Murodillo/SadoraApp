@@ -123,6 +123,10 @@ data class AppConfig(
                         secretKey = envOrNull("CLICK_SECRET_KEY"),
                         checkoutUrl = env("CLICK_CHECKOUT_URL", "https://my.click.uz/services/pay"),
                     ),
+                    googlePlay = GooglePlayConfig(
+                        packageName = env("GOOGLE_PLAY_PACKAGE_NAME", "uz.sadora.app"),
+                        serviceAccountFile = envOrNull("GOOGLE_PLAY_SERVICE_ACCOUNT_FILE"),
+                    ),
                 ),
                 // The day the copy in the app's LegalScreen took effect. The consent row records
                 // this string, so a screen dated later than the version stored against it
@@ -258,7 +262,20 @@ data class PushConfig(
     val isConfigured: Boolean get() = projectId != null && serviceAccountPath != null
 }
 
-data class BillingConfig(val payme: PaymeConfig, val click: ClickConfig)
+data class BillingConfig(
+    val payme: PaymeConfig,
+    val click: ClickConfig,
+    val googlePlay: GooglePlayConfig = GooglePlayConfig(packageName = "uz.sadora.app", serviceAccountFile = null),
+)
+
+/** Play Developer API access: the app's package and a service account Play Console trusts. */
+data class GooglePlayConfig(
+    val packageName: String,
+    /** Path to the service-account JSON; blank means Play receipts are refused. */
+    val serviceAccountFile: String?,
+) {
+    val isConfigured: Boolean get() = serviceAccountFile != null
+}
 
 data class PaymeConfig(
     val merchantId: String?,

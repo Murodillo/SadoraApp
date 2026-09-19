@@ -48,6 +48,8 @@ kotlin {
             implementation(libs.ktor.client.okhttp)
             // Health Connect: sleep, steps, temperature and period days from Android watches.
             implementation(libs.androidx.health.connect)
+            // Google Play subscriptions, for the build installed from Play.
+            implementation(libs.play.billing)
         }
         iosMain.dependencies {
             implementation(libs.ktor.client.darwin)

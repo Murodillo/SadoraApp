@@ -322,6 +322,18 @@ private fun MainShell(
     // The phone's health store, read each time the app comes to the front. The sync rests
     // a quarter hour between runs by itself, so switching apps back and forth reads
     // nothing; a run is left to finish on pause, since the upload is already under way.
+    // A store purchase made while the server could not be reached — or on another phone —
+    // is sent for verification each time the app comes forward. Play refunds a purchase
+    // nobody acknowledges within three days, so this is not optional.
+    LifecycleResumeEffect(controllers.billing) {
+        val job = scope.launch {
+            if (controllers.account.currentUserId != null) {
+                controllers.billing.reconcileStore { controllers.account.refreshEntitlements() }
+            }
+        }
+        onPauseOrDispose { job.cancel() }
+    }
+
     LifecycleResumeEffect(controllers.wearables) {
         scope.launch {
             val wearables = controllers.wearables
