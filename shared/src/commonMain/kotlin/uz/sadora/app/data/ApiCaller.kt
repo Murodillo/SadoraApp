@@ -41,7 +41,8 @@ class ApiCaller internal constructor(
 
     /**
      * Sends with the current access token; on a 401 refreshes once and retries once. A
-     * second 401 means the refresh token is gone too, so the session is cleared.
+     * second 401 means the refresh token is gone too, so the session is cleared. A
+     * refresh that fails for any other reason — no connection — leaves the session be.
      */
     suspend inline fun <reified T> authenticated(
         path: String,
@@ -54,7 +55,7 @@ class ApiCaller internal constructor(
 
         val refreshed = refreshIfStillStale(tokenUsed)
         if (refreshed is ApiResult.Failure) {
-            clearSession()
+            if (refreshed.failure.endsSession) clearSession()
             return ApiResult.Failure(refreshed.failure)
         }
         return execute<T> { send(path, method, currentAccessToken(), block) }

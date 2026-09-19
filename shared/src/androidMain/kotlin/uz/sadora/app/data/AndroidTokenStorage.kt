@@ -27,23 +27,31 @@ class AndroidTokenStorage(context: Context) : TokenStorage {
 
     private val preferences = context.getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE)
 
-    override suspend fun readRefreshToken(): String? = withContext(Dispatchers.IO) {
-        val stored = preferences.getString(KEY_REFRESH_TOKEN, null) ?: return@withContext null
+    override suspend fun readRefreshToken(): String? = readEncrypted(KEY_REFRESH_TOKEN)
+
+    override suspend fun writeRefreshToken(token: String) = writeEncrypted(KEY_REFRESH_TOKEN, token)
+
+    override suspend fun readSessionSnapshot(): String? = readEncrypted(KEY_SESSION_SNAPSHOT)
+
+    override suspend fun writeSessionSnapshot(json: String) = writeEncrypted(KEY_SESSION_SNAPSHOT, json)
+
+    override suspend fun clear() = withContext(Dispatchers.IO) {
+        preferences.edit().remove(KEY_REFRESH_TOKEN).remove(KEY_SESSION_SNAPSHOT).apply()
+    }
+
+    private suspend fun readEncrypted(key: String): String? = withContext(Dispatchers.IO) {
+        val stored = preferences.getString(key, null) ?: return@withContext null
         runCatching { decrypt(stored) }.getOrElse {
             // The key is gone — the user cleared app data, restored a backup onto a new
             // device, or the Keystore was reset. There is nothing to recover, so drop
             // the unreadable value and let the app sign in again.
-            preferences.edit().remove(KEY_REFRESH_TOKEN).apply()
+            preferences.edit().remove(key).apply()
             null
         }
     }
 
-    override suspend fun writeRefreshToken(token: String) = withContext(Dispatchers.IO) {
-        preferences.edit().putString(KEY_REFRESH_TOKEN, encrypt(token)).apply()
-    }
-
-    override suspend fun clear() = withContext(Dispatchers.IO) {
-        preferences.edit().remove(KEY_REFRESH_TOKEN).apply()
+    private suspend fun writeEncrypted(key: String, value: String) = withContext(Dispatchers.IO) {
+        preferences.edit().putString(key, encrypt(value)).apply()
     }
 
     override suspend fun installationId(): String = withContext(Dispatchers.IO) {
@@ -94,6 +102,7 @@ class AndroidTokenStorage(context: Context) : TokenStorage {
         const val GCM_TAG_BITS = 128
         const val PREFERENCES_NAME = "sadora.secure"
         const val KEY_REFRESH_TOKEN = "refresh_token"
+        const val KEY_SESSION_SNAPSHOT = "session_snapshot"
         const val KEY_INSTALLATION_ID = "installation_id"
         const val SEPARATOR = ":"
     }

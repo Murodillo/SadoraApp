@@ -41,6 +41,7 @@ import uz.sadora.server.auth.SocialVerifier
 import uz.sadora.server.cache.Cache
 import uz.sadora.server.cache.Caches
 import uz.sadora.server.config.AppConfig
+import uz.sadora.server.config.Environment
 import uz.sadora.server.db.DatabaseFactory
 import uz.sadora.server.entitlement.EntitlementRepository
 import uz.sadora.server.entitlement.EntitlementService
@@ -125,7 +126,7 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
 
     val jwtService = JwtService(config.jwt)
     val refreshTokenService = RefreshTokenService(config.jwt, auditService)
-    val otpService = OtpService(config.otp, cache, LoggingOtpSender())
+    val otpService = OtpService(config.otp, cache, LoggingOtpSender(showCode = config.environment == Environment.DEV))
     val socialVerifier = SocialVerifier(config.social)
 
     val authService = AuthService(

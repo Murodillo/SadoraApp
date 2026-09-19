@@ -6,6 +6,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlin.time.Instant
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.jsonObject
 import uz.sadora.contract.Entitlements
 import uz.sadora.contract.TokenPair
 import uz.sadora.contract.UserProfile
@@ -57,8 +60,32 @@ class SessionStore(private val storage: TokenStorage) {
         storage.writeRefreshToken(tokens.refreshToken)
     }
 
-    fun updateProfile(user: UserProfile, entitlements: Entitlements) {
+    /** Publishes who is signed in, and keeps a copy for the next launch without a network. */
+    suspend fun updateProfile(user: UserProfile, entitlements: Entitlements) {
         _state.value = SessionState.SignedIn(user, entitlements)
+        // A snapshot that fails to write costs only the offline launch, never the session.
+        runCatching {
+            val snapshot = buildJsonObject {
+                put(SNAPSHOT_USER, SadoraJson.encodeToJsonElement(UserProfile.serializer(), user))
+                put(SNAPSHOT_ENTITLEMENTS, SadoraJson.encodeToJsonElement(Entitlements.serializer(), entitlements))
+            }
+            storage.writeSessionSnapshot(snapshot.toString())
+        }
+    }
+
+    /** The profile the last session saw, or null when there is none or it no longer parses. */
+    suspend fun cachedSession(): SessionState.SignedIn? = runCatching {
+        val stored = storage.readSessionSnapshot() ?: return@runCatching null
+        val snapshot: JsonObject = SadoraJson.parseToJsonElement(stored).jsonObject
+        SessionState.SignedIn(
+            user = SadoraJson.decodeFromJsonElement(UserProfile.serializer(), snapshot.getValue(SNAPSHOT_USER)),
+            entitlements = SadoraJson.decodeFromJsonElement(Entitlements.serializer(), snapshot.getValue(SNAPSHOT_ENTITLEMENTS)),
+        )
+    }.getOrNull()
+
+    private companion object {
+        const val SNAPSHOT_USER = "user"
+        const val SNAPSHOT_ENTITLEMENTS = "entitlements"
     }
 
     fun markSignedOut() {

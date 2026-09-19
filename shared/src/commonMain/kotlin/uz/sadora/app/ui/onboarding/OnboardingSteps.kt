@@ -58,7 +58,6 @@ import uz.sadora.app.model.AppState
 import uz.sadora.app.model.Goal
 import uz.sadora.app.model.LifeStage
 import uz.sadora.app.nav.AppPhase
-import uz.sadora.app.ui.components.ButtonTone
 import uz.sadora.app.ui.components.ChipFlowRow
 import uz.sadora.app.ui.components.ConsentRow
 import uz.sadora.app.ui.components.DisclaimerNote
@@ -76,7 +75,6 @@ import uz.sadora.app.ui.components.SadoraTopBar
 import uz.sadora.app.ui.components.SelectChip
 import uz.sadora.app.ui.components.TabSwitch
 import uz.sadora.app.ui.components.noRippleClickable
-import uz.sadora.contract.AuthProvider
 import uz.sadora.contract.OtpChallenge
 import uz.sadora.app.data.readable
 import uz.sadora.app.i18n.strings
@@ -399,38 +397,10 @@ fun SignInScreen(
             enabled = phoneIsComplete(state.phone) && !controller.busy,
         )
 
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.weight(1f).height(1.dp).background(c.line))
-            Text("  yoki  ", style = Sadora.type.body, color = c.muted)
-            Box(Modifier.weight(1f).height(1.dp).background(c.line))
-        }
-
-        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-            SadoraButton(
-                "Apple",
-                tone = ButtonTone.Secondary,
-                leading = "",
-                enabled = !controller.busy,
-                modifier = Modifier.weight(1f),
-                onClick = {
-                    scope.launch {
-                        controller.signInWithSocial(AuthProvider.APPLE, "")?.let(::finish)
-                    }
-                },
-            )
-            SadoraButton(
-                "Google",
-                tone = ButtonTone.Secondary,
-                leading = "G",
-                enabled = !controller.busy,
-                modifier = Modifier.weight(1f),
-                onClick = {
-                    scope.launch {
-                        controller.signInWithSocial(AuthProvider.GOOGLE, "")?.let(::finish)
-                    }
-                },
-            )
-        }
+        // Apple and Google buttons stood here, sending an empty identity token that the
+        // server could only refuse. They come back with the platform sign-in behind them
+        // (Sign in with Apple, Credential Manager); `controller.signInWithSocial` and the
+        // server's verifier are already in place for that.
 
         Row(
             Modifier.fillMaxWidth(),

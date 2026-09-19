@@ -65,6 +65,14 @@ sealed class ApiFailure(open val message: String) {
     data class Unexpected(override val message: String, val requestId: String? = null) :
         ApiFailure(message)
 
+    /**
+     * Whether a failed token refresh means the session is really over. Only the server
+     * saying no — the token is revoked, expired, or the account blocked — ends it. No
+     * connection, a timeout or a 5xx says nothing about the token, and signing her out
+     * for those sent anyone who opened the app on a plane back to onboarding.
+     */
+    val endsSession: Boolean get() = this is Unauthorized || this is Blocked
+
     companion object {
         /**
          * Maps a server error body onto the cases above.

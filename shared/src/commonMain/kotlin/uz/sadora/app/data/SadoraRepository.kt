@@ -38,7 +38,9 @@ class SadoraRepository(
      * signed-out, which is what the splash screen waits on.
      *
      * A stored token that the server rejects is treated as no session at all — the user
-     * sees the sign-in screen, not an error about a token she never knew existed.
+     * sees the sign-in screen, not an error about a token she never knew existed. A
+     * refresh that could not reach the server is not a rejection: she keeps her session
+     * and opens on the profile the last launch saw.
      */
     suspend fun resume(): SessionState {
         if (!session.hasStoredSession()) {
@@ -47,8 +49,19 @@ class SadoraRepository(
         }
         val refreshed = api.refreshSession()
         if (refreshed is ApiResult.Failure) {
-            session.clear()
-            return SessionState.SignedOut
+            if (refreshed.failure.endsSession) {
+                session.clear()
+                return SessionState.SignedOut
+            }
+            // Offline, or the server is having a bad minute. The token stays; the next
+            // call that gets through refreshes it. Without a snapshot — an install from
+            // before snapshots existed — there is nothing to open on, so she signs in.
+            val cached = session.cachedSession() ?: run {
+                session.markSignedOut()
+                return SessionState.SignedOut
+            }
+            session.updateProfile(cached.user, cached.entitlements)
+            return cached
         }
         return when (val bootstrap = api.bootstrap(device.platform)) {
             is ApiResult.Success -> bootstrap.value.applyToSession()
@@ -126,13 +139,13 @@ class SadoraRepository(
             session.updateProfile(authSession.user, authSession.entitlements)
         }
 
-    private fun ApiResult<UserProfile>.applyProfile(): ApiResult<UserProfile> =
+    private suspend fun ApiResult<UserProfile>.applyProfile(): ApiResult<UserProfile> =
         onSuccess { profile ->
             val current = session.state.value as? SessionState.SignedIn ?: return@onSuccess
             session.updateProfile(profile, current.entitlements)
         }
 
-    private fun Bootstrap.applyToSession(): SessionState.SignedIn {
+    private suspend fun Bootstrap.applyToSession(): SessionState.SignedIn {
         session.updateProfile(user, entitlements)
         return SessionState.SignedIn(user, entitlements)
     }

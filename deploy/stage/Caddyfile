@@ -16,8 +16,15 @@
 :8081 {
 	encode gzip
 
+	# Here the connection comes from cloudflared, not from the phone, so the address
+	# Caddy would put in X-Forwarded-For is the tunnel's. Cloudflare's edge sets
+	# CF-Connecting-IP to the real client and overwrites anything a client sends, and
+	# this port is reachable only through the tunnel — so that header is what the API's
+	# rate limiter should see.
 	handle /v1/* {
-		reverse_proxy api:8080
+		reverse_proxy api:8080 {
+			header_up X-Forwarded-For {http.request.header.CF-Connecting-IP}
+		}
 	}
 
 	handle /health/* {

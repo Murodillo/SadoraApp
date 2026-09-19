@@ -69,6 +69,79 @@ class SadoraRepositoryTest {
         assertEquals(null, graph.session.currentRefreshToken())
     }
 
+    /**
+     * Opening the app with no connection is not the server rejecting her token. She
+     * stays signed in, on the profile the last launch saw, and keeps her token.
+     */
+    @Test
+    fun `resume offline opens on the cached profile and keeps the token`() = runTest {
+        val recording = RecordingEngine { throw RuntimeException("network down") }
+        val graph = graph(recording)
+        graph.session.updateProfile(testProfile(), testEntitlements(SubscriptionTier.PREMIUM))
+
+        val state = assertIs<SessionState.SignedIn>(graph.repository.resume())
+
+        assertEquals("Malika", state.user.name)
+        assertEquals(SubscriptionTier.PREMIUM, state.entitlements.tier)
+        assertEquals("refresh-0", graph.session.currentRefreshToken())
+    }
+
+    @Test
+    fun `resume offline with no cached profile signs out but keeps the token`() = runTest {
+        val recording = RecordingEngine { throw RuntimeException("network down") }
+        val graph = graph(recording)
+
+        assertEquals(SessionState.SignedOut, graph.repository.resume())
+        assertEquals("refresh-0", graph.session.currentRefreshToken())
+    }
+
+    @Test
+    fun `a server error on refresh does not end the session`() = runTest {
+        val recording = RecordingEngine {
+            json(errorBody("internal_error", "Xatolik"), HttpStatusCode.InternalServerError)
+        }
+        val graph = graph(recording)
+        graph.session.updateProfile(testProfile(), testEntitlements())
+
+        assertIs<SessionState.SignedIn>(graph.repository.resume())
+        assertEquals("refresh-0", graph.session.currentRefreshToken())
+    }
+
+    /** A 401 whose refresh then cannot reach the server leaves her signed in. */
+    @Test
+    fun `a failed refresh on a 401 keeps the session when the network is down`() = runTest {
+        var online = true
+        val recording = RecordingEngine { request ->
+            when {
+                !online -> throw RuntimeException("network down")
+                request.url.encodedPath == "/v1/auth/refresh" -> {
+                    online = false
+                    throw RuntimeException("network down")
+                }
+                else -> json(errorBody(ErrorCodes.TOKEN_REVOKED, "Muddati tugagan"), HttpStatusCode.Unauthorized)
+            }
+        }
+        val graph = graph(recording)
+        graph.session.updateProfile(testProfile(), testEntitlements())
+
+        val result = graph.repository.refreshEntitlements()
+
+        assertIs<ApiResult.Failure>(result)
+        assertEquals("refresh-0", graph.session.currentRefreshToken())
+        assertIs<SessionState.SignedIn>(graph.session.state.value)
+    }
+
+    @Test
+    fun `sign out removes the cached profile too`() = runTest {
+        val recording = RecordingEngine { throw RuntimeException("network down") }
+        val graph = graph(recording)
+        graph.session.updateProfile(testProfile(), testEntitlements())
+
+        graph.repository.signOut()
+
+        assertEquals(null, graph.session.cachedSession())
+    }
+
     /** A valid session plus a failing bootstrap is a network problem, not a sign-out. */
     @Test
     fun `resume keeps the session when only bootstrap fails`() = runTest {

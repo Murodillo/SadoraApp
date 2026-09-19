@@ -51,8 +51,13 @@ class KeychainTokenStorage : TokenStorage {
 
     override suspend fun writeRefreshToken(token: String) = write(ACCOUNT_REFRESH_TOKEN, token)
 
+    override suspend fun readSessionSnapshot(): String? = read(ACCOUNT_SESSION_SNAPSHOT)
+
+    override suspend fun writeSessionSnapshot(json: String) = write(ACCOUNT_SESSION_SNAPSHOT, json)
+
     override suspend fun clear() {
         delete(ACCOUNT_REFRESH_TOKEN)
+        delete(ACCOUNT_SESSION_SNAPSHOT)
     }
 
     override suspend fun installationId(): String =
@@ -112,6 +117,7 @@ class KeychainTokenStorage : TokenStorage {
     private companion object {
         const val SERVICE = "uz.sadora.app"
         const val ACCOUNT_REFRESH_TOKEN = "refresh_token"
+        const val ACCOUNT_SESSION_SNAPSHOT = "session_snapshot"
         const val ACCOUNT_INSTALLATION_ID = "installation_id"
     }
 }

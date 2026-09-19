@@ -33,6 +33,7 @@ dependencies {
     implementation(libs.ktor.server.callId)
     implementation(libs.ktor.server.cors)
     implementation(libs.ktor.server.rateLimit)
+    implementation(libs.ktor.server.forwardedHeader)
     implementation(libs.ktor.server.defaultHeaders)
     implementation(libs.ktor.server.compression)
     implementation(libs.ktor.server.requestValidation)

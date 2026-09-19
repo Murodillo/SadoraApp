@@ -14,7 +14,16 @@ package uz.sadora.app.data
 interface TokenStorage {
     suspend fun readRefreshToken(): String?
     suspend fun writeRefreshToken(token: String)
+    /** Removes the refresh token and the session snapshot together. */
     suspend fun clear()
+
+    /**
+     * The last signed-in profile and entitlements as JSON, so a launch with no connection
+     * can open the app she was using instead of the sign-in screen. It names her life
+     * stage, so it is stored the way the token is, and [clear] removes it.
+     */
+    suspend fun readSessionSnapshot(): String?
+    suspend fun writeSessionSnapshot(json: String)
 
     /** Stable per install, generated on first use. Never a hardware identifier. */
     suspend fun installationId(): String
@@ -27,6 +36,9 @@ class InMemoryTokenStorage(
 ) : TokenStorage {
     override suspend fun readRefreshToken(): String? = token
     override suspend fun writeRefreshToken(token: String) { this.token = token }
-    override suspend fun clear() { token = null }
+    private var snapshot: String? = null
+    override suspend fun clear() { token = null; snapshot = null }
+    override suspend fun readSessionSnapshot(): String? = snapshot
+    override suspend fun writeSessionSnapshot(json: String) { snapshot = json }
     override suspend fun installationId(): String = installationId
 }

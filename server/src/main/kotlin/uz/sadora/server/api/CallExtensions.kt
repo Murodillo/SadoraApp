@@ -33,8 +33,8 @@ fun ApplicationCall.requireAdminRole(vararg allowed: AdminRole): AdminPrincipal 
 }
 
 /**
- * Client IP as seen by the load balancer. `origin.remoteHost` already honours the
- * forwarded headers Ktor is configured to trust.
+ * Client IP as the proxy in front saw it: `origin.remoteHost` reads X-Forwarded-For
+ * through the XForwardedHeaders plugin installed in configureHttp.
  */
 fun ApplicationCall.requestContext(): RequestContext = RequestContext(
     ip = request.origin.remoteHost,

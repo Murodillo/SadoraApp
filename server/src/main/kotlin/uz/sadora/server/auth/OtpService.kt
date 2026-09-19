@@ -162,10 +162,23 @@ interface OtpSender {
     suspend fun send(phone: String, code: String)
 }
 
-class LoggingOtpSender : OtpSender {
+/**
+ * The stand-in until an SMS gateway is wired: it sends nothing and writes a line.
+ *
+ * Only a developer's own machine gets the code in that line. Anywhere else the log is
+ * read by more people than the user — `docker logs`, a log shipper, whoever shares the
+ * host — and a code in it is a sign-in to her account. Stage testers read the code the
+ * API returns under OTP_EXPOSE_CODE instead; production has neither, and needs a real
+ * sender before anybody can sign in there.
+ */
+class LoggingOtpSender(private val showCode: Boolean) : OtpSender {
     private val logger = LoggerFactory.getLogger(LoggingOtpSender::class.java)
 
     override suspend fun send(phone: String, code: String) {
-        logger.info("OTP for {} is {} (no SMS provider configured)", PhoneNumbers.mask(phone), code)
+        if (showCode) {
+            logger.info("OTP for {} is {} (no SMS provider configured)", PhoneNumbers.mask(phone), code)
+        } else {
+            logger.warn("OTP for {} was not sent: no SMS provider configured", PhoneNumbers.mask(phone))
+        }
     }
 }
