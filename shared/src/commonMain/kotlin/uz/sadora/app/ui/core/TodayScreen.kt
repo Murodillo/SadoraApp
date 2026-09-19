@@ -199,7 +199,7 @@ private fun TodayHeader(
             greeting = "",
             name = state.name,
             onAvatarClick = { onOpen(Route.Profile) },
-            onNotificationsClick = { onOpen(Route.Notifications) },
+            onNotificationsClick = { onOpen(Route.NotificationInbox) },
             hasUnread = state.medications.any { it.status == MedStatus.Pending },
         )
         Row(
@@ -517,29 +517,35 @@ private fun HealthScoreCard(
     val t = strings.today
     val c = Sadora.colors
     val score = healthScore(state)
+    // No orange for a low day: the ring summarises what she logged, it is not a warning.
     val tint = when {
+        score == null -> c.line
         score >= 80 -> c.success
-        score >= 60 -> c.primary
-        else -> c.warningSoft
+        else -> c.primary
     }
 
     SadoraCard {
         Text(t.healthScore, style = Sadora.type.body, color = c.muted)
+        if (score == null) Text(t.scoreNeedsData, style = Sadora.type.body, color = c.text)
         Row(
             Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
         ) {
             ProgressRing(
-                progress = score / 100f,
+                progress = (score ?: 0) / 100f,
                 size = 104.dp,
                 strokeWidth = 9.dp,
                 color = tint,
-                glow = true,
+                glow = score != null,
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    AnimatedNumber(score, Sadora.type.h1, c.text)
-                    Text(t.scoreWord(score), style = Sadora.type.body, color = c.muted, maxLines = 1)
+                    if (score != null) {
+                        AnimatedNumber(score, Sadora.type.h1, c.text)
+                        Text(t.scoreWord(score), style = Sadora.type.body, color = c.muted, maxLines = 1)
+                    } else {
+                        Text("—", style = Sadora.type.h1, color = c.muted)
+                    }
                 }
             }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
@@ -606,19 +612,23 @@ private fun SignalTile(
  * cannot mask another being missed. Nothing here is a model or a medical measure — it
  * is a summary of what was logged today.
  */
-internal fun healthScore(state: AppState): Int {
-    // Mood runs 1..5; a neutral day should not read as a failing quarter.
-    val mood = ((state.mood.score - 1) / 4f).coerceIn(0f, 1f)
-    // Signals nobody measured are left out rather than counted as zero: a phone with
-    // no watch scores on water and mood, not on a night it knows nothing about.
+internal fun healthScore(state: AppState): Int? {
+    // Signals nobody logged are left out rather than counted as zero: a phone with no
+    // watch scores on water and mood, not on a night it knows nothing about — and a
+    // mood she has not given today is not an answer, whatever the default says.
     val parts = listOfNotNull(
         state.sleepMinutes?.let { goalRatio(it, DailySleepGoalMinutes) },
-        goalRatio(state.waterMl, state.waterGoalMl),
+        state.waterMl.takeIf { it > 0 }?.let { goalRatio(it, state.waterGoalMl) },
         state.activityRatio(),
-        mood,
+        // Mood runs 1..5; a neutral day should not read as a failing quarter.
+        ((state.mood.score - 1) / 4f).coerceIn(0f, 1f).takeIf { state.moodLoggedToday },
     )
+    // One signal is not a day. Until there are two, the card asks rather than grades.
+    if (parts.size < MinScoreSignals) return null
     return (parts.average() * 100f).toInt().coerceIn(0, 100)
 }
+
+private const val MinScoreSignals = 2
 
 
 

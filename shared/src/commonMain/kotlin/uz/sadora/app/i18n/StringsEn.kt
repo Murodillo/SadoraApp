@@ -374,6 +374,14 @@ object StringsEn : Strings {
             "screens that belong to it. Everything you have recorded stays."
 
         override val notificationsTitle = "Notifications"
+        override val inboxDueToday = "Due today"
+        override val inboxEarlier = "Sent"
+        override val inboxEmpty = "No notifications yet"
+        override val inboxEmptyBody = "Reminders and summaries will show up here. Choose which ones you get in settings."
+        override val inboxSettings = "Notification settings"
+        override fun inboxDoseDue(name: String, time: String) = "$name · $time"
+        override val inboxDoseAction = "Open the medication plan"
+        override val notificationSettingsTitle = "Notification settings"
         override val medReminder = "Medication reminders"
         override val medReminderNote = "10 minutes before each dose"
         override val cycleReminder = "Period reminder"
@@ -555,6 +563,7 @@ object StringsEn : Strings {
             "usual and you have been drinking less."
         override val sampleAnswerAdvice = "Energy was logged low on the same days. Two steps " +
             "for today: 700 ml of water before lunch, and lights out by 23:00."
+        override val freeFeaturesHeading = "Premium unlocks"
         override val freeFeatures = listOf(
             "20 questions a day, with your data in mind",
             "A personal AI summary every day",
@@ -591,7 +600,7 @@ object StringsEn : Strings {
         override fun anonymousAs(alias: String) = "Anonymous · you: $alias"
         override val anonymous = "Anonymous — nobody sees your name"
         override val rulesTitle = "How the chat works"
-        override val rulesIntro = "Everyone here writes under an alias. Your posts are never tied to your profile, phone number or name — not even the SADORA team can see who wrote what in the feed."
+        override val rulesIntro = "Everyone here writes under an alias. Others see your posts under your alias only — your profile, phone number and name are never shown."
         override val rules = listOf(
             "Be kind — everyone here came with a question of her own.",
             "Leave no personal details: names, numbers, addresses, photos.",
@@ -766,8 +775,10 @@ object StringsEn : Strings {
             score >= 80 -> "Great"
             score >= 60 -> "Good"
             score >= 40 -> "Fair"
-            else -> "Low"
+            else -> "A quiet day"
         }
+        override val scoreNeedsData =
+            "Log two things — water, mood, sleep or steps — to see your day here."
 
         override val emptySummaryTitle = "Today in short"
         override val emptySummaryBody =
@@ -963,7 +974,7 @@ object StringsEn : Strings {
         override val aiAdvice =
             "Iron-rich food and gentle stretching may help this week. This is general " +
                 "health information."
-        override val aiBadge = "SADORA AI · SUGGESTION"
+        override val aiBadge = "General advice"
 
         override val appointmentsTitle = "Appointments"
         override val filterUpcoming = "Upcoming"
@@ -1602,17 +1613,19 @@ object StringsEn : Strings {
         override val benefitAiTitle = "AI assistant"
         override val benefitAiBody = "Up to 20 questions a day, answered with your cycle, sleep and food in mind."
         override val benefitScannerTitle = "Food scanner"
-        override val benefitScannerBody = "30 photos a month: snap a dish and the calories and nutrients are worked out for you."
+        override val benefitScannerBody = "30 photos a month: snap a dish for an estimate of its calories and nutrients, which you can correct."
         override val benefitInsightsTitle = "Insights history"
         override val benefitInsightsBody = "30- and 90-day windows and observations: see what tends to come together."
         override val benefitLibraryTitle = "The whole Knowledge library"
-        override val benefitLibraryBody = "Every clinician-reviewed article, matched to your stage."
+        override val benefitLibraryBody = "Every article our specialists prepared, matched to your stage."
         override val benefitDevicesTitle = "Device insights"
         override val benefitDevicesBody = "WHOOP and other device readings set against your cycle phases."
         override val compareTitle = "Free and Premium"
         override val seePlans = "See plans"
         override val manage = "Manage subscription"
         override fun buyWithCoins(coinName: String) = "Get it with $coinName"
+        override fun fromPerMonth(sum: String) = "From $sum so'm a month"
+        override fun coinsFor(cost: String, days: Int, balance: String) = "$cost = $days days of Premium · you have $balance"
         override val faqTitle = "Common questions"
         override val faq = listOf(
             "What stays free?" to "Everything: cycle, mood, food diary, medications, appointments and 7-day insights. Premium only adds.",

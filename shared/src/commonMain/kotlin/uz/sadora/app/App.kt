@@ -111,6 +111,7 @@ import uz.sadora.app.ui.onboarding.LegalScreen
 import uz.sadora.app.ui.onboarding.OnboardingFlow
 import uz.sadora.app.ui.onboarding.SignInScreen
 import uz.sadora.app.ui.onboarding.SplashScreen
+import uz.sadora.app.ui.settings.NotificationInboxScreen
 import uz.sadora.app.ui.settings.HomeLayoutScreen
 import uz.sadora.app.ui.settings.SettingsDetailScreen
 
@@ -643,6 +644,8 @@ private fun RootTab(
         Tab.Premium -> PremiumScreen(
             state = state,
             controller = controllers.account,
+            billing = controllers.billing,
+            rewards = controllers.rewards,
             onOpen = { route ->
                 if (route == Route.Paywall) controllers.analytics.event(AnalyticsEvents.PAYWALL_OPENED, mapOf("from" to "premium_tab"))
                 navigator.push(route)
@@ -790,6 +793,7 @@ private fun PushedScreen(
             onClose = close,
         )
         Route.ShareProfile -> ShareProfileScreen(controllers.share, close, onToast = toast)
+        Route.NotificationInbox -> NotificationInboxScreen(state, controllers.notifications, close, navigator::push)
 
         // The same documents onboarding shows, reachable again from settings.
         Route.Terms -> LegalScreen(LegalDocument.Terms, close)

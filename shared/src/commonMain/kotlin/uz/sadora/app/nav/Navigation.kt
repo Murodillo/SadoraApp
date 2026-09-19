@@ -109,6 +109,8 @@ sealed interface Route {
     data object GoalsSettings : Route
     data object LifeStageSettings : Route
     data object Notifications : Route
+    /** The bell: what is due today and what was sent. Settings are one tap further. */
+    data object NotificationInbox : Route
     data object PrivacySecurity : Route
     data object LanguageSettings : Route
     data object About : Route

@@ -204,6 +204,8 @@ interface AiStrings {
     val sampleAnswer: String
     val sampleAnswerBody: String
     val sampleAnswerAdvice: String
+    /** Heads the list below, so nothing on it reads as already included. */
+    val freeFeaturesHeading: String
     val freeFeatures: List<String>
     val freeKeeps: String
     val seePremium: String
@@ -395,6 +397,8 @@ interface TodayStrings {
     val mood: String
     val steps: String
     fun scoreWord(score: Int): String
+    /** Shown instead of a number until two of the four signals are logged today. */
+    val scoreNeedsData: String
 
     val emptySummaryTitle: String
     val emptySummaryBody: String
@@ -741,6 +745,17 @@ interface SettingsStrings {
 
     // ---- notifications
     val notificationsTitle: String
+    /** The bell's own screen: what is due today and what was sent. */
+    val inboxDueToday: String
+    val inboxEarlier: String
+    val inboxEmpty: String
+    val inboxEmptyBody: String
+    val inboxSettings: String
+    /** "Tabletka · 09:00" — a dose still waiting today. */
+    fun inboxDoseDue(name: String, time: String): String
+    val inboxDoseAction: String
+    /** Settings, as the screen's own title when it is opened from the inbox. */
+    val notificationSettingsTitle: String
     val medReminder: String
     val medReminderNote: String
     val cycleReminder: String

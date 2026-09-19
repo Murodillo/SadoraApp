@@ -59,3 +59,11 @@ class PregnancyWeekStringsTest {
         assertNotEquals(StringsUz.pregnancyWeeks.baby, StringsEn.pregnancyWeeks.baby)
     }
 }
+
+class RussianPluralTest {
+    @Test
+    fun formsFollowTheLastDigits() {
+        val forms = listOf(1, 2, 5, 11, 14, 21, 22, 25, 101, 111).map { ru(it, "день", "дня", "дней") }
+        assertEquals(listOf("день", "дня", "дней", "дней", "дней", "день", "дня", "дней", "день", "дней"), forms)
+    }
+}

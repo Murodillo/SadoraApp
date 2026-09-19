@@ -42,7 +42,7 @@ object StringsUz : Strings {
         override fun journey(stage: LifeStage) = when (stage) {
             LifeStage.Cycle -> "Sikl"
             LifeStage.TryingToConceive -> "Reja"
-            LifeStage.Pregnancy -> "Homilador"
+            LifeStage.Pregnancy -> "Homiladorlik"
             LifeStage.Postpartum -> "Tiklanish"
             LifeStage.Perimenopause -> "Bosqich"
             LifeStage.Menopause -> "Salomatlik"
@@ -313,7 +313,7 @@ object StringsUz : Strings {
         override val insights = "Tahlillar"
         override val knowledge = "Bilim"
 
-        override val rewards = "Gul va streak"
+        override val rewards = "Gul va ketma-ketlik"
         override val shop = "Gul do'koni"
         override val referral = "Do'stlarni taklif qilish"
         override val homeLayout = "Bosh ekran tartibi"
@@ -374,6 +374,14 @@ object StringsUz : Strings {
             "ekranlar butunlay yangilanadi. Yozilgan ma'lumotlaringiz saqlanadi."
 
         override val notificationsTitle = "Bildirishnomalar"
+        override val inboxDueToday = "Bugun kutilmoqda"
+        override val inboxEarlier = "Yuborilganlar"
+        override val inboxEmpty = "Hozircha xabar yo'q"
+        override val inboxEmptyBody = "Eslatmalar va xulosalar shu yerda paydo bo'ladi. Qaysilarini olishni sozlamalarda tanlaysiz."
+        override val inboxSettings = "Bildirishnoma sozlamalari"
+        override fun inboxDoseDue(name: String, time: String) = "$name · $time"
+        override val inboxDoseAction = "Dorilar rejasini ochish"
+        override val notificationSettingsTitle = "Bildirishnoma sozlamalari"
         override val medReminder = "Dori eslatmalari"
         override val medReminderNote = "Qabul vaqtidan 10 daqiqa oldin"
         override val cycleReminder = "Hayz eslatmasi"
@@ -556,6 +564,7 @@ object StringsUz : Strings {
             "suv iste'moli pasaygan."
         override val sampleAnswerAdvice = "Shu kunlarda energiya ham past qayd etilgan. " +
             "Bugun ikki qadam: tushga qadar 700 ml suv va 23:00 gacha yotish."
+        override val freeFeaturesHeading = "Premium'da ochiladi"
         override val freeFeatures = listOf(
             "Kuniga 20 savol, ma'lumotlar kontekstida",
             "Har kunlik shaxsiy AI xulosa",
@@ -592,7 +601,7 @@ object StringsUz : Strings {
         override fun anonymousAs(alias: String) = "Anonim · siz: $alias"
         override val anonymous = "Anonim — ismingiz hech kimga ko'rinmaydi"
         override val rulesTitle = "Chat qanday ishlaydi"
-        override val rulesIntro = "Bu yerda hamma taxallus ostida. Postlaringiz profilingizga, telefon raqamingizga yoki ismingizga bog'lanmaydi — hatto SADORA jamoasi ham lentada kim yozganini ko'rmaydi."
+        override val rulesIntro = "Bu yerda hamma taxallus ostida yozadi. Postlaringiz boshqalarga faqat taxallusingiz bilan ko'rinadi — profilingiz, telefon raqamingiz va ismingiz ko'rsatilmaydi."
         override val rules = listOf(
             "Hurmat bilan yozing — bu yerda hamma o'z savoli bilan kelgan.",
             "Shaxsiy ma'lumot qoldirmang: ism, raqam, manzil, surat.",
@@ -765,8 +774,10 @@ object StringsUz : Strings {
             score >= 80 -> "Ajoyib"
             score >= 60 -> "Yaxshi"
             score >= 40 -> "O'rtacha"
-            else -> "Past"
+            else -> "Sokin kun"
         }
+        override val scoreNeedsData =
+            "Kuningiz ko'rinishi uchun ikkita narsani belgilang: suv, kayfiyat, uyqu yoki qadam."
 
         override val emptySummaryTitle = "Bugungi xulosa"
         override val emptySummaryBody =
@@ -962,7 +973,7 @@ object StringsUz : Strings {
         override val aiAdvice =
             "Bu haftada temirga boy ovqatlar va yengil cho'zilish mashqlari foydali " +
                 "bo'lishi mumkin. Umumiy salomatlik ma'lumoti."
-        override val aiBadge = "SADORA AI · TAVSIYA"
+        override val aiBadge = "Umumiy maslahat"
 
         override val appointmentsTitle = "Tadbirlar"
         override val filterUpcoming = "Yaqin"
@@ -1070,7 +1081,7 @@ object StringsUz : Strings {
         override val sleepMoodTitle = "Uyqu va kayfiyat"
         override val notEnoughData = "Ma'lumot yetarli emas"
         override val notEnoughDataBody = "Uyqu soat yoki telefondan keladi, kayfiyat esa " +
-            "kunlik check-in'dan. Bir necha kundan keyin bu yerda ikkalasi birga ko'rinadi."
+            "kunlik belgilashdan. Bir necha kundan keyin bu yerda ikkalasi birga ko'rinadi."
         override val scoreCaps = "BALL"
         override fun sleepGoal(hours: String) = "Maqsad · $hours"
         override val moodWeek7 = "7 kunlik kayfiyat"
@@ -1399,7 +1410,7 @@ object StringsUz : Strings {
         override fun coinsGained(amount: String) = "+$amount gul"
 
         override fun streakDays(days: Int) = "$days kun ketma-ket"
-        override val streakStarted = "Streak boshlandi"
+        override val streakStarted = "Ketma-ketlik boshlandi"
         override val streakSubtitle = "Bugun ham keldingiz 🌸"
         override fun milestoneReached(days: Int) = "$days kun! 🎉"
         override fun daysToMilestone(days: Int, milestone: Int) =
@@ -1410,7 +1421,7 @@ object StringsUz : Strings {
         override val balance = "Balans"
         override val earned = "Yig'ilgan"
         override val spent = "Sarflangan"
-        override val currentStreak = "Joriy streak"
+        override val currentStreak = "Joriy ketma-ketlik"
         override val longestStreak = "Eng uzun"
         override fun days(count: Int) = "$count kun"
         override val history = "Harakatlar"
@@ -1419,7 +1430,7 @@ object StringsUz : Strings {
         override fun perDay(times: Int) = "kuniga $times martagacha"
         override fun earnReason(reason: String) = when (reason) {
             CoinReasons.DAILY_OPEN -> "Kunda birinchi kirish"
-            CoinReasons.STREAK_MILESTONE -> "Streak bosqichi"
+            CoinReasons.STREAK_MILESTONE -> "Ketma-ketlik bosqichi"
             CoinReasons.CHECK_IN -> "Kayfiyatni belgilash"
             CoinReasons.WATER_GOAL -> "Suv maqsadiga yetish"
             CoinReasons.DOSE_TAKEN -> "Dori qabulini tasdiqlash"
@@ -1521,7 +1532,7 @@ object StringsUz : Strings {
         override fun widget(key: String) = when (key) {
             HomeWidgets.AI -> "AI xulosasi"
             HomeWidgets.SCORE -> "Salomatlik ko'rsatkichi"
-            HomeWidgets.STREAK -> "Streak va gul"
+            HomeWidgets.STREAK -> "Ketma-ketlik va gul"
             HomeWidgets.STAGE -> "Sikl / bosqich"
             HomeWidgets.PLAN -> "Bugungi reja"
             HomeWidgets.SLEEP -> "Uyqu"
@@ -1603,17 +1614,19 @@ object StringsUz : Strings {
         override val benefitAiTitle = "AI yordamchi"
         override val benefitAiBody = "Kuniga 20 tagacha savol — sikl, uyqu va ovqatlanishingizni bilgan holda javob beradi."
         override val benefitScannerTitle = "Ovqat skaneri"
-        override val benefitScannerBody = "Oyiga 30 ta surat: taomni suratga oling, kaloriya va tarkib o'zi hisoblanadi."
+        override val benefitScannerBody = "Oyiga 30 ta surat: taomni suratga oling — kaloriya va tarkib taxminan baholanadi, kerak bo'lsa o'zingiz to'g'rilaysiz."
         override val benefitInsightsTitle = "Tahlillar tarixi"
         override val benefitInsightsBody = "30 va 90 kunlik oynalar va kuzatuvlar: nima nima bilan birga kelayotganini ko'rasiz."
         override val benefitLibraryTitle = "Butun Bilim kutubxonasi"
-        override val benefitLibraryBody = "Shifokorlar tekshirgan barcha maqolalar, bosqichingizga mos."
+        override val benefitLibraryBody = "Mutaxassislar tayyorlagan barcha maqolalar, bosqichingizga mos."
         override val benefitDevicesTitle = "Qurilma tahlili"
         override val benefitDevicesBody = "WHOOP va boshqa qurilmalar ko'rsatkichlari sikl fazalari bilan solishtiriladi."
         override val compareTitle = "Bepul va Premium"
         override val seePlans = "Tariflarni ko'rish"
         override val manage = "Obunani boshqarish"
         override fun buyWithCoins(coinName: String) = "$coinName bilan olish"
+        override fun fromPerMonth(sum: String) = "Oyiga $sum so'mdan"
+        override fun coinsFor(cost: String, days: Int, balance: String) = "$cost = $days kun Premium · sizda $balance"
         override val faqTitle = "Ko'p so'raladigan savollar"
         override val faq = listOf(
             "Bepul rejada nima qoladi?" to "Hammasi: sikl, kayfiyat, ovqat kundaligi, dorilar, ko'riklar va 7 kunlik tahlillar. Premium faqat qo'shadi.",

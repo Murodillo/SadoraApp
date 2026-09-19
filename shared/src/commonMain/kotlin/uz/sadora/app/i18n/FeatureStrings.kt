@@ -66,6 +66,10 @@ interface PremiumStrings {
     val manage: String
     /** "Gul bilan olish" — the second way in. */
     fun buyWithCoins(coinName: String): String
+    /** "Oyiga 49 000 so'mdan" — the cheapest plan per month, under the main button. */
+    fun fromPerMonth(sum: String): String
+    /** "300 gul = 30 kun · sizda 1 250 gul" — what the coin route costs, and what she has. */
+    fun coinsFor(cost: String, days: Int, balance: String): String
     val faqTitle: String
     val faq: List<Pair<String, String>>
     val freeStays: String

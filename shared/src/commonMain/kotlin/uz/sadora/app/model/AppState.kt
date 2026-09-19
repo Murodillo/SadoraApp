@@ -302,6 +302,12 @@ class AppState {
     var mood by mutableStateOf(Mood.Good)
 
     /**
+     * Whether today's mood was actually logged. [mood] always has a value, and a score
+     * that counted the default as an answer graded a day she had not described.
+     */
+    var moodLoggedToday by mutableStateOf(false)
+
+    /**
      * True once she has answered the onboarding "how do you feel" question. [mood] has
      * a default, so without this the request could not tell an answer from the default.
      */
@@ -772,6 +778,7 @@ class AppState {
     fun setCheckIn(mood: Mood = this.mood, energy: Int = this.energy, stress: Int = this.stress) {
         isNewUser = false
         this.mood = mood
+        moodLoggedToday = true
         this.energy = energy.coerceIn(1, 5)
         this.stress = stress.coerceIn(1, 5)
         sync?.checkInChanged(this.mood, this.energy, this.stress)

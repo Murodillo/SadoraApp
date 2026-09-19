@@ -377,6 +377,14 @@ object StringsRu : Strings {
             "обновятся полностью. Записанные данные сохранятся."
 
         override val notificationsTitle = "Уведомления"
+        override val inboxDueToday = "Ждёт сегодня"
+        override val inboxEarlier = "Отправленные"
+        override val inboxEmpty = "Пока уведомлений нет"
+        override val inboxEmptyBody = "Здесь появятся напоминания и сводки. Какие получать, выбираете в настройках."
+        override val inboxSettings = "Настройки уведомлений"
+        override fun inboxDoseDue(name: String, time: String) = "$name · $time"
+        override val inboxDoseAction = "Открыть план приёма"
+        override val notificationSettingsTitle = "Настройки уведомлений"
         override val medReminder = "Напоминания о приёме"
         override val medReminderNote = "За 10 минут до времени приёма"
         override val cycleReminder = "Напоминание о цикле"
@@ -564,6 +572,7 @@ object StringsRu : Strings {
             "стало меньше."
         override val sampleAnswerAdvice = "В эти же дни отмечалась низкая энергия. Два шага " +
             "на сегодня: 700 мл воды до обеда и лечь до 23:00."
+        override val freeFeaturesHeading = "Откроется в Premium"
         override val freeFeatures = listOf(
             "20 вопросов в день, с учётом ваших данных",
             "Ежедневная персональная сводка ИИ",
@@ -600,7 +609,7 @@ object StringsRu : Strings {
         override fun anonymousAs(alias: String) = "Анонимно · вы: $alias"
         override val anonymous = "Анонимно — вашего имени никто не видит"
         override val rulesTitle = "Как устроен чат"
-        override val rulesIntro = "Здесь все пишут под псевдонимом. Ваши посты не связаны с профилем, номером телефона или именем — даже команда SADORA не видит, кто что написал в ленте."
+        override val rulesIntro = "Здесь все пишут под псевдонимом. Другие видят ваши посты только под псевдонимом — профиль, номер телефона и имя не показываются."
         override val rules = listOf(
             "Пишите с уважением — каждая здесь пришла со своим вопросом.",
             "Не оставляйте личные данные: имя, номер, адрес, фото.",
@@ -772,8 +781,10 @@ object StringsRu : Strings {
             score >= 80 -> "Отлично"
             score >= 60 -> "Хорошо"
             score >= 40 -> "Средне"
-            else -> "Низко"
+            else -> "Тихий день"
         }
+        override val scoreNeedsData =
+            "Отметьте две вещи — воду, настроение, сон или шаги, — и здесь появится ваш день."
 
         override val emptySummaryTitle = "Итог дня"
         override val emptySummaryBody =
@@ -904,7 +915,7 @@ object StringsRu : Strings {
         override val regularSteady = "Стабильно"
         override val regularVaries = "Меняется"
         override val cycleLength = "Длина цикла"
-        override fun lastNCycles(count: Int) = "последние $count цикла"
+        override fun lastNCycles(count: Int) = "последние $count " + ru(count, "цикл", "цикла", "циклов")
         override val previousCycles = "Прошлые циклы"
         override val noHistoryYet = "Истории циклов пока нет"
         override val noHistoryYetBody = "Как только появится вторая дата менструации, здесь " +
@@ -969,7 +980,7 @@ object StringsRu : Strings {
         override val aiAdvice =
             "На этой неделе полезны продукты, богатые железом, и лёгкая растяжка. " +
                 "Это общая информация о здоровье."
-        override val aiBadge = "SADORA AI · СОВЕТ"
+        override val aiBadge = "Общий совет"
 
         override val appointmentsTitle = "События"
         override val filterUpcoming = "Ближайшие"
@@ -1040,7 +1051,7 @@ object StringsRu : Strings {
         override val perimenopauseTitle = "Перименопауза"
         override val cycleRegularity = "Регулярность цикла"
         override val noData = "нет данных"
-        override fun lastCycles(count: Int) = "последние $count цикл."
+        override fun lastCycles(count: Int) = "последние $count " + ru(count, "цикл", "цикла", "циклов")
         override val regularityEmpty =
             "Когда вы начнёте отмечать менструации, длина цикла появится здесь. " +
                 "На этом этапе прогноз не показывается."
@@ -1114,7 +1125,7 @@ object StringsRu : Strings {
         override fun vsLastWeek(delta: String) = "$delta к прошлой неделе"
         override val strain = "Нагрузка"
         override val recovery = "Восстановление"
-        override fun goalFrom(hours: Int) = "от $hours часов"
+        override fun goalFrom(hours: Int) = "от $hours " + ru(hours, "часа", "часов", "часов")
         override val lastNight = "Прошлая ночь"
         override fun restingPulse(bpm: Int) = "Пульс покоя $bpm уд/мин"
         override val deep = "Глубокий"
@@ -1171,7 +1182,7 @@ object StringsRu : Strings {
         override val medsDisclaimer =
             "SADORA не даёт указаний по пропущенному приёму. Следуйте инструкции к " +
                 "препарату или рекомендации врача либо фармацевта."
-        override fun stockLeft(name: String, days: Int) = "Запаса $name осталось на $days дн."
+        override fun stockLeft(name: String, days: Int) = "$name: осталось на $days дн."
         override fun stockDays(days: Int) = "Запас $days дн."
         override val pending = "Ожидается"
         override val skipped = "Пропущено"
@@ -1211,7 +1222,7 @@ object StringsRu : Strings {
         override val portionLabel = "Порция"
         override val pieces = "шт. × 100"
         override val grams = "граммов"
-        override fun bowls(count: Int) = "$count миски"
+        override fun bowls(count: Int) = "$count " + ru(count, "миска", "миски", "мисок")
         override val total = "Итого"
         override val addToDiary = "Добавить в дневник"
         override val perPiece = "шт."
@@ -1405,12 +1416,12 @@ object StringsRu : Strings {
         override fun coins(amount: String) = "$amount гул"
         override fun coinsGained(amount: String) = "+$amount гул"
 
-        override fun streakDays(days: Int) = "$days дней подряд"
+        override fun streakDays(days: Int) = "$days " + ru(days, "день", "дня", "дней") + " подряд"
         override val streakStarted = "Серия началась"
         override val streakSubtitle = "Вы снова здесь 🌸"
-        override fun milestoneReached(days: Int) = "$days дней! 🎉"
+        override fun milestoneReached(days: Int) = "$days " + ru(days, "день", "дня", "дней") + "! 🎉"
         override fun daysToMilestone(days: Int, milestone: Int) =
-            "Ещё $days дней — рубеж $milestone дней"
+            "Ещё $days " + ru(days, "день", "дня", "дней") + " — рубеж $milestone " + ru(milestone, "день", "дня", "дней")
         override val streakBeyondMilestones = "Все рубежи уже позади"
 
         override val walletTitle = "Кошелёк Гул"
@@ -1423,7 +1434,7 @@ object StringsRu : Strings {
         override val history = "История"
         override val historyEmpty = "Пока пусто. Пользуйтесь приложением — гул будет копиться."
         override val howToEarn = "Как копить гул"
-        override fun perDay(times: Int) = "до $times раз в день"
+        override fun perDay(times: Int) = "до $times " + ru(times, "раза", "раз", "раз") + " в день"
         override fun earnReason(reason: String) = when (reason) {
             CoinReasons.DAILY_OPEN -> "Первый вход за день"
             CoinReasons.STREAK_MILESTONE -> "Рубеж серии"
@@ -1481,7 +1492,7 @@ object StringsRu : Strings {
         override fun priceWas(price: String) = price
         override fun priceNow(price: String) = price
         override fun saving(amount: String) = "экономия $amount"
-        override fun premiumDays(days: Int) = "$days дней Premium"
+        override fun premiumDays(days: Int) = "$days " + ru(days, "день", "дня", "дней") + " Premium"
         override val outOfStock = "Закончилось"
         override fun stockLeft(count: Int) = "осталось $count"
         override val notEnough = "Не хватает гул"
@@ -1575,7 +1586,7 @@ object StringsRu : Strings {
         override fun days(count: Int) = "$count дн."
         override fun expiresAt(at: String) = "Действует до $at"
         override val expired = "Срок истёк"
-        override fun viewedTimes(count: Int) = "Открыта $count раз"
+        override fun viewedTimes(count: Int) = "Открыта $count " + ru(count, "раз", "раза", "раз")
         override val neverViewed = "Ещё не открывали"
         override fun lastViewed(ago: String) = "Последний раз $ago"
         override val includesTitle = "Что на странице"
@@ -1609,17 +1620,19 @@ object StringsRu : Strings {
         override val benefitAiTitle = "AI-помощник"
         override val benefitAiBody = "До 20 вопросов в день — отвечает, зная ваш цикл, сон и питание."
         override val benefitScannerTitle = "Сканер еды"
-        override val benefitScannerBody = "30 фото в месяц: сфотографируйте блюдо — калории и состав посчитаются сами."
+        override val benefitScannerBody = "30 фото в месяц: сфотографируйте блюдо — калории и состав оцениваются примерно, при необходимости вы их поправите."
         override val benefitInsightsTitle = "История аналитики"
         override val benefitInsightsBody = "Окна 30 и 90 дней и наблюдения: видно, что с чем приходит вместе."
         override val benefitLibraryTitle = "Вся библиотека Знаний"
-        override val benefitLibraryBody = "Все статьи, проверенные врачами, под ваш этап."
+        override val benefitLibraryBody = "Все статьи, подготовленные специалистами, под ваш этап."
         override val benefitDevicesTitle = "Анализ устройств"
         override val benefitDevicesBody = "Показатели WHOOP и других устройств сопоставляются с фазами цикла."
         override val compareTitle = "Бесплатно и Premium"
         override val seePlans = "Посмотреть тарифы"
         override val manage = "Управлять подпиской"
         override fun buyWithCoins(coinName: String) = "Получить за $coinName"
+        override fun fromPerMonth(sum: String) = "От $sum сум в месяц"
+        override fun coinsFor(cost: String, days: Int, balance: String) = "$cost = $days дн. Premium · у вас $balance"
         override val faqTitle = "Частые вопросы"
         override val faq = listOf(
             "Что остаётся бесплатным?" to "Всё: цикл, настроение, дневник питания, лекарства, приёмы и 7-дневная аналитика. Premium только добавляет.",
@@ -1704,5 +1717,20 @@ object StringsRu : Strings {
         override val accessDenied = "Доступ не дан — ничего не прочитано"
         override fun periodsImported(count: Int) = "Добавлено периодов: $count"
         override val appleHealthManage = "Что читается, меняется в приложении «Здоровье»: Профиль → Приложения → SADORA."
+    }
+}
+
+/**
+ * Russian plural form for [n]: 1 день, 2 дня, 5 дней — and 11–14 always take the third.
+ * Numbers go into these strings in all three forms, so a fixed "дней" read "1 дней".
+ */
+internal fun ru(n: Int, one: String, few: String, many: String): String {
+    val mod100 = n % 100
+    val mod10 = n % 10
+    return when {
+        mod100 in 11..14 -> many
+        mod10 == 1 -> one
+        mod10 in 2..4 -> few
+        else -> many
     }
 }

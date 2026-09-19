@@ -311,7 +311,7 @@ private fun BillingPlan.savingLabel(all: List<BillingPlan>, t: ModuleStrings): S
 }
 
 /** Thousands separated with a space, the way prices are written in Uzbek. */
-private fun sumLabel(minor: Long): String =
+internal fun sumLabel(minor: Long): String =
     (minor / 100).toString()
         .reversed()
         .chunked(3)

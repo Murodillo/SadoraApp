@@ -706,36 +706,21 @@ private fun PregnancyJourney(state: AppState, health: HealthController, onOpen: 
     }
 }
 
-/** Stage-level AI recommendation — gradient, premium-badged, explicitly general. */
+/**
+ * The stage's general advice.
+ *
+ * It used to sit on the brand gradient under "SADORA AI" with a PREMIUM tag, shown to
+ * everyone and the same every week — a fixed sentence dressed as a personal AI answer,
+ * and a Premium label on something free. It is now what it is: general advice, on a
+ * plain card.
+ */
 @Composable
 private fun AiAdviceCard(body: String) {
     val t = strings.journey
     val c = Sadora.colors
-    val onGradient = c.onPrimary
-    Column(
-        Modifier
-            .fillMaxWidth()
-            .clip(Radius.card)
-            .background(c.heroGradient)
-            .padding(Spacing.md),
-        verticalArrangement = Arrangement.spacedBy(Spacing.xs),
-    ) {
-        Row(
-            Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
-        ) {
-            Text(t.aiBadge, style = Sadora.type.caption, color = onGradient)
-            Box(
-                Modifier
-                    .clip(Radius.chip)
-                    .background(onGradient.copy(alpha = 0.2f))
-                    .padding(horizontal = Spacing.xs, vertical = 3.dp),
-            ) {
-                Text(strings.journey.premiumCaps, style = Sadora.type.caption, color = onGradient)
-            }
-        }
-        Text(body, style = Sadora.type.body, color = onGradient)
+    SadoraCard {
+        CardLabel(t.aiBadge)
+        Text(body, style = Sadora.type.body, color = c.text)
     }
 }
 

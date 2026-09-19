@@ -369,6 +369,19 @@ object SadoraIcons {
     }
 
     /** Bildirishnomalar. */
+    /** Settings: a gear, for the bell screen's way into its switches. */
+    val Settings: ImageVector = icon("Settings") {
+        stroke {
+            moveTo(12.00f, 5.40f); lineTo(13.68f, 3.57f); lineTo(15.29f, 4.05f); lineTo(15.67f, 6.51f); lineTo(16.67f, 7.33f); lineTo(19.15f, 7.22f); lineTo(19.95f, 8.71f); lineTo(18.47f, 10.71f); lineTo(18.60f, 12.00f); lineTo(20.43f, 13.68f); lineTo(19.95f, 15.29f); lineTo(17.49f, 15.67f); lineTo(16.67f, 16.67f); lineTo(16.78f, 19.15f); lineTo(15.29f, 19.95f); lineTo(13.29f, 18.47f); lineTo(12.00f, 18.60f); lineTo(10.32f, 20.43f); lineTo(8.71f, 19.95f); lineTo(8.33f, 17.49f); lineTo(7.33f, 16.67f); lineTo(4.85f, 16.78f); lineTo(4.05f, 15.29f); lineTo(5.53f, 13.29f); lineTo(5.40f, 12.00f); lineTo(3.57f, 10.32f); lineTo(4.05f, 8.71f); lineTo(6.51f, 8.33f); lineTo(7.33f, 7.33f); lineTo(7.22f, 4.85f); lineTo(8.71f, 4.05f); lineTo(10.71f, 5.53f); close()
+        }
+        stroke {
+            moveTo(9.2f, 12f)
+            arcToRelative(2.8f, 2.8f, 0f, false, true, 5.6f, 0f)
+            arcToRelative(2.8f, 2.8f, 0f, false, true, -5.6f, 0f)
+            close()
+        }
+    }
+
     val Bell: ImageVector = icon("Bell") {
         stroke {
             moveTo(18.2f, 16.6f)

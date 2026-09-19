@@ -19,6 +19,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import uz.sadora.app.design.Radius
 import uz.sadora.app.design.Sadora
+import uz.sadora.app.design.IconSize
 import uz.sadora.app.design.SadoraIcons
 import uz.sadora.app.design.Spacing
 import uz.sadora.app.ui.components.AiOrb
@@ -99,13 +100,15 @@ fun AiFreePreviewScreen(
 
             item {
                 SadoraCard {
+                    CardLabel(t.freeFeaturesHeading)
                     t.freeFeatures.forEach { feature ->
                         Row(
                             Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
                         ) {
-                            Text("✓", style = Sadora.type.h3, color = c.successText)
+                            // A lock-free sparkle, not a green tick: a tick says "you have this".
+                            Icon(SadoraIcons.Sparkle, contentDescription = null, Modifier.size(IconSize.md), tint = c.textAccent)
                             Text(feature, style = Sadora.type.body, color = c.text)
                         }
                     }

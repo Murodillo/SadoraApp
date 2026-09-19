@@ -5,6 +5,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import uz.sadora.app.data.api.NotificationApi
 import uz.sadora.contract.NotificationCategory
+import uz.sadora.contract.NotificationMessage
+import uz.sadora.contract.NotificationStatus
 import uz.sadora.contract.NotificationSettings
 import uz.sadora.contract.UpdateNotificationSettingsRequest
 
@@ -25,6 +27,19 @@ class NotificationsController(private val api: NotificationApi?) {
 
     var settings by mutableStateOf(NotificationSettings())
         private set
+
+    /** What actually reached her phone, newest first — the bell's list. */
+    var sent by mutableStateOf<List<NotificationMessage>>(emptyList())
+        private set
+
+    suspend fun loadSent() {
+        val api = api ?: return
+        calls.run(silent = true) { api.history(limit = 50) }?.let { history ->
+            // Suppressed and failed ones never arrived; showing them would be news to her.
+            sent = history.filter { it.status == NotificationStatus.SENT }
+                .sortedByDescending { it.sentAt ?: it.scheduledFor }
+        }
+    }
 
     suspend fun load() {
         val api = api ?: return

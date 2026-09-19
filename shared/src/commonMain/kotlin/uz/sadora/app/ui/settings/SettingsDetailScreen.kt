@@ -78,7 +78,7 @@ fun SettingsDetailScreen(
             Route.PersonalDetails -> PersonalDetails(state, controller, onClose)
             Route.GoalsSettings -> GoalsSettings(state, controller, onClose)
             Route.LifeStageSettings -> LifeStageSettings(state, controller, onClose)
-            Route.Notifications -> NotificationSettings(notifications, onClose)
+            Route.Notifications -> NotificationSettings(state, notifications, onClose)
             Route.PrivacySecurity -> PrivacySettings(state, controller, share, onClose, onOpen, onSignedOut, onToast)
             Route.LanguageSettings -> LanguageSettings(state, controller, onClose)
             Route.About -> About(state, onClose)
@@ -215,20 +215,24 @@ private fun LifeStageSettings(state: AppState, controller: SadoraController, onC
 }
 
 @Composable
-private fun NotificationSettings(notifications: NotificationsController, onClose: () -> Unit) {
+private fun NotificationSettings(state: AppState, notifications: NotificationsController, onClose: () -> Unit) {
     val t = strings.settings
     val scope = rememberCoroutineScope()
     LaunchedEffect(Unit) { notifications.load() }
-    SadoraTopBar(t.notificationsTitle, onBack = onClose)
+    SadoraTopBar(t.notificationSettingsTitle, onBack = onClose)
     ScreenContent {
         item {
             notifications.error?.let { ErrorStrip(it.readable()) }
             SadoraCard {
                 // Each switch is one category on the server — the same settings the
                 // scheduler reads before it sends — and saves the moment it moves.
-                listOf(
+                //
+                // A period reminder only means something while there is a period to
+                // predict; offered to someone pregnant it reads as the app not knowing her.
+                listOfNotNull(
                     Triple(t.medReminder, t.medReminderNote, NotificationCategory.MED_REMINDER),
-                    Triple(t.cycleReminder, t.cycleReminderNote, NotificationCategory.CYCLE),
+                    Triple(t.cycleReminder, t.cycleReminderNote, NotificationCategory.CYCLE)
+                        .takeIf { state.lifeStage.predictsCycle },
                     Triple(t.waterReminder, t.waterReminderNote, NotificationCategory.WATER),
                     Triple(t.aiSummary, t.aiSummaryNote, NotificationCategory.INSIGHT),
                 ).forEach { (title, note, category) ->

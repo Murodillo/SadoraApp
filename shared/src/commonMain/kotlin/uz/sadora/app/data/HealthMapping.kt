@@ -64,6 +64,7 @@ fun AppState.applyCycle(status: CycleStatus) {
  */
 fun AppState.applyDay(log: DailyLog, catalogue: List<SymptomDefinition>) {
     mood = log.mood?.toAppMood() ?: mood
+    moodLoggedToday = log.mood != null
     log.energy?.let { energy = it.coerceIn(1, 5) }
     log.stress?.let { stress = it.coerceIn(1, 5) }
     val labels = catalogue.associate { it.key to it.label }

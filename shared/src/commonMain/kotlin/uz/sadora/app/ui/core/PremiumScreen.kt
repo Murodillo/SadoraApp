@@ -1,5 +1,11 @@
 package uz.sadora.app.ui.core
 
+import uz.sadora.app.ui.modules.sumLabel
+import uz.sadora.app.model.Fmt
+import uz.sadora.contract.BillingPeriod
+import uz.sadora.contract.ShopKind
+import uz.sadora.app.data.RewardsController
+import uz.sadora.app.data.BillingController
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -57,6 +63,8 @@ import uz.sadora.app.ui.modules.PremiumComparison
 fun PremiumScreen(
     state: AppState,
     controller: SadoraController,
+    billing: BillingController,
+    rewards: RewardsController,
     onOpen: (Route) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -66,6 +74,12 @@ fun PremiumScreen(
     // The tier can change outside the app — a purchase on another device, a lapsed
     // subscription — so it is re-read whenever the tab is opened.
     LaunchedEffect(Unit) { controller.refreshEntitlements() }
+    LaunchedEffect(state.isPremium) {
+        if (!state.isPremium) {
+            billing.loadCatalogue()
+            rewards.loadCatalog()
+        }
+    }
 
     Column(modifier) {
         SadoraTopBar(t.title)
@@ -74,6 +88,45 @@ fun PremiumScreen(
             item {
                 Box(Modifier.appearFromBelow(0)) {
                     StatusHero(state, onOpen)
+                }
+            }
+
+            // The way in, with its price, right under the hero: it used to sit below five
+            // benefits and a comparison table, and nowhere on the tab said what it costs.
+            if (!state.isPremium) {
+                item {
+                    Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                        PremiumCtaButton(t.seePlans, onClick = { onOpen(Route.Paywall) })
+                        cheapestMonthlyMinor(billing)?.let {
+                            Text(
+                                t.fromPerMonth(sumLabel(it)),
+                                style = Sadora.type.body,
+                                color = c.muted,
+                                modifier = Modifier.align(Alignment.CenterHorizontally),
+                            )
+                        }
+                        SadoraButton(
+                            t.buyWithCoins(strings.rewards.coinName),
+                            { onOpen(Route.Shop) },
+                            tone = ButtonTone.Outline,
+                            icon = SadoraIcons.Bloom,
+                        )
+                        rewards.productsOf(ShopKind.PREMIUM)
+                            .filter { it.premiumDays != null }
+                            .minByOrNull { it.coinCost }
+                            ?.let { product ->
+                                Text(
+                                    t.coinsFor(
+                                        strings.rewards.coins(Fmt.int(product.coinCost)),
+                                        product.premiumDays!!,
+                                        strings.rewards.coins(Fmt.int(state.coins)),
+                                    ),
+                                    style = Sadora.type.body,
+                                    color = c.muted,
+                                    modifier = Modifier.align(Alignment.CenterHorizontally),
+                                )
+                            }
+                    }
                 }
             }
 
@@ -95,20 +148,6 @@ fun PremiumScreen(
                     Text(t.compareTitle, style = Sadora.type.h3, color = c.text, modifier = Modifier.padding(start = Spacing.xxs))
                     PremiumComparison()
                     Text(t.freeStays, style = Sadora.type.caption, color = c.muted, modifier = Modifier.padding(start = Spacing.xxs))
-                }
-            }
-
-            if (!state.isPremium) {
-                item {
-                    Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-                        PremiumCtaButton(t.seePlans, onClick = { onOpen(Route.Paywall) })
-                        SadoraButton(
-                            t.buyWithCoins(strings.rewards.coinName),
-                            { onOpen(Route.Shop) },
-                            tone = ButtonTone.Outline,
-                            icon = SadoraIcons.Bloom,
-                        )
-                    }
                 }
             }
 
@@ -228,3 +267,18 @@ private fun FaqRow(question: String, answer: String) {
         }
     }
 }
+
+/** The lowest price per month across the plans — a year plan counts at its monthly rate. */
+private fun cheapestMonthlyMinor(billing: BillingController): Long? =
+    billing.catalogue?.plans?.minOfOrNull { plan ->
+        plan.monthlyEquivalentMinor ?: when (plan.period) {
+            BillingPeriod.YEAR -> plan.priceMinor / 12
+            else -> plan.priceMinor
+        }
+    }?.let { minor ->
+        // A year split twelve ways lands on odd sums like 24 916; rounded down to the
+        // hundred so a "from" price is never above what she would actually pay.
+        minor / HundredSoumMinor * HundredSoumMinor
+    }
+
+private const val HundredSoumMinor = 100L * 100L
