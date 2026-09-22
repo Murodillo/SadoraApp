@@ -3,12 +3,17 @@ import { useNavigate } from 'react-router-dom'
 import { useUsers } from '../api/hooks'
 import type { UserFilters } from '../api/hooks'
 import type { AdminUserSummary } from '../api/types'
+import { useAuth } from '../auth/AuthContext'
 import { Card, Empty, ErrorNotice, formatDateTime, Loading, StatusBadge, TierBadge } from '../components/ui'
+import { lifeStageLabels } from './DashboardPage'
 
 const PAGE_SIZE = 25
 
 export function UsersPage() {
   const navigate = useNavigate()
+  const { can } = useAuth()
+  // The card route is Owner/Admin/Support; an Analyst clicking a row would only get a 403.
+  const opensCard = can(['OWNER', 'ADMIN', 'SUPPORT'])
   const [filters, setFilters] = useState<UserFilters>({ limit: PAGE_SIZE, offset: 0 })
   const [search, setSearch] = useState('')
 
@@ -114,11 +119,15 @@ export function UsersPage() {
                 </thead>
                 <tbody>
                   {page.items.map((user) => (
-                    <tr key={user.id} className="clickable" onClick={() => navigate(`/users/${user.id}`)}>
+                    <tr
+                      key={user.id}
+                      className={opensCard ? 'clickable' : undefined}
+                      onClick={opensCard ? () => navigate(`/users/${user.id}`) : undefined}
+                    >
                       <td style={{ fontWeight: 600 }}>{user.name || '—'}</td>
                       <td className="mono">{user.phone ?? user.email ?? '—'}</td>
                       <td>{user.language.toUpperCase()}</td>
-                      <td className="muted">{user.lifeStage}</td>
+                      <td className="muted">{lifeStageLabels[user.lifeStage] ?? user.lifeStage}</td>
                       <td>
                         <TierBadge tier={user.tier} />
                       </td>

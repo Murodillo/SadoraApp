@@ -43,6 +43,7 @@ fun Route.adminRoutes(
     adminService: AdminService,
     auditRepository: AuditRepository,
     statsRepository: AdminStatsRepository,
+    analyticsRepository: AdminAnalyticsRepository,
     refreshTokens: RefreshTokenService,
 ) {
     route("/admin") {
@@ -88,6 +89,13 @@ fun Route.adminRoutes(
             get("/stats/signups") {
                 call.requireAdminRole(AdminRole.OWNER, AdminRole.ADMIN, AdminRole.ANALYST)
                 call.respond(statsRepository.signUpsPerDay(call.intParameter("days", 14, 90)))
+            }
+
+            // The analytics page. Analyst reads it; Support's job is one account at a time,
+            // and the cohort numbers here are not that.
+            get("/stats/analytics") {
+                call.requireAdminRole(AdminRole.OWNER, AdminRole.ADMIN, AdminRole.ANALYST)
+                call.respond(analyticsRepository.analytics(call.intParameter("days", 30, 180)))
             }
 
             get("/stats/events") {

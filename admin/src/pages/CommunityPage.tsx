@@ -10,9 +10,10 @@ import {
   useRestrictAuthor,
 } from '../api/hooks'
 import type { ModerationFilters } from '../api/hooks'
-import type { ModerationPost, ModerationReport, ReportReason } from '../api/types'
+import type { ModerationComment, ModerationPost, ModerationReport, ReportReason } from '../api/types'
 import { useAuth } from '../auth/AuthContext'
-import { Card, Empty, ErrorNotice, Field, formatDateTime, Loading, Modal, Stat } from '../components/ui'
+import { useToast } from '../components/toast'
+import { Card, Empty, ErrorNotice, Field, formatDateTime, Loading, Modal, Spinner, Stat, TabPanel, Tabs } from '../components/ui'
 import { limits } from '../api/limits'
 
 const PAGE_SIZE = 25
@@ -61,16 +62,24 @@ export function CommunityPage() {
         </div>
       )}
 
-      <div className="tabs">
-        <button className={`tab${tab === 'posts' ? ' active' : ''}`} onClick={() => setTab('posts')}>
-          Postlar
-        </button>
-        <button className={`tab${tab === 'reports' ? ' active' : ''}`} onClick={() => setTab('reports')}>
-          Shikoyatlar{stats.data?.openReports ? ` (${stats.data.openReports})` : ''}
-        </button>
-      </div>
+      <Tabs<Tab>
+        value={tab}
+        onChange={setTab}
+        items={[
+          { key: 'posts', label: 'Postlar' },
+          {
+            key: 'reports',
+            label: (
+              <>
+                Shikoyatlar
+                {stats.data?.openReports ? <span className="badge warn" style={{ marginLeft: 6 }}>{stats.data.openReports}</span> : null}
+              </>
+            ),
+          },
+        ]}
+      />
 
-      {tab === 'posts' ? <PostsTab /> : <ReportsTab />}
+      <TabPanel id={tab}>{tab === 'posts' ? <PostsTab /> : <ReportsTab />}</TabPanel>
     </div>
   )
 }
@@ -85,6 +94,7 @@ function PostsTab() {
   const [dialog, setDialog] = useState<{ kind: 'hide' | 'restrict'; post: ModerationPost } | null>(null)
   const posts = useModerationPosts(filters)
   const hide = useHidePost()
+  const { notify } = useToast()
 
   function update(patch: Partial<ModerationFilters>) {
     setFilters((current) => ({ ...current, ...patch, offset: 0 }))
@@ -166,7 +176,7 @@ function PostsTab() {
                       expanded={expanded === post.id}
                       onToggle={() => setExpanded(expanded === post.id ? null : post.id)}
                       onHide={() => setDialog({ kind: 'hide', post })}
-                      onRestore={() => hide.mutate({ id: post.id, hidden: false })}
+                      onRestore={() => hide.mutate({ id: post.id, hidden: false }, { onSuccess: () => notify('Post lentaga qaytdi') })}
                       onRestrict={() => setDialog({ kind: 'restrict', post })}
                     />
                   ))}
@@ -278,11 +288,15 @@ function PostRow({
 function CommentsPanel({ postId, editable }: { postId: string; editable: boolean }) {
   const comments = useModerationComments(postId)
   const hide = useHideComment()
+  const { notify } = useToast()
+  const [hiding, setHiding] = useState<ModerationComment | null>(null)
   if (comments.isLoading) return <Loading rows={2} />
   if (comments.error) return <ErrorNotice error={comments.error} />
   const items = comments.data ?? []
   if (!items.length) return <p className="faint" style={{ margin: 0 }}>Izoh yo'q.</p>
   return (
+    <>
+    {hiding && <HideCommentDialog comment={hiding} onClose={() => setHiding(null)} />}
     <table>
       <tbody>
         {items.map((comment) => (
@@ -301,17 +315,15 @@ function CommentsPanel({ postId, editable }: { postId: string; editable: boolean
             <td style={{ width: 120 }}>
               {editable &&
                 (comment.hidden ? (
-                  <button className="btn small" onClick={() => hide.mutate({ id: comment.id, hidden: false })}>
+                  <button
+                    className="btn small"
+                    disabled={hide.isPending}
+                    onClick={() => hide.mutate({ id: comment.id, hidden: false }, { onSuccess: () => notify('Izoh qaytarildi') })}
+                  >
                     Qaytarish
                   </button>
                 ) : (
-                  <button
-                    className="btn small danger"
-                    onClick={() => {
-                      const reason = window.prompt('Yashirish sababi')
-                      if (reason?.trim()) hide.mutate({ id: comment.id, hidden: true, reason: reason.trim() })
-                    }}
-                  >
+                  <button className="btn small danger" onClick={() => setHiding(comment)}>
                     Yashirish
                   </button>
                 ))}
@@ -320,11 +332,53 @@ function CommentsPanel({ postId, editable }: { postId: string; editable: boolean
         ))}
       </tbody>
     </table>
+    </>
+  )
+}
+
+function HideCommentDialog({ comment, onClose }: { comment: ModerationComment; onClose: () => void }) {
+  const hide = useHideComment()
+  const { notify } = useToast()
+  const [reason, setReason] = useState('')
+  return (
+    <Modal title="Izohni yashirish" onClose={onClose}>
+      <p className="faint" style={{ margin: 0 }}>
+        {comment.alias}: “{excerpt(comment.body, 120)}”
+      </p>
+      <Field label="Sabab (majburiy)">
+        <input value={reason} onChange={(event) => setReason(event.target.value)} maxLength={limits.reasonMax} autoFocus />
+      </Field>
+      {hide.error && <ErrorNotice error={hide.error} />}
+      <div className="row" style={{ justifyContent: 'flex-end' }}>
+        <button className="btn ghost" onClick={onClose}>
+          Bekor qilish
+        </button>
+        <button
+          className="btn danger"
+          disabled={!reason.trim() || hide.isPending}
+          onClick={() =>
+            hide.mutate(
+              { id: comment.id, hidden: true, reason: reason.trim() },
+              {
+                onSuccess: () => {
+                  notify('Izoh yashirildi', 'info')
+                  onClose()
+                },
+              },
+            )
+          }
+        >
+          {hide.isPending && <Spinner />}
+          {hide.isPending ? 'Yuborilmoqda…' : 'Yashirish'}
+        </button>
+      </div>
+    </Modal>
   )
 }
 
 function HideDialog({ post, onClose }: { post: ModerationPost; onClose: () => void }) {
   const hide = useHidePost()
+  const { notify } = useToast()
   const [reason, setReason] = useState('')
   return (
     <Modal title="Postni yashirish" onClose={onClose}>
@@ -350,8 +404,19 @@ function HideDialog({ post, onClose }: { post: ModerationPost; onClose: () => vo
         <button
           className="btn danger"
           disabled={!reason.trim() || hide.isPending}
-          onClick={() => hide.mutate({ id: post.id, hidden: true, reason: reason.trim() }, { onSuccess: onClose })}
+          onClick={() =>
+            hide.mutate(
+              { id: post.id, hidden: true, reason: reason.trim() },
+              {
+                onSuccess: () => {
+                  notify('Post yashirildi, shikoyatlari yopildi', 'info')
+                  onClose()
+                },
+              },
+            )
+          }
         >
+          {hide.isPending && <Spinner />}
           {hide.isPending ? 'Yuborilmoqda…' : 'Yashirish'}
         </button>
       </div>
@@ -361,6 +426,7 @@ function HideDialog({ post, onClose }: { post: ModerationPost; onClose: () => vo
 
 function RestrictDialog({ post, onClose }: { post: ModerationPost; onClose: () => void }) {
   const restrict = useRestrictAuthor()
+  const { notify } = useToast()
   const [reason, setReason] = useState('')
   const [days, setDays] = useState('')
   return (
@@ -391,10 +457,16 @@ function RestrictDialog({ post, onClose }: { post: ModerationPost; onClose: () =
           onClick={() =>
             restrict.mutate(
               { postId: post.id, reason: reason.trim(), days: days ? Number(days) : null },
-              { onSuccess: onClose },
+              {
+                onSuccess: () => {
+                  notify(days ? `Muallif ${days} kunga cheklandi` : 'Muallif cheklandi', 'info')
+                  onClose()
+                },
+              },
             )
           }
         >
+          {restrict.isPending && <Spinner />}
           {restrict.isPending ? 'Yuborilmoqda…' : 'Cheklash'}
         </button>
       </div>
@@ -486,6 +558,7 @@ function ReportsTab() {
 
 function ReportRow({ report, editable }: { report: ModerationReport; editable: boolean }) {
   const resolve = useResolveReport()
+  const { notify } = useToast()
   return (
     <tr>
       <td className="faint" style={{ whiteSpace: 'nowrap' }}>
@@ -512,14 +585,19 @@ function ReportRow({ report, editable }: { report: ModerationReport; editable: b
             <button
               className="btn small"
               disabled={resolve.isPending}
-              onClick={() => resolve.mutate({ id: report.id, action: 'dismiss' })}
+              onClick={() => resolve.mutate({ id: report.id, action: 'dismiss' }, { onSuccess: () => notify('Shikoyat rad etildi') })}
             >
               Rad etish
             </button>
             <button
               className="btn small danger"
               disabled={resolve.isPending}
-              onClick={() => resolve.mutate({ id: report.id, action: 'hide', reason: `Shikoyat: ${reasonLabels[report.reason]}` })}
+              onClick={() =>
+                resolve.mutate(
+                  { id: report.id, action: 'hide', reason: `Shikoyat: ${reasonLabels[report.reason]}` },
+                  { onSuccess: () => notify('Matn yashirildi, shikoyat yopildi', 'info') },
+                )
+              }
             >
               Yashirish
             </button>

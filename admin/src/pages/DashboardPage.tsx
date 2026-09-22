@@ -1,21 +1,13 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useRecentEvents, useSignUps, useStats } from '../api/hooks'
-import type { SignUpPoint } from '../api/types'
-import { Card, ErrorNotice, formatDateTime, Loading, Stat } from '../components/ui'
+import { useAnalytics, useRecentEvents, useStats } from '../api/hooks'
+import type { AdminAnalytics } from '../api/types'
+import { useAuth } from '../auth/AuthContext'
+import { som } from '../components/analytics'
+import { BarChart, Donut, LineChart } from '../components/charts'
+import { Card, Delta, ErrorNotice, formatDateTime, formatTime, Loading, Stat } from '../components/ui'
 
-/** Expands a sparse series into one entry per day, oldest first. */
-function fillDays(points: SignUpPoint[], days: number): SignUpPoint[] {
-  const counts = new Map(points.map((point) => [point.date, point.signUps]))
-  const today = new Date()
-  return Array.from({ length: days }, (_, index) => {
-    const date = new Date(today)
-    date.setUTCDate(today.getUTCDate() - (days - 1 - index))
-    const key = date.toISOString().slice(0, 10)
-    return { date: key, signUps: counts.get(key) ?? 0 }
-  })
-}
-
-const lifeStageLabels: Record<string, string> = {
+export const lifeStageLabels: Record<string, string> = {
   cycle: 'Sikl',
   trying_to_conceive: 'Rejalashtirish',
   pregnancy: 'Homiladorlik',
@@ -24,121 +16,203 @@ const lifeStageLabels: Record<string, string> = {
   menopause: 'Menopauza',
 }
 
+export const languageLabels: Record<string, string> = {
+  uz: "O'zbekcha",
+  ru: 'Ruscha',
+  en: 'Inglizcha',
+}
+
+const actionLabels: Record<string, string> = {
+  'user.signed_up': "Ro'yxatdan o'tdi",
+  'user.signed_in': 'Kirdi',
+  'user.signed_out': 'Chiqdi',
+  'user.onboarded': 'Onboardingni tugatdi',
+  'user.blocked': 'Bloklandi',
+  'user.unblocked': 'Blokdan chiqdi',
+  'user.profile_updated': 'Profilni yangiladi',
+  'user.consent_changed': "Rozilikni o'zgartirdi",
+  'user.deletion_requested': "O'chirishni so'radi",
+  'subscription.granted': 'Premium berildi',
+  'admin.signed_in': 'Operator kirdi',
+  'admin.sign_in_failed': 'Operator kira olmadi',
+  'flag.updated': "Bayroq o'zgardi",
+  'community.post_hidden': 'Post yashirildi',
+  'community.report_resolved': 'Shikoyat yopildi',
+  'rewards.coins_adjusted': "Gul to'g'rilandi",
+  'share.created': 'Shifokor sahifasi yaratildi',
+  'share.viewed': "Shifokor sahifasi ko'rildi",
+}
+
+export const PERIODS = [7, 14, 30, 90] as const
+export type Period = (typeof PERIODS)[number]
+
+export function PeriodPicker({ value, onChange }: { value: Period; onChange: (days: Period) => void }) {
+  return (
+    <div className="segmented" role="group" aria-label="Davr">
+      {PERIODS.map((option) => (
+        <button key={option} className={option === value ? 'active' : undefined} onClick={() => onChange(option)}>
+          {option} kun
+        </button>
+      ))}
+    </div>
+  )
+}
+
 export function DashboardPage() {
+  const { can } = useAuth()
+  const [days, setDays] = useState<Period>(14)
   const stats = useStats()
-  const signUps = useSignUps(14)
+  // Support has no analytics route; her dashboard is the counts and the feed.
+  const seesAnalytics = can(['OWNER', 'ADMIN', 'ANALYST'])
+  const analytics = useAnalytics(days, seesAnalytics)
   const events = useRecentEvents(10)
 
   if (stats.isLoading) return <Loading rows={6} />
   if (stats.error) return <ErrorNotice error={stats.error} />
   const data = stats.data!
+  const report = analytics.data
 
-  // The endpoint returns only days that had a sign-up. Rendering those alone would put
-  // one bar across the whole width and read as "every day was busy", so the empty days
-  // are filled back in to make a real 14-day axis.
-  const series = fillDays(signUps.data ?? [], 14)
-  const peak = Math.max(1, ...series.map((point) => point.signUps))
+  const dauOfMau = data.activeThisMonth ? Math.round((data.activeToday / data.activeThisMonth) * 100) : null
 
   return (
     <div className="grid" style={{ gap: 16 }}>
+      <div className="row" style={{ justifyContent: 'space-between' }}>
+        <span className="faint live">
+          Yangilangan {formatTime(data.generatedAt)} · har 30 soniyada
+        </span>
+        {seesAnalytics && <PeriodPicker value={days} onChange={setDays} />}
+      </div>
+
       <div className="grid stat-row">
-        <Stat label="Jami foydalanuvchi" value={data.totalUsers} hint={`Haftada +${data.newThisWeek}`} />
-        <Stat label="Bugun ro'yxatdan o'tgan" value={data.newToday} />
+        <Stat
+          label="Jami foydalanuvchi"
+          value={data.totalUsers}
+          hint={`Haftada +${data.newThisWeek}`}
+          spark={report?.perDay.map((day) => day.signUps)}
+        />
+        <Stat
+          label={`Ro'yxatdan o'tgan · ${days} kun`}
+          value={report?.current.signUps ?? data.newToday}
+          delta={report ? { previous: report.previous.signUps } : undefined}
+          hint={report ? `bugun ${data.newToday}` : 'bugun'}
+        />
         <Stat
           label="Kunlik faol (DAU)"
           value={data.activeToday}
-          hint={data.activeThisMonth ? `Oylik ${data.activeThisMonth} · ${Math.round((data.activeToday / data.activeThisMonth) * 100)}% qaytadi` : undefined}
-        />
-        <Stat label="Aktiv obuna" value={data.premiumUsers} hint={`${data.expiringWithinWeek} tasi hafta ichida tugaydi`} />
-        <Stat label="Bloklangan" value={data.blockedUsers} />
-        <Stat label="O'chirish so'rovi" value={data.deletionPending} />
-      </div>
-
-      <div className="grid stat-row">
-        <Stat label="Chat — 24 soatda post" value={data.communityPostsToday} />
-        <Stat
-          label="Ochiq shikoyatlar"
-          value={data.communityOpenReports}
-          hint={data.communityOpenReports > 0 ? 'Moderatsiya sahifasida' : 'Navbat bo‘sh'}
+          hint={dauOfMau !== null ? `MAU ${data.activeThisMonth} · ${dauOfMau}% qaytadi` : undefined}
+          spark={report?.perDay.map((day) => day.activeUsers)}
+          sparkColor="var(--c3)"
         />
         <Stat
-          label="Shifokor tavsiyasi bilan"
-          value={data.referredByDoctor}
-          hint={data.totalUsers ? `${Math.round((data.referredByDoctor / data.totalUsers) * 100)}% foydalanuvchi` : undefined}
+          label="Aktiv obuna"
+          value={data.premiumUsers}
+          hint={`${data.expiringWithinWeek} tasi hafta ichida tugaydi`}
+          spark={report?.perDay.map((day) => day.premiumStarted)}
+          sparkColor="var(--c2)"
         />
+        <Stat
+          label={`Tushum · ${days} kun`}
+          value={report ? `${som(report.current.revenueMinor)} so'm` : '—'}
+          hint={report ? <Delta current={report.current.revenueMinor} previous={report.previous.revenueMinor} /> : undefined}
+          spark={report?.perDay.map((day) => day.revenueMinor)}
+          sparkColor="var(--c2)"
+        />
+        <Stat label="Bloklangan" value={data.blockedUsers} hint={`${data.deletionPending} ta o'chirish so'rovi`} />
       </div>
 
-      <div className="grid" style={{ gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1fr)', gap: 16 }}>
-        <Card title="Ro'yxatdan o'tish — 14 kun">
-          {signUps.isLoading ? (
-            <Loading rows={1} />
-          ) : (
-            <>
-              <div className="bars">
-                {series.map((point) => (
-                  <div
-                    key={point.date}
-                    className="bar"
-                    data-empty={point.signUps === 0}
-                    style={{ height: `${Math.max((point.signUps / peak) * 100, point.signUps ? 6 : 2)}%` }}
-                    title={`${point.date}: ${point.signUps}`}
-                  />
-                ))}
-              </div>
-              <div className="row" style={{ justifyContent: 'space-between', marginTop: 6 }}>
-                <span className="faint">{series[0]?.date}</span>
-                <span className="faint">
-                  Eng yuqori: {peak} · jami {series.reduce((sum, point) => sum + point.signUps, 0)}
-                </span>
-                <span className="faint">{series[series.length - 1]?.date}</span>
-              </div>
-            </>
-          )}
-        </Card>
-
+      {seesAnalytics && (
         <Card
-          title="Bugungi AI foydalanish"
+          title={`Ro'yxatdan o'tish va faollik — ${days} kun`}
           action={
-            <Link to="/ai" className="faint">
-              Xarajat →
+            <Link to="/analytics" className="faint">
+              To'liq analitika →
             </Link>
           }
         >
-          {Object.keys(data.aiUsageToday).length === 0 ? (
-            <p className="faint" style={{ margin: 0 }}>
-              Bugun AI so'rovlari bo'lmagan. Har bir chat savoli <span className="mono">ai_chat</span>{' '}
-              hisoblagichini oshiradi; kunlik xarajat "AI xarajati" sahifasida.
-            </p>
-          ) : (
-            <table>
-              <tbody>
-                {Object.entries(data.aiUsageToday).map(([key, count]) => (
-                  <tr key={key}>
-                    <td className="mono">{key}</td>
-                    <td style={{ textAlign: 'right', fontWeight: 600 }}>{count}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          {analytics.isLoading && !report ? (
+            <Loading rows={3} />
+          ) : analytics.error ? (
+            <ErrorNotice error={analytics.error} />
+          ) : report ? (
+            <GrowthChart report={report} />
+          ) : null}
+        </Card>
+      )}
+
+      <div className="two-col">
+        <Card title="Chat va AI — 24 soat">
+          <div className="grid stat-row tight">
+            <Stat label="Chat — post" value={data.communityPostsToday} spark={report?.perDay.map((day) => day.posts)} sparkColor="var(--c6)" />
+            <Stat
+              label="Ochiq shikoyatlar"
+              value={data.communityOpenReports}
+              hint={
+                data.communityOpenReports > 0 ? (
+                  <Link to="/community">Moderatsiya sahifasida →</Link>
+                ) : (
+                  'Navbat bo‘sh'
+                )
+              }
+            />
+            <Stat
+              label="AI javoblari"
+              value={Object.values(data.aiUsageToday).reduce((sum, count) => sum + count, 0)}
+              hint={
+                <Link to="/ai">
+                  Xarajat →
+                </Link>
+              }
+              spark={report?.perDay.map((day) => day.aiCalls)}
+              sparkColor="var(--c5)"
+            />
+            <Stat
+              label="Shifokor tavsiyasi bilan"
+              value={data.referredByDoctor}
+              hint={data.totalUsers ? `${Math.round((data.referredByDoctor / data.totalUsers) * 100)}% foydalanuvchi` : undefined}
+            />
+          </div>
+          {report && report.perDay.some((day) => day.aiCalls > 0) && (
+            <div style={{ marginTop: 14 }}>
+              <div className="faint" style={{ marginBottom: 4 }}>
+                AI javoblari kun bo'yicha
+              </div>
+              <BarChart labels={report.perDay.map((day) => day.date)} values={report.perDay.map((day) => day.aiCalls)} height={110} color="var(--c5)" />
+            </div>
           )}
+        </Card>
+
+        <Card title="Hayot bosqichi bo'yicha">
+          <Donut
+            slices={Object.entries(data.byLifeStage)
+              .sort(([, a], [, b]) => b - a)
+              .map(([stage, count]) => ({ key: stage, label: lifeStageLabels[stage] ?? stage, value: count }))}
+            centerLabel="hisob"
+            size={132}
+          />
         </Card>
       </div>
 
-      <div className="grid" style={{ gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 2fr)', gap: 16 }}>
-        <Card title="Hayot bosqichi bo'yicha">
-          <table>
-            <tbody>
-              {Object.entries(data.byLifeStage).map(([stage, count]) => (
-                <tr key={stage}>
-                  <td>{lifeStageLabels[stage] ?? stage}</td>
-                  <td style={{ textAlign: 'right', fontWeight: 600 }}>{count}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      <div className="two-col reverse">
+        <Card title="Til bo'yicha">
+          <Donut
+            slices={Object.entries(data.byLanguage)
+              .sort(([, a], [, b]) => b - a)
+              .map(([language, count]) => ({ key: language, label: languageLabels[language] ?? language.toUpperCase(), value: count }))}
+            centerLabel="hisob"
+            size={132}
+          />
         </Card>
 
-        <Card title="So'nggi hodisalar">
+        <Card
+          title="So'nggi hodisalar"
+          action={
+            can(['OWNER']) ? (
+              <Link to="/audit" className="faint">
+                Audit log →
+              </Link>
+            ) : undefined
+          }
+        >
           {events.isLoading ? (
             <Loading rows={4} />
           ) : (
@@ -147,14 +221,24 @@ export function DashboardPage() {
                 <tbody>
                   {(events.data ?? []).map((event) => (
                     <tr key={event.id}>
-                      <td className="faint" style={{ whiteSpace: 'nowrap' }}>{formatDateTime(event.createdAt)}</td>
-                      <td>
-                        <span className="badge free">{event.actorType}</span>
+                      <td className="faint" style={{ whiteSpace: 'nowrap' }}>
+                        {formatDateTime(event.createdAt)}
                       </td>
-                      <td className="mono">{event.action}</td>
+                      <td>
+                        <span className={`badge ${event.actorType === 'admin' ? 'premium' : 'free'}`}>{event.actorType}</span>
+                      </td>
+                      <td>
+                        <div>{actionLabels[event.action] ?? event.action}</div>
+                        <div className="mono faint">{event.action}</div>
+                      </td>
                       <td className="muted">{event.reason ?? ''}</td>
                     </tr>
                   ))}
+                  {!events.data?.length && (
+                    <tr>
+                      <td className="faint">Hodisa yo'q</td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
@@ -163,10 +247,42 @@ export function DashboardPage() {
       </div>
 
       <div className="notice">
-        DAU va MAU — hisobning oxirgi so'rovi bo'yicha, seans soni emas. Seanslar, ekranlar va
-        voronkalar uchun alohida hodisalar jadvali kerak; u hali yo'q, shuning uchun bu yerda
+        DAU va MAU — hisobning oxirgi so'rovi bo'yicha. Grafikdagi "faol" esa o'lchangan: kunlik
+        check-in yozuvi va kirishlar bo'yicha, har bir hisob kuniga bir marta. Ekranlar va
+        voronkalar uchun alohida hodisalar jadvali kerak; u yo'q, shuning uchun bu yerda
         o'lchanmagan raqam ko'rsatilmaydi.
       </div>
     </div>
+  )
+}
+
+function GrowthChart({ report }: { report: AdminAnalytics }) {
+  const labels = report.perDay.map((day) => day.date)
+  return (
+    <>
+      <LineChart
+        labels={labels}
+        height={190}
+        series={[
+          { key: 'active', label: 'Ilovani ochganlar', values: report.perDay.map((day) => day.activeUsers), color: 'var(--c3)', area: true },
+          { key: 'signups', label: "Ro'yxatdan o'tganlar", values: report.perDay.map((day) => day.signUps), color: 'var(--c1)', area: true },
+          { key: 'premium', label: 'Premium boshlandi', values: report.perDay.map((day) => day.premiumStarted), color: 'var(--c2)' },
+        ]}
+      />
+      <div className="chart-legend">
+        <span>
+          <span className="swatch" style={{ background: 'var(--c3)' }} /> Ilovani ochganlar
+        </span>
+        <span>
+          <span className="swatch" style={{ background: 'var(--c1)' }} /> Ro'yxatdan o'tganlar
+        </span>
+        <span>
+          <span className="swatch" style={{ background: 'var(--c2)' }} /> Premium boshlandi
+        </span>
+        <span className="faint" style={{ marginLeft: 'auto' }}>
+          Jami: {report.current.activeUsers} ochish · {report.current.signUps} yangi · {report.current.premiumStarted} premium
+        </span>
+      </div>
+    </>
   )
 }

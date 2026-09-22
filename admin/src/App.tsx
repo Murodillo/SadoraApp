@@ -3,7 +3,9 @@ import { Navigate, Route, BrowserRouter, Routes } from 'react-router-dom'
 import { ApiFailure } from './api/client'
 import { AuthProvider, useAuth } from './auth/AuthContext'
 import { LoginPage } from './auth/LoginPage'
+import { ToastProvider } from './components/toast'
 import { Shell } from './layout/Shell'
+import { AnalyticsPage } from './pages/AnalyticsPage'
 import { AuditPage } from './pages/AuditPage'
 import { CommunityPage } from './pages/CommunityPage'
 import { AiPage } from './pages/AiPage'
@@ -36,9 +38,11 @@ export function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <BrowserRouter>
-          <AppRoutes />
-        </BrowserRouter>
+        <ToastProvider>
+          <BrowserRouter>
+            <AppRoutes />
+          </BrowserRouter>
+        </ToastProvider>
       </AuthProvider>
     </QueryClientProvider>
   )
@@ -56,6 +60,10 @@ function AppRoutes() {
     <Routes>
       <Route element={<Shell />}>
         <Route index element={<DashboardPage />} />
+        <Route
+          path="analytics"
+          element={can(['OWNER', 'ADMIN', 'ANALYST']) ? <AnalyticsPage /> : <Navigate to="/" replace />}
+        />
         <Route path="users" element={<UsersPage />} />
         <Route path="users/:id" element={<UserCardPage />} />
         <Route path="community" element={<CommunityPage />} />

@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react'
 import { useFeatures, useUpdateFeature } from '../api/hooks'
 import type { FeatureDefinition } from '../api/types'
 import { useAuth } from '../auth/AuthContext'
-import { Card, ErrorNotice, Loading } from '../components/ui'
+import { useToast } from '../components/toast'
+import { Card, ErrorNotice, Loading, Spinner, Switch } from '../components/ui'
 
 /**
  * The entitlement table, editable in place.
@@ -14,7 +15,9 @@ export function FeaturesPage() {
   const features = useFeatures()
   const update = useUpdateFeature()
   const { can } = useAuth()
+  const { notify } = useToast()
   const editable = can(['OWNER', 'ADMIN'])
+  const [saving, setSaving] = useState<string | null>(null)
 
   const [draft, setDraft] = useState<Record<string, FeatureDefinition>>({})
 
@@ -72,13 +75,7 @@ export function FeaturesPage() {
                       <div className="faint">{feature.description}</div>
                     </td>
                     <td>
-                      <input
-                        type="checkbox"
-                        style={{ width: 'auto' }}
-                        disabled={!editable}
-                        checked={current.freeEnabled}
-                        onChange={(event) => edit(feature.key, { freeEnabled: event.target.checked })}
-                      />
+                      <Switch disabled={!editable} checked={current.freeEnabled} onChange={(value) => edit(feature.key, { freeEnabled: value })} />
                     </td>
                     <td>
                       <LimitInput
@@ -95,13 +92,7 @@ export function FeaturesPage() {
                       />
                     </td>
                     <td>
-                      <input
-                        type="checkbox"
-                        style={{ width: 'auto' }}
-                        disabled={!editable}
-                        checked={current.premiumEnabled}
-                        onChange={(event) => edit(feature.key, { premiumEnabled: event.target.checked })}
-                      />
+                      <Switch disabled={!editable} checked={current.premiumEnabled} onChange={(value) => edit(feature.key, { premiumEnabled: value })} />
                     </td>
                     <td>
                       <LimitInput
@@ -121,8 +112,15 @@ export function FeaturesPage() {
                       <button
                         className="btn small primary"
                         disabled={!editable || !isDirty(feature) || update.isPending}
-                        onClick={() => update.mutate(current)}
+                        onClick={() => {
+                          setSaving(feature.key)
+                          update.mutate(current, {
+                            onSuccess: () => notify(`${feature.key} saqlandi — keyingi o‘qishdan kuchga kiradi`),
+                            onSettled: () => setSaving(null),
+                          })
+                        }}
                       >
+                        {saving === feature.key && update.isPending && <Spinner />}
                         Saqlash
                       </button>
                     </td>

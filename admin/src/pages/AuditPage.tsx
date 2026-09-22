@@ -6,8 +6,9 @@ const PAGE_SIZE = 40
 
 export function AuditPage() {
   const [action, setAction] = useState('')
+  const [entityId, setEntityId] = useState('')
   const [offset, setOffset] = useState(0)
-  const audit = useAudit({ action: action || undefined, limit: PAGE_SIZE, offset })
+  const audit = useAudit({ action: action || undefined, entityId: entityId || undefined, limit: PAGE_SIZE, offset })
 
   const page = audit.data
 
@@ -29,6 +30,28 @@ export function AuditPage() {
             }}
             style={{ maxWidth: 380 }}
           />
+          <input
+            placeholder="Obyekt ID (foydalanuvchi, post, bayroq…)"
+            className="mono"
+            value={entityId}
+            onChange={(event) => {
+              setEntityId(event.target.value.trim())
+              setOffset(0)
+            }}
+            style={{ maxWidth: 340 }}
+          />
+          {(action || entityId) && (
+            <button
+              className="btn small ghost"
+              onClick={() => {
+                setAction('')
+                setEntityId('')
+                setOffset(0)
+              }}
+            >
+              Tozalash
+            </button>
+          )}
         </div>
       </Card>
 
@@ -63,7 +86,7 @@ export function AuditPage() {
                         <span className="faint">{entry.actorLabel ?? ''}</span>
                       </td>
                       <td className="mono">{entry.action}</td>
-                      <td className="mono faint">
+                      <td className="mono faint" title={entry.entityId ?? undefined}>
                         {entry.entityType ? `${entry.entityType}:${entry.entityId?.slice(0, 8) ?? ''}` : '—'}
                       </td>
                       <td className="muted">{entry.reason ?? '—'}</td>

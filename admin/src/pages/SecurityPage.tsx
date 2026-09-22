@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { useAdminMe, useConfirmTotp, useDisableTotp, useStartTotpEnrolment } from '../api/hooks'
 import type { TotpEnrolment } from '../api/types'
-import { Card, ErrorNotice, Field, Loading } from '../components/ui'
+import { useToast } from '../components/toast'
+import { Card, ErrorNotice, Field, Loading, Spinner } from '../components/ui'
 
 /**
  * The operator's own account: the one page here that is not about somebody else.
@@ -43,6 +44,7 @@ export function SecurityPage() {
 }
 
 function EnrolCard({ email }: { email: string }) {
+  const { notify } = useToast()
   const start = useStartTotpEnrolment()
   const confirm = useConfirmTotp()
   const [enrolment, setEnrolment] = useState<TotpEnrolment | null>(null)
@@ -62,7 +64,8 @@ function EnrolCard({ email }: { email: string }) {
 
       {!enrolment ? (
         <>
-          <button className="primary" disabled={start.isPending} onClick={begin}>
+          <button className="btn primary" disabled={start.isPending} onClick={begin}>
+            {start.isPending && <Spinner />}
             {start.isPending ? 'Kalit yaratilmoqda…' : 'Sozlashni boshlash'}
           </button>
           {start.error ? <ErrorNotice error={start.error} /> : null}
@@ -94,10 +97,11 @@ function EnrolCard({ email }: { email: string }) {
           </Field>
           <div>
             <button
-              className="primary"
+              className="btn primary"
               disabled={code.length !== 6 || confirm.isPending}
-              onClick={() => confirm.mutate(code)}
+              onClick={() => confirm.mutate(code, { onSuccess: () => notify('2FA yoqildi — keyingi kirishda kod so‘raladi') })}
             >
+              {confirm.isPending && <Spinner />}
               {confirm.isPending ? 'Tekshirilmoqda…' : 'Yoqish'}
             </button>
           </div>
@@ -109,6 +113,7 @@ function EnrolCard({ email }: { email: string }) {
 }
 
 function DisableCard() {
+  const { notify } = useToast()
   const disable = useDisableTotp()
   const [password, setPassword] = useState('')
   const [code, setCode] = useState('')
@@ -141,10 +146,12 @@ function DisableCard() {
         </Field>
       </div>
       <button
-        className="danger"
+        className="btn danger"
+        style={{ marginTop: 12 }}
         disabled={!password || code.length !== 6 || disable.isPending}
-        onClick={() => disable.mutate({ password, code })}
+        onClick={() => disable.mutate({ password, code }, { onSuccess: () => notify("2FA o'chirildi", 'info') })}
       >
+        {disable.isPending && <Spinner />}
         {disable.isPending ? "O'chirilmoqda…" : "2FA'ni o'chirish"}
       </button>
       {disable.error ? <ErrorNotice error={disable.error} /> : null}

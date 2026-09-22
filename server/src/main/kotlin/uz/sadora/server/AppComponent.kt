@@ -31,6 +31,7 @@ import uz.sadora.server.community.CommunityService
 import uz.sadora.server.community.MessagingRepository
 import uz.sadora.server.community.MessagingService
 import uz.sadora.server.admin.AdminService
+import uz.sadora.server.admin.AdminAnalyticsRepository
 import uz.sadora.server.admin.AdminStatsRepository
 import uz.sadora.server.audit.AuditRepository
 import uz.sadora.server.audit.AuditService
@@ -111,6 +112,7 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
     val auditService = AuditService()
     val auditRepository = AuditRepository()
     val statsRepository = AdminStatsRepository()
+    val analyticsRepository = AdminAnalyticsRepository()
 
     val userRepository = UserRepository()
     val entitlementRepository = EntitlementRepository()

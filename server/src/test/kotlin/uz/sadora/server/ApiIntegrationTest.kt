@@ -157,6 +157,7 @@ import uz.sadora.server.admin.Totp
 import uz.sadora.server.admin.TotpConfirmRequest
 import uz.sadora.server.admin.TotpDisableRequest
 import uz.sadora.server.admin.TotpEnrolment
+import uz.sadora.server.admin.AdminAnalytics
 import uz.sadora.server.admin.AdminStats
 import uz.sadora.server.auth.PasswordHasher
 import uz.sadora.server.billing.BillingService
@@ -1563,6 +1564,35 @@ class ApiIntegrationTest {
     }
 
     @Test
+    fun `the analytics page counts today's sign-up and opener in the current window`() = api {
+        val user = signUp().also { onboard(it) }
+        // Opening the app is what the streak's check-in records; that is the DAU the page draws.
+        post<DailyCheckInResult>("/v1/rewards/check-in", user.token, Unit)
+
+        val report = get<AdminAnalytics>("/v1/admin/stats/analytics?days=7", adminToken())
+
+        assertEquals(7, report.perDay.size, "one entry per day, dense")
+        assertEquals(7, report.days)
+        val today = report.perDay.last()
+        assertTrue(today.signUps >= 1, "$today")
+        assertTrue(today.activeUsers >= 1, "$today")
+        assertTrue(report.current.signUps >= 1)
+        assertEquals(listOf(1, 7, 30), report.retention.map { it.horizonDays })
+        assertTrue(report.retention.all { it.returned <= it.cohort })
+        val funnel = report.funnel.associate { it.key to it.count }
+        assertTrue((funnel["registered"] ?: 0) >= (funnel["onboarded"] ?: 0), "$funnel")
+        assertTrue((funnel["premium_now"] ?: 0) >= (funnel["paying"] ?: 0), "$funnel")
+        assertTrue(report.platforms.any { it.key == "android" && it.count >= 1 }, "${report.platforms}")
+        assertEquals(listOf("1-2", "3-6", "7-13", "14-29", "30+", "lapsed"), report.streaks.map { it.key })
+        assertEquals(4, report.consents.size)
+
+        // Support's job is one account at a time; the cohort page is not hers.
+        val support = adminAccount(role = "SUPPORT")
+        val refused = client.get("/v1/admin/stats/analytics") { auth(support.token) }
+        assertEquals(HttpStatusCode.Forbidden, refused.status)
+    }
+
+    @Test
     fun `without AI consent the answer is general and says so`() = api {
         val user = signUp().also { onboard(it, storeHealth = true, aiInsights = false) }
         val reply = post<AiChatReply>("/v1/ai/chat", user.token, AiChatRequest("Nega charchayapman?"))
@@ -1673,7 +1703,7 @@ class ApiIntegrationTest {
 
     private class TestAdmin(val token: String, val email: String, val password: String)
 
-    private suspend fun Api.adminAccount(): TestAdmin {
+    private suspend fun Api.adminAccount(role: String = "owner"): TestAdmin {
         val email = "test-${Uuid.random()}@sadora.test"
         val password = "Test12345"
         dbQuery {
@@ -1682,7 +1712,7 @@ class ApiIntegrationTest {
                 it[AdminUsers.email] = email
                 it[passwordHash] = PasswordHasher.hash(password)
                 it[name] = "Integration"
-                it[role] = "owner"
+                it[AdminUsers.role] = role.lowercase()
                 it[totpEnabled] = false
                 it[status] = "active"
                 it[failedAttempts] = 0

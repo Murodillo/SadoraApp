@@ -10,7 +10,8 @@ import {
 import { acceptSlug, limits, slugPattern } from '../api/limits'
 import type { AdminArticle, ArticleBlock, ArticleKind, SaveArticleBody } from '../api/types'
 import { useAuth } from '../auth/AuthContext'
-import { Card, Empty, ErrorNotice, Field, formatDateTime, Loading, Modal } from '../components/ui'
+import { useToast } from '../components/toast'
+import { Card, Empty, ErrorNotice, Field, formatDateTime, Loading, Modal, Spinner, Switch } from '../components/ui'
 
 const kindLabels: Record<ArticleKind, string> = {
   article: 'Maqola',
@@ -27,6 +28,7 @@ const kindLabels: Record<ArticleKind, string> = {
  */
 export function ContentPage() {
   const { can } = useAuth()
+  const { notify } = useToast()
   const articles = useArticles()
   const categories = useArticleCategories()
   const publish = usePublishArticle()
@@ -97,7 +99,16 @@ export function ContentPage() {
                         <button
                           className="btn small ghost"
                           onClick={() =>
-                            publish.mutate({ slug: article.slug, published: !article.published })
+                            publish.mutate(
+                              { slug: article.slug, published: !article.published },
+                              {
+                                onSuccess: () =>
+                                  notify(
+                                    article.published ? `"${article.title}" qoralamaga qaytdi` : `"${article.title}" chop etildi`,
+                                    article.published ? 'info' : 'ok',
+                                  ),
+                              },
+                            )
                           }
                         >
                           {article.published ? 'Qoralamaga' : 'Chop etish'}
@@ -105,7 +116,9 @@ export function ContentPage() {
                         <button
                           className="btn small danger"
                           onClick={() => {
-                            if (confirm(`"${article.title}" o'chirilsinmi?`)) remove.mutate(article.slug)
+                            if (confirm(`"${article.title}" o'chirilsinmi?`)) {
+                              remove.mutate(article.slug, { onSuccess: () => notify(`"${article.title}" o‘chirildi`, 'info') })
+                            }
                           }}
                         >
                           O'chirish
@@ -155,6 +168,7 @@ function ArticleEditor({
 }) {
   const create = useCreateArticle()
   const update = useUpdateArticle()
+  const { notify } = useToast()
 
   const [slug, setSlug] = useState(article?.slug ?? '')
   const [title, setTitle] = useState(article?.title ?? '')
@@ -183,10 +197,14 @@ function ArticleEditor({
   })
 
   const save = () => {
+    const done = () => {
+      notify(`"${title}" saqlandi`)
+      onClose()
+    }
     if (article) {
-      update.mutate({ slug: article.slug, article: payload() }, { onSuccess: onClose })
+      update.mutate({ slug: article.slug, article: payload() }, { onSuccess: done })
     } else {
-      create.mutate({ slug, article: payload() }, { onSuccess: onClose })
+      create.mutate({ slug, article: payload() }, { onSuccess: done })
     }
   }
 
@@ -260,15 +278,7 @@ function ArticleEditor({
         </div>
 
         <Field label="Premium — tanasi faqat obunachilarga ochiladi">
-          <label className="row">
-            <input
-              type="checkbox"
-              checked={premium}
-              onChange={(e) => setPremium(e.target.checked)}
-              disabled={readOnly}
-            />
-            <span>Faqat Premium</span>
-          </label>
+          <Switch label="Faqat Premium" checked={premium} onChange={setPremium} disabled={readOnly} />
         </Field>
 
         <div className="row">
@@ -328,7 +338,8 @@ function ArticleEditor({
             <button className="btn small ghost" onClick={onClose}>
               Bekor qilish
             </button>
-            <button className="btn" onClick={save} disabled={busy || !title || (!article && !slug)}>
+            <button className="btn primary" onClick={save} disabled={busy || !title || (!article && !slug)}>
+              {busy && <Spinner />}
               {busy ? 'Saqlanmoqda…' : 'Saqlash'}
             </button>
           </div>

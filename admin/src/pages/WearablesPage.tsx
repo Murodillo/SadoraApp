@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { useMappings, useProviders, useSaveMapping } from '../api/hooks'
 import type { HealthMetric, HealthProvider, MetricMapping } from '../api/types'
 import { useAuth } from '../auth/AuthContext'
-import { Card, Empty, ErrorNotice, Field, formatDateTime, Loading, Modal } from '../components/ui'
+import { useToast } from '../components/toast'
+import { Card, Empty, ErrorNotice, Field, formatDateTime, Loading, Modal, Spinner, Switch } from '../components/ui'
 
 const providers: HealthProvider[] = [
   'apple_health',
@@ -44,6 +45,7 @@ const metrics: HealthMetric[] = [
  */
 export function WearablesPage() {
   const { can } = useAuth()
+  const { notify } = useToast()
   const editable = can(['OWNER', 'ADMIN'])
   const health = useProviders()
   const mappings = useMappings()
@@ -142,7 +144,14 @@ export function WearablesPage() {
         <MappingDialog
           initial={editing === 'new' ? null : editing}
           onClose={() => setEditing(null)}
-          onSave={(mapping) => save.mutate(mapping, { onSuccess: () => setEditing(null) })}
+          onSave={(mapping) =>
+            save.mutate(mapping, {
+              onSuccess: () => {
+                notify(`${mapping.provider} · ${mapping.providerMetric} → ${mapping.metric} saqlandi`)
+                setEditing(null)
+              },
+            })
+          }
           pending={save.isPending}
         />
       )}
@@ -203,10 +212,7 @@ function MappingDialog({
       <Field label="Scale">
         <input type="number" step="any" value={scale} onChange={(event) => setScale(event.target.value)} />
       </Field>
-      <label className="row" style={{ gap: 6 }}>
-        <input type="checkbox" style={{ width: 'auto' }} checked={active} onChange={(event) => setActive(event.target.checked)} />
-        <span className="faint">Faol</span>
-      </label>
+      <Switch label="Faol" checked={active} onChange={setActive} />
       <div className="row" style={{ justifyContent: 'flex-end' }}>
         <button className="btn ghost" onClick={onClose}>
           Bekor qilish
@@ -225,6 +231,7 @@ function MappingDialog({
             })
           }
         >
+          {pending && <Spinner />}
           {pending ? 'Saqlanmoqda…' : 'Saqlash'}
         </button>
       </div>

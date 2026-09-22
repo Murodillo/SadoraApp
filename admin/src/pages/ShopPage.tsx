@@ -7,7 +7,9 @@ import {
 } from '../api/hooks'
 import type { AdminShopProduct, SaveShopProductBody, ShopKind } from '../api/types'
 import { useAuth } from '../auth/AuthContext'
-import { Card, ErrorNotice, Field, Loading, Modal } from '../components/ui'
+import { acceptSlug, slugPattern } from '../api/limits'
+import { useToast } from '../components/toast'
+import { Card, ErrorNotice, Field, Loading, Modal, Spinner, Switch } from '../components/ui'
 
 const KINDS: { value: ShopKind; label: string }[] = [
   { value: 'premium', label: 'Premium' },
@@ -48,6 +50,7 @@ export function ShopPage() {
   const update = useUpdateShopProduct()
   const remove = useDeleteShopProduct()
   const { can } = useAuth()
+  const { notify } = useToast()
   const editable = can(['OWNER', 'ADMIN'])
 
   const [editing, setEditing] = useState<AdminShopProduct | null>(null)
@@ -98,9 +101,25 @@ export function ShopPage() {
       discountPercent: form.kind === 'premium' ? 0 : form.discountPercent,
     }
     if (editing) {
-      update.mutate({ id: editing.id, product: body }, { onSuccess: () => setEditing(null) })
+      update.mutate(
+        { id: editing.id, product: body },
+        {
+          onSuccess: () => {
+            notify(`${body.title} saqlandi`)
+            setEditing(null)
+          },
+        },
+      )
     } else {
-      create.mutate({ slug: slug.trim().toLowerCase(), product: body }, { onSuccess: () => setCreating(false) })
+      create.mutate(
+        { slug: acceptSlug(slug), product: body },
+        {
+          onSuccess: () => {
+            notify(`${body.title} katalogga qo‘shildi`)
+            setCreating(false)
+          },
+        },
+      )
     }
   }
 
@@ -179,7 +198,12 @@ export function ShopPage() {
                             const warning = product.redeemed
                               ? `${product.title}: ${product.redeemed} ta kod berilgan, shuning uchun o‘chirilmaydi — faqat yashiriladi. Davom etamizmi?`
                               : `${product.title} o‘chirilsinmi?`
-                            if (confirm(warning)) remove.mutate(product.id)
+                            if (confirm(warning)) {
+                              remove.mutate(product.id, {
+                                onSuccess: () =>
+                                  notify(product.redeemed ? `${product.title} yashirildi` : `${product.title} o‘chirildi`, 'info'),
+                              })
+                            }
                           }}
                         >
                           O‘chirish
@@ -215,7 +239,8 @@ export function ShopPage() {
             <Field label="Slug (o‘zgarmaydi)">
               <input
                 value={slug}
-                onChange={(event) => setSlug(event.target.value)}
+                onChange={(event) => setSlug(acceptSlug(event.target.value))}
+                pattern={slugPattern}
                 placeholder="vitamin-d3"
               />
             </Field>
@@ -327,15 +352,7 @@ export function ShopPage() {
             />
           </Field>
 
-          <label className="row" style={{ gap: 8, alignItems: 'center' }}>
-            <input
-              type="checkbox"
-              style={{ width: 'auto' }}
-              checked={form.active}
-              onChange={(event) => setForm({ ...form, active: event.target.checked })}
-            />
-            Ilovada ko‘rinsin
-          </label>
+          <Switch label="Ilovada ko‘rinsin" checked={form.active} onChange={(active) => setForm({ ...form, active })} />
 
           {/* What the user will actually see, computed the same way the app computes it.
               A discount is easy to mistype as a coin price, and this line catches it. */}
@@ -371,6 +388,7 @@ export function ShopPage() {
                 (form.kind === 'premium' ? !form.premiumDays : form.priceUzs == null)
               }
             >
+              {(create.isPending || update.isPending) && <Spinner />}
               {create.isPending || update.isPending ? 'Saqlanmoqda…' : 'Saqlash'}
             </button>
           </div>

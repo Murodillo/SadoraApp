@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react'
 import { useCaps, useSaveTemplate, useTemplates, useUpdateCaps } from '../api/hooks'
 import type { NotificationTemplate } from '../api/types'
 import { useAuth } from '../auth/AuthContext'
-import { Card, ErrorNotice, Field, Loading } from '../components/ui'
+import { useToast } from '../components/toast'
+import { Card, ErrorNotice, Field, Loading, Spinner, Switch } from '../components/ui'
 
 const categoryLabels: Record<string, string> = {
   med_reminder: 'Dori eslatmasi',
@@ -33,6 +34,7 @@ export function NotificationsPage() {
 }
 
 function CapsCard({ editable }: { editable: boolean }) {
+  const { notify } = useToast()
   const caps = useCaps()
   const update = useUpdateCaps()
   const [perDay, setPerDay] = useState(6)
@@ -83,8 +85,14 @@ function CapsCard({ editable }: { editable: boolean }) {
           <button
             className="btn primary"
             disabled={!editable || !dirty || update.isPending}
-            onClick={() => update.mutate({ maxPerDay: perDay, maxPerWeek: perWeek })}
+            onClick={() =>
+              update.mutate(
+                { maxPerDay: perDay, maxPerWeek: perWeek },
+                { onSuccess: () => notify('Chastota chegaralari saqlandi') },
+              )
+            }
           >
+            {update.isPending && <Spinner />}
             Saqlash
           </button>
         </div>
@@ -95,6 +103,7 @@ function CapsCard({ editable }: { editable: boolean }) {
 }
 
 function TemplatesCard({ editable }: { editable: boolean }) {
+  const { notify } = useToast()
   const templates = useTemplates()
   const save = useSaveTemplate()
   const [draft, setDraft] = useState<Record<string, NotificationTemplate>>({})
@@ -164,19 +173,13 @@ function TemplatesCard({ editable }: { editable: boolean }) {
                       />
                     </td>
                     <td>
-                      <input
-                        type="checkbox"
-                        style={{ width: 'auto' }}
-                        disabled={!editable}
-                        checked={current.active}
-                        onChange={(event) => edit(key, { active: event.target.checked })}
-                      />
+                      <Switch disabled={!editable} checked={current.active} onChange={(value) => edit(key, { active: value })} />
                     </td>
                     <td>
                       <button
                         className="btn small primary"
                         disabled={!editable || !isDirty(template) || save.isPending}
-                        onClick={() => save.mutate(current)}
+                        onClick={() => save.mutate(current, { onSuccess: () => notify(`${template.key} (${template.language.toUpperCase()}) saqlandi`) })}
                       >
                         Saqlash
                       </button>

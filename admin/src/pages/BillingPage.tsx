@@ -63,13 +63,9 @@ export function BillingPage() {
       <Card
         title="Provayderlar bo'yicha"
         action={
-          <div className="row" style={{ gap: 6 }}>
+          <div className="segmented" role="group" aria-label="Davr">
             {[7, 30, 90].map((option) => (
-              <button
-                key={option}
-                className={`btn small${option === days ? '' : ' ghost'}`}
-                onClick={() => setDays(option)}
-              >
+              <button key={option} className={option === days ? 'active' : undefined} onClick={() => setDays(option)}>
                 {option} kun
               </button>
             ))}
@@ -145,11 +141,11 @@ export function BillingPage() {
       <Card
         title="To'lovlar"
         action={
-          <div className="row" style={{ gap: 6 }}>
+          <div className="segmented" role="group" aria-label="Holat">
             {([undefined, 'paid', 'pending', 'failed'] as const).map((option) => (
               <button
                 key={option ?? 'all'}
-                className={`btn small${option === state ? '' : ' ghost'}`}
+                className={option === state ? 'active' : undefined}
                 onClick={() => setState(option as PaymentState | undefined)}
               >
                 {option ? stateLabels[option] : 'Barchasi'}

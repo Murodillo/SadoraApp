@@ -50,7 +50,8 @@ Birinchi Owner hisobi backend birinchi marta ko'tarilganda yaratiladi —
 | Sahifa | Rol | Nima |
 |---|---|---|
 | Kirish | — | Email + parol, 2FA yoqilgan bo'lsa TOTP kodi |
-| Dashboard | hamma | 6 ko'rsatkich, 14 kunlik ro'yxatdan o'tish grafigi, hodisalar lentasi |
+| Dashboard | hamma | Ko'rsatkichlar (oldingi davrga nisbatan o'zgarish va sparkline bilan), faollik grafigi, bosqich va til donutlari, hodisalar lentasi |
+| Analitika | Owner/Admin/Analyst | Kunlik faol foydalanuvchilar (o'lchangan), retention 1/7/30, hisobdan to'lovgacha voronka, tushum, platforma va versiyalar, streak taqsimoti, rozilik, kunlar jadvali va CSV |
 | Foydalanuvchilar | hamma | Filtrlar, qidiruv, CSV, sahifalash |
 | Kartochka | Owner/Admin/Support | Umumiy · Obuna · Texnik. Bloklash, Premium berish |
 | Entitlements va limitlar | Owner/Admin (Analyst o'qiydi) | Jadvalni joyida tahrirlash |
@@ -93,9 +94,25 @@ moderator kimligini bilmaydi. Bu maxfiy chatning butun mazmuni.
 
 **DAU/MAU — hisobning oxirgi so'rovi bo'yicha, seans emas.** Auth qatlami har
 so'rovda `last_active_at` ni yangilaydi, shuning uchun bu raqamni halol o'lchash mumkin.
-Seanslar, ekranlar va voronkalar alohida hodisalar jadvalini talab qiladi; u yo'q,
-shuning uchun ular ko'rsatilmaydi — o'lchanmagan raqamni o'lchangandek ko'rsatish
-ko'rsatmaslikdan yomonroq. AI xarajati esa o'z sahifasida, kunlik dinamikasi bilan.
+Ekranlar va seanslar alohida hodisalar jadvalini talab qiladi; u yo'q, shuning uchun ular
+ko'rsatilmaydi — o'lchanmagan raqamni o'lchangandek ko'rsatish ko'rsatmaslikdan yomonroq.
+AI xarajati esa o'z sahifasida, kunlik dinamikasi bilan.
+
+**Analitika sahifasi faqat mahsulot o'z ishi uchun yozadigan qatorlarni sanaydi.**
+"Ilovani ochganlar" — streak tizimining kunlik check-in yozuvi (har hisobga kuniga bir
+marta) va audit'dagi kirishlar; retention — ro'yxatdan o'tgan sanaga nisbatan oxirgi
+so'rov; voronka — hisob, onboarding, 30 kunlik faollik, Premium, to'lov. Grafik uchun
+ilovaga hech qanday hodisa qo'shilmagan va birorta raqam sog'liq qiymati emas.
+
+**Grafiklar qo'lda chizilgan SVG.** To'rtta shakl — kunlar bo'yicha chiziq, ustunlar,
+donut va voronka — bir necha yuz qator, va ular ilovaning o'z egri chiziqlarida
+animatsiya qiladi hamda qolgan hamma narsa bilan bir xil rang tokenlarini o'qiydi.
+Bog'liqlik yo'q. Har bir grafik o'lchov, shuning uchun har birini hover qilib raqamni
+ko'rish mumkin.
+
+**Saqlash toast bilan tasdiqlanadi.** Ilgari yagona tasdiq "Saqlash" tugmasining
+kulrang bo'lishi edi — buni "hali saqlanmoqda"dan ajratib bo'lmasdi. Endi har bir
+muvaffaqiyatli yozuv burchakda qisqa xabar chiqaradi; xato esa avvalgidek joyida.
 
 ## Buyruqlar
 

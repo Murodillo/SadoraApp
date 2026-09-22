@@ -9,7 +9,8 @@ import {
 } from '../api/hooks'
 import type { CoinRule, RedemptionStatus } from '../api/types'
 import { useAuth } from '../auth/AuthContext'
-import { Card, ErrorNotice, Loading, Stat, formatDateTime } from '../components/ui'
+import { useToast } from '../components/toast'
+import { Card, ErrorNotice, Loading, Stat, Switch, formatDateTime } from '../components/ui'
 
 /**
  * The Gul economy, in one page.
@@ -29,6 +30,7 @@ export function RewardsPage() {
   const redemptions = useRedemptions(50)
   const updateRedemption = useUpdateRedemption()
   const { can } = useAuth()
+  const { notify } = useToast()
   const editable = can(['OWNER', 'ADMIN'])
 
   const [draft, setDraft] = useState<Record<string, CoinRule>>({})
@@ -122,19 +124,13 @@ export function RewardsPage() {
                       />
                     </td>
                     <td>
-                      <input
-                        type="checkbox"
-                        style={{ width: 'auto' }}
-                        disabled={!editable}
-                        checked={current.enabled}
-                        onChange={(event) => edit(rule.reason, { enabled: event.target.checked })}
-                      />
+                      <Switch disabled={!editable} checked={current.enabled} onChange={(value) => edit(rule.reason, { enabled: value })} />
                     </td>
                     <td>
                       <button
                         className="btn small"
                         disabled={!editable || !isDirty(rule) || save.isPending}
-                        onClick={() => save.mutate(current)}
+                        onClick={() => save.mutate(current, { onSuccess: () => notify(`${rule.reason}: endi ${current.amount} gul`) })}
                       >
                         Saqlash
                       </button>
@@ -181,10 +177,10 @@ export function RewardsPage() {
                       value={redemption.status}
                       disabled={!can(['OWNER', 'ADMIN', 'SUPPORT'])}
                       onChange={(event) =>
-                        updateRedemption.mutate({
-                          id: redemption.id,
-                          status: event.target.value as RedemptionStatus,
-                        })
+                        updateRedemption.mutate(
+                          { id: redemption.id, status: event.target.value as RedemptionStatus },
+                          { onSuccess: () => notify(`${redemption.code}: holat yangilandi`) },
+                        )
                       }
                     >
                       <option value="issued">Faol</option>
@@ -220,6 +216,7 @@ export function RewardsPage() {
 export function UserRewardsCard({ userId, card }: { userId: string; card: AdminRewardsCardProps }) {
   const adjust = useAdjustCoins(userId)
   const { can } = useAuth()
+  const { notify } = useToast()
   const [amount, setAmount] = useState('')
   const [note, setNote] = useState('')
 
@@ -254,7 +251,13 @@ export function UserRewardsCard({ userId, card }: { userId: string; card: AdminR
             onClick={() =>
               adjust.mutate(
                 { amount: Number(amount), note: note.trim() },
-                { onSuccess: () => { setAmount(''); setNote('') } },
+                {
+                  onSuccess: () => {
+                    notify(`${Number(amount) >= 0 ? '+' : ''}${Number(amount)} gul qo‘llandi`)
+                    setAmount('')
+                    setNote('')
+                  },
+                },
               )
             }
           >

@@ -4,6 +4,7 @@ import { useGrantPremium, useSetBlocked, useUserCard, useUserRewards } from '../
 import { UserRewardsCard } from './RewardsPage'
 import { limits } from '../api/limits'
 import { useAuth } from '../auth/AuthContext'
+import { useToast } from '../components/toast'
 import {
   Card,
   ErrorNotice,
@@ -12,9 +13,13 @@ import {
   formatExpiry,
   Loading,
   Modal,
+  Spinner,
   StatusBadge,
+  TabPanel,
+  Tabs,
   TierBadge,
 } from '../components/ui'
+import { lifeStageLabels } from './DashboardPage'
 
 type Tab = 'general' | 'subscription' | 'rewards' | 'technical'
 
@@ -61,21 +66,18 @@ export function UserCardPage() {
         )}
       </div>
 
-      <div className="tabs">
-        {(
-          [
-            ['general', 'Umumiy'],
-            ['subscription', 'Obuna'],
-            ['rewards', 'Gul'],
-            ['technical', 'Texnik'],
-          ] as [Tab, string][]
-        ).map(([key, label]) => (
-          <button key={key} className={`tab${tab === key ? ' active' : ''}`} onClick={() => setTab(key)}>
-            {label}
-          </button>
-        ))}
-      </div>
+      <Tabs<Tab>
+        value={tab}
+        onChange={setTab}
+        items={[
+          { key: 'general', label: 'Umumiy' },
+          { key: 'subscription', label: 'Obuna' },
+          { key: 'rewards', label: 'Gul' },
+          { key: 'technical', label: 'Texnik' },
+        ]}
+      />
 
+      <TabPanel id={tab}>
       {tab === 'general' && (
         <Card>
           <table>
@@ -84,7 +86,7 @@ export function UserCardPage() {
               <Row label="Email" value={user.email ?? '—'} mono />
               <Row label="Til" value={user.language.toUpperCase()} />
               <Row label="Vaqt mintaqasi" value={data.technical.timezone} />
-              <Row label="Hayot bosqichi" value={user.lifeStage} />
+              <Row label="Hayot bosqichi" value={lifeStageLabels[user.lifeStage] ?? user.lifeStage} />
               <Row label="Ro'yxatdan o'tgan" value={formatDateTime(user.registeredAt)} />
               <Row label="Oxirgi faollik" value={formatDateTime(user.lastActiveAt)} />
             </tbody>
@@ -195,6 +197,8 @@ export function UserCardPage() {
         </div>
       )}
 
+      </TabPanel>
+
       {dialog === 'premium' && id && <GrantPremiumDialog userId={id} onClose={() => setDialog(null)} />}
       {dialog === 'block' && id && (
         <BlockDialog userId={id} blocked={user.status === 'blocked'} onClose={() => setDialog(null)} />
@@ -229,6 +233,7 @@ function RewardsTab({ userId }: { userId: string }) {
 
 function GrantPremiumDialog({ userId, onClose }: { userId: string; onClose: () => void }) {
   const grant = useGrantPremium(userId)
+  const { notify } = useToast()
   const [reason, setReason] = useState('')
   const [expiresAt, setExpiresAt] = useState('')
 
@@ -262,10 +267,16 @@ function GrantPremiumDialog({ userId, onClose }: { userId: string; onClose: () =
                 reason: reason.trim(),
                 expiresAt: expiresAt ? new Date(`${expiresAt}T00:00:00Z`).toISOString() : null,
               },
-              { onSuccess: onClose },
+              {
+                onSuccess: () => {
+                  notify(expiresAt ? `Premium ${expiresAt} gacha berildi` : 'Muddatsiz Premium berildi')
+                  onClose()
+                },
+              },
             )
           }
         >
+          {grant.isPending && <Spinner />}
           {grant.isPending ? 'Yuborilmoqda…' : 'Berish'}
         </button>
       </div>
@@ -275,6 +286,7 @@ function GrantPremiumDialog({ userId, onClose }: { userId: string; onClose: () =
 
 function BlockDialog({ userId, blocked, onClose }: { userId: string; blocked: boolean; onClose: () => void }) {
   const setBlocked = useSetBlocked(userId)
+  const { notify } = useToast()
   const [reason, setReason] = useState('')
 
   return (
@@ -301,9 +313,18 @@ function BlockDialog({ userId, blocked, onClose }: { userId: string; blocked: bo
           className={`btn ${blocked ? 'primary' : 'danger'}`}
           disabled={!reason.trim() || setBlocked.isPending}
           onClick={() =>
-            setBlocked.mutate({ blocked: !blocked, reason: reason.trim() }, { onSuccess: onClose })
+            setBlocked.mutate(
+              { blocked: !blocked, reason: reason.trim() },
+              {
+                onSuccess: () => {
+                  notify(blocked ? 'Hisob blokdan chiqarildi' : 'Hisob bloklandi, seanslar bekor qilindi', blocked ? 'ok' : 'info')
+                  onClose()
+                },
+              },
+            )
           }
         >
+          {setBlocked.isPending && <Spinner />}
           {setBlocked.isPending ? 'Yuborilmoqda…' : blocked ? 'Blokdan chiqarish' : 'Bloklash'}
         </button>
       </div>

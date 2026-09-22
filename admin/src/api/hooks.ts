@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { query, request } from './client'
 import type {
+  AdminAnalytics,
   AdminArticle,
   AdminRedemption,
   AdminRewardsCard,
@@ -63,6 +64,20 @@ export const useRecentEvents = (limit = 12) =>
     queryKey: ['events', limit],
     queryFn: () => request<AuditEntry[]>(`/v1/admin/stats/events${query({ limit })}`),
     refetchInterval: 30_000,
+  })
+
+/**
+ * The analytics page's one request. Gated on the caller's role rather than on a 403,
+ * so a Support operator opening the dashboard does not see a failed request for a card
+ * she was never going to get.
+ */
+export const useAnalytics = (days: number, enabled = true) =>
+  useQuery({
+    queryKey: ['analytics', days],
+    queryFn: () => request<AdminAnalytics>(`/v1/admin/stats/analytics${query({ days })}`),
+    enabled,
+    refetchInterval: 60_000,
+    placeholderData: (previous) => previous,
   })
 
 export const useUsers = (filters: UserFilters) =>

@@ -21,7 +21,10 @@ const ALL: AdminRole[] = ['OWNER', 'ADMIN', 'SUPPORT', 'ANALYST']
 const groups: NavGroup[] = [
   {
     title: 'Umumiy',
-    entries: [{ to: '/', label: 'Dashboard', glyph: '◧', roles: ALL }],
+    entries: [
+      { to: '/', label: 'Dashboard', glyph: '◧', roles: ALL },
+      { to: '/analytics', label: 'Analitika', glyph: '◫', roles: ['OWNER', 'ADMIN', 'ANALYST'] },
+    ],
   },
   {
     title: 'Foydalanuvchilar',
@@ -65,6 +68,7 @@ const groups: NavGroup[] = [
 
 const titles: Record<string, string> = {
   '/': 'Dashboard',
+  '/analytics': 'Analitika',
   '/users': 'Foydalanuvchilar',
   '/community': 'Chat — moderatsiya',
   '/content': 'Bilim — maqolalar',
@@ -84,17 +88,35 @@ export function Shell() {
   const { session, signOut, can } = useAuth()
   const location = useLocation()
   const [theme, setTheme] = useState(() => localStorage.getItem('sadora.admin.theme') ?? 'dark')
+  const [flip, setFlip] = useState(false)
+  const [navOpen, setNavOpen] = useState(false)
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme
     localStorage.setItem('sadora.admin.theme', theme)
   }, [theme])
 
+  // The rail closes itself after a choice on a narrow screen, and on Escape.
+  useEffect(() => setNavOpen(false), [location.pathname])
+  useEffect(() => {
+    if (!navOpen) return
+    const onKey = (event: KeyboardEvent) => event.key === 'Escape' && setNavOpen(false)
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [navOpen])
+
   const title = titles[location.pathname] ?? (location.pathname.startsWith('/users/') ? 'Foydalanuvchi kartochkasi' : 'SADORA')
+
+  function toggleTheme() {
+    setTheme(theme === 'dark' ? 'light' : 'dark')
+    setFlip(true)
+    window.setTimeout(() => setFlip(false), 720)
+  }
 
   return (
     <div className="shell">
-      <nav className="nav">
+      {navOpen && <div className="nav-scrim" onClick={() => setNavOpen(false)} role="presentation" />}
+      <nav className={`nav${navOpen ? ' open' : ''}`} aria-label="Bo'limlar">
         <div className="brand">
           <SadoraTile size={34} />
           <div>
@@ -123,21 +145,28 @@ export function Shell() {
             </div>
           )
         })}
-
       </nav>
 
       <div className="main">
         <header className="header">
-          <h1 key={title} className="page-title">{title}</h1>
-          <div className="spacer" />
           <button
-            className="btn ghost small"
-            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-            title="Mavzuni almashtirish"
+            className="btn ghost small nav-toggle"
+            onClick={() => setNavOpen((open) => !open)}
+            aria-label="Bo'limlar"
+            aria-expanded={navOpen}
           >
-            {theme === 'dark' ? '☾' : '☀'}
+            ☰
           </button>
-          <span className="faint">
+          <h1 key={title} className="page-title">
+            {title}
+          </h1>
+          <div className="spacer" />
+          <button className="btn ghost small theme-toggle" onClick={toggleTheme} title="Mavzuni almashtirish" aria-label="Mavzuni almashtirish">
+            <span className={`glyph${flip ? ' flip' : ''}`} key={theme}>
+              {theme === 'dark' ? '☾' : '☀'}
+            </span>
+          </button>
+          <span className="faint who">
             {session?.email} · <span className="badge free">{session?.role}</span>
           </span>
           <button className="btn small" onClick={signOut}>

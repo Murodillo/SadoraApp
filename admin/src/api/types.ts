@@ -530,3 +530,57 @@ export interface AdminRewardsCard {
   referral?: ReferralStatus | null
   history: CoinEntry[]
 }
+
+// ---------------------------------------------------------------- analytics
+
+/** One calendar day of the analytics page, in the server's (Tashkent) day. */
+export interface AnalyticsDay {
+  date: string
+  signUps: number
+  /** Distinct accounts that opened the app: the daily check-in, plus fresh sign-ins. */
+  activeUsers: number
+  signIns: number
+  premiumStarted: number
+  revenueMinor: number
+  aiCalls: number
+  posts: number
+  /** Journal, meal and daily-log rows written — engagement, never content. */
+  entries: number
+}
+
+export interface AnalyticsTotals {
+  signUps: number
+  activeUsers: number
+  revenueMinor: number
+  aiCalls: number
+  premiumStarted: number
+  posts: number
+  entries: number
+}
+
+export interface RetentionCohort {
+  horizonDays: number
+  cohort: number
+  returned: number
+}
+
+export interface NamedCount {
+  key: string
+  count: number
+}
+
+export interface AdminAnalytics {
+  days: number
+  timezone: string
+  perDay: AnalyticsDay[]
+  current: AnalyticsTotals
+  /** The window of the same length immediately before `perDay`. */
+  previous: AnalyticsTotals
+  retention: RetentionCohort[]
+  funnel: NamedCount[]
+  platforms: NamedCount[]
+  appVersions: NamedCount[]
+  streaks: NamedCount[]
+  consents: NamedCount[]
+  generatedAt: string
+}

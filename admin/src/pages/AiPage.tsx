@@ -2,7 +2,9 @@ import { useState } from 'react'
 import { useAiUsage, useFlags, useUpdateFlag } from '../api/hooks'
 import type { AiUsageDay } from '../api/types'
 import { useAuth } from '../auth/AuthContext'
-import { Card, Empty, ErrorNotice, Loading, Stat } from '../components/ui'
+import { BarChart } from '../components/charts'
+import { useToast } from '../components/toast'
+import { Card, Empty, ErrorNotice, Loading, Stat, Switch } from '../components/ui'
 
 const MODEL_FLAG = 'ai_model_enabled'
 
@@ -49,6 +51,7 @@ function money(micros: number): string {
  */
 export function AiPage() {
   const { can } = useAuth()
+  const { notify } = useToast()
   const [days, setDays] = useState(14)
   const usage = useAiUsage(days)
   const flags = useFlags()
@@ -97,13 +100,9 @@ export function AiPage() {
           <Card
             title="Model kalitlari"
             action={
-              <div className="row" style={{ gap: 6 }}>
+              <div className="segmented" role="group" aria-label="Davr">
                 {[7, 14, 30].map((option) => (
-                  <button
-                    key={option}
-                    className={`btn small${option === days ? '' : ' ghost'}`}
-                    onClick={() => setDays(option)}
-                  >
+                  <button key={option} className={option === days ? 'active' : undefined} onClick={() => setDays(option)}>
                     {option} kun
                   </button>
                 ))}
@@ -118,20 +117,18 @@ export function AiPage() {
                   emas, uni arzonlashtirish.
                 </div>
               </div>
-              <button
-                className={`btn small${flag?.enabled ? ' danger' : ''}`}
+              <Switch
+                label={flag?.enabled ? 'Yoqilgan' : "O'chirilgan"}
+                checked={Boolean(flag?.enabled)}
                 disabled={!mayToggle || !flag || updateFlag.isPending}
-                onClick={() =>
+                onChange={(enabled) =>
                   flag &&
-                  updateFlag.mutate({
-                    key: MODEL_FLAG,
-                    enabled: !flag.enabled,
-                    defaultValue: flag.defaultValue,
-                  })
+                  updateFlag.mutate(
+                    { key: MODEL_FLAG, enabled, defaultValue: flag.defaultValue },
+                    { onSuccess: () => notify(enabled ? 'Model javob yozmoqda' : 'Model o‘chirildi — qoidalar javob beradi', enabled ? 'ok' : 'info') },
+                  )
                 }
-              >
-                {flag?.enabled ? "O'chirish" : 'Yoqish'}
-              </button>
+              />
             </div>
             <ErrorNotice error={updateFlag.error} />
           </Card>
@@ -141,23 +138,14 @@ export function AiPage() {
               <Empty>Bu oraliqda birorta ham javob yo'q.</Empty>
             ) : (
               <>
-                <div className="bars">
-                  {series.map((point) => (
-                    <div
-                      key={point.date}
-                      className="bar"
-                      data-empty={point.costMicros === 0}
-                      style={{
-                        height: `${Math.max((point.costMicros / peak) * 100, point.costMicros ? 6 : 2)}%`,
-                      }}
-                      title={`${point.date}: ${money(point.costMicros)} · ${point.calls} javob`}
-                    />
-                  ))}
-                </div>
-                <div className="row" style={{ justifyContent: 'space-between', marginTop: 6 }}>
-                  <span className="faint">{series[0]?.date}</span>
+                <BarChart
+                  labels={series.map((point) => point.date)}
+                  values={series.map((point) => point.costMicros)}
+                  format={money}
+                  color="var(--c5)"
+                />
+                <div className="row" style={{ justifyContent: 'flex-end', marginTop: 6 }}>
                   <span className="faint">Eng qimmat kun: {money(peak)}</span>
-                  <span className="faint">{series[series.length - 1]?.date}</span>
                 </div>
               </>
             )}

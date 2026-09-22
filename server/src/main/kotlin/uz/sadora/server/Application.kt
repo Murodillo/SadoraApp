@@ -152,6 +152,7 @@ fun Application.apiModule(component: AppComponent) {
                 adminService = component.adminService,
                 auditRepository = component.auditRepository,
                 statsRepository = component.statsRepository,
+                analyticsRepository = component.analyticsRepository,
                 refreshTokens = component.refreshTokenService,
             )
         }

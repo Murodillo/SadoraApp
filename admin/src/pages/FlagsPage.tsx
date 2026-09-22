@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { useAddFlagRule, useFlags, useRemoveFlagRule, useUpdateFlag } from '../api/hooks'
 import type { AdminFlag } from '../api/types'
 import { useAuth } from '../auth/AuthContext'
-import { Card, ErrorNotice, Field, Loading, Modal } from '../components/ui'
+import { useToast } from '../components/toast'
+import { Card, ErrorNotice, Field, Loading, Modal, Switch } from '../components/ui'
 
 /**
  * Priority orders the rules, and the server refuses anything outside this. Clamping
@@ -19,6 +20,7 @@ export function FlagsPage() {
   const flags = useFlags()
   const update = useUpdateFlag()
   const { can } = useAuth()
+  const { notify } = useToast()
   const editable = can(['OWNER', 'ADMIN'])
   const [ruleFor, setRuleFor] = useState<AdminFlag | null>(null)
 
@@ -47,30 +49,28 @@ export function FlagsPage() {
               <div className="faint">{flag.description}</div>
             </div>
             <div className="row">
-              <label className="row" style={{ gap: 6 }}>
-                <input
-                  type="checkbox"
-                  style={{ width: 'auto' }}
-                  disabled={!editable || update.isPending}
-                  checked={flag.enabled}
-                  onChange={(event) =>
-                    update.mutate({ key: flag.key, enabled: event.target.checked, defaultValue: flag.defaultValue })
-                  }
-                />
-                <span className="faint">Yoqilgan</span>
-              </label>
-              <label className="row" style={{ gap: 6 }}>
-                <input
-                  type="checkbox"
-                  style={{ width: 'auto' }}
-                  disabled={!editable || update.isPending}
-                  checked={flag.defaultValue}
-                  onChange={(event) =>
-                    update.mutate({ key: flag.key, enabled: flag.enabled, defaultValue: event.target.checked })
-                  }
-                />
-                <span className="faint">Standart</span>
-              </label>
+              <Switch
+                label="Yoqilgan"
+                disabled={!editable || update.isPending}
+                checked={flag.enabled}
+                onChange={(enabled) =>
+                  update.mutate(
+                    { key: flag.key, enabled, defaultValue: flag.defaultValue },
+                    { onSuccess: () => notify(`${flag.key}: ${enabled ? 'yoqildi' : 'o‘chirildi'}`, enabled ? 'ok' : 'info') },
+                  )
+                }
+              />
+              <Switch
+                label="Standart"
+                disabled={!editable || update.isPending}
+                checked={flag.defaultValue}
+                onChange={(defaultValue) =>
+                  update.mutate(
+                    { key: flag.key, enabled: flag.enabled, defaultValue },
+                    { onSuccess: () => notify(`${flag.key}: standart qiymat ${defaultValue ? 'ha' : 'yo‘q'}`) },
+                  )
+                }
+              />
               {editable && (
                 <button className="btn small" onClick={() => setRuleFor(flag)}>
                   Qoida qo'shish
@@ -119,6 +119,7 @@ function RuleRow({
   editable: boolean
 }) {
   const remove = useRemoveFlagRule()
+  const { notify } = useToast()
   return (
     <tr>
       <td>{rule.environment ?? 'har qanday'}</td>
@@ -134,7 +135,7 @@ function RuleRow({
           <button
             className="btn small danger"
             disabled={remove.isPending}
-            onClick={() => remove.mutate({ key: flagKey, ruleId: rule.id })}
+            onClick={() => remove.mutate({ key: flagKey, ruleId: rule.id }, { onSuccess: () => notify('Qoida o‘chirildi', 'info') })}
           >
             O'chirish
           </button>
@@ -146,6 +147,7 @@ function RuleRow({
 
 function AddRuleDialog({ flag, onClose }: { flag: AdminFlag; onClose: () => void }) {
   const add = useAddFlagRule()
+  const { notify } = useToast()
   const [environment, setEnvironment] = useState('')
   const [rollout, setRollout] = useState(100)
   const [value, setValue] = useState(true)
@@ -202,7 +204,12 @@ function AddRuleDialog({ flag, onClose }: { flag: AdminFlag; onClose: () => void
                 value,
                 priority,
               },
-              { onSuccess: onClose },
+              {
+                onSuccess: () => {
+                  notify(`${flag.key}: qoida qo‘shildi (${rollout}%)`)
+                  onClose()
+                },
+              },
             )
           }
         >
