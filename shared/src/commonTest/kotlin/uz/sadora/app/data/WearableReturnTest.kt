@@ -55,9 +55,12 @@ class WearableReturnTest {
         assertEquals(true, recording.bodies.any { it.contains("\"state\":\"st4te\"") && it.contains("\"code\":\"c0de\"") })
     }
 
-    /** A crafted link must not make the signed-in app post a code for a flow it never began. */
+    /**
+     * The activity can be rebuilt while she is in the browser, and the controller with it.
+     * The return still has to finish the connection; the server checks whose state it is.
+     */
     @Test
-    fun `a return for a flow this app did not start is ignored`() = runTest {
+    fun `a return after the app forgot starting the flow still completes`() = runTest {
         val recording = RecordingEngine { request ->
             when (request.url.encodedPath) {
                 "/v1/wearables/whoop/complete" -> json("""{"ok":true}""")
@@ -68,8 +71,8 @@ class WearableReturnTest {
 
         controller.onReturned("whoop", ok = true, code = "c0de", state = "st4te")
 
-        assertEquals(false, controller.returned)
-        assertEquals(0, recording.countOf("/v1/wearables/whoop/complete"))
+        assertEquals(true, controller.returned)
+        assertEquals(1, recording.countOf("/v1/wearables/whoop/complete"))
     }
 
     @Test

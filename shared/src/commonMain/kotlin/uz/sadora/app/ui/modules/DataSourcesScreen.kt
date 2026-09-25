@@ -5,10 +5,11 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -19,9 +20,12 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import kotlin.time.Clock
@@ -30,45 +34,35 @@ import uz.sadora.app.data.HealthController
 import uz.sadora.app.data.WearableController
 import uz.sadora.app.data.health.DeviceSyncOutcome
 import uz.sadora.app.data.readable
-import uz.sadora.app.design.Radius
 import uz.sadora.app.design.Sadora
-import uz.sadora.app.design.SadoraIcons
 import uz.sadora.app.design.Spacing
 import uz.sadora.app.i18n.strings
-import uz.sadora.app.model.Fmt
 import uz.sadora.app.ui.components.BadgeTone
 import uz.sadora.app.ui.components.ButtonTone
-import uz.sadora.app.ui.components.CardLabel
-import uz.sadora.app.ui.components.ChipFlowRow
-import uz.sadora.app.ui.components.DisclaimerNote
 import uz.sadora.app.ui.components.ErrorStrip
-import uz.sadora.app.ui.components.IconTile
 import uz.sadora.app.ui.components.PillButton
+import uz.sadora.app.ui.components.ProviderLogo
 import uz.sadora.app.ui.components.SadoraBadge
-import uz.sadora.app.ui.components.SadoraButton
+import uz.sadora.app.ui.components.SadoraBottomSheet
 import uz.sadora.app.ui.components.SadoraCard
 import uz.sadora.app.ui.components.SadoraDialog
 import uz.sadora.app.ui.components.SadoraTopBar
 import uz.sadora.app.ui.components.ScreenContent
-import uz.sadora.app.ui.components.appearFromBelow
-import uz.sadora.app.ui.components.noRippleClickable
 import uz.sadora.app.ui.components.rememberHealthAccessRequest
 import uz.sadora.contract.ConnectionStatus
 import uz.sadora.contract.HealthProvider
 import uz.sadora.contract.ProviderInfo
 import uz.sadora.contract.ProviderKind
-import uz.sadora.contract.ProviderStatus
+import uz.sadora.contract.ProviderUnavailable
 
 /**
- * "Qurilmalar" — the providers, the ones she has, and what each one is for.
+ * "Qurilmalar" — every provider as a tile: its logo and its name, nothing else.
  *
- * Three groups, in the order that matters to her: what is connected (with its status,
- * a sync button and a way out), what can be connected today, and what is planned. A
- * planned provider is drawn rather than hidden, greyed with a reason, so the list is the
- * same on every phone and nobody wonders where their watch went.
- *
- * Connecting a cloud provider leaves for the browser and comes back through a link;
- * the controller remembers that we went, and the return says whether it worked.
+ * Hers come first, marked with a dot, then what can be connected, then what is planned,
+ * greyed. A provider this phone can never read (Apple Health on Android) is left out.
+ * Tapping an open tile connects it; tapping one of hers opens a sheet with sync and
+ * disconnect. Connecting a cloud provider leaves for the browser and comes back through
+ * a link, and the return says whether it worked.
  */
 @Composable
 fun DataSourcesScreen(
@@ -77,15 +71,15 @@ fun DataSourcesScreen(
     onClose: () -> Unit,
     onToast: (String) -> Unit,
     modifier: Modifier = Modifier,
+    onErrorToast: (String) -> Unit = onToast,
 ) {
     val t = strings.devices
     // Read here, not inside the coroutines below: the language lives in composition.
     val errors = strings.errors
-    val c = Sadora.colors
     val scope = rememberCoroutineScope()
     val uriHandler = LocalUriHandler.current
     var confirmDisconnect by remember { mutableStateOf<HealthProvider?>(null) }
-    var expanded by remember { mutableStateOf<HealthProvider?>(null) }
+    var opened by remember { mutableStateOf<HealthProvider?>(null) }
 
     LaunchedEffect(Unit) {
         wearables.load()
@@ -114,8 +108,8 @@ fun DataSourcesScreen(
             val outcome = wearables.onDeviceAccess(granted)
             val failure = outcome?.failure
             when {
-                !granted -> onToast(t.accessDenied)
-                failure != null -> onToast(failure.readable(errors))
+                !granted -> onErrorToast(t.accessDenied)
+                failure != null -> onErrorToast(failure.readable(errors))
                 else -> {
                     wearables.devicePlatform.provider?.let { onToast(t.deviceConnected(t.provider(it))) }
                     outcome?.let { afterDeviceSync(it) }
@@ -128,7 +122,7 @@ fun DataSourcesScreen(
     LaunchedEffect(wearables.returned) {
         when (wearables.returned) {
             true -> onToast(t.returnedOk)
-            false -> onToast(t.returnedError)
+            false -> onErrorToast(t.returnedError)
             null -> Unit
         }
         if (wearables.returned != null) {
@@ -137,142 +131,89 @@ fun DataSourcesScreen(
         }
     }
 
-    val samplesBy = health.sources.associateBy { it.provider }
+    fun connect(info: ProviderInfo) {
+        when {
+            info.kind == ProviderKind.ON_DEVICE && wearables.deviceNeedsInstall -> wearables.devicePlatform.openStore()
+            info.kind == ProviderKind.ON_DEVICE -> requestDeviceAccess()
+            else -> scope.launch { wearables.startConnect(info.provider)?.let(uriHandler::openUri) }
+        }
+    }
+
+    // A provider no phone of this kind can read is not an option, so it is not drawn.
+    val tiles = (wearables.connected + wearables.available + wearables.planned).filterNot {
+        it.unavailableReason == ProviderUnavailable.IOS_ONLY || it.unavailableReason == ProviderUnavailable.ANDROID_ONLY
+    }
 
     Column(modifier) {
-        SadoraTopBar(t.title, onBack = onClose, subtitle = t.subtitle)
+        SadoraTopBar(t.title, onBack = onClose)
 
         ScreenContent {
             wearables.error?.let { failure ->
                 item { ErrorStrip(failure.readable(), onRetry = wearables::clearError) }
             }
 
-            if (wearables.connected.isNotEmpty()) {
-                item { SectionLabel(t.connectedSection) }
-                itemsIndexed(wearables.connected) { index, info ->
-                    Box(Modifier.appearFromBelow(index)) {
-                        val onPhone = info.kind == ProviderKind.ON_DEVICE
-                        ConnectedCard(
-                            info = info,
-                            samples = samplesBy[info.provider],
-                            busy = wearables.busy || wearables.deviceSyncing,
-                            footnote = if (info.provider == HealthProvider.APPLE_HEALTH) t.appleHealthManage else null,
-                            onSync = {
-                                scope.launch {
-                                    if (onPhone) {
-                                        val outcome = wearables.syncDevice(force = true)
-                                        val failure = outcome?.failure
-                                        if (failure != null) {
-                                            onToast(failure.readable(errors))
-                                        } else {
-                                            onToast(t.synced)
-                                            outcome?.let { afterDeviceSync(it) }
-                                        }
-                                    } else {
-                                        wearables.syncNow(info.provider)?.let { result ->
-                                            onToast(t.synced)
-                                            if (result.accepted + result.updated > 0) health.refreshWearables()
-                                        }
-                                    }
-                                }
-                            },
-                            onDisconnect = { confirmDisconnect = info.provider },
-                            onReconnect = {
-                                // A store's access is given back on the phone, not through a browser.
-                                if (onPhone) {
-                                    requestDeviceAccess()
-                                } else {
-                                    scope.launch {
-                                        wearables.startConnect(info.provider)?.let(uriHandler::openUri)
-                                    }
-                                }
-                            },
-                        )
-                    }
-                }
-            }
-
-            if (wearables.available.isNotEmpty()) {
-                item { SectionLabel(t.availableSection) }
-                items(wearables.available.size) { index ->
-                    val info = wearables.available[index]
-                    Box(Modifier.appearFromBelow(index + wearables.connected.size)) {
-                        ProviderCard(
-                            info = info,
-                            expanded = expanded == info.provider,
-                            onToggle = { expanded = if (expanded == info.provider) null else info.provider },
-                            action = {
-                                when {
-                                    info.kind == ProviderKind.ON_DEVICE && wearables.deviceNeedsInstall -> {
-                                        SadoraButton(t.installHealthConnect, onClick = { wearables.devicePlatform.openStore() })
-                                        Text(t.healthConnectMissing, style = Sadora.type.caption, color = c.muted)
-                                    }
-                                    info.kind == ProviderKind.ON_DEVICE -> {
-                                        SadoraButton(
-                                            if (wearables.deviceSyncing) t.connecting else t.connect,
-                                            enabled = !wearables.deviceSyncing,
-                                            onClick = requestDeviceAccess,
-                                        )
-                                        Text(t.onDeviceNote(info.provider), style = Sadora.type.caption, color = c.muted)
-                                    }
-                                    else -> {
-                                        SadoraButton(
-                                            if (wearables.connectStarted == info.provider) t.connecting else t.connect,
-                                            enabled = !wearables.busy,
-                                            onClick = {
-                                                scope.launch {
-                                                    wearables.startConnect(info.provider)?.let(uriHandler::openUri)
-                                                }
-                                            },
-                                        )
-                                        Text(t.openBrowserNote, style = Sadora.type.caption, color = c.muted)
-                                        if (info.provider == HealthProvider.WHOOP) {
-                                            Text(t.noStepsNote, style = Sadora.type.caption, color = c.muted)
-                                        }
-                                    }
-                                }
-                            },
-                        )
-                    }
-                }
-            }
-
-            if (wearables.planned.isNotEmpty()) {
-                item { SectionLabel(t.plannedSection) }
-                items(wearables.planned.size) { index ->
-                    val info = wearables.planned[index]
-                    ProviderCard(
-                        info = info,
-                        expanded = expanded == info.provider,
-                        onToggle = { expanded = if (expanded == info.provider) null else info.provider },
-                        action = null,
-                    )
-                }
-            }
-
-            if (wearables.providers.isEmpty() && !wearables.busy) {
+            tiles.chunked(2).forEach { pair ->
                 item {
-                    SadoraCard {
-                        Text(strings.modules.sourcesEmpty, style = Sadora.type.h3, color = c.text)
-                        Text(strings.modules.sourcesEmptyBody, style = Sadora.type.body, color = c.muted)
+                    Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                        pair.forEach { info ->
+                            ProviderTile(
+                                info = info,
+                                connecting = wearables.connectStarted == info.provider || wearables.deviceSyncing && info.kind == ProviderKind.ON_DEVICE,
+                                modifier = Modifier.weight(1f),
+                                onClick = {
+                                    when {
+                                        info.connection != null -> opened = info.provider
+                                        info.available -> if (!wearables.busy) connect(info)
+                                        else -> onToast(t.unavailable(info.unavailableReason.orEmpty()))
+                                    }
+                                },
+                            )
+                        }
+                        if (pair.size == 1) Spacer(Modifier.weight(1f))
                     }
                 }
             }
+        }
+    }
 
-            item {
-                SadoraCard {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                        IconTile(SadoraIcons.Pencil, tint = c.muted, size = 40.dp, iconSize = 18.dp)
-                        Column(Modifier.weight(1f)) {
-                            Text(t.manualTitle, style = Sadora.type.h3, color = c.text)
-                            Text(t.manualBody, style = Sadora.type.body, color = c.muted)
+    val sheetInfo = opened?.let { p -> wearables.connected.firstOrNull { it.provider == p } }
+    SadoraBottomSheet(
+        visible = sheetInfo != null,
+        title = sheetInfo?.let { t.provider(it.provider) }.orEmpty(),
+        onDismiss = { opened = null },
+    ) {
+        val info = sheetInfo ?: return@SadoraBottomSheet
+        ConnectedActions(
+            info = info,
+            busy = wearables.busy || wearables.deviceSyncing,
+            onSync = {
+                scope.launch {
+                    if (info.kind == ProviderKind.ON_DEVICE) {
+                        val outcome = wearables.syncDevice(force = true)
+                        val failure = outcome?.failure
+                        if (failure != null) {
+                            onErrorToast(failure.readable(errors))
+                        } else {
+                            onToast(t.synced)
+                            outcome?.let { afterDeviceSync(it) }
+                        }
+                    } else {
+                        wearables.syncNow(info.provider)?.let { result ->
+                            onToast(t.synced)
+                            if (result.accepted + result.updated > 0) health.refreshWearables()
                         }
                     }
                 }
-            }
-
-            item { DisclaimerNote(t.note) }
-        }
+            },
+            onReconnect = {
+                opened = null
+                connect(info)
+            },
+            onDisconnect = {
+                opened = null
+                confirmDisconnect = info.provider
+            },
+        )
     }
 
     val pending = confirmDisconnect
@@ -290,143 +231,91 @@ fun DataSourcesScreen(
     )
 }
 
+/** Logo and name. A dot in the corner for one of hers: green when it reads, amber when it needs her. */
 @Composable
-private fun SectionLabel(text: String) {
-    Text(text, style = Sadora.type.h3, color = Sadora.colors.text, modifier = Modifier.padding(start = Spacing.xxs, top = Spacing.xxs))
-}
-
-/** A provider she has: status, last sync, sample count, and the two actions. */
-@Composable
-private fun ConnectedCard(
+private fun ProviderTile(
     info: ProviderInfo,
-    samples: ProviderStatus?,
-    busy: Boolean,
-    footnote: String?,
-    onSync: () -> Unit,
-    onDisconnect: () -> Unit,
-    onReconnect: () -> Unit,
+    connecting: Boolean,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
 ) {
     val t = strings.devices
-    val m = strings.modules
+    val c = Sadora.colors
+    val status = info.connection?.status
+    Box(modifier) {
+        SadoraCard(
+            modifier = Modifier.alpha(if (info.available || status != null) 1f else 0.45f),
+            onClick = onClick,
+            verticalGap = Spacing.xs,
+        ) {
+            Column(
+                Modifier.fillMaxWidth().padding(vertical = Spacing.xs),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+            ) {
+                ProviderLogo(info.provider, size = 56.dp)
+                Text(
+                    if (connecting) t.connecting else t.provider(info.provider),
+                    style = Sadora.type.body.copy(fontWeight = FontWeight.SemiBold),
+                    color = c.text,
+                    textAlign = TextAlign.Center,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+        if (status != null) {
+            Box(
+                Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(Spacing.sm)
+                    .size(10.dp)
+                    .clip(CircleShape)
+                    .background(if (status == ConnectionStatus.ACTIVE) c.success else c.warning),
+            )
+        }
+    }
+}
+
+/** The sheet behind one of hers: status, last sync, and the two actions. */
+@Composable
+private fun ConnectedActions(
+    info: ProviderInfo,
+    busy: Boolean,
+    onSync: () -> Unit,
+    onReconnect: () -> Unit,
+    onDisconnect: () -> Unit,
+) {
+    val t = strings.devices
     val c = Sadora.colors
     val dates = strings.dates
     val connection = info.connection ?: return
-    val status = connection.status
-    SadoraCard {
-        Row(
-            Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-        ) {
-            ProviderGlyph(info.provider, active = true)
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(t.provider(info.provider), style = Sadora.type.h3, color = c.text)
-                Text(
-                    connection.lastSyncAt?.let { t.lastSync(dates.ago(it, Clock.System.now())) } ?: t.neverSynced,
-                    style = Sadora.type.body,
-                    color = c.muted,
-                )
-            }
-            when (status) {
-                ConnectionStatus.ACTIVE -> SadoraBadge(t.statusActive, BadgeTone.Connected)
-                ConnectionStatus.EXPIRED -> SadoraBadge(t.statusExpired, BadgeTone.Neutral)
-                ConnectionStatus.ERROR -> SadoraBadge(t.statusError, BadgeTone.Neutral)
-            }
-        }
-        samples?.let {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+        ProviderLogo(info.provider, size = 44.dp)
+        Column(Modifier.weight(1f)) {
             Text(
-                listOfNotNull(
-                    m.samples(Fmt.int(it.sampleCount.toInt())),
-                    it.lastSampleAt?.let { at -> m.lastSample(dates.ago(at, Clock.System.now())) },
-                ).joinToString(" · "),
-                style = Sadora.type.caption,
-                color = c.muted2,
+                connection.lastSyncAt?.let { t.lastSync(dates.ago(it, Clock.System.now())) } ?: t.neverSynced,
+                style = Sadora.type.body,
+                color = c.muted,
             )
         }
-        footnote?.let { Text(it, style = Sadora.type.caption, color = c.muted) }
-        if (info.metrics.isNotEmpty()) {
-            ChipFlowRow(horizontalGap = Spacing.xxs, verticalGap = Spacing.xxs) {
-                info.metrics.take(8).forEach { metric -> SadoraBadge(m.metric(metric), BadgeTone.Neutral) }
-            }
-        }
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-            // Off while a request is running: the label said "syncing" but the pill still
-            // fired, so every extra tap sent another sync or disconnect.
-            if (status == ConnectionStatus.EXPIRED) {
-                PillButton(t.reconnect, onReconnect, tone = ButtonTone.Primary, modifier = Modifier.weight(1f), enabled = !busy)
-            } else {
-                PillButton(if (busy) t.syncing else t.syncNow, onSync, tone = ButtonTone.Primary, modifier = Modifier.weight(1f), enabled = !busy)
-            }
-            PillButton(t.disconnect, onDisconnect, modifier = Modifier.weight(1f), enabled = !busy)
+        when (connection.status) {
+            ConnectionStatus.ACTIVE -> SadoraBadge(t.statusActive, BadgeTone.Connected)
+            ConnectionStatus.EXPIRED -> SadoraBadge(t.statusExpired, BadgeTone.Neutral)
+            ConnectionStatus.ERROR -> SadoraBadge(t.statusError, BadgeTone.Neutral)
         }
     }
-}
-
-/**
- * A provider she does not have: the name, the tagline, and — when opened — what it
- * brings and where the app uses it. The action slot is the connect button for an
- * available provider and nothing for a planned one.
- */
-@Composable
-private fun ProviderCard(
-    info: ProviderInfo,
-    expanded: Boolean,
-    onToggle: () -> Unit,
-    action: (@Composable () -> Unit)?,
-) {
-    val t = strings.devices
-    val m = strings.modules
-    val c = Sadora.colors
-    SadoraCard(onClick = onToggle) {
-        Row(
-            Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-        ) {
-            ProviderGlyph(info.provider, active = info.available)
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(t.provider(info.provider), style = Sadora.type.h3, color = if (info.available) c.text else c.muted)
-                Text(t.providerTagline(info.provider), style = Sadora.type.body, color = c.muted)
-            }
-            if (!info.available) {
-                SadoraBadge(t.unavailable(info.unavailableReason.orEmpty()), BadgeTone.Neutral)
-            } else {
-                Text(if (expanded) "–" else "+", style = Sadora.type.h3, color = c.muted)
-            }
-        }
-        if (expanded || action != null && info.available) {
-            CardLabel(t.givesTitle)
-            ChipFlowRow(horizontalGap = Spacing.xxs, verticalGap = Spacing.xxs) {
-                info.metrics.forEach { metric -> SadoraBadge(m.metric(metric), BadgeTone.Neutral) }
-            }
-            CardLabel(t.usedInTitle)
-            t.usedIn(info.provider).forEach { place ->
-                Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-                    Text("•", style = Sadora.type.body, color = c.primary)
-                    Text(place, style = Sadora.type.body, color = c.text)
-                }
-            }
-            action?.invoke()
-        }
+    if (info.provider == HealthProvider.APPLE_HEALTH) {
+        Text(t.appleHealthManage, style = Sadora.type.caption, color = c.muted)
     }
-}
-
-/** A round tile with the provider's initial — no vendor logos, so nothing looks endorsed. */
-@Composable
-private fun ProviderGlyph(provider: HealthProvider, active: Boolean) {
-    val c = Sadora.colors
-    val t = strings.devices
-    Box(
-        Modifier
-            .size(44.dp)
-            .clip(Radius.chip)
-            .background(if (active) c.primary.copy(alpha = if (c.isDark) 0.24f else 0.12f) else c.surface2),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            t.provider(provider).take(1),
-            style = Sadora.type.h3.copy(fontWeight = FontWeight.Bold),
-            color = if (active) c.textAccent else c.muted2,
-        )
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+        // Off while a request is running: the label said "syncing" but the pill still
+        // fired, so every extra tap sent another sync or disconnect.
+        if (connection.status == ConnectionStatus.EXPIRED) {
+            PillButton(t.reconnect, onReconnect, tone = ButtonTone.Primary, modifier = Modifier.weight(1f), enabled = !busy)
+        } else {
+            PillButton(if (busy) t.syncing else t.syncNow, onSync, tone = ButtonTone.Primary, modifier = Modifier.weight(1f), enabled = !busy)
+        }
+        PillButton(t.disconnect, onDisconnect, modifier = Modifier.weight(1f), enabled = !busy)
     }
 }

@@ -66,6 +66,7 @@ import uz.sadora.app.ui.components.PillButton
 import uz.sadora.app.ui.components.SadoraBottomNav
 import uz.sadora.app.ui.components.SadoraBottomSheet
 import uz.sadora.app.ui.components.SadoraToast
+import uz.sadora.app.ui.components.ToastTone
 import uz.sadora.app.ui.components.StreakCelebration
 import uz.sadora.app.ui.components.SystemBackHandler
 import uz.sadora.app.ui.core.AiChatScreen
@@ -290,6 +291,8 @@ private class ShellOverlays {
     /** The day the symptom sheet writes; null is today. Set by the calendar's day page. */
     var symptomSheetDate by mutableStateOf<kotlinx.datetime.LocalDate?>(null)
     var toast by mutableStateOf<String?>(null)
+    /** The toast on screen reports a failure: drawn with the warning mark, not the check. */
+    var toastIsError by mutableStateOf(false)
     var lastWaterAdded by mutableStateOf(0)
 
     val anyOpen: Boolean
@@ -395,12 +398,15 @@ private fun MainShell(
 
     // The browser sent her back from a wearable provider's consent page. The devices
     // screen shows the outcome, so it is opened if she is not already on it.
+    // The round trip runs in the shell's scope, not this effect's: consuming the link
+    // changes the key, and the effect it restarts would cancel the code on its way to
+    // the server — the grant was given and never saved.
     val link = AppLinks.pending
     LaunchedEffect(link) {
         if (link is AppLink.WearableReturn) {
             AppLinks.consume()
-            controllers.wearables.onReturned(link.provider, link.ok, link.code, link.state)
             if (navigator.current != Route.DataSources) navigator.push(Route.DataSources)
+            scope.launch { controllers.wearables.onReturned(link.provider, link.ok, link.code, link.state) }
         }
     }
 
@@ -436,7 +442,10 @@ private fun MainShell(
         controllers.analytics.event(AnalyticsEvents.WATER_ADDED)
     }
 
-    val toast: (String) -> Unit = { overlays.toast = it }
+    val toast: (String) -> Unit = {
+        overlays.toastIsError = false
+        overlays.toast = it
+    }
     val fullScreen = route?.isFullScreen == true
 
     Box(Modifier.fillMaxSize()) {
@@ -507,6 +516,7 @@ private fun MainShell(
         ) {
             SadoraToast(
                 message = overlays.toast,
+                tone = if (overlays.toastIsError) ToastTone.Error else ToastTone.Success,
                 actionText = if (overlays.lastWaterAdded > 0) waterStrings.undo else null,
                 onAction = {
                     state.addWater(-overlays.lastWaterAdded)
@@ -515,6 +525,7 @@ private fun MainShell(
                 },
                 onTimeout = {
                     overlays.toast = null
+                    overlays.toastIsError = false
                     overlays.lastWaterAdded = 0
                 },
             )
@@ -791,7 +802,16 @@ private fun PushedScreen(
         Route.Insights -> InsightsScreen(state, insights, close, upgrade)
         Route.Knowledge -> KnowledgeScreen(state, controllers.learn, close, navigator::push)
         is Route.Article -> ArticleScreen(route.slug, controllers.learn, close, upgrade)
-        Route.DataSources -> DataSourcesScreen(controllers.wearables, health, close, onToast = toast)
+        Route.DataSources -> DataSourcesScreen(
+            controllers.wearables,
+            health,
+            close,
+            onToast = toast,
+            onErrorToast = {
+                overlays.toastIsError = true
+                overlays.toast = it
+            },
+        )
 
         // Gul.
         Route.Rewards -> RewardsScreen(state, controllers.rewards, close, navigator::push)

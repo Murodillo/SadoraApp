@@ -189,12 +189,13 @@ class WearableController(
      * server accepts it.
      */
     suspend fun onReturned(provider: String, ok: Boolean, code: String? = null, state: String? = null) {
-        val started = connectStarted
         connectStarted = null
         val known = HealthProvider.entries.firstOrNull { it.name.equals(provider, ignoreCase = true) }
-        // Only a return from a flow this app started is forwarded: a crafted link could
-        // otherwise make the signed-in app post somebody else's code and state.
-        val completed = ok && code != null && state != null && known != null && started == known &&
+        // Forwarded whether or not this controller remembers starting the flow: the phone
+        // may have rebuilt the activity while she was in the browser, and that forgot it.
+        // A crafted link is still harmless — the server refuses a state issued to anyone
+        // but the account that posts it.
+        val completed = ok && code != null && state != null && known != null &&
             api?.let { calls.run { it.complete(known, state, code) } } != null
         returned = completed
         if (completed) analytics.event(AnalyticsEvents.DEVICE_CONNECTED, mapOf("provider" to provider))
