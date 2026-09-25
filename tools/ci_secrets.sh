@@ -15,6 +15,12 @@
 #                                                                   with — this machine's, so a phone
 #                                                                   with a locally built APK updates in place
 #
+# And, when an App Store Connect team key is on this machine, three more for TestFlight:
+#
+#   ASC_KEY_ID                  from the key's file name, AuthKey_<id>.p8
+#   ASC_ISSUER_ID               given in the shell: ASC_ISSUER_ID=… ./tools/ci_secrets.sh
+#   ASC_KEY_P8                  ~/.appstoreconnect/private_keys/AuthKey_<id>.p8
+#
 # Re-running replaces them. Rotating the CI key: generate a new pair at the same path, run
 # tools/deploy_stage.sh (it rebinds the key on both hosts), then run this again.
 set -euo pipefail
@@ -43,6 +49,15 @@ set_secret STAGE_SSH_KNOWN_HOSTS < "$CI_DIR/known_hosts"
 printf '%s' "$SADORA_JUMP" | set_secret STAGE_JUMP
 printf '%s' "$SADORA_HOST" | set_secret STAGE_HOST
 base64 < "$KEYSTORE" | tr -d '\n' | set_secret STAGE_KEYSTORE_B64
+ASC_KEY=$(ls "$HOME"/.appstoreconnect/private_keys/AuthKey_*.p8 2>/dev/null | head -1 || true)
+if [[ -s $ASC_KEY && -n ${ASC_ISSUER_ID:-} ]]; then
+  ASC_KEY_ID=$(basename "$ASC_KEY" .p8); ASC_KEY_ID=${ASC_KEY_ID#AuthKey_}
+  printf '%s' "$ASC_KEY_ID" | set_secret ASC_KEY_ID
+  printf '%s' "$ASC_ISSUER_ID" | set_secret ASC_ISSUER_ID
+  set_secret ASC_KEY_P8 < "$ASC_KEY"
+else
+  echo "    (no App Store Connect key, or no ASC_ISSUER_ID in the shell — TestFlight from CI stays off)"
+fi
 
 echo "==> done. Re-run the latest CI run of an open pull request into dev to deliver it:"
 echo "    gh run rerun \$(gh run list --workflow CI --limit 1 --json databaseId --jq '.[0].databaseId')"

@@ -2,7 +2,7 @@ name: Stage
 
 # Delivers one commit to the staging server, through the gate in deploy/stage/sadora-ci.
 #
-#   preflight ─┬─ image  (API image → GHCR, by digest) ─┬─ deploy ── apk ── smoke
+#   preflight ─┬─ image  (API image → GHCR, by digest) ─┬─ deploy ── apk ── smoke ── testflight
 #              └─ bundle (admin panel + landing page)  ──┘
 #
 # Called by ci.yml once the checks pass. Also runnable by hand — Actions → Stage → Run
@@ -369,6 +369,115 @@ jobs:
           app=$(jq -r .app <<<"$urls"); landing=$(jq -r .landing <<<"$urls")
           echo "::add-mask::$app"; echo "::add-mask::$landing"
           bash tools/ci/smoke.sh "$app" "$landing" "$GITHUB_SHA" "$BUILD" "$APK_SHA256"
+
+  # The iOS twin of the APK: a build against the same staging API, uploaded to TestFlight,
+  # where the internal group takes every processed build on its own. Only dev itself gets
+  # one — a pull request would spend macOS minutes (ten times Linux) and a build number on
+  # something not yet merged — and only once staging has passed its smoke test.
+  testflight:
+    name: TestFlight
+    needs: smoke
+    if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
+    runs-on: macos-latest
+    timeout-minutes: 60
+    environment: staging
+    concurrency:
+      group: stage-testflight
+      cancel-in-progress: false
+    env:
+      ASC_APP_ID: '6811085950'
+      TEAM_ID: WAAR6RJ42C
+    steps:
+      # No App Store Connect key yet is a skip with a pointer, the same as staging itself.
+      - id: secrets
+        env:
+          HAVE: ${{ secrets.ASC_KEY_ID != '' && secrets.ASC_ISSUER_ID != '' && secrets.ASC_KEY_P8 != '' }}
+        run: |
+          echo "ready=$HAVE" >> "$GITHUB_OUTPUT"
+          [[ $HAVE == true ]] || echo "::notice::No App Store Connect key in the staging environment — run tools/ci_secrets.sh. TestFlight skipped."
+
+      - if: steps.secrets.outputs.ready == 'true'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - if: steps.secrets.outputs.ready == 'true'
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: zulu
+          java-version: '21'
+
+      - if: steps.secrets.outputs.ready == 'true'
+        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+
+      - if: steps.secrets.outputs.ready == 'true'
+        uses: ./.github/actions/stage-ssh
+        with:
+          key: ${{ secrets.STAGE_SSH_KEY }}
+          known-hosts: ${{ secrets.STAGE_SSH_KNOWN_HOSTS }}
+          jump: ${{ secrets.STAGE_JUMP }}
+          host: ${{ secrets.STAGE_HOST }}
+
+      - name: Find the API and the build number
+        if: steps.secrets.outputs.ready == 'true'
+        id: plan
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+        run: |
+          url=$(stage url | jq -r .app)
+          [[ $url =~ ^https://[a-z0-9-]+\.trycloudflare\.com$ ]] || { echo "::error::the app tunnel reports no URL"; exit 1; }
+          echo "::add-mask::$url"
+          # xcodebuild finds the key by its id in this folder; it never reaches the logs.
+          install -d -m 700 ~/.appstoreconnect/private_keys
+          key=~/.appstoreconnect/private_keys/AuthKey_$ASC_KEY_ID.p8
+          printf '%s\n' "$ASC_KEY_P8" > "$key"; chmod 600 "$key"
+          python3 -m pip install --quiet --break-system-packages cryptography
+          build=$(ASC_KEY_PATH=$key python3 tools/ci/asc_next_build.py "$ASC_APP_ID")
+          { echo "host=${url#https://}"; echo "key=$key"; echo "build=$build"; } >> "$GITHUB_OUTPUT"
+
+      # Archived unsigned, then signed for distribution on export: a distribution profile
+      # needs no registered devices, and the key lets Xcode make one on a fresh runner.
+      - name: Archive
+        if: steps.secrets.outputs.ready == 'true'
+        env:
+          HOST: ${{ steps.plan.outputs.host }}
+          BUILD: ${{ steps.plan.outputs.build }}
+        run: |
+          set -o pipefail
+          xcodebuild archive -project iosApp/iosApp.xcodeproj -scheme iosApp -configuration Release \
+            -destination 'generic/platform=iOS' -archivePath "$RUNNER_TEMP/Sadora.xcarchive" \
+            CODE_SIGNING_ALLOWED=NO CURRENT_PROJECT_VERSION="$BUILD" SADORA_API_HOST="$HOST" \
+            | tail -40
+
+      - name: Upload to TestFlight
+        if: steps.secrets.outputs.ready == 'true'
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          KEY: ${{ steps.plan.outputs.key }}
+          BUILD: ${{ steps.plan.outputs.build }}
+        run: |
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>destination</key><string>upload</string>
+            <key>teamID</key><string>$TEAM_ID</string>
+            <key>signingStyle</key><string>automatic</string>
+          </dict></plist>
+          PLIST
+          set -o pipefail
+          xcodebuild -exportArchive -archivePath "$RUNNER_TEMP/Sadora.xcarchive" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" -exportPath "$RUNNER_TEMP/export" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$KEY" -authenticationKeyID "$ASC_KEY_ID" -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
+            | tail -40
+          printf '### TestFlight\n\nBuild **%s** uploaded; the internal group gets it once Apple has processed it.\n' "$BUILD" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Forget the key
+        if: always()
+        run: rm -rf ~/.appstoreconnect/private_keys
 
   rollback:
     name: Roll back
