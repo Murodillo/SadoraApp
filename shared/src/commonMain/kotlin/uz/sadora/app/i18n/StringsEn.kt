@@ -1738,6 +1738,8 @@ object StringsEn : Strings {
         }
         override val installHealthConnect = "Install Health Connect"
         override val healthConnectMissing = "Health Connect is missing or out of date on this phone. Install it from Google Play, then come back here."
+        override val samsungSyncHint = "Let Samsung Health write to Health Connect: on the page that opens, turn on “Allow all”."
+        override val openSamsungHealth = "Samsung permissions"
         override fun deviceConnected(name: String) = "$name connected — data is on its way"
         override val accessDenied = "Access was not given — nothing was read"
         override fun periodsImported(count: Int) = if (count == 1) "1 period added" else "$count periods added"

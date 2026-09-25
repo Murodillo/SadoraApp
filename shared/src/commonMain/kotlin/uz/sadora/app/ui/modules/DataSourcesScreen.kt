@@ -80,6 +80,8 @@ fun DataSourcesScreen(
     val uriHandler = LocalUriHandler.current
     var confirmDisconnect by remember { mutableStateOf<HealthProvider?>(null) }
     var opened by remember { mutableStateOf<HealthProvider?>(null) }
+    // Samsung Health's tile asked for Health Connect; once granted, its sheet says the one step left.
+    var samsungAsked by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         wearables.load()
@@ -111,10 +113,13 @@ fun DataSourcesScreen(
                 !granted -> onErrorToast(t.accessDenied)
                 failure != null -> onErrorToast(failure.readable(errors))
                 else -> {
-                    wearables.devicePlatform.provider?.let { onToast(t.deviceConnected(t.provider(it))) }
+                    val shown = if (samsungAsked) HealthProvider.SAMSUNG_HEALTH else wearables.devicePlatform.provider
+                    shown?.let { onToast(t.deviceConnected(t.provider(it))) }
+                    if (samsungAsked) opened = HealthProvider.SAMSUNG_HEALTH
                     outcome?.let { afterDeviceSync(it) }
                 }
             }
+            samsungAsked = false
         }
     }
 
@@ -133,6 +138,11 @@ fun DataSourcesScreen(
 
     fun connect(info: ProviderInfo) {
         when {
+            info.provider == HealthProvider.SAMSUNG_HEALTH && !wearables.samsungInstalled -> wearables.openSamsungHealth()
+            info.provider == HealthProvider.SAMSUNG_HEALTH && !wearables.deviceNeedsInstall -> {
+                samsungAsked = true
+                requestDeviceAccess()
+            }
             info.kind == ProviderKind.ON_DEVICE && wearables.deviceNeedsInstall -> wearables.devicePlatform.openStore()
             info.kind == ProviderKind.ON_DEVICE -> requestDeviceAccess()
             else -> scope.launch { wearables.startConnect(info.provider)?.let(uriHandler::openUri) }
@@ -213,6 +223,13 @@ fun DataSourcesScreen(
                 opened = null
                 confirmDisconnect = info.provider
             },
+            // Samsung Health has nothing of its own to disconnect: it is Health Connect's
+            // reading, switched off on that tile. What it needs is its own sync switch.
+            onOpenApp = if (info.provider == HealthProvider.SAMSUNG_HEALTH) {
+                { wearables.openSamsungHealth() }
+            } else {
+                null
+            },
         )
     }
 
@@ -285,6 +302,7 @@ private fun ConnectedActions(
     onSync: () -> Unit,
     onReconnect: () -> Unit,
     onDisconnect: () -> Unit,
+    onOpenApp: (() -> Unit)? = null,
 ) {
     val t = strings.devices
     val c = Sadora.colors
@@ -308,14 +326,22 @@ private fun ConnectedActions(
     if (info.provider == HealthProvider.APPLE_HEALTH) {
         Text(t.appleHealthManage, style = Sadora.type.caption, color = c.muted)
     }
+    if (onOpenApp != null && connection.status != ConnectionStatus.ACTIVE) {
+        Text(t.samsungSyncHint, style = Sadora.type.body, color = c.text)
+    }
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
         // Off while a request is running: the label said "syncing" but the pill still
         // fired, so every extra tap sent another sync or disconnect.
-        if (connection.status == ConnectionStatus.EXPIRED) {
+        // Samsung's amber means its own write switch is off, which a reconnect here cannot fix.
+        if (connection.status == ConnectionStatus.EXPIRED && onOpenApp == null) {
             PillButton(t.reconnect, onReconnect, tone = ButtonTone.Primary, modifier = Modifier.weight(1f), enabled = !busy)
         } else {
             PillButton(if (busy) t.syncing else t.syncNow, onSync, tone = ButtonTone.Primary, modifier = Modifier.weight(1f), enabled = !busy)
         }
-        PillButton(t.disconnect, onDisconnect, modifier = Modifier.weight(1f), enabled = !busy)
+        if (onOpenApp != null) {
+            PillButton(t.openSamsungHealth, onOpenApp, modifier = Modifier.weight(1f))
+        } else {
+            PillButton(t.disconnect, onDisconnect, modifier = Modifier.weight(1f), enabled = !busy)
+        }
     }
 }

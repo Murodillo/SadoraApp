@@ -115,6 +115,9 @@ interface DeviceStrings {
     fun onDeviceNote(provider: HealthProvider): String
     val installHealthConnect: String
     val healthConnectMissing: String
+    /** Samsung Health reaches the app through Health Connect; this is the one switch on its side. */
+    val samsungSyncHint: String
+    val openSamsungHealth: String
     fun deviceConnected(name: String): String
     val accessDenied: String
     fun periodsImported(count: Int): String

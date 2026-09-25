@@ -1739,6 +1739,8 @@ object StringsUz : Strings {
         }
         override val installHealthConnect = "Health Connect'ni o'rnatish"
         override val healthConnectMissing = "Bu telefonda Health Connect yo'q yoki eskirgan. Play Market'dan o'rnating, so'ng shu yerga qayting."
+        override val samsungSyncHint = "Samsung Health'ga Health Connect'ga yozishga ruxsat bering: ochilgan sahifada «Allow all»ni yoqing."
+        override val openSamsungHealth = "Samsung ruxsatlari"
         override fun deviceConnected(name: String) = "$name ulandi — ma'lumotlar kelmoqda"
         override val accessDenied = "Ruxsat berilmadi — hech narsa o'qilmadi"
         override fun periodsImported(count: Int) = "$count ta hayz davri qo'shildi"

@@ -129,6 +129,39 @@ class HealthConnectPlatform(context: Context) : HealthPlatform {
         }
     }
 
+    override suspend fun isWriterInstalled(writer: HealthProvider): Boolean {
+        val pkg = WriterPackages[writer] ?: return false
+        return runCatching { context.packageManager.getPackageInfo(pkg, 0) }.isSuccess
+    }
+
+    override suspend fun isWriterWriting(writer: HealthProvider): Boolean {
+        val pkg = WriterPackages[writer] ?: return false
+        val pm = context.packageManager
+        return WriterSignals.any { pm.checkPermission(it, pkg) == android.content.pm.PackageManager.PERMISSION_GRANTED }
+    }
+
+    override fun openWriter(writer: HealthProvider) {
+        val pkg = WriterPackages[writer] ?: return
+        val installed = runCatching { context.packageManager.getPackageInfo(pkg, 0) }.isSuccess
+        if (installed) {
+            // Health Connect's own page for that app, where "Allow all" lets it write.
+            // Android 14 moved it into the system; before that it lives in the HC app.
+            val action = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                "android.health.connect.action.MANAGE_HEALTH_PERMISSIONS"
+            } else {
+                "androidx.health.ACTION_MANAGE_HEALTH_PERMISSIONS"
+            }
+            val page = Intent(action).putExtra(Intent.EXTRA_PACKAGE_NAME, pkg).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            if (runCatching { context.startActivity(page) }.isSuccess) return
+        }
+        val launch = context.packageManager.getLaunchIntentForPackage(pkg)
+            ?: Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=$pkg")).setPackage("com.android.vending")
+        runCatching { context.startActivity(launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }.onFailure {
+            val web = Uri.parse("https://play.google.com/store/apps/details?id=$pkg")
+            runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, web).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+        }
+    }
+
     private fun HealthConnectClient.feature(feature: Int): Boolean =
         runCatching { features.getFeatureStatus(feature) == HealthConnectFeatures.FEATURE_STATUS_AVAILABLE }
             .getOrDefault(false)
@@ -282,6 +315,12 @@ class HealthConnectPlatform(context: Context) : HealthPlatform {
 
     companion object {
         const val ProviderPackage = "com.google.android.apps.healthdata"
+
+        /** Apps that write into Health Connect and have their own tile on the devices screen. */
+        val WriterPackages = mapOf(HealthProvider.SAMSUNG_HEALTH to "com.sec.android.app.shealth")
+
+        /** Either one granted means the writer's sync is on; neither means nothing will come. */
+        val WriterSignals = listOf("android.permission.health.WRITE_STEPS", "android.permission.health.WRITE_SLEEP")
 
         /** Must match the `android.permission.health.READ_*` list in AndroidManifest.xml. */
         private val RecordTypes: List<KClass<out Record>> = listOf(

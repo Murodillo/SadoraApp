@@ -77,6 +77,14 @@ class WearableController(
     var lastDeviceSync by mutableStateOf<DeviceSyncOutcome?>(null)
         private set
 
+    /** Samsung Health is on this phone — its tile rides on the Health Connect reading. */
+    var samsungInstalled by mutableStateOf(false)
+        private set
+
+    /** Samsung Health may write into Health Connect. Without it the tile is amber and nothing arrives. */
+    var samsungWriting by mutableStateOf(false)
+        private set
+
     /** Health Connect is missing or too old — the fix is a Play Store visit, not a permission. */
     val deviceNeedsInstall: Boolean
         get() = deviceAvailability == HealthAvailability.NOT_INSTALLED ||
@@ -95,6 +103,7 @@ class WearableController(
 
     private fun ProviderInfo.onThisPhone(): ProviderInfo {
         if (kind != ProviderKind.ON_DEVICE) return this
+        if (provider == HealthProvider.SAMSUNG_HEALTH) return samsungOnThisPhone()
         if (provider != HealthProvider.APPLE_HEALTH && provider != HealthProvider.HEALTH_CONNECT) return this
         if (!isThisPhone(provider)) {
             // An iPhone cannot read Health Connect and an Android phone cannot read
@@ -120,6 +129,32 @@ class WearableController(
         return this
     }
 
+    /**
+     * Samsung Health reaches the app through Health Connect: it is "connected" when the
+     * phone's reading is on and Samsung Health is installed to write into it. Only a phone
+     * with Health Connect can have it at all.
+     */
+    private fun ProviderInfo.samsungOnThisPhone(): ProviderInfo {
+        if (device?.platform?.provider != HealthProvider.HEALTH_CONNECT) {
+            return copy(available = false, unavailableReason = ProviderUnavailable.ANDROID_ONLY)
+        }
+        if (!available) return this
+        if (deviceEnabled && samsungInstalled) {
+            return copy(
+                connection = WearableConnection(
+                    provider = provider,
+                    status = if (deviceAccess && samsungWriting) ConnectionStatus.ACTIVE else ConnectionStatus.EXPIRED,
+                    connectedAt = deviceLastSync ?: Instant.fromEpochMilliseconds(0),
+                    lastSyncAt = deviceLastSync,
+                ),
+            )
+        }
+        return this
+    }
+
+    /** Opens Health Connect's page for Samsung Health — or its Play listing when it is not installed. */
+    fun openSamsungHealth() = device?.platform?.openWriter(HealthProvider.SAMSUNG_HEALTH)
+
     suspend fun load() {
         refreshDevice()
         val api = api ?: return
@@ -132,6 +167,8 @@ class WearableController(
         val userId = currentUserId() ?: return
         deviceAvailability = device.platform.availability()
         deviceAccess = device.platform.hasAccess()
+        samsungInstalled = device.platform.isWriterInstalled(HealthProvider.SAMSUNG_HEALTH)
+        samsungWriting = device.platform.isWriterWriting(HealthProvider.SAMSUNG_HEALTH)
         val state = device.state(userId)
         deviceEnabled = state.enabled
         deviceLastSync = state.lastSyncAt

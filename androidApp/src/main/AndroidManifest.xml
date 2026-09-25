@@ -55,6 +55,8 @@
     <!-- Android 11+ hides other packages; without this Health Connect looks uninstalled. -->
     <queries>
         <package android:name="com.google.android.apps.healthdata" />
+        <!-- Samsung Health writes into Health Connect; its tile needs to know it is there. -->
+        <package android:name="com.sec.android.app.shealth" />
     </queries>
 
     <application

@@ -102,7 +102,14 @@ class WearableConnectService(
             ),
             ProviderInfo(HealthProvider.GARMIN, ProviderKind.CLOUD, false, ProviderUnavailable.PLANNED, WATCH_METRICS),
             ProviderInfo(HealthProvider.FITBIT, ProviderKind.CLOUD, false, ProviderUnavailable.PLANNED, WATCH_METRICS),
-            ProviderInfo(HealthProvider.SAMSUNG_HEALTH, ProviderKind.ON_DEVICE, false, ProviderUnavailable.PLANNED, PLATFORM_METRICS),
+            // Samsung Health writes into Health Connect, and that is how the app reads it;
+            // the app shows it on Android phones only.
+            ProviderInfo(
+                provider = HealthProvider.SAMSUNG_HEALTH,
+                kind = ProviderKind.ON_DEVICE,
+                available = true,
+                metrics = PLATFORM_METRICS,
+            ),
         )
     }
 

@@ -1745,6 +1745,8 @@ object StringsRu : Strings {
         }
         override val installHealthConnect = "Установить Health Connect"
         override val healthConnectMissing = "На этом телефоне нет Health Connect или он устарел. Установите его из Google Play и вернитесь сюда."
+        override val samsungSyncHint = "Разрешите Samsung Health записывать в Health Connect: на открывшейся странице включите «Разрешить все»."
+        override val openSamsungHealth = "Разрешения Samsung"
         override fun deviceConnected(name: String) = "$name подключён — данные загружаются"
         override val accessDenied = "Доступ не дан — ничего не прочитано"
         override fun periodsImported(count: Int) = "Добавлено периодов: $count"

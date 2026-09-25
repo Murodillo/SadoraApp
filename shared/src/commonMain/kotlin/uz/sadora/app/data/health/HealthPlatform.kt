@@ -65,6 +65,21 @@ interface HealthPlatform {
     /** Where an unavailable store is fixed: Health Connect's Play listing. A no-op on iOS. */
     fun openStore()
 
+    /**
+     * Whether an app that writes into this store, and that she would name on its own, is
+     * on the phone — Samsung Health on a Galaxy writes into Health Connect.
+     */
+    suspend fun isWriterInstalled(writer: HealthProvider): Boolean = false
+
+    /** Whether that app has been allowed to write into the store — without it nothing arrives. */
+    suspend fun isWriterWriting(writer: HealthProvider): Boolean = false
+
+    /**
+     * Where she lets that app write: the store's permission page for it, or the app's
+     * store listing when it is not installed.
+     */
+    fun openWriter(writer: HealthProvider) = Unit
+
     object None : HealthPlatform {
         override val provider: HealthProvider? = null
         override suspend fun availability() = HealthAvailability.UNSUPPORTED
