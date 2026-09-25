@@ -64,6 +64,33 @@ object SampleNormalizer {
     }
 
     /**
+     * Whether a value could have come from a body.
+     *
+     * A corrupt sample — a negative sleep, a heart rate of ten thousand, a weight of
+     * 1e308 — used to be stored and summed like any other, and the Sleep screen and the
+     * doctor page then showed the nonsense as fact. The bounds are deliberately wide:
+     * they refuse the impossible, not the unusual.
+     */
+    fun isPlausible(metric: HealthMetric, value: Double): Boolean {
+        if (!value.isFinite() || value < 0) return false
+        return when (metric) {
+            HealthMetric.STEPS -> value <= 200_000
+            HealthMetric.ACTIVE_ENERGY -> value <= 20_000
+            HealthMetric.DISTANCE -> value <= 500_000
+            HealthMetric.HEART_RATE, HealthMetric.RESTING_HEART_RATE -> value in 20.0..300.0
+            HealthMetric.HRV -> value <= 1_000
+            HealthMetric.RESPIRATORY_RATE -> value in 2.0..80.0
+            HealthMetric.BODY_TEMPERATURE, HealthMetric.SKIN_TEMPERATURE -> value in 25.0..45.0
+            HealthMetric.SLEEP_DURATION, HealthMetric.SLEEP_DEEP, HealthMetric.SLEEP_REM,
+            HealthMetric.SLEEP_LIGHT, HealthMetric.SLEEP_AWAKE -> value <= 24 * 60
+            HealthMetric.SLEEP_PERFORMANCE, HealthMetric.SLEEP_EFFICIENCY,
+            HealthMetric.RECOVERY, HealthMetric.SPO2 -> value <= 100
+            HealthMetric.WEIGHT -> value in 2.0..400.0
+            HealthMetric.STRAIN -> value <= 21
+        }
+    }
+
+    /**
      * Reduces a day's samples for one metric to a single figure.
      *
      * The reduction follows the metric, not the caller: steps sum, heart rate averages,

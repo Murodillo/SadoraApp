@@ -91,6 +91,9 @@ class MessagingService(
         if (!target.dmOpen || identities.blockedEitherWay(userId, target.userId)) {
             throw ForbiddenException(message = UNAVAILABLE)
         }
+        // The line is checked before the thread exists: an empty or over-long first
+        // message used to open an empty conversation on the other side's list anyway.
+        validateBody(request.body)
         val thread = messages.openConversation(userId, target.userId)
         send(userId, thread, request.body)
         return thread(userId, thread.id)
@@ -103,11 +106,16 @@ class MessagingService(
         return send(userId, thread, request.body).toDto(userId)
     }
 
-    private suspend fun send(userId: Uuid, thread: ConversationRecord, rawBody: String): MessageRecord {
-        community.requireCanWrite(userId)
+    private fun validateBody(rawBody: String): String {
         val body = rawBody.trim()
         if (body.isEmpty()) throw ValidationException("body", "Xabar bo'sh bo'lishi mumkin emas")
         if (body.length > Limits.MESSAGE_MAX) throw ValidationException("body", "Eng ko'pi ${Limits.MESSAGE_MAX} belgi")
+        return body
+    }
+
+    private suspend fun send(userId: Uuid, thread: ConversationRecord, rawBody: String): MessageRecord {
+        community.requireCanWrite(userId)
+        val body = validateBody(rawBody)
         if (messages.messagesSince(userId, now() - 24.hours) >= MAX_MESSAGES_PER_DAY) {
             throw RateLimitedException("Bir kunda $MAX_MESSAGES_PER_DAY tadan ko'p xabar yozib bo'lmaydi")
         }
@@ -132,6 +140,10 @@ class MessagingService(
     }
 
     private suspend fun notify(recipient: Uuid, sender: Uuid, message: MessageRecord) {
+        // Her notification switch applies to a message like to a reminder: off means
+        // nothing is queued, rather than a push the scheduler would deliver anyway.
+        val settings = notifications.settingsOf(recipient)
+        if (!settings.enabled || !settings.isCategoryEnabled(NotificationCategory.SYSTEM)) return
         val alias = identities.identitiesFor(listOf(sender))[sender]?.alias ?: CommunityService.FALLBACK_ALIAS
         notifications.enqueue(
             userId = recipient,

@@ -42,11 +42,22 @@ class AuthService(
         val phone = otp.verify(request.challengeId, request.code)
         val existing = users.findByPhone(phone)
         val isNewUser = existing == null
-        val user = existing ?: users.create(
-            NewUser(phone = phone, timezone = request.device.timezone.orDefaultTimeZone()),
-        )
+        val user = existing ?: createByPhone(phone, request.device)
         return completeSignIn(user, request.device, isNewUser, AuthProvider.PHONE, context)
     }
+
+    /**
+     * Two codes for one number verified at the same moment — two phones, or one phone
+     * tapping twice — both find no account and both try to create it. The unique index
+     * on the phone refuses the second insert; that refusal means the account now exists,
+     * so it is read back instead of surfacing as an internal error.
+     */
+    private suspend fun createByPhone(phone: String, device: DeviceInfo): UserRecord =
+        try {
+            users.create(NewUser(phone = phone, timezone = device.timezone.orDefaultTimeZone()))
+        } catch (conflict: org.jetbrains.exposed.v1.exceptions.ExposedSQLException) {
+            users.findByPhone(phone) ?: throw conflict
+        }
 
     // ---------------------------------------------------------------- social
 

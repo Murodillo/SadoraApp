@@ -42,6 +42,7 @@ import uz.sadora.server.db.UserGoals
 import uz.sadora.server.db.Users
 import uz.sadora.server.db.dbValue
 import uz.sadora.server.db.enumFromDb
+import uz.sadora.server.db.escapeLike
 import uz.sadora.server.db.dbQuery
 
 /**
@@ -57,6 +58,12 @@ class UserRepository {
 
     suspend fun findById(id: Uuid): UserRecord? = dbQuery {
         Users.selectAll().where { Users.id eq id }.singleOrNull()?.toUserRecord()
+    }
+
+    /** Only the status column, for the gate that runs on every authenticated request. */
+    suspend fun statusOf(id: Uuid): AccountStatus? = dbQuery {
+        Users.select(Users.status).where { Users.id eq id }.singleOrNull()
+            ?.let { enumFromDb(it[Users.status], AccountStatus.ACTIVE) }
     }
 
     suspend fun findByPhone(phone: String): UserRecord? = dbQuery {
@@ -438,7 +445,7 @@ class UserRepository {
                 query = query.andWhere { Users.createdAt less until.toOffsetDateTime() }
             }
             filter.query?.takeIf { it.isNotBlank() }?.let { term ->
-                val pattern = "%${term.trim().lowercase()}%"
+                val pattern = "%${term.trim().take(64).lowercase().escapeLike()}%"
                 query = query.andWhere {
                     (Users.phone.lowerCase() like pattern) or
                         (Users.email.lowerCase() like pattern) or

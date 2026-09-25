@@ -93,7 +93,12 @@ fun ProfileScreen(
                                 style = Sadora.type.h3,
                                 color = c.text,
                             )
-                            Text(state.email, style = Sadora.type.body, color = c.muted)
+                            // A phone-only account has no email; the number is what she signed in with.
+                            Text(
+                                state.email.ifBlank { "+${uz.sadora.contract.UzbekPhone.COUNTRY_CODE} ${uz.sadora.contract.UzbekPhone.format(state.phone)}" },
+                                style = Sadora.type.body,
+                                color = c.muted,
+                            )
                         }
                         Icon(SadoraIcons.ChevronRight, contentDescription = null, Modifier.size(IconSize.md), tint = c.muted2)
                     }

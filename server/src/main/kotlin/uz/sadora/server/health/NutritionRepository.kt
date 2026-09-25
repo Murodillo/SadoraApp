@@ -30,6 +30,7 @@ import uz.sadora.server.db.FoodItems
 import uz.sadora.server.db.Meals
 import uz.sadora.server.db.NutritionGoalsTable
 import uz.sadora.server.db.dbQuery
+import uz.sadora.server.db.escapeLike
 import uz.sadora.server.db.dbValue
 import uz.sadora.server.db.enumFromDb
 
@@ -190,7 +191,8 @@ class NutritionRepository {
     suspend fun searchFoods(query: String?, limit: Int): List<FoodItem> = dbQuery {
         var statement = FoodItems.selectAll().where { FoodItems.active eq true }
         query?.trim()?.takeIf { it.isNotEmpty() }?.let { term ->
-            statement = statement.andWhere { FoodItems.name.lowerCase() like "%${term.lowercase()}%" }
+            // `%` and `_` are wildcards to LIKE; typed by a user they are just characters.
+            statement = statement.andWhere { FoodItems.name.lowerCase() like "%${term.take(64).lowercase().escapeLike()}%" }
         }
         statement
             .orderBy(FoodItems.name to SortOrder.ASC)

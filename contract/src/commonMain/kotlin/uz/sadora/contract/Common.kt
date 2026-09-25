@@ -95,6 +95,8 @@ object ErrorCodes {
     const val TOKEN_REVOKED = "token_revoked"
     const val SOCIAL_TOKEN_INVALID = "social_token_invalid"
     const val ACCOUNT_BLOCKED = "account_blocked"
+    /** Admin sign-in: the password was right and the account wants its 2FA code next. */
+    const val TOTP_REQUIRED = "totp_required"
     const val ENTITLEMENT_REQUIRED = "entitlement_required"
 
     /** Health data was sent without the consent that permits storing it. */

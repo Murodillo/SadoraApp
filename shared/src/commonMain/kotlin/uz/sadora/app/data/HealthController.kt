@@ -299,6 +299,20 @@ class HealthController(
     }
 
     /**
+     * Whether [day] is the server's record for [date], fetching it when it is not.
+     *
+     * A partial write — one chip, one dial — is built on top of that record, so without
+     * it there is nothing safe to build on. With no backend (previews, tests) the store
+     * is the record, and the answer is yes.
+     */
+    suspend fun hasDayRecord(date: LocalDate): Boolean {
+        if (cycleApi == null) return true
+        if (day?.date == date) return true
+        loadDay(date)
+        return day?.date == date
+    }
+
+    /**
      * The last [days] days of records, for the screens that count how often something
      * happened rather than showing one day.
      *

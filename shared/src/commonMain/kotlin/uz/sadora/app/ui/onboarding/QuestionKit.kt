@@ -610,7 +610,12 @@ fun WheelPicker(
             if (listState.firstVisibleItemScrollOffset > rowPx / 2f) first + 1 else first
         }
     }
-    LaunchedEffect(centred) { onSelect(centred.coerceIn(0, items.lastIndex)) }
+    // Only a wheel she has actually turned reports a value. The first composition used
+    // to fire `onSelect` with the row the wheel happened to open on, so a body question
+    // she skipped still sent 164 cm and 58 kg to the server as if she had said so.
+    var touched by remember { mutableStateOf(false) }
+    LaunchedEffect(listState.isScrollInProgress) { if (listState.isScrollInProgress) touched = true }
+    LaunchedEffect(centred) { if (touched) onSelect(centred.coerceIn(0, items.lastIndex)) }
 
     Box(modifier.height(rowHeight * visibleRows), contentAlignment = Alignment.Center) {
         Box(
@@ -672,8 +677,6 @@ fun WheelPicker(
 }
 
 // ---------------------------------------------------------------- calendar
-
-private val weekdayInitials = listOf("Du", "Se", "Ch", "Pa", "Ju", "Sh", "Ya")
 
 /**
  * One month at a time, with arrows either side of the month's name — the deck's
@@ -741,7 +744,7 @@ fun CalendarPicker(
         }
 
         Row(Modifier.fillMaxWidth()) {
-            weekdayInitials.forEach { initial ->
+            strings.dates.weekdaysShort.forEach { initial ->
                 Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
                     Text(
                         initial,

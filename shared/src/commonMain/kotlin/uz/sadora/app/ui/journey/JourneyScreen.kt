@@ -594,12 +594,14 @@ private fun PregnancyJourney(state: AppState, health: HealthController, onOpen: 
                     )
                 }
                 // The day within the week, counted from the same anchor as the week.
+                // Obstetric notation: the week is complete weeks, the day 0–6 within it.
+                // "24 weeks, day 7" never exists; the old "+ 1" produced it once a week.
                 val due = state.dueDate
                 val dayOfWeek = due?.let {
-                    ((280 - state.today.daysUntil(it)) % 7).coerceIn(0, 6) + 1
+                    ((280 - state.today.daysUntil(it)) % 7).coerceIn(0, 6)
                 }
                 Text(
-                    if (dayOfWeek != null) {
+                    if (dayOfWeek != null && dayOfWeek > 0) {
                         t.weekAndDay(state.pregnancyWeek, dayOfWeek)
                     } else {
                         t.weekOnly(state.pregnancyWeek)

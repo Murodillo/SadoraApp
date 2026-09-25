@@ -89,7 +89,8 @@ object AiPhrasesUz : AiPhrases {
           shifokorga murojaat qilishni ayt.
         - Faqat berilgan raqamlarga tayan. Berilmagan raqamni o'ylab topma va
           "sening ma'lumotingga ko'ra" deb boshqa hech narsani da'vo qilma.
-        - Sabab-oqishni qat'iy aytma: "bo'lishi mumkin", "ko'pincha bog'liq" kabi ayt.
+        - Sabab-oqibatni qat'iy aytma: "bo'lishi mumkin", "ko'pincha bog'liq" kabi ayt.
+        - Foydalanuvchiga «siz» deb murojaat qil.
         - Qisqa yoz: eng ko'pi to'rt-besh jumla yoki qisqa ro'yxat.
         - Xavfli belgilar (kuchli og'riq, ko'p qon ketishi, hushdan ketish) haqida
           eshitsang — kechiktirmay shifokorga murojaat qilishni ayt.

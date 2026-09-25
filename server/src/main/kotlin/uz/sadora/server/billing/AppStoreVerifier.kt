@@ -31,11 +31,22 @@ class AppStoreVerifier(
     private val bundleIds: Set<String>,
     private val root: X509Certificate = pinnedRoot(),
     private val clock: () -> Instant = { now() },
+    /**
+     * Whether a sandbox transaction counts. Apple signs sandbox and TestFlight purchases
+     * with the very same chain as paid ones, so the signature alone cannot tell them
+     * apart — only the payload's `environment` can. True on a laptop and on staging,
+     * where testers are the only buyers; false in production, or anybody with a
+     * TestFlight build could give herself Premium for nothing.
+     */
+    private val allowSandbox: Boolean = true,
 ) {
 
     fun verify(productId: String, signedTransaction: String): VerifiedPurchase {
         val payload = verifiedPayload(signedTransaction)
         if (payload.bundleId !in bundleIds) throw ReceiptRejectedException("The transaction is for another app")
+        if (!allowSandbox && !payload.environment.equals("Production", ignoreCase = true)) {
+            throw ReceiptRejectedException("The transaction is not from the production App Store")
+        }
         if (payload.productId != productId) throw ReceiptRejectedException("The transaction is for a different product")
         if (payload.revocationDate != null) throw ReceiptRejectedException("The transaction was refunded or revoked")
         val expiresAt = payload.expiresDate?.let(Instant::fromEpochMilliseconds)

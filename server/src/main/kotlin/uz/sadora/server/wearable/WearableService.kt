@@ -59,8 +59,9 @@ class WearableService(
                 return@forEach
             }
             // A watch whose clock is wrong can report tomorrow; those samples would sit
-            // in a day the user cannot see and quietly skew it when it arrives.
-            if (normalized.localDate > today) {
+            // in a day the user cannot see and quietly skew it when it arrives. A value no
+            // body could produce is refused the same way, before it can be summed.
+            if (normalized.localDate > today || !SampleNormalizer.isPlausible(normalized.metric, normalized.value)) {
                 rejected++
                 return@forEach
             }

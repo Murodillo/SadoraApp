@@ -12,6 +12,7 @@ import org.jetbrains.exposed.v1.core.lessEq
 import org.jetbrains.exposed.v1.jdbc.andWhere
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insert
+import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.update
 import org.jetbrains.exposed.v1.jdbc.upsert
@@ -129,16 +130,17 @@ class MedicationRepository {
     }
 
     suspend fun adjustStock(userId: Uuid, id: Uuid, delta: Int): Int? = dbQuery {
-        val current = Medications.selectAll()
+        // The arithmetic is the database's: two taps on two doses used to both read 10
+        // and both write 9. `delta` comes from the service, never from a request, and the
+        // ids were parsed as UUIDs, so the statement carries nothing a caller typed.
+        exec(
+            "UPDATE medications SET stock_units = GREATEST(COALESCE(stock_units, 0) + ($delta), 0), " +
+                "updated_at = now() WHERE id = '$id' AND user_id = '$userId'",
+        )
+        Medications.select(Medications.stockUnits)
             .where { (Medications.id eq id) and (Medications.userId eq userId) }
             .singleOrNull()
             ?.get(Medications.stockUnits)
-        val updated = ((current ?: 0) + delta).coerceAtLeast(0)
-        Medications.update({ (Medications.id eq id) and (Medications.userId eq userId) }) {
-            it[stockUnits] = updated
-            it[updatedAt] = now().toOffsetDateTime()
-        }
-        updated
     }
 
     // ---------------------------------------------------------------- intakes
@@ -180,7 +182,8 @@ class MedicationRepository {
     ): DoseStatus = dbQuery {
         val previous = MedicationIntakes.selectAll()
             .where {
-                (MedicationIntakes.medicationId eq medicationId) and
+                (MedicationIntakes.userId eq userId) and
+                    (MedicationIntakes.medicationId eq medicationId) and
                     (MedicationIntakes.dueOn eq dueOn) and
                     (MedicationIntakes.dueAt eq dueAt)
             }
@@ -205,9 +208,10 @@ class MedicationRepository {
     }
 
     /** Undoes a record, putting the dose back to pending. */
-    suspend fun clearIntake(medicationId: Uuid, dueOn: LocalDate, dueAt: LocalTime): Unit = dbQuery {
+    suspend fun clearIntake(userId: Uuid, medicationId: Uuid, dueOn: LocalDate, dueAt: LocalTime): Unit = dbQuery {
         MedicationIntakes.deleteWhere {
-            (MedicationIntakes.medicationId eq medicationId) and
+            (MedicationIntakes.userId eq userId) and
+                (MedicationIntakes.medicationId eq medicationId) and
                 (MedicationIntakes.dueOn eq dueOn) and
                 (MedicationIntakes.dueAt eq dueAt)
         }

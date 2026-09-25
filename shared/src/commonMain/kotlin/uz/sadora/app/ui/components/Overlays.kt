@@ -30,10 +30,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
+import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.ui.semantics.Role
+import uz.sadora.app.design.MinTouchTarget
 import uz.sadora.app.design.Radius
 import uz.sadora.app.design.Sadora
 import uz.sadora.app.design.SadoraIcons
 import uz.sadora.app.design.Spacing
+import uz.sadora.app.i18n.strings
 
 /**
  * Centre modal — destructive confirmations such as "Hisobni o'chirish?".
@@ -49,10 +53,13 @@ fun SadoraDialog(
     confirmText: String,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
-    cancelText: String = "Bekor",
+    cancelText: String = strings.common.cancel,
     destructive: Boolean = true,
 ) {
     val c = Sadora.colors
+    // System back closes the dialog, as it closes a sheet. Without this it popped the
+    // screen underneath and took the open confirmation with it.
+    SystemBackHandler(enabled = visible, onBack = onDismiss)
     AnimatedVisibility(visible, enter = fadeIn(), exit = fadeOut()) {
         Box(
             Modifier
@@ -266,10 +273,13 @@ fun ErrorStrip(text: String, onRetry: (() -> Unit)? = null, modifier: Modifier =
         Text(text, style = Sadora.type.body, color = c.danger, modifier = Modifier.weight(1f))
         if (onRetry != null) {
             Text(
-                "Qayta urinish",
+                strings.common.retry,
                 style = Sadora.type.body.copy(fontWeight = FontWeight.SemiBold),
                 color = c.danger,
-                modifier = Modifier.noRippleClickable(onClick = onRetry),
+                modifier = Modifier
+                    .defaultMinSize(minHeight = MinTouchTarget)
+                    .noRippleClickable(role = Role.Button, onClick = onRetry)
+                    .padding(horizontal = Spacing.xs),
             )
         }
     }

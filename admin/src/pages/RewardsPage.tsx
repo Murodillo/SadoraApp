@@ -24,12 +24,16 @@ import { Card, ErrorNotice, Loading, Stat, Switch, formatDateTime } from '../com
  * paid, and rewriting history would make the wallet's own explanation wrong.
  */
 export function RewardsPage() {
-  const overview = useRewardsOverview()
-  const rules = useCoinRules()
+  const { can } = useAuth()
+  // Support is here for the redemption table — a partner phoning in a code — and may
+  // not read the rules or the totals. The page used to ask for both, be refused, and
+  // show nothing but the refusal.
+  const readsRules = can(['OWNER', 'ADMIN', 'ANALYST'])
+  const overview = useRewardsOverview(readsRules)
+  const rules = useCoinRules(readsRules)
   const save = useSaveCoinRule()
   const redemptions = useRedemptions(50)
   const updateRedemption = useUpdateRedemption()
-  const { can } = useAuth()
   const { notify } = useToast()
   const editable = can(['OWNER', 'ADMIN'])
 
@@ -64,6 +68,8 @@ export function RewardsPage() {
 
       {save.error && <ErrorNotice error={save.error} />}
 
+      {readsRules && (
+      <>
       <div className="grid stat-row">
         <Stat
           label="Muomaladagi gul"
@@ -142,6 +148,8 @@ export function RewardsPage() {
           </table>
         </div>
       </Card>
+      </>
+      )}
 
       <Card title="Berilgan kodlar">
         {updateRedemption.error && <ErrorNotice error={updateRedemption.error} />}

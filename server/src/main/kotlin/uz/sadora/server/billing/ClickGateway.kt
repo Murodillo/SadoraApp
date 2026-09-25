@@ -94,8 +94,13 @@ class ClickGateway(
             return error(request, INCORRECT_AMOUNT, "Incorrect amount")
         }
 
-        // Repeated Completes answer from the row: the subscription is granted once.
-        if (transaction.state == PaymentState.PENDING) billing.activate(transaction)
+        // Repeated Completes answer from the row: the subscription is granted once. A row
+        // paid but never granted — a crash between the two — is finished by the retry.
+        if (transaction.state == PaymentState.PENDING ||
+            (transaction.state == PaymentState.PAID && transaction.subscriptionId == null)
+        ) {
+            billing.activate(transaction)
+        }
 
         return Response(
             click_trans_id = request.clickTransId,

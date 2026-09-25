@@ -242,7 +242,7 @@ fun GreetingHeader(
         // profile, so the greeting itself is left as plain text.
         Avatar(name, size = MinTouchTarget, onClick = onAvatarClick)
         Box {
-            CircleIconButton(SadoraIcons.Bell, contentDescription = "Bildirishnomalar", onClick = onNotificationsClick)
+            CircleIconButton(SadoraIcons.Bell, contentDescription = strings.profile.notifications, onClick = onNotificationsClick)
             if (hasUnread) {
                 Box(
                     Modifier

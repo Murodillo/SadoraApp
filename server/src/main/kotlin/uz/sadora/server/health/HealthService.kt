@@ -170,6 +170,7 @@ class HealthService(
                 stress = existing?.stress,
                 symptoms = symptoms,
                 note = existing?.note,
+                fetalMovement = existing?.fetalMovement,
             ),
         )
         return true
@@ -216,9 +217,15 @@ class HealthService(
         val user = access.requireWritable(userId, FeatureKeys.CYCLE_PREDICTION)
         val today = now().dayIn(user.timezone)
         if (date > today) throw ValidationException("date", "Kelajakdagi kun uchun yozuv qo'shib bo'lmaydi")
+        if (date < EARLIEST_DATE) throw ValidationException("date", "Sana juda eski")
 
         request.energy?.let {
             if (it !in 1..5) throw ValidationException("energy", "1–5 oralig'ida bo'lishi kerak")
+        }
+        // Stress went unchecked while energy was checked; the column's own CHECK then
+        // turned a -1 into an internal error instead of a validation one.
+        request.stress?.let {
+            if (it !in 1..5) throw ValidationException("stress", "1–5 oralig'ida bo'lishi kerak")
         }
         request.note?.let {
             if (it.length > MAX_NOTE_LENGTH) {
@@ -232,10 +239,11 @@ class HealthService(
             throw ValidationException("symptoms", "Noma'lum simptom: ${unknown.joinToString()}")
         }
 
-        // An empty day is a removal, not a row full of nulls.
+        // An empty day is a removal, not a row full of nulls — of the sheet's own fields.
+        // The water counter shares the row and is not the sheet's to clear.
         if (request.toDailyLog(date).isEmpty) {
-            repository.deleteLog(userId, date)
-            return DailyLog(date = date)
+            repository.clearLog(userId, date)
+            return repository.logOn(userId, date) ?: DailyLog(date = date)
         }
 
         repository.saveLog(userId, date, request)
@@ -264,6 +272,9 @@ class HealthService(
         if (startedOn > today) {
             throw ValidationException("startedOn", "Kelajakdagi sana bo'lishi mumkin emas")
         }
+        if (startedOn < EARLIEST_DATE) {
+            throw ValidationException("startedOn", "Sana juda eski")
+        }
         if (endedOn != null) {
             if (endedOn < startedOn) {
                 throw ValidationException("endedOn", "Boshlanishdan oldin tugashi mumkin emas")
@@ -289,13 +300,23 @@ class HealthService(
         flow = flow,
         mood = mood,
         energy = energy,
+        // Both were missing here, so a day carrying only a stress score or the foetal
+        // movement answer counted as empty — and was deleted instead of saved.
+        stress = stress,
         symptoms = symptoms,
         note = note,
+        fetalMovement = fetalMovement,
     )
 
     private companion object {
         const val MAX_CALENDAR_DAYS = 400
         const val MAX_PERIOD_DAYS = Limits.PERIOD_LENGTH_MAX
         const val MAX_NOTE_LENGTH = Limits.DAY_NOTE_MAX
+
+        /**
+         * Nothing in the product is older than this. A period dated 1900 used to be
+         * accepted and then sat at the bottom of the history for good.
+         */
+        val EARLIEST_DATE = LocalDate(2000, 1, 1)
     }
 }

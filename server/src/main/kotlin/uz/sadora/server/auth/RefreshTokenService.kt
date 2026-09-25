@@ -1,5 +1,6 @@
 package uz.sadora.server.auth
 
+import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
 import kotlin.uuid.Uuid
 import kotlinx.coroutines.Dispatchers
@@ -73,15 +74,30 @@ class RefreshTokenService(
 
         val outcome = withContext(Dispatchers.IO) {
             transaction {
+                // The row is locked for the rotation. Without the lock two requests
+                // carrying the same token both read it unspent, both issued a successor
+                // and neither noticed the other — the "single use" below was not.
                 val row = RefreshTokens.selectAll().where { RefreshTokens.tokenHash eq hash }
+                    .forUpdate()
                     .singleOrNull() ?: return@transaction RotationOutcome.Unknown
 
                 val userId = row[RefreshTokens.userId]
                 val familyId = row[RefreshTokens.familyId]
 
-                if (row[RefreshTokens.revokedAt] != null) {
-                    revokeFamilyIn(familyId, "refresh_token_reuse")
-                    return@transaction RotationOutcome.Reused(userId, familyId)
+                val spentAt = row[RefreshTokens.revokedAt]?.toKotlinInstant()
+                if (spentAt != null) {
+                    // A token rotated a moment ago and presented again is, almost always,
+                    // the same phone retrying a request whose answer was lost — the
+                    // connection dropped after the server rotated, or two of its calls hit
+                    // 401 together. Within the grace window that retry gets a successor of
+                    // its own in the same family; a replay any later than that is what the
+                    // family revocation exists for.
+                    val benignRetry = row[RefreshTokens.revokedReason] == ROTATED &&
+                        spentAt > now() - REUSE_GRACE
+                    if (!benignRetry) {
+                        revokeFamilyIn(familyId, "refresh_token_reuse")
+                        return@transaction RotationOutcome.Reused(userId, familyId)
+                    }
                 }
                 if (row[RefreshTokens.expiresAt].toKotlinInstant() <= now()) {
                     return@transaction RotationOutcome.Expired
@@ -97,9 +113,14 @@ class RefreshTokenService(
                     it[issuedAt] = now().toOffsetDateTime()
                     it[RefreshTokens.expiresAt] = successorExpiry.toOffsetDateTime()
                 }
-                RefreshTokens.update({ RefreshTokens.id eq row[RefreshTokens.id] }) {
+                // Only an unspent row is stamped: a retry inside the grace window must
+                // not move the window forward, or a chain of replays could keep a spent
+                // token alive indefinitely.
+                RefreshTokens.update({
+                    (RefreshTokens.id eq row[RefreshTokens.id]) and RefreshTokens.revokedAt.isNull()
+                }) {
                     it[revokedAt] = now().toOffsetDateTime()
-                    it[revokedReason] = "rotated"
+                    it[revokedReason] = ROTATED
                     it[replacedBy] = successorId
                 }
                 RotationOutcome.Rotated(userId, familyId)
@@ -169,5 +190,16 @@ class RefreshTokenService(
         data object Expired : RotationOutcome
         data class Reused(val userId: Uuid, val familyId: Uuid) : RotationOutcome
         data class Rotated(val userId: Uuid, val familyId: Uuid) : RotationOutcome
+    }
+
+    private companion object {
+        const val ROTATED = "rotated"
+
+        /**
+         * How long after a rotation the spent token is still taken for a retry. Long
+         * enough for a lost response and a phone's second attempt, far too short for a
+         * copy taken from a backup to be of use.
+         */
+        val REUSE_GRACE = 15.seconds
     }
 }

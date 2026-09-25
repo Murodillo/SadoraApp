@@ -45,6 +45,12 @@ class GooglePlayVerifier(
     private val packageName: String,
     private val serviceAccount: ServiceAccount,
     private val apiBase: String = "https://androidpublisher.googleapis.com",
+    /**
+     * Whether a licence tester's purchase — one Play never charged for — counts. True
+     * on a laptop and on staging, where those are the only purchases there are; false
+     * in production, where a tester's free receipt must not become a free subscription.
+     */
+    private val allowTestPurchases: Boolean = true,
 ) {
     private val tokenLock = Mutex()
     private var accessToken: String? = null
@@ -69,6 +75,11 @@ class GooglePlayVerifier(
     internal fun interpret(purchase: SubscriptionPurchaseV2, productId: String): VerifiedPurchase {
         if (purchase.subscriptionState !in PAID_STATES) {
             throw ReceiptRejectedException("Subscription is ${purchase.subscriptionState}")
+        }
+        // Play marks a licence tester's purchase with a `testPurchase` object; no money
+        // moved, so outside development nothing is granted for it.
+        if (purchase.testPurchase != null && !allowTestPurchases) {
+            throw ReceiptRejectedException("Test purchases are not accepted here")
         }
         val line = purchase.lineItems.firstOrNull { it.productId == productId }
             ?: throw ReceiptRejectedException("The token is for a different product")
@@ -161,6 +172,8 @@ internal data class SubscriptionPurchaseV2(
     val latestOrderId: String? = null,
     val lineItems: List<LineItem> = emptyList(),
     val externalAccountIdentifiers: ExternalAccountIdentifiers? = null,
+    /** Present, as an empty object, only on a licence tester's purchase. */
+    val testPurchase: TestPurchase? = null,
 ) {
     @Serializable
     data class LineItem(
@@ -174,6 +187,10 @@ internal data class SubscriptionPurchaseV2(
 
     @Serializable
     data class ExternalAccountIdentifiers(val obfuscatedExternalAccountId: String? = null)
+
+    /** Play sends `"testPurchase": {}` — no fields, only presence. */
+    @Serializable
+    class TestPurchase
 }
 
 /** Routes each store to its verifier; a store with no credentials refuses, as before. */

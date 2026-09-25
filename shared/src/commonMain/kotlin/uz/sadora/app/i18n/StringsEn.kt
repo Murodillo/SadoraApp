@@ -102,7 +102,7 @@ object StringsEn : Strings {
             "else, and you can delete it whenever you like."
 
         override val birthYearTitle = "What year were you born?"
-        override val birthYearSubtitle = "Your age makes the predictions closer."
+        override val birthYearSubtitle = "Your age makes the predictions more accurate."
 
         override val goalsTitle = "What would you like help with?"
         override val goalsSubtitle = "Choose as many as you like."
@@ -194,7 +194,7 @@ object StringsEn : Strings {
         override val markMore = "Mark another?"
         override fun markMoreBody(marked: Int) =
             "You have marked $marked so far. With three we can measure the length of your " +
-                "cycle, and the prediction gets a great deal closer."
+                "cycle, and the prediction gets a great deal more accurate."
         override val iWillMark = "I will mark one"
         override fun markedWithAverage(filled: Int, total: Int, averageCycle: Int) =
             "$filled/$total marked · average cycle $averageCycle days"
@@ -204,7 +204,7 @@ object StringsEn : Strings {
         override val regularityTitle = "Is your cycle regular?"
         override val regularitySubtitle = "Does it arrive on roughly the same day each month?"
         override val regularYes = "Yes, regular"
-        override val regularYesNote = "Good — the predictions will be closer from the start."
+        override val regularYesNote = "Good — the predictions will be more accurate from the start."
         override val regularNo = "No, it varies"
         override val regularNoNote = "We will take that into account and show how sure a prediction is."
         override val regularUnknown = "I do not know"
@@ -212,7 +212,7 @@ object StringsEn : Strings {
 
         override val sensitiveTitle = "The next questions are personal"
         override val sensitiveBody = "We will ask about contraception and trying to conceive. " +
-            "They make the predictions closer, but answering is entirely optional."
+            "They make the predictions more accurate, but answering is entirely optional."
 
         override val birthControlTitle = "Have you used contraception in the last 6 months?"
         override val birthControlSubtitle = "Some methods affect the cycle, which is why we ask."
@@ -288,6 +288,7 @@ object StringsEn : Strings {
         override val consentHealth = "I agree to my health data being processed so the app can work. "
         override val consentHealthMore = "More in the "
         override val consentTermsPrefix = "I accept the "
+        override val consentTermsSuffix = ""
         override val terms = "Terms of use"
         override val and = " and the "
         override val privacyPolicy = "Privacy policy"
@@ -723,6 +724,7 @@ object StringsEn : Strings {
         override val validation = "Something you entered is not right."
         override val sessionExpired = "Your session has ended. Please sign in again."
         override val blocked = "This account is blocked. Please contact support."
+        override val forbidden = "You cannot do this."
         override val premiumRequired = "This opens with Premium."
         override val monthlyLimit = "The monthly limit is used up."
         override val dailyLimit = "Today's limit is used up."
@@ -918,7 +920,7 @@ object StringsEn : Strings {
         override fun symptomsAndMood(symptoms: String, mood: String) = "$symptoms · mood $mood"
         override fun noSymptomsAndMood(mood: String) = "No symptoms logged · mood $mood"
         override val statsNote = "These figures rest on the cycles you have entered. The more " +
-            "there are, the closer they get."
+            "there are, the more accurate they get."
         override val regularity = "Regularity"
         override val regularSteady = "Steady"
         override val regularVaries = "Varies"
@@ -1320,7 +1322,7 @@ object StringsEn : Strings {
 
         override val scannerTitle = "Food scanner"
         override val scannerFrameHint = "Put the dish inside the frame"
-        override val scannerLightHint = "Good light makes the estimate closer"
+        override val scannerLightHint = "Good light makes the estimate more accurate"
         override val scannerGallery = "Gallery"
         override val scannerShutter = "Take a photo"
         override val scannerManual = "By hand"

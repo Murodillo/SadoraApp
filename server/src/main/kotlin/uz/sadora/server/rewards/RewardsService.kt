@@ -115,14 +115,14 @@ class RewardsService(
         val today = day ?: now().dayIn(users.findById(userId)?.timezone ?: "Asia/Tashkent")
 
         // A cap above one is counted; a cap of one (or none) is held by the index alone.
+        // The count applies whether or not the caller named the thing being paid for:
+        // a meal id keeps a retry from paying twice, it does not lift the daily ceiling —
+        // and without this, every extra meal paid until the wallet bought Premium.
         val cap = rule.dailyCap
+        if (cap != null && cap > 1 && repository.countToday(userId, reason, today) >= cap) return null
         val entryReference = when {
             reference != null -> reference
-            cap != null && cap > 1 -> {
-                val used = repository.countToday(userId, reason, today)
-                if (used >= cap) return null
-                "$today#${used + 1}"
-            }
+            cap != null && cap > 1 -> "$today#${repository.countToday(userId, reason, today) + 1}"
             else -> null
         }
 
@@ -298,18 +298,9 @@ class RewardsService(
     suspend fun adjust(userId: Uuid, amount: Int, note: String): CoinBalance {
         if (amount == 0) throw ValidationException("amount", "Nol bo'lishi mumkin emas")
         if (note.isBlank()) throw ValidationException("note", "Sabab yozilishi shart")
-        val balance = repository.balance(userId)
-        if (amount < 0 && balance.balance + amount < 0) {
-            throw ValidationException("amount", "Balansdan ko'p ayirib bo'lmaydi")
-        }
-        repository.award(
-            userId = userId,
-            reason = CoinReasons.ADMIN_ADJUSTMENT,
-            amount = amount,
-            reference = Uuid.random().toString(),
-            note = note.trim(),
-        )
-        return repository.balance(userId)
+        // The balance check and the row share the wallet lock, as a redemption does.
+        return repository.adjust(userId, amount, note.trim())
+            ?: throw ValidationException("amount", "Balansdan ko'p ayirib bo'lmaydi")
     }
 
     suspend fun adminCard(userId: Uuid): AdminRewardsCard {

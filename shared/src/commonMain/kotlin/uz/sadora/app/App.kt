@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -156,6 +157,17 @@ fun App(graph: SadoraGraph? = null) {
     }
 
     LaunchedEffect(graph) { state.appVersion = graph?.appVersion }
+
+    // The session can end while she is inside: a refresh the server refuses, an account
+    // blocked by an operator. The store then cleared itself and nothing else moved — every
+    // call failed quietly and the shell kept showing her data. Now the app leaves the
+    // shell the moment the session is gone; the phase change above resets the store.
+    val sessionState = graph?.session?.state?.collectAsState()?.value
+    LaunchedEffect(sessionState) {
+        if (sessionState is SessionState.SignedOut && navigator.phase == AppPhase.Main) {
+            navigator.goTo(AppPhase.SignIn)
+        }
+    }
 
     // Analytics follows her consent, and nothing else: off until the box is ticked,
     // off again the moment it is unticked.

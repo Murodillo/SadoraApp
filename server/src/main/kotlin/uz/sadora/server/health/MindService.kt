@@ -3,6 +3,7 @@ package uz.sadora.server.health
 import kotlin.uuid.Uuid
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.daysUntil
 import kotlinx.datetime.minus
 import uz.sadora.contract.FeatureKeys
 import uz.sadora.contract.JournalEntry
@@ -76,19 +77,9 @@ class MindService(
         checkIn.energy?.let { validateScale("energy", it) }
         checkIn.stress?.let { validateScale("stress", it) }
 
-        val existing = health.logOn(userId, today)
-        health.saveLog(
-            userId = userId,
-            date = today,
-            request = uz.sadora.contract.SaveDailyLogRequest(
-                flow = existing?.flow,
-                mood = checkIn.mood,
-                energy = checkIn.energy,
-                stress = checkIn.stress,
-                symptoms = existing?.symptoms.orEmpty(),
-                note = existing?.note,
-            ),
-        )
+        // Only the three dials are written; the rest of the row is left exactly as the
+        // cycle sheet had it, whatever else lands on it at the same moment.
+        health.saveCheckIn(userId, today, checkIn.mood, checkIn.energy, checkIn.stress)
         rewards.logged(userId, CoinReasons.CHECK_IN)
         return checkIn
     }
@@ -98,6 +89,9 @@ class MindService(
     suspend fun entries(userId: Uuid, from: LocalDate, to: LocalDate): List<JournalEntry> {
         access.requireUser(userId)
         if (from > to) throw ValidationException("from", "Boshlanish sanasi tugashdan keyin bo'lishi mumkin emas")
+        if (from.daysUntil(to) > MAX_RANGE_DAYS) {
+            throw ValidationException("to", "Eng ko'pi $MAX_RANGE_DAYS kunlik oraliq")
+        }
         return mind.entriesBetween(userId, from, to)
     }
 
@@ -154,6 +148,8 @@ class MindService(
 
     private companion object {
         const val WINDOW_DAYS = 14
+        /** The same ceiling as the calendar and the logs: a journal is read in windows, not whole. */
+        const val MAX_RANGE_DAYS = 400
         const val RECENT_ENTRIES = 20
         const val RECENT_PRACTICES = 10
         const val MAX_BODY_LENGTH = Limits.JOURNAL_MAX

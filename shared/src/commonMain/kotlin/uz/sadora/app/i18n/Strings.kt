@@ -344,6 +344,8 @@ interface ErrorStrings {
     val validation: String
     val sessionExpired: String
     val blocked: String
+    /** A plain refusal — not hers, or closed to her — which is not the same as a block. */
+    val forbidden: String
     val premiumRequired: String
     val monthlyLimit: String
     val dailyLimit: String
@@ -644,6 +646,12 @@ interface OnboardingStrings {
     val consentHealth: String
     val consentHealthMore: String
     val consentTermsPrefix: String
+    /**
+     * What follows the two linked document names. Uzbek puts the verb last — "Men
+     * Foydalanish shartlari va Maxfiylik siyosatini qabul qilaman" — so a prefix alone
+     * left the consent line without one; the other languages leave this empty.
+     */
+    val consentTermsSuffix: String
     val terms: String
     val and: String
     val privacyPolicy: String

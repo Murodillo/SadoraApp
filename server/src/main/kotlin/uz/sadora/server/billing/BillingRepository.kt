@@ -9,6 +9,7 @@ import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.or
 import org.jetbrains.exposed.v1.core.neq
+import org.jetbrains.exposed.v1.core.isNotNull
 import org.jetbrains.exposed.v1.core.isNull
 import org.jetbrains.exposed.v1.core.greaterEq
 import org.jetbrains.exposed.v1.jdbc.andWhere
@@ -193,14 +194,37 @@ class BillingRepository {
         }
     }
 
-    suspend fun markCancelled(id: Uuid, reason: Int?, state: PaymentState = PaymentState.CANCELLED): Unit = dbQuery {
+    /**
+     * Cancels a pending transaction — and only a pending one. The callers read the state
+     * first, but a "paid" claim can land between their read and this write; the condition
+     * here is what keeps a cancel callback from overwriting a granted subscription's row.
+     */
+    suspend fun markCancelled(id: Uuid, reason: Int?, state: PaymentState = PaymentState.CANCELLED): Boolean = dbQuery {
         val timestamp = now().toOffsetDateTime()
-        PaymentTransactions.update({ PaymentTransactions.id eq id }) {
+        PaymentTransactions.update({
+            (PaymentTransactions.id eq id) and (PaymentTransactions.state eq PaymentState.PENDING.dbValue())
+        }) {
             it[PaymentTransactions.state] = state.dbValue()
             it[cancelledAt] = timestamp
             it[cancelReason] = reason
             it[updatedAt] = timestamp
-        }
+        } > 0
+    }
+
+    /**
+     * Payme's transactions inside a window, for their `GetStatement` — a dedicated query,
+     * because "the newest thousand of every provider, then filter" left out anything
+     * older than a thousand Click and store rows.
+     */
+    suspend fun paymeStatement(fromMillis: Long, toMillis: Long): List<TransactionRecord> = dbQuery {
+        PaymentTransactions.selectAll()
+            .where {
+                (PaymentTransactions.provider eq PaymentProvider.PAYME.dbValue()) and
+                    PaymentTransactions.externalId.isNotNull()
+            }
+            .orderBy(PaymentTransactions.createdAt to SortOrder.ASC)
+            .map { it.toRecord() }
+            .filter { (it.providerCreatedAt ?: it.createdAt.toEpochMilliseconds()) in fromMillis..toMillis }
     }
 
     /**

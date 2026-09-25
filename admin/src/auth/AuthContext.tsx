@@ -13,7 +13,18 @@ interface AuthValue {
 
 const AuthContext = createContext<AuthValue | null>(null)
 
-export function AuthProvider({ children }: { children: ReactNode }) {
+export function AuthProvider({
+  children,
+  onSessionEnd,
+}: {
+  children: ReactNode
+  /**
+   * Runs whenever a session ends, however it ends. The app clears the query cache
+   * here: on a shared machine the next operator's first paint used to show the previous
+   * one's cached user list — phones, emails — until the refetch landed.
+   */
+  onSessionEnd?: () => void
+}) {
   const [session, setSession] = useState<AdminSession | null>(() =>
     tokenStore.read() ? tokenStore.readSession<AdminSession>() : null,
   )
@@ -21,10 +32,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Any 401 anywhere in the app drops back to sign-in. The admin realm has no refresh
   // token by design — re-entering the 2FA code is the point.
   useEffect(() => {
-    const handler = () => setSession(null)
+    const handler = () => {
+      setSession(null)
+      onSessionEnd?.()
+    }
     window.addEventListener(SESSION_EXPIRED_EVENT, handler)
     return () => window.removeEventListener(SESSION_EXPIRED_EVENT, handler)
-  }, [])
+  }, [onSessionEnd])
 
   const signIn = useCallback(async (email: string, password: string, totpCode?: string) => {
     const result = await request<AdminSession>('/v1/admin/auth/login', {
@@ -40,7 +54,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = useCallback(() => {
     tokenStore.clear()
     setSession(null)
-  }, [])
+    onSessionEnd?.()
+  }, [onSessionEnd])
 
   const value = useMemo<AuthValue>(
     () => ({

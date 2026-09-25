@@ -138,7 +138,7 @@ object PregnancyWeeksEn : PregnancyWeekStrings {
 
     override val mother = listOf(
         // 4
-        "Your period is late and a test may be positive. If you have not started folic acid yet, start 400 mcg a day and tell your doctor.",
+        "Your period is late and a test may be positive. Doctors usually recommend 400 mcg of folic acid a day — if you have not started it yet, talk to your doctor.",
         // 5
         "Tiredness, tender breasts and nausea may begin. They are common signs of the hormonal changes.",
         // 6

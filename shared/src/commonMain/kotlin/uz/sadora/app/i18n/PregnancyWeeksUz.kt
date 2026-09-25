@@ -138,7 +138,7 @@ object PregnancyWeeksUz : PregnancyWeekStrings {
 
     override val mother = listOf(
         // 4
-        "Hayz kechikdi, test ijobiy chiqishi mumkin. Foliy kislotasini hali boshlamagan bo'lsangiz, kuniga 400 mkg ichishni boshlang va shifokoringizga ayting.",
+        "Hayz kechikdi, test ijobiy chiqishi mumkin. Shifokorlar odatda kuniga 400 mkg foliy kislotasi tavsiya qiladi — hali boshlamagan bo'lsangiz, shifokoringiz bilan maslahatlashing.",
         // 5
         "Charchoq, ko'krak sezuvchanligi va ko'ngil aynishi boshlanishi mumkin. Bu gormonlar o'zgarishining odatiy belgilari.",
         // 6
@@ -178,7 +178,7 @@ object PregnancyWeeksUz : PregnancyWeekStrings {
         // 23
         "Oyoqlar biroz shishishi mumkin. Oyoqlarni ko'tarib dam oling. Yuz yoki qo'llar to'satdan shishsa, darhol shifokorga murojaat qiling.",
         // 24
-        "24–28-haftalarda qandli diabetga glyukoza testi topshiriladi.",
+        "24–28-haftalarda homiladorlik diabetiga (gestatsion diabet) glyukoza testi topshiriladi.",
         // 25
         "Jig'ildon qaynashi va uyqu qiyinlashishi mumkin. Kechki ovqatni ertaroq va yengilroq qiling.",
         // 26

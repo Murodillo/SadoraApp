@@ -25,6 +25,7 @@ import uz.sadora.server.core.dayIn
 import uz.sadora.contract.CoinReasons
 import uz.sadora.server.core.RewardHooks
 import uz.sadora.server.core.now
+import uz.sadora.server.core.resolveTimeZone
 
 /**
  * Medications and their intake log.
@@ -56,7 +57,7 @@ class MedicationService(
         val target = date ?: now().dayIn(user.timezone)
         val medications = repository.listOf(userId, includeArchived = true)
         val intakes = repository.intakesBetween(userId, target, target)
-        return MedicationDay(target, buildDoses(medications, intakes, target, target))
+        return MedicationDay(target, buildDoses(medications, intakes, target, target, resolveTimeZone(user.timezone)))
     }
 
     suspend fun history(userId: Uuid, medicationId: Uuid, days: Int): MedicationHistory {
@@ -70,10 +71,11 @@ class MedicationService(
         val to = now().dayIn(user.timezone)
         val from = to.plus(-(days - 1), DateTimeUnit.DAY)
         val intakes = repository.intakesFor(userId, medicationId, from, to)
+        val zone = resolveTimeZone(user.timezone)
 
         val byDay = (0..from.daysUntil(to)).map { offset ->
             val date = from.plus(offset, DateTimeUnit.DAY)
-            MedicationDay(date, buildDoses(listOf(medication), intakes, date, date))
+            MedicationDay(date, buildDoses(listOf(medication), intakes, date, date, zone))
         }
         val allDoses = byDay.flatMap { it.doses }
 
@@ -134,7 +136,7 @@ class MedicationService(
         if (request.status == DoseStatus.PENDING) {
             val previous = repository.intakesFor(userId, id, request.dueOn, request.dueOn)
                 .firstOrNull { it.dueAt == request.dueAt }
-            repository.clearIntake(id, request.dueOn, request.dueAt)
+            repository.clearIntake(userId, id, request.dueOn, request.dueAt)
             if (previous?.status == DoseStatus.TAKEN && medication.stockUnits != null) {
                 repository.adjustStock(userId, id, +1)
             }
@@ -175,6 +177,7 @@ class MedicationService(
         intakes: List<IntakeRecord>,
         from: LocalDate,
         to: LocalDate,
+        zone: kotlinx.datetime.TimeZone,
     ): List<MedicationDose> {
         val recorded = intakes.associateBy { Triple(it.medicationId, it.dueOn, it.dueAt) }
         return (0..from.daysUntil(to)).flatMap { offset ->
@@ -192,7 +195,7 @@ class MedicationService(
                         dueAt = dueAt,
                         status = intake?.status ?: DoseStatus.PENDING,
                         takenAt = intake?.takeIf { it.status == DoseStatus.TAKEN }?.recordedAt,
-                        isLate = intake?.isLate(date, dueAt) ?: false,
+                        isLate = intake?.isLate(date, dueAt, zone) ?: false,
                     )
                 }
             }
@@ -203,10 +206,11 @@ class MedicationService(
      * Late is a fact for the history chip, not a judgement: recorded more than an hour
      * after it was due. Nothing acts on it.
      */
-    private fun IntakeRecord.isLate(date: LocalDate, dueAt: LocalTime): Boolean {
+    private fun IntakeRecord.isLate(date: LocalDate, dueAt: LocalTime, zone: kotlinx.datetime.TimeZone): Boolean {
         if (status != DoseStatus.TAKEN) return false
-        val dueInstant = kotlinx.datetime.LocalDateTime(date, dueAt)
-            .toInstant(kotlinx.datetime.TimeZone.UTC)
+        // Due times are hers, so the hour of grace is measured in her zone — read as
+        // UTC, a Tashkent dose due at 08:00 was "on time" until 14:00.
+        val dueInstant = kotlinx.datetime.LocalDateTime(date, dueAt).toInstant(zone)
         return recordedAt > dueInstant + kotlin.time.Duration.parse("1h")
     }
 

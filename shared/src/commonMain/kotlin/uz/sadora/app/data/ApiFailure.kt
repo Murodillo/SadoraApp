@@ -27,6 +27,13 @@ sealed class ApiFailure(open val message: String) {
     /** The account is blocked or pending deletion — a different screen from sign-in. */
     data class Blocked(override val message: String) : ApiFailure(message)
 
+    /**
+     * A plain refusal: not her resource, or a section closed to her. It used to be read
+     * as [Blocked], so a temporary chat restriction told her the whole account was
+     * blocked — and, on a refresh, ended the session.
+     */
+    data class Forbidden(override val message: String) : ApiFailure(message)
+
     /** A Premium-only feature. The paywall is the right response. */
     data class PremiumRequired(val featureKey: String, override val message: String) :
         ApiFailure(message)
@@ -89,7 +96,7 @@ sealed class ApiFailure(open val message: String) {
             -> Unauthorized(error.message)
 
             ErrorCodes.ACCOUNT_BLOCKED -> Blocked(error.message)
-            ErrorCodes.FORBIDDEN -> Blocked(error.message)
+            ErrorCodes.FORBIDDEN -> Forbidden(error.message)
             ErrorCodes.ENTITLEMENT_REQUIRED ->
                 PremiumRequired(error.details["feature"].orEmpty(), error.message)
 

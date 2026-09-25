@@ -19,7 +19,14 @@ object PhoneNumbers {
     fun normalize(raw: String): String = UzbekPhone.toE164(raw)
         ?: throw ValidationException("phone", "O'zbekiston raqami formatida bo'lishi kerak")
 
-    /** Masked for logs and error messages: `+998 90 *** ** 67`. */
+    /**
+     * Masked for logs and error messages: `+998 ** *** ** 67`.
+     *
+     * The country code and the last two digits are enough to recognise a line in a log
+     * next to the person who reported the problem, and too little to dial her: an
+     * earlier mask kept the operator code and the first five digits, which narrowed a
+     * number down to a hundred candidates.
+     */
     fun mask(e164: String): String =
-        if (e164.length < 6) "***" else "${e164.dropLast(4)}**${e164.takeLast(2)}"
+        if (e164.length < 6) "***" else "+${UzbekPhone.COUNTRY_CODE} ** *** ** ${e164.takeLast(2)}"
 }

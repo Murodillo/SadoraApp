@@ -6,16 +6,23 @@ import io.ktor.server.request.header
 import io.ktor.server.plugins.origin
 import io.ktor.server.request.userAgent
 import kotlin.uuid.Uuid
+import uz.sadora.contract.ErrorCodes
 import uz.sadora.server.auth.RequestContext
 import uz.sadora.server.core.ForbiddenException
 import uz.sadora.server.core.UnauthorizedException
 import uz.sadora.server.core.ValidationException
 import uz.sadora.server.plugins.AdminPrincipal
 import uz.sadora.server.plugins.AdminRole
+import uz.sadora.server.plugins.BlockedPrincipal
 import uz.sadora.server.plugins.UserPrincipal
 
-fun ApplicationCall.requireUserId(): Uuid =
-    principal<UserPrincipal>()?.userId ?: throw UnauthorizedException()
+fun ApplicationCall.requireUserId(): Uuid {
+    principal<UserPrincipal>()?.let { return it.userId }
+    // A good token for an account that may no longer act: the same refusal, with the
+    // same code, that sign-in gives — not a bare 401 the app would read as "sign in again".
+    principal<BlockedPrincipal>()?.let { throw ForbiddenException(ErrorCodes.ACCOUNT_BLOCKED, it.message) }
+    throw UnauthorizedException()
+}
 
 fun ApplicationCall.requireAdmin(): AdminPrincipal =
     principal<AdminPrincipal>() ?: throw UnauthorizedException()

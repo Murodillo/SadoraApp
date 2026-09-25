@@ -6,6 +6,7 @@ import uz.sadora.contract.PaymentProvider
 import uz.sadora.contract.PaymentState
 import uz.sadora.contract.StorePurchaseRequest
 import uz.sadora.contract.SubscriptionStatus
+import uz.sadora.server.core.ConflictException
 import uz.sadora.server.core.ValidationException
 import uz.sadora.server.entitlement.EntitlementService
 import uz.sadora.server.entitlement.SubscriptionRepository
@@ -49,19 +50,26 @@ class StorePurchaseService(
         }
 
         // The store's transaction id is the idempotency key: the same receipt sent twice
-        // — a reinstall, a restore, a retry — must not buy a second subscription.
-        repository.byExternalId(request.provider, verified.transactionId)?.let { existing ->
-            if (existing.state == PaymentState.PAID) return entitlements.subscriptionStatus(userId)
+        // — a reinstall, a restore, a retry — must not buy a second subscription. A row
+        // that exists but never reached "paid" is the trace of a crash between the two
+        // writes below; the retry picks it up rather than creating a second one the
+        // unique index would refuse.
+        val existing = repository.byExternalId(request.provider, verified.transactionId)
+        if (existing != null && existing.state == PaymentState.PAID && existing.subscriptionId != null) {
+            return entitlements.subscriptionStatus(userId)
         }
 
-        val transaction = repository.createTransaction(
+        val transaction = existing ?: repository.createTransaction(
             userId = userId,
             planId = plan.id,
             provider = request.provider,
             amountMinor = plan.priceMinor,
             currency = plan.currency,
-        )
-        repository.attachExternalId(transaction.id, verified.transactionId, null)
+        ).also { created ->
+            if (!repository.attachExternalId(created.id, verified.transactionId, null)) {
+                throw ConflictException("Bu chek allaqachon qayd etilgan")
+            }
+        }
 
         val subscriptionId = subscriptions.grant(
             userId = userId,

@@ -236,17 +236,26 @@ fun BirthYearQuestion(
         onBack = onBack,
         onSkip = onSkip,
         entry = entry,
-        footer = { AnswerFooter(visible = true) { SadoraButton(t.continueLabel, onNext) } },
+        footer = {
+            AnswerFooter(visible = true) {
+                // The year lands in the store when she confirms it, not when the wheel
+                // is first drawn — a skipped question must leave no invented birthday.
+                SadoraButton(
+                    t.continueLabel,
+                    onClick = {
+                        state.setBirthYear(FirstBirthYear + index)
+                        onNext()
+                    },
+                )
+            }
+        },
     ) {
         Spacer(Modifier.height(Spacing.md))
         Reveal(entry.value, from = 0.28f) {
             WheelPicker(
                 items = years,
                 selectedIndex = index,
-                onSelect = {
-                    index = it
-                    state.setBirthYear(FirstBirthYear + it)
-                },
+                onSelect = { index = it },
             )
         }
     }
@@ -470,14 +479,26 @@ fun CycleLengthQuestion(
         onBack = onBack,
         onSkip = onSkip,
         entry = entry,
-        footer = { AnswerFooter(visible = true) { SadoraButton(t.continueLabel, onNext) } },
+        footer = {
+            AnswerFooter(visible = true) {
+                // Continue means "this number": the wheel only writes when she turns it,
+                // so the row it opened on is committed here, not on first draw.
+                SadoraButton(
+                    t.continueLabel,
+                    onClick = {
+                        state.averageCycleLength = 21 + index
+                        onNext()
+                    },
+                )
+            }
+        },
     ) {
         Spacer(Modifier.height(Spacing.md))
         Reveal(entry.value, from = 0.28f) {
             WheelPicker(
                 items = lengths,
                 selectedIndex = index,
-                suffix = "kun",
+                suffix = strings.common.daysWord,
                 onSelect = {
                     index = it
                     state.averageCycleLength = 21 + it
@@ -508,14 +529,24 @@ fun PeriodLengthQuestion(
         onBack = onBack,
         onSkip = onSkip,
         entry = entry,
-        footer = { AnswerFooter(visible = true) { SadoraButton(t.continueLabel, onNext) } },
+        footer = {
+            AnswerFooter(visible = true) {
+                SadoraButton(
+                    t.continueLabel,
+                    onClick = {
+                        state.averagePeriodLength = 2 + index
+                        onNext()
+                    },
+                )
+            }
+        },
     ) {
         Spacer(Modifier.height(Spacing.md))
         Reveal(entry.value, from = 0.28f) {
             WheelPicker(
                 items = lengths,
                 selectedIndex = index,
-                suffix = "kun",
+                suffix = strings.common.daysWord,
                 onSelect = {
                     index = it
                     state.averagePeriodLength = 2 + it
@@ -612,7 +643,20 @@ fun BodyQuestion(
         onBack = onBack,
         onSkip = onSkip,
         entry = entry,
-        footer = { AnswerFooter(visible = true) { SadoraButton(t.continueLabel, onNext) } },
+        footer = {
+            AnswerFooter(visible = true) {
+                // Written only when she confirms: the wheels' opening rows used to land in
+                // the store on first draw, so a skipped question still sent 164 cm / 58 kg.
+                SadoraButton(
+                    t.continueLabel,
+                    onClick = {
+                        state.heightCm = (140 + heightIndex).toString()
+                        state.weightKg = (35 + weightIndex).toString()
+                        onNext()
+                    },
+                )
+            }
+        },
     ) {
         Reveal(entry.value, from = 0.26f) {
             Column {
@@ -620,11 +664,8 @@ fun BodyQuestion(
                 WheelPicker(
                     items = heights,
                     selectedIndex = heightIndex,
-                    suffix = "sm",
-                    onSelect = {
-                        heightIndex = it
-                        state.heightCm = (140 + it).toString()
-                    },
+                    suffix = strings.settings.centimetres,
+                    onSelect = { heightIndex = it },
                 )
             }
         }
@@ -634,11 +675,8 @@ fun BodyQuestion(
                 WheelPicker(
                     items = weights,
                     selectedIndex = weightIndex,
-                    suffix = "kg",
-                    onSelect = {
-                        weightIndex = it
-                        state.weightKg = (35 + it).toString()
-                    },
+                    suffix = strings.settings.kilograms,
+                    onSelect = { weightIndex = it },
                 )
             }
         }

@@ -115,7 +115,23 @@ class EntitlementService(
         if (!feature.enabled) throw EntitlementRequiredException(featureKey)
         if (feature.remainingToday == 0) throw LimitReachedException(featureKey, "day")
         if (feature.remainingThisMonth == 0) throw LimitReachedException(featureKey, "month")
-        repository.recordUse(userId, featureKey, now().dayIn(timezone), costMicros)
+
+        // The check above and the increment are separate statements, so a burst of
+        // parallel requests all read "one left" and all pass it. The increment itself is
+        // atomic and answers with the count it produced; anything past the limit is
+        // handed back and refused, so the limit holds however many arrive together.
+        val day = now().dayIn(timezone)
+        val usedToday = repository.recordUse(userId, featureKey, day, costMicros)
+        val dailyLimit = feature.dailyLimit
+        if (dailyLimit != null && usedToday > dailyLimit) {
+            repository.releaseUse(userId, featureKey, day, costMicros)
+            throw LimitReachedException(featureKey, "day")
+        }
+        val monthlyLimit = feature.monthlyLimit
+        if (monthlyLimit != null && feature.usedThisMonth + (usedToday - feature.usedToday) > monthlyLimit) {
+            repository.releaseUse(userId, featureKey, day, costMicros)
+            throw LimitReachedException(featureKey, "month")
+        }
     }
 
     private companion object {

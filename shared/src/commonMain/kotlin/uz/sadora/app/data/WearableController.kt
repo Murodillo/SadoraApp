@@ -50,7 +50,7 @@ class WearableController(
 
     /** The provider a connect flow was started for and not yet resolved. */
     var connectStarted by mutableStateOf<HealthProvider?>(null)
-        private set
+        internal set
 
     /** The last return from a provider's page: true for connected, false for refused. */
     var returned by mutableStateOf<Boolean?>(null)
@@ -189,9 +189,12 @@ class WearableController(
      * server accepts it.
      */
     suspend fun onReturned(provider: String, ok: Boolean, code: String? = null, state: String? = null) {
+        val started = connectStarted
         connectStarted = null
         val known = HealthProvider.entries.firstOrNull { it.name.equals(provider, ignoreCase = true) }
-        val completed = ok && code != null && state != null && known != null &&
+        // Only a return from a flow this app started is forwarded: a crafted link could
+        // otherwise make the signed-in app post somebody else's code and state.
+        val completed = ok && code != null && state != null && known != null && started == known &&
             api?.let { calls.run { it.complete(known, state, code) } } != null
         returned = completed
         if (completed) analytics.event(AnalyticsEvents.DEVICE_CONNECTED, mapOf("provider" to provider))

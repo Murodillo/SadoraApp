@@ -36,4 +36,13 @@ class HealthAccess(
         entitlements.requireAvailable(userId, featureKey, user.timezone)
         return user
     }
+
+    /**
+     * Spends one use of a metered feature. For the calls that cost money — the food
+     * scanner's model call — [requireWritable] only asks whether a use is available;
+     * this is what records that one was taken.
+     */
+    suspend fun consume(userId: Uuid, featureKey: String, timezone: String, costMicros: Long = 0) {
+        entitlements.consume(userId, featureKey, timezone, costMicros)
+    }
 }

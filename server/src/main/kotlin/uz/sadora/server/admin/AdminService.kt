@@ -48,6 +48,14 @@ class AdminService(
     private val flagRepository: FeatureFlagRepository,
     private val flagService: FeatureFlagService,
     private val audit: AuditService,
+    /**
+     * Two things a block must reach beyond the account row: the per-request status
+     * gate, so the block lands on the next call rather than when its cache expires, and
+     * her doctor links, which must not stay openable from a blocked account. Both are
+     * optional so the unit tests that build this service by hand keep working.
+     */
+    private val accountGate: uz.sadora.server.plugins.AccountGate? = null,
+    private val shares: uz.sadora.server.share.ShareRepository? = null,
 ) {
 
     // ---------------------------------------------------------------- users
@@ -121,11 +129,15 @@ class AdminService(
 
         if (request.blocked) {
             users.setStatus(userId, AccountStatus.BLOCKED, request.reason)
-            // Blocking has to take effect now, not when the access token expires.
+            // Blocking has to take effect now, not when the access token expires: the
+            // refresh tokens go, the status gate forgets its cached answer, and every
+            // live doctor link is taken back.
             refreshTokens.revokeAllForUser(userId, "blocked_by_admin")
+            shares?.revokeAll(userId, uz.sadora.server.core.now())
         } else {
             users.setStatus(userId, AccountStatus.ACTIVE, null)
         }
+        accountGate?.forget(userId)
 
         audit.record(
             admin.entry(
@@ -148,6 +160,18 @@ class AdminService(
             throw ValidationException("reason", "Sabab ko'rsatilishi shart")
         }
         users.findById(userId) ?: throw NotFoundException("Foydalanuvchi topilmadi")
+        // A grant supersedes whatever is active. Two dates it must not carry: one already
+        // in the past (an expired subscription that still replaced a live one), and one
+        // earlier than the subscription she is paying for (a one-day comp on top of a
+        // year would have cut the year to a day).
+        val now = uz.sadora.server.core.now()
+        request.expiresAt?.let { until ->
+            if (until <= now) throw ValidationException("expiresAt", "O'tgan sana bo'lishi mumkin emas")
+            val current = entitlementService.subscriptionStatus(userId).expiresAt
+            if (current != null && current > until) {
+                throw ValidationException("expiresAt", "Faol obuna bundan kechroq tugaydi")
+            }
+        }
         subscriptions.grant(
             userId = userId,
             source = SubscriptionSource.MANUAL,

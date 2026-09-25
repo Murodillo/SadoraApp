@@ -349,6 +349,7 @@ fun ConsentGateScreen(
                             withLink(t.terms, c.textAccent)
                             append(t.and)
                             withLink(t.privacyPolicy, c.textAccent)
+                            append(t.consentTermsSuffix)
                             append(".")
                         },
                         onLinkClick = { onOpenLegal(LegalDocument.Terms) },

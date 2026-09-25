@@ -199,6 +199,10 @@ private fun NavItem(
                 style = Sadora.type.caption.copy(letterSpacing = TextUnit.Unspecified),
                 color = labelColor,
                 maxLines = 1,
+                // A fifth of the bar is ~65dp; "После родов" at 11sp is wider. Clipping
+                // mid-letter looked broken, an ellipsis reads as a label.
+                softWrap = false,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
             )
         }
     }

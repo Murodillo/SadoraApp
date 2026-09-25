@@ -46,12 +46,30 @@ class WearableReturnTest {
             }
         }
         val controller = graph(recording).wearableController()
+        controller.connectStarted = uz.sadora.contract.HealthProvider.WHOOP
 
         controller.onReturned("whoop", ok = true, code = "c0de", state = "st4te")
 
         assertEquals(true, controller.returned)
         assertEquals(1, recording.countOf("/v1/wearables/whoop/complete"))
         assertEquals(true, recording.bodies.any { it.contains("\"state\":\"st4te\"") && it.contains("\"code\":\"c0de\"") })
+    }
+
+    /** A crafted link must not make the signed-in app post a code for a flow it never began. */
+    @Test
+    fun `a return for a flow this app did not start is ignored`() = runTest {
+        val recording = RecordingEngine { request ->
+            when (request.url.encodedPath) {
+                "/v1/wearables/whoop/complete" -> json("""{"ok":true}""")
+                else -> json("[]")
+            }
+        }
+        val controller = graph(recording).wearableController()
+
+        controller.onReturned("whoop", ok = true, code = "c0de", state = "st4te")
+
+        assertEquals(false, controller.returned)
+        assertEquals(0, recording.countOf("/v1/wearables/whoop/complete"))
     }
 
     @Test
@@ -64,6 +82,7 @@ class WearableReturnTest {
             }
         }
         val controller = graph(recording).wearableController()
+        controller.connectStarted = uz.sadora.contract.HealthProvider.WHOOP
 
         controller.onReturned("whoop", ok = true, code = "c0de", state = "someone-elses")
 

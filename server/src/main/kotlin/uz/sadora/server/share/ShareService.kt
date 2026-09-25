@@ -75,9 +75,22 @@ class ShareService(
     private val wearables: WearableService,
     private val audit: AuditService,
     private val publicBaseUrl: String,
+    /** Meters the export; optional only for the tests that build the service by hand. */
+    private val entitlements: uz.sadora.server.entitlement.EntitlementService? = null,
 ) {
 
     // ---------------------------------------------------------------- hers
+
+    /**
+     * The document as a file for her, counted against the `data_export` allowance: the
+     * page is the most expensive read in the API — ninety days of every table — and the
+     * allowance was seeded for exactly this door, then never checked.
+     */
+    suspend fun export(userId: Uuid, language: Language): DoctorSummary {
+        val user = users.findById(userId) ?: throw NotFoundException("Foydalanuvchi topilmadi")
+        entitlements?.consume(userId, uz.sadora.contract.FeatureKeys.DATA_EXPORT, user.timezone)
+        return summaryFor(userId, language)
+    }
 
     suspend fun create(userId: Uuid, request: CreateShareRequest, ip: String?): ProfileShare {
         users.findById(userId) ?: throw NotFoundException("Foydalanuvchi topilmadi")
@@ -138,6 +151,9 @@ class ShareService(
         if (!record.share.isActive(at)) return null
 
         val user = users.findById(record.userId) ?: return null
+        // A blocked account's link, or one whose owner asked for deletion, reads as gone:
+        // the door closes with the account, not a week later when the link expires.
+        if (user.status != uz.sadora.contract.AccountStatus.ACTIVE) return null
         shares.recordView(Uuid.parse(record.share.id), at)
         audit.record(
             AuditEntry(

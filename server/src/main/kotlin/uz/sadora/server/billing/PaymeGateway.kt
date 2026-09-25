@@ -129,7 +129,12 @@ class PaymeGateway(
                 val updated = repository.transaction(transaction.id) ?: transaction
                 updated.asState(TRANSACTION_PERFORMED)
             }
-            PaymentState.PAID -> transaction.asState(TRANSACTION_PERFORMED)
+            PaymentState.PAID -> {
+                // Paid without a subscription is a grant that never finished; the retry
+                // that brought us here completes it (activate is idempotent otherwise).
+                if (transaction.subscriptionId == null) billing.activate(transaction)
+                transaction.asState(TRANSACTION_PERFORMED)
+            }
             else -> throw PaymeError(CANNOT_PERFORM, "Transaction is cancelled")
         }
     }
@@ -160,9 +165,7 @@ class PaymeGateway(
     private suspend fun getStatement(params: JsonObject): JsonObject {
         val from = params.long("from") ?: 0
         val to = params.long("to") ?: Long.MAX_VALUE
-        val rows = repository.recent(limit = 1000)
-            .filter { it.provider == PaymentProvider.PAYME && it.externalId != null }
-            .filter { (it.providerCreatedAt ?: it.createdAt.toEpochMilliseconds()) in from..to }
+        val rows = repository.paymeStatement(from, to)
         return buildJsonObject {
             put(
                 "transactions",
@@ -195,7 +198,8 @@ class PaymeGateway(
             ?: throw PaymeError(ACCOUNT_INVALID, "Order id required", config.accountField)
         val id = runCatching { Uuid.parse(raw) }.getOrNull()
             ?: throw PaymeError(ACCOUNT_INVALID, "Order not found", config.accountField)
-        return repository.transaction(id)
+        // An order opened for Click or a store is not Payme's to pay, whatever id it quotes.
+        return repository.transaction(id)?.takeIf { it.provider == PaymentProvider.PAYME }
             ?: throw PaymeError(ACCOUNT_INVALID, "Order not found", config.accountField)
     }
 

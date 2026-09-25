@@ -70,6 +70,9 @@ class PhoneNumbersTest {
     @Test
     fun `masking keeps enough to recognise a number and not enough to dial it`() {
         val masked = PhoneNumbers.mask("+998901234567")
-        assertEquals("+99890123**67", masked)
+        assertEquals("+998 ** *** ** 67", masked)
+        // Only the country code and the last two digits survive: the operator code and
+        // the subscriber number would narrow a line down to a hundred candidates.
+        assertEquals(listOf("998", "67"), Regex("\\d+").findAll(masked).map { it.value }.toList())
     }
 }

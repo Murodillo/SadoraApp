@@ -470,6 +470,72 @@ class ApiIntegrationTest {
     }
 
     /**
+     * A counted award stays counted when the caller names the thing being paid for. The
+     * meal id kept a retry from paying twice; it used to lift the daily ceiling as well,
+     * and every extra meal paid until the wallet bought Premium.
+     */
+    @Test
+    fun `logging meals pays up to the daily cap and not a coin beyond it`() = api {
+        val user = signUp()
+        onboard(user)
+        val rate = get<RewardsSummary>("/v1/rewards", user.token).earnRates
+            .first { it.reason == CoinReasons.MEAL_LOGGED }
+        val cap = assertNotNull(rate.dailyCap, "the seed caps meals per day")
+        val today = LocalDate.parse(java.time.LocalDate.now(java.time.ZoneId.of("Asia/Tashkent")).toString())
+
+        repeat(cap + 2) { index ->
+            post<uz.sadora.contract.Meal>(
+                "/v1/nutrition/meals",
+                user.token,
+                uz.sadora.contract.LogMealRequest(
+                    date = today,
+                    slot = uz.sadora.contract.MealSlot.SNACK,
+                    description = "Meal $index",
+                    kcal = 100,
+                ),
+            )
+        }
+
+        val paid = get<RewardsSummary>("/v1/rewards", user.token).history
+            .count { it.reason == CoinReasons.MEAL_LOGGED }
+        assertEquals(cap, paid, "the cap holds however many meals are logged")
+    }
+
+    /**
+     * Blocking revokes the refresh tokens, but the access token already on the phone
+     * lives for fifteen minutes. The account is refused on its very next request, with
+     * the same code sign-in gives, and let back in the moment the block is lifted.
+     */
+    @Test
+    fun `a blocked account is refused on its next request, not when its token expires`() = api {
+        val user = signUp()
+        onboard(user)
+        val admin = adminToken()
+
+        val blocked = client.post("/v1/admin/users/${user.userId}/block") {
+            auth(admin)
+            json(uz.sadora.server.admin.BlockUserRequest(blocked = true, reason = "integration test"))
+        }
+        assertEquals(HttpStatusCode.OK, blocked.status, blocked.bodyAsTextSafe())
+
+        val refused = client.get("/v1/me") { auth(user.token) }
+        assertEquals(HttpStatusCode.Forbidden, refused.status, refused.bodyAsTextSafe())
+        assertTrue(refused.bodyAsTextSafe().contains("account_blocked"))
+        val today = LocalDate.parse(java.time.LocalDate.now(java.time.ZoneId.of("Asia/Tashkent")).toString())
+        val refusedWrite = client.put("/v1/days/$today") {
+            auth(user.token)
+            json(uz.sadora.contract.SaveDailyLogRequest(mood = MoodLevel.OK))
+        }
+        assertEquals(HttpStatusCode.Forbidden, refusedWrite.status)
+
+        client.post("/v1/admin/users/${user.userId}/block") {
+            auth(admin)
+            json(uz.sadora.server.admin.BlockUserRequest(blocked = false, reason = "test over"))
+        }
+        assertEquals(HttpStatusCode.OK, client.get("/v1/me") { auth(user.token) }.status)
+    }
+
+    /**
      * The invite pays both sides exactly once, and never for a code somebody typed at
      * their own account. A referral scheme that can be pointed at itself is a mint.
      */
@@ -650,11 +716,13 @@ class ApiIntegrationTest {
 
         // Nothing is switched on until a code proves the authenticator holds the secret.
         assertTrue(!get<AdminMe>("/v1/admin/me", admin.token).totpEnabled)
+        // A typo in the code is a field error, not the end of the session: a 401 here
+        // used to sign the operator out of the panel in the middle of enrolling.
         val wrong = client.post("/v1/admin/me/totp/confirm") {
             auth(admin.token)
             json(TotpConfirmRequest("000000"))
         }
-        assertEquals(HttpStatusCode.Unauthorized, wrong.status)
+        assertEquals(HttpStatusCode.BadRequest, wrong.status)
         assertTrue(!get<AdminMe>("/v1/admin/me", admin.token).totpEnabled)
 
         val code = currentCodeFor(enrolment.secret)
@@ -670,6 +738,12 @@ class ApiIntegrationTest {
             json(AdminSignInRequest(admin.email, admin.password))
         }
         assertEquals(HttpStatusCode.Unauthorized, passwordOnly.status)
+        // Named as such, so the panel shows the code field instead of matching the
+        // message text — and a missing code is not a failed attempt against the lockout.
+        assertTrue(passwordOnly.bodyAsTextSafe().contains("totp_required"), passwordOnly.bodyAsTextSafe())
+        repeat(5) {
+            client.post("/v1/admin/auth/login") { json(AdminSignInRequest(admin.email, admin.password)) }
+        }
 
         val withCode = client.post("/v1/admin/auth/login") {
             json(AdminSignInRequest(admin.email, admin.password, currentCodeFor(enrolment.secret)))
@@ -690,7 +764,7 @@ class ApiIntegrationTest {
             auth(admin.token)
             json(TotpDisableRequest(password = "not-the-password", code = currentCodeFor(enrolment.secret)))
         }
-        assertEquals(HttpStatusCode.Unauthorized, sessionOnly.status)
+        assertEquals(HttpStatusCode.BadRequest, sessionOnly.status)
         assertTrue(get<AdminMe>("/v1/admin/me", admin.token).totpEnabled, "still protected")
 
         val proper = client.post("/v1/admin/me/totp/disable") {

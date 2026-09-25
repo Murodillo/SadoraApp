@@ -425,17 +425,21 @@ export const useDisableTotp = () =>
 
 // ---------------------------------------------------------------- Gul
 
-export const useRewardsOverview = () =>
+// Both are Owner/Admin/Analyst on the server; Support reaches the page for the
+// redemption table only, so its session never asks for what it would be refused.
+export const useRewardsOverview = (enabled = true) =>
   useQuery({
     queryKey: ['rewards-overview'],
     queryFn: () => request<RewardsOverview>('/v1/admin/rewards/overview'),
     refetchInterval: 60_000,
+    enabled,
   })
 
-export const useCoinRules = () =>
+export const useCoinRules = (enabled = true) =>
   useQuery({
     queryKey: ['coin-rules'],
     queryFn: () => request<CoinRule[]>('/v1/admin/rewards/rules'),
+    enabled,
   })
 
 export const useSaveCoinRule = () => {

@@ -48,6 +48,9 @@ class UserService(
      * calls would owe somebody an invite nobody could prove.
      */
     private val rewards: RewardsService? = null,
+    /** See [requestDeletion]: the request must close every door at once, not one. */
+    private val accountGate: uz.sadora.server.plugins.AccountGate? = null,
+    private val shares: uz.sadora.server.share.ShareRepository? = null,
 ) {
 
     suspend fun requireUser(userId: Uuid): UserRecord =
@@ -266,6 +269,11 @@ class UserService(
         }
         users.requestDeletion(userId)
         refreshTokens.revokeAllForUser(userId, "account_deletion")
+        // The access token in her phone is refused from the next request, and a doctor
+        // link she made earlier stops opening: asking for deletion means nobody reads
+        // the data any more, starting now.
+        accountGate?.forget(userId)
+        shares?.revokeAll(userId, now())
         audit.record(
             AuditEntry(
                 actorType = ActorType.USER,

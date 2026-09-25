@@ -10,6 +10,7 @@ import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.jdbc.JdbcTransaction
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.insertIgnore
 import org.jetbrains.exposed.v1.jdbc.select
@@ -180,10 +181,13 @@ class RewardsRepository {
     /**
      * Spends coins, refusing when the balance does not cover it.
      *
-     * The check and the write share one transaction, so two redemptions of the last
-     * coins cannot both succeed: the second reads the first's row.
+     * The check and the write share one transaction, and the wallet is locked for it:
+     * under READ COMMITTED two redemptions of the last coins both read the same sum and
+     * both wrote a withdrawal, which is how one balance bought Premium twice. The lock
+     * is per user and released with the transaction, so nobody else waits on it.
      */
     suspend fun spend(userId: Uuid, amount: Int, reference: String): CoinBalance? = dbQuery {
+        lockWallet(userId)
         val balance = readBalance(userId)
         if (amount <= 0 || balance.balance < amount) return@dbQuery null
         CoinLedger.insert {
@@ -195,6 +199,32 @@ class RewardsRepository {
             it[createdAt] = now().toOffsetDateTime()
         }
         readBalance(userId)
+    }
+
+    /**
+     * An operator's correction, under the same lock as [spend]: a withdrawal may not
+     * take the balance below zero, and two corrections at once may not both pass.
+     */
+    suspend fun adjust(userId: Uuid, amount: Int, note: String): CoinBalance? = dbQuery {
+        lockWallet(userId)
+        val balance = readBalance(userId)
+        if (amount < 0 && balance.balance + amount < 0) return@dbQuery null
+        CoinLedger.insert {
+            it[id] = Uuid.random()
+            it[CoinLedger.userId] = userId
+            it[CoinLedger.amount] = amount
+            it[reason] = uz.sadora.contract.CoinReasons.ADMIN_ADJUSTMENT
+            it[CoinLedger.reference] = Uuid.random().toString()
+            it[CoinLedger.note] = note
+            it[createdAt] = now().toOffsetDateTime()
+        }
+        readBalance(userId)
+    }
+
+    /** A transaction-scoped advisory lock on one wallet; the key is derived from the id. */
+    private fun JdbcTransaction.lockWallet(userId: Uuid) {
+        val key = userId.toLongs { most, least -> most xor least }
+        exec("SELECT pg_advisory_xact_lock($key)")
     }
 
     /** How many times a reason has already paid today — the daily cap reads this. */

@@ -13,8 +13,15 @@ import io.ktor.client.request.setBody
 import io.ktor.client.statement.HttpResponse
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.isSuccess
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import uz.sadora.contract.ApiErrorResponse
 import uz.sadora.contract.AuthSession
 import uz.sadora.contract.RefreshRequest
@@ -33,6 +40,18 @@ class ApiCaller internal constructor(
     private val session: SessionStore,
 ) {
     private val refreshMutex = Mutex()
+
+    /**
+     * The refresh in flight, if any, run in a scope that outlives the screen that asked.
+     *
+     * A refresh used to run inside the calling coroutine — a screen's own scope — so
+     * leaving the screen mid-request cancelled it after the server had already rotated
+     * the token. The stored token was then a spent one, the next attempt looked like a
+     * replay, and the server ended the whole session. Now the work is shared and finishes
+     * regardless of who is still waiting for it.
+     */
+    private val refreshScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private var inFlightRefresh: Deferred<ApiResult<AuthSession>>? = null
 
     suspend inline fun <reified T> unauthenticated(
         path: String,
@@ -75,8 +94,12 @@ class ApiCaller internal constructor(
     suspend fun refreshSession(): ApiResult<AuthSession> {
         val refreshToken = session.currentRefreshToken()
             ?: return ApiResult.Failure(ApiFailure.Unauthorized("no refresh token"))
-        return unauthenticated<AuthSession>("v1/auth/refresh") { setBody(RefreshRequest(refreshToken)) }
-            .onSuccess { session.saveTokens(it.tokens) }
+        val result = unauthenticated<AuthSession>("v1/auth/refresh") { setBody(RefreshRequest(refreshToken)) }
+        // The new pair is written whatever happens to the caller: a cancellation between
+        // the server's answer and this line would leave the phone holding a token the
+        // server has already spent.
+        result.onSuccess { withContext(NonCancellable) { session.saveTokens(it.tokens) } }
+        return result
     }
 
     /**
@@ -88,11 +111,22 @@ class ApiCaller internal constructor(
      * token in turn — extra round trips, and a wider window in which a genuinely stolen
      * token would look identical to normal traffic.
      */
-    suspend fun refreshIfStillStale(tokenUsed: String?): ApiResult<Unit> =
-        refreshMutex.withLock {
-            if (session.currentAccessToken() != tokenUsed) return@withLock ApiResult.Success(Unit)
-            refreshSession().map { }
+    suspend fun refreshIfStillStale(tokenUsed: String?): ApiResult<Unit> {
+        // The mutex only decides who starts the refresh; waiting happens outside it, on a
+        // job in the caller-independent scope, so a screen leaving mid-refresh neither
+        // cancels the request nor holds the lock while it is cancelled.
+        val refresh = refreshMutex.withLock {
+            if (session.currentAccessToken() != tokenUsed) return ApiResult.Success(Unit)
+            inFlightRefresh?.takeIf { it.isActive } ?: refreshScope.async {
+                try {
+                    refreshSession()
+                } finally {
+                    refreshMutex.withLock { inFlightRefresh = null }
+                }
+            }.also { inFlightRefresh = it }
         }
+        return refresh.await().map { }
+    }
 
     suspend fun postTo(path: String, block: HttpRequestBuilder.() -> Unit): HttpResponse =
         client.post(path, block)

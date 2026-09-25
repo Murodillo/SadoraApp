@@ -156,11 +156,16 @@ data class AppConfig(
          * a fixed OTP code.
          */
         private fun AppConfig.verifyProductionSafety() {
-            if (!environment.isProduction) return
+            if (environment == Environment.DEV) return
+            // Staging is reachable from the internet too. A token signed with the key that
+            // sits in the public repository is a token anybody can mint, so the signing key
+            // is checked on every environment but a laptop; the OTP conveniences below stay
+            // allowed on stage, where testers read the code from the response.
             require(jwt.secret != DEV_JWT_SECRET) {
-                "JWT_SECRET must be set in production — the development default is public."
+                "JWT_SECRET must be set outside development — the development default is public."
             }
             require(jwt.secret.length >= 32) { "JWT_SECRET must be at least 32 characters." }
+            if (!environment.isProduction) return
             require(!otp.exposeCode) { "OTP_EXPOSE_CODE must be false in production." }
             require(otp.fixedCode == null) { "OTP_FIXED_CODE must not be set in production." }
             require(publicBaseUrl.startsWith("https://")) { "PUBLIC_BASE_URL must be an https URL in production." }

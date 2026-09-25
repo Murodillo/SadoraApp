@@ -39,6 +39,10 @@ import uz.sadora.app.ui.components.SadoraCard
 import uz.sadora.app.ui.components.SadoraTopBar
 import uz.sadora.app.ui.components.ScreenContent
 import uz.sadora.app.ui.components.Skeleton
+import uz.sadora.app.ui.components.ErrorStrip
+import uz.sadora.app.data.readable
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import uz.sadora.app.ui.components.appearFromBelow
 import uz.sadora.app.ui.components.rememberShareAction
 
@@ -59,6 +63,7 @@ fun ReferralScreen(
     val t = strings.rewards
     val c = Sadora.colors
     val share = rememberShareAction()
+    val scope = rememberCoroutineScope()
     var shared by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) { rewards.loadReferral() }
@@ -69,12 +74,19 @@ fun ReferralScreen(
         SadoraTopBar(t.referralTitle, onBack = onClose)
 
         if (referral == null) {
+            // A skeleton only while the request is running. A failed load used to leave
+            // the skeleton on screen for good, with no word about why and no way back.
+            val failure = rewards.error
             Column(
                 Modifier.fillMaxWidth().padding(horizontal = Spacing.screen),
                 verticalArrangement = Arrangement.spacedBy(Spacing.sm),
             ) {
-                Skeleton(Modifier.fillMaxWidth().height(180.dp))
-                Skeleton(Modifier.fillMaxWidth().height(120.dp))
+                if (failure != null && !rewards.busy) {
+                    ErrorStrip(failure.readable(), onRetry = { scope.launch { rewards.loadReferral() } })
+                } else {
+                    Skeleton(Modifier.fillMaxWidth().height(180.dp))
+                    Skeleton(Modifier.fillMaxWidth().height(120.dp))
+                }
             }
             return@Column
         }

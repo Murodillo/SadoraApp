@@ -51,7 +51,10 @@ internal fun HttpClientConfig<*>.configureSadoraClient(environment: SadoraEnviro
         install(Logging) {
             // HEADERS, not ALL: request bodies carry health data and sign-in codes, and
             // a debug log is the easiest place for those to end up somewhere unaudited.
+            // The bearer token is a header, so it is masked too — a debug build on a
+            // phone shares its logcat with every other app that asked for it.
             level = LogLevel.HEADERS
+            sanitizeHeader { header -> header == io.ktor.http.HttpHeaders.Authorization }
         }
     }
 

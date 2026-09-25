@@ -13,8 +13,10 @@ import uz.sadora.server.auth.JwtService
 import uz.sadora.server.auth.PasswordHasher
 import uz.sadora.server.auth.RequestContext
 import uz.sadora.server.auth.TokenSubjectType
+import uz.sadora.contract.ErrorCodes
 import uz.sadora.server.core.ForbiddenException
 import uz.sadora.server.core.UnauthorizedException
+import uz.sadora.server.core.ValidationException
 import uz.sadora.server.core.now
 import uz.sadora.server.core.toKotlinInstant
 import uz.sadora.server.core.toOffsetDateTime
@@ -67,7 +69,13 @@ class AdminAuthService(
         if (row[AdminUsers.totpEnabled]) {
             val secret = row[AdminUsers.totpSecret]
             val code = request.totpCode
-            if (secret == null || code == null || !Totp.verify(secret, code)) {
+            // No code at all is the panel asking whether one is needed, not a wrong
+            // guess: it is answered with its own error code and costs no attempt. A
+            // wrong code is a guess, and is counted like a wrong password.
+            if (code.isNullOrBlank()) {
+                throw UnauthorizedException(ErrorCodes.TOTP_REQUIRED, "2FA kodi kerak")
+            }
+            if (secret == null || !Totp.verify(secret, code)) {
                 registerFailedAttempt(adminId, row[AdminUsers.failedAttempts] + 1)
                 recordFailure(email, "bad_totp", context)
                 throw UnauthorizedException(message = "2FA kodi noto'g'ri")
@@ -158,8 +166,10 @@ class AdminAuthService(
         val row = requireAdmin(adminId)
         val secret = row[AdminUsers.totpSecret]
             ?: throw ForbiddenException(message = "Avval 2FA sozlashni boshlang")
+        // A wrong code here is a typo in a form, not a failed sign-in: answered as a
+        // field error. A 401 would have signed the operator out of the panel mid-setup.
         if (!Totp.verify(secret, request.code)) {
-            throw UnauthorizedException(message = "2FA kodi noto'g'ri")
+            throw ValidationException("code", "2FA kodi noto'g'ri")
         }
         dbQuery {
             AdminUsers.update({ AdminUsers.id eq adminId }) {
@@ -179,10 +189,10 @@ class AdminAuthService(
         if (!row[AdminUsers.totpEnabled]) return
         val secret = row[AdminUsers.totpSecret]
         if (!PasswordHasher.verify(request.password, row[AdminUsers.passwordHash])) {
-            throw UnauthorizedException(message = "Parol noto'g'ri")
+            throw ValidationException("password", "Parol noto'g'ri")
         }
         if (secret == null || !Totp.verify(secret, request.code)) {
-            throw UnauthorizedException(message = "2FA kodi noto'g'ri")
+            throw ValidationException("code", "2FA kodi noto'g'ri")
         }
         dbQuery {
             AdminUsers.update({ AdminUsers.id eq adminId }) {

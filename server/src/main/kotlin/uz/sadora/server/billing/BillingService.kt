@@ -128,12 +128,17 @@ class BillingService(
      * transaction's own state is the guard.
      */
     suspend fun activate(transaction: TransactionRecord): Uuid? {
-        if (transaction.state == PaymentState.PAID) return transaction.subscriptionId
+        // Paid and granted: nothing to do. Paid but not granted is the trace of a process
+        // that died between the claim and the grant; the provider's retry — which lands
+        // here — finishes the job instead of answering "done" from a row that is not.
+        if (transaction.state == PaymentState.PAID && transaction.subscriptionId != null) {
+            return transaction.subscriptionId
+        }
 
         val plan = repository.plan(transaction.planId) ?: return null
         // The claim, not the state read above, decides who grants: a second delivery
         // racing this one loses here and returns what the winner recorded.
-        if (!repository.claimPaid(transaction.id)) {
+        if (transaction.state != PaymentState.PAID && !repository.claimPaid(transaction.id)) {
             return repository.transaction(transaction.id)?.subscriptionId
         }
 

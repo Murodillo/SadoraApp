@@ -40,12 +40,17 @@ fun Route.shareRoutes(shares: ShareService) {
             }
         }
 
-        /** The same document as JSON, for her own export. */
-        get("/me/export") {
-            val userId = call.requireUserId()
-            val language = call.request.queryParameters["lang"]?.let(::languageOf)
-            call.response.header("Content-Disposition", "attachment; filename=\"sadora-export.json\"")
-            call.respond(shares.summaryFor(userId, language ?: Language.UZ))
+        /**
+         * The same document as JSON, for her own export. Behind the AI-grade per-address
+         * limit and the `data_export` allowance: it is the heaviest read in the API.
+         */
+        rateLimit(RateLimits.AI) {
+            get("/me/export") {
+                val userId = call.requireUserId()
+                val language = call.request.queryParameters["lang"]?.let(::languageOf)
+                call.response.header("Content-Disposition", "attachment; filename=\"sadora-export.json\"")
+                call.respond(shares.export(userId, language ?: Language.UZ))
+            }
         }
     }
 }

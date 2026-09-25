@@ -60,8 +60,13 @@ class RedisCache(url: String) : Cache {
 
     override suspend fun increment(key: String, ttl: Duration): Long =
         withContext(Dispatchers.IO) {
+            // The TTL is attached when the key is born, not after the first increment: a
+            // crash between INCR and PEXPIRE used to leave a counter with no expiry, and
+            // the phone behind it over its hourly OTP cap for good. SET NX is a no-op
+            // once the key exists, so a live counter keeps the expiry it already has.
+            commands.set(key, "0", SetArgs.Builder.nx().px(ttl.inWholeMilliseconds))
             val count = commands.incr(key)
-            if (count == 1L) commands.pexpire(key, ttl.inWholeMilliseconds)
+            if (commands.pttl(key) < 0) commands.pexpire(key, ttl.inWholeMilliseconds)
             count
         }
 

@@ -177,11 +177,21 @@ export function UsersPage() {
  * bulk extraction of account data and belongs behind its own audited endpoint, not
  * behind a button that looks like a convenience.
  */
+/**
+ * A cell a spreadsheet would run rather than show. A name typed as `=HYPERLINK(...)`
+ * or `+cmd|...` is a formula to Excel and LibreOffice; a leading apostrophe makes it
+ * text again, and a tab or carriage return cannot start one either.
+ */
+function csvSafe(cell: string): string {
+  const cleaned = cell.replace(/[\t\r]/g, ' ')
+  return /^[=+\-@]/.test(cleaned) ? `'${cleaned}` : cleaned
+}
+
 function exportCsv(rows: AdminUserSummary[]) {
   const header = ['id', 'name', 'phone', 'email', 'language', 'lifeStage', 'tier', 'status', 'registeredAt']
   const body = rows.map((row) =>
     [row.id, row.name, row.phone ?? '', row.email ?? '', row.language, row.lifeStage, row.tier, row.status, row.registeredAt]
-      .map((cell) => `"${String(cell).replaceAll('"', '""')}"`)
+      .map((cell) => `"${csvSafe(String(cell)).replaceAll('"', '""')}"`)
       .join(','),
   )
   const blob = new Blob([[header.join(','), ...body].join('\n')], { type: 'text/csv;charset=utf-8' })

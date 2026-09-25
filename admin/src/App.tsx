@@ -3,6 +3,7 @@ import { Navigate, Route, BrowserRouter, Routes } from 'react-router-dom'
 import { ApiFailure } from './api/client'
 import { AuthProvider, useAuth } from './auth/AuthContext'
 import { LoginPage } from './auth/LoginPage'
+import { ErrorBoundary } from './components/ErrorBoundary'
 import { ToastProvider } from './components/toast'
 import { Shell } from './layout/Shell'
 import { AnalyticsPage } from './pages/AnalyticsPage'
@@ -37,10 +38,12 @@ const queryClient = new QueryClient({
 export function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
+      <AuthProvider onSessionEnd={() => queryClient.clear()}>
         <ToastProvider>
           <BrowserRouter>
-            <AppRoutes />
+            <ErrorBoundary>
+              <AppRoutes />
+            </ErrorBoundary>
           </BrowserRouter>
         </ToastProvider>
       </AuthProvider>

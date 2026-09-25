@@ -76,6 +76,8 @@ class ShopService(
         val spent = rewards.spend(userId, product.coinCost, redemption.id)
         if (spent == null) {
             shop.setStatus(Uuid.parse(redemption.id), RedemptionStatus.CANCELLED)
+            // The unit came off the shelf before the coins were asked for; it goes back.
+            shop.restock(product.id)
             throw ValidationException("coins", "Gul yetarli emas")
         }
 

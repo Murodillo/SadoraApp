@@ -79,19 +79,36 @@ class NotificationScheduler(
     private suspend fun queueMedicationReminders() {
         val currentTime = now()
         val horizon = currentTime + lookAhead
+        // One row for everybody; re-reading it per dose was the largest share of the
+        // tick's queries.
+        val caps = notifications.caps()
 
         medications.withRemindersEnabled().forEach { (userId, medication) ->
-            val user = users.findById(userId) ?: return@forEach
-            val zone = resolveTimeZone(user.timezone)
-            val today = currentTime.dayIn(user.timezone)
+            // One medication that cannot be scheduled — a template that fails to render,
+            // a row the database refuses — must not stop the loop before the next user's
+            // reminders; it used to abort the whole tick, every minute, until fixed.
+            runCatching { queueRemindersFor(userId, medication, currentTime, horizon, caps) }
+                .onFailure { logger.error("Could not queue reminders for medication {}", medication.id, it) }
+        }
+    }
 
-            DoseSchedule.dosesOn(medication, today).forEach { dueAt ->
+    private suspend fun queueRemindersFor(
+        userId: Uuid,
+        medication: uz.sadora.server.health.MedicationRecord,
+        currentTime: kotlin.time.Instant,
+        horizon: kotlin.time.Instant,
+        caps: uz.sadora.contract.FrequencyCaps,
+    ) {
+        val user = users.findById(userId) ?: return
+        val zone = resolveTimeZone(user.timezone)
+        val today = currentTime.dayIn(user.timezone)
+
+        DoseSchedule.dosesOn(medication, today).forEach { dueAt ->
                 val dueInstant = LocalDateTime(today, dueAt).toInstant(zone)
                 if (dueInstant < currentTime || dueInstant > horizon) return@forEach
 
                 val dedupeKey = "med:${medication.id}:$today:$dueAt"
                 val settings = notifications.settingsOf(userId)
-                val caps = notifications.caps()
                 val localTime = currentTime.toLocalDateTime(zone).time
 
                 val decision = NotificationPolicy.decide(
@@ -125,7 +142,6 @@ class NotificationScheduler(
                 if (queued && decision is DeliveryDecision.Suppress) {
                     logger.debug("Suppressed reminder for {}: {}", medication.name, decision.reason)
                 }
-            }
         }
     }
 

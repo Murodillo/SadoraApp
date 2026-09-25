@@ -189,7 +189,7 @@ private fun readyLines(state: AppState): List<Pair<ImageVector, String>> = build
         add(SadoraIcons.Target to t.goalsChosen(state.goals.size))
     }
     if (state.notificationsAllowed) add(SadoraIcons.Bell to t.remindersOn)
-    if (state.healthDataAllowed) add(SadoraIcons.Watch to "Salomatlik ma'lumotlari ulanadi")
+    if (state.healthDataAllowed) add(SadoraIcons.Watch to t.healthDataOn)
 }
 
 /**

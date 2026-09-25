@@ -58,6 +58,27 @@ class StoreVerifierTest {
         }
     }
 
+    /** Play marks a licence tester's purchase; nobody paid for it, so production refuses it. */
+    @Test
+    fun `a licence tester's purchase is accepted in development and refused in production`() {
+        val body = """{"subscriptionState":"SUBSCRIPTION_STATE_ACTIVE","latestOrderId":"GPA.9",
+               "lineItems":[{"productId":"premium_month"}],"testPurchase":{}}"""
+        assertEquals("GPA.9", playVerifier.interpret(play(body), "premium_month").transactionId)
+
+        val production = GooglePlayVerifier(
+            http = io.ktor.client.HttpClient(),
+            packageName = "uz.sadora.app",
+            serviceAccount = GooglePlayVerifier.ServiceAccount(
+                clientEmail = "test@example.iam.gserviceaccount.com",
+                privateKey = java.security.KeyPairGenerator.getInstance("RSA").apply { initialize(2048) }
+                    .generateKeyPair().private as java.security.interfaces.RSAPrivateKey,
+                tokenUri = "http://127.0.0.1:1/token",
+            ),
+            allowTestPurchases = false,
+        )
+        assertFailsWith<ReceiptRejectedException> { production.interpret(play(body), "premium_month") }
+    }
+
     @Test
     fun `a Play token for another product is refused`() {
         assertFailsWith<ReceiptRejectedException> {

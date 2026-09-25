@@ -81,6 +81,10 @@ class AppointmentService(
         if (remind != null && remind !in 0..MAX_REMIND_HOURS) {
             throw ValidationException("remindHoursBefore", "0 dan $MAX_REMIND_HOURS gacha bo'lishi kerak")
         }
+        // A visit in 1990 or in 2150 is a typo, not a record; both used to be accepted.
+        if (request.scheduledOn < EARLIEST_DATE || request.scheduledOn > LATEST_DATE) {
+            throw ValidationException("scheduledOn", "Sana noto'g'ri")
+        }
     }
 
     private fun notFound() = NotFoundException("Tadbir topilmadi")
@@ -88,5 +92,7 @@ class AppointmentService(
     private companion object {
         /** A week. Reminding someone a month early about a scan is not a reminder. */
         const val MAX_REMIND_HOURS = 168
+        val EARLIEST_DATE = kotlinx.datetime.LocalDate(2000, 1, 1)
+        val LATEST_DATE = kotlinx.datetime.LocalDate(2099, 12, 31)
     }
 }

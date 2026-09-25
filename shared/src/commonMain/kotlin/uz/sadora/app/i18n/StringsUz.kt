@@ -151,7 +151,7 @@ object StringsUz : Strings {
         override val deviceNoNote = "Hammasini qo'lda ham kiritish mumkin"
         override val deviceConnectTitle = "Qurilmangizni ulaymizmi?"
         override val deviceConnectBody =
-            "Bir marta ulasangiz, uyqu, pulse va qadamlar har kuni o'zi yangilanadi. " +
+            "Bir marta ulasangiz, uyqu, puls va qadamlar har kuni o'zi yangilanadi. " +
                 "Istalgan vaqtda uzib qo'yishingiz mumkin."
         override val deviceConnectNow = "Hozir ulash"
         override val deviceConnectLater = "Keyinroq"
@@ -288,6 +288,7 @@ object StringsUz : Strings {
         override val consentHealth = "Salomatlik ma'lumotlarimni ilova funksiyalari uchun qayta ishlashga roziman. "
         override val consentHealthMore = "Batafsil — "
         override val consentTermsPrefix = "Men "
+        override val consentTermsSuffix = "ni qabul qilaman"
         override val terms = "Foydalanish shartlari"
         override val and = " va "
         override val privacyPolicy = "Maxfiylik siyosati"
@@ -720,6 +721,7 @@ object StringsUz : Strings {
         override val validation = "Kiritilgan ma'lumot noto'g'ri."
         override val sessionExpired = "Sessiya tugadi. Qaytadan kiring."
         override val blocked = "Hisob bloklangan. Qo'llab-quvvatlash bilan bog'laning."
+        override val forbidden = "Bu amal uchun ruxsat yo'q."
         override val premiumRequired = "Bu imkoniyat Premium'da ochiladi."
         override val monthlyLimit = "Bu oylik limit tugadi."
         override val dailyLimit = "Bugungi limit tugadi."

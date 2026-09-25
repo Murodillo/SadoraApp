@@ -406,6 +406,9 @@ textarea {
   animation: title-in var(--standard) var(--emphasized) both;
 }
 
+/* Ends on `none`, not `translateY(0)`: with fill-mode `both` the final transform stays
+   applied for the life of the element, and any transform makes it the containing block
+   of every `position: fixed` descendant. */
 @keyframes rise {
   from {
     opacity: 0;
@@ -413,7 +416,7 @@ textarea {
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: none;
   }
 }
 
@@ -793,7 +796,7 @@ input.narrow {
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: none;
   }
 }
 

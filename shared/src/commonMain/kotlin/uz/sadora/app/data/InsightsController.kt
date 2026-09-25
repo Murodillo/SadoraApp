@@ -64,8 +64,9 @@ class InsightsController(private val api: InsightsApi?) {
                 if (lockedWindow == days) lockedWindow = null
                 error = null
             }
-            refusal is ApiFailure.PremiumRequired || refusal is ApiFailure.LimitReached ->
-                lockedWindow = days
+            // Only a Premium refusal is a lock. A limit reached by a Premium account used
+            // to be shown as "this window is Premium" and lead to a paywall she had paid.
+            refusal is ApiFailure.PremiumRequired -> lockedWindow = days
             refusal != null -> error = refusal
         }
     }

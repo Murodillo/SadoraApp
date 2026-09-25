@@ -145,16 +145,20 @@ fun PillButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     tone: ButtonTone = ButtonTone.Secondary,
+    /** Off while the action it fires is in flight: a pill that stayed live sent the request twice. */
+    enabled: Boolean = true,
 ) {
     val c = Sadora.colors
     val bg = if (tone == ButtonTone.Primary) c.primary else c.surface2
     val fg = if (tone == ButtonTone.Primary) c.onPrimary else c.text
     Box(
         modifier = modifier
+            .alpha(if (enabled) 1f else 0.5f)
             .clip(Radius.chip)
             .background(bg)
-            .defaultMinSize(minHeight = 36.dp)
-            .pressable(onClick = onClick)
+            // The pill itself stays compact; the touch target around it is the full 44dp.
+            .defaultMinSize(minWidth = MinTouchTarget, minHeight = MinTouchTarget)
+            .pressable(enabled = enabled, onClick = onClick)
             .padding(horizontal = 14.dp, vertical = Spacing.xs),
         contentAlignment = Alignment.Center,
     ) {

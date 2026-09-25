@@ -213,4 +213,13 @@ data class AuditEntryView(
     val metadata: Map<String, String> = emptyMap(),
     val ip: String? = null,
     val createdAt: Instant,
-)
+) {
+    /** The event without its who, where and why — what a non-Owner's dashboard shows. */
+    fun redacted(): AuditEntryView = copy(
+        actorId = null,
+        actorLabel = null,
+        reason = null,
+        metadata = emptyMap(),
+        ip = null,
+    )
+}

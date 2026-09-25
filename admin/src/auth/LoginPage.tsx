@@ -24,8 +24,14 @@ export function LoginPage() {
       await signIn(email, password, totpCode || undefined)
     } catch (cause) {
       if (cause instanceof ApiFailure) {
-        if (cause.message.includes('2FA')) setNeedsTotp(true)
-        setError(cause.message)
+        // The server names the case with a code; matching the message text would tie
+        // the panel to the wording, and the wording is not a contract.
+        if (cause.code === 'totp_required') {
+          setNeedsTotp(true)
+          setError(totpCode ? cause.message : null)
+        } else {
+          setError(cause.message)
+        }
       } else {
         setError('Kutilmagan xatolik')
       }

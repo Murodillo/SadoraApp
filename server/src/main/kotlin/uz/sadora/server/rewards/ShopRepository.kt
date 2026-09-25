@@ -6,6 +6,12 @@ import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.greater
+import org.jetbrains.exposed.v1.core.isNotNull
+import org.jetbrains.exposed.v1.core.isNull
+import org.jetbrains.exposed.v1.core.minus
+import org.jetbrains.exposed.v1.core.or
+import org.jetbrains.exposed.v1.core.plus
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.select
@@ -129,17 +135,18 @@ class ShopRepository {
         code: String,
         expiresAt: Instant?,
     ): Redemption? = dbQuery {
-        val stock = ShopProducts.selectAll()
-            .where { ShopProducts.id eq product.id }
-            .singleOrNull()
-            ?.get(ShopProducts.stock)
-        if (stock != null) {
-            if (stock <= 0) return@dbQuery null
-            ShopProducts.update({ ShopProducts.id eq product.id }) {
-                it[ShopProducts.stock] = stock - 1
-                it[updatedAt] = now().toOffsetDateTime()
-            }
+        // The unit is taken with one conditional statement — `stock - 1` computed by
+        // the database, refused when nothing is left — rather than a read and a write
+        // of the value read: two buyers of the last unit both used to read 1 and both
+        // write 0. An unlimited product (NULL stock) always answers yes.
+        val taken = ShopProducts.update({
+            (ShopProducts.id eq product.id) and
+                (ShopProducts.stock.isNull() or (ShopProducts.stock greater 0))
+        }) {
+            it[ShopProducts.stock] = ShopProducts.stock - 1
+            it[updatedAt] = now().toOffsetDateTime()
         }
+        if (taken == 0) return@dbQuery null
 
         val id = Uuid.random()
         val timestamp = now()
@@ -200,6 +207,14 @@ class ShopRepository {
                     usedAt = row[ShopRedemptions.usedAt]?.toKotlinInstant(),
                 )
             }
+    }
+
+    /** Puts a unit back when the redemption it was taken for could not be paid. */
+    suspend fun restock(productId: Uuid): Unit = dbQuery {
+        ShopProducts.update({ (ShopProducts.id eq productId) and ShopProducts.stock.isNotNull() }) {
+            it[stock] = ShopProducts.stock + 1
+            it[updatedAt] = now().toOffsetDateTime()
+        }
     }
 
     suspend fun setStatus(id: Uuid, status: RedemptionStatus): Boolean = dbQuery {

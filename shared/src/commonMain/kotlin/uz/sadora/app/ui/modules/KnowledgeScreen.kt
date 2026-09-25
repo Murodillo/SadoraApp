@@ -35,8 +35,12 @@ import uz.sadora.contract.ArticleKind
 import uz.sadora.contract.ArticleSummary
 import uz.sadora.app.data.readable
 
-/** Drawn first, and the only category the app names itself — the rest are the server's. */
-private const val AllCategories = "Barchasi"
+/**
+ * The "everything" filter: a key that no server category can collide with. Its label
+ * comes from the strings — the key itself used to double as the chip's text, in Uzbek
+ * whatever language the app was in.
+ */
+private const val AllCategories = "*"
 
 /**
  * "Bilim" — the library.
@@ -80,7 +84,7 @@ fun KnowledgeScreen(
                 item {
                     ChipFlowRow {
                         SelectChip(
-                            label = AllCategories,
+                            label = strings.journey.filterAll,
                             selected = category == AllCategories,
                             onClick = { category = AllCategories },
                         )

@@ -192,6 +192,7 @@ fun ApiFailure.readable(t: ErrorStrings): String = when (this) {
     is ApiFailure.Validation -> fields.values.firstOrNull() ?: t.validation
     is ApiFailure.Unauthorized -> t.sessionExpired
     is ApiFailure.Blocked -> t.blocked
+    is ApiFailure.Forbidden -> t.forbidden
     is ApiFailure.PremiumRequired -> t.premiumRequired
     is ApiFailure.LimitReached -> if (period == "month") t.monthlyLimit else t.dailyLimit
     is ApiFailure.RateLimited ->

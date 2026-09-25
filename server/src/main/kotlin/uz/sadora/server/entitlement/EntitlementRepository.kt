@@ -10,6 +10,7 @@ import org.jetbrains.exposed.v1.core.greater
 import org.jetbrains.exposed.v1.core.greaterEq
 import org.jetbrains.exposed.v1.core.isNull
 import org.jetbrains.exposed.v1.core.lessEq
+import org.jetbrains.exposed.v1.core.minus
 import org.jetbrains.exposed.v1.core.or
 import org.jetbrains.exposed.v1.core.plus
 import org.jetbrains.exposed.v1.core.sum
@@ -269,5 +270,23 @@ class EntitlementRepository {
                     (FeatureUsageDaily.usageDate eq day)
             }
             .single()[FeatureUsageDaily.used]
+    }
+
+    /** Hands a use back — the increment overshot the limit and the request was refused. */
+    suspend fun releaseUse(
+        userId: Uuid,
+        featureKey: String,
+        day: LocalDate,
+        costMicros: Long = 0,
+    ): Unit = dbQuery {
+        FeatureUsageDaily.update({
+            (FeatureUsageDaily.userId eq userId) and
+                (FeatureUsageDaily.featureKey eq featureKey) and
+                (FeatureUsageDaily.usageDate eq day) and
+                (FeatureUsageDaily.used greater 0)
+        }) {
+            it[used] = FeatureUsageDaily.used - 1
+            it[FeatureUsageDaily.costMicros] = FeatureUsageDaily.costMicros - costMicros
+        }
     }
 }

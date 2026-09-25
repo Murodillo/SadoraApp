@@ -350,12 +350,14 @@ private fun ConnectedCard(
             }
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+            // Off while a request is running: the label said "syncing" but the pill still
+            // fired, so every extra tap sent another sync or disconnect.
             if (status == ConnectionStatus.EXPIRED) {
-                PillButton(t.reconnect, onReconnect, tone = ButtonTone.Primary, modifier = Modifier.weight(1f))
+                PillButton(t.reconnect, onReconnect, tone = ButtonTone.Primary, modifier = Modifier.weight(1f), enabled = !busy)
             } else {
-                PillButton(if (busy) t.syncing else t.syncNow, onSync, tone = ButtonTone.Primary, modifier = Modifier.weight(1f))
+                PillButton(if (busy) t.syncing else t.syncNow, onSync, tone = ButtonTone.Primary, modifier = Modifier.weight(1f), enabled = !busy)
             }
-            PillButton(t.disconnect, onDisconnect, modifier = Modifier.weight(1f))
+            PillButton(t.disconnect, onDisconnect, modifier = Modifier.weight(1f), enabled = !busy)
         }
     }
 }

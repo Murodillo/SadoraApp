@@ -99,8 +99,12 @@ fun Route.adminRoutes(
             }
 
             get("/stats/events") {
-                call.requireAdminRole(AdminRole.OWNER, AdminRole.ADMIN, AdminRole.SUPPORT, AdminRole.ANALYST)
-                call.respond(statsRepository.recentEvents(call.intParameter("limit", 12, 50)))
+                val principal = call.requireAdminRole(AdminRole.OWNER, AdminRole.ADMIN, AdminRole.SUPPORT, AdminRole.ANALYST)
+                val events = statsRepository.recentEvents(call.intParameter("limit", 12, 50))
+                // The audit log is the Owner's. The dashboard feed shows everybody what
+                // happened, but who, from where and why stay with the log itself — the
+                // same rows were readable here in full by every role.
+                call.respond(if (principal.role == AdminRole.OWNER) events else events.map { it.redacted() })
             }
 
             // --- users: list and card -----------------------------------------

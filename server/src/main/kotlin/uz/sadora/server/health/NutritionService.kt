@@ -77,6 +77,11 @@ class NutritionService(
             "Skaner hozircha ishlamayapti. Taomni qo'lda qo'shishingiz mumkin.",
         )
 
+        // The use is spent before the model is called, as the chat does: a scan the model
+        // answered is a scan that cost money, and the daily and monthly limits on this
+        // feature were never counted down — a Premium account could scan without end.
+        access.consume(userId, FeatureKeys.FOOD_SCAN, user.timezone)
+
         val started = kotlin.time.TimeSource.Monotonic.markNow()
         return try {
             val answer = model.recognise(image, request.mimeType, user.language)

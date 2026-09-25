@@ -51,7 +51,13 @@ class AndroidTokenStorage(context: Context) : TokenStorage {
     }
 
     private suspend fun writeEncrypted(key: String, value: String) = withContext(Dispatchers.IO) {
-        preferences.edit().putString(key, encrypt(value)).apply()
+        // A Keystore that refuses — a phone mid-update, a wiped or locked key — used to
+        // throw out of the sign-in coroutine and take the app down with it. The session
+        // then lives in memory only and the next launch asks her to sign in again, which
+        // is a far smaller failure than a crash on the last onboarding screen.
+        runCatching { preferences.edit().putString(key, encrypt(value)).apply() }
+            .onFailure { preferences.edit().remove(key).apply() }
+        Unit
     }
 
     override suspend fun installationId(): String = withContext(Dispatchers.IO) {

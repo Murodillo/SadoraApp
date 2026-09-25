@@ -94,11 +94,15 @@ class AppState {
     // Blank until she answers the first question. A prefilled name would be answered
     // for her, and the onboarding greets people by it.
     var name by mutableStateOf("")
-    var email by mutableStateOf("malika@example.com")
+    // Blank until the server or she says otherwise. These used to open on a sample
+    // person — "malika@example.com", born 14.03.1994, 164 cm, 58 kg — and the sample's
+    // numbers went up with every onboarding whose body and birth-year questions were
+    // skipped: the request sends whatever is in here, and the server stored it as hers.
+    var email by mutableStateOf("")
     var phone by mutableStateOf("")
-    var birthDate by mutableStateOf("14.03.1994")
-    var heightCm by mutableStateOf("164")
-    var weightKg by mutableStateOf("58")
+    var birthDate by mutableStateOf("")
+    var heightCm by mutableStateOf("")
+    var weightKg by mutableStateOf("")
     var lifeStage by mutableStateOf(LifeStage.Cycle)
     // Empty until the onboarding grid is answered, for the same reason [name] is blank.
     val goals = mutableStateListOf<Goal>()

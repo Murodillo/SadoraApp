@@ -46,6 +46,10 @@ class HealthSync(
 
         scope.launch {
             dayWrites.withLock {
+                // The day goes up whole, built from the record in hand. With no record —
+                // the first load failed offline — a one-chip write used to replace the
+                // server's row with a day holding that chip and nothing else.
+                if (!health.hasDayRecord(date)) return@withLock
                 val current = health.day?.symptoms.orEmpty()
                 val updated = if (nowSelected) {
                     if (current.any { it.key == key }) current else current + SymptomEntry(key)
@@ -117,20 +121,25 @@ class HealthSync(
         } }
     }
 
-    override fun mealDeleted(id: String) {
-        scope.launch {
-            // "scan-3" and "search-1" are the store's own ids for a meal whose upload may
-            // still be in flight; the server has no such row to delete. Reading the day
-            // back settles it either way, and also restores the row if the delete failed.
-            val provisional = id.startsWith("scan-") || id.startsWith("search-")
-            if (provisional || !health.deleteMeal(id)) health.refreshNutrition()
-        }
-    }
-
     override fun checkInChanged(mood: Mood?, energy: Int?, stress: Int?) {
         // Same queue as the symptoms: a check-in also rewrites the day, and an older one
         // landing after a newer one put the dial back where it had been.
         scope.launch { dayWrites.withLock { health.saveCheckIn(mood?.toWire(), energy, stress) } }
+    }
+
+    override fun mealDeleted(id: String) {
+        // Queued behind the meal writes: a delete used to race the add it belonged to,
+        // and the add's own refresh put the deleted meal back on the screen.
+        scope.launch {
+            nutritionWrites.withLock {
+                // "scan-3" and "search-1" are the store's own ids for a meal whose upload
+                // may still be in flight; the server has no such row to delete. Reading the
+                // day back settles it either way, and also restores the row if the delete
+                // failed.
+                val provisional = id.startsWith("scan-") || id.startsWith("search-")
+                if (provisional || !health.deleteMeal(id)) health.refreshNutrition()
+            }
+        }
     }
 
     override fun practiceLogged(kind: PracticeKind, seconds: Int) {

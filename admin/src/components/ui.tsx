@@ -1,5 +1,6 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import type { ReactNode } from 'react'
+import { cloneElement, isValidElement, useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
+import type { ReactElement, ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import type { AccountStatus, SubscriptionTier } from '../api/types'
 import { percentChange } from './analytics'
 import { Sparkline } from './charts'
@@ -91,15 +92,27 @@ const statusLabels: Record<AccountStatus, { text: string; tone: string }> = {
 }
 
 export function StatusBadge({ status }: { status: AccountStatus }) {
-  const { text, tone } = statusLabels[status]
+  // A status the server adds later must not take the whole page down with a
+  // destructuring of undefined; it is shown as it came.
+  const { text, tone } = statusLabels[status] ?? { text: status, tone: 'free' }
   return <span className={`badge ${tone}`}>{text}</span>
 }
 
+/**
+ * A labelled control. The label is tied to the control by id, so clicking it focuses
+ * the field and a screen reader names the input — as siblings they were two unrelated
+ * things, and every form in the panel had unnamed inputs.
+ */
 export function Field({ label, children }: { label: string; children: ReactNode }) {
+  const id = useId()
+  const control =
+    isValidElement(children) && !(children.props as { id?: string }).id
+      ? cloneElement(children as ReactElement<{ id?: string }>, { id })
+      : children
   return (
     <div className="field">
-      <label>{label}</label>
-      {children}
+      <label htmlFor={id}>{label}</label>
+      {control}
     </div>
   )
 }
@@ -259,7 +272,12 @@ export function Modal({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  return (
+  // Rendered on <body>, not inside the page: every page and tab panel keeps a
+  // `transform` from its entrance animation, and a transformed ancestor becomes the
+  // containing block of a fixed backdrop — the scrim then covered only the page box,
+  // the header and sidebar stayed clickable, and on a long page the dialog sat
+  // off-screen. A dialog inside an animated table row was clipped into the row.
+  return createPortal(
     <div className={`backdrop${leaving ? ' leaving' : ''}`} onClick={close} role="presentation">
       <div
         ref={dialog}
@@ -278,7 +296,8 @@ export function Modal({
         </div>
         {children}
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
 

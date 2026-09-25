@@ -226,6 +226,64 @@ class HealthRepository {
         DailyLogs.deleteWhere { (DailyLogs.userId eq userId) and (DailyLogs.logDate eq date) } > 0
     }
 
+    /**
+     * Empties the day sheet's fields but keeps the row while it still carries water.
+     *
+     * The water counter lives on the same row as the sheet, so "clear the day" used to
+     * take the glasses she had logged with it. The row goes only once nothing is left.
+     */
+    suspend fun clearLog(userId: Uuid, date: LocalDate): Unit = dbQuery {
+        DailySymptoms.deleteWhere { (DailySymptoms.userId eq userId) and (DailySymptoms.logDate eq date) }
+        DailyLogs.update({ (DailyLogs.userId eq userId) and (DailyLogs.logDate eq date) }) {
+            it[flow] = null
+            it[mood] = null
+            it[energy] = null
+            it[stress] = null
+            it[note] = null
+            it[fetalMovement] = null
+            it[updatedAt] = now().toOffsetDateTime()
+        }
+        DailyLogs.deleteWhere {
+            (DailyLogs.userId eq userId) and (DailyLogs.logDate eq date) and (DailyLogs.waterMl eq 0)
+        }
+    }
+
+    /**
+     * Writes the three Mind dials and nothing else.
+     *
+     * Column-scoped like the water upsert: the check-in and the cycle sheet share the
+     * row, and rebuilding the whole row from a read a moment earlier is how a check-in
+     * used to erase the foetal-movement answer, or a sheet saved at the same time.
+     */
+    suspend fun saveCheckIn(
+        userId: Uuid,
+        date: LocalDate,
+        mood: MoodLevel?,
+        energy: Int?,
+        stress: Int?,
+    ): Unit = dbQuery {
+        val timestamp = now().toOffsetDateTime()
+        DailyLogs.upsert(
+            DailyLogs.userId,
+            DailyLogs.logDate,
+            onUpdate = {
+                it[DailyLogs.mood] = mood?.dbValue()
+                it[DailyLogs.energy] = energy
+                it[DailyLogs.stress] = stress
+                it[DailyLogs.updatedAt] = timestamp
+            },
+        ) {
+            it[DailyLogs.userId] = userId
+            it[logDate] = date
+            it[DailyLogs.mood] = mood?.dbValue()
+            it[DailyLogs.energy] = energy
+            it[DailyLogs.stress] = stress
+            it[waterMl] = 0
+            it[createdAt] = timestamp
+            it[updatedAt] = timestamp
+        }
+    }
+
     // ---------------------------------------------------------------- catalogue
 
     /** A symptom with no stage rows is offered everywhere; the rest are scoped. */

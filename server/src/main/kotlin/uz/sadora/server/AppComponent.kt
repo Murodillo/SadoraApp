@@ -124,6 +124,14 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
     val nutritionRepository = NutritionRepository()
     val medicationRepository = MedicationRepository()
     val wearableRepository = WearableRepository()
+    val shareRepository = ShareRepository()
+
+    /**
+     * Refuses blocked and deletion-pending accounts on every authenticated request.
+     * Declared before the services that must forget an account the moment they change
+     * its status — Kotlin initialises these in order, and a later `val` is null here.
+     */
+    val accountGate = uz.sadora.server.plugins.AccountGate(userRepository)
 
     val entitlementService = EntitlementService(entitlementRepository)
     val flagService = FeatureFlagService(flagRepository)
@@ -171,6 +179,8 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
         audit = auditService,
         config = config,
         rewards = rewardsService,
+        accountGate = accountGate,
+        shares = shareRepository,
     )
 
     val aiUsageRepository = AiUsageRepository()
@@ -326,7 +336,6 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
      * The QR code she shows a doctor. Reads through the health services rather than the
      * repositories, so the page is subject to exactly the same access rules as the app.
      */
-    val shareRepository = ShareRepository()
     val shareService = ShareService(
         shares = shareRepository,
         users = userRepository,
@@ -338,6 +347,7 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
         wearables = wearableService,
         audit = auditService,
         publicBaseUrl = config.publicBaseUrl,
+        entitlements = entitlementService,
     )
 
     val billingRepository = BillingRepository()
@@ -364,9 +374,15 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
                     http = outboundHttpClient,
                     packageName = it.packageName,
                     serviceAccount = GooglePlayVerifier.ServiceAccount.fromFile(it.serviceAccountFile!!),
+                    allowTestPurchases = !config.environment.isProduction,
                 )
             },
-            appStore = AppStoreVerifier(bundleIds = config.social.appleBundleIds.toSet()),
+            // Sandbox and TestFlight receipts are signed exactly like paid ones; only
+            // production refuses them, so testers on staging can still buy.
+            appStore = AppStoreVerifier(
+                bundleIds = config.social.appleBundleIds.toSet(),
+                allowSandbox = !config.environment.isProduction,
+            ),
         ),
     )
 
@@ -380,6 +396,8 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
         flagRepository = flagRepository,
         flagService = flagService,
         audit = auditService,
+        accountGate = accountGate,
+        shares = shareRepository,
     )
 
     override fun close() {

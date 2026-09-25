@@ -2,6 +2,7 @@ package uz.sadora.server.health
 
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.auth.authenticate
+import io.ktor.server.plugins.ratelimit.rateLimit
 import io.ktor.server.request.receive
 import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
@@ -26,6 +27,7 @@ import uz.sadora.contract.UpdateNutritionGoalsRequest
 import uz.sadora.server.api.requireUserId
 import uz.sadora.server.core.ValidationException
 import uz.sadora.server.core.parseUuid
+import uz.sadora.server.plugins.RateLimits
 import uz.sadora.server.plugins.USER_AUTH
 
 fun Route.mindRoutes(mind: MindService) {
@@ -114,10 +116,13 @@ fun Route.nutritionRoutes(nutrition: NutritionService) {
             /**
              * A photograph in, an estimate out. Nothing is written: the app shows the
              * result, she corrects the portion, and logging it is a separate request.
+             * Under the same per-address limit as the chat: both are paid model calls.
              */
-            post("/scan") {
-                val request = call.receive<FoodScanRequest>()
-                call.respond(nutrition.scan(call.requireUserId(), request))
+            rateLimit(RateLimits.AI) {
+                post("/scan") {
+                    val request = call.receive<FoodScanRequest>()
+                    call.respond(nutrition.scan(call.requireUserId(), request))
+                }
             }
 
             get("/foods") {

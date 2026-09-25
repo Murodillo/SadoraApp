@@ -97,7 +97,7 @@ fun Application.apiModule(component: AppComponent) {
     configureHttp(config)
     configureStatusPages()
     configureRateLimit(config)
-    configureSecurity(component.jwtService)
+    configureSecurity(component.jwtService, component.accountGate)
 
     routing {
         healthCheckRoutes(config.environment.name.lowercase(), SERVER_VERSION)
