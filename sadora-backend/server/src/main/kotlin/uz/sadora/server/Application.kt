@@ -1,0 +1,164 @@
+package uz.sadora.server
+
+import io.ktor.server.application.Application
+import io.ktor.server.engine.embeddedServer
+import io.ktor.server.netty.Netty
+import io.ktor.server.plugins.swagger.swaggerUI
+import io.ktor.server.routing.route
+import io.ktor.server.routing.routing
+import java.util.TimeZone
+import kotlinx.coroutines.runBlocking
+import org.slf4j.LoggerFactory
+import uz.sadora.contract.API_VERSION
+import uz.sadora.server.admin.AdminBootstrap
+import uz.sadora.server.ai.adminAiRoutes
+import uz.sadora.server.billing.adminBillingRoutes
+import uz.sadora.server.billing.billingRoutes
+import uz.sadora.server.billing.clickWebhook
+import uz.sadora.server.billing.paymeWebhook
+import uz.sadora.server.ai.aiRoutes
+import uz.sadora.server.rewards.adminRewardsRoutes
+import uz.sadora.server.rewards.rewardsRoutes
+import uz.sadora.server.share.publicShareRoutes
+import uz.sadora.server.share.shareRoutes
+import uz.sadora.server.community.adminCommunityRoutes
+import uz.sadora.server.community.communityRoutes
+import uz.sadora.server.doctor.adminDoctorRoutes
+import uz.sadora.server.doctor.doctorRoutes
+import uz.sadora.server.admin.adminRoutes
+import uz.sadora.server.api.healthCheckRoutes
+import uz.sadora.server.auth.authRoutes
+import uz.sadora.server.config.AppConfig
+import uz.sadora.server.health.healthRoutes
+import uz.sadora.server.health.medicationRoutes
+import uz.sadora.server.health.appointmentRoutes
+import uz.sadora.server.health.mindRoutes
+import uz.sadora.server.health.nutritionRoutes
+import uz.sadora.server.content.adminContentRoutes
+import uz.sadora.server.content.contentRoutes
+import uz.sadora.server.insights.insightsRoutes
+import uz.sadora.server.notify.adminNotificationRoutes
+import uz.sadora.server.notify.notificationRoutes
+import uz.sadora.server.wearable.adminWearableRoutes
+import uz.sadora.server.wearable.wearableRoutes
+import uz.sadora.server.wearable.wearableConnectRoutes
+import uz.sadora.server.wearable.wearablePublicRoutes
+import uz.sadora.server.plugins.configureHttp
+import uz.sadora.server.plugins.configureMonitoring
+import uz.sadora.server.plugins.configureRateLimit
+import uz.sadora.server.plugins.configureSecurity
+import uz.sadora.server.plugins.configureSerialization
+import uz.sadora.server.plugins.configureStatusPages
+import uz.sadora.server.user.userRoutes
+
+const val SERVER_VERSION: String = "0.1.0"
+
+fun main() {
+    // Every timestamp column is `timestamptz` and the domain works in UTC instants;
+    // pinning the JVM removes the deploy host's timezone from the equation entirely.
+    TimeZone.setDefault(TimeZone.getTimeZone("UTC"))
+
+    val config = AppConfig.fromEnvironment()
+    val logger = LoggerFactory.getLogger("uz.sadora.server")
+    val component = AppComponent(config)
+
+    runBlocking { AdminBootstrap.run() }
+
+    // Reminders only mean anything if something is running to send them.
+    component.notificationScheduler.start()
+
+    // "Delete my account" is a promise about the future, so something has to keep it.
+    component.accountErasureJob.start()
+
+    // Cloud wearables are pulled, not pushed: the job is the floor under the webhooks.
+    component.wearableSyncJob.start()
+
+    Runtime.getRuntime().addShutdownHook(Thread { component.close() })
+
+    logger.info(
+        "SADORA API {} starting on {}:{} [{}]",
+        SERVER_VERSION,
+        config.http.host,
+        config.http.port,
+        config.environment,
+    )
+
+    embeddedServer(
+        factory = Netty,
+        port = config.http.port,
+        host = config.http.host,
+        module = { apiModule(component) },
+    ).start(wait = true)
+}
+
+fun Application.apiModule(component: AppComponent) {
+    val config = component.config
+
+    configureSerialization()
+    configureMonitoring()
+    configureHttp(config)
+    configureStatusPages()
+    configureRateLimit(config)
+    configureSecurity(component.jwtService, component.accountGate)
+
+    routing {
+        healthCheckRoutes(config.environment.name.lowercase(), SERVER_VERSION)
+
+        // The spec is served only where it is useful; production does not publish it.
+        if (!config.environment.isProduction) {
+            swaggerUI(path = "docs", swaggerFile = "openapi/openapi.yaml")
+        }
+
+        // The one page a person opens in a browser: the doctor's view behind a QR code.
+        // Outside the version prefix because it is a link on a screen, not an API call.
+        publicShareRoutes(component.shareService)
+
+        route("/$API_VERSION") {
+            authRoutes(component.authService, component.otpService)
+            shareRoutes(component.shareService)
+            userRoutes(
+                userService = component.userService,
+                entitlementService = component.entitlementService,
+                flagService = component.flagService,
+                healthService = component.healthService,
+                config = config,
+            )
+            healthRoutes(component.healthService)
+            mindRoutes(component.mindService)
+            appointmentRoutes(component.appointmentService)
+            nutritionRoutes(component.nutritionService)
+            medicationRoutes(component.medicationService)
+            notificationRoutes(component.notificationService)
+            adminNotificationRoutes(component.notificationService, component.auditService)
+            wearableRoutes(component.wearableService)
+            wearableConnectRoutes(component.wearableConnectService, component.wearableSyncJob)
+            // The provider's own doors: an OAuth return and a signed webhook, no app token.
+            wearablePublicRoutes(component.wearableConnectService, component.wearableSyncJob)
+            adminWearableRoutes(component.wearableService, component.wearableRepository, component.auditService)
+            communityRoutes(component.communityService, component.messagingService)
+            adminCommunityRoutes(component.communityModerationService)
+            doctorRoutes(component.doctorService, component.communityService)
+            adminDoctorRoutes(component.doctorService)
+            aiRoutes(component.aiService, component.greetingService)
+            rewardsRoutes(component.rewardsService, component.shopService, component.homeLayoutRepository)
+            adminRewardsRoutes(component.rewardsService, component.shopService, component.auditService)
+            adminAiRoutes(component.aiService, component.adminService)
+            insightsRoutes(component.insightsService)
+            contentRoutes(component.contentService)
+            adminContentRoutes(component.contentService)
+            billingRoutes(component.billingService, component.storePurchaseService)
+            adminBillingRoutes(component.billingService, component.billingRepository)
+            // The providers' own protocols; not behind the app's auth or its error envelope.
+            paymeWebhook(component.paymeGateway, component.billingRepository)
+            clickWebhook(component.clickGateway, component.billingRepository)
+            adminRoutes(
+                adminAuth = component.adminAuthService,
+                adminService = component.adminService,
+                auditRepository = component.auditRepository,
+                statsRepository = component.statsRepository,
+                analyticsRepository = component.analyticsRepository,
+                refreshTokens = component.refreshTokenService,
+            )
+        }
+    }
+}

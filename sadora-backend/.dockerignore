@@ -1,0 +1,11 @@
+# The image's build stage needs the Gradle wrapper, the settings, the contract and the
+# server — none of the machine-local or generated files beside them.
+**/build
+**/.gradle
+**/.kotlin
+**/local.properties
+admin
+deploy
+server/secrets
+server/.env*
+*.md

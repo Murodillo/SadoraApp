@@ -25,9 +25,9 @@ echo "==> Postgres and Redis"
 # environment file rather than the shell. Without it compose falls back to 5432, which
 # on this machine belongs to another project — and the container is recreated bound to
 # a port it cannot have, leaving the demo with no database.
-SADORA_DB_PORT=$(grep -E '^SADORA_DB_PORT=' server/.env.dev | cut -d= -f2)
+SADORA_DB_PORT=$(grep -E '^SADORA_DB_PORT=' sadora-backend/server/.env.dev | cut -d= -f2)
 export SADORA_DB_PORT=${SADORA_DB_PORT:-5432}
-docker compose up -d >/dev/null
+docker compose -f sadora-backend/docker-compose.yml up -d >/dev/null
 
 echo "==> tunnels"
 pkill -f "cloudflared tunnel --url" 2>/dev/null || true
@@ -61,12 +61,12 @@ curl -sf localhost:8080/health/ready >/dev/null || { echo "backend did not start
 echo "==> admin panel"
 OLD=$(lsof -ti:4173 -sTCP:LISTEN 2>/dev/null || true)
 [[ -n "$OLD" ]] && kill "$OLD" 2>/dev/null && sleep 1
-npm --prefix admin run build >/dev/null
-(cd admin && npx vite preview --port 4173 > "$RUN/admin.log" 2>&1 &)
+npm --prefix sadora-backend/admin run build >/dev/null
+(cd sadora-backend/admin && npx vite preview --port 4173 > "$RUN/admin.log" 2>&1 &)
 
 echo "==> APK against $API"
-./gradlew :androidApp:assembleDebug -Psadora.devHost="$API" --console=plain > "$RUN/apk.log" 2>&1
-cp androidApp/build/outputs/apk/debug/androidApp-debug.apk "$RUN/sadora-online.apk"
+(cd sadora-client && ./gradlew :androidApp:assembleDebug -Psadora.devHost="$API" --console=plain) > "$RUN/apk.log" 2>&1
+cp sadora-client/androidApp/build/outputs/apk/debug/androidApp-debug.apk "$RUN/sadora-online.apk"
 
 # The Mac must not sleep, or both tunnels drop and the client sees a dead link.
 pgrep -x caffeinate >/dev/null || (caffeinate -dimsu >/dev/null 2>&1 &)

@@ -1,0 +1,184 @@
+package uz.sadora.doctor.data
+
+import io.ktor.client.HttpClient
+import io.ktor.client.call.body
+import io.ktor.client.request.HttpRequestBuilder
+import io.ktor.client.request.delete
+import io.ktor.client.request.get
+import io.ktor.client.request.header
+import io.ktor.client.request.patch
+import io.ktor.client.request.post
+import io.ktor.client.request.put
+import io.ktor.client.request.setBody
+import io.ktor.client.statement.HttpResponse
+import io.ktor.http.HttpStatusCode
+import io.ktor.http.isSuccess
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
+import uz.sadora.contract.ApiErrorResponse
+import uz.sadora.contract.AuthSession
+import uz.sadora.contract.RefreshRequest
+
+enum class HttpMethodKind { GET, POST, PATCH, PUT, DELETE }
+
+/**
+ * One place where a request becomes an [ApiResult].
+ *
+ * The same caller the client app uses: every API class — sign-in, the doctor panel, the
+ * community — goes through it, so none of them copies the refresh-and-retry logic, and
+ * a second copy is the one that gets the concurrency wrong.
+ */
+class ApiCaller internal constructor(
+    private val client: HttpClient,
+    private val session: SessionStore,
+) {
+    private val refreshMutex = Mutex()
+
+    /**
+     * The refresh in flight, if any, run in a scope that outlives the screen that asked.
+     *
+     * A refresh used to run inside the calling coroutine — a screen's own scope — so
+     * leaving the screen mid-request cancelled it after the server had already rotated
+     * the token. The stored token was then a spent one, the next attempt looked like a
+     * replay, and the server ended the whole session. Now the work is shared and finishes
+     * regardless of who is still waiting for it.
+     */
+    private val refreshScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private var inFlightRefresh: Deferred<ApiResult<AuthSession>>? = null
+
+    suspend inline fun <reified T> unauthenticated(
+        path: String,
+        noinline block: HttpRequestBuilder.() -> Unit = {},
+    ): ApiResult<T> = execute { postTo(path, block) }
+
+    /**
+     * Sends with the current access token; on a 401 refreshes once and retries once. A
+     * second 401 means the refresh token is gone too, so the session is cleared. A
+     * refresh that fails for any other reason — no connection — leaves the session be.
+     */
+    suspend inline fun <reified T> authenticated(
+        path: String,
+        method: HttpMethodKind,
+        noinline block: HttpRequestBuilder.() -> Unit = {},
+    ): ApiResult<T> {
+        val tokenUsed = currentAccessToken()
+        val first = execute<T> { send(path, method, tokenUsed, block) }
+        if (first.failureOrNull !is ApiFailure.Unauthorized) return first
+
+        val refreshed = refreshIfStillStale(tokenUsed)
+        if (refreshed is ApiResult.Failure) {
+            if (refreshed.failure.endsSession) clearSession()
+            return ApiResult.Failure(refreshed.failure)
+        }
+        return execute<T> { send(path, method, currentAccessToken(), block) }
+            .onFailure { if (it is ApiFailure.Unauthorized) clearSession() }
+    }
+
+    suspend fun currentAccessToken(): String? = session.currentAccessToken()
+
+    suspend fun clearSession() = session.clear()
+
+    /**
+     * Spends the stored refresh token for a new pair.
+     *
+     * Lives here rather than in [AuthApi] because the retry path above needs it, and a
+     * refresh that went through the retry path could recurse.
+     */
+    suspend fun refreshSession(): ApiResult<AuthSession> {
+        val refreshToken = session.currentRefreshToken()
+            ?: return ApiResult.Failure(ApiFailure.Unauthorized("no refresh token"))
+        val result = unauthenticated<AuthSession>("v1/auth/refresh") { setBody(RefreshRequest(refreshToken)) }
+        // The new pair is written whatever happens to the caller: a cancellation between
+        // the server's answer and this line would leave the phone holding a token the
+        // server has already spent.
+        result.onSuccess { withContext(NonCancellable) { session.saveTokens(it.tokens) } }
+        return result
+    }
+
+    /**
+     * Refreshes once for a burst of concurrent 401s.
+     *
+     * Several screens loading at once all fail with the same expired token. The first
+     * through the mutex refreshes; the rest find the access token already changed and go
+     * straight to their retry. Without that check each would spend the rotating refresh
+     * token in turn — extra round trips, and a wider window in which a genuinely stolen
+     * token would look identical to normal traffic.
+     */
+    suspend fun refreshIfStillStale(tokenUsed: String?): ApiResult<Unit> {
+        // The mutex only decides who starts the refresh; waiting happens outside it, on a
+        // job in the caller-independent scope, so a screen leaving mid-refresh neither
+        // cancels the request nor holds the lock while it is cancelled.
+        val refresh = refreshMutex.withLock {
+            if (session.currentAccessToken() != tokenUsed) return ApiResult.Success(Unit)
+            inFlightRefresh?.takeIf { it.isActive } ?: refreshScope.async {
+                try {
+                    refreshSession()
+                } finally {
+                    refreshMutex.withLock { inFlightRefresh = null }
+                }
+            }.also { inFlightRefresh = it }
+        }
+        return refresh.await().map { }
+    }
+
+    suspend fun postTo(path: String, block: HttpRequestBuilder.() -> Unit): HttpResponse =
+        client.post(path, block)
+
+    suspend fun send(
+        path: String,
+        method: HttpMethodKind,
+        accessToken: String?,
+        block: HttpRequestBuilder.() -> Unit,
+    ): HttpResponse {
+        val configure: HttpRequestBuilder.() -> Unit = {
+            accessToken?.let { header("Authorization", "Bearer $it") }
+            block()
+        }
+        return when (method) {
+            HttpMethodKind.GET -> client.get(path, configure)
+            HttpMethodKind.POST -> client.post(path, configure)
+            HttpMethodKind.PATCH -> client.patch(path, configure)
+            HttpMethodKind.PUT -> client.put(path, configure)
+            HttpMethodKind.DELETE -> client.delete(path, configure)
+        }
+    }
+
+    suspend inline fun <reified T> execute(request: () -> HttpResponse): ApiResult<T> = try {
+        val response = request()
+        if (response.status.isSuccess()) {
+            ApiResult.Success(response.body<T>())
+        } else {
+            ApiResult.Failure(response.toFailure())
+        }
+    } catch (cancellation: kotlin.coroutines.cancellation.CancellationException) {
+        throw cancellation
+    } catch (failure: Throwable) {
+        // Everything reaching here is a transport or parsing problem, not a rejection the
+        // server described. Reporting it as Network is what lets the UI offer a retry
+        // rather than an apology.
+        ApiResult.Failure(ApiFailure.Network(failure.message ?: "transport failure"))
+    }
+
+    /**
+     * The message on these is a diagnostic, not a sentence for a screen: `readable()`
+     * writes its own words for every case but validation and OTP, where the server's
+     * message names the field.
+     */
+    suspend fun HttpResponse.toFailure(): ApiFailure {
+        val parsed = runCatching { body<ApiErrorResponse>() }.getOrNull()
+        if (parsed != null) return ApiFailure.from(parsed.error)
+        // A gateway or proxy answered instead of the API, so there is no error envelope.
+        return when (status) {
+            HttpStatusCode.Unauthorized -> ApiFailure.Unauthorized("401 with no error envelope")
+            HttpStatusCode.TooManyRequests -> ApiFailure.RateLimited("429 with no error envelope", null)
+            else -> ApiFailure.Unexpected("http ${status.value} with no error envelope")
+        }
+    }
+}

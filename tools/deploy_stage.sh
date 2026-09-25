@@ -25,12 +25,14 @@
 set -e
 cd "$(dirname "$0")/.."
 
-# Where the server is lives outside the repository, which is public: deploy/stage/hosts.env
-# (gitignored, see hosts.env.example) or the same variables in the environment.
-[[ -f deploy/stage/hosts.env ]] && source deploy/stage/hosts.env
+# Where the server is lives outside the repository, which is public:
+# sadora-backend/deploy/stage/hosts.env (gitignored, see hosts.env.example) or the same
+# variables in the environment.
+HOSTS=sadora-backend/deploy/stage/hosts.env
+[[ -f $HOSTS ]] && source $HOSTS
 KEY=${SADORA_DEPLOY_KEY:-$HOME/.ssh/id_ed25519_sadora_deploy}
-JUMP=${SADORA_JUMP:?set SADORA_JUMP in deploy/stage/hosts.env — see hosts.env.example}
-HOST=${SADORA_HOST:?set SADORA_HOST in deploy/stage/hosts.env — see hosts.env.example}
+JUMP=${SADORA_JUMP:?set SADORA_JUMP in $HOSTS — see hosts.env.example}
+HOST=${SADORA_HOST:?set SADORA_HOST in $HOSTS — see hosts.env.example}
 DIR=${SADORA_DIR:-/opt/sadora}
 OUT=build/stage
 mkdir -p "$OUT"
@@ -61,22 +63,22 @@ fi
 remote 'docker --version'
 
 echo "==> admin panel"
-npm --prefix admin run build >/dev/null
+npm --prefix sadora-backend/admin run build >/dev/null
 
 echo "==> source"
 remote "mkdir -p $DIR"
-# Only what the stack needs: no mobile modules, no build output, no secrets. The image's
-# build stage compiles the server from scratch, and settings.gradle.kts includes the
-# mobile modules only when their directories exist.
+# Only what the stack needs: sadora-backend becomes the server's $DIR, and the landing
+# page sits beside it as $DIR/landing — the layout the deploy gate and the compose files
+# expect. No apps, no build output, no secrets; the image's build stage compiles the
+# server from scratch.
 COPYFILE_DISABLE=1 tar -czf - \
-  --exclude='./.git' --exclude='./.gradle' --exclude='./.kotlin' --exclude='./.idea' \
+  --exclude='./.gradle' --exclude='./.kotlin' --exclude='./.idea' \
   --exclude='./build' --exclude='*/build' --exclude='*/node_modules' \
-  --exclude='./androidApp' --exclude='./iosApp' --exclude='./shared' --exclude='./design' \
-  --exclude='./.env' --exclude='./server/.env.prod' --exclude='./server/.env.stage' \
-  --exclude='./deploy/stage/hosts.env' --exclude='./local.properties' --exclude='.DS_Store' \
+  --exclude='./server/.env.prod' --exclude='./server/.env.stage' \
+  --exclude='./deploy/stage/hosts.env' --exclude='local.properties' --exclude='.DS_Store' \
   --exclude='./downloads' --exclude='./releases' --exclude='./backups' --exclude='./.release.env' \
   --exclude='*/coverage' \
-  . | remote "tar -xzf - -C $DIR"
+  -C sadora-backend . -C .. landing | remote "tar -xzf - -C $DIR"
 
 echo "==> environment"
 if remote "test -f $DIR/server/.env.stage"; then

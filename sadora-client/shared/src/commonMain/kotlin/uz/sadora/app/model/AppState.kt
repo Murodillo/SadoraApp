@@ -1,0 +1,945 @@
+package uz.sadora.app.model
+
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.snapshots.SnapshotStateList
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import kotlin.time.Clock
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.daysUntil
+import kotlinx.datetime.minus
+import kotlinx.datetime.plus
+import kotlinx.datetime.todayIn
+import uz.sadora.contract.HomeLayout
+
+enum class AppLanguage(val code: String, val native: String, val english: String) {
+    Uz("UZ", "O'zbekcha", "Uzbek"),
+    Ru("RU", "Русский", "Russian"),
+    En("EN", "English", "English"),
+}
+
+/** The eight onboarding goals. Selected goals surface first on the Today screen. */
+enum class Goal {
+    UnderstandCycle,
+    SleepBetter,
+    MoreEnergy,
+    LessStress,
+    EatBalanced,
+    DrinkWater,
+    BeActive,
+    RememberMeds,
+}
+
+/**
+ * How long she has been trying to conceive.
+ *
+ * Asked only of that life stage, and only after the sensitive-topic notice.
+ */
+enum class ConceptionWindow { JustStarted, UnderThreeMonths, ThreeToSix, SixToTwelve, OverAYear }
+
+/**
+ * Contraception used in the last six months.
+ *
+ * It changes predictions rather than describing her: hormonal methods suppress
+ * ovulation, so the first cycles after stopping one are not a baseline worth
+ * predicting from, and the app should say so instead of guessing confidently.
+ */
+enum class BirthControl { None, StillUsing, Pill, Iud, Barrier, Other, Undisclosed }
+
+/** How many period starts the onboarding calendar collects. */
+const val MaxEnteredCycles = 3
+
+/** Gaps outside this range are mistaps, not cycles. Mirrors the server's own filter. */
+private val PlausibleCycleDays = 15..60
+
+/** The fertile window the app assumes when the server has not supplied one. */
+private val AssumedFertileCycleDays = 12..16
+
+/**
+ * The five moods, worst first.
+ *
+ * The word for each and the line the Mind screen shows under the big face live in
+ * [uz.sadora.app.i18n.CommonStrings]; an enum is one object for the process, and
+ * the language belongs to the screen. The face is the same everywhere, so it stays.
+ */
+enum class Mood(val emoji: String, val score: Int) {
+    Bad("😞", 1),
+    Low("😕", 2),
+    Ok("😐", 3),
+    Good("🙂", 4),
+    Great("😄", 5);
+
+    companion object {
+        fun forScore(score: Int): Mood = entries.firstOrNull { it.score == score } ?: Ok
+    }
+}
+
+/** Today, in the device's own zone. */
+fun deviceToday(): LocalDate = Clock.System.todayIn(TimeZone.currentSystemDefault())
+
+/**
+ * Single in-memory store for the whole app.
+ *
+ * Screens read and write here directly; the server's answers are mirrored onto it by
+ * the data layer, and local edits leave through [sync]. Everything is Compose state,
+ * so any mutation recomposes the affected screens.
+ */
+class AppState {
+    // ---- account / onboarding ----
+    var language by mutableStateOf(AppLanguage.Uz)
+    // Blank until she answers the first question. A prefilled name would be answered
+    // for her, and the onboarding greets people by it.
+    var name by mutableStateOf("")
+    // Blank until the server or she says otherwise. These used to open on a sample
+    // person — "malika@example.com", born 14.03.1994, 164 cm, 58 kg — and the sample's
+    // numbers went up with every onboarding whose body and birth-year questions were
+    // skipped: the request sends whatever is in here, and the server stored it as hers.
+    var email by mutableStateOf("")
+    var phone by mutableStateOf("")
+    var birthDate by mutableStateOf("")
+    var heightCm by mutableStateOf("")
+    var weightKg by mutableStateOf("")
+    var lifeStage by mutableStateOf(LifeStage.Cycle)
+    // Empty until the onboarding grid is answered, for the same reason [name] is blank.
+    val goals = mutableStateListOf<Goal>()
+
+    // ---- cycle baseline, answered during onboarding ----
+    /**
+     * Every day she has marked as a period day, in no particular order.
+     *
+     * Days rather than starts, because a period is a span she edits: the first tap
+     * fills in a typical length as a convenience, and she is then free to shorten it,
+     * extend it, or cut it down to the single day she is sure of. Empty means "not
+     * answered", which stays distinguishable from any marking.
+     */
+    val markedPeriodDays = mutableStateListOf<LocalDate>()
+
+    /**
+     * The marked days grouped into periods — one run of consecutive days each, oldest
+     * first.
+     *
+     * Deriving the periods from the days rather than storing them separately is what
+     * lets a single tap edit any day without the two representations drifting apart.
+     */
+    fun periodRuns(): List<List<LocalDate>> {
+        val sorted = markedPeriodDays.distinct().sorted()
+        if (sorted.isEmpty()) return emptyList()
+        val runs = mutableListOf(mutableListOf(sorted.first()))
+        sorted.zipWithNext { previous, day ->
+            if (previous.plus(1, DateTimeUnit.DAY) == day) {
+                runs.last().add(day)
+            } else {
+                runs.add(mutableListOf(day))
+            }
+        }
+        return runs
+    }
+
+    /** The first day of each marked period, oldest first. */
+    val recentPeriodStarts: List<LocalDate> get() = periodRuns().map { it.first() }
+
+    /** The anchor the baseline carries: the most recent period's first day. */
+    val lastPeriodStart: LocalDate? get() = recentPeriodStarts.lastOrNull()
+
+    fun isPeriodDay(date: LocalDate): Boolean = date in markedPeriodDays
+
+    var cycleIsRegular by mutableStateOf(true)
+    var conceptionWindow by mutableStateOf<ConceptionWindow?>(null)
+    var birthControl by mutableStateOf<BirthControl?>(null)
+
+    /** Pregnancy due date, and the birth date behind a postpartum stage. */
+    var dueDate by mutableStateOf<LocalDate?>(null)
+
+    /** The child's birth date, for the postpartum stage. */
+    var childBirthDate by mutableStateOf<LocalDate?>(null)
+    var babyBirthDate by mutableStateOf<LocalDate?>(null)
+
+    /** "Did a doctor recommend SADORA?" — null until answered, and null when skipped. */
+    var referredByDoctor by mutableStateOf<Boolean?>(null)
+
+    var notificationsAllowed by mutableStateOf(true)
+    var healthDataAllowed by mutableStateOf(true)
+    var cameraAllowed by mutableStateOf(false)
+
+    // The consent gate in front of onboarding is what turns these on, so they start
+    // off: a box that arrives pre-ticked is not consent, it is a default.
+    var consentStoreHealth by mutableStateOf(false)
+    var consentAiInsights by mutableStateOf(true)
+    var consentAnalytics by mutableStateOf(false)
+
+    /** Acceptance of the Terms of Use and the Privacy Policy. Required to continue. */
+    var consentTerms by mutableStateOf(false)
+
+    // ---- subscription ----
+    /**
+     * Free until the server says otherwise.
+     *
+     * The prototype defaulted to true so the Premium screens were visible; with real
+     * entitlements behind it that default would show paid content to someone who has
+     * not paid, so the tier now only ever comes from [Entitlements].
+     */
+    var isPremium by mutableStateOf(false)
+    /** When the plan ends, and whether it renews itself — the Profile card words it. */
+    var premiumExpiresAt by mutableStateOf<LocalDate?>(null)
+    var premiumAutoRenewing by mutableStateOf(false)
+
+    // ---- rewards ----
+    /**
+     * The Gul balance and the streak behind most of it.
+     *
+     * Mirrored from the server on every launch and never computed here: an app that
+     * added up its own coins would mint them on a reinstall. Zero until the first
+     * check-in answers, which is also what a signed-out prototype shows.
+     */
+    var coins by mutableStateOf(0)
+    var streakDays by mutableStateOf(0)
+    var longestStreak by mutableStateOf(0)
+    var streakOpenedToday by mutableStateOf(false)
+
+    /** Her invite code, once the referral screen has been opened at least once. */
+    var referralCode by mutableStateOf<String?>(null)
+
+    /**
+     * The code she arrived with, from a shared link or typed into onboarding.
+     *
+     * Held here rather than sent immediately because it is claimed as part of the
+     * onboarding request — the account has to exist before anything can be paid for it.
+     */
+    var pendingInviteCode by mutableStateOf<String?>(null)
+
+    /** "Do you wear a smart watch or band?" — null until answered, null when skipped. */
+    var hasWearable by mutableStateOf<Boolean?>(null)
+
+    /**
+     * Set only by the onboarding question, and cleared the moment the shell acts on it.
+     *
+     * Separate from [hasWearable] on purpose: that answer is permanent and lives on the
+     * profile, so routing off it would reopen the connect screen on every launch for
+     * everyone who owns a watch.
+     */
+    var pendingDeviceConnect by mutableStateOf(false)
+
+    /**
+     * How Today is arranged, as the server has it.
+     *
+     * Starts at the shipped default so the first frame is right; the saved layout
+     * replaces it when it loads, which is usually before the screen is even reached.
+     */
+    var homeLayout by mutableStateOf(HomeLayout())
+
+    /** The cards Today should draw, in order. */
+    fun homeWidgets(): List<String> = homeLayout.visible()
+
+    // ---- appearance ----
+    var darkTheme by mutableStateOf(false)
+
+    // ---- what the server has switched on ----
+    // Both default to open: a phone that has not heard from the server yet shows the
+    // app whole, and the server's flags close a section rather than open one.
+    var communityEnabled by mutableStateOf(true)
+    var aiChatEnabled by mutableStateOf(true)
+
+    // ---- the day ----
+    /**
+     * The day every "bugun" on screen refers to.
+     *
+     * Starts as the device's date and is replaced by the server's once the cycle
+     * status loads, so the calendar and the ring agree with the backend about which
+     * day it is even across a midnight the phone crossed while offline.
+     */
+    var today by mutableStateOf(deviceToday())
+
+    // ---- cycle ----
+    var cycleDay by mutableStateOf(14)
+    var averageCycleLength by mutableStateOf(28)
+    var averagePeriodLength by mutableStateOf(5)
+    var pregnancyWeek by mutableStateOf(24)
+    var postpartumWeek by mutableStateOf(7)
+
+    /**
+     * The first day of the current cycle.
+     *
+     * Kept separately from [markedPeriodDays] because those are handed to the server
+     * and cleared once onboarding finishes, and the calendar still needs an anchor to
+     * colour the days around today from.
+     */
+    var cycleStartDate by mutableStateOf<LocalDate?>(null)
+
+    /** The server's phase for today, when it has given one. */
+    var cyclePhase by mutableStateOf<CyclePhase?>(null)
+    var daysUntilNextPeriod by mutableStateOf<Int?>(null)
+    var fertileFrom by mutableStateOf<LocalDate?>(null)
+    var fertileUntil by mutableStateOf<LocalDate?>(null)
+
+    /**
+     * False when the server has said it cannot predict yet — one data point, a stage
+     * that does not cycle. The screens then say so instead of drawing a confident ring.
+     */
+    var hasCyclePrediction by mutableStateOf(true)
+
+    // ---- daily data ----
+    // What she has logged starts at nothing, never at a plausible number: these used to
+    // open at 1.2 l and 1 240 kcal, and a cold start on a slow network showed her a day
+    // she had not had until the server answered. The goals are defaults, not claims.
+    var waterMl by mutableStateOf(0)
+    var waterGoalMl by mutableStateOf(2000)
+
+    var caloriesEaten by mutableStateOf(0)
+    var calorieGoal by mutableStateOf(1850)
+    var proteinG by mutableStateOf(0)
+    var proteinGoalG by mutableStateOf(85)
+    var fatG by mutableStateOf(0)
+    var fatGoalG by mutableStateOf(62)
+    var carbsG by mutableStateOf(0)
+    var carbsGoalG by mutableStateOf(210)
+
+    /**
+     * True on the first day of an account with nothing logged yet. Drives Today's empty
+     * state — the fourth Today state in the design, alongside free, premium and skeleton.
+     *
+     * Set by the health controller after the first load, and cleared by the first thing
+     * she logs, so the screen turns into the ordinary deck the moment there is a day.
+     */
+    var isNewUser by mutableStateOf(false)
+
+    var mood by mutableStateOf(Mood.Good)
+
+    /**
+     * Whether today's mood was actually logged. [mood] always has a value, and a score
+     * that counted the default as an answer graded a day she had not described.
+     */
+    var moodLoggedToday by mutableStateOf(false)
+
+    /**
+     * True once she has answered the onboarding "how do you feel" question. [mood] has
+     * a default, so without this the request could not tell an answer from the default.
+     */
+    var moodAnswered by mutableStateOf(false)
+
+    /** 1–5, the Mind tab's second and third dials. Stress 5 is the most stressed. */
+    var energy by mutableStateOf(4)
+    var stress by mutableStateOf(2)
+
+    /**
+     * Whether she set each dial today. Like [mood], both always hold a number, and the
+     * Mind tab used to draw "Stress: past 40%, Energiya: yuqori 80%" for a day she had
+     * said nothing about — then sent those two numbers up as her answers the first time
+     * she tapped a mood.
+     */
+    /**
+     * Counts check-ins the server has accepted. The week's mood chart is a cached window,
+     * and this is what tells it that today's bar has changed.
+     */
+    var checkInsSaved by mutableStateOf(0)
+
+    var energyLoggedToday by mutableStateOf(false)
+    var stressLoggedToday by mutableStateOf(false)
+
+    /**
+     * What her device measured today. Null until a device — or her own hand, for sleep —
+     * has said anything: the app used to start every account at 6 420 steps and 6h 40m,
+     * and a phone that had never seen a watch showed them as if it had.
+     */
+    var steps by mutableStateOf<Int?>(null)
+    var sleepMinutes by mutableStateOf<Int?>(null)
+
+    // The recovery family the strap-style wearables speak in. Each is null until a
+    // device sends it; none is computed here, and none is a medical measure.
+    var restingHeartRate by mutableStateOf<Int?>(null)
+    var hrvMs by mutableStateOf<Int?>(null)
+    /** 0–100, the vendor's own readiness score for the day. */
+    var recovery by mutableStateOf<Int?>(null)
+    /** WHOOP's 0–21 cardiovascular load. Stands in for steps on a strap that counts none. */
+    var strain by mutableStateOf<Double?>(null)
+    var skinTemperature by mutableStateOf<Double?>(null)
+    var spo2 by mutableStateOf<Int?>(null)
+    /** Which device today's numbers came from, worded by the screen. Null when none did. */
+    var wearableSource by mutableStateOf<String?>(null)
+
+    /** True once anything above has arrived from a device. */
+    val hasDeviceData: Boolean
+        get() = wearableSource != null
+
+    /** The build she is running, for the About screen. Set by the platform entry point. */
+    var appVersion by mutableStateOf<String?>(null)
+
+    /** The day the account was made, in her zone. Decides whether Today is still "first day". */
+    var memberSince by mutableStateOf<LocalDate?>(null)
+
+    /** Seconds of breathing and meditation practised today. */
+    var practiceSecondsToday by mutableStateOf(0)
+
+    /**
+     * The journal, newest first.
+     *
+     * Held here like every other health record so the screen reads the store rather than
+     * the network, and so an entry she has just written is on screen before the server
+     * has confirmed it.
+     */
+    val journal = mutableStateListOf<JournalNote>()
+
+    // Filled by the onboarding check-in, then by the symptom sheet.
+    val symptoms = mutableStateListOf<String>()
+    // Empty until the server answers. Seeding them meant a phone that had just signed
+    // in showed two meals and a medication course nobody had entered.
+    val meals = mutableStateListOf<Meal>()
+    val medications = mutableStateListOf<Medication>()
+
+    // ---- secret chat ----
+    /**
+     * The feed, and what she has done to it.
+     *
+     * Her own likes, saves and comments are kept apart from the posts rather than
+     * folded into them: a post is everyone's, and her reaction to it is only hers, so
+     * the two have different owners the moment there is a server behind this.
+     */
+    // Empty until the feed loads. Seeding it with written-out posts meant every phone
+    // opened the secret chat on five conversations nobody had had.
+    val communityPosts = mutableStateListOf<CommunityPost>()
+    val likedPosts = mutableStateListOf<String>()
+    val savedPosts = mutableStateListOf<String>()
+    private val ownComments = mutableStateMapOf<String, SnapshotStateList<CommunityComment>>()
+
+    var communityTopic by mutableStateOf(CommunityTopic.All)
+    var communityFilter by mutableStateOf(CommunityFilter.Feed)
+    var communitySort by mutableStateOf(CommunitySort.Newest)
+    /** Only what verified doctors wrote; a chip beside the rooms, across all of them. */
+    var communityDoctorsOnly by mutableStateOf(false)
+
+    /**
+     * Her name as a verified doctor, once the server says she is one. Everything she
+     * writes in the chat then carries it instead of her alias.
+     */
+    var doctorName by mutableStateOf<String?>(null)
+
+    /** The alias she posts under, once the server has assigned one. */
+    var communityAlias by mutableStateOf<String?>(null)
+    var communityTint by mutableStateOf(0)
+    /** The line under her alias, and whether strangers may write to her. */
+    var communityBio by mutableStateOf<String?>(null)
+    var communityDmOpen by mutableStateOf(true)
+    var communityBadges by mutableStateOf<List<CommunityBadge>>(emptyList())
+    /** Unread private messages, for the badge on the chat header. */
+    var communityUnread by mutableStateOf(0)
+
+    /** Set once there is a backend; every community edit below reports through it. */
+    var communitySync: CommunitySync? = null
+
+    /** Everyone else's likes plus hers, so the count moves the instant she taps. */
+    fun likeCount(post: CommunityPost): Int =
+        post.likes + if (post.id in likedPosts) 1 else 0
+
+    fun commentsOf(post: CommunityPost): List<CommunityComment> =
+        post.comments + ownComments[post.id].orEmpty()
+
+    /** What the card shows: the server's count until the sheet has loaded the comments. */
+    fun commentCountOf(post: CommunityPost): Int =
+        maxOf(post.commentCount, post.comments.size) + ownComments[post.id].orEmpty().size
+
+    fun toggleLike(postId: String) {
+        val liked = !likedPosts.remove(postId)
+        if (liked) likedPosts.add(postId)
+        communitySync?.postLiked(postId, liked)
+    }
+
+    fun toggleSaved(postId: String) {
+        val saved = !savedPosts.remove(postId)
+        if (saved) savedPosts.add(postId)
+        communitySync?.postSaved(postId, saved)
+    }
+
+    fun addComment(postId: String, body: String) {
+        val text = body.trim()
+        if (text.isEmpty()) return
+        ownComments.getOrPut(postId) { mutableStateListOf() }
+            .add(
+                CommunityComment(
+                    // Blank rather than a word: the screen already draws "siz" beside
+                    // a comment marked as hers, and a word here could not be translated.
+                    alias = doctorName ?: communityAlias.orEmpty(),
+                    tint = communityTint,
+                    createdAt = Clock.System.now(),
+                    body = text,
+                    isMine = true,
+                ),
+            )
+        communitySync?.commentAdded(postId, text)
+    }
+
+    /**
+     * Takes back a comment the server refused — the daily limit, a restricted account, no
+     * network. It stayed on the page as if posted, with its +1, until some later load
+     * quietly dropped it.
+     */
+    fun dropOwnComment(postId: String, body: String) {
+        val mine = ownComments[postId] ?: return
+        mine.indexOfLast { it.body == body }.takeIf { it >= 0 }?.let(mine::removeAt)
+    }
+
+    /** Undoes a like or a save the server did not take, so the heart is not left lying. */
+    fun revertLike(postId: String, liked: Boolean) {
+        if (liked) likedPosts.remove(postId) else if (postId !in likedPosts) likedPosts.add(postId)
+    }
+
+    fun revertSaved(postId: String, saved: Boolean) {
+        if (saved) savedPosts.remove(postId) else if (postId !in savedPosts) savedPosts.add(postId)
+    }
+
+    /**
+     * A new post. With a backend the feed is refreshed from the server's answer; without
+     * one it goes straight to the top of the sample feed so the prototype still works.
+     */
+    fun createPost(topic: CommunityTopic, body: String) {
+        val text = body.trim()
+        if (text.isEmpty()) return
+        val sync = communitySync
+        if (sync != null) {
+            sync.postCreated(topic, text)
+            return
+        }
+        communityPosts.add(
+            0,
+            CommunityPost(
+                id = "local-${communityPosts.size + 1}",
+                alias = communityAlias.orEmpty(),
+                tint = communityTint,
+                topic = topic,
+                createdAt = Clock.System.now(),
+                body = text,
+                likes = 0,
+                isMine = true,
+            ),
+        )
+    }
+
+    fun deletePost(postId: String) {
+        communityPosts.removeAll { it.id == postId }
+        likedPosts.remove(postId)
+        savedPosts.remove(postId)
+        ownComments.remove(postId)
+        communitySync?.postDeleted(postId)
+    }
+
+    fun reportPost(postId: String, reason: ReportReason, note: String?) {
+        communitySync?.postReported(postId, reason, note)
+    }
+
+    /** The server's feed, replacing the samples and whatever she tapped before it arrived. */
+    fun replaceCommunityFeed(posts: List<CommunityPost>, liked: Set<String>, saved: Set<String>) {
+        // Comments loaded for a post survive the refresh, or the sheet would blank on every like.
+        val keptComments = communityPosts.associate { it.id to it.comments }
+        communityPosts.clear()
+        communityPosts.addAll(posts.map { post -> post.copy(comments = keptComments[post.id].orEmpty()) })
+        likedPosts.clear()
+        likedPosts.addAll(liked)
+        savedPosts.clear()
+        savedPosts.addAll(saved)
+    }
+
+    /** The server's comments for one post; her optimistic ones are now among them. */
+    fun replaceComments(postId: String, comments: List<CommunityComment>) {
+        val index = communityPosts.indexOfFirst { it.id == postId }
+        if (index >= 0) {
+            communityPosts[index] = communityPosts[index].copy(comments = comments, commentCount = comments.size)
+        }
+        ownComments.remove(postId)
+    }
+
+    /** The posts the feed should show, given the room and the saved filter. */
+    fun visiblePosts(): List<CommunityPost> {
+        val shown = communityPosts.filter { post ->
+            val inTopic = communityTopic == CommunityTopic.All || post.topic == communityTopic
+            val inFilter = when (communityFilter) {
+                CommunityFilter.Feed -> true
+                CommunityFilter.Saved -> post.id in savedPosts
+                CommunityFilter.Mine -> post.isMine
+            }
+            val byDoctor = !communityDoctorsOnly || post.doctor != null
+            inTopic && inFilter && byDoctor
+        }
+        // Sorted here, not trusted from the server: a post she just wrote is appended
+        // to the list optimistically and still has to come out on top.
+        return when (communitySort) {
+            CommunitySort.Newest -> shown.sortedByDescending { it.createdAt }
+            CommunitySort.Active -> shown.sortedWith(
+                compareByDescending<CommunityPost> { likeCount(it) + commentCountOf(it) * 2 }
+                    .thenByDescending { it.createdAt },
+            )
+        }
+    }
+
+    /**
+     * Set once the app has a backend. Every mutation below reports through it, so the
+     * screens stay unaware that anything is being synced.
+     */
+    var sync: AppStateSync? = null
+
+    /**
+     * Gaps between the entered period starts, in days.
+     *
+     * Implausible gaps are dropped rather than averaged in: a mistapped date would
+     * otherwise drag the average somewhere no cycle goes, and the same filter runs on
+     * the server, so the two agree on what counts.
+     */
+    fun observedCycleLengths(): List<Int> =
+        recentPeriodStarts.sorted()
+            .zipWithNext { earlier, later -> earlier.daysUntil(later) }
+            .filter { it in PlausibleCycleDays }
+
+    /** The average of [observedCycleLengths], or null until two dates are entered. */
+    fun averageFromEnteredCycles(): Int? =
+        observedCycleLengths().takeIf { it.isNotEmpty() }?.let { it.sum() / it.size }
+
+    /**
+     * Marks or unmarks one day of a period.
+     *
+     * Three cases, in the order someone actually uses them:
+     *  - an unmarked day on its own starts a period, filling in
+     *    [averagePeriodLength] days as a convenience — that is the common case, and it
+     *    saves five taps;
+     *  - an unmarked day touching an existing period joins it, so she can lengthen a
+     *    period the fill-in got wrong;
+     *  - a marked day is removed on its own, so she can shorten one, or cut it back to
+     *    the single day she is sure of.
+     *
+     * The auto-fill is only ever a starting point. Nothing here is a fixed span, which
+     * is why the days are stored rather than the starts.
+     */
+    fun togglePeriodDay(date: LocalDate, latestAllowed: LocalDate) {
+        if (markedPeriodDays.remove(date)) return
+
+        val touchesExisting = isPeriodDay(date.plus(1, DateTimeUnit.DAY)) ||
+            isPeriodDay(date.minus(1, DateTimeUnit.DAY))
+        if (touchesExisting) {
+            markedPeriodDays.add(date)
+            return
+        }
+
+        // A fresh period. Days already marked or still in the future are skipped rather
+        // than filled, so the convenience never invents a day she did not bleed.
+        val length = averagePeriodLength.coerceAtLeast(1)
+        val days = (0 until length)
+            .map { date.plus(it, DateTimeUnit.DAY) }
+            .filter { it <= latestAllowed && !isPeriodDay(it) }
+        markedPeriodDays.addAll(days)
+        dropOldestPeriodsBeyondLimit()
+    }
+
+    /** Keeps at most [MaxEnteredCycles] periods, dropping the oldest whole runs. */
+    private fun dropOldestPeriodsBeyondLimit() {
+        var runs = periodRuns()
+        while (runs.size > MaxEnteredCycles) {
+            markedPeriodDays.removeAll(runs.first())
+            runs = periodRuns()
+        }
+    }
+
+    /**
+     * The marked periods as start..end ranges, clearing them as they are taken.
+     *
+     * The most recent start survives as [cycleStartDate]: the days go to the server,
+     * but the calendar on the very next screen still needs to know where the cycle
+     * began.
+     */
+    fun takeMarkedPeriods(): List<ClosedRange<LocalDate>> {
+        val runs = periodRuns().map { it.first()..it.last() }
+        runs.lastOrNull()?.let { cycleStartDate = it.start }
+        markedPeriodDays.clear()
+        return runs
+    }
+
+    /**
+     * Recomputes the local cycle position from the onboarding answers.
+     *
+     * The server owns the real prediction, but it only answers on the next load, and
+     * the first screen after onboarding is Today. Deriving the day here means that
+     * screen is right immediately instead of showing a stale default until the first
+     * sync lands — and the server's answer overwrites it as soon as it arrives.
+     */
+    fun recomputeCycleDay(today: LocalDate) {
+        val start = lastPeriodStart ?: cycleStartDate ?: return
+        val elapsed = start.daysUntil(today)
+        if (elapsed < 0) return
+        this.today = today
+        cycleStartDate = start
+        val length = averageCycleLength.coerceAtLeast(1)
+        cycleDay = elapsed % length + 1
+        // The server has not spoken yet, so anything it would have said is unknown.
+        cyclePhase = null
+        daysUntilNextPeriod = null
+        fertileFrom = null
+        fertileUntil = null
+    }
+
+    // ---- cycle, derived ----
+
+    /** Which phase a given cycle day falls in, from the averages alone. */
+    fun phaseForCycleDay(day: Int): CyclePhase = when {
+        day <= averagePeriodLength -> CyclePhase.Period
+        day in AssumedFertileCycleDays -> CyclePhase.Fertile
+        day < AssumedFertileCycleDays.first -> CyclePhase.Follicular
+        else -> CyclePhase.Luteal
+    }
+
+    /** Today's phase: the server's answer, or the local estimate until it arrives. */
+    fun currentPhase(): CyclePhase = cyclePhase ?: phaseForCycleDay(cycleDay)
+
+    /**
+     * The cycle day a date would be, counting from [cycleStartDate] and wrapping every
+     * [averageCycleLength] days in both directions.
+     *
+     * Null when there is no anchor — the calendar then draws a plain month rather than
+     * a guess, which is what the design rules require of an unmarked prediction.
+     */
+    fun cycleDayFor(date: LocalDate): Int? {
+        val start = cycleStartDate ?: return null
+        val length = averageCycleLength.coerceAtLeast(1)
+        val elapsed = start.daysUntil(date)
+        return ((elapsed % length) + length) % length + 1
+    }
+
+    fun phaseForDate(date: LocalDate): CyclePhase? = cycleDayFor(date)?.let(::phaseForCycleDay)
+
+    /** The predicted first day of the next period. */
+    fun nextPeriodStart(): LocalDate? {
+        daysUntilNextPeriod?.let { return today.plus(it, DateTimeUnit.DAY) }
+        val length = averageCycleLength.coerceAtLeast(1)
+        return today.plus(length - cycleDay + 1, DateTimeUnit.DAY)
+    }
+
+    /** Days from today until [nextPeriodStart]. */
+    fun daysToNextPeriod(): Int = daysUntilNextPeriod ?: (today.daysUntil(nextPeriodStart() ?: today))
+
+    /** The fertile window as cycle days, from the server or the assumed window. */
+    fun fertileWindowDays(): IntRange {
+        val from = fertileFrom?.let(::cycleDayFor)
+        val until = fertileUntil?.let(::cycleDayFor)
+        return if (from != null && until != null && from <= until) from..until else AssumedFertileCycleDays
+    }
+
+    /** Whether a date is inside the fertile window. */
+    fun isFertile(date: LocalDate): Boolean {
+        val from = fertileFrom
+        val until = fertileUntil
+        if (from != null && until != null) return date in from..until
+        return cycleDayFor(date)?.let { it in AssumedFertileCycleDays } ?: false
+    }
+
+    fun toggleGoal(goal: Goal) {
+        if (!goals.remove(goal)) goals.add(goal)
+    }
+
+    /**
+     * The onboarding tiles, which record the catalogue key as well as the word.
+     *
+     * The sign-up request sends keys, and before this the key was found by looking the
+     * Uzbek word up in a map — which stopped working the moment the words could be
+     * Russian or English.
+     */
+    val starterSymptomKeys = mutableStateListOf<String>()
+
+    fun toggleStarterSymptom(key: String, label: String) {
+        if (!starterSymptomKeys.remove(key)) starterSymptomKeys.add(key)
+        toggleSymptom(label)
+    }
+
+    fun toggleSymptom(symptom: String) {
+        isNewUser = false
+        val added = !symptoms.remove(symptom)
+        if (added) symptoms.add(symptom)
+        sync?.symptomToggled(symptom, added)
+    }
+
+    fun addWater(ml: Int) {
+        isNewUser = false
+        waterMl = (waterMl + ml).coerceAtLeast(0)
+        sync?.waterAdded(ml)
+    }
+
+    /**
+     * The one balance score, so every screen that shows one shows the same one.
+     *
+     * Four signals against her own goals, averaged. The menopause header used to draw a
+     * fixed 72 next to real numbers, which made the real ones look invented too.
+     */
+    fun balanceScore(): Int {
+        val parts = listOfNotNull(
+            goalRatio(caloriesEaten, calorieGoal),
+            goalRatio(waterMl, waterGoalMl),
+            activityRatio(),
+            sleepMinutes?.let { goalRatio(it, DailySleepGoalMinutes) },
+        )
+        // Only what was measured counts: a day without a watch is a day with fewer
+        // signals, not a day at half the score.
+        return if (parts.isEmpty()) 0 else (parts.average() * 100).toInt()
+    }
+
+    /**
+     * Activity against its goal: steps against 8 000, or — on a strap that counts none —
+     * WHOOP's strain against a moderate day. Null when neither was measured.
+     */
+    fun activityRatio(): Float? =
+        steps?.let { goalRatio(it, DailyStepGoal) }
+            ?: strain?.let { (it / ModerateStrain).toFloat().coerceIn(0f, 1f) }
+
+    /** "6 420" for the tiles, or a dash when no device has counted. */
+    fun stepsLabel(): String = steps?.let { Fmt.int(it) } ?: NoValue
+
+    /** Millilitres still to drink; never negative once the goal is passed. */
+    val waterRemainingMl: Int get() = (waterGoalMl - waterMl).coerceAtLeast(0)
+
+    fun markMedicationTaken(id: String) {
+        setMedicationStatus(id, MedStatus.Taken)
+        sync?.doseTaken(id)
+    }
+
+    fun markMedicationSkipped(id: String) {
+        setMedicationStatus(id, MedStatus.Skipped)
+        sync?.doseSkipped(id)
+    }
+
+    private fun setMedicationStatus(id: String, status: MedStatus) {
+        val index = medications.indexOfFirst { it.id == id }
+        if (index >= 0) medications[index] = medications[index].copy(status = status)
+    }
+
+    /** "1 / 2" — doses confirmed against doses due today. */
+    val dosesTaken: Int get() = medications.count { it.status == MedStatus.Taken }
+    val dosesDue: Int get() = medications.size
+
+    fun logMeal(meal: Meal) {
+        isNewUser = false
+        meals.add(meal)
+        caloriesEaten += meal.calories
+        proteinG += meal.protein
+        fatG += meal.fat
+        carbsG += meal.carbs
+        sync?.mealLogged(meal)
+    }
+
+    /**
+     * Takes a meal out of today. The totals come down with it at once; the server's own
+     * totals replace them when the delete returns. A meal added seconds ago still has
+     * the store's provisional id, which the server never saw, so nothing is sent for it.
+     */
+    fun deleteMeal(meal: Meal) {
+        if (!meals.remove(meal)) return
+        caloriesEaten = (caloriesEaten - meal.calories).coerceAtLeast(0)
+        proteinG = (proteinG - meal.protein).coerceAtLeast(0)
+        fatG = (fatG - meal.fat).coerceAtLeast(0)
+        carbsG = (carbsG - meal.carbs).coerceAtLeast(0)
+        sync?.mealDeleted(meal.id)
+    }
+
+    /**
+     * The Mind check-in. The three dials are saved as one record — the server replaces
+     * the day's check-in wholesale — so every dial she has set goes up each time, and a
+     * dial she has not touched goes up as null rather than as its default.
+     */
+    fun setCheckIn(mood: Mood? = null, energy: Int? = null, stress: Int? = null) {
+        isNewUser = false
+        if (mood != null) {
+            this.mood = mood
+            moodLoggedToday = true
+        }
+        if (energy != null) {
+            this.energy = energy.coerceIn(1, 5)
+            energyLoggedToday = true
+        }
+        if (stress != null) {
+            this.stress = stress.coerceIn(1, 5)
+            stressLoggedToday = true
+        }
+        sync?.checkInChanged(
+            this.mood.takeIf { moodLoggedToday },
+            this.energy.takeIf { energyLoggedToday },
+            this.stress.takeIf { stressLoggedToday },
+        )
+    }
+
+    fun logPractice(kind: PracticeKind, seconds: Int) {
+        if (seconds <= 0) return
+        practiceSecondsToday += seconds
+        sync?.practiceLogged(kind, seconds)
+    }
+
+    /**
+     * Writes a journal entry.
+     *
+     * The entry appears at the top immediately under a local id; the server's copy
+     * replaces the whole list on the next refresh, which is when it gains its real one.
+     * Writing is the one thing in this app that must never feel like it is waiting.
+     */
+    fun addJournalNote(body: String) {
+        val text = body.trim()
+        if (text.isEmpty()) return
+        journal.add(0, JournalNote(id = LOCAL_NOTE_ID, date = today, time = nowTimeLabel(), body = text))
+        sync?.journalSaved(text)
+    }
+
+    /** Removes an entry. A note that never reached the server has nothing to delete there. */
+    fun deleteJournalNote(note: JournalNote) {
+        journal.remove(note)
+        if (note.id != LOCAL_NOTE_ID) sync?.journalDeleted(note.id)
+    }
+
+    /** "6s 40d" — the app's sleep-duration format. */
+    /**
+     * "6s 40d" — sleep as hours and minutes.
+     *
+     * The abbreviations differ by language, so the caller hands in the two words. The
+     * arithmetic stays here because every screen that shows a night does it the same way.
+     */
+    fun sleepLabel(
+        minutes: Int? = sleepMinutes,
+        format: (hours: Int, minutes: Int) -> String,
+    ): String = minutes?.let { format(it / 60, it % 60) } ?: NoValue
+
+    /** Clears whatever a device said, on sign-out and on a new account. */
+    fun clearDeviceData() {
+        steps = null
+        sleepMinutes = null
+        restingHeartRate = null
+        hrvMs = null
+        recovery = null
+        strain = null
+        skinTemperature = null
+        spo2 = null
+        wearableSource = null
+    }
+}
+
+/** A value against its goal, clamped to one. Null goals are unanswerable. */
+internal fun goalRatio(value: Int, goal: Int): Float? =
+    if (goal <= 0) null else (value / goal.toFloat()).coerceIn(0f, 1f)
+
+/** What a tile shows when nothing was measured. Language-neutral on purpose. */
+const val NoValue: String = "—"
+
+/**
+ * One journal entry as a screen shows it.
+ *
+ * [time] is formatted where the entry is mapped rather than where it is drawn: the wire
+ * carries an instant, and turning that into a wall clock needs the device's zone, which
+ * is a data-layer concern.
+ */
+data class JournalNote(
+    val id: String,
+    val date: LocalDate,
+    val time: String,
+    val body: String,
+)
+
+/** The id an entry carries until the server has given it a real one. */
+const val LOCAL_NOTE_ID: String = "local"
+
+/** The two goals the app sets itself, because nothing on the wire carries them yet. */
+const val DailyStepGoal = 8000
+const val DailySleepGoalMinutes = 480
+
+/** A moderate WHOOP day on its 0–21 scale; the activity ring fills at this. */
+const val ModerateStrain = 14.0

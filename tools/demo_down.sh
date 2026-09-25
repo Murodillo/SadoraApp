@@ -25,4 +25,4 @@ echo "==> sleep inhibitor"
 pkill -x caffeinate 2>/dev/null && echo "released" || echo "none running"
 
 echo
-echo "Postgres is still up (docker compose down stops it, and keeps the data)."
+echo "Postgres is still up (docker compose -f sadora-backend/docker-compose.yml down stops it, and keeps the data)."

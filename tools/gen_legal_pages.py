@@ -4,7 +4,7 @@
 Google Play requires a publicly reachable privacy policy URL, and the App Store asks
 for both documents. Retyping them into HTML would create a second copy that drifts —
 and the one that drifts is the one a regulator reads. So the pages are generated from
-`shared/.../i18n/LegalTexts*.kt`, which is what the app itself renders.
+`sadora-client/shared/.../i18n/LegalTexts*.kt`, which is what the app itself renders.
 
     python3 tools/gen_legal_pages.py
 
@@ -19,7 +19,7 @@ import re
 import sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-I18N = ROOT / "shared/src/commonMain/kotlin/uz/sadora/app/i18n"
+I18N = ROOT / "sadora-client/shared/src/commonMain/kotlin/uz/sadora/app/i18n"
 OUT = ROOT / "landing"
 
 LANGUAGES = [

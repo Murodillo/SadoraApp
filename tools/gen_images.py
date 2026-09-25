@@ -11,7 +11,7 @@ The key is also read from `.env` (GEMINI_API_KEY=...). Image generation is not o
 the Gemini free tier — the API answers 429 with "limit: 0" until billing is enabled
 for the project at https://aistudio.google.com/. Until then the app draws these
 pictures itself (see `ui/components/Illustrations.kt`); once the PNGs exist under
-`shared/src/commonMain/composeResources/drawable/`, reference them with
+`sadora-client/shared/src/commonMain/composeResources/drawable/`, reference them with
 `painterResource(Res.drawable.<name>)` in place of the drawn versions.
 """
 
@@ -24,10 +24,8 @@ import urllib.request
 
 MODEL = os.environ.get("GEMINI_IMAGE_MODEL", "gemini-2.5-flash-image")
 ENDPOINT = f"https://generativelanguage.googleapis.com/v1beta/models/{MODEL}:generateContent"
-OUT_DIR = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-    "shared", "src", "commonMain", "composeResources", "drawable",
-)
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+OUT_DIR = os.path.join(ROOT, "sadora-client", "shared", "src", "commonMain", "composeResources", "drawable")
 
 STYLE = (
     "Soft pastel digital illustration for a women's wellness app. Lavender (#F7F5FF) "
@@ -91,7 +89,7 @@ def api_key() -> str:
     key = os.environ.get("GEMINI_API_KEY")
     if key:
         return key
-    env = os.path.join(os.path.dirname(OUT_DIR.split("shared")[0]), ".env")
+    env = os.path.join(ROOT, ".env")
     if os.path.exists(env):
         for line in open(env):
             line = line.strip()

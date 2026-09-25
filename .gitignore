@@ -18,26 +18,32 @@ captures
 **/xcshareddata/WorkspaceSettings.xcsettings
 node_modules/
 
-# Secrets. `server/.env.dev` is committed on purpose — it holds only public development
-# defaults — but anything holding real credentials stays out.
+# Secrets. `sadora-backend/server/.env.dev` is committed on purpose — it holds only public
+# development defaults — but anything holding real credentials stays out.
 .env
-server/.env
-server/.env.prod
-server/.env.stage
+sadora-backend/server/.env
+sadora-backend/server/.env.prod
+sadora-backend/server/.env.stage
 
-# The upload key. Generated once, kept in a password manager, never committed.
-androidApp/keystore.properties
-androidApp/*.jks
-androidApp/*.keystore
+# The upload keys. Generated once, kept in a password manager, never committed.
+sadora-client/androidApp/keystore.properties
+sadora-client/androidApp/*.jks
+sadora-client/androidApp/*.keystore
+sadora-doctor/androidApp/keystore.properties
+sadora-doctor/androidApp/*.jks
+sadora-doctor/androidApp/*.keystore
 
 # Firebase: the app's config, and the key the server sends push with. The config is not
 # a credential by Firebase's own account, but it names the project and carries an API key
 # that secret scanning flags in a public repository; the service account key is one.
-androidApp/google-services.json
-iosApp/iosApp/GoogleService-Info.plist
-server/secrets/
+sadora-client/androidApp/google-services.json
+sadora-client/iosApp/iosApp/GoogleService-Info.plist
+sadora-doctor/androidApp/google-services.json
+sadora-doctor/iosApp/iosApp/GoogleService-Info.plist
+sadora-backend/server/secrets/
 
 # Addresses of the staging server — the repository is public.
-deploy/stage/hosts.env
-admin/coverage/
+sadora-backend/deploy/stage/hosts.env
+sadora-backend/admin/coverage/
+sadora-doctor-admin/coverage/
 __pycache__/

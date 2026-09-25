@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CADisableMinimumFrameDurationOnPhone</key>
+	<true/>
+	<!-- App Transport Security blocks cleartext by default. The simulator, or a phone on the
+	     desk, reaches a locally running backend over http on the local network, which is
+	     not an address that exists anywhere but a developer's machine. Everything else
+	     stays https-only. -->
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
+	<!-- iOS asks before an app talks to the local network; a debug build pointed at the
+	     development machine by SADORA_DEV_HOST does. -->
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Sadora Doctor ishlab chiqish nusxasi shu tarmoqdagi dasturchi serveriga ulanadi.</string>
+	<!-- Only the system's HTTPS, which is exempt; without this every build waits on the
+	     export-compliance question in App Store Connect before testers can install it. -->
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+	<!-- Empty means production. A TestFlight build aimed at staging sets SADORA_API_HOST. -->
+	<key>SadoraApiHost</key>
+	<string>$(SADORA_API_HOST)</string>
+	<!-- Empty means the simulator's loopback. A debug build for a phone sets
+	     SADORA_DEV_HOST to the development machine, which the phone can reach. -->
+	<key>SadoraDevHost</key>
+	<string>$(SADORA_DEV_HOST)</string>
+	<!-- The application's documents: iOS terminates the app on presenting the photo
+	     library without this. -->
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Diplom va litsenziyangiz rasmini galereyadan tanlab, shifokor arizasiga qo'shasiz.</string>
+</dict>
+</plist>

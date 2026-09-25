@@ -110,8 +110,8 @@ jobs:
       - id: build
         uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
         with:
-          context: .
-          file: server/Dockerfile
+          context: sadora-backend
+          file: sadora-backend/server/Dockerfile
           platforms: linux/amd64
           push: true
           build-args: SADORA_RELEASE=${{ github.sha }}
@@ -142,10 +142,10 @@ jobs:
         with:
           node-version: '22'
           cache: npm
-          cache-dependency-path: admin/package-lock.json
+          cache-dependency-path: sadora-backend/admin/package-lock.json
 
       - name: Build the admin panel
-        working-directory: admin
+        working-directory: sadora-backend/admin
         run: npm ci && npm run build
 
       # Exactly what the gate accepts: admin/dist, landing, infra, RELEASE. The infra
@@ -155,9 +155,10 @@ jobs:
         run: |
           b="$RUNNER_TEMP/bundle"
           mkdir -p "$b/admin" "$b/infra"
-          cp -r admin/dist "$b/admin/dist"
+          cp -r sadora-backend/admin/dist "$b/admin/dist"
           cp -r landing "$b/landing"
-          cp docker-compose.prod.yml docker-compose.stage.yml deploy/stage/Caddyfile deploy/stage/sadora-ci "$b/infra/"
+          cp sadora-backend/docker-compose.prod.yml sadora-backend/docker-compose.stage.yml \
+            sadora-backend/deploy/stage/Caddyfile sadora-backend/deploy/stage/sadora-ci "$b/infra/"
           echo "$GITHUB_SHA" > "$b/RELEASE"
           tar -czf bundle.tgz -C "$b" .
           ls -l bundle.tgz
@@ -285,6 +286,7 @@ jobs:
           echo "cert=$cert" >> "$GITHUB_OUTPUT"
 
       - name: Build
+        working-directory: sadora-client
         env:
           API: ${{ steps.api.outputs.url }}
           BUILD: ${{ github.run_number }}
@@ -301,7 +303,7 @@ jobs:
         env:
           EXPECTED_CERT: ${{ steps.keystore.outputs.cert }}
         run: |
-          apk=androidApp/build/outputs/apk/debug/androidApp-debug.apk
+          apk=sadora-client/androidApp/build/outputs/apk/debug/androidApp-debug.apk
           tools=$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 | sort -V | tail -1)
           "$tools/apksigner" verify --print-certs "$apk" | tee certs.txt
           # "Signer #1 certificate SHA-256 digest:" or "V2 Signer: certificate SHA-256 digest:",
@@ -444,7 +446,7 @@ jobs:
           BUILD: ${{ steps.plan.outputs.build }}
         run: |
           set -o pipefail
-          xcodebuild archive -project iosApp/iosApp.xcodeproj -scheme iosApp -configuration Release \
+          xcodebuild archive -project sadora-client/iosApp/iosApp.xcodeproj -scheme iosApp -configuration Release \
             -destination 'generic/platform=iOS' -archivePath "$RUNNER_TEMP/Sadora.xcarchive" \
             CODE_SIGNING_ALLOWED=NO CURRENT_PROJECT_VERSION="$BUILD" SADORA_API_HOST="$HOST" \
             | tail -40

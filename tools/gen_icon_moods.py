@@ -14,11 +14,11 @@ the colours differ, so only the colours are substituted.
     python3 tools/gen_icon_moods.py
 
 Writes:
-    androidApp/src/main/res/drawable-v24/ic_launcher_foreground_calm.xml
-    androidApp/src/main/res/drawable-v24/ic_launcher_foreground_cold.xml
-    androidApp/src/main/res/drawable/ic_launcher_background_calm.xml
-    androidApp/src/main/res/drawable/ic_launcher_background_cold.xml
-    androidApp/src/main/res/mipmap-anydpi-v26/ic_launcher_{calm,cold}.xml
+    sadora-client/androidApp/src/main/res/drawable-v24/ic_launcher_foreground_calm.xml
+    sadora-client/androidApp/src/main/res/drawable-v24/ic_launcher_foreground_cold.xml
+    sadora-client/androidApp/src/main/res/drawable/ic_launcher_background_calm.xml
+    sadora-client/androidApp/src/main/res/drawable/ic_launcher_background_cold.xml
+    sadora-client/androidApp/src/main/res/mipmap-anydpi-v26/ic_launcher_{calm,cold}.xml
 """
 
 from __future__ import annotations
@@ -32,7 +32,7 @@ except ImportError:  # pragma: no cover - the vectors are the important half
     Image = None
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-RES = ROOT / "androidApp/src/main/res"
+RES = ROOT / "sadora-client/androidApp/src/main/res"
 
 FOREGROUND = RES / "drawable-v24/ic_launcher_foreground.xml"
 BACKGROUND = RES / "drawable/ic_launcher_background.xml"

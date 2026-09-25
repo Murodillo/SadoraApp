@@ -1,0 +1,19 @@
+// The same Apple Developer team as sadora-client ("Ziyodulla Samatov").
+TEAM_ID=WAAR6RJ42C
+
+PRODUCT_NAME=Sadora Doctor
+// Its own App Store identity, beside uz.sadora.app. It matches the Android applicationId.
+PRODUCT_BUNDLE_IDENTIFIER=uz.sadora.doctor
+
+// The API host a release build talks to; empty means production. A host, not a URL,
+// because an xcconfig reads a double slash as a comment. Override on the xcodebuild
+// command line.
+SADORA_API_HOST=
+
+// The host a DEBUG build talks to; empty means the simulator's own loopback. A build
+// meant for a phone on the desk sets it to the development machine — `macbook.local`,
+// or a whole `https://` URL for a tunnel. Mirrors Android's `sadora.devHost`.
+SADORA_DEV_HOST=
+
+CURRENT_PROJECT_VERSION=1
+MARKETING_VERSION=1.0

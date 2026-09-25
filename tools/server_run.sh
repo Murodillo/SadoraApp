@@ -5,12 +5,15 @@
 #   ./tools/server_run.sh dev      # gradle, reloads on restart, talks to docker-compose
 #   ./tools/server_run.sh prod     # the built distribution, against the real database
 #
-# The settings come from `server/.env.dev` or `server/.env.prod` — this script's only job
+# The settings come from `sadora-backend/server/.env.dev` or `.env.prod` — this script's only job
 # is to load one of them, so there is exactly one place per environment where a value
 # lives and no environment can be started with another's settings by mistake.
 
 set -e
-cd "$(dirname "$0")/.."
+# Everything below is relative to the backend build; the untracked .env with the
+# secrets stays at the repository root, one level up.
+cd "$(dirname "$0")/../sadora-backend"
+SECRETS=../.env
 
 ENV_NAME=${1:-dev}
 FILE="server/.env.$ENV_NAME"
@@ -29,8 +32,8 @@ set +a
 
 # The Gemini key is deliberately absent from the committed dev file; it lives in the
 # untracked .env at the repository root. Production sets it in its own env file.
-if [[ -z $GEMINI_API_KEY && -f .env ]]; then
-  export GEMINI_API_KEY=$(grep '^GEMINI_API_KEY=' .env | tail -1 | cut -d= -f2-)
+if [[ -z $GEMINI_API_KEY && -f $SECRETS ]]; then
+  export GEMINI_API_KEY=$(grep '^GEMINI_API_KEY=' $SECRETS | tail -1 | cut -d= -f2-)
 fi
 
 # Push the same way: the service account key sits in server/secrets/ (gitignored) and the
@@ -38,8 +41,8 @@ fi
 # WHOOP and Oura secrets and the token key live there too; without them a provider shows as not set up.
 for name in FCM_PROJECT_ID FCM_SERVICE_ACCOUNT_FILE GOOGLE_PLAY_SERVICE_ACCOUNT_FILE \
     WHOOP_CLIENT_SECRET OURA_CLIENT_SECRET WEARABLE_TOKEN_KEY; do
-  if [[ -z ${(P)name} && -f .env ]]; then
-    export $name="$(grep "^$name=" .env | tail -1 | cut -d= -f2-)"
+  if [[ -z ${(P)name} && -f $SECRETS ]]; then
+    export $name="$(grep "^$name=" $SECRETS | tail -1 | cut -d= -f2-)"
   fi
 done
 

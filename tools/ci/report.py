@@ -91,6 +91,8 @@ JOBS = {
     "android": "Android and shared",
     "ios": "iOS shared",
     "admin": "Admin panel",
+    "doctor": "Doctor app",
+    "doctor-admin": "Doctor web panel",
     "infra": "Deploy tooling",
     "stage": "Staging",
 }

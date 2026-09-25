@@ -11,13 +11,42 @@ tarjima; til `Profil → Til` da tanlanadi va AI javoblari ham o'sha tilda kelad
 
 ---
 
+## Loyiha tuzilishi
+
+Bitta repozitoriy, to'rtta mustaqil loyiha — har biri o'z papkasidan yig'iladi va
+Android Studio / IDE'da alohida ochiladi:
+
+```
+sadora-backend/        API va xodimlar paneli
+├── contract/          API modellari (KMP) — alohida Gradle build, uchala loyiha ulaydi
+├── server/            Ktor backend — server/README.md
+├── admin/             sadora-admin: React + TS, Sadora xodimlari uchun
+├── deploy/            Caddy, staging gate (sadora-ci)
+└── docker-compose*.yml
+sadora-client/         ayollar ilovasi (KMP): shared/ androidApp/ iosApp/
+sadora-doctor/         shifokorlar ilovasi (KMP, kmp.jetbrains.com wizard'idan)
+sadora-doctor-admin/   shifokorlar veb-paneli: React + TS
+landing/  design/  tools/  .github/
+```
+
+- `sadora-client` va `sadora-doctor` contract'ni `includeBuild("../sadora-backend/contract")`
+  bilan ulaydi va unga `uz.sadora:contract` deb bog'lanadi — backend'dagi DTO o'zgarsa,
+  ikkala ilova ham kompilyatsiyada buziladi.
+- Har bir Gradle loyihaning o'z `gradle/libs.versions.toml` i bor. Kotlin va Android Gradle
+  plugin versiyalari uchalasida bir xil bo'lishi shart (Gradle bitta build'da ikki xil AGP'ni
+  qabul qilmaydi) — `python3 tools/ci/check_versions.py` buni tekshiradi, CI ham.
+- Android SDK yo'li (`local.properties`, git'ga qo'shilmaydi) har bir Gradle papkada kerak:
+  `sadora-client/`, `sadora-doctor/` va `sadora-backend/contract/`.
+
+---
+
 ## Muhitlar
 
 Ikkita muhit bor va ular alohida sozlamalar fayllaridan yashaydi:
 
 | | **dev** | **prod** |
 |---|---|---|
-| Sozlamalar | `server/.env.dev` — git'da, ichida sir yo'q | `server/.env.prod` — git'ga qo'shilmaydi, `.env.prod.example` dan nusxa |
+| Sozlamalar | `sadora-backend/server/.env.dev` — git'da, ichida sir yo'q | `sadora-backend/server/.env.prod` — git'ga qo'shilmaydi, `.env.prod.example` dan nusxa |
 | Baza | `docker compose` ko'targan lokal Postgres | boshqariladigan alohida instansiya |
 | SMS kodi | har doim `123456` (`OTP_FIXED_CODE`) | haqiqiy SMS provayder (hali ulanmagan) |
 | JWT kaliti | ochiq, repozitoriyda | generatsiya qilingan, kamida 32 belgi |
@@ -35,11 +64,11 @@ Hozircha faqat **dev** ishlaydi. Prod Play Market'ga chiqishdan oldin ko'tarilad
 
 ## Ishga tushirish (dev)
 
-Postgres va Redis'ni ko'taring, so'ng serverni — sozlamalar `server/.env.dev` dan
-o'qiladi:
+Postgres va Redis'ni ko'taring, so'ng serverni — sozlamalar
+`sadora-backend/server/.env.dev` dan o'qiladi:
 
 ```bash
-docker compose up -d
+docker compose -f sadora-backend/docker-compose.yml up -d
 ```
 
 ```bash
@@ -47,10 +76,17 @@ docker compose up -d
 ```
 
 Admin panel (backend ishlab turganda) — <http://localhost:5173>, batafsil
-[admin/README.md](./admin/README.md):
+[sadora-backend/admin/README.md](./sadora-backend/admin/README.md):
 
 ```bash
-npm --prefix admin install && npm --prefix admin run dev
+npm --prefix sadora-backend/admin install && npm --prefix sadora-backend/admin run dev
+```
+
+Shifokorlar veb-paneli — <http://localhost:5174>, `/v1` so'rovlarini Vite o'zi 8080 ga
+uzatadi, batafsil [sadora-doctor-admin/README.md](./sadora-doctor-admin/README.md):
+
+```bash
+npm --prefix sadora-doctor-admin install && npm --prefix sadora-doctor-admin run dev
 ```
 
 Test ma'lumotlari — 4 ta demo hisob, 10 ta fon hisobi va Bilim kutubxonasi:
@@ -59,21 +95,27 @@ Test ma'lumotlari — 4 ta demo hisob, 10 ta fon hisobi va Bilim kutubxonasi:
 python3 tools/seed_demo.py
 ```
 
-Android ilovasi:
+Android ilovasi (mijoz):
 
 ```bash
-./gradlew :androidApp:assembleDebug
+cd sadora-client && ./gradlew :androidApp:assembleDebug
 ```
 
-iOS uchun `iosApp/iosApp.xcodeproj` faylini Xcode'da oching va ishga tushiring. Imzolash
-uchun `iosApp/Configuration/Config.xcconfig` faylidagi `TEAM_ID` ni to'ldiring — u
-hisobga bog'liq, shuning uchun repozitoriyda bo'sh turadi.
+Shifokorlar ilovasi xuddi shunday, `sadora-doctor` papkasidan:
+
+```bash
+cd sadora-doctor && ./gradlew :androidApp:assembleDebug
+```
+
+iOS uchun `sadora-client/iosApp/iosApp.xcodeproj` (yoki `sadora-doctor/iosApp/...`)
+faylini Xcode'da oching va ishga tushiring. Imzolovchi jamoa `iosApp/Configuration/Config.xcconfig`
+dagi `TEAM_ID`.
 
 Haqiqiy telefonda sinash uchun APK'ni shu kompyuterning nomiga qaratib yig'ing —
 emulyatordagi `10.0.2.2` telefonda mavjud emas:
 
 ```bash
-./gradlew :androidApp:assembleDebug -Psadora.devHost=$(scutil --get LocalHostName).local
+cd sadora-client && ./gradlew :androidApp:assembleDebug -Psadora.devHost=$(scutil --get LocalHostName).local
 ```
 
 IP o'rniga nom: DHCP ijarasi yangilanganda manzil o'zgaradi va telefondagi ilova
@@ -82,7 +124,7 @@ yo'q bo'lgan manzilga murojaat qilib, "Internetga ulanib bo'lmadi" deb yozadi.
 ishlaganda kerak bo'ladi.
 
 Android SDK yo'li `local.properties` faylida ko'rsatiladi (bu fayl git'ga
-qo'shilmaydi):
+qo'shilmaydi) — `sadora-client/`, `sadora-doctor/` va `sadora-backend/contract/` da:
 
 ```
 sdk.dir=/Users/<siz>/Library/Android/sdk
@@ -94,7 +136,7 @@ Do'kon identifikatori — `uz.sadora.app`, ikkala platformada ham bir xil va ser
 `APPLE_BUNDLE_IDS` sozlamasi ham shuni kutadi. U bir marta chiqqandan keyin
 o'zgartirilmaydi.
 
-Imzo kaliti `androidApp/keystore.properties` dan o'qiladi (git'ga qo'shilmaydi;
+Imzo kaliti `sadora-client/androidApp/keystore.properties` dan o'qiladi (git'ga qo'shilmaydi;
 `storeFile`, `storePassword`, `keyAlias`, `keyPassword`). Fayl bo'lmasa release turi
 imzosiz yig'iladi — Play baribir imzosiz yuklamani qabul qilmaydi, lekin toza klonda
 build buzilmaydi.
@@ -103,22 +145,26 @@ Versiya buyruq qatoridan beriladi, ya'ni reliz uchun commit shart emas; Play bir
 ko'rgan `versionCode` ni ikkinchi marta qabul qilmaydi:
 
 ```bash
-./gradlew :androidApp:bundleRelease -Psadora.versionCode=2 -Psadora.versionName=1.0.1
+cd sadora-client && ./gradlew :androidApp:bundleRelease -Psadora.versionCode=2 -Psadora.versionName=1.0.1
 ```
 
 Release build R8 bilan qisqartiriladi va obfuskatsiya qilinadi. Wire format aks ettirish
-orqali topiladi, shuning uchun `androidApp/proguard-rules.pro` `:contract` DTO'larini va
+orqali topiladi, shuning uchun `androidApp/proguard-rules.pro` contract DTO'larini va
 ularning serializatorlarini saqlaydi — bu qoidalarsiz ilova yig'iladi, o'rnatiladi va
 birinchi so'rovda yiqiladi. `bundleRelease` — o'sha qoidalarni tekshiradigan yagona narsa.
 
 Testlar:
 
 ```bash
-./gradlew :server:test :contract:jvmTest
+cd sadora-backend && ./gradlew :server:test :contract:jvmTest
 ```
 
 ```bash
-./gradlew :shared:testAndroidHostTest
+cd sadora-client && ./gradlew :shared:testAndroidHostTest
+```
+
+```bash
+cd sadora-doctor && ./gradlew :shared:testAndroidHostTest
 ```
 
 ---
@@ -163,10 +209,13 @@ tekshiriladi: `main` do'kon relizi.
 ```
 PR → dev                                                     (.github/workflows/ci.yml)
  ├─ Backend          testlar, haqiqiy Postgres'da migratsiya, Kover coverage (pastki chegara 58%)
- ├─ Android/shared   shared modul testlari
- ├─ iOS shared       Kotlin/Native testlari — yetkazishni kutdirmaydi
+ ├─ Android/shared   sadora-client: shared modul testlari, lint, APK
+ ├─ Doctor app       sadora-doctor: shared testlari, APK
+ ├─ iOS shared       ikkala ilovaning Kotlin/Native testlari — yetkazishni kutdirmaydi
  ├─ Admin panel      typecheck, vitest + coverage chegaralari, build, npm audit
- ├─ Deploy tooling   shellcheck, actionlint, gate testlari, compose va Caddyfile tekshiruvi
+ ├─ Doctor web panel sadora-doctor-admin: xuddi shunday
+ ├─ Deploy tooling   shellcheck, actionlint, gate testlari, compose va Caddyfile tekshiruvi,
+ │                   uch Gradle loyihada Kotlin/AGP versiyalari bir xilligi
  └─ Staging (hammasi o'tsa)                                  (.github/workflows/stage.yml)
      ├─ API image     bir marta yig'iladi → GHCR, digest bo'yicha; SBOM va provenance bilan
      ├─ Web bundle    admin panel + landing
@@ -197,7 +246,7 @@ staging natijasi.
 ### Bir martalik sozlash
 
 ```bash
-cp deploy/stage/hosts.env.example deploy/stage/hosts.env   # manzillarni yozing
+cp sadora-backend/deploy/stage/hosts.env.example sadora-backend/deploy/stage/hosts.env   # manzillarni yozing
 ./tools/deploy_stage.sh                                     # gate + CI kalitini bog'laydi
 ./tools/ci_secrets.sh                                       # `staging` environment secret'lari
 ```
@@ -212,9 +261,9 @@ imzolanadi — telefondagi eski yig'ma ustidan yangilanadi.
   bo'lsa — oldingi sog'lom relizga.
 - **Smoke test:** `tools/ci/smoke.sh <app url> <landing url> <commit sha>`
 - **Testlar lokal:**
-  - gate — `docker run --rm -v "$PWD":/src -w /src ubuntu:24.04 bash deploy/stage/test/sadora-ci.test.sh`
-  - admin — `npm --prefix admin run test:coverage`
-  - server coverage — `TEST_DB_URL=… ./gradlew :server:koverHtmlReport`
+  - gate — `docker run --rm -v "$PWD":/src -w /src ubuntu:24.04 bash sadora-backend/deploy/stage/test/sadora-ci.test.sh`
+  - admin — `npm --prefix sadora-backend/admin run test:coverage`
+  - server coverage — `cd sadora-backend && TEST_DB_URL=… ./gradlew :server:koverHtmlReport`
   - hisobot generatori — `python3 -m unittest discover -s tools/ci`
 
 ### Cheklovlar
@@ -229,16 +278,14 @@ imzolanadi — telefondagi eski yig'ma ustidan yangilanadi.
 
 ## Arxitektura
 
-Butun UI `:shared` modulining `commonMain` manbasida — Android va iOS bir xil
-kodni ishlatadi. Platformaga xos qism juda kichik: ikkala tomonda ham faqat
-`App()` ni chaqiradigan ingichka kirish nuqtasi.
+Quyidagi hammasi `sadora-client` haqida. Butun UI `:shared` modulining `commonMain`
+manbasida — Android va iOS bir xil kodni ishlatadi. Platformaga xos qism juda kichik:
+ikkala tomonda ham faqat `App()` ni chaqiradigan ingichka kirish nuqtasi.
 
 ```
+sadora-client/
 androidApp/          MainActivity — App() ni chaqiradi
 iosApp/              SwiftUI ContentView — App() ni chaqiradi
-admin/               React + TS admin panel — admin/README.md
-contract/            Mobil va backend bo'lishadigan DTO'lar (KMP)
-server/              Ktor backend — server/README.md
 shared/src/commonMain/kotlin/uz/sadora/app/
 ├── App.kt           Ildiz: AppState va Navigator shu yerda yashaydi
 ├── design/          Dizayn tokenlari (ranglar, tipografika, o'lchamlar, mavzu)
@@ -511,7 +558,7 @@ hech qachon maslahat yoki tashxis bermaydi.
 
 ## Huquqiy matnlar
 
-Foydalanish shartlari va Maxfiylik siyosati `shared/.../i18n/LegalTexts*.kt` da, uch
+Foydalanish shartlari va Maxfiylik siyosati `sadora-client/shared/.../i18n/LegalTexts*.kt` da, uch
 tilda. Asl matn o'zbekcha va yuridik kuchga ega bo'lgani ham o'sha — qolgan ikkitasi
 tarjima, va ekranning o'zi buni aytadi. Matn ilova ichida yashaydi, chunki onboarding
 rozilikni hisob paydo bo'lishidan oldin so'raydi: foydalanuvchi nimaga rozi

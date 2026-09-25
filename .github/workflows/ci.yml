@@ -2,6 +2,10 @@ name: CI
 
 # Every pull request into dev or main, and every push to either, is checked.
 #
+# The repository holds four projects, each built from its own folder: sadora-backend (the
+# API, the contract and the staff admin panel), sadora-client (the app), sadora-doctor (the
+# doctor app) and sadora-doctor-admin (the doctors' web panel).
+#
 # A pull request into dev — and dev itself once it merges — is also delivered to staging
 # (stage.yml): the API image, the admin panel and the landing page, then an APK built
 # against the staging API and published beside the landing page, then smoke tests against
@@ -61,6 +65,9 @@ jobs:
     name: Backend
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: sadora-backend
 
     # The migrations are the part unit tests cannot check, so the job runs against a
     # real Postgres and boots the server against it below.
@@ -131,12 +138,13 @@ jobs:
 
       - name: Collect reports
         if: always()
+        working-directory: .
         run: |
           mkdir -p reports/server reports/contract
-          cp -r server/build/test-results reports/server/ 2>/dev/null || true
-          cp -r contract/build/test-results reports/contract/ 2>/dev/null || true
-          cp server/build/reports/kover/report.xml reports/server/kover.xml 2>/dev/null || true
-          cp -r server/build/reports/kover/html reports/server/kover-html 2>/dev/null || true
+          cp -r sadora-backend/server/build/test-results reports/server/ 2>/dev/null || true
+          cp -r sadora-backend/contract/build/test-results reports/contract/ 2>/dev/null || true
+          cp sadora-backend/server/build/reports/kover/report.xml reports/server/kover.xml 2>/dev/null || true
+          cp -r sadora-backend/server/build/reports/kover/html reports/server/kover-html 2>/dev/null || true
 
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()
@@ -151,6 +159,9 @@ jobs:
     needs: plan
     runs-on: ubuntu-latest
     timeout-minutes: 40
+    defaults:
+      run:
+        working-directory: sadora-client
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -196,9 +207,10 @@ jobs:
 
       - name: Collect reports
         if: always()
+        working-directory: .
         run: |
           mkdir -p reports/shared
-          cp -r shared/build/test-results reports/shared/ 2>/dev/null || true
+          cp -r sadora-client/shared/build/test-results reports/shared/ 2>/dev/null || true
 
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()
@@ -211,9 +223,10 @@ jobs:
   ios:
     name: iOS shared
     # macOS minutes bill at ten times the Linux rate, and nothing staging runs is built
-    # for iOS, so delivery does not wait for this job — it reports beside it.
+    # for iOS, so delivery does not wait for this job — it reports beside it. Both apps
+    # share the one macOS runner.
     runs-on: macos-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -226,7 +239,12 @@ jobs:
         with:
           cache-read-only: ${{ github.ref != 'refs/heads/dev' && github.ref != 'refs/heads/main' }}
 
-      - name: Test the shared module on the simulator target
+      - name: Test the client's shared module on the simulator target
+        working-directory: sadora-client
+        run: ./gradlew :shared:iosSimulatorArm64Test --stacktrace
+
+      - name: Test the doctor app's shared module on the simulator target
+        working-directory: sadora-doctor
         run: ./gradlew :shared:iosSimulatorArm64Test --stacktrace
 
   admin:
@@ -235,7 +253,7 @@ jobs:
     timeout-minutes: 15
     defaults:
       run:
-        working-directory: admin
+        working-directory: sadora-backend/admin
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -243,7 +261,7 @@ jobs:
         with:
           node-version: '22'
           cache: npm
-          cache-dependency-path: admin/package-lock.json
+          cache-dependency-path: sadora-backend/admin/package-lock.json
 
       - run: npm ci
 
@@ -266,13 +284,110 @@ jobs:
         working-directory: .
         run: |
           mkdir -p reports/admin/test-results
-          cp admin/coverage/coverage-summary.json reports/admin/ 2>/dev/null || true
-          cp admin/coverage/junit/TEST-admin.xml reports/admin/test-results/ 2>/dev/null || true
+          cp sadora-backend/admin/coverage/coverage-summary.json reports/admin/ 2>/dev/null || true
+          cp sadora-backend/admin/coverage/junit/TEST-admin.xml reports/admin/test-results/ 2>/dev/null || true
 
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()
         with:
           name: reports-admin
+          path: reports/
+          retention-days: 14
+          if-no-files-found: ignore
+
+  doctor:
+    name: Doctor app
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    defaults:
+      run:
+        working-directory: sadora-doctor
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: zulu
+          java-version: '21'
+
+      - uses: android-actions/setup-android@40fd30fb8d7440372e1316f5d1809ec01dcd3699 # v4.0.1
+        with:
+          packages: platform-tools
+
+      - uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+        with:
+          cache-read-only: ${{ github.ref != 'refs/heads/dev' && github.ref != 'refs/heads/main' }}
+
+      - name: Reject a comma in a test name
+        run: |
+          # shellcheck disable=SC2016 # the backticks are the pattern, not a substitution
+          if grep -rn 'fun `[^`]*,' shared/src/commonTest; then
+            echo "::error::Kotlin/Native rejects a comma in a backticked name — use an em dash."
+            exit 1
+          fi
+
+      - name: Test the shared module
+        run: ./gradlew :shared:testAndroidHostTest --stacktrace
+
+      - name: Assemble the app
+        run: ./gradlew :androidApp:assembleDebug --stacktrace
+
+      - name: Collect reports
+        if: always()
+        working-directory: .
+        run: |
+          mkdir -p reports/doctor
+          cp -r sadora-doctor/shared/build/test-results reports/doctor/ 2>/dev/null || true
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: reports-doctor
+          path: reports/
+          retention-days: 14
+          if-no-files-found: ignore
+
+  doctor-admin:
+    name: Doctor web panel
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: sadora-doctor-admin
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: sadora-doctor-admin/package-lock.json
+
+      - run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test, with coverage
+        run: npm run test:coverage
+
+      - name: Build
+        run: npm run build
+
+      - name: Audit
+        run: npm audit --audit-level=high
+
+      - name: Collect reports
+        if: always()
+        working-directory: .
+        run: |
+          mkdir -p reports/doctor-admin
+          cp sadora-doctor-admin/coverage/coverage-summary.json reports/doctor-admin/ 2>/dev/null || true
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: reports-doctor-admin
           path: reports/
           retention-days: 14
           if-no-files-found: ignore
@@ -285,7 +400,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Lint shell scripts
-        run: shellcheck deploy/stage/sadora-ci deploy/stage/test/*.sh .github/actions/stage-ssh/setup.sh .github/actions/stage-ssh/stage tools/ci/*.sh
+        run: shellcheck sadora-backend/deploy/stage/sadora-ci sadora-backend/deploy/stage/test/*.sh .github/actions/stage-ssh/setup.sh .github/actions/stage-ssh/stage tools/ci/*.sh
 
       - name: Lint workflows
         run: docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:1.7.12 -color
@@ -294,23 +409,28 @@ jobs:
       - name: Test the deploy gate
         run: |
           mkdir -p reports/gate
-          bash deploy/stage/test/sadora-ci.test.sh | tee reports/gate/results.txt
+          bash sadora-backend/deploy/stage/test/sadora-ci.test.sh | tee reports/gate/results.txt
 
       - name: Test the report generator
         run: python3 -m unittest discover -s tools/ci -v
+
+      # The apps include the backend's contract build, and Gradle refuses two versions
+      # of the Android plugin in one build; Kotlin drifting apart breaks it more quietly.
+      - name: Hold the three builds on one Kotlin and one Android plugin
+        run: python3 tools/ci/check_versions.py
 
       - name: Validate the compose files
         run: |
           printf 'POSTGRES_PASSWORD=ci\n' > "$RUNNER_TEMP/ci.env"
           SADORA_ENV_FILE="$RUNNER_TEMP/ci.env" docker compose \
-            -f docker-compose.prod.yml -f docker-compose.stage.yml \
+            -f sadora-backend/docker-compose.prod.yml -f sadora-backend/docker-compose.stage.yml \
             --env-file "$RUNNER_TEMP/ci.env" config --quiet
 
       - name: Validate the Caddyfiles
         run: |
-          docker run --rm -v "$PWD/deploy/stage/Caddyfile:/etc/caddy/Caddyfile:ro" \
+          docker run --rm -v "$PWD/sadora-backend/deploy/stage/Caddyfile:/etc/caddy/Caddyfile:ro" \
             caddy:2-alpine caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
-          docker run --rm -e SADORA_DOMAIN=api.example.com -v "$PWD/deploy/Caddyfile:/etc/caddy/Caddyfile:ro" \
+          docker run --rm -e SADORA_DOMAIN=api.example.com -v "$PWD/sadora-backend/deploy/Caddyfile:/etc/caddy/Caddyfile:ro" \
             caddy:2-alpine caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
 
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -333,7 +453,7 @@ jobs:
 
   report:
     name: Report
-    needs: [plan, backend, android, ios, admin, infra, stage]
+    needs: [plan, backend, android, ios, admin, doctor, doctor-admin, infra, stage]
     if: always() && !cancelled()
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -360,6 +480,7 @@ jobs:
             --junit 'reports/**/TEST-*.xml' \
             --kover server=reports/server/kover.xml \
             --vitest admin=reports/admin/coverage-summary.json \
+            --vitest doctor-admin=reports/doctor-admin/coverage-summary.json \
             --gate reports/gate/results.txt > report.md
           cat report.md >> "$GITHUB_STEP_SUMMARY"
 
