@@ -34,8 +34,10 @@ if [[ -z $GEMINI_API_KEY && -f .env ]]; then
 fi
 
 # Push the same way: the service account key sits in server/secrets/ (gitignored) and the
-# untracked .env names it, so a clone without the key still boots and only logs.
-for name in FCM_PROJECT_ID FCM_SERVICE_ACCOUNT_FILE GOOGLE_PLAY_SERVICE_ACCOUNT_FILE; do
+# untracked .env names it, so a clone without the key still boots and only logs. The
+# WHOOP and Oura secrets and the token key live there too; without them a provider shows as not set up.
+for name in FCM_PROJECT_ID FCM_SERVICE_ACCOUNT_FILE GOOGLE_PLAY_SERVICE_ACCOUNT_FILE \
+    WHOOP_CLIENT_SECRET OURA_CLIENT_SECRET WEARABLE_TOKEN_KEY; do
   if [[ -z ${(P)name} && -f .env ]]; then
     export $name="$(grep "^$name=" .env | tail -1 | cut -d= -f2-)"
   fi

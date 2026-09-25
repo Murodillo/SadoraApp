@@ -143,6 +143,13 @@ data class AppConfig(
                         redirectUri = env("WHOOP_REDIRECT_URI", "$publicBaseUrl/v1/wearables/whoop/callback"),
                         apiBaseUrl = env("WHOOP_API_BASE_URL", "https://api.prod.whoop.com"),
                     ),
+                    oura = OuraConfig(
+                        clientId = envOrNull("OURA_CLIENT_ID"),
+                        clientSecret = envOrNull("OURA_CLIENT_SECRET"),
+                        redirectUri = env("OURA_REDIRECT_URI", "$publicBaseUrl/v1/wearables/oura/callback"),
+                        authorizeUrl = env("OURA_AUTHORIZE_URL", "https://cloud.ouraring.com/oauth/authorize"),
+                        apiBaseUrl = env("OURA_API_BASE_URL", "https://api.ouraring.com"),
+                    ),
                 ),
                 accountErasureGracePeriod = env("ACCOUNT_ERASURE_GRACE_DAYS", "30").toInt().days,
             )
@@ -169,7 +176,7 @@ data class AppConfig(
             require(!otp.exposeCode) { "OTP_EXPOSE_CODE must be false in production." }
             require(otp.fixedCode == null) { "OTP_FIXED_CODE must not be set in production." }
             require(publicBaseUrl.startsWith("https://")) { "PUBLIC_BASE_URL must be an https URL in production." }
-            if (wearables.whoop.isConfigured) {
+            if (wearables.whoop.isConfigured || wearables.oura.isConfigured) {
                 require(wearables.tokenKey != null) { "WEARABLE_TOKEN_KEY must be set when a cloud wearable is configured." }
             }
         }
@@ -313,6 +320,7 @@ data class ClickConfig(
 data class WearableConfig(
     val tokenKey: String?,
     val whoop: WhoopConfig,
+    val oura: OuraConfig = OuraConfig(null, null, "", "", ""),
 )
 
 /**
@@ -325,6 +333,18 @@ data class WhoopConfig(
     val clientSecret: String?,
     /** Must match a redirect URI registered in the WHOOP dashboard, character for character. */
     val redirectUri: String,
+    val apiBaseUrl: String,
+) {
+    val isConfigured: Boolean get() = clientId != null && clientSecret != null
+}
+
+/** Oura's API application, on the same terms as [WhoopConfig]. */
+data class OuraConfig(
+    val clientId: String?,
+    val clientSecret: String?,
+    /** Must match a redirect URI registered on the Oura application, character for character. */
+    val redirectUri: String,
+    val authorizeUrl: String,
     val apiBaseUrl: String,
 ) {
     val isConfigured: Boolean get() = clientId != null && clientSecret != null

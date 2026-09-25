@@ -17,7 +17,13 @@ import kotlin.time.Instant
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonObject
+import uz.sadora.contract.HealthProvider
+import uz.sadora.contract.HealthSampleInput
 import uz.sadora.server.config.WhoopConfig
+import uz.sadora.server.wearable.CloudProviderClient
+import uz.sadora.server.wearable.OAuthTokens
+import uz.sadora.server.wearable.ProviderApiException
+import uz.sadora.server.wearable.ProviderUnauthorizedException
 
 /**
  * The WHOOP developer API, v2.
@@ -32,13 +38,15 @@ import uz.sadora.server.config.WhoopConfig
 class WhoopClient(
     private val client: HttpClient,
     private val config: WhoopConfig,
-) {
+) : CloudProviderClient {
+    override val provider = HealthProvider.WHOOP
+
     private val api = "${config.apiBaseUrl.trimEnd('/')}/developer/v2"
     private val oauth = "${config.apiBaseUrl.trimEnd('/')}/oauth/oauth2"
 
     val scopes: List<String> = SCOPES
 
-    fun authorizeUrl(state: String): String = URLBuilder("$oauth/auth").apply {
+    override fun authorizeUrl(state: String): String = URLBuilder("$oauth/auth").apply {
         parameters.append("response_type", "code")
         parameters.append("client_id", config.clientId.orEmpty())
         parameters.append("redirect_uri", config.redirectUri)
@@ -46,7 +54,7 @@ class WhoopClient(
         parameters.append("state", state)
     }.buildString()
 
-    suspend fun exchange(code: String): WhoopTokens = token(
+    override suspend fun exchange(code: String): WhoopTokens = token(
         Parameters.build {
             append("grant_type", "authorization_code")
             append("code", code)
@@ -56,7 +64,7 @@ class WhoopClient(
         },
     )
 
-    suspend fun refresh(refreshToken: String): WhoopTokens = token(
+    override suspend fun refresh(refreshToken: String): WhoopTokens = token(
         Parameters.build {
             append("grant_type", "refresh_token")
             append("refresh_token", refreshToken)
@@ -83,8 +91,20 @@ class WhoopClient(
             .takeIf { it.status.isSuccess() }?.body()
 
     /** Best effort: WHOOP forgets the grant on its side too, and stops the webhooks. */
-    suspend fun revoke(accessToken: String) {
+    override suspend fun revoke(accessToken: String) {
         runCatching { client.delete("$api/user/access") { bearerAuth(accessToken) } }
+    }
+
+    override suspend fun externalUserId(accessToken: String): String? =
+        runCatching { profile(accessToken).userId.toString() }.getOrNull()
+
+    override suspend fun pull(accessToken: String, from: Instant, to: Instant, externalUserId: String?): List<HealthSampleInput> {
+        val samples = mutableListOf<HealthSampleInput>()
+        recoveries(accessToken, from, to).forEach { samples += WhoopMapper.fromRecovery(it) }
+        sleeps(accessToken, from, to).forEach { samples += WhoopMapper.fromSleep(it) }
+        cycles(accessToken, from, to).forEach { samples += WhoopMapper.fromCycle(it) }
+        body(accessToken)?.let { samples += WhoopMapper.fromBody(it, to, externalUserId.orEmpty()) }
+        return samples
     }
 
     suspend fun recoveries(accessToken: String, from: Instant, to: Instant): List<WhoopRecovery> =
@@ -146,22 +166,13 @@ class WhoopClient(
     }
 }
 
-/** The grant is gone — a refresh is the only recovery, and after that a reconnect. */
-class WhoopUnauthorizedException(message: String) : Exception(message)
+class WhoopUnauthorizedException(message: String) : ProviderUnauthorizedException(message)
 
-/** Anything else WHOOP refused: rate limit, outage, a scope we do not hold. */
-class WhoopApiException(val status: Int, message: String) : Exception(message)
+class WhoopApiException(status: Int, message: String) : ProviderApiException(status, message)
 
 // ---------------------------------------------------------------- wire
 
-@Serializable
-data class WhoopTokens(
-    @SerialName("access_token") val accessToken: String,
-    @SerialName("refresh_token") val refreshToken: String? = null,
-    @SerialName("expires_in") val expiresIn: Long = 3600,
-    val scope: String = "",
-    @SerialName("token_type") val tokenType: String = "bearer",
-)
+typealias WhoopTokens = OAuthTokens
 
 @Serializable
 data class WhoopProfile(

@@ -28,7 +28,7 @@ import uz.sadora.server.plugins.USER_AUTH
 import uz.sadora.server.wearable.whoop.WhoopWebhookEvent
 
 /** Where the browser is sent after the provider's consent page: back into the app. */
-private const val APP_RETURN_LINK = "sadora://wearables/whoop"
+private fun appReturnLink(provider: String) = "sadora://wearables/$provider"
 
 /** The device list, the OAuth start, disconnect and sync — all behind her token. */
 fun Route.wearableConnectRoutes(service: WearableConnectService, job: WearableSyncJob) {
@@ -52,7 +52,8 @@ fun Route.wearableConnectRoutes(service: WearableConnectService, job: WearableSy
                     val request = call.receive<CompleteConnectRequest>()
                     val userId = service.completeConnect(call.provider(), request.state, request.code, call.requireUserId())
                     // The first pull is thirty days and a few pages; it does not hold the call.
-                    job.syncInBackground { service.dueForSyncOf(userId)?.let { service.sync(it) } }
+                    val provider = call.provider()
+                    job.syncInBackground { service.dueForSyncOf(userId, provider)?.let { service.sync(it) } }
                     call.respond(Ack())
                 }
 
@@ -78,19 +79,22 @@ fun Route.wearableConnectRoutes(service: WearableConnectService, job: WearableSy
  */
 fun Route.wearablePublicRoutes(service: WearableConnectService, job: WearableSyncJob) {
     rateLimit(RateLimits.WEARABLE) {
-        route("/wearables/whoop") {
-            // The browser only carries the code back to the app. Exchanging it here would
-            // save the grant to whoever started the flow, not whoever is holding the phone.
-            get("/callback") {
+        // The browser only carries the code back to the app. Exchanging it here would
+        // save the grant to whoever started the flow, not whoever is holding the phone.
+        listOf("whoop", "oura").forEach { provider ->
+            get("/wearables/$provider/callback") {
                 val error = call.request.queryParameters["error"]
                 val code = call.request.queryParameters["code"]
                 val state = call.request.queryParameters["state"]
                 if (error != null || code.isNullOrBlank() || state.isNullOrBlank()) {
-                    call.respondText(ReturnPage.render(ok = false), ContentType.Text.Html, HttpStatusCode.BadRequest)
+                    call.respondText(ReturnPage.render(provider, ok = false), ContentType.Text.Html, HttpStatusCode.BadRequest)
                     return@get
                 }
-                call.respondText(ReturnPage.render(ok = true, code = code, state = state), ContentType.Text.Html)
+                call.respondText(ReturnPage.render(provider, ok = true, code = code, state = state), ContentType.Text.Html)
             }
+        }
+
+        route("/wearables/whoop") {
 
             post("/webhook") {
                 val secret = service.whoopWebhookSecret
@@ -139,7 +143,7 @@ object WebhookSignature {
 
 /** The page after the provider's consent screen. Three languages, one line each, and a button back. */
 private object ReturnPage {
-    fun render(ok: Boolean, code: String? = null, state: String? = null): String {
+    fun render(provider: String, ok: Boolean, code: String? = null, state: String? = null): String {
         val title = if (ok) "Deyarli tayyor · Почти готово · Almost done" else "Ulanmadi · Не удалось · Not connected"
         val body = if (ok) {
             "Ruxsat berildi. Ulanishni tugatish uchun SADORA ilovasiga qayting.<br>" +
@@ -156,7 +160,7 @@ private object ReturnPage {
             if (code != null) append("&code=").append(java.net.URLEncoder.encode(code, Charsets.UTF_8))
             if (state != null) append("&state=").append(java.net.URLEncoder.encode(state, Charsets.UTF_8))
         }
-        val link = "$APP_RETURN_LINK?$params".replace("&", "&amp;")
+        val link = "${appReturnLink(provider)}?$params".replace("&", "&amp;")
         return """
             <!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
             <meta name="robots" content="noindex"><title>SADORA</title>

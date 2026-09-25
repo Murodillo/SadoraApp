@@ -29,19 +29,17 @@ import uz.sadora.server.core.ValidationException
 import uz.sadora.server.core.now
 import uz.sadora.server.core.randomToken
 import uz.sadora.server.health.HealthAccess
+import uz.sadora.server.wearable.oura.OuraClient
 import uz.sadora.server.wearable.whoop.WhoopClient
-import uz.sadora.server.wearable.whoop.WhoopMapper
-import uz.sadora.server.wearable.whoop.WhoopUnauthorizedException
 
 /**
  * Connecting a cloud wearable, and pulling from it.
  *
- * WHOOP is the first. The shape is general on purpose — a provider is an OAuth grant, a
- * client that pages through its collections, and a mapper that turns its records into
- * [HealthSampleInput] — so Oura or Garmin is the same three pieces again, not a new
- * design. Everything provider-specific stops at [WhoopMapper]; from there the samples
- * go through the same [WearableService.ingest] the phone uses, under the same consent
- * gate and the same mapping table.
+ * WHOOP and Oura so far. A provider is an OAuth grant and a [CloudProviderClient] that
+ * pages through its collections and maps them to [HealthSampleInput]; Garmin would be
+ * the same pieces again, not a new design. Everything provider-specific stops at the
+ * client; from there the samples go through the same [WearableService.ingest] the phone
+ * uses, under the same consent gate and the same mapping table.
  */
 class WearableConnectService(
     private val connections: ConnectionRepository,
@@ -51,7 +49,12 @@ class WearableConnectService(
     private val cipher: TokenCipher,
     private val whoopConfig: WhoopConfig,
     private val whoop: WhoopClient?,
+    private val oura: OuraClient? = null,
 ) {
+    /** The clients this server has credentials for. A provider missing here is "not configured". */
+    private val clients: Map<HealthProvider, CloudProviderClient> =
+        listOfNotNull<CloudProviderClient>(whoop, oura).associateBy { it.provider }
+
     private val logger = LoggerFactory.getLogger(WearableConnectService::class.java)
 
     // ---------------------------------------------------------------- the list
@@ -89,7 +92,14 @@ class WearableConnectService(
                 available = true,
                 metrics = PLATFORM_METRICS,
             ),
-            ProviderInfo(HealthProvider.OURA, ProviderKind.CLOUD, false, ProviderUnavailable.PLANNED, RING_METRICS),
+            ProviderInfo(
+                provider = HealthProvider.OURA,
+                kind = ProviderKind.CLOUD,
+                available = oura != null,
+                unavailableReason = if (oura == null) ProviderUnavailable.NOT_CONFIGURED else null,
+                metrics = RING_METRICS,
+                connection = connected[HealthProvider.OURA]?.toDto(),
+            ),
             ProviderInfo(HealthProvider.GARMIN, ProviderKind.CLOUD, false, ProviderUnavailable.PLANNED, WATCH_METRICS),
             ProviderInfo(HealthProvider.FITBIT, ProviderKind.CLOUD, false, ProviderUnavailable.PLANNED, WATCH_METRICS),
             ProviderInfo(HealthProvider.SAMSUNG_HEALTH, ProviderKind.ON_DEVICE, false, ProviderUnavailable.PLANNED, PLATFORM_METRICS),
@@ -131,10 +141,10 @@ class WearableConnectService(
         }
         val tokens = try {
             client.exchange(code)
-        } catch (e: WhoopUnauthorizedException) {
+        } catch (e: ProviderUnauthorizedException) {
             throw ValidationException("code", "Ruxsat kodi qabul qilinmadi")
         }
-        val profile = runCatching { client.profile(tokens.accessToken) }.getOrNull()
+        val externalUserId = runCatching { client.externalUserId(tokens.accessToken) }.getOrNull()
         connections.save(
             userId,
             provider,
@@ -143,7 +153,7 @@ class WearableConnectService(
                 refreshTokenEnc = tokens.refreshToken?.let(cipher::encrypt),
                 expiresAt = now() + tokens.expiresIn.seconds,
                 scopes = tokens.scope.split(' ').filter { it.isNotBlank() },
-                externalUserId = profile?.userId?.toString(),
+                externalUserId = externalUserId,
             ),
         )
         audit.record(
@@ -161,7 +171,7 @@ class WearableConnectService(
 
     suspend fun disconnect(userId: Uuid, provider: HealthProvider) {
         val record = connections.find(userId, provider) ?: throw NotFoundException("Ulanish topilmadi")
-        whoop?.takeIf { provider == HealthProvider.WHOOP }?.let { client ->
+        clients[provider]?.let { client ->
             runCatching { cipher.decrypt(record.accessTokenEnc) }.getOrNull()?.let { client.revoke(it) }
         }
         connections.delete(userId, provider)
@@ -200,18 +210,14 @@ class WearableConnectService(
 
         val accessToken = try {
             freshAccessToken(record, client)
-        } catch (e: WhoopUnauthorizedException) {
+        } catch (e: ProviderUnauthorizedException) {
             connections.markFailed(record.userId, record.provider, ConnectionStatus.EXPIRED, "token_expired")
             throw e
         }
 
-        val samples = mutableListOf<HealthSampleInput>()
-        try {
-            client.recoveries(accessToken, from, at).forEach { samples += WhoopMapper.fromRecovery(it) }
-            client.sleeps(accessToken, from, at).forEach { samples += WhoopMapper.fromSleep(it) }
-            client.cycles(accessToken, from, at).forEach { samples += WhoopMapper.fromCycle(it) }
-            client.body(accessToken)?.let { samples += WhoopMapper.fromBody(it, at, record.externalUserId.orEmpty()) }
-        } catch (e: WhoopUnauthorizedException) {
+        val samples: List<HealthSampleInput> = try {
+            client.pull(accessToken, from, at, record.externalUserId)
+        } catch (e: ProviderUnauthorizedException) {
             connections.markFailed(record.userId, record.provider, ConnectionStatus.EXPIRED, "token_expired")
             throw e
         } catch (e: Exception) {
@@ -227,7 +233,7 @@ class WearableConnectService(
             throw e
         }
         if (result.unmapped.isNotEmpty()) {
-            logger.warn("WHOOP sync for {} had unmapped metrics: {}", record.userId, result.unmapped)
+            logger.warn("{} sync for {} had unmapped metrics: {}", record.provider, record.userId, result.unmapped)
         }
         connections.markSynced(record.userId, record.provider, at)
         return SyncResult(record.provider, result.accepted, result.updated, result.daysAffected)
@@ -239,18 +245,19 @@ class WearableConnectService(
         runCatching { sync(record) }.onFailure { logger.warn("Webhook sync failed for {}", record.userId, it) }
     }
 
-    private suspend fun freshAccessToken(record: ConnectionRecord, client: WhoopClient): String {
+    private suspend fun freshAccessToken(record: ConnectionRecord, client: CloudProviderClient): String {
         val current = runCatching { cipher.decrypt(record.accessTokenEnc) }.getOrNull()
         if (current != null && record.tokenExpiresAt - now() > REFRESH_MARGIN) return current
         val refreshToken = record.refreshTokenEnc?.let { runCatching { cipher.decrypt(it) }.getOrNull() }
-            ?: throw WhoopUnauthorizedException("no refresh token")
+            ?: throw ProviderUnauthorizedException("no refresh token")
         val tokens = client.refresh(refreshToken)
         connections.updateTokens(
             record.userId,
             record.provider,
             GrantedTokens(
                 accessTokenEnc = cipher.encrypt(tokens.accessToken),
-                refreshTokenEnc = tokens.refreshToken?.let(cipher::encrypt),
+                // Oura's refresh tokens are single-use and come back new; WHOOP's may not.
+                refreshTokenEnc = (tokens.refreshToken ?: refreshToken).let(cipher::encrypt),
                 expiresAt = now() + tokens.expiresIn.seconds,
                 scopes = tokens.scope.split(' ').filter { it.isNotBlank() },
             ),
@@ -258,17 +265,15 @@ class WearableConnectService(
         return tokens.accessToken
     }
 
-    private fun clientFor(provider: HealthProvider): WhoopClient = when (provider) {
-        HealthProvider.WHOOP -> whoop ?: throw ProviderUnavailableException(provider)
-        else -> throw ProviderUnavailableException(provider)
-    }
+    private fun clientFor(provider: HealthProvider): CloudProviderClient =
+        clients[provider] ?: throw ProviderUnavailableException(provider)
 
-    /** Her WHOOP row, for the first pull right after the grant. */
-    suspend fun dueForSyncOf(userId: Uuid): ConnectionRecord? = connections.find(userId, HealthProvider.WHOOP)
+    /** Her row for [provider], for the first pull right after the grant. */
+    suspend fun dueForSyncOf(userId: Uuid, provider: HealthProvider): ConnectionRecord? = connections.find(userId, provider)
 
-    /** What the job asks for: which connections to pull, how many at once. */
+    /** What the job asks for: which connections to pull, how many at once, across every configured provider. */
     suspend fun dueForSync(limit: Int): List<ConnectionRecord> =
-        if (whoop == null) emptyList() else connections.dueForSync(HealthProvider.WHOOP, now() - SYNC_INTERVAL, limit)
+        clients.keys.flatMap { connections.dueForSync(it, now() - SYNC_INTERVAL, limit) }.take(limit)
 
     suspend fun sweepStates() = connections.sweepStates()
 

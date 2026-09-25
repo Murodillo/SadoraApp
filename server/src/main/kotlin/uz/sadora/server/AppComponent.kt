@@ -81,6 +81,7 @@ import uz.sadora.server.wearable.WearableService
 import uz.sadora.server.wearable.ConnectionRepository
 import uz.sadora.server.wearable.WearableConnectService
 import uz.sadora.server.wearable.WearableSyncJob
+import uz.sadora.server.wearable.oura.OuraClient
 import uz.sadora.server.wearable.whoop.WhoopClient
 import uz.sadora.server.core.TokenCipher
 import uz.sadora.server.user.UserService
@@ -216,6 +217,7 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
         cipher = TokenCipher.from(config.wearables.tokenKey, fallbackSecret = config.jwt.secret),
         whoopConfig = config.wearables.whoop,
         whoop = if (config.wearables.whoop.isConfigured) WhoopClient(outboundHttpClient, config.wearables.whoop) else null,
+        oura = if (config.wearables.oura.isConfigured) OuraClient(outboundHttpClient, config.wearables.oura) else null,
     )
     val wearableSyncJob = WearableSyncJob(wearableConnectService)
 
