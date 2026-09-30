@@ -30,21 +30,21 @@ interface HealthGateStrings {
 object HealthGateStringsUz : HealthGateStrings {
     override fun title(store: String) = "$store ma'lumotlariga ruxsat bering"
     override fun body(store: String) =
-        "Sadora telefoningizdagi $store'dagi barcha sog'liq ma'lumotlarini — butun tarixi bilan — o'qiydi. " +
+        "Sadora telefoningizdagi $store'dan ilovada ishlatiladigan sog'liq ma'lumotlarini — butun tarixi bilan — o'qiydi. " +
             "Shu bilan sikl bashorati, tahlillar va shifokorga ko'rsatiladigan karta to'liq bo'ladi."
     override val kinds = listOf(
-        "Hayz sikli, ovulyatsiya testlari, bachadon bo'yni suyuqligi",
-        "Qadam, masofa, kaloriya, mashg'ulotlar, qavatlar",
-        "Puls, HRV, qon bosimi, qondagi qand, SpO₂, harorat",
-        "Uyqu bosqichlari va meditatsiya",
-        "Vazn, bo'y, yog' foizi va tana tarkibi",
-        "Ovqat, suv va jinsiy faollik qaydlari",
+        "Hayz sikli va bazal harorat",
+        "Qadam, masofa va faol kaloriya",
+        "Puls, tinch holatdagi puls, HRV, nafas va SpO₂",
+        "Tana va teri harorati",
+        "Uyqu va uning bosqichlari",
+        "Vazn",
     )
     override val privacy = "Ma'lumotlar faqat sizning hisobingizda saqlanadi va hech kimga sotilmaydi. " +
         "Ruxsatni istalgan vaqtda telefon sozlamalaridan olib qo'yishingiz mumkin."
     override val allow = "Ruxsat berish"
     override fun partial(granted: Int, total: Int) = "$total ta ruxsatdan $granted tasi berildi"
-    override val partialBody = "Ilovadan foydalanish uchun barcha turlarga ruxsat kerak. " +
+    override val partialBody = "Ilovadan foydalanish uchun ro'yxatdagi barcha turlarga ruxsat kerak. " +
         "Sozlamalarda \"Hammasiga ruxsat berish\"ni yoqing."
     override val openSettings = "Sozlamalarni ochish"
     override fun install(store: String) = "$store o'rnatilmagan"
@@ -61,21 +61,21 @@ object HealthGateStringsUz : HealthGateStrings {
 object HealthGateStringsRu : HealthGateStrings {
     override fun title(store: String) = "Разрешите доступ к $store"
     override fun body(store: String) =
-        "Sadora читает все данные о здоровье из $store на телефоне — со всей историей. " +
+        "Sadora читает из $store на телефоне данные о здоровье, которые использует приложение, — со всей историей. " +
             "Так прогноз цикла, аналитика и карта для врача будут полными."
     override val kinds = listOf(
-        "Менструальный цикл, тесты на овуляцию, цервикальная слизь",
-        "Шаги, дистанция, калории, тренировки, этажи",
-        "Пульс, ВСР, давление, глюкоза крови, SpO₂, температура",
-        "Фазы сна и медитация",
-        "Вес, рост, процент жира и состав тела",
-        "Питание, вода и записи о сексуальной активности",
+        "Менструальный цикл и базальная температура",
+        "Шаги, дистанция и активные калории",
+        "Пульс, пульс в покое, ВСР, дыхание и SpO₂",
+        "Температура тела и кожи",
+        "Сон и его фазы",
+        "Вес",
     )
     override val privacy = "Данные хранятся только в вашем аккаунте и никому не продаются. " +
         "Доступ можно отозвать в настройках телефона в любой момент."
     override val allow = "Разрешить"
     override fun partial(granted: Int, total: Int) = "Выдано $granted из $total разрешений"
-    override val partialBody = "Чтобы пользоваться приложением, нужен доступ ко всем типам. " +
+    override val partialBody = "Чтобы пользоваться приложением, нужен доступ ко всем типам из списка. " +
         "Включите «Разрешить все» в настройках."
     override val openSettings = "Открыть настройки"
     override fun install(store: String) = "$store не установлен"
@@ -92,21 +92,21 @@ object HealthGateStringsRu : HealthGateStrings {
 object HealthGateStringsEn : HealthGateStrings {
     override fun title(store: String) = "Allow access to $store"
     override fun body(store: String) =
-        "Sadora reads all the health data in $store on your phone — with its whole history. " +
+        "Sadora reads the health data the app uses from $store on your phone — with its whole history. " +
             "That is what makes the cycle forecast, the insights and the record for your doctor complete."
     override val kinds = listOf(
-        "Menstrual cycle, ovulation tests, cervical mucus",
-        "Steps, distance, calories, workouts, floors",
-        "Heart rate, HRV, blood pressure, blood glucose, SpO₂, temperature",
-        "Sleep stages and mindfulness",
-        "Weight, height, body fat and body composition",
-        "Food, water and sexual activity notes",
+        "Menstrual cycle and basal temperature",
+        "Steps, distance and active calories",
+        "Heart rate, resting heart rate, HRV, breathing and SpO₂",
+        "Body and skin temperature",
+        "Sleep and its stages",
+        "Weight",
     )
     override val privacy = "Your data stays in your account and is never sold. " +
         "You can take the access back in your phone's settings at any time."
     override val allow = "Allow"
     override fun partial(granted: Int, total: Int) = "$granted of $total permissions granted"
-    override val partialBody = "The app needs every type to work. Turn on \"Allow all\" in the settings."
+    override val partialBody = "The app needs every type on the list to work. Turn on \"Allow all\" in the settings."
     override val openSettings = "Open settings"
     override fun install(store: String) = "$store is not installed"
     override fun installBody(store: String) = "Reading health data needs $store. Install or update it from the Play Store."
