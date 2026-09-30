@@ -72,6 +72,60 @@ enum class HealthMetric(val canonicalUnit: String, val aggregation: Aggregation)
     @SerialName("spo2") SPO2("percent", Aggregation.AVERAGE),
     /** Skin temperature, distinct from [BODY_TEMPERATURE]: a wrist reads cooler than a thermometer. */
     @SerialName("skin_temperature") SKIN_TEMPERATURE("c", Aggregation.AVERAGE),
+
+    // ---- everything else the phone's store holds (2026-09-30): read in full so her
+    // history is here, whatever the app draws from it today.
+
+    // Activity
+    /** Resting plus active: what the phone counts as the day's whole burn. */
+    @SerialName("total_energy") TOTAL_ENERGY("kcal", Aggregation.SUM),
+    /** The day's basal burn — the rate her body runs at, in a day's kilocalories. */
+    @SerialName("basal_metabolic_rate") BASAL_METABOLIC_RATE("kcal", Aggregation.AVERAGE),
+    @SerialName("floors") FLOORS("count", Aggregation.SUM),
+    @SerialName("elevation_gained") ELEVATION_GAINED("m", Aggregation.SUM),
+    @SerialName("exercise_minutes") EXERCISE_MINUTES("min", Aggregation.SUM),
+    @SerialName("mindfulness_minutes") MINDFULNESS_MINUTES("min", Aggregation.SUM),
+    @SerialName("wheelchair_pushes") WHEELCHAIR_PUSHES("count", Aggregation.SUM),
+    @SerialName("speed") SPEED("m/s", Aggregation.AVERAGE),
+    @SerialName("power") POWER("w", Aggregation.AVERAGE),
+    @SerialName("steps_cadence") STEPS_CADENCE("spm", Aggregation.AVERAGE),
+    @SerialName("cycling_cadence") CYCLING_CADENCE("rpm", Aggregation.AVERAGE),
+    /** Cardiorespiratory fitness, in millilitres of oxygen per kilogram per minute. */
+    @SerialName("vo2_max") VO2_MAX("ml/kg/min", Aggregation.LATEST),
+
+    // Vitals
+    @SerialName("blood_glucose") BLOOD_GLUCOSE("mmol/l", Aggregation.AVERAGE),
+    @SerialName("blood_pressure_systolic") BLOOD_PRESSURE_SYSTOLIC("mmhg", Aggregation.AVERAGE),
+    @SerialName("blood_pressure_diastolic") BLOOD_PRESSURE_DIASTOLIC("mmhg", Aggregation.AVERAGE),
+
+    // Body measurements
+    @SerialName("height") HEIGHT("cm", Aggregation.LATEST),
+    @SerialName("body_fat") BODY_FAT("percent", Aggregation.LATEST),
+    @SerialName("lean_body_mass") LEAN_BODY_MASS("kg", Aggregation.LATEST),
+    @SerialName("body_water_mass") BODY_WATER_MASS("kg", Aggregation.LATEST),
+    @SerialName("bone_mass") BONE_MASS("kg", Aggregation.LATEST),
+
+    // Nutrition
+    @SerialName("hydration") HYDRATION("ml", Aggregation.SUM),
+    @SerialName("dietary_energy") DIETARY_ENERGY("kcal", Aggregation.SUM),
+    @SerialName("protein") PROTEIN("g", Aggregation.SUM),
+    @SerialName("carbohydrates") CARBOHYDRATES("g", Aggregation.SUM),
+    @SerialName("fat") FAT("g", Aggregation.SUM),
+
+    // Cycle tracking
+    /**
+     * An ovulation test's result, as a code: 0 inconclusive, 1 negative, 2 high, 3 positive.
+     * The day keeps the strongest, so one positive stick is not averaged away.
+     */
+    @SerialName("ovulation_test") OVULATION_TEST("result", Aggregation.MAX),
+    /**
+     * Cervical mucus appearance, as a code: 1 dry, 2 sticky, 3 creamy, 4 watery,
+     * 5 egg white, 6 unusual. The day keeps the latest note.
+     */
+    @SerialName("cervical_mucus") CERVICAL_MUCUS("appearance", Aggregation.LATEST),
+    /** Spotting between periods: how many times it was noted that day. */
+    @SerialName("intermenstrual_bleeding") INTERMENSTRUAL_BLEEDING("count", Aggregation.SUM),
+    @SerialName("sexual_activity") SEXUAL_ACTIVITY("count", Aggregation.SUM),
 }
 
 /**

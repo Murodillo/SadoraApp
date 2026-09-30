@@ -585,6 +585,7 @@ object StringsUz : Strings {
     }
 
     override val doctors: DoctorStrings = DoctorStringsUz
+    override val healthGate: HealthGateStrings = HealthGateStringsUz
 
     override val community = object : CommunityStrings {
         override val title = "Chat"
@@ -1431,6 +1432,35 @@ object StringsUz : Strings {
             HealthMetric.SPO2 -> "SpO₂"
             HealthMetric.SKIN_TEMPERATURE -> "Teri harorati"
             HealthMetric.WEIGHT -> "Vazn"
+            HealthMetric.TOTAL_ENERGY -> "Jami energiya"
+            HealthMetric.BASAL_METABOLIC_RATE -> "Bazal metabolizm"
+            HealthMetric.FLOORS -> "Qavatlar"
+            HealthMetric.ELEVATION_GAINED -> "Ko'tarilish"
+            HealthMetric.EXERCISE_MINUTES -> "Mashg'ulot"
+            HealthMetric.MINDFULNESS_MINUTES -> "Meditatsiya"
+            HealthMetric.WHEELCHAIR_PUSHES -> "Aravacha itarishlari"
+            HealthMetric.SPEED -> "Tezlik"
+            HealthMetric.POWER -> "Quvvat"
+            HealthMetric.STEPS_CADENCE -> "Qadam sur'ati"
+            HealthMetric.CYCLING_CADENCE -> "Pedal sur'ati"
+            HealthMetric.VO2_MAX -> "VO₂max"
+            HealthMetric.BLOOD_GLUCOSE -> "Qondagi qand"
+            HealthMetric.BLOOD_PRESSURE_SYSTOLIC -> "Sistolik bosim"
+            HealthMetric.BLOOD_PRESSURE_DIASTOLIC -> "Diastolik bosim"
+            HealthMetric.HEIGHT -> "Bo'y"
+            HealthMetric.BODY_FAT -> "Yog' foizi"
+            HealthMetric.LEAN_BODY_MASS -> "Yog'siz massa"
+            HealthMetric.BODY_WATER_MASS -> "Tanadagi suv"
+            HealthMetric.BONE_MASS -> "Suyak massasi"
+            HealthMetric.HYDRATION -> "Ichilgan suv"
+            HealthMetric.DIETARY_ENERGY -> "Ovqat kaloriyasi"
+            HealthMetric.PROTEIN -> "Oqsil"
+            HealthMetric.CARBOHYDRATES -> "Uglevodlar"
+            HealthMetric.FAT -> "Yog'lar"
+            HealthMetric.OVULATION_TEST -> "Ovulyatsiya testi"
+            HealthMetric.CERVICAL_MUCUS -> "Bachadon bo'yni suyuqligi"
+            HealthMetric.INTERMENSTRUAL_BLEEDING -> "Oraliq qon ketish"
+            HealthMetric.SEXUAL_ACTIVITY -> "Jinsiy faollik"
         }
 
         override val balanceTitle = "Balans"

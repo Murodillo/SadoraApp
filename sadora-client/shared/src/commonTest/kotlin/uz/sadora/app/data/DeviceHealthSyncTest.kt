@@ -14,6 +14,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.atStartOfDayIn
+import kotlinx.datetime.toLocalDateTime
 import uz.sadora.app.data.health.DeviceHealthBackend
 import uz.sadora.app.data.health.DeviceHealthSync
 import uz.sadora.app.data.health.HealthAvailability
@@ -44,12 +45,16 @@ class DeviceHealthSyncTest {
         var access: Boolean = true,
     ) : HealthPlatform {
         val reads = mutableListOf<Pair<Instant, Instant>>()
+        val ends = mutableListOf<Instant>()
         var revoked = false
         override val provider = HealthProvider.HEALTH_CONNECT
         override suspend fun availability() = HealthAvailability.AVAILABLE
         override suspend fun hasAccess() = access
         override suspend fun read(samplesFrom: Instant, flowFrom: Instant, to: Instant, zone: TimeZone): HealthReading {
             reads += samplesFrom to flowFrom
+            ends += to
+            // The history's older years hold nothing here; the data sits in the last one.
+            if (flowFrom >= to) return HealthReading(emptyList(), emptySet())
             return HealthReading(samples, flowDays)
         }
         override suspend fun revokeAccess() {
@@ -108,15 +113,26 @@ class DeviceHealthSyncTest {
     }
 
     @Test
-    fun `the first sync reads a month from midnight and half a year of periods and then remembers`() = runTest {
+    fun `the first sync reads her whole history a year at a time and the periods once`() = runTest {
         platform.samples = steps(3)
         platform.flowDays = (10..14).map { LocalDate(2026, 8, it) }.toSet()
+        val progress = mutableListOf<Float>()
 
-        val outcome = assertNotNull(sync.sync("u1"))
+        val outcome = assertNotNull(sync.sync("u1", progress = { progress += it }))
 
-        val (samplesFrom, flowFrom) = platform.reads.single()
-        assertEquals(LocalDate(2026, 8, 14).atStartOfDayIn(zone), samplesFrom, "a whole day, so its total is not cut")
-        assertEquals(now - 180.days, flowFrom)
+        val history = now - DeviceHealthSync.HistoryWindow
+        assertEquals(history.toLocalDateTime(zone).date.atStartOfDayIn(zone), platform.reads.first().first, "from a whole day")
+        assertEquals(now, platform.ends.last())
+        // Each slice starts where the last ended, none longer than a year.
+        platform.reads.zipWithNext().forEachIndexed { i, (a, b) ->
+            assertEquals(platform.ends[i], b.first)
+            assertTrue(platform.ends[i] - a.first <= 365.days)
+        }
+        // Bleeding days are read once, over the whole history, in the last slice.
+        assertEquals(history, platform.reads.last().second)
+        assertTrue(platform.reads.dropLast(1).indices.all { platform.reads[it].second >= platform.ends[it] })
+        assertEquals(platform.reads.size, progress.size)
+        assertEquals(1f, progress.last())
         assertEquals("Asia/Tashkent", backend.batches.single().timezone)
         assertEquals(3, outcome.accepted)
         assertEquals(1, outcome.periodsAdded)
@@ -127,10 +143,11 @@ class DeviceHealthSyncTest {
     @Test
     fun `a sync within a quarter hour is skipped unless she asks`() = runTest {
         sync.sync("u1")
+        val first = platform.reads.size
         now += 5.minutes
         assertNull(sync.sync("u1"))
         assertNotNull(sync.sync("u1", force = true))
-        assertEquals(2, platform.reads.size)
+        assertEquals(first + 1, platform.reads.size, "after the history, one window")
     }
 
     @Test

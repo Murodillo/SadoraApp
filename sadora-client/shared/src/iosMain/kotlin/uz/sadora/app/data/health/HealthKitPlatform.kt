@@ -63,6 +63,34 @@ import platform.HealthKit.percentUnit
 import platform.HealthKit.predicateForSamplesWithStartDate
 import platform.HealthKit.secondUnitWithMetricPrefix
 import platform.HealthKit.unitDividedByUnit
+import platform.HealthKit.HKCategoryTypeIdentifierCervicalMucusQuality
+import platform.HealthKit.HKCategoryTypeIdentifierIntermenstrualBleeding
+import platform.HealthKit.HKCategoryTypeIdentifierMindfulSession
+import platform.HealthKit.HKCategoryTypeIdentifierOvulationTestResult
+import platform.HealthKit.HKCategoryTypeIdentifierSexualActivity
+import platform.HealthKit.HKMetricPrefixCenti
+import platform.HealthKit.HKQuantityTypeIdentifierAppleExerciseTime
+import platform.HealthKit.HKQuantityTypeIdentifierBasalEnergyBurned
+import platform.HealthKit.HKQuantityTypeIdentifierBloodGlucose
+import platform.HealthKit.HKQuantityTypeIdentifierBloodPressureDiastolic
+import platform.HealthKit.HKQuantityTypeIdentifierBloodPressureSystolic
+import platform.HealthKit.HKQuantityTypeIdentifierBodyFatPercentage
+import platform.HealthKit.HKQuantityTypeIdentifierDietaryCarbohydrates
+import platform.HealthKit.HKQuantityTypeIdentifierDietaryEnergyConsumed
+import platform.HealthKit.HKQuantityTypeIdentifierDietaryFatTotal
+import platform.HealthKit.HKQuantityTypeIdentifierDietaryProtein
+import platform.HealthKit.HKQuantityTypeIdentifierDietaryWater
+import platform.HealthKit.HKQuantityTypeIdentifierFlightsClimbed
+import platform.HealthKit.HKQuantityTypeIdentifierHeight
+import platform.HealthKit.HKQuantityTypeIdentifierLeanBodyMass
+import platform.HealthKit.HKQuantityTypeIdentifierPushCount
+import platform.HealthKit.HKQuantityTypeIdentifierVO2Max
+import platform.HealthKit.HKQuantityTypeIdentifierWalkingSpeed
+import platform.HealthKit.gramUnit
+import platform.HealthKit.literUnitWithMetricPrefix
+import platform.HealthKit.meterUnitWithMetricPrefix
+import platform.HealthKit.millimeterOfMercuryUnit
+import platform.HealthKit.secondUnit
 import uz.sadora.contract.HealthProvider
 import uz.sadora.contract.HealthSampleInput
 
@@ -107,6 +135,7 @@ class HealthKitPlatform : HealthPlatform {
         }
         HKCategoryType.categoryTypeForIdentifier(HKCategoryTypeIdentifierSleepAnalysis)?.let(::add)
         HKCategoryType.categoryTypeForIdentifier(HKCategoryTypeIdentifierMenstrualFlow)?.let(::add)
+        Notes.forEach { note -> HKCategoryType.categoryTypeForIdentifier(note.identifier)?.let(::add) }
     }
 
     override suspend fun read(samplesFrom: Instant, flowFrom: Instant, to: Instant, zone: TimeZone): HealthReading {
@@ -114,6 +143,7 @@ class HealthKitPlatform : HealthPlatform {
             DailySums.forEach { (identifier, unit) -> addAll(daily(identifier, unit(), HKStatisticsOptionCumulativeSum, samplesFrom, to, zone)) }
             DailyAverages.forEach { (identifier, unit) -> addAll(daily(identifier, unit(), HKStatisticsOptionDiscreteAverage, samplesFrom, to, zone)) }
             Measurements.forEach { addAll(measurements(it, samplesFrom, to)) }
+            Notes.forEach { addAll(notes(it, samplesFrom, to)) }
             addAll(sleep(samplesFrom, to, zone))
         }
         return HealthReading(samples, flowDays(flowFrom, to, zone))
@@ -190,6 +220,21 @@ class HealthKitPlatform : HealthPlatform {
         }
     }
 
+    /** Category samples — mindful minutes and the cycle notes — as numbers the V29 mappings name. */
+    private suspend fun notes(note: Note, from: Instant, to: Instant): List<HealthSampleInput> {
+        val type = HKCategoryType.categoryTypeForIdentifier(note.identifier) ?: return emptyList()
+        return samplesOf(type, from, to).filterIsInstance<HKCategorySample>().mapNotNull { sample ->
+            HealthSampleInput(
+                provider = HealthProvider.APPLE_HEALTH,
+                externalId = sample.UUID.UUIDString,
+                metric = note.identifier,
+                value = note.value(sample) ?: return@mapNotNull null,
+                startedAt = sample.startDate.instant(),
+                sourceDevice = sample.sourceRevision.source.name,
+            )
+        }
+    }
+
     private suspend fun sleep(from: Instant, to: Instant, zone: TimeZone): List<HealthSampleInput> {
         val type = HKCategoryType.categoryTypeForIdentifier(HKCategoryTypeIdentifierSleepAnalysis) ?: return emptyList()
         val segments = samplesOf(type, from, to).filterIsInstance<HKCategorySample>().mapNotNull { sample ->
@@ -234,6 +279,9 @@ class HealthKitPlatform : HealthPlatform {
     /** A discrete reading sent as it is. [factor] converts HealthKit's fraction to a percentage. */
     private class Measurement(val identifier: String, val unit: () -> HKUnit, val factor: Double = 1.0)
 
+    /** A category sample turned into a number; null drops it. */
+    private class Note(val identifier: String, val value: (HKCategorySample) -> Double?)
+
     private companion object {
         const val AskedKey = "sadora.healthkit.asked"
 
@@ -244,10 +292,21 @@ class HealthKitPlatform : HealthPlatform {
             HKQuantityTypeIdentifierStepCount!! to { HKUnit.countUnit() },
             HKQuantityTypeIdentifierDistanceWalkingRunning!! to { HKUnit.meterUnit() },
             HKQuantityTypeIdentifierActiveEnergyBurned!! to { HKUnit.kilocalorieUnit() },
+            // Everything else Health holds (2026-09-30), in the units V29 maps.
+            HKQuantityTypeIdentifierBasalEnergyBurned!! to { HKUnit.kilocalorieUnit() },
+            HKQuantityTypeIdentifierFlightsClimbed!! to { HKUnit.countUnit() },
+            HKQuantityTypeIdentifierAppleExerciseTime!! to { HKUnit.minuteUnit() },
+            HKQuantityTypeIdentifierPushCount!! to { HKUnit.countUnit() },
+            HKQuantityTypeIdentifierDietaryWater!! to { HKUnit.literUnitWithMetricPrefix(HKMetricPrefixMilli) },
+            HKQuantityTypeIdentifierDietaryEnergyConsumed!! to { HKUnit.kilocalorieUnit() },
+            HKQuantityTypeIdentifierDietaryProtein!! to { HKUnit.gramUnit() },
+            HKQuantityTypeIdentifierDietaryCarbohydrates!! to { HKUnit.gramUnit() },
+            HKQuantityTypeIdentifierDietaryFatTotal!! to { HKUnit.gramUnit() },
         )
 
         val DailyAverages: Map<String, () -> HKUnit> = mapOf(
             HKQuantityTypeIdentifierHeartRate!! to bpm,
+            HKQuantityTypeIdentifierWalkingSpeed!! to { HKUnit.meterUnit().unitDividedByUnit(HKUnit.secondUnit()) },
         )
 
         val Measurements: List<Measurement> = listOf(
@@ -259,6 +318,32 @@ class HealthKitPlatform : HealthPlatform {
             Measurement(HKQuantityTypeIdentifierBasalBodyTemperature!!, { HKUnit.degreeCelsiusUnit() }),
             Measurement(HKQuantityTypeIdentifierAppleSleepingWristTemperature!!, { HKUnit.degreeCelsiusUnit() }),
             Measurement(HKQuantityTypeIdentifierBodyMass!!, { HKUnit.gramUnitWithMetricPrefix(HKMetricPrefixKilo) }),
+            Measurement(HKQuantityTypeIdentifierHeight!!, { HKUnit.meterUnitWithMetricPrefix(HKMetricPrefixCenti) }),
+            Measurement(HKQuantityTypeIdentifierBodyFatPercentage!!, { HKUnit.percentUnit() }, factor = 100.0),
+            Measurement(HKQuantityTypeIdentifierLeanBodyMass!!, { HKUnit.gramUnitWithMetricPrefix(HKMetricPrefixKilo) }),
+            Measurement(HKQuantityTypeIdentifierBloodGlucose!!, { HKUnit.unitFromString("mg/dL") }),
+            Measurement(HKQuantityTypeIdentifierBloodPressureSystolic!!, { HKUnit.millimeterOfMercuryUnit() }),
+            Measurement(HKQuantityTypeIdentifierBloodPressureDiastolic!!, { HKUnit.millimeterOfMercuryUnit() }),
+            Measurement(HKQuantityTypeIdentifierVO2Max!!, { HKUnit.unitFromString("ml/kg*min") }),
+        )
+
+        // HealthKit's raw category values, turned into the codes V29 describes.
+        val Notes: List<Note> = listOf(
+            // A session's length in minutes.
+            Note(HKCategoryTypeIdentifierMindfulSession!!) { (it.endDate.timeIntervalSince1970 - it.startDate.timeIntervalSince1970) / 60.0 },
+            // 1 negative, 2 LH surge, 3 indeterminate, 4 oestrogen surge → 1, 3, 0, 2.
+            Note(HKCategoryTypeIdentifierOvulationTestResult!!) {
+                when (it.value) {
+                    1L -> 1.0
+                    2L -> 3.0
+                    4L -> 2.0
+                    else -> 0.0
+                }
+            },
+            // 1 dry … 5 egg white: the same scale as Health Connect's.
+            Note(HKCategoryTypeIdentifierCervicalMucusQuality!!) { it.value.toDouble().takeIf { v -> v in 1.0..5.0 } },
+            Note(HKCategoryTypeIdentifierIntermenstrualBleeding!!) { 1.0 },
+            Note(HKCategoryTypeIdentifierSexualActivity!!) { 1.0 },
         )
     }
 }

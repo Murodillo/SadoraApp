@@ -584,6 +584,7 @@ object StringsEn : Strings {
     }
 
     override val doctors: DoctorStrings = DoctorStringsEn
+    override val healthGate: HealthGateStrings = HealthGateStringsEn
 
     override val community = object : CommunityStrings {
         override val title = "Chat"
@@ -1431,6 +1432,35 @@ object StringsEn : Strings {
             HealthMetric.SPO2 -> "SpO₂"
             HealthMetric.SKIN_TEMPERATURE -> "Skin temperature"
             HealthMetric.WEIGHT -> "Weight"
+            HealthMetric.TOTAL_ENERGY -> "Total energy"
+            HealthMetric.BASAL_METABOLIC_RATE -> "Basal metabolic rate"
+            HealthMetric.FLOORS -> "Floors"
+            HealthMetric.ELEVATION_GAINED -> "Elevation gained"
+            HealthMetric.EXERCISE_MINUTES -> "Exercise"
+            HealthMetric.MINDFULNESS_MINUTES -> "Mindfulness"
+            HealthMetric.WHEELCHAIR_PUSHES -> "Wheelchair pushes"
+            HealthMetric.SPEED -> "Speed"
+            HealthMetric.POWER -> "Power"
+            HealthMetric.STEPS_CADENCE -> "Step cadence"
+            HealthMetric.CYCLING_CADENCE -> "Cycling cadence"
+            HealthMetric.VO2_MAX -> "VO₂max"
+            HealthMetric.BLOOD_GLUCOSE -> "Blood glucose"
+            HealthMetric.BLOOD_PRESSURE_SYSTOLIC -> "Systolic pressure"
+            HealthMetric.BLOOD_PRESSURE_DIASTOLIC -> "Diastolic pressure"
+            HealthMetric.HEIGHT -> "Height"
+            HealthMetric.BODY_FAT -> "Body fat"
+            HealthMetric.LEAN_BODY_MASS -> "Lean body mass"
+            HealthMetric.BODY_WATER_MASS -> "Body water"
+            HealthMetric.BONE_MASS -> "Bone mass"
+            HealthMetric.HYDRATION -> "Hydration"
+            HealthMetric.DIETARY_ENERGY -> "Dietary energy"
+            HealthMetric.PROTEIN -> "Protein"
+            HealthMetric.CARBOHYDRATES -> "Carbohydrates"
+            HealthMetric.FAT -> "Fat"
+            HealthMetric.OVULATION_TEST -> "Ovulation test"
+            HealthMetric.CERVICAL_MUCUS -> "Cervical mucus"
+            HealthMetric.INTERMENSTRUAL_BLEEDING -> "Spotting"
+            HealthMetric.SEXUAL_ACTIVITY -> "Sexual activity"
         }
 
         override val balanceTitle = "Balance"

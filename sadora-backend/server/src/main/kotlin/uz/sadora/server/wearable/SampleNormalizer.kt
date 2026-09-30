@@ -87,6 +87,30 @@ object SampleNormalizer {
             HealthMetric.RECOVERY, HealthMetric.SPO2 -> value <= 100
             HealthMetric.WEIGHT -> value in 2.0..400.0
             HealthMetric.STRAIN -> value <= 21
+            HealthMetric.TOTAL_ENERGY -> value <= 25_000
+            HealthMetric.BASAL_METABOLIC_RATE -> value <= 10_000
+            HealthMetric.FLOORS -> value <= 2_000
+            HealthMetric.ELEVATION_GAINED -> value <= 20_000
+            HealthMetric.EXERCISE_MINUTES, HealthMetric.MINDFULNESS_MINUTES -> value <= 24 * 60
+            HealthMetric.WHEELCHAIR_PUSHES -> value <= 100_000
+            HealthMetric.SPEED -> value <= 100
+            HealthMetric.POWER -> value <= 3_000
+            HealthMetric.STEPS_CADENCE -> value <= 400
+            HealthMetric.CYCLING_CADENCE -> value <= 300
+            HealthMetric.VO2_MAX -> value in 5.0..100.0
+            HealthMetric.BLOOD_GLUCOSE -> value in 0.5..50.0
+            HealthMetric.BLOOD_PRESSURE_SYSTOLIC -> value in 40.0..300.0
+            HealthMetric.BLOOD_PRESSURE_DIASTOLIC -> value in 20.0..200.0
+            HealthMetric.HEIGHT -> value in 40.0..260.0
+            HealthMetric.BODY_FAT -> value <= 100
+            HealthMetric.LEAN_BODY_MASS, HealthMetric.BODY_WATER_MASS -> value <= 300
+            HealthMetric.BONE_MASS -> value <= 30
+            HealthMetric.HYDRATION -> value <= 20_000
+            HealthMetric.DIETARY_ENERGY -> value <= 30_000
+            HealthMetric.PROTEIN, HealthMetric.CARBOHYDRATES, HealthMetric.FAT -> value <= 3_000
+            HealthMetric.OVULATION_TEST -> value <= 3
+            HealthMetric.CERVICAL_MUCUS -> value in 1.0..6.0
+            HealthMetric.INTERMENSTRUAL_BLEEDING, HealthMetric.SEXUAL_ACTIVITY -> value <= 50
         }
     }
 

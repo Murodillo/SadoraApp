@@ -77,6 +77,14 @@ class WearableController(
     var lastDeviceSync by mutableStateOf<DeviceSyncOutcome?>(null)
         private set
 
+    /** Every asked-for type allowed — what the gate before the app waits for. */
+    var deviceFullAccess by mutableStateOf(false)
+        private set
+
+    /** 0..1 while a sync runs, for the gate's progress bar; null when none is running. */
+    var deviceSyncProgress by mutableStateOf<Float?>(null)
+        private set
+
     /** Samsung Health is on this phone — its tile rides on the Health Connect reading. */
     var samsungInstalled by mutableStateOf(false)
         private set
@@ -167,6 +175,7 @@ class WearableController(
         val userId = currentUserId() ?: return
         deviceAvailability = device.platform.availability()
         deviceAccess = device.platform.hasAccess()
+        deviceFullAccess = device.platform.hasFullAccess()
         samsungInstalled = device.platform.isWriterInstalled(HealthProvider.SAMSUNG_HEALTH)
         samsungWriting = device.platform.isWriterWriting(HealthProvider.SAMSUNG_HEALTH)
         val state = device.state(userId)
@@ -211,12 +220,48 @@ class WearableController(
         val userId = currentUserId() ?: return null
         if (deviceSyncing) return null
         deviceSyncing = true
+        deviceSyncProgress = 0f
         return try {
-            device.sync(userId, force)?.also { lastDeviceSync = it }
+            device.sync(userId, force) { deviceSyncProgress = it }?.also { lastDeviceSync = it }
         } finally {
             deviceSyncing = false
+            deviceSyncProgress = null
             refreshDevice()
         }
+    }
+
+    // ---------------------------------------------------------------- the gate before the app
+
+    /**
+     * Whether the gate before the app has anything to ask. Nothing where the phone has no
+     * store at all; otherwise until every type is allowed and her history has come up once.
+     */
+    suspend fun gateNeeded(): Boolean {
+        val device = device ?: return false
+        val userId = currentUserId() ?: return false
+        refreshDevice()
+        return when (deviceAvailability) {
+            HealthAvailability.UNSUPPORTED -> false
+            HealthAvailability.NOT_INSTALLED, HealthAvailability.UPDATE_REQUIRED -> true
+            HealthAvailability.AVAILABLE -> !deviceFullAccess || device.state(userId).lastSyncAt == null
+        }
+    }
+
+    /**
+     * Everything allowed: switch reading on and bring the whole history up. True when it
+     * came up; false leaves the gate to offer a retry.
+     */
+    suspend fun importEverything(): Boolean {
+        val device = device ?: return true
+        val userId = currentUserId() ?: return true
+        if (!device.state(userId).enabled) {
+            device.enable(userId)
+            device.platform.provider?.let { provider ->
+                analytics.event(AnalyticsEvents.DEVICE_CONNECTED, mapOf("provider" to provider.name.lowercase()))
+            }
+        }
+        val outcome = syncDevice(force = true) ?: return device.state(userId).lastSyncAt != null
+        return outcome.failure == null
     }
 
     /** The link brought her back. Reloads the list so the new connection is drawn. */

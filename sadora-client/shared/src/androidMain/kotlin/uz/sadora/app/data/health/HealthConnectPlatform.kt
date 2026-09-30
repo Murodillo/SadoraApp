@@ -4,10 +4,42 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
+import android.util.Log
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.HealthConnectFeatures
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.ActiveCaloriesBurnedRecord
+import androidx.health.connect.client.records.BasalMetabolicRateRecord
+import androidx.health.connect.client.records.BloodGlucoseRecord
+import androidx.health.connect.client.records.BloodPressureRecord
+import androidx.health.connect.client.records.BodyFatRecord
+import androidx.health.connect.client.records.BodyWaterMassRecord
+import androidx.health.connect.client.records.BoneMassRecord
+import androidx.health.connect.client.records.CervicalMucusRecord
+import androidx.health.connect.client.records.CyclingPedalingCadenceRecord
+import androidx.health.connect.client.records.ElevationGainedRecord
+import androidx.health.connect.client.records.ExerciseSessionRecord
+import androidx.health.connect.client.records.FloorsClimbedRecord
+import androidx.health.connect.client.records.HeightRecord
+import androidx.health.connect.client.records.HydrationRecord
+import androidx.health.connect.client.records.IntermenstrualBleedingRecord
+import androidx.health.connect.client.records.LeanBodyMassRecord
+import androidx.health.connect.client.records.MindfulnessSessionRecord
+import androidx.health.connect.client.records.NutritionRecord
+import androidx.health.connect.client.records.OvulationTestRecord
+import androidx.health.connect.client.records.PowerRecord
+import androidx.health.connect.client.records.SexualActivityRecord
+import androidx.health.connect.client.records.SpeedRecord
+import androidx.health.connect.client.records.StepsCadenceRecord
+import androidx.health.connect.client.records.TotalCaloriesBurnedRecord
+import androidx.health.connect.client.records.WheelchairPushesRecord
+import androidx.health.connect.client.records.Vo2MaxRecord
+import androidx.health.connect.client.units.Energy
+import androidx.health.connect.client.units.Length
+import androidx.health.connect.client.units.Mass
+import androidx.health.connect.client.units.Velocity
+import androidx.health.connect.client.units.Volume
+import kotlin.time.Duration.Companion.days
 import androidx.health.connect.client.records.BasalBodyTemperatureRecord
 import androidx.health.connect.client.records.BodyTemperatureRecord
 import androidx.health.connect.client.records.DistanceRecord
@@ -42,7 +74,7 @@ import uz.sadora.contract.HealthSampleInput
 
 /**
  * Health Connect: what Samsung Health, Mi Fitness, Zepp, Fitbit and the Pixel Watch
- * write, read in one place.
+ * write, read in one place — every type the store holds, since 2026-09-30.
  *
  * Totals (steps, distance, energy, heart rate) are asked for as daily aggregates rather
  * than raw records. Two apps on one phone often both write steps, and Health Connect's
@@ -52,6 +84,10 @@ import uz.sadora.contract.HealthSampleInput
  * The client library needs Android 8, while the app installs on 7; every entry point
  * checks the version before a Health Connect class is touched.
  */
+// Mindfulness sessions are still marked experimental in the 1.1.0 client; they are read
+// only where the store reports the feature, and a change in the API breaks the build here
+// rather than a reading at runtime.
+@OptIn(androidx.health.connect.client.feature.ExperimentalMindfulnessSessionApi::class)
 class HealthConnectPlatform(context: Context) : HealthPlatform {
 
     private val context = context.applicationContext
@@ -85,6 +121,9 @@ class HealthConnectPlatform(context: Context) : HealthPlatform {
         if (client.feature(HealthConnectFeatures.FEATURE_SKIN_TEMPERATURE)) {
             base += HealthPermission.getReadPermission(SkinTemperatureRecord::class)
         }
+        if (client.feature(HealthConnectFeatures.FEATURE_MINDFULNESS_SESSION)) {
+            base += HealthPermission.getReadPermission(MindfulnessSessionRecord::class)
+        }
         // Without it Health Connect hands over only the 30 days before the first grant,
         // which is not enough cycles to import.
         if (client.feature(HealthConnectFeatures.FEATURE_READ_HEALTH_DATA_HISTORY)) {
@@ -98,6 +137,32 @@ class HealthConnectPlatform(context: Context) : HealthPlatform {
         return granted().any { it in requestedPermissions() }
     }
 
+    override suspend fun hasFullAccess(): Boolean {
+        if (availability() != HealthAvailability.AVAILABLE) return false
+        return granted().containsAll(requestedPermissions())
+    }
+
+    override fun openPermissionSettings() {
+        // Android 14 moved Health Connect into the system settings; before that it is an app.
+        val action = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            "android.health.connect.action.MANAGE_HEALTH_PERMISSIONS"
+        } else {
+            "androidx.health.ACTION_MANAGE_HEALTH_PERMISSIONS"
+        }
+        val page = Intent(action).putExtra(Intent.EXTRA_PACKAGE_NAME, context.packageName).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        runCatching { context.startActivity(page) }.onFailure {
+            runCatching {
+                context.startActivity(Intent(HealthConnectClient.ACTION_HEALTH_CONNECT_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            }
+        }
+    }
+
+    /** How many of the asked-for permissions are granted, of how many: what the gate shows. */
+    override suspend fun grantedCount(): Pair<Int, Int> {
+        val asked = requestedPermissions()
+        return granted().count { it in asked } to asked.size
+    }
+
     private suspend fun granted(): Set<String> =
         client?.let { runCatching { it.permissionController.getGrantedPermissions() }.getOrNull() }.orEmpty()
 
@@ -105,13 +170,18 @@ class HealthConnectPlatform(context: Context) : HealthPlatform {
         withContext(Dispatchers.IO) {
             val client = client ?: return@withContext HealthReading(emptyList(), emptySet())
             val granted = granted()
-            val reader = Reader(client, granted, ZoneId.of(zone.id), zone)
+            val reader = Reader(client, granted, ZoneId.of(zone.id), zone, client.feature(HealthConnectFeatures.FEATURE_MINDFULNESS_SESSION))
             HealthReading(
                 samples = reader.dailyTotals(samplesFrom, to) +
                     reader.measurements(samplesFrom, to) +
+                    reader.mindfulness(samplesFrom, to) +
                     reader.sleep(samplesFrom, to),
                 flowDays = reader.flowDays(flowFrom, to),
-            )
+            ).also {
+                // What a read found, for adb logcat: a store that holds nothing looks exactly
+                // like one that failed to read, and only this line tells them apart.
+                Log.i(LogTag, "read $samplesFrom..$to: ${it.samples.size} samples, ${it.flowDays.size} flow days, ${granted.size} permissions")
+            }
         }
 
     override suspend fun revokeAccess() {
@@ -172,38 +242,64 @@ class HealthConnectPlatform(context: Context) : HealthPlatform {
         private val granted: Set<String>,
         private val javaZone: ZoneId,
         private val zone: TimeZone,
+        /** Mindfulness sessions exist only on a Health Connect new enough to have them. */
+        private val mindfulness: Boolean,
     ) {
         private fun allowed(type: KClass<out Record>) = HealthPermission.getReadPermission(type) in granted
 
+        /**
+         * One aggregate per day and metric, each already in SADORA's unit. Asked for a year
+         * at a time: a whole history in one request is thousands of buckets, more than
+         * Health Connect answers in one go.
+         */
         suspend fun dailyTotals(from: Instant, to: Instant): List<HealthSampleInput> {
-            val metrics = buildMap<String, AggregateMetric<*>> {
-                if (allowed(StepsRecord::class)) put("Steps", StepsRecord.COUNT_TOTAL)
-                if (allowed(DistanceRecord::class)) put("Distance", DistanceRecord.DISTANCE_TOTAL)
-                if (allowed(ActiveCaloriesBurnedRecord::class)) put("ActiveCaloriesBurned", ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL)
-                if (allowed(HeartRateRecord::class)) put("HeartRate", HeartRateRecord.BPM_AVG)
+            val metrics = buildMap<String, Pair<AggregateMetric<*>, (Any) -> Double?>> {
+                fun total(type: KClass<out Record>, name: String, metric: AggregateMetric<*>, convert: (Any) -> Double?) {
+                    if (allowed(type)) put(name, metric to convert)
+                }
+                total(StepsRecord::class, "Steps", StepsRecord.COUNT_TOTAL, ::count)
+                total(DistanceRecord::class, "Distance", DistanceRecord.DISTANCE_TOTAL) { (it as? Length)?.inMeters }
+                // Kilojoules for the one mapping that has always been in them (V10).
+                total(ActiveCaloriesBurnedRecord::class, "ActiveCaloriesBurned", ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL) { (it as? Energy)?.inKilojoules }
+                total(HeartRateRecord::class, "HeartRate", HeartRateRecord.BPM_AVG, ::count)
+                total(FloorsClimbedRecord::class, "FloorsClimbed", FloorsClimbedRecord.FLOORS_CLIMBED_TOTAL, ::count)
+                total(ElevationGainedRecord::class, "ElevationGained", ElevationGainedRecord.ELEVATION_GAINED_TOTAL) { (it as? Length)?.inMeters }
+                total(ExerciseSessionRecord::class, "ExerciseSession", ExerciseSessionRecord.EXERCISE_DURATION_TOTAL, ::minutes)
+                total(WheelchairPushesRecord::class, "WheelchairPushes", WheelchairPushesRecord.COUNT_TOTAL, ::count)
+                total(SpeedRecord::class, "Speed", SpeedRecord.SPEED_AVG) { (it as? Velocity)?.inMetersPerSecond }
+                total(PowerRecord::class, "Power", PowerRecord.POWER_AVG) { (it as? androidx.health.connect.client.units.Power)?.inWatts }
+                total(StepsCadenceRecord::class, "StepsCadence", StepsCadenceRecord.RATE_AVG, ::count)
+                total(CyclingPedalingCadenceRecord::class, "CyclingPedalingCadence", CyclingPedalingCadenceRecord.RPM_AVG, ::count)
+                total(HydrationRecord::class, "Hydration", HydrationRecord.VOLUME_TOTAL) { (it as? Volume)?.inMilliliters }
+                total(NutritionRecord::class, "NutritionEnergy", NutritionRecord.ENERGY_TOTAL, ::kcal)
+                total(NutritionRecord::class, "NutritionProtein", NutritionRecord.PROTEIN_TOTAL, ::grams)
+                total(NutritionRecord::class, "NutritionCarbohydrates", NutritionRecord.TOTAL_CARBOHYDRATE_TOTAL, ::grams)
+                total(NutritionRecord::class, "NutritionFat", NutritionRecord.TOTAL_FAT_TOTAL, ::grams)
             }
-            if (metrics.isEmpty()) return emptyList()
+            return yearsBetween(from, to).flatMap { (start, end) ->
+                // All metrics in one request, and if the store refuses the set, one by one:
+                // a single aggregate a phone's Health Connect does not support used to take
+                // every other total of the year down with it.
+                val groups = if (metrics.isEmpty()) {
+                    emptyList()
+                } else {
+                    aggregate(metrics.values.map { it.first }.toSet(), start, end)
+                        ?: metrics.values.flatMap { (metric, _) -> aggregate(setOf(metric), start, end).orEmpty() }
+                }
+                totalsOf(groups, metrics) + derived(start, end)
+            }
+        }
 
-            val groups = runCatching {
-                client.aggregateGroupByPeriod(
-                    AggregateGroupByPeriodRequest(
-                        metrics = metrics.values.toSet(),
-                        timeRangeFilter = TimeRangeFilter.between(from.local(), to.local()),
-                        timeRangeSlicer = Period.ofDays(1),
-                    ),
-                )
-            }.getOrElse { return emptyList() }
-
-            return groups.flatMap { group ->
+        private fun totalsOf(
+            groups: List<androidx.health.connect.client.aggregate.AggregationResultGroupedByPeriod>,
+            metrics: Map<String, Pair<AggregateMetric<*>, (Any) -> Double?>>,
+        ): List<HealthSampleInput> =
+            groups.flatMap { group ->
                 val day = group.startTime.toLocalDate()
                 val at = Instant.fromEpochMilliseconds(group.startTime.atZone(javaZone).toInstant().toEpochMilli())
-                metrics.mapNotNull { (name, metric) ->
-                    val value = when (val raw = group.result[metric]) {
-                        is Long -> raw.toDouble()
-                        is androidx.health.connect.client.units.Length -> raw.inMeters
-                        is androidx.health.connect.client.units.Energy -> raw.inKilojoules
-                        else -> null
-                    } ?: return@mapNotNull null
+                metrics.mapNotNull { (name, pair) ->
+                    val raw = group.result[pair.first] ?: return@mapNotNull null
+                    val value = pair.second(raw) ?: return@mapNotNull null
                     HealthSampleInput(
                         provider = HealthProvider.HEALTH_CONNECT,
                         // One row per day: re-reading today replaces the morning's total
@@ -215,7 +311,76 @@ class HealthConnectPlatform(context: Context) : HealthPlatform {
                     )
                 }
             }
+
+        /**
+         * Basal and total energy, each asked for alone and kept only for days some app
+         * actually wrote. Health Connect derives both from a default basal rate when nothing
+         * was recorded, which put ten years of the same two made-up numbers on a phone that
+         * never measured a calorie. A derived day comes back with no data origin.
+         */
+        private suspend fun derived(from: Instant, to: Instant): List<HealthSampleInput> {
+            val wanted = buildMap<String, Pair<AggregateMetric<*>, (Any) -> Double?>> {
+                if (allowed(BasalMetabolicRateRecord::class)) put("BasalMetabolicRate", BasalMetabolicRateRecord.BASAL_CALORIES_TOTAL to ::kcal)
+                if (allowed(TotalCaloriesBurnedRecord::class)) put("TotalCaloriesBurned", TotalCaloriesBurnedRecord.ENERGY_TOTAL to ::kcal)
+            }
+            return wanted.flatMap { (name, pair) ->
+                val groups = aggregate(setOf(pair.first), from, to).orEmpty()
+                    .filter { it.result.dataOrigins.isNotEmpty() }
+                totalsOf(groups, mapOf(name to pair))
+            }
         }
+
+        private suspend fun aggregate(
+            metrics: Set<AggregateMetric<*>>,
+            from: Instant,
+            to: Instant,
+        ): List<androidx.health.connect.client.aggregate.AggregationResultGroupedByPeriod>? =
+            runCatching {
+                client.aggregateGroupByPeriod(
+                    AggregateGroupByPeriodRequest(
+                        metrics = metrics,
+                        timeRangeFilter = TimeRangeFilter.between(from.local(), to.local()),
+                        timeRangeSlicer = Period.ofDays(1),
+                    ),
+                )
+            }.getOrElse { failure ->
+                Log.w(LogTag, "daily totals $from..$to (${metrics.size} metrics) failed: ${failure.message}")
+                null
+            }
+
+        /**
+         * Mindful minutes, summed per day from the sessions themselves: Health Connect has an
+         * aggregate for them, but not every phone's store answers it.
+         */
+        suspend fun mindfulness(from: Instant, to: Instant): List<HealthSampleInput> {
+            if (!mindfulness) return emptyList()
+            return records<MindfulnessSessionRecord>(from, to)
+                .groupBy { it.startTime.kotlin().toLocalDateTime(zone).date }
+                .map { (day, sessions) ->
+                    HealthSampleInput(
+                        provider = HealthProvider.HEALTH_CONNECT,
+                        externalId = "day:$day:MindfulnessSession",
+                        metric = "MindfulnessSession",
+                        value = sessions.sumOf { java.time.Duration.between(it.startTime, it.endTime).toMillis() } / 60_000.0,
+                        startedAt = sessions.minOf { it.startTime }.kotlin(),
+                    )
+                }
+        }
+
+        /** [from]..[to] cut into spans of at most a year, oldest first. */
+        private fun yearsBetween(from: Instant, to: Instant): List<Pair<Instant, Instant>> = buildList {
+            var start = from
+            while (start < to) {
+                val end = minOf(start + 365.days, to)
+                add(start to end)
+                start = end
+            }
+        }
+
+        private fun count(value: Any): Double? = (value as? Number)?.toDouble()
+        private fun kcal(value: Any): Double? = (value as? Energy)?.inKilocalories
+        private fun grams(value: Any): Double? = (value as? Mass)?.inGrams
+        private fun minutes(value: Any): Double? = (value as? java.time.Duration)?.toMillis()?.div(60_000.0)
 
         suspend fun measurements(from: Instant, to: Instant): List<HealthSampleInput> = buildList {
             records<RestingHeartRateRecord>(from, to).forEach { add(sample(it, "RestingHeartRate", it.beatsPerMinute.toDouble(), it.time)) }
@@ -225,6 +390,42 @@ class HealthConnectPlatform(context: Context) : HealthPlatform {
             records<BasalBodyTemperatureRecord>(from, to).forEach { add(sample(it, "BasalBodyTemperature", it.temperature.inCelsius, it.time)) }
             records<OxygenSaturationRecord>(from, to).forEach { add(sample(it, "OxygenSaturation", it.percentage.value, it.time)) }
             records<WeightRecord>(from, to).forEach { add(sample(it, "Weight", it.weight.inKilograms, it.time)) }
+            records<Vo2MaxRecord>(from, to).forEach { add(sample(it, "Vo2Max", it.vo2MillilitersPerMinuteKilogram, it.time)) }
+            records<HeightRecord>(from, to).forEach { add(sample(it, "Height", it.height.inMeters * 100, it.time)) }
+            records<BodyFatRecord>(from, to).forEach { add(sample(it, "BodyFat", it.percentage.value, it.time)) }
+            records<LeanBodyMassRecord>(from, to).forEach { add(sample(it, "LeanBodyMass", it.mass.inKilograms, it.time)) }
+            records<BodyWaterMassRecord>(from, to).forEach { add(sample(it, "BodyWaterMass", it.mass.inKilograms, it.time)) }
+            records<BoneMassRecord>(from, to).forEach { add(sample(it, "BoneMass", it.mass.inKilograms, it.time)) }
+            records<BloodGlucoseRecord>(from, to).forEach { add(sample(it, "BloodGlucose", it.level.inMillimolesPerLiter, it.time)) }
+            // One reading is two numbers; the externalIds differ by the suffix.
+            records<BloodPressureRecord>(from, to).forEach { record ->
+                add(sample(record, "BloodPressureSystolic", record.systolic.inMillimetersOfMercury, record.time, "sys"))
+                add(sample(record, "BloodPressureDiastolic", record.diastolic.inMillimetersOfMercury, record.time, "dia"))
+            }
+            // Cycle notes, as the codes the V29 mappings describe.
+            records<OvulationTestRecord>(from, to).forEach { record ->
+                val code = when (record.result) {
+                    OvulationTestRecord.RESULT_POSITIVE -> 3.0
+                    OvulationTestRecord.RESULT_HIGH -> 2.0
+                    OvulationTestRecord.RESULT_NEGATIVE -> 1.0
+                    else -> 0.0
+                }
+                add(sample(record, "OvulationTest", code, record.time))
+            }
+            records<CervicalMucusRecord>(from, to).forEach { record ->
+                val code = when (record.appearance) {
+                    CervicalMucusRecord.APPEARANCE_DRY -> 1.0
+                    CervicalMucusRecord.APPEARANCE_STICKY -> 2.0
+                    CervicalMucusRecord.APPEARANCE_CREAMY -> 3.0
+                    CervicalMucusRecord.APPEARANCE_WATERY -> 4.0
+                    CervicalMucusRecord.APPEARANCE_EGG_WHITE -> 5.0
+                    CervicalMucusRecord.APPEARANCE_UNUSUAL -> 6.0
+                    else -> null
+                } ?: return@forEach
+                add(sample(record, "CervicalMucus", code, record.time))
+            }
+            records<IntermenstrualBleedingRecord>(from, to).forEach { add(sample(it, "IntermenstrualBleeding", 1.0, it.time)) }
+            records<SexualActivityRecord>(from, to).forEach { add(sample(it, "SexualActivity", 1.0, it.time)) }
             // A ring or watch records a night as deltas from her own baseline. Only a
             // night with the baseline gives a temperature; a delta alone is not one.
             records<SkinTemperatureRecord>(from, to).forEach { record ->
@@ -282,7 +483,9 @@ class HealthConnectPlatform(context: Context) : HealthPlatform {
         }
 
         private suspend inline fun <reified T : Record> records(from: Instant, to: Instant): List<T> {
-            if (!allowed(T::class)) return emptyList()
+            // An empty range — the history's older slices ask for no bleeding days — is not
+            // a question Health Connect takes: it throws rather than answer nothing.
+            if (!allowed(T::class) || from >= to) return emptyList()
             val all = mutableListOf<T>()
             var page: String? = null
             do {
@@ -294,16 +497,19 @@ class HealthConnectPlatform(context: Context) : HealthPlatform {
                             pageToken = page,
                         ),
                     )
-                }.getOrElse { return all }
+                }.getOrElse { failure ->
+                    Log.w(LogTag, "reading ${T::class.simpleName} failed", failure)
+                    return all
+                }
                 all += response.records
                 page = response.pageToken
             } while (page != null)
             return all
         }
 
-        private fun sample(record: Record, metric: String, value: Double, at: java.time.Instant) = HealthSampleInput(
+        private fun sample(record: Record, metric: String, value: Double, at: java.time.Instant, part: String? = null) = HealthSampleInput(
             provider = HealthProvider.HEALTH_CONNECT,
-            externalId = record.metadata.id,
+            externalId = part?.let { "${record.metadata.id}:$it" } ?: record.metadata.id,
             metric = metric,
             value = value,
             startedAt = at.kotlin(),
@@ -314,6 +520,7 @@ class HealthConnectPlatform(context: Context) : HealthPlatform {
     }
 
     companion object {
+        private const val LogTag = "SadoraHealth"
         const val ProviderPackage = "com.google.android.apps.healthdata"
 
         /** Apps that write into Health Connect and have their own tile on the devices screen. */
@@ -338,6 +545,32 @@ class HealthConnectPlatform(context: Context) : HealthPlatform {
             SleepSessionRecord::class,
             MenstruationFlowRecord::class,
             MenstruationPeriodRecord::class,
+            // Everything else Health Connect holds (2026-09-30). Skin temperature and
+            // mindfulness are asked for separately, only where the store has them.
+            TotalCaloriesBurnedRecord::class,
+            BasalMetabolicRateRecord::class,
+            FloorsClimbedRecord::class,
+            ElevationGainedRecord::class,
+            ExerciseSessionRecord::class,
+            WheelchairPushesRecord::class,
+            SpeedRecord::class,
+            PowerRecord::class,
+            StepsCadenceRecord::class,
+            CyclingPedalingCadenceRecord::class,
+            BloodGlucoseRecord::class,
+            BloodPressureRecord::class,
+            HeightRecord::class,
+            BodyFatRecord::class,
+            LeanBodyMassRecord::class,
+            BodyWaterMassRecord::class,
+            BoneMassRecord::class,
+            HydrationRecord::class,
+            NutritionRecord::class,
+            OvulationTestRecord::class,
+            CervicalMucusRecord::class,
+            IntermenstrualBleedingRecord::class,
+            SexualActivityRecord::class,
+            Vo2MaxRecord::class,
         )
     }
 }

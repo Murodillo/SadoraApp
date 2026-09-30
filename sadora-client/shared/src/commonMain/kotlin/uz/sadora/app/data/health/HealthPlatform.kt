@@ -59,6 +59,22 @@ interface HealthPlatform {
      */
     suspend fun read(samplesFrom: Instant, flowFrom: Instant, to: Instant, zone: TimeZone): HealthReading
 
+    /**
+     * Whether every type the app asks for was allowed — what the gate before the app
+     * waits for. Health Connect says so; HealthKit never does, so there it is [hasAccess].
+     */
+    suspend fun hasFullAccess(): Boolean = hasAccess()
+
+    /**
+     * The store's own page for this app's permissions: where she turns on what she left
+     * off, and the only way back once Health Connect stops showing its sheet (it does,
+     * after two refusals). A no-op where there is no such page.
+     */
+    fun openPermissionSettings() = Unit
+
+    /** Granted of asked, where the store can say — Health Connect can, HealthKit cannot. */
+    suspend fun grantedCount(): Pair<Int, Int>? = null
+
     /** Gives the permissions back where the platform allows it (Health Connect does; HealthKit does not). */
     suspend fun revokeAccess()
 

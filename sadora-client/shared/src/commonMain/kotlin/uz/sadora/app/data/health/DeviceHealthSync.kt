@@ -79,8 +79,19 @@ class DeviceHealthSync(
         platform.revokeAccess()
     }
 
-    /** Null when nothing ran: switched off, too soon, or no access. */
-    suspend fun sync(userId: String, force: Boolean = false): DeviceSyncOutcome? = mutex.withLock {
+    /**
+     * Null when nothing ran: switched off, too soon, or no access.
+     *
+     * The first run after she switches it on brings her whole history, a year at a time
+     * and oldest first, each year posted before the next is read — ten years of a watch
+     * held in memory at once would be the phone's whole heap. [progress] hears the share
+     * of years done. Later runs read only from a little before the last one.
+     */
+    suspend fun sync(
+        userId: String,
+        force: Boolean = false,
+        progress: (Float) -> Unit = {},
+    ): DeviceSyncOutcome? = mutex.withLock {
         val backend = backend ?: return null
         val saved = state(userId)
         if (!saved.enabled) return null
@@ -90,26 +101,28 @@ class DeviceHealthSync(
         if (platform.availability() != HealthAvailability.AVAILABLE || !platform.hasAccess()) return null
 
         val zone = zone()
-        val window = window(last, now, zone)
-        val reading = runCatching { platform.read(window.samplesFrom, window.flowFrom, now, zone) }
-            .getOrElse { return DeviceSyncOutcome() }
-
+        val spans = spans(last, now, zone)
         var accepted = 0
         var updated = 0
+        var added = 0
         val days = mutableSetOf<LocalDate>()
-        reading.samples.chunked(BatchSize).forEach { batch ->
-            when (val result = backend.ingest(IngestSamplesRequest(batch, zone.id))) {
-                is ApiResult.Success -> {
-                    accepted += result.value.accepted
-                    updated += result.value.updated
-                    days.addAll(result.value.daysAffected)
+        spans.forEachIndexed { index, span ->
+            val reading = runCatching { platform.read(span.samplesFrom, span.flowFrom, span.to, zone) }
+                .getOrElse { return DeviceSyncOutcome(accepted, updated, added, days.sorted()) }
+            reading.samples.chunked(BatchSize).forEach { batch ->
+                when (val result = backend.ingest(IngestSamplesRequest(batch, zone.id))) {
+                    is ApiResult.Success -> {
+                        accepted += result.value.accepted
+                        updated += result.value.updated
+                        days.addAll(result.value.daysAffected)
+                    }
+                    // The last sync time is not moved, so the next run reads this window again.
+                    is ApiResult.Failure -> return DeviceSyncOutcome(accepted, updated, added, days.sorted(), result.failure)
                 }
-                // The last sync time is not moved, so the next run reads this window again.
-                is ApiResult.Failure -> return DeviceSyncOutcome(accepted, updated, failure = result.failure)
             }
+            added += importPeriods(backend, reading.flowDays, now.toLocalDateTime(zone).date)
+            progress((index + 1f) / spans.size)
         }
-
-        val added = importPeriods(backend, reading.flowDays, now.toLocalDateTime(zone).date)
         prefs.save(saved.copy(lastSyncAt = now))
         DeviceSyncOutcome(accepted, updated, added, days.sorted())
     }
@@ -129,20 +142,29 @@ class DeviceHealthSync(
         return added
     }
 
-    internal data class Window(val samplesFrom: Instant, val flowFrom: Instant)
+    internal data class Window(val samplesFrom: Instant, val flowFrom: Instant, val to: Instant)
 
     internal companion object {
         val MinInterval = 15.minutes
 
-        /** The first read, and the furthest back any read goes. */
+        /**
+         * How far the first read looks back: all of it, in practice. Health Connect keeps
+         * only what apps wrote into it, and hands over what is older than 30 days before
+         * the grant only with the history permission, which the sheet asks for.
+         */
+        val HistoryWindow = (10 * 365).days
+
+        /** Later reads go no further back than this. */
         val SampleWindow = 30.days
 
         /** How far before the last sync a read starts again, for a watch that synced late. */
         val Overlap = 2.days
 
-        /** A first import brings several cycles; later ones only what could still be changing. */
-        val FirstFlowWindow = 180.days
+        /** Later reads of the cycle look back only as far as could still be changing. */
         val FlowWindow = 45.days
+
+        /** The first read's slices: a year each. */
+        val Slice = 365.days
 
         /** Under the server's 2,000-per-request cap, with room for a long month. */
         const val BatchSize = 1_000
@@ -153,10 +175,30 @@ class DeviceHealthSync(
          */
         fun window(last: Instant?, now: Instant, zone: TimeZone): Window {
             val earliest = now - SampleWindow
-            val from = last?.let { maxOf(it - Overlap, earliest) } ?: earliest
+            val from = last?.let { maxOf(it - Overlap, earliest) } ?: (now - HistoryWindow)
             val samplesFrom = from.toLocalDateTime(zone).date.atStartOfDayIn(zone)
-            val flowFrom = if (last == null) now - FirstFlowWindow else now - FlowWindow
-            return Window(samplesFrom, flowFrom)
+            val flowFrom = if (last == null) now - HistoryWindow else now - FlowWindow
+            return Window(samplesFrom, flowFrom, now)
+        }
+
+        /**
+         * The first read cut into years, oldest first; any later read is one window.
+         *
+         * The bleeding days are read once, over the whole history, in the last slice: read
+         * a year at a time, a period across New Year would be imported as two.
+         */
+        fun spans(last: Instant?, now: Instant, zone: TimeZone): List<Window> {
+            val whole = window(last, now, zone)
+            if (last != null) return listOf(whole)
+            return buildList {
+                var start = whole.samplesFrom
+                while (start < now) {
+                    val end = minOf(start + Slice, now)
+                    // An empty flow range for every slice but the last.
+                    add(Window(start, if (end < now) end else whole.flowFrom, end))
+                    start = end
+                }
+            }
         }
     }
 }

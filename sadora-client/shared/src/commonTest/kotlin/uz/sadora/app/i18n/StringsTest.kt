@@ -396,6 +396,16 @@ class StringsTest {
             )
             faq.forEach { (question, answer) -> add(question); add(answer) }
         }
+        with(t.healthGate) {
+            addAll(kinds)
+            addAll(
+                listOf(
+                    title("Health Connect"), body("Health Connect"), privacy, allow, partial(12, 40), partialBody,
+                    openSettings, install("Health Connect"), installBody("Health Connect"), installButton,
+                    importing, importingBody, importPercent(40), importFailed, retry, later,
+                ),
+            )
+        }
         with(t.devices) {
             addAll(
                 listOf(

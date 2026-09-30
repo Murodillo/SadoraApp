@@ -436,6 +436,35 @@ internal class PageText private constructor(private val language: Language) {
         HealthMetric.RECOVERY -> pick("Tiklanish", "Восстановление", "Recovery")
         HealthMetric.STRAIN -> pick("Yuklama", "Нагрузка", "Strain")
         HealthMetric.SPO2 -> "SpO₂"
+        HealthMetric.TOTAL_ENERGY -> pick("Jami energiya", "Общая энергия", "Total energy")
+        HealthMetric.BASAL_METABOLIC_RATE -> pick("Bazal metabolizm", "Базальный метаболизм", "Basal metabolic rate")
+        HealthMetric.FLOORS -> pick("Qavatlar", "Этажи", "Floors")
+        HealthMetric.ELEVATION_GAINED -> pick("Ko'tarilish", "Набор высоты", "Elevation gained")
+        HealthMetric.EXERCISE_MINUTES -> pick("Mashg'ulot", "Тренировки", "Exercise")
+        HealthMetric.MINDFULNESS_MINUTES -> pick("Meditatsiya", "Медитация", "Mindfulness")
+        HealthMetric.WHEELCHAIR_PUSHES -> pick("Aravacha itarishlari", "Толчки коляски", "Wheelchair pushes")
+        HealthMetric.SPEED -> pick("Tezlik", "Скорость", "Speed")
+        HealthMetric.POWER -> pick("Quvvat", "Мощность", "Power")
+        HealthMetric.STEPS_CADENCE -> pick("Qadam sur'ati", "Каденс шагов", "Step cadence")
+        HealthMetric.CYCLING_CADENCE -> pick("Pedal sur'ati", "Каденс педалей", "Cycling cadence")
+        HealthMetric.VO2_MAX -> "VO₂max"
+        HealthMetric.BLOOD_GLUCOSE -> pick("Qondagi qand", "Глюкоза крови", "Blood glucose")
+        HealthMetric.BLOOD_PRESSURE_SYSTOLIC -> pick("Sistolik bosim", "Систолическое давление", "Systolic pressure")
+        HealthMetric.BLOOD_PRESSURE_DIASTOLIC -> pick("Diastolik bosim", "Диастолическое давление", "Diastolic pressure")
+        HealthMetric.HEIGHT -> pick("Bo'y", "Рост", "Height")
+        HealthMetric.BODY_FAT -> pick("Yog' foizi", "Процент жира", "Body fat")
+        HealthMetric.LEAN_BODY_MASS -> pick("Yog'siz massa", "Безжировая масса", "Lean body mass")
+        HealthMetric.BODY_WATER_MASS -> pick("Tanadagi suv", "Вода в организме", "Body water")
+        HealthMetric.BONE_MASS -> pick("Suyak massasi", "Костная масса", "Bone mass")
+        HealthMetric.HYDRATION -> pick("Ichilgan suv", "Выпито воды", "Hydration")
+        HealthMetric.DIETARY_ENERGY -> pick("Ovqat kaloriyasi", "Калории из еды", "Dietary energy")
+        HealthMetric.PROTEIN -> pick("Oqsil", "Белки", "Protein")
+        HealthMetric.CARBOHYDRATES -> pick("Uglevodlar", "Углеводы", "Carbohydrates")
+        HealthMetric.FAT -> pick("Yog'lar", "Жиры", "Fat")
+        HealthMetric.OVULATION_TEST -> pick("Ovulyatsiya testi", "Тест на овуляцию", "Ovulation test")
+        HealthMetric.CERVICAL_MUCUS -> pick("Bachadon bo'yni suyuqligi", "Цервикальная слизь", "Cervical mucus")
+        HealthMetric.INTERMENSTRUAL_BLEEDING -> pick("Oraliq qon ketish", "Межменструальное кровотечение", "Spotting")
+        HealthMetric.SEXUAL_ACTIVITY -> pick("Jinsiy faollik", "Сексуальная активность", "Sexual activity")
     }
 
     fun unit(m: HealthMetric) = when (m.canonicalUnit) {
@@ -444,7 +473,17 @@ internal class PageText private constructor(private val language: Language) {
         "bpm" -> pick("zarb/daq", "уд/мин", "bpm")
         "percent" -> "%"
         "c" -> "°C"
-        "score" -> ""
+        "score", "result", "appearance" -> ""
+        "kcal" -> pick("kkal", "ккал", "kcal")
+        "ml" -> pick("ml", "мл", "ml")
+        "g" -> pick("g", "г", "g")
+        "cm" -> pick("sm", "см", "cm")
+        "kg" -> pick("kg", "кг", "kg")
+        "mmhg" -> pick("mm sim. ust.", "мм рт. ст.", "mmHg")
+        "mmol/l" -> pick("mmol/l", "ммоль/л", "mmol/L")
+        "w" -> "W"
+        "spm" -> pick("qadam/daq", "шаг/мин", "spm")
+        "rpm" -> pick("ayl/daq", "об/мин", "rpm")
         else -> m.canonicalUnit
     }
 }

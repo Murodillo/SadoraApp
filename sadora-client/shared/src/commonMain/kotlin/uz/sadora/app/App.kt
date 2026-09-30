@@ -43,6 +43,7 @@ import uz.sadora.app.data.CommunitySyncBridge
 import uz.sadora.app.data.HealthSync
 import uz.sadora.app.data.SadoraGraph
 import uz.sadora.app.data.SessionState
+import uz.sadora.app.ui.modules.HealthGate
 import uz.sadora.app.data.applyServerProfile
 import uz.sadora.app.design.SadoraDarkSurface
 import uz.sadora.app.design.SadoraTheme
@@ -229,7 +230,10 @@ fun App(graph: SadoraGraph? = null) {
                             )
                         }
 
-                        AppPhase.Main -> MainShell(state, navigator, controllers)
+                        // The phone's health store is asked for, in full, before the app opens.
+                        AppPhase.Main -> HealthGate(controllers.wearables) {
+                            MainShell(state, navigator, controllers)
+                        }
                     }
                 }
             }

@@ -57,6 +57,7 @@ interface Strings {
     val ai: AiStrings
     val community: CommunityStrings
     val doctors: DoctorStrings
+    val healthGate: HealthGateStrings
     val rewards: RewardStrings
     val pregnancyWeeks: PregnancyWeekStrings
     val shop: ShopStrings
