@@ -1,3 +1,4 @@
+import java.util.Properties
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
@@ -57,6 +58,17 @@ val devHost: String = (project.findProperty("sadora.devHost") as String?).orEmpt
 val apiUrl: String = (project.findProperty("sadora.apiUrl") as String?).orEmpty()
 
 /** `-Psadora.versionCode=12 -Psadora.versionName=1.2.0`, so a release does not need a commit. */
+/**
+ * The upload key, read from `androidApp/keystore.properties` when that file exists — the
+ * same arrangement as sadora-client, with a key of its own: Play ties an upload key to
+ * one app. The file is gitignored; without it the release type is left unsigned rather
+ * than failing a fresh clone's build. Keys: `storeFile` (relative to androidApp/),
+ * `storePassword`, `keyAlias`, `keyPassword`.
+ */
+val keystoreProperties: Properties? = file("keystore.properties")
+    .takeIf { it.exists() }
+    ?.let { file -> Properties().apply { file.inputStream().use(::load) } }
+
 val sadoraVersionCode: Int = (project.findProperty("sadora.versionCode") as String?)?.toInt() ?: 1
 val sadoraVersionName: String = (project.findProperty("sadora.versionName") as String?) ?: "1.0"
 
@@ -81,9 +93,23 @@ android {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
     }
+    signingConfigs {
+        if (keystoreProperties != null) {
+            create("release") {
+                storeFile = file(keystoreProperties.getProperty("storeFile"))
+                storePassword = keystoreProperties.getProperty("storePassword")
+                keyAlias = keystoreProperties.getProperty("keyAlias")
+                keyPassword = keystoreProperties.getProperty("keyPassword")
+            }
+        }
+    }
     buildTypes {
         release {
-            isMinifyEnabled = false
+            signingConfig = signingConfigs.findByName("release")
+            // R8 shrinks the bundle by half; proguard-rules.pro is sadora-client's, which
+            // already covers everything under uz.sadora and the libraries both apps share.
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"

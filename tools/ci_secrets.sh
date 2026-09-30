@@ -21,6 +21,17 @@
 #   ASC_ISSUER_ID               given in the shell: ASC_ISSUER_ID=… ./tools/ci_secrets.sh
 #   ASC_KEY_P8                  ~/.appstoreconnect/private_keys/AuthKey_<id>.p8
 #
+# And for Google Play's internal track, whatever of these is on this machine:
+#
+#   PLAY_SERVICE_ACCOUNT_JSON   ~/.config/sadora/play-service-account.json   a Google Cloud
+#                               service account invited to the Play Console with "Release
+#                               apps to testing tracks" on both apps
+#   PLAY_KEYSTORE_<APP>_B64     sadora-<app>/androidApp/<storeFile>          each app's upload key,
+#   PLAY_KEYSTORE_<APP>_PASSWORD  from its keystore.properties               alias `upload`, one password
+#   GOOGLE_SERVICES_<APP>_JSON  sadora-<app>/androidApp/google-services.json  push in store builds
+#
+# (<APP> is CLIENT or DOCTOR.)
+#
 # Re-running replaces them. Rotating the CI key: generate a new pair at the same path, run
 # tools/deploy_stage.sh (it rebinds the key on both hosts), then run this again.
 set -euo pipefail
@@ -59,6 +70,25 @@ if [[ -s $ASC_KEY && -n ${ASC_ISSUER_ID:-} ]]; then
 else
   echo "    (no App Store Connect key, or no ASC_ISSUER_ID in the shell — TestFlight from CI stays off)"
 fi
+
+PLAY_ACCOUNT=${SADORA_PLAY_ACCOUNT:-$HOME/.config/sadora/play-service-account.json}
+if [[ -s $PLAY_ACCOUNT ]]; then
+  set_secret PLAY_SERVICE_ACCOUNT_JSON < "$PLAY_ACCOUNT"
+else
+  echo "    (no Play service account at $PLAY_ACCOUNT — Play upload from CI stays off)"
+fi
+for app in client doctor; do
+  APP=$(printf '%s' "$app" | tr '[:lower:]' '[:upper:]')
+  dir=sadora-$app/androidApp
+  if [[ -s $dir/keystore.properties ]]; then
+    store=$(sed -n 's/^storeFile=//p' "$dir/keystore.properties")
+    alias=$(sed -n 's/^keyAlias=//p' "$dir/keystore.properties")
+    [[ $alias == upload ]] || { echo "    $dir: CI expects the key alias 'upload', found '$alias' — skipped" >&2; continue; }
+    base64 < "$dir/$store" | tr -d '\n' | set_secret "PLAY_KEYSTORE_${APP}_B64"
+    sed -n 's/^storePassword=//p' "$dir/keystore.properties" | tr -d '\n' | set_secret "PLAY_KEYSTORE_${APP}_PASSWORD"
+  fi
+  [[ -s $dir/google-services.json ]] && set_secret "GOOGLE_SERVICES_${APP}_JSON" < "$dir/google-services.json"
+done
 
 echo "==> done. Re-run the latest CI run of an open pull request into dev to deliver it:"
 echo "    gh run rerun \$(gh run list --workflow CI --limit 1 --json databaseId --jq '.[0].databaseId')"

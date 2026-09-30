@@ -2,8 +2,8 @@ name: Stage
 
 # Delivers one commit to the staging server, through the gate in deploy/stage/sadora-ci.
 #
-#   preflight ─┬─ image  (API image → GHCR, by digest) ─┬─ deploy ── apk ── smoke ── testflight
-#              └─ bundle (admin panels + landing page) ──┘
+#   preflight ─┬─ image  (API image → GHCR, by digest) ─┬─ deploy ── apk ── smoke ─┬─ testflight (both apps)
+#              └─ bundle (admin panels + landing page) ──┘                          └─ play       (both apps)
 #
 # Called by ci.yml once the checks pass. Also runnable by hand — Actions → Stage → Run
 # workflow — to redeploy a branch or to roll staging back to an earlier release.
@@ -383,27 +383,37 @@ jobs:
   # where the internal group takes every processed build on its own. Only dev itself gets
   # one — a pull request would spend macOS minutes (ten times Linux) and a build number on
   # something not yet merged — and only once staging has passed its smoke test.
+  # Both apps, one team key: the women's app and Sadora Doctor are separate App Store
+  # Connect apps, each with its own build numbers and its own internal group.
   testflight:
-    name: TestFlight
+    name: TestFlight (${{ matrix.app.name }})
     needs: smoke
     if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
     runs-on: macos-latest
     timeout-minutes: 60
     environment: staging
+    strategy:
+      fail-fast: false
+      matrix:
+        app:
+          - { name: Sadora, dir: sadora-client, asc_app_id: '6811085950' }
+          - { name: Sadora Doctor, dir: sadora-doctor, asc_app_id: '' }
     concurrency:
-      group: stage-testflight
+      group: stage-testflight-${{ matrix.app.dir }}
       cancel-in-progress: false
     env:
-      ASC_APP_ID: '6811085950'
+      ASC_APP_ID: ${{ matrix.app.asc_app_id }}
+      APP_DIR: ${{ matrix.app.dir }}
       TEAM_ID: WAAR6RJ42C
     steps:
-      # No App Store Connect key yet is a skip with a pointer, the same as staging itself.
+      # No App Store Connect key yet is a skip with a pointer, the same as staging itself;
+      # so is an app that has no App Store Connect record yet.
       - id: secrets
         env:
-          HAVE: ${{ secrets.ASC_KEY_ID != '' && secrets.ASC_ISSUER_ID != '' && secrets.ASC_KEY_P8 != '' }}
+          HAVE: ${{ secrets.ASC_KEY_ID != '' && secrets.ASC_ISSUER_ID != '' && secrets.ASC_KEY_P8 != '' && matrix.app.asc_app_id != '' }}
         run: |
           echo "ready=$HAVE" >> "$GITHUB_OUTPUT"
-          [[ $HAVE == true ]] || echo "::notice::No App Store Connect key in the staging environment — run tools/ci_secrets.sh. TestFlight skipped."
+          [[ $HAVE == true ]] || echo "::notice::No App Store Connect key in the staging environment (tools/ci_secrets.sh), or no App Store Connect app for $APP_DIR yet. TestFlight skipped."
 
       - if: steps.secrets.outputs.ready == 'true'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -453,7 +463,7 @@ jobs:
           BUILD: ${{ steps.plan.outputs.build }}
         run: |
           set -o pipefail
-          xcodebuild archive -project sadora-client/iosApp/iosApp.xcodeproj -scheme iosApp -configuration Release \
+          xcodebuild archive -project "$APP_DIR/iosApp/iosApp.xcodeproj" -scheme iosApp -configuration Release \
             -destination 'generic/platform=iOS' -archivePath "$RUNNER_TEMP/Sadora.xcarchive" \
             CODE_SIGNING_ALLOWED=NO CURRENT_PROJECT_VERSION="$BUILD" SADORA_API_HOST="$HOST" \
             | tail -40
@@ -482,11 +492,113 @@ jobs:
             -allowProvisioningUpdates \
             -authenticationKeyPath "$KEY" -authenticationKeyID "$ASC_KEY_ID" -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
             | tail -40
-          printf '### TestFlight\n\nBuild **%s** uploaded; the internal group gets it once Apple has processed it.\n' "$BUILD" >> "$GITHUB_STEP_SUMMARY"
+          printf '### TestFlight · %s\n\nBuild **%s** uploaded; the internal group gets it once Apple has processed it.\n' "${{ matrix.app.name }}" "$BUILD" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Forget the key
         if: always()
         run: rm -rf ~/.appstoreconnect/private_keys
+
+  # The Android twin of TestFlight: a signed bundle of each app against the same staging
+  # API, on its Play internal testing track. Needs a Play service account and each app's
+  # upload key in the staging environment (tools/ci_secrets.sh); without them, a skip.
+  play:
+    name: Play internal (${{ matrix.app.name }})
+    needs: smoke
+    if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    environment: staging
+    strategy:
+      fail-fast: false
+      matrix:
+        app:
+          - { name: Sadora, dir: sadora-client, package: uz.sadora.app, key: CLIENT }
+          - { name: Sadora Doctor, dir: sadora-doctor, package: uz.sadora.doctor, key: DOCTOR }
+    concurrency:
+      group: stage-play-${{ matrix.app.dir }}
+      cancel-in-progress: false
+    env:
+      APP_DIR: ${{ matrix.app.dir }}
+      PACKAGE: ${{ matrix.app.package }}
+    steps:
+      - id: secrets
+        env:
+          HAVE: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON != '' && secrets[format('PLAY_KEYSTORE_{0}_B64', matrix.app.key)] != '' && secrets[format('PLAY_KEYSTORE_{0}_PASSWORD', matrix.app.key)] != '' }}
+        run: |
+          echo "ready=$HAVE" >> "$GITHUB_OUTPUT"
+          [[ $HAVE == true ]] || echo "::notice::No Play service account or no upload key for $PACKAGE in the staging environment — run tools/ci_secrets.sh. Play upload skipped."
+
+      - if: steps.secrets.outputs.ready == 'true'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - if: steps.secrets.outputs.ready == 'true'
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: zulu
+          java-version: '21'
+
+      - if: steps.secrets.outputs.ready == 'true'
+        uses: android-actions/setup-android@40fd30fb8d7440372e1316f5d1809ec01dcd3699 # v4.0.1
+        with:
+          packages: platform-tools
+
+      - if: steps.secrets.outputs.ready == 'true'
+        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+        with:
+          cache-read-only: true
+
+      - if: steps.secrets.outputs.ready == 'true'
+        uses: ./.github/actions/stage-ssh
+        with:
+          key: ${{ secrets.STAGE_SSH_KEY }}
+          known-hosts: ${{ secrets.STAGE_SSH_KNOWN_HOSTS }}
+          jump: ${{ secrets.STAGE_JUMP }}
+          host: ${{ secrets.STAGE_HOST }}
+
+      # The upload key and Firebase's file go where Gradle looks for them, readable by the
+      # runner only; the service account goes to a temp file the uploader reads.
+      - name: Keys, API and versionCode
+        if: steps.secrets.outputs.ready == 'true'
+        id: plan
+        env:
+          KEYSTORE: ${{ secrets[format('PLAY_KEYSTORE_{0}_B64', matrix.app.key)] }}
+          PASSWORD: ${{ secrets[format('PLAY_KEYSTORE_{0}_PASSWORD', matrix.app.key)] }}
+          GOOGLE_SERVICES: ${{ secrets[format('GOOGLE_SERVICES_{0}_JSON', matrix.app.key)] }}
+          ACCOUNT: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+        run: |
+          url=$(stage url | jq -r .app)
+          [[ $url =~ ^https://[a-z0-9-]+\.trycloudflare\.com$ ]] || { echo "::error::the app tunnel reports no URL"; exit 1; }
+          echo "::add-mask::$url"
+          umask 077
+          printf '%s' "$KEYSTORE" | base64 -d > "$APP_DIR/androidApp/upload.jks"
+          printf 'storeFile=upload.jks\nstorePassword=%s\nkeyAlias=upload\nkeyPassword=%s\n' "$PASSWORD" "$PASSWORD" > "$APP_DIR/androidApp/keystore.properties"
+          # Without Firebase's file the build still passes; the app just has no push.
+          [[ -n $GOOGLE_SERVICES ]] && printf '%s' "$GOOGLE_SERVICES" > "$APP_DIR/androidApp/google-services.json"
+          printf '%s' "$ACCOUNT" > "$RUNNER_TEMP/play.json"
+          python3 -m pip install --quiet --break-system-packages cryptography
+          code=$(PLAY_SERVICE_ACCOUNT=$RUNNER_TEMP/play.json python3 tools/ci/play_upload.py next "$PACKAGE")
+          { echo "url=$url"; echo "code=$code"; } >> "$GITHUB_OUTPUT"
+
+      - name: Bundle
+        if: steps.secrets.outputs.ready == 'true'
+        working-directory: ${{ matrix.app.dir }}
+        env:
+          API: ${{ steps.plan.outputs.url }}
+          CODE: ${{ steps.plan.outputs.code }}
+        run: ./gradlew --no-daemon :androidApp:bundleRelease -Psadora.apiUrl="$API" -Psadora.versionCode="$CODE" -Psadora.versionName=1.0
+
+      - name: Upload to the internal track
+        if: steps.secrets.outputs.ready == 'true'
+        env:
+          CODE: ${{ steps.plan.outputs.code }}
+        run: |
+          PLAY_SERVICE_ACCOUNT=$RUNNER_TEMP/play.json python3 tools/ci/play_upload.py upload "$PACKAGE" \
+            "$APP_DIR/androidApp/build/outputs/bundle/release/androidApp-release.aab" "$CODE (1.0) · ${GITHUB_SHA::7}"
+          printf '### Play internal · %s\n\nversionCode **%s** is on the internal track; testers get it once Play has processed it.\n' "${{ matrix.app.name }}" "$CODE" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Forget the keys
+        if: always()
+        run: rm -f "$RUNNER_TEMP/play.json" "$APP_DIR/androidApp/upload.jks" "$APP_DIR/androidApp/keystore.properties" "$APP_DIR/androidApp/google-services.json"
 
   rollback:
     name: Roll back
