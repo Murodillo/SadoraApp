@@ -45,6 +45,10 @@ object AuditActions {
     const val COMMUNITY_COMMENT_RESTORED = "community.comment_restored"
     const val COMMUNITY_REPORT_RESOLVED = "community.report_resolved"
     const val COMMUNITY_AUTHOR_RESTRICTED = "community.author_restricted"
+    /** A moderator read the lines around a reported private message. */
+    const val COMMUNITY_REPORT_CONTEXT_VIEWED = "community.report_context_viewed"
+    /** A doctor opened the health record a patient attached in a consultation. */
+    const val CONSULTATION_RECORD_VIEWED = "consultation.record_viewed"
 
     // Who may write with a check mark. An approval puts a real name in front of every
     // reader, so each decision keeps its admin and its reason.

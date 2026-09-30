@@ -303,6 +303,8 @@ internal fun AnswerInput(
     modifier: Modifier = Modifier,
     placeholder: String = strings.community.answerHint,
     maxLength: Int = Limits.COMMENT_MAX,
+    /** Each change of the text — what a private thread turns into "yozmoqda…". */
+    onType: (() -> Unit)? = null,
 ) {
     val c = Sadora.colors
     val t = strings.common
@@ -316,7 +318,10 @@ internal fun AnswerInput(
     ) {
         SadoraTextField(
             value = draft,
-            onValueChange = { draft = acceptText(it, maxLength) },
+            onValueChange = {
+                draft = acceptText(it, maxLength)
+                if (draft.isNotBlank()) onType?.invoke()
+            },
             placeholder = placeholder,
             singleLine = false,
             modifier = Modifier.weight(1f),

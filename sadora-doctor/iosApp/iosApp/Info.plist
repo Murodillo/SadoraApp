@@ -32,5 +32,8 @@
 	     library without this. -->
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Diplom va litsenziyangiz rasmini galereyadan tanlab, shifokor arizasiga qo'shasiz.</string>
+	<!-- The Scan tab: iOS terminates the app on opening the camera without this. -->
+	<key>NSCameraUsageDescription</key>
+	<string>Bemor ko'rsatgan Sadora QR kodini skanerlab, uning ma'lumotlarini ochasiz.</string>
 </dict>
 </plist>

@@ -1,5 +1,6 @@
 package uz.sadora.app.i18n
 
+import kotlin.time.Duration
 import uz.sadora.contract.DoctorSpecialty
 
 /**
@@ -30,6 +31,44 @@ interface DoctorStrings {
     val statExperience: String
     val herPosts: String
     val noPosts: String
+
+    // ---- a consultation: writing to her, and the thread with her
+    val messageDoctor: String
+    val openConsultation: String
+    val viewHistory: String
+    /** Under the button: what a consultation costs and how long it lasts. */
+    val messageDoctorNote: String
+    val cannotMessage: String
+    val consentTitle: String
+    /**
+     * Read before she writes: free for now, a day long, her real name and age are seen,
+     * an answer is not a diagnosis, an emergency is 103. In that order.
+     */
+    val consentPoints: List<String>
+    val consentConfirm: String
+    val consultationOpen: String
+    fun hoursLeft(hours: Int): String
+    fun minutesLeft(minutes: Int): String
+
+    /**
+     * "23 soat qoldi" — whole hours while there is an hour or more, then minutes, and
+     * never "0": a window that is still open has at least a minute in the words too.
+     */
+    fun timeLeft(remaining: Duration): String {
+        val minutes = remaining.inWholeMinutes
+        return if (minutes >= 60) hoursLeft((minutes / 60).toInt()) else minutesLeft(minutes.coerceAtLeast(1).toInt())
+    }
+    val consultationExpired: String
+    val consultationClosed: String
+    val consultationClosedBody: String
+    val reopen: String
+    /** In place of the composer while the consultation is shut. */
+    val composerClosed: String
+    val chipOpen: String
+    val chipClosed: String
+    /** At the top of a consultation thread. */
+    val threadNote: String
+    val doctorPage: String
 }
 
 object DoctorStringsUz : DoctorStrings {
@@ -63,6 +102,31 @@ object DoctorStringsUz : DoctorStrings {
     override val herPosts = "Postlari"
     override val noPosts = "Hali post yozmagan."
 
+    override val messageDoctor = "Shifokorga yozish"
+    override val openConsultation = "Suhbatni ochish"
+    override val viewHistory = "Oldingi suhbatni ko'rish"
+    override val messageDoctorNote = "Hozircha bepul · konsultatsiya 24 soat ochiq turadi"
+    override val cannotMessage = "Shifokor hozir konsultatsiya qabul qilmayapti."
+    override val consentTitle = "Shifokor bilan konsultatsiya"
+    override val consentPoints = listOf(
+        "Hozircha bepul. Konsultatsiya 24 soat ochiq turadi — keyin yangisini ochishingiz mumkin.",
+        "Bu yerda taxallus yo'q: shifokor ismingiz va yoshingizni ko'radi.",
+        "Shifokorning javobi tashxis emas. To'liq tekshiruv uchun qabulga boring.",
+        "Shoshilinch holatda kutmang — 103 ga qo'ng'iroq qiling.",
+    )
+    override val consentConfirm = "Tushundim, yozaman"
+    override val consultationOpen = "Konsultatsiya ochiq"
+    override fun hoursLeft(hours: Int) = "$hours soat qoldi"
+    override fun minutesLeft(minutes: Int) = "$minutes daqiqa qoldi"
+    override val consultationExpired = "Konsultatsiya muddati tugadi"
+    override val consultationClosed = "Shifokor konsultatsiyani yakunladi"
+    override val consultationClosedBody = "Yozishni davom ettirish uchun yangi konsultatsiya oching — yana 24 soat, hozircha bepul."
+    override val reopen = "Yangi konsultatsiya ochish"
+    override val composerClosed = "Konsultatsiya yopilgan — yangisini oching"
+    override val chipOpen = "Ochiq"
+    override val chipClosed = "Yopiq"
+    override val threadNote = "Shifokor ismingiz va yoshingizni ko'radi. Javob tashxis emas; shoshilinch holatda 103 ga qo'ng'iroq qiling."
+    override val doctorPage = "Shifokor sahifasi"
 }
 
 object DoctorStringsRu : DoctorStrings {
@@ -96,6 +160,31 @@ object DoctorStringsRu : DoctorStrings {
     override val herPosts = "Посты"
     override val noPosts = "Пока нет постов."
 
+    override val messageDoctor = "Написать врачу"
+    override val openConsultation = "Открыть переписку"
+    override val viewHistory = "Посмотреть прошлую переписку"
+    override val messageDoctorNote = "Пока бесплатно · консультация открыта 24 часа"
+    override val cannotMessage = "Врач сейчас не принимает консультации."
+    override val consentTitle = "Консультация с врачом"
+    override val consentPoints = listOf(
+        "Пока бесплатно. Консультация открыта 24 часа — потом можно открыть новую.",
+        "Здесь нет псевдонима: врач увидит ваше имя и возраст.",
+        "Ответ врача — не диагноз. Для полного обследования запишитесь на приём.",
+        "В экстренном случае не ждите — звоните 103.",
+    )
+    override val consentConfirm = "Понятно, написать"
+    override val consultationOpen = "Консультация открыта"
+    override fun hoursLeft(hours: Int) = "Осталось $hours ч"
+    override fun minutesLeft(minutes: Int) = "Осталось $minutes мин"
+    override val consultationExpired = "Время консультации истекло"
+    override val consultationClosed = "Врач завершил консультацию"
+    override val consultationClosedBody = "Чтобы продолжить, откройте новую консультацию — ещё 24 часа, пока бесплатно."
+    override val reopen = "Открыть новую консультацию"
+    override val composerClosed = "Консультация закрыта — откройте новую"
+    override val chipOpen = "Открыта"
+    override val chipClosed = "Закрыта"
+    override val threadNote = "Врач видит ваше имя и возраст. Ответ — не диагноз; в экстренном случае звоните 103."
+    override val doctorPage = "Страница врача"
 }
 
 object DoctorStringsEn : DoctorStrings {
@@ -129,4 +218,29 @@ object DoctorStringsEn : DoctorStrings {
     override val herPosts = "Posts"
     override val noPosts = "No posts yet."
 
+    override val messageDoctor = "Message the doctor"
+    override val openConsultation = "Open the conversation"
+    override val viewHistory = "See the earlier conversation"
+    override val messageDoctorNote = "Free for now · a consultation stays open for 24 hours"
+    override val cannotMessage = "The doctor is not taking consultations right now."
+    override val consentTitle = "A consultation with a doctor"
+    override val consentPoints = listOf(
+        "Free for now. A consultation stays open for 24 hours — after that you can open a new one.",
+        "There is no alias here: the doctor sees your name and age.",
+        "A doctor's answer is not a diagnosis. For a full examination, book an appointment.",
+        "In an emergency, do not wait — call 103.",
+    )
+    override val consentConfirm = "Understood, write"
+    override val consultationOpen = "Consultation open"
+    override fun hoursLeft(hours: Int) = if (hours == 1) "1 hour left" else "$hours hours left"
+    override fun minutesLeft(minutes: Int) = if (minutes == 1) "1 minute left" else "$minutes minutes left"
+    override val consultationExpired = "The consultation has ended"
+    override val consultationClosed = "The doctor closed the consultation"
+    override val consultationClosedBody = "To keep writing, open a new consultation — another 24 hours, free for now."
+    override val reopen = "Open a new consultation"
+    override val composerClosed = "The consultation is closed — open a new one"
+    override val chipOpen = "Open"
+    override val chipClosed = "Closed"
+    override val threadNote = "The doctor sees your name and age. An answer is not a diagnosis; in an emergency, call 103."
+    override val doctorPage = "Doctor's page"
 }

@@ -1,5 +1,6 @@
 package uz.sadora.app.ui.core
 
+import uz.sadora.app.ui.components.ResizeForKeyboard
 import uz.sadora.app.ui.components.animateFloatUnlessReduced
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloat
@@ -90,6 +91,7 @@ fun AiChatScreen(
     val t = strings.ai
     val errors = strings.errors
     val scope = rememberCoroutineScope()
+    ResizeForKeyboard()
     var draft by remember { mutableStateOf("") }
     var showMenu by remember { mutableStateOf(false) }
     val messages = remember { mutableStateListOf<ChatMessage>() }

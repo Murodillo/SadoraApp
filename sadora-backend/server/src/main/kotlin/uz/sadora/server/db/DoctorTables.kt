@@ -21,6 +21,7 @@ object DoctorProfiles : Table("doctor_profiles") {
     val submittedAt = timestampWithTimeZone("submitted_at")
     val createdAt = timestampWithTimeZone("created_at")
     val updatedAt = timestampWithTimeZone("updated_at")
+    val acceptsConsultations = bool("accepts_consultations")
 
     override val primaryKey = PrimaryKey(id)
 }

@@ -1,11 +1,24 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useDoctor, useDoctorCounts, useDoctorDocument, useDoctors, useReviewDoctor } from '../api/hooks'
 import { limits } from '../api/limits'
 import type { AdminDoctorDetail, AdminDoctorDocument, DoctorReviewAction, DoctorStatus } from '../api/types'
 import { useAuth } from '../auth/AuthContext'
 import { useToast } from '../components/toast'
-import { Card, Empty, ErrorNotice, Field, formatDate, formatDateTime, Loading, Modal, Spinner, TabPanel, Tabs } from '../components/ui'
+import {
+  Card,
+  Empty,
+  ErrorNotice,
+  Field,
+  formatDate,
+  formatDateTime,
+  Loading,
+  Modal,
+  Spinner,
+  TabPanel,
+  Tabs,
+  useObjectUrl,
+} from '../components/ui'
 import {
   allowedReviewActions,
   documentKindLabels,
@@ -238,6 +251,8 @@ function DoctorDetail({ id, onClose }: { id: string; onClose: () => void }) {
         </div>
       )}
 
+      <ConsultationsSection doctor={doctor} />
+
       <h2 style={{ marginTop: 16 }}>Hujjatlar</h2>
       {doctor.documents.length === 0 ? (
         <p className="faint" style={{ margin: 0 }}>
@@ -270,6 +285,41 @@ function DoctorDetail({ id, onClose }: { id: string; onClose: () => void }) {
   )
 }
 
+/**
+ * How busy her consultations are, in counts. What was said in them never reaches the
+ * panel — a message is seen only through a report, on the Chat page.
+ */
+function ConsultationsSection({ doctor }: { doctor: AdminDoctorDetail }) {
+  const stats = doctor.consultations
+  return (
+    <>
+      <div className="row" style={{ justifyContent: 'space-between', marginTop: 16, marginBottom: 8 }}>
+        <h2 style={{ margin: 0 }}>Konsultatsiyalar</h2>
+        {doctor.acceptsConsultations ? (
+          <span className="badge ok">Qabul qilmoqda</span>
+        ) : (
+          <span className="badge free">Qabul qilmayapti</span>
+        )}
+      </div>
+      {stats ? (
+        <table>
+          <tbody>
+            <Row label="Jami" value={stats.total} />
+            <Row label="Ochiq" value={stats.open} />
+            <Row label="Shifokor xabarlari" value={stats.messagesFromDoctor} />
+            <Row label="Bemor xabarlari" value={stats.messagesFromPatients} />
+            <Row label="Oxirgi faollik" value={formatDateTime(stats.lastMessageAt)} />
+          </tbody>
+        </table>
+      ) : (
+        <p className="faint" style={{ margin: 0 }}>
+          Konsultatsiya bo'lmagan.
+        </p>
+      )}
+    </>
+  )
+}
+
 function Row({ label, value, mono }: { label: string; value: React.ReactNode; mono?: boolean }) {
   return (
     <tr>
@@ -279,24 +329,6 @@ function Row({ label, value, mono }: { label: string; value: React.ReactNode; mo
       <td className={mono ? 'mono' : undefined}>{value}</td>
     </tr>
   )
-}
-
-/**
- * The scan comes over an authenticated request, so it is shown through an object URL
- * that lives exactly as long as the thumbnail does.
- */
-function useObjectUrl(blob: Blob | undefined): string | null {
-  const [url, setUrl] = useState<string | null>(null)
-  useEffect(() => {
-    if (!blob) {
-      setUrl(null)
-      return
-    }
-    const next = URL.createObjectURL(blob)
-    setUrl(next)
-    return () => URL.revokeObjectURL(next)
-  }, [blob])
-  return url
 }
 
 function DocumentThumb({ doctorId, document }: { doctorId: string; document: AdminDoctorDocument }) {

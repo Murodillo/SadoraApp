@@ -15,6 +15,9 @@ import uz.sadora.contract.CommunityTopic
 import uz.sadora.contract.Conversation
 import uz.sadora.contract.ConversationThread
 import uz.sadora.contract.DirectMessage
+import uz.sadora.contract.DoctorSummary
+import uz.sadora.contract.StartConsultationRequest
+import kotlinx.serialization.json.JsonObject
 import uz.sadora.contract.CreateCommentRequest
 import uz.sadora.contract.CreatePostRequest
 import uz.sadora.contract.LikeState
@@ -48,9 +51,14 @@ class CommunityApi(private val caller: ApiCaller) {
 
     // ---- private messages
 
-    suspend fun conversations(): ApiResult<List<Conversation>> =
-        caller.authenticated("v1/community/conversations", HttpMethodKind.GET)
+    /**
+     * Her threads. "personal" is everything but consultations in which she is the doctor:
+     * a doctor who also uses this app reads her patients in sadora-doctor, not here.
+     */
+    suspend fun conversations(scope: String = SCOPE_PERSONAL): ApiResult<List<Conversation>> =
+        caller.authenticated("v1/community/conversations?scope=$scope", HttpMethodKind.GET)
 
+    /** Reads the thread, and reading it marks it read on the server. */
     suspend fun thread(conversationId: String): ApiResult<ConversationThread> =
         caller.authenticated("v1/community/conversations/$conversationId", HttpMethodKind.GET)
 
@@ -59,9 +67,48 @@ class CommunityApi(private val caller: ApiCaller) {
             setBody(StartConversationRequest(alias, body))
         }
 
-    suspend fun sendMessage(conversationId: String, body: String): ApiResult<DirectMessage> =
+    /** One line: text, a photo with an optional caption, or her record — see [SendMessageRequest]. */
+    suspend fun sendMessage(conversationId: String, request: SendMessageRequest): ApiResult<DirectMessage> =
         caller.authenticated("v1/community/conversations/$conversationId/messages", HttpMethodKind.POST) {
-            setBody(SendMessageRequest(body))
+            setBody(request)
+        }
+
+    suspend fun sendMessage(conversationId: String, body: String): ApiResult<DirectMessage> =
+        sendMessage(conversationId, SendMessageRequest(body))
+
+    /**
+     * A photo's bytes. Authenticated like everything else and never cached by the
+     * server's headers, so the phone keeps them in memory only, for as long as it runs.
+     */
+    suspend fun messageImage(conversationId: String, messageId: String): ApiResult<ByteArray> =
+        caller.authenticated(
+            "v1/community/conversations/$conversationId/messages/$messageId/image",
+            HttpMethodKind.GET,
+        )
+
+    /**
+     * The record she attached, as the doctor reads it — so she can see exactly what she
+     * shared. She may always read her own; the doctor only while the consultation is open.
+     */
+    suspend fun messageRecord(conversationId: String, messageId: String, language: String): ApiResult<DoctorSummary> =
+        caller.authenticated(
+            "v1/community/conversations/$conversationId/messages/$messageId/record?lang=$language",
+            HttpMethodKind.GET,
+        )
+
+    /** "She is typing." The other side sees it for a few seconds; the caller throttles it. */
+    suspend fun typing(conversationId: String): ApiResult<Ack> =
+        caller.authenticated("v1/community/conversations/$conversationId/typing", HttpMethodKind.POST) {
+            setBody(JsonObject(emptyMap()))
+        }
+
+    /**
+     * Opens a consultation with a verified doctor — or opens it again once it has closed —
+     * and returns the thread. One that is still open comes back as it is.
+     */
+    suspend fun startConsultation(doctorId: String, body: String? = null): ApiResult<ConversationThread> =
+        caller.authenticated("v1/doctors/$doctorId/consultations", HttpMethodKind.POST) {
+            setBody(StartConsultationRequest(body))
         }
 
     suspend fun reportConversation(conversationId: String, reason: ReportReason, note: String?): ApiResult<Ack> =
@@ -124,4 +171,8 @@ class CommunityApi(private val caller: ApiCaller) {
         caller.authenticated("v1/community/comments/$commentId/report", HttpMethodKind.POST) {
             setBody(ReportRequest(reason, note))
         }
+
+    companion object {
+        const val SCOPE_PERSONAL = "personal"
+    }
 }

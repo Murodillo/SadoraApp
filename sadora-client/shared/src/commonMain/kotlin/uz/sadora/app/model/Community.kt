@@ -1,6 +1,8 @@
 package uz.sadora.app.model
 
+import kotlin.time.Duration
 import kotlin.time.Instant
+import uz.sadora.contract.ConsultationPatient
 import uz.sadora.contract.DoctorAuthor
 
 /**
@@ -71,7 +73,13 @@ data class AliasProfile(
     val posts: List<CommunityPost>,
 )
 
-/** One private thread in the list. */
+/**
+ * One private thread in the list.
+ *
+ * Two kinds share it. Between two aliases [alias] is the other alias. In a consultation
+ * with a verified doctor [consultation] is set, [doctor] names her, and [alias] is her
+ * real name — the patient was told before she wrote that the doctor sees hers too.
+ */
 data class Conversation(
     val id: String,
     val alias: String,
@@ -81,13 +89,69 @@ data class Conversation(
     val lastMessageAt: Instant,
     val unread: Int,
     val blocked: Boolean,
-)
+    /** The doctor on the other side, when this is her consultation. */
+    val doctor: DoctorAuthor? = null,
+    /**
+     * The patient on the other side, for a doctor reading her own consultations. This
+     * app lists only her "personal" threads, so it stays null here; it is mapped anyway
+     * so the model never quietly drops a field the wire carries.
+     */
+    val patient: ConsultationPatient? = null,
+    val consultation: ConsultationWindow? = null,
+    /** What the last line was, so the list can say "Rasm" rather than show an empty caption. */
+    val lastMessageKind: MessageKind = MessageKind.Text,
+    /** The last line is hers and the other side has read it: the double tick in the list. */
+    val lastMessageRead: Boolean = false,
+) {
+    val isConsultation: Boolean get() = consultation != null
+
+    /**
+     * Whether a line can go in now. A block closes any thread; a consultation also
+     * closes when its window runs out or the doctor ends it.
+     */
+    val canWrite: Boolean get() = !blocked && consultation?.open != false
+}
+
+/**
+ * A consultation's window: open for a day from when she starts it, until then or until
+ * the doctor closes it. [open] is the server's verdict, so a phone with a wrong clock
+ * still agrees with the doctor's panel about whether a message will go.
+ */
+data class ConsultationWindow(
+    val openedAt: Instant,
+    val expiresAt: Instant,
+    val closedAt: Instant? = null,
+    val open: Boolean,
+) {
+    /** What is left of the window, never negative; zero once it is shut. */
+    fun remaining(now: Instant): Duration =
+        if (!open) Duration.ZERO else (expiresAt - now).coerceAtLeast(Duration.ZERO)
+
+    /** The doctor ended it, as opposed to the day simply running out. */
+    val closedByDoctor: Boolean get() = !open && closedAt != null
+}
+
+/** What a line carries. Mirrors the wire enum without depending on it. */
+enum class MessageKind { Text, Image, Record }
+
+/** A photo's pixel size, known before the picture itself, so the bubble keeps its place. */
+data class MessageImageSize(val width: Int, val height: Int) {
+    /** Height over width, held to a range a bubble can draw: no ribbons, no towers. */
+    val aspect: Float
+        get() = if (width <= 0 || height <= 0) 1f else (height.toFloat() / width).coerceIn(0.4f, 1.6f)
+}
 
 data class DirectMessage(
     val id: String,
+    /** The text, a photo's caption, or empty for an attached record. */
     val body: String,
     val createdAt: Instant,
     val isMine: Boolean,
+    val kind: MessageKind = MessageKind.Text,
+    /** Set on a photo. The bytes are fetched separately, by [id]. */
+    val image: MessageImageSize? = null,
+    /** Hers, and the other side has opened the thread since: the double tick. */
+    val read: Boolean = false,
 )
 
 /**

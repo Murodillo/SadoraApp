@@ -68,6 +68,12 @@ object Limits {
     const val BIO_MAX = 160
     /** One private message. */
     const val MESSAGE_MAX = 1000
+    /** A photo in a message, decoded. The apps resize to a 1280-pixel edge well under it. */
+    const val MESSAGE_IMAGE_MAX_BYTES = 3_000_000
+    /** How long a consultation takes messages once the patient opens it. */
+    const val CONSULTATION_HOURS = 24
+    /** How long "yozmoqda…" lasts after the last keystroke report. */
+    const val TYPING_SECONDS = 6
 
     // ---- doctors
     const val DOCTOR_NAME_MIN = 5

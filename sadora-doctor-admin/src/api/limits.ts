@@ -11,6 +11,12 @@ export const limits = {
   commentMax: 1000,
   doctorWorkplaceMax: 160,
   doctorBioMax: 500,
+  /** `Limits.MESSAGE_MAX`: a message, or a photo's caption. */
+  messageMax: 1000,
+  /** `Limits.MESSAGE_IMAGE_MAX_BYTES`: a photo after it is decoded. */
+  messageImageMaxBytes: 3_000_000,
+  /** `Limits.REPORT_NOTE_MAX`. */
+  reportNoteMax: 500,
 } as const
 
 /**

@@ -10,11 +10,13 @@ import {
   useRestrictAuthor,
 } from '../api/hooks'
 import type { ModerationFilters } from '../api/hooks'
-import type { ModerationComment, ModerationPost, ModerationReport, ReportReason } from '../api/types'
+import type { ModerationComment, ModerationPost, ModerationReport } from '../api/types'
 import { useAuth } from '../auth/AuthContext'
 import { useToast } from '../components/toast'
 import { Card, Empty, ErrorNotice, Field, formatDateTime, Loading, Modal, Spinner, Stat, TabPanel, Tabs } from '../components/ui'
 import { limits } from '../api/limits'
+import { canViewMessageContext, reasonLabels, reportTarget } from './messageReports'
+import { ReportContextModal, RestrictSenderDialog } from './ReportContext'
 
 const PAGE_SIZE = 25
 
@@ -23,14 +25,6 @@ const topicLabels: Record<string, string> = {
   pregnancy: 'Homiladorlik',
   wellbeing: 'Kayfiyat',
   body: 'Tana',
-}
-
-const reasonLabels: Record<ReportReason, string> = {
-  spam: 'Spam',
-  abuse: 'Haqorat',
-  misinformation: 'Xavfli maslahat',
-  personal_data: "Shaxsiy ma'lumot",
-  other: 'Boshqa',
 }
 
 type Tab = 'posts' | 'reports'
@@ -59,6 +53,19 @@ export function CommunityPage() {
           <Stat label="Bugun" value={stats.data.postsToday} />
           <Stat label="Yashirilgan" value={stats.data.hiddenPosts} />
           <Stat label="Ochiq shikoyat" value={stats.data.openReports} />
+        </div>
+      )}
+
+      {/* Private messages, counted only: how much is said, never what. */}
+      {stats.data && (
+        <div className="grid stat-row">
+          <Stat label="Bugungi xabarlar" value={stats.data.messagesToday} hint={`so'nggi 24 soat · ${stats.data.conversations} suhbat`} />
+          <Stat
+            label="Konsultatsiyalar"
+            value={`${stats.data.openConsultations} / ${stats.data.consultations}`}
+            hint="ochiq / jami"
+          />
+          <Stat label="Xabar shikoyatlari" value={stats.data.openMessageReports} hint="ochiq" />
         </div>
       )}
 
@@ -477,8 +484,10 @@ function RestrictDialog({ post, onClose }: { post: ModerationPost; onClose: () =
 // ---------------------------------------------------------------- reports
 
 function ReportsTab() {
-  const { can } = useAuth()
+  const { can, session } = useAuth()
   const editable = can(['OWNER', 'ADMIN'])
+  const canViewContext = canViewMessageContext(session?.role)
+  const [dialog, setDialog] = useState<{ kind: 'context' | 'restrict'; report: ModerationReport } | null>(null)
   const [open, setOpen] = useState(true)
   const [offset, setOffset] = useState(0)
   const reports = useModerationReports(open, PAGE_SIZE, offset)
@@ -527,7 +536,14 @@ function ReportsTab() {
                 </thead>
                 <tbody>
                   {page.items.map((report) => (
-                    <ReportRow key={report.id} report={report} editable={editable && !report.resolvedAt} />
+                    <ReportRow
+                      key={report.id}
+                      report={report}
+                      moderate={editable}
+                      canViewContext={canViewContext}
+                      onContext={() => setDialog({ kind: 'context', report })}
+                      onRestrict={() => setDialog({ kind: 'restrict', report })}
+                    />
                   ))}
                 </tbody>
               </table>
@@ -552,13 +568,37 @@ function ReportsTab() {
           </>
         )}
       </Card>
+
+      {dialog?.kind === 'context' && (
+        <ReportContextModal report={dialog.report} moderate={editable} onClose={() => setDialog(null)} />
+      )}
+      {dialog?.kind === 'restrict' && <RestrictSenderDialog report={dialog.report} onClose={() => setDialog(null)} />}
     </>
   )
 }
 
-function ReportRow({ report, editable }: { report: ModerationReport; editable: boolean }) {
+/**
+ * One report. A private message's text shows here only as the reported excerpt; the
+ * lines around it open in a dialog, and only for Owner, Admin and Support.
+ */
+function ReportRow({
+  report,
+  moderate,
+  canViewContext,
+  onContext,
+  onRestrict,
+}: {
+  report: ModerationReport
+  moderate: boolean
+  canViewContext: boolean
+  onContext: () => void
+  onRestrict: () => void
+}) {
   const resolve = useResolveReport()
   const { notify } = useToast()
+  const target = reportTarget(report)
+  const editable = moderate && !report.resolvedAt
+  const message = Boolean(report.messageId)
   return (
     <tr>
       <td className="faint" style={{ whiteSpace: 'nowrap' }}>
@@ -566,7 +606,13 @@ function ReportRow({ report, editable }: { report: ModerationReport; editable: b
       </td>
       <td>
         <span className="badge warn">{reasonLabels[report.reason]}</span>
-        <div className="faint">{report.messageId ? 'xabar' : report.commentId ? 'izoh' : 'post'}</div>
+        {message ? (
+          <div style={{ marginTop: 4 }}>
+            <span className={`badge ${target.tone}`}>{target.text}</span>
+          </div>
+        ) : (
+          <div className="faint">{target.text}</div>
+        )}
       </td>
       <td>{report.excerpt}</td>
       <td className="muted">{report.note ?? ''}</td>
@@ -580,29 +626,41 @@ function ReportRow({ report, editable }: { report: ModerationReport; editable: b
         )}
       </td>
       <td>
-        {editable && (
-          <div className="row">
-            <button
-              className="btn small"
-              disabled={resolve.isPending}
-              onClick={() => resolve.mutate({ id: report.id, action: 'dismiss' }, { onSuccess: () => notify('Shikoyat rad etildi') })}
-            >
-              Rad etish
+        <div className="row" style={{ flexWrap: 'wrap' }}>
+          {message && canViewContext && (
+            <button className="btn small" onClick={onContext}>
+              Kontekstni ko'rish
             </button>
-            <button
-              className="btn small danger"
-              disabled={resolve.isPending}
-              onClick={() =>
-                resolve.mutate(
-                  { id: report.id, action: 'hide', reason: `Shikoyat: ${reasonLabels[report.reason]}` },
-                  { onSuccess: () => notify('Matn yashirildi, shikoyat yopildi', 'info') },
-                )
-              }
-            >
-              Yashirish
+          )}
+          {editable && (
+            <>
+              <button
+                className="btn small"
+                disabled={resolve.isPending}
+                onClick={() => resolve.mutate({ id: report.id, action: 'dismiss' }, { onSuccess: () => notify('Shikoyat rad etildi') })}
+              >
+                Rad etish
+              </button>
+              <button
+                className="btn small danger"
+                disabled={resolve.isPending}
+                onClick={() =>
+                  resolve.mutate(
+                    { id: report.id, action: 'hide', reason: `Shikoyat: ${reasonLabels[report.reason]}` },
+                    { onSuccess: () => notify('Matn yashirildi, shikoyat yopildi', 'info') },
+                  )
+                }
+              >
+                Yashirish
+              </button>
+            </>
+          )}
+          {message && moderate && (
+            <button className="btn small ghost" onClick={onRestrict} title="Yuboruvchi yozishdan cheklanadi; kimligi ko'rinmaydi">
+              Yuboruvchini cheklash
             </button>
-          </div>
-        )}
+          )}
+        </div>
       </td>
     </tr>
   )

@@ -38,6 +38,7 @@ interface Strings {
     val community: CommunityStrings
     val settings: SettingsStrings
     val doctors: DoctorStrings
+    val tabs: TabStrings
 }
 
 interface CommonStrings {

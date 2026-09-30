@@ -2,19 +2,28 @@ package uz.sadora.app.data
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 import uz.sadora.app.model.AppState
 import uz.sadora.app.model.CommunityTopic
+import uz.sadora.app.model.MessageImageSize
+import uz.sadora.app.model.MessageKind
 import uz.sadora.app.i18n.StringsEn
 import uz.sadora.app.i18n.StringsRu
 import uz.sadora.app.i18n.StringsUz
 import uz.sadora.contract.CommunityComment as WireComment
 import uz.sadora.contract.CommunityPost as WirePost
 import uz.sadora.contract.CommunityTopic as WireTopic
+import uz.sadora.contract.Consultation as WireConsultation
+import uz.sadora.contract.Conversation as WireConversation
+import uz.sadora.contract.DirectMessage as WireMessage
+import uz.sadora.contract.MessageKind as WireKind
 
 /**
  * The store counts her own like on top of the post's, so the wire's total — which
@@ -117,5 +126,86 @@ class CommunityMappingTest {
             .toAppComment()
         assertEquals(true, comment.isMine)
         assertEquals("5 daqiqa oldin", StringsUz.dates.ago(comment.createdAt, TestNow))
+    }
+
+    /**
+     * A consultation arrives as a conversation with a doctor, a window and the new
+     * last-line fields; all of it has to survive onto the app's model, or the list draws
+     * a doctor as an alias and an open window as a closed one.
+     */
+    @Test
+    fun `a consultation keeps its doctor and window and the list's last line fields`() {
+        val doctor = uz.sadora.contract.DoctorAuthor("d1", "Dr Nodira Karimova", uz.sadora.contract.DoctorSpecialty.GYNECOLOGIST)
+        val wire = WireConversation(
+            id = "c1",
+            alias = doctor.fullName,
+            tint = 0,
+            lastMessage = "",
+            lastMessageAt = TestNow,
+            unread = 1,
+            doctor = doctor,
+            consultation = WireConsultation(openedAt = TestNow - 1.hours, expiresAt = TestNow + 23.hours, open = true),
+            lastMessageKind = WireKind.RECORD,
+            lastMessageRead = true,
+        )
+        val thread = wire.toAppConversation()
+        assertEquals(doctor, thread.doctor)
+        assertTrue(thread.isConsultation)
+        assertTrue(thread.canWrite)
+        assertEquals(MessageKind.Record, thread.lastMessageKind)
+        assertTrue(thread.lastMessageRead)
+        val window = assertNotNull(thread.consultation)
+        assertEquals(23.hours, window.remaining(TestNow))
+        assertFalse(window.closedByDoctor)
+    }
+
+    @Test
+    fun `a shut window takes no messages and says who shut it`() {
+        val expired = WireConsultation(openedAt = TestNow - 25.hours, expiresAt = TestNow - 1.hours, open = false).toAppWindow()
+        val closed = WireConsultation(TestNow - 2.hours, TestNow + 22.hours, closedAt = TestNow - 5.minutes, open = false).toAppWindow()
+        assertFalse(expired.closedByDoctor)
+        assertTrue(closed.closedByDoctor)
+        // The server's verdict wins over the clock: shut is shut even with time on the clock.
+        assertEquals(kotlin.time.Duration.ZERO, closed.remaining(TestNow))
+
+        val base = WireConversation("c1", "Dr X", 0, lastMessageAt = TestNow)
+        assertFalse(base.copy(consultation = WireConsultation(TestNow, TestNow, open = false)).toAppConversation().canWrite)
+        assertFalse(base.copy(blocked = true).toAppConversation().canWrite)
+        val alias = base.toAppConversation()
+        assertTrue(alias.canWrite, "an alias thread has no window to close")
+        assertFalse(alias.isConsultation)
+        assertEquals(MessageKind.Text, alias.lastMessageKind)
+    }
+
+    @Test
+    fun `a photo keeps its size and ticks and a size on anything else is dropped`() {
+        val photo = WireMessage(
+            id = "m1",
+            body = "Toshma",
+            createdAt = TestNow,
+            isMine = true,
+            kind = WireKind.IMAGE,
+            image = uz.sadora.contract.MessageImage(width = 1024, height = 768),
+            read = true,
+        ).toAppMessage()
+        assertEquals(MessageKind.Image, photo.kind)
+        assertEquals(MessageImageSize(1024, 768), photo.image)
+        assertEquals(0.75f, assertNotNull(photo.image).aspect)
+        assertTrue(photo.read)
+
+        val record = WireMessage("m2", "", TestNow, isMine = true, kind = WireKind.RECORD, image = uz.sadora.contract.MessageImage(1, 1))
+            .toAppMessage()
+        assertEquals(MessageKind.Record, record.kind)
+        assertNull(record.image)
+        assertFalse(record.read)
+
+        WireKind.entries.forEach { kind -> assertEquals(kind.name, kind.toAppKind().name.uppercase()) }
+    }
+
+    @Test
+    fun `a photo's shape is held to a range a bubble can draw`() {
+        assertEquals(1.6f, MessageImageSize(100, 1000).aspect, "a tall strip does not become a tower")
+        assertEquals(0.4f, MessageImageSize(1000, 100).aspect, "a panorama does not become a ribbon")
+        assertEquals(1f, MessageImageSize(0, 0).aspect, "no size is a square, not a division by zero")
     }
 }

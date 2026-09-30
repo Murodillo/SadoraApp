@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Mock } from 'vitest'
 import { apiError, json, mockApi } from '../test/http'
-import { ApiFailure, fieldsOf, logout, messageOf, query, request, SESSION_EXPIRED_EVENT, tokenStore } from './client'
+import { ApiFailure, fieldsOf, logout, messageOf, query, request, requestBlob, SESSION_EXPIRED_EVENT, tokenStore } from './client'
 import { deviceId } from './device'
 
 const REFRESH = 'POST /v1/auth/refresh'
@@ -38,6 +38,38 @@ beforeEach(() => {
 
 afterEach(() => {
   window.removeEventListener(SESSION_EXPIRED_EVENT, expired)
+})
+
+describe('requestBlob', () => {
+  const IMAGE = 'GET /v1/community/conversations/c1/messages/m1/image'
+
+  it('fetches bytes with the access token, renewing once on a 401', async () => {
+    tokenStore.writeTokens({ accessToken: 'access-1', refreshToken: 'refresh-1' })
+    const api = mockApi({
+      [IMAGE]: (call) =>
+        bearer(call.headers) === 'access-2'
+          ? new Response(new Uint8Array([1, 2, 3]), { status: 200, headers: { 'Content-Type': 'image/jpeg' } })
+          : apiError(401, 'unauthorized', 'Kirish kerak'),
+      [REFRESH]: renewedSession('access-2', 'refresh-2'),
+    })
+
+    const blob = await requestBlob('/v1/community/conversations/c1/messages/m1/image')
+
+    expect(blob.size).toBe(3)
+    expect(api.calls.map((call) => `${call.method} ${call.path} ${bearer(call.headers) ?? '-'}`)).toEqual([
+      `${IMAGE} access-1`,
+      `${REFRESH} -`,
+      `${IMAGE} access-2`,
+    ])
+  })
+
+  it("raises the server's error for a refused photo", async () => {
+    tokenStore.writeTokens({ accessToken: 'access-1', refreshToken: 'refresh-1' })
+    mockApi({ [IMAGE]: apiError(404, 'not_found', 'Rasm topilmadi') })
+
+    const failure = await failureOf(requestBlob('/v1/community/conversations/c1/messages/m1/image'))
+    expect(failure).toMatchObject({ status: 404, message: 'Rasm topilmadi' })
+  })
 })
 
 describe('request', () => {

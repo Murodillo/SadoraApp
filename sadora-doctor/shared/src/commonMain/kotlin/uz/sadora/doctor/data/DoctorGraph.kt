@@ -29,12 +29,13 @@ class DoctorGraph(
     val authApi: AuthApi = AuthApi(caller, session)
     val doctorApi: DoctorApi = DoctorApi(caller)
     val communityApi: CommunityApi = CommunityApi(caller)
+    val patientApi: PatientApi = PatientApi(caller)
 
     val repository: AuthRepository = AuthRepository(authApi, session, device, appVersion)
 
     fun authController(): AuthController = AuthController(repository)
 
-    fun doctorController(): DoctorController = DoctorController(doctorApi, communityApi)
+    fun doctorController(): DoctorController = DoctorController(doctorApi, communityApi, patientApi)
 
     fun close() = client.close()
 }

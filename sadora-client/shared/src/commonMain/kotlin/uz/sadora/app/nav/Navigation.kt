@@ -279,6 +279,16 @@ class Navigator {
     }
 
     /**
+     * A doctor's page, from a thread with her. When that thread was itself opened from
+     * her page, the page is already underneath: going back to it beats stacking page,
+     * thread, page, thread for every tap on her name.
+     */
+    fun openDoctor(id: String) {
+        val below = stack.getOrNull(stack.size - 2)
+        if (below == Route.Doctor(id)) pop() else push(Route.Doctor(id))
+    }
+
+    /**
      * Swap the top of the stack. Used by linear flows such as
      * camera -> analysing -> result, where backing up to the previous step
      * would be wrong.

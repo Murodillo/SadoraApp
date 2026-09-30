@@ -31,6 +31,7 @@ import org.jetbrains.exposed.v1.jdbc.upsert
 import uz.sadora.contract.CommunityTopic
 import uz.sadora.contract.DoctorSpecialty
 import uz.sadora.contract.DoctorStatus
+import uz.sadora.contract.MessageKind
 import uz.sadora.contract.ReportReason
 import uz.sadora.server.core.now
 import uz.sadora.server.core.toKotlinInstant
@@ -39,6 +40,7 @@ import uz.sadora.server.db.CommunityBlocks
 import uz.sadora.server.db.CommunityComments
 import uz.sadora.server.db.CommunityIdentities
 import uz.sadora.server.db.CommunityMessages
+import uz.sadora.server.db.CommunityConversations
 import uz.sadora.server.db.CommunityPostLikes
 import uz.sadora.server.db.CommunityPostSaves
 import uz.sadora.server.db.CommunityPosts
@@ -143,7 +145,20 @@ data class ReportRecord(
     val excerpt: String,
     val targetStatus: ContentStatus,
     val messageId: Uuid? = null,
+    val messageKind: MessageKind? = null,
+    /** The reported message is in a consultation with a doctor. */
+    val consultation: Boolean = false,
 )
+
+/** A reported private message as the queue needs it. */
+private class ReportedMessage(val body: String, val status: ContentStatus, val kind: MessageKind, val conversationId: Uuid) {
+    /** A photo is named for what it is; a record's content never reaches the queue. */
+    fun excerpt(): String = when (kind) {
+        MessageKind.TEXT -> body
+        MessageKind.IMAGE -> "[rasm]" + body.takeIf { it.isNotEmpty() }?.let { " $it" }.orEmpty()
+        MessageKind.RECORD -> "[tibbiy karta]"
+    }
+}
 
 data class RestrictionRecord(val reason: String, val until: Instant?)
 
@@ -571,14 +586,29 @@ class CommunityRepository {
             .singleOrNull()
             ?.get(CommunityPosts.userId)
             ?: return@dbQuery false
+        restrict(author, reason, until, by)
+        true
+    }
+
+    /** Silences whoever sent [messageId] — the report names the message, never the account. */
+    suspend fun restrictSenderOf(messageId: Uuid, reason: String, until: Instant?, by: Uuid): Boolean = dbQuery {
+        val sender = CommunityMessages.select(CommunityMessages.senderId)
+            .where { CommunityMessages.id eq messageId }
+            .singleOrNull()
+            ?.get(CommunityMessages.senderId)
+            ?: return@dbQuery false
+        restrict(sender, reason, until, by)
+        true
+    }
+
+    private fun restrict(user: Uuid, reason: String, until: Instant?, by: Uuid) {
         CommunityRestrictions.upsert(CommunityRestrictions.userId) {
-            it[userId] = author
+            it[userId] = user
             it[CommunityRestrictions.reason] = reason
             it[CommunityRestrictions.until] = until?.toOffsetDateTime()
             it[createdBy] = by
             it[createdAt] = now().toOffsetDateTime()
         }
-        true
     }
 
     // ---------------------------------------------------------------- moderation reads
@@ -692,11 +722,24 @@ class CommunityRepository {
             .associate { it[CommunityComments.id] to it.toComment() }
         val messageIds = rows.mapNotNull { it[CommunityReports.messageId] }
         val messages = if (messageIds.isEmpty()) emptyMap() else CommunityMessages
-            .select(CommunityMessages.id, CommunityMessages.body, CommunityMessages.status)
+            .select(CommunityMessages.id, CommunityMessages.body, CommunityMessages.status, CommunityMessages.kind, CommunityMessages.conversationId)
             .where { CommunityMessages.id inList messageIds }
             .associate {
-                it[CommunityMessages.id] to (it[CommunityMessages.body] to enumFromDb(it[CommunityMessages.status], ContentStatus.VISIBLE))
+                it[CommunityMessages.id] to ReportedMessage(
+                    body = it[CommunityMessages.body],
+                    status = enumFromDb(it[CommunityMessages.status], ContentStatus.VISIBLE),
+                    kind = enumFromDb(it[CommunityMessages.kind], MessageKind.TEXT),
+                    conversationId = it[CommunityMessages.conversationId],
+                )
             }
+        // Which of those threads are consultations, so the queue can say so without
+        // anyone opening the thread.
+        val consultations = messages.values.map { it.conversationId }.distinct().let { ids ->
+            if (ids.isEmpty()) emptySet() else CommunityConversations.select(CommunityConversations.id)
+                .where { (CommunityConversations.id inList ids) and CommunityConversations.doctorId.isNotNull() }
+                .map { it[CommunityConversations.id] }
+                .toSet()
+        }
 
         rows.map { row ->
             val post = row[CommunityReports.postId]?.let { posts[it] }
@@ -712,8 +755,10 @@ class CommunityRepository {
                 createdAt = row[CommunityReports.createdAt].toKotlinInstant(),
                 resolvedAt = row[CommunityReports.resolvedAt]?.toKotlinInstant(),
                 resolution = row[CommunityReports.resolution],
-                excerpt = (post?.body ?: comment?.body ?: message?.first).orEmpty().take(EXCERPT_LENGTH),
-                targetStatus = post?.status ?: comment?.status ?: message?.second ?: ContentStatus.HIDDEN,
+                excerpt = (post?.body ?: comment?.body ?: message?.excerpt()).orEmpty().take(EXCERPT_LENGTH),
+                targetStatus = post?.status ?: comment?.status ?: message?.status ?: ContentStatus.HIDDEN,
+                messageKind = message?.kind,
+                consultation = message != null && message.conversationId in consultations,
             )
         } to total
     }

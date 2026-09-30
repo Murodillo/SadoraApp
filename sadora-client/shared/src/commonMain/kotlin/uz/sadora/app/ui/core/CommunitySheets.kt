@@ -234,12 +234,17 @@ fun EditBioSheetContent(
 /**
  * The "···" on a thread: her page, the block, and a report on her latest line. The
  * block asks once, in the same sheet, rather than opening a dialog over a sheet.
+ *
+ * In a consultation the page is the doctor's, and there is no block: a block is
+ * between aliases, and a doctor who oversteps is a report — which staff read with the
+ * lines around it — not a name to hide.
  */
 @Composable
 fun ConversationMenuSheetContent(
     messages: MessagesController,
     community: CommunityController,
     onOpenProfile: (String) -> Unit,
+    onOpenDoctor: (String) -> Unit,
     onDone: (message: String?) -> Unit,
 ) {
     val c = Sadora.colors
@@ -248,11 +253,18 @@ fun ConversationMenuSheetContent(
     val thread = messages.current ?: return
     var reason by remember { mutableStateOf<ReportReason?>(null) }
     var confirmingBlock by remember { mutableStateOf(false) }
+    val doctor = thread.doctor
 
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-        SadoraButton(t.viewProfile, tone = ButtonTone.Secondary, onClick = { onDone(null); onOpenProfile(thread.alias) })
+        if (doctor != null) {
+            SadoraButton(strings.doctors.doctorPage, tone = ButtonTone.Secondary, onClick = { onDone(null); onOpenDoctor(doctor.id) })
+        } else {
+            SadoraButton(t.viewProfile, tone = ButtonTone.Secondary, onClick = { onDone(null); onOpenProfile(thread.alias) })
+        }
 
-        if (confirmingBlock) {
+        if (doctor != null) {
+            // No block in a consultation; see the note above.
+        } else if (confirmingBlock) {
             Text(t.blockConfirmBody, style = Sadora.type.body, color = c.muted)
             SadoraButton(
                 t.block,

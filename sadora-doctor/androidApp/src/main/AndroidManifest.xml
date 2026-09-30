@@ -5,6 +5,11 @@
          connection error that looks exactly like a flaky network. -->
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <!-- The Scan tab reads a patient's QR code from the live camera. Asked for the first
+         time the tab opens, not at install; a phone without a camera still installs. -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera.any" android:required="false" />
+
     <!-- Nothing else: the document photos come through the system photo picker, which
          needs no permission and hands over only the image she picked. -->
 

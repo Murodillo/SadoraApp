@@ -224,6 +224,24 @@ export function TabPanel({ id, children }: { id: string; children: ReactNode }) 
   )
 }
 
+/**
+ * An authenticated download — a diploma scan, a reported photo — shown through an object
+ * URL that lives exactly as long as the component holding it.
+ */
+export function useObjectUrl(blob: Blob | undefined | null): string | null {
+  const [url, setUrl] = useState<string | null>(null)
+  useEffect(() => {
+    if (!blob) {
+      setUrl(null)
+      return
+    }
+    const next = URL.createObjectURL(blob)
+    setUrl(next)
+    return () => URL.revokeObjectURL(next)
+  }, [blob])
+  return url
+}
+
 const MODAL_LEAVE_MS = 160
 
 export function Modal({

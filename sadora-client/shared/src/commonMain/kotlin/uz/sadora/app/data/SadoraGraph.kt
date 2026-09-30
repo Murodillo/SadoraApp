@@ -100,7 +100,9 @@ class SadoraGraph(
     fun communityController(state: uz.sadora.app.model.AppState): CommunityController =
         CommunityController(communityApi, state)
 
-    fun messagesController(): MessagesController = MessagesController(communityApi)
+    /** [clock] is for tests: the typing throttle is measured on it. */
+    fun messagesController(clock: kotlin.time.Clock = kotlin.time.Clock.System): MessagesController =
+        MessagesController(communityApi, clock)
 
     fun doctorController(state: uz.sadora.app.model.AppState): DoctorController = DoctorController(doctorApi, state)
 

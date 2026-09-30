@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
-import { QUESTIONS_LIMIT, useQuestions } from '../api/hooks'
+import { QUESTIONS_LIMIT, useConversations, useQuestions } from '../api/hooks'
 import { useAuth } from '../auth/AuthContext'
 import { useApprovedDoctor } from '../auth/doctor'
 import { SadoraTile } from '../components/Logo'
@@ -25,6 +25,7 @@ const groups: NavGroup[] = [
     title: 'Chat',
     entries: [
       { to: '/', label: 'Savollar', glyph: '◉' },
+      { to: '/messages', label: 'Xabarlar', glyph: '✉' },
       { to: '/posts', label: 'Postlarim', glyph: '❑' },
     ],
   },
@@ -36,6 +37,7 @@ const groups: NavGroup[] = [
 
 const titles: Record<string, string> = {
   '/': 'Savollar — javob kutayotganlar',
+  '/messages': 'Xabarlar — bemorlar bilan konsultatsiyalar',
   '/posts': 'Postlarim',
   '/profile': 'Profil',
 }
@@ -48,6 +50,8 @@ export function Shell() {
   // The same query the questions page reads with no filter, so the count costs nothing
   // extra there and keeps itself fresh everywhere else.
   const questions = useQuestions()
+  // Polled here as well as on the page, so an unread line shows wherever she is.
+  const conversations = useConversations()
 
   // The rail closes itself after a choice on a narrow screen, and on Escape.
   useEffect(() => setNavOpen(false), [location.pathname])
@@ -60,6 +64,7 @@ export function Shell() {
 
   const title = titles[location.pathname] ?? 'SADORA'
   const waiting = questions.data?.length ?? 0
+  const unread = conversations.data?.reduce((sum, conversation) => sum + (conversation.unread ?? 0), 0) ?? 0
 
   return (
     <div className="shell">
@@ -91,6 +96,11 @@ export function Shell() {
                   // Re-keyed on the number, so a question arriving or leaving bumps it.
                   <span key={waiting} className="badge warn nav-count" aria-label={`${waiting} ta javobsiz savol`}>
                     {waiting >= QUESTIONS_LIMIT ? `${QUESTIONS_LIMIT}+` : waiting}
+                  </span>
+                )}
+                {entry.to === '/messages' && unread > 0 && (
+                  <span key={unread} className="badge danger nav-count" aria-label={`${unread} ta o'qilmagan xabar`}>
+                    {unread > 99 ? '99+' : unread}
                   </span>
                 )}
               </NavLink>

@@ -40,6 +40,7 @@ data class DoctorRecord(
     val reviewedAt: Instant?,
     val verifiedAt: Instant?,
     val submittedAt: Instant,
+    val acceptsConsultations: Boolean = true,
 )
 
 /** The fields an application sets, whether it is the first or a resubmission. */
@@ -75,6 +76,11 @@ class DoctorRepository {
 
     suspend fun byId(id: Uuid): DoctorRecord? = dbQuery {
         DoctorProfiles.selectAll().where { DoctorProfiles.id eq id }.singleOrNull()?.toRecord()
+    }
+
+    suspend fun byIds(ids: Collection<Uuid>): Map<Uuid, DoctorRecord> = dbQuery {
+        if (ids.isEmpty()) return@dbQuery emptyMap()
+        DoctorProfiles.selectAll().where { DoctorProfiles.id inList ids }.associate { it[DoctorProfiles.id] to it.toRecord() }
     }
 
     suspend fun approved(): List<DoctorRecord> = dbQuery {
@@ -137,10 +143,17 @@ class DoctorRepository {
         this[DoctorProfiles.bio] = application.bio
     }
 
-    suspend fun updateProfile(id: Uuid, workplace: String?, bio: String?, keepBio: Boolean): Unit = dbQuery {
+    suspend fun updateProfile(
+        id: Uuid,
+        workplace: String?,
+        bio: String?,
+        keepBio: Boolean,
+        acceptsConsultations: Boolean? = null,
+    ): Unit = dbQuery {
         DoctorProfiles.update({ DoctorProfiles.id eq id }) {
             workplace?.let { value -> it[DoctorProfiles.workplace] = value }
             if (!keepBio) it[DoctorProfiles.bio] = bio
+            acceptsConsultations?.let { value -> it[DoctorProfiles.acceptsConsultations] = value }
             it[updatedAt] = now().toOffsetDateTime()
         }
     }
@@ -230,5 +243,6 @@ class DoctorRepository {
         reviewedAt = this[DoctorProfiles.reviewedAt]?.toKotlinInstant(),
         verifiedAt = this[DoctorProfiles.verifiedAt]?.toKotlinInstant(),
         submittedAt = this[DoctorProfiles.submittedAt].toKotlinInstant(),
+        acceptsConsultations = this[DoctorProfiles.acceptsConsultations],
     )
 }

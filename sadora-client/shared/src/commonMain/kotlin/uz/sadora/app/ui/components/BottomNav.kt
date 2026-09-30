@@ -33,6 +33,8 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
@@ -73,6 +75,8 @@ fun SadoraBottomNav(
     journeyLabel: String,
     /** "Ong" alone, or "Ong · Ovqat" while the food diary lives inside the Mind tab. */
     mindLabel: String,
+    /** Unread private messages; above zero, the Chat tab wears a dot. */
+    chatUnread: Int = 0,
 ) {
     val c = Sadora.colors
     val t = strings
@@ -134,6 +138,7 @@ fun SadoraBottomNav(
                         },
                         selected = selected == tab,
                         onClick = { onSelect(tab) },
+                        unread = if (tab == Tab.SecretChat && chatUnread > 0) t.community.unreadCount(chatUnread) else null,
                         modifier = Modifier.width(slot).fillMaxHeight(),
                     )
                 }
@@ -148,6 +153,10 @@ fun SadoraBottomNav(
  * The icon and its label are laid out at a fixed height whether or not the tab is
  * selected — only colour, scale and the label's opacity change — so selecting a tab
  * never nudges its neighbours.
+ *
+ * [unread], when set, draws a dot on the icon's shoulder and is what a screen reader
+ * says after the label: "Chat, 2 ta o'qilmagan". A dot, not a number — the count is one
+ * tap away, and a number on a 24dp icon is noise at the size it would have to be.
  */
 @Composable
 private fun NavItem(
@@ -156,6 +165,7 @@ private fun NavItem(
     selected: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    unread: String? = null,
 ) {
     val c = Sadora.colors
     val tint by animateColorAsState(if (selected) c.primary else c.muted2, label = "tab-tint")
@@ -175,25 +185,36 @@ private fun NavItem(
     Box(
         modifier
             // One element per tab: "Bugun, tab, selected", not an icon and a word.
-            .noRippleSelectable(selected, role = Role.Tab, onClick = onClick),
+            .noRippleSelectable(selected, role = Role.Tab, onClick = onClick)
+            .then(if (unread != null) Modifier.semantics { stateDescription = unread } else Modifier),
         contentAlignment = Alignment.Center,
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(3.dp),
         ) {
-            Icon(
-                icon,
-                contentDescription = null,
-                Modifier
-                    .size(IconSize.lg)
-                    .graphicsLayer {
-                        scaleX = scale
-                        scaleY = scale
-                        translationY = liftPx
-                    },
-                tint = tint,
-            )
+            Box(
+                Modifier.graphicsLayer {
+                    scaleX = scale
+                    scaleY = scale
+                    translationY = liftPx
+                },
+            ) {
+                Icon(icon, contentDescription = null, Modifier.size(IconSize.lg), tint = tint)
+                if (unread != null) {
+                    Box(
+                        Modifier
+                            .align(Alignment.TopEnd)
+                            .offset(x = 3.dp, y = (-1).dp)
+                            .size(9.dp)
+                            .clip(Radius.chip)
+                            .background(c.surface)
+                            .padding(1.5.dp)
+                            .clip(Radius.chip)
+                            .background(c.secondary),
+                    )
+                }
+            }
             Text(
                 label,
                 style = Sadora.type.caption.copy(letterSpacing = TextUnit.Unspecified),

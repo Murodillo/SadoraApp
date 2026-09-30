@@ -1,4 +1,4 @@
-import type { CommunityTopic, DoctorSpecialty, DoctorStatus } from '../api/types'
+import type { CommunityTopic, DoctorSpecialty, DoctorStatus, LifeStage, ReportReason } from '../api/types'
 
 /*
  * The words the app uses, so a doctor reads the same name for a room here as the woman
@@ -48,3 +48,32 @@ export const statusLabels: Record<DoctorStatus, { text: string; tone: string }> 
 
 /** The line the app puts under a doctor's answer; the panel shows it under the answer box. */
 export const ANSWER_DISCLAIMER = "Chatdagi javobingiz umumiy maslahat sifatida ko'rinadi, tashxis emas."
+
+/** Her stage of life, as the doctor app words it (`TabStringsUz.lifeStage`). */
+export const lifeStageLabels: Record<LifeStage, string> = {
+  cycle: 'Hayz sikli',
+  trying_to_conceive: 'Homiladorlikni rejalashtirmoqda',
+  pregnancy: 'Homiladorlik',
+  postpartum: "Tug'ruqdan keyingi davr",
+  perimenopause: 'Perimenopauza',
+  menopause: 'Menopauza',
+}
+
+export function lifeStageLabel(stage: LifeStage | null | undefined): string {
+  if (!stage) return '—'
+  return lifeStageLabels[stage] ?? stage
+}
+
+/** Report reasons, as the women's app words them (`StringsUz.reportReason`). */
+export const reportReasonOrder: ReportReason[] = ['abuse', 'spam', 'misinformation', 'personal_data', 'other']
+
+export const reportReasonLabels: Record<ReportReason, string> = {
+  spam: 'Spam yoki reklama',
+  abuse: 'Haqorat yoki tahdid',
+  misinformation: 'Xavfli tibbiy maslahat',
+  personal_data: "Shaxsiy ma'lumot oshkor qilingan",
+  other: 'Boshqa sabab',
+}
+
+/** Under the patient's record in the panel. */
+export const RECORD_DISCLAIMER = "Bu bemor o'zi kiritgan ma'lumotlar, tashxis emas"

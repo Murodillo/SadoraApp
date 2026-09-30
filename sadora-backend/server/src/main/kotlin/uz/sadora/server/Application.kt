@@ -137,7 +137,7 @@ fun Application.apiModule(component: AppComponent) {
             adminWearableRoutes(component.wearableService, component.wearableRepository, component.auditService)
             communityRoutes(component.communityService, component.messagingService)
             adminCommunityRoutes(component.communityModerationService)
-            doctorRoutes(component.doctorService, component.communityService)
+            doctorRoutes(component.doctorService, component.communityService, component.messagingService)
             adminDoctorRoutes(component.doctorService)
             aiRoutes(component.aiService, component.greetingService)
             rewardsRoutes(component.rewardsService, component.shopService, component.homeLayoutRepository)

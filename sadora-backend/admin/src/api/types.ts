@@ -203,6 +203,8 @@ export interface ModerationReport {
   postId?: string | null
   commentId?: string | null
   messageId?: string | null
+  /** Not sent by the list today; the modal learns it from the context view. */
+  consultation?: boolean
   reason: ReportReason
   note?: string | null
   excerpt: string
@@ -217,6 +219,41 @@ export interface CommunityStats {
   postsToday: number
   hiddenPosts: number
   openReports: number
+  // Private messages, counted only — the panel sees how much is said, never what.
+  messagesToday: number
+  conversations: number
+  consultations: number
+  openConsultations: number
+  openMessageReports: number
+}
+
+export type MessageKind = 'text' | 'image' | 'record'
+
+/**
+ * One line around a reported private message. `fromReported` is the side the report is
+ * about; the other side is the one who reported. A record line never carries its body —
+ * her health record is not the moderator's to read.
+ */
+export interface ReportContextMessage {
+  id: string
+  fromReported: boolean
+  kind: MessageKind
+  body: string
+  createdAt: string
+  /** The message the report is about. */
+  reported: boolean
+  hidden: boolean
+}
+
+/** The only view of a private thread the panel has, and each opening is audited. */
+export interface ReportContextView {
+  reportId: string
+  consultation: boolean
+  /** Display labels: an alias, or a doctor's name with ✓. Never an account. */
+  reporter: string
+  reported: string
+  reportedIsDoctor: boolean
+  messages: ReportContextMessage[]
 }
 
 // ---- notifications ----
@@ -647,4 +684,15 @@ export interface AdminDoctorDetail {
   reviewedAt?: string | null
   verifiedAt?: string | null
   documents: AdminDoctorDocument[]
+  acceptsConsultations: boolean
+  /** Counts only: how busy her consultations are, never what was said in them. */
+  consultations?: DoctorConsultationStats | null
+}
+
+export interface DoctorConsultationStats {
+  total: number
+  open: number
+  messagesFromDoctor: number
+  messagesFromPatients: number
+  lastMessageAt?: string | null
 }

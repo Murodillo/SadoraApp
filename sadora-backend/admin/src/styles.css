@@ -1881,3 +1881,100 @@ tbody tr.selected:hover {
   object-fit: contain;
   border-radius: var(--radius-sm);
 }
+
+/* ---------------------------------------------------------------- reported messages */
+
+.badge.consult {
+  background: color-mix(in srgb, var(--primary) 18%, transparent);
+  color: var(--primary);
+  border-color: color-mix(in srgb, var(--primary) 40%, transparent);
+}
+
+/* The lines around a reported private message: the reported side on the left, the one
+   who reported on the right, as the two of them saw it. */
+.chat-context {
+  list-style: none;
+  margin: 0;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  max-height: min(56vh, 520px);
+  overflow-y: auto;
+}
+
+.chat-line {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-width: 78%;
+  align-self: flex-start;
+  align-items: flex-start;
+}
+
+.chat-line.from-reporter {
+  align-self: flex-end;
+  align-items: flex-end;
+}
+
+.chat-meta {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  font-size: 12px;
+}
+
+.chat-bubble {
+  padding: 8px 12px;
+  border-radius: 14px;
+  border-bottom-left-radius: 4px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 14px;
+}
+
+.chat-line.from-reporter .chat-bubble {
+  border-bottom-left-radius: 14px;
+  border-bottom-right-radius: 4px;
+  background: color-mix(in srgb, var(--secondary) 10%, var(--surface));
+}
+
+.chat-line.doctor .chat-bubble {
+  background: color-mix(in srgb, var(--primary) 14%, var(--surface));
+  border-color: color-mix(in srgb, var(--primary) 35%, var(--border));
+}
+
+.chat-bubble.attachment {
+  font-style: italic;
+  color: var(--text-dim);
+}
+
+.chat-line.target .chat-bubble {
+  border: 2px solid var(--danger);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--danger) 14%, transparent);
+}
+
+.chat-line.hidden .chat-bubble {
+  opacity: 0.5;
+  color: var(--text-faint);
+}
+
+.chat-image {
+  display: block;
+  max-width: 100%;
+  max-height: 360px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  object-fit: contain;
+}
+
+@media (max-width: 560px) {
+  .chat-line {
+    max-width: 92%;
+  }
+}

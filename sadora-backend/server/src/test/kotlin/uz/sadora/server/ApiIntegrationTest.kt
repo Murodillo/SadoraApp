@@ -1901,6 +1901,143 @@ class ApiIntegrationTest {
         Api(client).block()
     }
 
+    @Test
+    fun `a patient consults a doctor with photos and her record and a report opens the lines around it`() = api {
+        val doctor = signUp().also { onboard(it) }
+        val patient = signUp().also { onboard(it) }
+        val stranger = signUp().also { onboard(it) }
+        val admin = adminToken()
+        val name = "Dr Chat ${Uuid.random().toString().take(6)}"
+        val jpeg = kotlin.io.encoding.Base64.encode(byteArrayOf(0xFF.toByte(), 0xD8.toByte(), 0xFF.toByte(), 0xE0.toByte(), 1, 2, 3))
+        post<DoctorAccount>(
+            "/v1/doctor/application",
+            doctor.token,
+            DoctorApplicationRequest(name, DoctorSpecialty.GYNECOLOGIST, "Klinika", 9, "LIC-9", documents = listOf(DoctorDocumentUpload(DoctorDocumentKind.DIPLOMA, jpeg))),
+        )
+        val profileId = get<Page<uz.sadora.server.doctor.AdminDoctorRow>>("/v1/admin/doctors?status=pending&limit=200", admin)
+            .items.first { it.fullName == name }.id
+        postAck("/v1/admin/doctors/$profileId/review", admin, uz.sadora.server.doctor.DoctorReviewRequest("approve"))
+
+        // Her page offers the consultation; her own page does not.
+        val page = get<uz.sadora.contract.DoctorProfile>("/v1/doctors/$profileId", patient.token)
+        assertTrue(page.canMessage)
+        assertNull(page.conversationId)
+        assertFalse(get<uz.sadora.contract.DoctorProfile>("/v1/doctors/$profileId", doctor.token).canMessage)
+
+        // Opening it: a window, the doctor by name, the first line.
+        val opened = post<ConversationThread>("/v1/doctors/$profileId/consultations", patient.token, uz.sadora.contract.StartConsultationRequest("Salom, doktor"))
+        val id = opened.conversation.id
+        assertEquals(name, opened.conversation.alias)
+        assertEquals(profileId, opened.conversation.doctor?.id)
+        val window = assertNotNull(opened.conversation.consultation)
+        assertTrue(window.open)
+        assertEquals(1, opened.messages.size)
+        val again = post<ConversationThread>("/v1/doctors/$profileId/consultations", patient.token, uz.sadora.contract.StartConsultationRequest())
+        assertEquals(id, again.conversation.id)
+        assertEquals(window.expiresAt, again.conversation.consultation?.expiresAt, "a second tap does not extend an open window")
+        assertEquals(id, get<uz.sadora.contract.DoctorProfile>("/v1/doctors/$profileId", patient.token).conversationId)
+
+        // The doctor's list names the patient; her own chat header does not count it.
+        val patients = get<List<Conversation>>("/v1/community/conversations?scope=patients", doctor.token)
+        val held = patients.single { it.id == id }
+        assertEquals("Test", held.alias)
+        assertEquals(LifeStage.CYCLE, held.patient?.lifeStage)
+        assertNull(held.doctor)
+        assertEquals(1, held.unread)
+        assertTrue(get<List<Conversation>>("/v1/community/conversations?scope=personal", doctor.token).none { it.id == id })
+        assertEquals(0, get<CommunityIdentity>("/v1/community/me", doctor.token).unreadMessages)
+        assertTrue(get<List<Conversation>>("/v1/community/conversations?scope=personal", patient.token).any { it.id == id })
+        assertTrue(get<List<Conversation>>("/v1/community/conversations?scope=patients", patient.token).isEmpty())
+
+        // A photo: its size is read from the picture, and only the two of them may open it.
+        val picture = java.awt.image.BufferedImage(40, 30, java.awt.image.BufferedImage.TYPE_INT_RGB)
+        val png = java.io.ByteArrayOutputStream().also { javax.imageio.ImageIO.write(picture, "png", it) }.toByteArray()
+        val photo = post<DirectMessage>(
+            "/v1/community/conversations/$id/messages",
+            patient.token,
+            SendMessageRequest("Tahlil natijasi", image = uz.sadora.contract.MessageImageUpload(kotlin.io.encoding.Base64.encode(png), "image/png")),
+        )
+        assertEquals(uz.sadora.contract.MessageKind.IMAGE, photo.kind)
+        assertEquals(40, photo.image?.width)
+        assertEquals(30, photo.image?.height)
+        val fetched = raw { client.get("/v1/community/conversations/$id/messages/${photo.id}/image") { auth(doctor.token) } }
+        assertEquals(HttpStatusCode.OK, fetched.status)
+        assertEquals("image/png", fetched.headers["Content-Type"])
+        assertEquals(HttpStatusCode.NotFound, raw { client.get("/v1/community/conversations/$id/messages/${photo.id}/image") { auth(stranger.token) } }.status)
+        val notAPicture = raw {
+            client.post("/v1/community/conversations/$id/messages") {
+                auth(patient.token)
+                json(SendMessageRequest(image = uz.sadora.contract.MessageImageUpload(kotlin.io.encoding.Base64.encode(byteArrayOf(1, 2, 3)), "image/png")))
+            }
+        }
+        assertEquals(HttpStatusCode.BadRequest, notAPicture.status)
+
+        // Her record, attached by her, read live by her doctor; a doctor cannot attach one.
+        val record = post<DirectMessage>("/v1/community/conversations/$id/messages", patient.token, SendMessageRequest(attachRecord = true))
+        assertEquals(uz.sadora.contract.MessageKind.RECORD, record.kind)
+        val summary = get<uz.sadora.contract.DoctorSummary>("/v1/community/conversations/$id/messages/${record.id}/record?lang=ru", doctor.token)
+        assertEquals("Test", summary.person.name)
+        assertEquals(Language.RU, summary.language)
+        assertEquals(HttpStatusCode.BadRequest, raw { client.post("/v1/community/conversations/$id/messages") { auth(doctor.token); json(SendMessageRequest(attachRecord = true)) } }.status)
+        assertTrue("consultation.record_viewed" in rawGet("/v1/admin/audit?action=consultation.record_viewed&entityId=${record.id}&limit=5", admin))
+
+        // Ticks and typing: she types, he sees it; he opens the thread, her lines turn read.
+        postAck("/v1/community/conversations/$id/typing", patient.token, uz.sadora.contract.Ack())
+        val doctorView = get<ConversationThread>("/v1/community/conversations/$id", doctor.token)
+        assertTrue(doctorView.otherTyping)
+        assertTrue(doctorView.messages.none { it.read }, "nothing of his has been sent yet")
+        val patientView = get<ConversationThread>("/v1/community/conversations/$id", patient.token)
+        assertTrue(patientView.messages.filter { it.isMine }.all { it.read }, "the doctor opened the thread after every line")
+        assertNotNull(patientView.otherReadAt)
+        assertFalse(patientView.otherTyping, "the doctor is not typing")
+
+        // The doctor closes it: no more lines, no more record; she opens it again.
+        val closed = post<ConversationThread>("/v1/community/conversations/$id/close", doctor.token, uz.sadora.contract.Ack())
+        assertEquals(false, closed.conversation.consultation?.open)
+        assertEquals(HttpStatusCode.Forbidden, raw { client.post("/v1/community/conversations/$id/close") { auth(patient.token) } }.status)
+        assertEquals(HttpStatusCode.Forbidden, raw { client.post("/v1/community/conversations/$id/messages") { auth(patient.token); json(SendMessageRequest("yana")) } }.status)
+        assertEquals(HttpStatusCode.Forbidden, raw { client.get("/v1/community/conversations/$id/messages/${record.id}/record") { auth(doctor.token) } }.status)
+        val reopened = post<ConversationThread>("/v1/doctors/$profileId/consultations", patient.token, uz.sadora.contract.StartConsultationRequest("Yana savol"))
+        assertEquals(id, reopened.conversation.id)
+        assertEquals(true, reopened.conversation.consultation?.open)
+        post<DirectMessage>("/v1/community/conversations/$id/messages", doctor.token, SendMessageRequest("Marhamat, eshitaman"))
+
+        // Her switch: off, and the button and the door close together.
+        put<DoctorAccount>("/v1/doctor/me", doctor.token, uz.sadora.contract.UpdateDoctorProfileRequest(acceptsConsultations = false))
+        assertFalse(get<uz.sadora.contract.DoctorProfile>("/v1/doctors/$profileId", stranger.token).canMessage)
+        assertEquals(HttpStatusCode.Forbidden, raw { client.post("/v1/doctors/$profileId/consultations") { auth(stranger.token); json(uz.sadora.contract.StartConsultationRequest()) } }.status)
+        put<DoctorAccount>("/v1/doctor/me", doctor.token, uz.sadora.contract.UpdateDoctorProfileRequest(acceptsConsultations = true))
+
+        // The doctor reports the thread: the staff panel reads the lines around the line,
+        // names the doctor by name and the patient by alias, and never shows the record.
+        post<DirectMessage>("/v1/community/conversations/$id/messages", patient.token, SendMessageRequest("Qo'pol xabar"))
+        postAck("/v1/community/conversations/$id/report", doctor.token, ReportRequest(ReportReason.ABUSE))
+        val report = get<Page<ModerationReportView>>("/v1/admin/community/reports?open=true&limit=200", admin)
+            .items.first { it.excerpt == "Qo'pol xabar" }
+        assertTrue(report.consultation, "the queue says the line is from a consultation")
+        assertEquals(uz.sadora.contract.MessageKind.TEXT, report.messageKind)
+        val context = get<uz.sadora.server.community.ReportContextView>("/v1/admin/community/reports/${report.id}/context", admin)
+        assertTrue(context.consultation)
+        assertEquals("$name ✓", context.reporter)
+        assertFalse(context.reportedIsDoctor)
+        assertEquals("Qo'pol xabar", context.messages.single { it.reported }.body)
+        assertTrue(context.messages.filter { it.kind == uz.sadora.contract.MessageKind.RECORD }.all { it.body.isEmpty() })
+        assertFalse(patient.userId in rawGet("/v1/admin/community/reports/${report.id}/context", admin), "the context never carries an account id")
+        assertTrue("community.report_context_viewed" in rawGet("/v1/admin/audit?action=community.report_context_viewed&limit=5", admin))
+        val stats = get<uz.sadora.server.community.CommunityStatsView>("/v1/admin/community/stats", admin)
+        assertTrue(stats.consultations >= 1 && stats.openMessageReports >= 1, "$stats")
+
+        // Silencing the sender by the report stops her writing anywhere in the room.
+        postAck("/v1/admin/community/reports/${report.id}/restrict-sender", admin, uz.sadora.server.community.RestrictAuthorRequest("haqorat", days = 1))
+        assertEquals(HttpStatusCode.Forbidden, raw { client.post("/v1/community/conversations/$id/messages") { auth(patient.token); json(SendMessageRequest("yana")) } }.status)
+
+        // Her card in the doctors page counts, and says nothing more.
+        val card = get<uz.sadora.server.doctor.AdminDoctorDetail>("/v1/admin/doctors/$profileId", admin)
+        val counts = assertNotNull(card.consultations)
+        assertEquals(1, counts.total)
+        assertEquals(1, counts.messagesFromDoctor)
+    }
+
     /** Rows a table holds for one account, by its user_id column. */
     private suspend fun countRowsFor(userId: Uuid, table: String): Int = dbQuery {
         exec("SELECT count(*) FROM $table WHERE user_id = '$userId'") { rows ->

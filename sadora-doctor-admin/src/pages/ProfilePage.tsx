@@ -17,34 +17,84 @@ export function ProfilePage() {
   const doctor = useApprovedDoctor()
   return (
     <div className="two-col even">
-      <Card title="Ma'lumotlarim">
-        <dl className="details">
-          <dt>Ism-sharif</dt>
-          <dd className="row" style={{ gap: 6 }}>
-            {doctor.fullName ?? '—'}
-            <VerifiedMark />
-          </dd>
-          <dt>Mutaxassislik</dt>
-          <dd>{specialtyLabel(doctor.specialty)}</dd>
-          <dt>Tajriba</dt>
-          <dd>{doctor.experienceYears != null ? `${doctor.experienceYears} yil` : '—'}</dd>
-          <dt>Litsenziya raqami</dt>
-          <dd className="mono">{doctor.licenseNumber ?? '—'}</dd>
-          <dt>Hujjatlar</dt>
-          <dd>{doctor.documentCount} ta</dd>
-          <dt>Ariza yuborilgan</dt>
-          <dd>{formatDate(doctor.submittedAt)}</dd>
-          <dt>Tasdiqlangan</dt>
-          <dd>{formatDate(doctor.reviewedAt)}</dd>
-        </dl>
-        <p className="faint" style={{ marginBottom: 0 }}>
-          Ism, mutaxassislik, tajriba va litsenziya hujjatlaringiz bo'yicha tekshirilgan, shuning uchun bu yerda
-          o'zgartirilmaydi.
-        </p>
-      </Card>
+      <div className="grid" style={{ gap: 16, alignContent: 'start' }}>
+        <Card title="Ma'lumotlarim">
+          <dl className="details">
+            <dt>Ism-sharif</dt>
+            <dd className="row" style={{ gap: 6 }}>
+              {doctor.fullName ?? '—'}
+              <VerifiedMark />
+            </dd>
+            <dt>Mutaxassislik</dt>
+            <dd>{specialtyLabel(doctor.specialty)}</dd>
+            <dt>Tajriba</dt>
+            <dd>{doctor.experienceYears != null ? `${doctor.experienceYears} yil` : '—'}</dd>
+            <dt>Litsenziya raqami</dt>
+            <dd className="mono">{doctor.licenseNumber ?? '—'}</dd>
+            <dt>Hujjatlar</dt>
+            <dd>{doctor.documentCount} ta</dd>
+            <dt>Ariza yuborilgan</dt>
+            <dd>{formatDate(doctor.submittedAt)}</dd>
+            <dt>Tasdiqlangan</dt>
+            <dd>{formatDate(doctor.reviewedAt)}</dd>
+          </dl>
+          <p className="faint" style={{ marginBottom: 0 }}>
+            Ism, mutaxassislik, tajriba va litsenziya hujjatlaringiz bo'yicha tekshirilgan, shuning uchun bu yerda
+            o'zgartirilmaydi.
+          </p>
+        </Card>
+
+        <ConsultationSwitch doctor={doctor} />
+      </div>
 
       <ProfileForm doctor={doctor} />
     </div>
+  )
+}
+
+/**
+ * Whether patients may open a consultation with her now. Switching it off leaves the
+ * consultations already open alone; it only stops new ones, which is what the server does.
+ */
+function ConsultationSwitch({ doctor }: { doctor: DoctorAccount }) {
+  const update = useUpdateDoctorProfile()
+  const { notify } = useToast()
+  const accepts = doctor.acceptsConsultations ?? true
+
+  function toggle() {
+    const next = !accepts
+    update.mutate(
+      { acceptsConsultations: next },
+      {
+        onSuccess: () =>
+          notify(next ? 'Konsultatsiyalar qabul qilinmoqda' : "Yangi konsultatsiyalar to'xtatildi"),
+        onError: (error) => notify(messageOf(error), 'error'),
+      },
+    )
+  }
+
+  return (
+    <Card title="Konsultatsiyalar">
+      <label className="switch-row">
+        <span className="switch-text">
+          <b>Konsultatsiya qabul qilaman</b>
+          <span className="faint">
+            {accepts
+              ? "Bemorlar sahifangizdan sizga shaxsiy yozishi mumkin. Har bir konsultatsiya 24 soat ochiq turadi."
+              : "Yangi konsultatsiya ochilmaydi. Ochiq konsultatsiyalar muddati tugaguncha davom etadi."}
+          </span>
+        </span>
+        <input
+          type="checkbox"
+          role="switch"
+          className="switch"
+          aria-label="Konsultatsiya qabul qilaman"
+          checked={accepts}
+          disabled={update.isPending}
+          onChange={toggle}
+        />
+      </label>
+    </Card>
   )
 }
 

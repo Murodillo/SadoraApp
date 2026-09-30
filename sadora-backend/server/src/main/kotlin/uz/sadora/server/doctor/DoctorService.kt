@@ -77,6 +77,18 @@ data class AdminDoctorDetail(
     val reviewedAt: Instant? = null,
     val verifiedAt: Instant? = null,
     val documents: List<AdminDoctorDocument> = emptyList(),
+    val acceptsConsultations: Boolean = true,
+    /** Counts only: how busy her consultations are, never what was said in them. */
+    val consultations: DoctorConsultationStats? = null,
+)
+
+@Serializable
+data class DoctorConsultationStats(
+    val total: Long = 0,
+    val open: Long = 0,
+    val messagesFromDoctor: Long = 0,
+    val messagesFromPatients: Long = 0,
+    val lastMessageAt: Instant? = null,
 )
 
 @Serializable
@@ -106,6 +118,8 @@ class DoctorService(
     private val users: UserRepository,
     private val audit: AuditService,
     private val notifications: NotificationRepository,
+    /** Where her consultation counts come from; null in tests without messages. */
+    private val messaging: uz.sadora.server.community.MessagingRepository? = null,
 ) {
 
     // ---------------------------------------------------------------- her own account
@@ -156,7 +170,13 @@ class DoctorService(
         if (bio != null && bio.length > Limits.DOCTOR_BIO_MAX) {
             throw ValidationException("bio", "Eng ko'pi ${Limits.DOCTOR_BIO_MAX} belgi")
         }
-        doctors.updateProfile(record.id, workplace, bio?.takeIf { it.isNotEmpty() }, keepBio = request.bio == null)
+        doctors.updateProfile(
+            record.id,
+            workplace,
+            bio?.takeIf { it.isNotEmpty() },
+            keepBio = request.bio == null,
+            acceptsConsultations = request.acceptsConsultations,
+        )
         return account(userId)
     }
 
@@ -218,6 +238,8 @@ class DoctorService(
             documents = doctors.documentsOf(record.id).map {
                 AdminDoctorDocument(it.id.toString(), it.kind, it.mimeType, it.sizeBytes, it.createdAt)
             },
+            acceptsConsultations = record.acceptsConsultations,
+            consultations = messaging?.consultationStats(record.id, record.userId),
         )
     }
 
@@ -344,6 +366,7 @@ class DoctorService(
         reviewNote = reviewNote,
         submittedAt = submittedAt,
         reviewedAt = reviewedAt,
+        acceptsConsultations = acceptsConsultations,
     )
 
     companion object {

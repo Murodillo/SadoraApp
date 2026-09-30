@@ -47,6 +47,12 @@ kotlin {
             implementation(libs.compose.uiToolingPreview)
             implementation(libs.compose.uiTooling)
             implementation(libs.ktor.client.okhttp)
+            // The Scan tab's camera and QR reader. ZXing is plain Java: no Play services
+            // and no model to download, so the scanner works on any phone, offline.
+            implementation(libs.androidx.camera.camera2)
+            implementation(libs.androidx.camera.lifecycle)
+            implementation(libs.androidx.camera.view)
+            implementation(libs.zxing.core)
         }
         iosMain.dependencies {
             implementation(libs.ktor.client.darwin)

@@ -3,19 +3,28 @@ package uz.sadora.doctor.data
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import kotlin.time.Instant
 import uz.sadora.contract.CommunityComment
 import uz.sadora.contract.CommunityPost
 import uz.sadora.contract.CommunityTopic
+import uz.sadora.contract.Conversation
+import uz.sadora.contract.ConversationThread
 import uz.sadora.contract.DoctorAccount
 import uz.sadora.contract.DoctorApplicationRequest
 import uz.sadora.contract.DoctorProfile
 import uz.sadora.contract.DoctorStatus
+import uz.sadora.contract.DoctorSummary
+import uz.sadora.contract.Language
+import uz.sadora.contract.MessageImageUpload
+import uz.sadora.contract.ReportReason
+import uz.sadora.contract.SendMessageRequest
 import uz.sadora.contract.UpdateDoctorProfileRequest
 
 /**
  * Everything the doctor does, after signing in: her application and panel, her public
- * page, the questions waiting for a doctor, a question's thread with her answer, and a
- * post of her own.
+ * page, the questions waiting for a doctor, a question's thread with her answer, a post
+ * of her own, the community feed, her private conversations, and the patient records
+ * she opens from a QR code.
  *
  * Ported from the client app's controller. The screens each read their own
  * [ApiCallState], so a failure on one page is not left standing as a banner on the next.
@@ -24,6 +33,7 @@ import uz.sadora.contract.UpdateDoctorProfileRequest
 class DoctorController(
     private val api: DoctorApi?,
     private val community: CommunityApi?,
+    private val patients: PatientApi? = null,
 ) {
     /** The panel: her account, the edit card and the work list. */
     val calls = ApiCallState()
@@ -39,6 +49,15 @@ class DoctorController(
 
     /** A new post of her own. */
     val composeCalls = ApiCallState()
+
+    /** The Community tab's feed. */
+    val feedCalls = ApiCallState()
+
+    /** The Messages tab and an open conversation. */
+    val chatCalls = ApiCallState()
+
+    /** A patient's record, opened from her QR code. */
+    val patientCalls = ApiCallState()
 
     val busy: Boolean get() = calls.busy
     val error: ApiFailure? get() = calls.error
@@ -60,7 +79,6 @@ class DoctorController(
     var profile by mutableStateOf<DoctorProfile?>(null)
         private set
     val profilePosts: List<CommunityPost> get() = profile?.posts.orEmpty()
-
     /** Questions waiting for a doctor — the approved panel's work list. */
     var questions by mutableStateOf<List<CommunityPost>>(emptyList())
         private set
@@ -123,6 +141,14 @@ class DoctorController(
         return true
     }
 
+    /** Her switch for taking consultations; the page patients see follows it at once. */
+    suspend fun setAcceptsConsultations(accepts: Boolean): Boolean {
+        val api = api ?: return false
+        val result = calls.run { api.update(UpdateDoctorProfileRequest(acceptsConsultations = accepts)) } ?: return false
+        account = result
+        return true
+    }
+
     suspend fun update(workplace: String?, bio: String?): Boolean {
         val api = api ?: return false
         val result = calls.run { api.update(UpdateDoctorProfileRequest(workplace = workplace, bio = bio)) } ?: return false
@@ -155,7 +181,7 @@ class DoctorController(
     suspend fun openThread(postId: String) {
         if (openThreadId != postId) {
             openThreadId = postId
-            thread = (questions + profilePosts).firstOrNull { it.id == postId }
+            thread = (questions + profilePosts + feed).firstOrNull { it.id == postId }
             threadComments = emptyList()
             threadLoaded = false
         }
@@ -205,6 +231,190 @@ class DoctorController(
         return true
     }
 
+    // ---------------------------------------------------------------- the feed
+
+    /** The community feed, newest first — all of it, or only the doctors' posts. */
+    var feed by mutableStateOf<List<CommunityPost>>(emptyList())
+        private set
+    var feedLoaded by mutableStateOf(false)
+        private set
+    var feedDoctorsOnly by mutableStateOf(false)
+        private set
+
+    suspend fun loadFeed(doctorsOnly: Boolean = feedDoctorsOnly) {
+        val community = community ?: return
+        if (doctorsOnly != feedDoctorsOnly) {
+            // Another filter is another list: the old one must not stand in for it.
+            feedDoctorsOnly = doctorsOnly
+            feed = emptyList()
+            feedLoaded = false
+        }
+        val posts = feedCalls.run(silent = feedLoaded) { community.feed(doctorsOnly) }?.items ?: return
+        if (doctorsOnly == feedDoctorsOnly) {
+            feed = posts
+            feedLoaded = true
+        }
+    }
+
+    // ---------------------------------------------------------------- consultations
+
+    /** The consultations she holds as a doctor, the most recent first. */
+    var conversations by mutableStateOf<List<Conversation>>(emptyList())
+        private set
+    var conversationsLoaded by mutableStateOf(false)
+        private set
+
+    /** Messages she has not read yet, across every consultation — the tab's dot. */
+    val unreadMessages: Int get() = conversations.sumOf { it.unread }
+
+    /** The consultation open on its own page; every read of it marks it read on the server. */
+    var openConversation by mutableStateOf<ConversationThread?>(null)
+        private set
+
+    /** Photos already fetched, by message id, so a thread polled every few seconds fetches each once. */
+    private val images = mutableMapOf<String, ByteArray>()
+
+    suspend fun loadConversations(silent: Boolean = conversationsLoaded) {
+        val community = community ?: return
+        chatCalls.run(silent = silent) { community.consultations() }?.let {
+            conversations = it
+            conversationsLoaded = true
+        }
+    }
+
+    /**
+     * Reads the thread — on opening, and again on every poll while it is on screen. A
+     * poll is silent: a dropped connection for one tick is not a banner.
+     */
+    suspend fun openConversation(id: String, poll: Boolean = false) {
+        val community = community ?: return
+        if (openConversation?.conversation?.id != id) openConversation = null
+        val thread = chatCalls.run(silent = poll || openConversation != null) { community.conversation(id) } ?: return
+        openConversation = thread
+        // Read now: the list's count for it goes, and with it, perhaps, the tab's dot.
+        conversations = conversations.map { if (it.id == id) thread.conversation else it }
+    }
+
+    /** False when it did not go; the composer then keeps the text. */
+    suspend fun sendMessage(id: String, body: String): Boolean = send(id, SendMessageRequest(body = body))
+
+    suspend fun sendImage(id: String, photo: CapturedPhotoData, caption: String = ""): Boolean =
+        send(id, SendMessageRequest(body = caption, image = MessageImageUpload(photo.base64, photo.mimeType)))
+
+    private suspend fun send(id: String, request: SendMessageRequest): Boolean {
+        val community = community ?: return false
+        val message = chatCalls.run { community.sendMessage(id, request) } ?: return false
+        openConversation = openConversation?.takeIf { it.conversation.id == id }?.let { thread ->
+            thread.copy(
+                conversation = thread.conversation.copy(
+                    lastMessage = message.body,
+                    lastMessageAt = message.createdAt,
+                    lastMessageKind = message.kind,
+                    lastMessageRead = false,
+                ),
+                // A poll may already have brought it in.
+                messages = if (thread.messages.any { it.id == message.id }) thread.messages else thread.messages + message,
+            )
+        }
+        // The conversation moves to the top of the list with its new last line.
+        conversations = conversations
+            .map {
+                if (it.id == id) {
+                    it.copy(lastMessage = message.body, lastMessageAt = message.createdAt, lastMessageKind = message.kind, lastMessageRead = false)
+                } else {
+                    it
+                }
+            }
+            .sortedByDescending { it.lastMessageAt }
+        return true
+    }
+
+    /** "yozmoqda…" for the patient: sent at most once per [TypingEveryMillis] while she types. */
+    suspend fun typing(id: String, nowMillis: Long) {
+        val community = community ?: return
+        if (nowMillis - lastTypingSent < TypingEveryMillis) return
+        lastTypingSent = nowMillis
+        community.typing(id)
+    }
+
+    private var lastTypingSent = 0L
+
+    suspend fun closeConsultation(id: String): Boolean {
+        val community = community ?: return false
+        val thread = chatCalls.run { community.close(id) } ?: return false
+        openConversation = thread
+        conversations = conversations.map { if (it.id == id) thread.conversation else it }
+        return true
+    }
+
+    suspend fun reportConversation(id: String, reason: ReportReason): Boolean {
+        val community = community ?: return false
+        return chatCalls.run { community.report(id, reason) } != null
+    }
+
+    /** A photo's bytes, fetched once; null while it cannot be had. */
+    suspend fun image(conversationId: String, messageId: String): ByteArray? {
+        images[messageId]?.let { return it }
+        val community = community ?: return null
+        val bytes = when (val result = community.image(conversationId, messageId)) {
+            is ApiResult.Success -> result.value
+            is ApiResult.Failure -> return null
+        }
+        images[messageId] = bytes
+        return bytes
+    }
+
+    /**
+     * The record a patient attached, opened on the same page as a scanned one. Keyed
+     * apart from share tokens, and not added to the Scan tab's list: that list is for
+     * the patients in front of her.
+     */
+    suspend fun openAttachedRecord(conversationId: String, messageId: String, language: Language) {
+        val community = community ?: return
+        val key = attachedKey(messageId)
+        if (patientToken != key) {
+            patientToken = key
+            patient = null
+        }
+        val record = patientCalls.run(silent = patient != null) { community.record(conversationId, messageId, language) } ?: return
+        if (patientToken != key) return
+        patient = record
+    }
+
+    // ---------------------------------------------------------------- patients
+
+    /** The record open on its page, and the token it was read by. */
+    var patient by mutableStateOf<DoctorSummary?>(null)
+        private set
+    private var patientToken: String? = null
+
+    /**
+     * The patients opened this session, the latest first, so a second look during the
+     * visit does not need the code again. Held in memory only — never written to the
+     * phone — and gone on sign-out; the link itself expires on her side.
+     */
+    var recentPatients by mutableStateOf<List<RecentPatient>>(emptyList())
+        private set
+
+    /** The code the camera opened last; the Scan tab does not open it again by itself. */
+    var lastScannedToken: String? = null
+
+    fun patientFor(token: String): DoctorSummary? = patient.takeIf { patientToken == token }
+
+    suspend fun openPatient(token: String, language: Language) {
+        val patients = patients ?: return
+        if (patientToken != token) {
+            patientToken = token
+            patient = null
+        }
+        val record = patientCalls.run(silent = patient != null) { patients.record(token, language) } ?: return
+        // She may have scanned another code while this one loaded.
+        if (patientToken != token) return
+        patient = record
+        recentPatients = listOf(RecentPatient(token, record.person.name, record.person.age, record.generatedAt)) +
+            recentPatients.filterNot { it.token == token }.take(RecentPatientsMax - 1)
+    }
+
     // ---------------------------------------------------------------- her own post
 
     /** Publishes a post; the server signs it with her name and check mark. */
@@ -212,6 +422,8 @@ class DoctorController(
         val community = community ?: return false
         val post = composeCalls.run { community.createPost(topic, body) } ?: return false
         profile = profile?.let { it.copy(postCount = it.postCount + 1, posts = listOf(post) + it.posts) }
+        // Her post is a doctor's post: it belongs at the top of either filter.
+        if (feedLoaded) feed = listOf(post) + feed
         return true
     }
 
@@ -219,6 +431,18 @@ class DoctorController(
     fun reset() {
         account = null
         profile = null
+        feed = emptyList()
+        feedLoaded = false
+        feedDoctorsOnly = false
+        conversations = emptyList()
+        conversationsLoaded = false
+        openConversation = null
+        images.clear()
+        lastTypingSent = 0L
+        patient = null
+        patientToken = null
+        recentPatients = emptyList()
+        lastScannedToken = null
         questions = emptyList()
         questionsLoaded = false
         answeredQuestions = emptyList()
@@ -227,7 +451,7 @@ class DoctorController(
         thread = null
         threadComments = emptyList()
         threadLoaded = false
-        listOf(calls, applyCalls, profileCalls, threadCalls, composeCalls).forEach { it.clearError() }
+        listOf(calls, applyCalls, profileCalls, threadCalls, composeCalls, feedCalls, chatCalls, patientCalls).forEach { it.clearError() }
     }
 }
 
@@ -236,3 +460,17 @@ data class AnsweredQuestion(val post: CommunityPost, val index: Int)
 
 /** One entry of the work list. [answered] entries are on their way out. */
 data class QuestionRow(val post: CommunityPost, val answered: Boolean)
+
+/** A patient opened this session, as the Scan tab lists her. */
+data class RecentPatient(val token: String, val name: String, val age: Int?, val openedAt: Instant)
+
+private const val RecentPatientsMax = 10
+
+/** How often "yozmoqda…" is reported while she types; the server holds it a little longer. */
+private const val TypingEveryMillis = 3_000L
+
+/** A photo on its way to a thread: the picker's bytes, already resized and encoded. */
+data class CapturedPhotoData(val base64: String, val mimeType: String)
+
+/** The key a record attached in a consultation is held under, apart from share tokens. */
+fun attachedKey(messageId: String): String = "message:$messageId"

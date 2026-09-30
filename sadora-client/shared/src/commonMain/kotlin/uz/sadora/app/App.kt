@@ -35,7 +35,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import uz.sadora.contract.DoctorProfile
 import uz.sadora.app.data.AnalyticsEvents
 import uz.sadora.app.data.CommunitySyncBridge
 import uz.sadora.app.data.HealthSync
@@ -72,6 +74,7 @@ import uz.sadora.app.ui.components.SystemBackHandler
 import uz.sadora.app.ui.core.AiChatScreen
 import uz.sadora.app.ui.core.AiFreePreviewScreen
 import uz.sadora.app.ui.core.AliasProfileScreen
+import uz.sadora.app.ui.core.ConsultationConsentSheetContent
 import uz.sadora.app.ui.core.DoctorProfileScreen
 import uz.sadora.app.ui.core.CommunityRulesSheetContent
 import uz.sadora.app.ui.core.ConversationMenuSheetContent
@@ -287,6 +290,8 @@ private class ShellOverlays {
     var showCommunityRules by mutableStateOf(false)
     var showEditBio by mutableStateOf(false)
     var showConversationMenu by mutableStateOf(false)
+    /** The doctor she is about to open a consultation with: the consent sheet is up. */
+    var consultWith by mutableStateOf<DoctorProfile?>(null)
     var showSymptomSheet by mutableStateOf(false)
 
     /** The day the symptom sheet writes; null is today. Set by the calendar's day page. */
@@ -298,7 +303,7 @@ private class ShellOverlays {
 
     val anyOpen: Boolean
         get() = showWaterSheet || showSymptomSheet || menuFor != null || showCompose || showCommunityRules ||
-            showEditBio || showConversationMenu
+            showEditBio || showConversationMenu || consultWith != null
 
     /** Closes the topmost sheet. False when none was open. */
     fun closeTop(): Boolean = when {
@@ -309,6 +314,7 @@ private class ShellOverlays {
         showCommunityRules -> { showCommunityRules = false; true }
         showEditBio -> { showEditBio = false; true }
         showConversationMenu -> { showConversationMenu = false; true }
+        consultWith != null -> { consultWith = null; true }
         else -> false
     }
 }
@@ -387,6 +393,24 @@ private fun MainShell(
             if (outcome.periodsAdded > 0) health.refreshCycle()
         }
         onPauseOrDispose { }
+    }
+
+    // The unread count behind the chat's envelope and the dot on its tab: read each time
+    // the app comes forward, and every half minute while she is on the Chat tab, where a
+    // doctor's reply is most likely to be waited for. Elsewhere the count waits for the
+    // next return to the front, rather than polling from every tab.
+    LifecycleResumeEffect(community) {
+        val job = scope.launch { community.refreshIdentity() }
+        onPauseOrDispose { job.cancel() }
+    }
+    LifecycleResumeEffect(community, navigator.tab) {
+        val job = if (navigator.tab != Tab.SecretChat) null else scope.launch {
+            while (true) {
+                delay(UnreadRefreshMillis)
+                community.refreshIdentity()
+            }
+        }
+        onPauseOrDispose { job?.cancel() }
     }
 
     // The streak celebration is the one event worth an analytics row on its own:
@@ -476,7 +500,12 @@ private fun MainShell(
                     label = "route",
                 ) { pushed ->
                     if (pushed != null) {
-                        PushedScreen(pushed, state, navigator, controllers, overlays, toast)
+                        PushedScreen(
+                            pushed, state, navigator, controllers, overlays, toast,
+                            // In the shell's scope: the thread's own ends with it, and the
+                            // count is refreshed exactly as she leaves.
+                            onThreadRead = { scope.launch { community.refreshIdentity() } },
+                        )
                     } else {
                         AnimatedContent(
                             targetState = navigator.tab,
@@ -506,6 +535,7 @@ private fun MainShell(
                     onSelect = navigator::select,
                     journeyLabel = strings.tabs.journey(state.lifeStage),
                     mindLabel = if (state.isPremium) strings.tabs.mind else strings.tabs.mindAndNutrition,
+                    chatUnread = state.communityUnread,
                 )
             }
         }
@@ -621,11 +651,30 @@ private fun MainShell(
                 messages = controllers.messages,
                 community = community,
                 onOpenProfile = { navigator.push(Route.AliasProfile(it)) },
+                onOpenDoctor = { navigator.openDoctor(it) },
                 onDone = { message ->
                     overlays.showConversationMenu = false
                     message?.let { overlays.toast = it }
                 },
             )
+        }
+
+        SadoraBottomSheet(
+            visible = overlays.consultWith != null,
+            title = strings.doctors.consentTitle,
+            onDismiss = { overlays.consultWith = null },
+        ) {
+            overlays.consultWith?.let { doctor ->
+                ConsultationConsentSheetContent(
+                    profile = doctor,
+                    messages = controllers.messages,
+                    onStarted = { thread ->
+                        overlays.consultWith = null
+                        navigator.push(Route.Conversation(thread.id, thread.alias))
+                    },
+                    onCancel = { overlays.consultWith = null },
+                )
+            }
         }
 
         SadoraBottomSheet(
@@ -750,6 +799,7 @@ private fun PushedScreen(
     controllers: AppControllers,
     overlays: ShellOverlays,
     toast: (String) -> Unit,
+    onThreadRead: () -> Unit,
 ) {
     val close = navigator::pop
     val upgrade = {
@@ -857,8 +907,11 @@ private fun PushedScreen(
             doctorId = route.id,
             state = state,
             doctors = controllers.doctors,
+            messages = controllers.messages,
             onOpenPost = { navigator.push(Route.Post(it.id)) },
             onOpenMenu = { overlays.menuFor = it },
+            onMessage = { overlays.consultWith = it },
+            onOpenConversation = { id, name -> navigator.push(Route.Conversation(id, name)) },
             onClose = close,
         )
         is Route.AliasProfile -> AliasProfileScreen(
@@ -868,8 +921,9 @@ private fun PushedScreen(
             onOpenPost = { navigator.push(Route.Post(it.id)) },
             onOpenMenu = { overlays.menuFor = it },
             onMessage = { alias ->
-                // An existing thread with her is reused; the list knows which.
-                val existing = controllers.messages.conversations.firstOrNull { it.alias == alias }
+                // An existing thread with her is reused; the list knows which. A consultation
+                // carries a doctor's real name, never an alias, but it is excluded all the same.
+                val existing = controllers.messages.conversations.firstOrNull { it.alias == alias && !it.isConsultation }
                 navigator.push(Route.Conversation(existing?.id, alias))
             },
             onEditBio = { overlays.showEditBio = true },
@@ -885,8 +939,11 @@ private fun PushedScreen(
             conversationId = route.id,
             alias = route.alias,
             messages = controllers.messages,
+            language = state.language.code,
             onOpenProfile = { navigator.push(Route.AliasProfile(it)) },
+            onOpenDoctor = { navigator.openDoctor(it) },
             onOpenMenu = { overlays.showConversationMenu = true },
+            onRead = onThreadRead,
             onClose = close,
         )
 
@@ -938,3 +995,6 @@ private fun PushedScreen(
         )
     }
 }
+
+/** How often the unread count is re-read while she is on the Chat tab. */
+private const val UnreadRefreshMillis = 30_000L

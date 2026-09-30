@@ -10,8 +10,13 @@ import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Instant
 import kotlinx.datetime.LocalDate
 import uz.sadora.contract.CommunityTopic
+import uz.sadora.contract.CyclePhase
 import uz.sadora.contract.DoctorDocumentKind
 import uz.sadora.contract.DoctorSpecialty
+import uz.sadora.contract.FlowLevel
+import uz.sadora.contract.HealthMetric
+import uz.sadora.contract.LifeStage
+import uz.sadora.contract.ReportReason
 import uz.sadora.doctor.data.ApiFailure
 import uz.sadora.doctor.data.readable
 
@@ -88,6 +93,35 @@ class StringsTest {
                 ),
             )
         }
+        with(t.tabs) {
+            addAll(listOf(greeting(8), greeting(14), greeting(22)))
+            LifeStage.entries.forEach { add(lifeStage(it)) }
+            CyclePhase.entries.forEach { add(phase(it)) }
+            FlowLevel.entries.forEach { add(flow(it)) }
+            ReportReason.entries.forEach { add(reportReason(it)) }
+            HealthMetric.entries.forEach { metric -> metric(metric)?.let { add(it) } }
+            addAll(
+                listOf(
+                    home, messages, scan, community, profile, homeSubtitle, statWaiting, statUnread,
+                    scanPatient, scanPatientBody, seeAll, messagesEmpty, messagesEmptyBody, messageHint,
+                    conversationClosed, unread(3), scanTitle, scanHint, cameraStarting, cameraDenied,
+                    openSettings, cameraMissing, notPatientCode, pasteLabel, open, recentTitle, recentNote,
+                    communityTitle, filterAll, filterDoctors, feedEmpty, feedEmptyBody, recordTitle,
+                    recordGone, recordGoneBody, recordDisclaimer, generatedAt("4-sentabr, 09:00"), age(31),
+                    heightLabel, weightLabel, cm(165), kg(58), days(28), memberSince("Sentabr 2026"),
+                    nothingYet, cycleTitle, cycleDay, phaseLabel, lastPeriod, averageCycle, averagePeriod,
+                    cycleRange, nextPeriod, estimated, pregnancyTitle, weekLabel, dueDate, birthDate,
+                    lessMovement(2), symptomsTitle, symptomsWindow(90), recentDaysTitle, mindTitle,
+                    daysLogged, averageMood, averageEnergy, averageStress, medsTitle, adherence(90),
+                    medFinished, appointmentsTitle, nutritionTitle, averageKcal, averageWater,
+                    wearableTitle, kcal(1800), ml(2000), hoursMinutes(450),
+                    consultationOpen(5, 20), consultationOpen(0, 12), consultationClosed, consultationClosedBody,
+                    closeConsultation, closeConfirmTitle, closeConfirmBody, closeConfirm, typing, photo, record,
+                    recordCardTitle, recordCardBody, viewRecord, recordClosed, attachPhoto, photoFailed, report,
+                    reportTitle, reportSent, sent, read, namesNotice, acceptsTitle, acceptsBody,
+                ),
+            )
+        }
     }
 
     @Test
@@ -122,6 +156,21 @@ class StringsTest {
             val same = uz.indices.count { uz[it] == other[it] }
             assertTrue(same * 10 < uz.size, "${t.language}: $same of ${uz.size} lines are the Uzbek text")
         }
+    }
+
+    @Test
+    fun `the record's metrics are the same set in every language`() {
+        val shown = languages.map { t -> HealthMetric.entries.filter { t.tabs.metric(it) != null } }
+        assertEquals(1, shown.distinct().size, "$shown")
+    }
+
+    @Test
+    fun `russian ages agree with their number`() {
+        val t = StringsRu.tabs
+        assertEquals("21 год", t.age(21))
+        assertEquals("23 года", t.age(23))
+        assertEquals("25 лет", t.age(25))
+        assertEquals("11 лет", t.age(11))
     }
 
     @Test

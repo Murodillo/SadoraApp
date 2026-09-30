@@ -78,7 +78,9 @@ class CommunityService(
         val stats = repository.activityFor(listOf(userId))[userId]
         return identity.toDto(
             badges = stats?.let { CommunityBadges.of(it, now()) }.orEmpty(),
-            unread = messaging?.unreadTotal(userId) ?: 0,
+            // Her own threads only: the consultations she holds as a doctor are counted
+            // in the doctor app, not on the chat header of her own.
+            unread = messaging?.unreadTotal(userId, doctors?.byUser(userId)?.id) ?: 0,
         )
     }
 
@@ -321,6 +323,8 @@ class CommunityService(
         val doctor = doctors?.byId(doctorId)?.takeIf { it.status == uz.sadora.contract.DoctorStatus.APPROVED }
             ?: throw NotFoundException("Shifokor topilmadi")
         val (posts, answers) = repository.doctorActivity(listOf(doctor.id))[doctor.id] ?: (0 to 0)
+        val isMe = doctor.userId == viewer
+        val existing = if (isMe) null else messaging?.consultationBetween(viewer, doctor.userId, doctor.id)
         return DoctorProfile(
             id = doctor.id.toString(),
             fullName = doctor.fullName,
@@ -331,8 +335,12 @@ class CommunityService(
             verifiedSince = doctor.verifiedAt ?: doctor.submittedAt,
             postCount = posts,
             answerCount = answers,
-            isMe = doctor.userId == viewer,
+            isMe = isMe,
             posts = project(viewer, repository.doctorPosts(doctor.id, PROFILE_POSTS)),
+            // Folds every refusal the start would give, so the button is drawn or not.
+            canMessage = !isMe && doctor.acceptsConsultations && messaging != null &&
+                !repository.blockedEitherWay(viewer, doctor.userId),
+            conversationId = existing?.id?.toString(),
         )
     }
 

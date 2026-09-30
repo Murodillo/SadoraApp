@@ -105,6 +105,11 @@ object CommunityConversations : Table("community_conversations") {
     val lastMessageAt = timestampWithTimeZone("last_message_at")
     val aReadAt = timestampWithTimeZone("a_read_at").nullable()
     val bReadAt = timestampWithTimeZone("b_read_at").nullable()
+    /** Set on a consultation: the doctor profile it is held under. */
+    val doctorId = uuid("doctor_id").nullable()
+    val openedAt = timestampWithTimeZone("opened_at").nullable()
+    val expiresAt = timestampWithTimeZone("expires_at").nullable()
+    val closedAt = timestampWithTimeZone("closed_at").nullable()
 
     override val primaryKey = PrimaryKey(id)
 }
@@ -117,8 +122,22 @@ object CommunityMessages : Table("community_messages") {
     val status = text("status")
     val hiddenReason = text("hidden_reason").nullable()
     val createdAt = timestampWithTimeZone("created_at")
+    /** `text`, `image` or `record`. */
+    val kind = text("kind")
 
     override val primaryKey = PrimaryKey(id)
+}
+
+/** The photo of an `image` message, read only when someone opens it. */
+object CommunityMessageImages : Table("community_message_images") {
+    val messageId = uuid("message_id").references(CommunityMessages.id)
+    val mimeType = text("mime_type")
+    val width = integer("width")
+    val height = integer("height")
+    val content = binary("content")
+    val createdAt = timestampWithTimeZone("created_at")
+
+    override val primaryKey = PrimaryKey(messageId)
 }
 
 object CommunityBlocks : Table("community_blocks") {

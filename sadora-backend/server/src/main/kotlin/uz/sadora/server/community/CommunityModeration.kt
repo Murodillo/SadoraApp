@@ -1,8 +1,12 @@
 package uz.sadora.server.community
 
+import io.ktor.http.ContentType
+import io.ktor.http.HttpHeaders
 import io.ktor.server.auth.authenticate
 import io.ktor.server.request.receive
+import io.ktor.server.response.header
 import io.ktor.server.response.respond
+import io.ktor.server.response.respondBytes
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.get
 import io.ktor.server.routing.post
@@ -13,6 +17,7 @@ import kotlin.uuid.Uuid
 import kotlinx.serialization.Serializable
 import uz.sadora.contract.Ack
 import uz.sadora.contract.CommunityTopic
+import uz.sadora.contract.MessageKind
 import uz.sadora.contract.Page
 import uz.sadora.contract.ReportReason
 import uz.sadora.server.api.enumParameter
@@ -85,6 +90,10 @@ data class ModerationReportView(
     val createdAt: Instant,
     val resolvedAt: Instant? = null,
     val resolution: String? = null,
+    /** For a message: text, a photo, or an attached record. */
+    val messageKind: MessageKind? = null,
+    /** The reported message is in a consultation with a doctor. */
+    val consultation: Boolean = false,
 )
 
 @Serializable
@@ -93,6 +102,42 @@ data class CommunityStatsView(
     val postsToday: Long,
     val hiddenPosts: Long,
     val openReports: Long,
+    // Private messages, counted. The panel sees how much is said, never what.
+    val messagesToday: Long = 0,
+    val conversations: Long = 0,
+    val consultations: Long = 0,
+    val openConsultations: Long = 0,
+    val openMessageReports: Long = 0,
+)
+
+/**
+ * A reported private message with the lines around it — the one view of a private
+ * thread the staff panel has, opened from a report and audited on every opening. The
+ * two sides are named as the room knows them: aliases, or a doctor by her name. Photos
+ * are marked, and only the reported one can be opened.
+ */
+@Serializable
+data class ReportContextView(
+    val reportId: String,
+    val consultation: Boolean,
+    val reporter: String,
+    val reported: String,
+    /** The reported side is a verified doctor. */
+    val reportedIsDoctor: Boolean = false,
+    val messages: List<ReportContextMessage>,
+)
+
+@Serializable
+data class ReportContextMessage(
+    val id: String,
+    /** Sent by the reported side; otherwise by the one who reported. */
+    val fromReported: Boolean,
+    val kind: MessageKind,
+    val body: String,
+    val createdAt: Instant,
+    /** The message the report is about. */
+    val reported: Boolean,
+    val hidden: Boolean,
 )
 
 @Serializable
@@ -127,6 +172,8 @@ class CommunityModerationService(
     private val repository: CommunityRepository,
     private val audit: AuditService,
     private val messaging: MessagingRepository,
+    /** Names a doctor side by her name in a report's context; null leaves aliases. */
+    private val doctors: uz.sadora.server.doctor.DoctorRepository? = null,
 ) {
 
     suspend fun posts(
@@ -151,7 +198,95 @@ class CommunityModerationService(
 
     suspend fun stats(): CommunityStatsView {
         val stats = repository.stats(now().dayIn("UTC"))
-        return CommunityStatsView(stats.postsTotal, stats.postsToday, stats.hiddenPosts, stats.openReports)
+        val dms = messaging.messagingStats(now() - 1.days)
+        return CommunityStatsView(
+            stats.postsTotal, stats.postsToday, stats.hiddenPosts, stats.openReports,
+            messagesToday = dms.messagesToday,
+            conversations = dms.conversations,
+            consultations = dms.consultations,
+            openConsultations = dms.openConsultations,
+            openMessageReports = dms.openMessageReports,
+        )
+    }
+
+    /** The lines around a reported message. Audited: reading a private thread is an act. */
+    suspend fun reportContext(reportId: Uuid, admin: AdminPrincipal, context: RequestContext): ReportContextView {
+        val (reporter, messageId) = messaging.messageReport(reportId) ?: throw NotFoundException("Xabar shikoyati topilmadi")
+        val target = messaging.messageById(messageId) ?: throw NotFoundException("Xabar topilmadi")
+        val thread = messaging.conversationById(target.conversationId) ?: throw NotFoundException("Suhbat topilmadi")
+        val reported = target.senderId
+        val lines = messaging.contextOf(messageId, CONTEXT_RADIUS)
+        val doctor = thread.doctorId?.let { doctors?.byId(it) }
+        val aliases = repository.identitiesFor(listOf(reporter, reported))
+        fun label(user: Uuid) = if (doctor != null && doctor.userId == user) {
+            "${doctor.fullName} ✓"
+        } else {
+            aliases[user]?.alias ?: CommunityService.FALLBACK_ALIAS
+        }
+        audit.record(
+            admin.entry(
+                action = AuditActions.COMMUNITY_REPORT_CONTEXT_VIEWED,
+                entityType = "community_message",
+                entityId = messageId.toString(),
+                metadata = mapOf("reportId" to reportId.toString()),
+                context = context,
+            ),
+        )
+        return ReportContextView(
+            reportId = reportId.toString(),
+            consultation = thread.isConsultation,
+            reporter = label(reporter),
+            reported = label(reported),
+            reportedIsDoctor = doctor?.userId == reported,
+            messages = lines.map { line ->
+                ReportContextMessage(
+                    id = line.id.toString(),
+                    fromReported = line.senderId == reported,
+                    kind = line.kind,
+                    // A record is her health data: the moderator is told it was attached, nothing more.
+                    body = if (line.kind == MessageKind.RECORD) "" else line.body,
+                    createdAt = line.createdAt,
+                    reported = line.id == messageId,
+                    hidden = line.status == ContentStatus.HIDDEN,
+                )
+            },
+        )
+    }
+
+    /** The photo of the reported message itself — no other picture in the thread. */
+    suspend fun reportImage(reportId: Uuid, admin: AdminPrincipal, context: RequestContext): MessageImageRecord {
+        val (_, messageId) = messaging.messageReport(reportId) ?: throw NotFoundException("Xabar shikoyati topilmadi")
+        val image = messaging.imageOf(messageId) ?: throw NotFoundException("Rasm topilmadi")
+        audit.record(
+            admin.entry(
+                action = AuditActions.COMMUNITY_REPORT_CONTEXT_VIEWED,
+                entityType = "community_message",
+                entityId = messageId.toString(),
+                metadata = mapOf("reportId" to reportId.toString(), "image" to "true"),
+                context = context,
+            ),
+        )
+        return image
+    }
+
+    /** Silences the sender of a reported message, named by the report and never by account. */
+    suspend fun restrictSender(reportId: Uuid, request: RestrictAuthorRequest, admin: AdminPrincipal, context: RequestContext) {
+        val reason = request.reason.trim()
+        if (reason.isEmpty()) throw ValidationException("reason", "Sabab ko'rsatilishi shart")
+        request.days?.let { if (it !in 1..365) throw ValidationException("days", "1–365 kun oralig'ida") }
+        val (_, messageId) = messaging.messageReport(reportId) ?: throw NotFoundException("Xabar shikoyati topilmadi")
+        val until = request.days?.let { now() + it.days }
+        if (!repository.restrictSenderOf(messageId, reason, until, admin.adminId)) throw NotFoundException("Xabar topilmadi")
+        audit.record(
+            admin.entry(
+                action = AuditActions.COMMUNITY_AUTHOR_RESTRICTED,
+                entityType = "community_message",
+                entityId = messageId.toString(),
+                reason = reason,
+                metadata = mapOf("until" to (until?.toString() ?: "indefinite"), "reportId" to reportId.toString()),
+                context = context,
+            ),
+        )
     }
 
     suspend fun setPostHidden(postId: Uuid, request: HideRequest, admin: AdminPrincipal, context: RequestContext) {
@@ -284,6 +419,8 @@ class CommunityModerationService(
         createdAt = createdAt,
         resolvedAt = resolvedAt,
         resolution = resolution,
+        messageKind = messageKind,
+        consultation = consultation,
     )
 
     companion object {
@@ -291,6 +428,8 @@ class CommunityModerationService(
         const val ACTION_HIDE = "hide"
         const val RESOLUTION_DISMISSED = "dismissed"
         const val RESOLUTION_HIDDEN = "hidden"
+        /** Lines each side of a reported message in its context. */
+        const val CONTEXT_RADIUS = 8
     }
 }
 
@@ -371,6 +510,25 @@ fun Route.adminCommunityRoutes(moderation: CommunityModerationService) {
                         offset = call.intParameter("offset", default = 0, max = Int.MAX_VALUE).toLong(),
                     ),
                 )
+            }
+
+            get("/reports/{id}/context") {
+                val admin = call.requireAdminRole(AdminRole.OWNER, AdminRole.ADMIN, AdminRole.SUPPORT)
+                call.respond(moderation.reportContext(parseUuid(call.parameters["id"].orEmpty(), "id"), admin, call.requestContext()))
+            }
+
+            get("/reports/{id}/image") {
+                val admin = call.requireAdminRole(AdminRole.OWNER, AdminRole.ADMIN, AdminRole.SUPPORT)
+                val image = moderation.reportImage(parseUuid(call.parameters["id"].orEmpty(), "id"), admin, call.requestContext())
+                call.response.header(HttpHeaders.CacheControl, "no-store")
+                call.respondBytes(image.bytes, ContentType.parse(image.mimeType))
+            }
+
+            post("/reports/{id}/restrict-sender") {
+                val admin = call.requireAdminRole(AdminRole.OWNER, AdminRole.ADMIN)
+                val request = call.receive<RestrictAuthorRequest>()
+                moderation.restrictSender(parseUuid(call.parameters["id"].orEmpty(), "id"), request, admin, call.requestContext())
+                call.respond(Ack())
             }
 
             post("/reports/{id}/resolve") {

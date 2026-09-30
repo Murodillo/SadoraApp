@@ -4,6 +4,9 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
+import kotlin.time.Duration.Companion.hours
+import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Duration.Companion.seconds
 import kotlinx.datetime.LocalDate
 import uz.sadora.app.model.AppLanguage
 import uz.sadora.app.model.BirthControl
@@ -310,6 +313,11 @@ class StringsTest {
                     blockConfirmTitle, blockConfirmBody, blocked, unblocked, viewProfile, messagesTitle,
                     messagesSubtitle, noMessages, noMessagesBody, messageHint, conversationBlocked,
                     conversationMenu, reportConversation, newConversation, unreadCount(2),
+                    photo, photoNote, record, attach, photoCaptionHint, sendPhoto, photoFailed, sending,
+                    tickSent, tickRead, typing("X"), typingShort, recordAttached, recordAttachedNote,
+                    attachRecord, attachRecordNote, attachRecordConfirmTitle, attachRecordConfirmBody,
+                    attachRecordConfirm, recordTitle, recordNote, recordAge(28), recordDays(12),
+                    recordCycleDay(14), recordPregnancyWeek(20), recordSymptoms, recordMedications, recordEmpty,
                 ),
             )
             addAll(rules)
@@ -355,8 +363,13 @@ class StringsTest {
                     verified, filterChip, doctorAnswer, answeredBy(1), answeredBy(3), nothingYet, nothingYetBody,
                     disclaimer, writingAs("X"), profileTitle, verifiedSince("x"), statPosts, statAnswers,
                     statExperience, herPosts, noPosts,
+                    messageDoctor, openConsultation, viewHistory, messageDoctorNote, cannotMessage, consentTitle,
+                    consentConfirm, consultationOpen, hoursLeft(23), minutesLeft(40), consultationExpired,
+                    consultationClosed, consultationClosedBody, reopen, composerClosed, chipOpen, chipClosed,
+                    threadNote, doctorPage,
                 ),
             )
+            addAll(consentPoints)
             uz.sadora.contract.DoctorSpecialty.entries.forEach { add(specialty(it)) }
         }
         with(t.share) {
@@ -509,6 +522,11 @@ class StringsTest {
             assertNotEquals(StringsUz.community.reportNote, t.community.reportNote)
             assertNotEquals(StringsUz.doctors.disclaimer, t.doctors.disclaimer)
             assertNotEquals(StringsUz.doctors.nothingYetBody, t.doctors.nothingYetBody)
+            assertNotEquals(StringsUz.doctors.threadNote, t.doctors.threadNote)
+            assertNotEquals(StringsUz.doctors.consultationClosedBody, t.doctors.consultationClosedBody)
+            StringsUz.doctors.consentPoints.zip(t.doctors.consentPoints).forEach { (uz, other) -> assertNotEquals(uz, other) }
+            assertNotEquals(StringsUz.community.attachRecordConfirmBody, t.community.attachRecordConfirmBody)
+            assertNotEquals(StringsUz.community.recordNote, t.community.recordNote)
             assertNotEquals(
                 StringsUz.modules.sleepEnergyFinding("1", "2"),
                 t.modules.sleepEnergyFinding("1", "2"),
@@ -606,5 +624,33 @@ class StringsTest {
             assertNotEquals(t.tabs.journey(LifeStage.Cycle), t.tabs.journey(LifeStage.Pregnancy))
             assertNotEquals(t.tabs.journey(LifeStage.Cycle), t.tabs.journey(LifeStage.Menopause))
         }
+    }
+
+    /**
+     * What she is told before a consultation opens is a promise, not decoration: four
+     * points in every language, and the two that matter most — her name is seen, and 103
+     * — actually said in each.
+     */
+    @Test
+    fun `the consultation consent says the same four things in every language`() {
+        languages.forEach { t ->
+            val points = t.doctors.consentPoints
+            assertEquals(4, points.size)
+            assertTrue(points.any { "24" in it }, "the window's length")
+            assertTrue(points.any { "103" in it }, "the emergency number")
+            assertTrue("103" in t.doctors.threadNote)
+        }
+    }
+
+    /** "23 soat qoldi" in whole hours, then minutes, and never "0" while the window is open. */
+    @Test
+    fun `time left reads in hours then minutes and never zero`() {
+        assertEquals("23 soat qoldi", StringsUz.doctors.timeLeft(23.hours + 40.minutes))
+        assertEquals("1 soat qoldi", StringsUz.doctors.timeLeft(60.minutes))
+        assertEquals("59 daqiqa qoldi", StringsUz.doctors.timeLeft(59.minutes + 30.seconds))
+        assertEquals("1 daqiqa qoldi", StringsUz.doctors.timeLeft(10.seconds))
+        assertEquals("Осталось 23 ч", StringsRu.doctors.timeLeft(23.hours))
+        assertEquals("1 hour left", StringsEn.doctors.timeLeft(61.minutes))
+        assertEquals("5 minutes left", StringsEn.doctors.timeLeft(5.minutes))
     }
 }

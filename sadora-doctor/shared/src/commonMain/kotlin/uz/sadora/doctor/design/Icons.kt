@@ -211,4 +211,165 @@ object SadoraIcons {
             moveTo(9f, 12.2f); lineTo(11.2f, 14.4f); lineTo(15.2f, 9.8f)
         }
     }
+
+    // ---- the tab bar and the patient record, copied from the client set
+
+    /** Bugun tab — the house from the deck's tab bar. */
+    val Home: ImageVector = icon("Home") {
+        stroke {
+            moveTo(3.6f, 11.2f); lineTo(12f, 4.2f); lineTo(20.4f, 11.2f)
+        }
+        stroke {
+            moveTo(5.8f, 9.6f); lineTo(5.8f, 19.4f)
+            lineTo(18.2f, 19.4f); lineTo(18.2f, 9.6f)
+        }
+        stroke {
+            moveTo(10f, 19.4f); lineTo(10f, 14.6f); lineTo(14f, 14.6f); lineTo(14f, 19.4f)
+        }
+    }
+
+    /** Chat — two overlapping speech bubbles: a room, not a private line. */
+    val Chats: ImageVector = icon("Chats") {
+        stroke {
+            moveTo(3.6f, 7.6f)
+            quadTo(3.6f, 5.2f, 6f, 5.2f)
+            lineTo(13.2f, 5.2f)
+            quadTo(15.6f, 5.2f, 15.6f, 7.6f)
+            lineTo(15.6f, 12.4f)
+            quadTo(15.6f, 14.8f, 13.2f, 14.8f)
+            lineTo(8.4f, 14.8f)
+            lineTo(5.2f, 17.6f)
+            lineTo(5.2f, 14.8f)
+            quadTo(3.6f, 14.6f, 3.6f, 12.4f)
+            close()
+        }
+        stroke {
+            moveTo(15.6f, 9.2f)
+            lineTo(18f, 9.2f)
+            quadTo(20.4f, 9.2f, 20.4f, 11.6f)
+            lineTo(20.4f, 16f)
+            quadTo(20.4f, 18.2f, 18.8f, 18.4f)
+            lineTo(18.8f, 21f)
+            lineTo(15.8f, 18.4f)
+            lineTo(11.6f, 18.4f)
+            quadTo(9.6f, 18.4f, 9.4f, 16.6f)
+        }
+    }
+
+    /** Profil — head and shoulders. */
+    val Profile: ImageVector = icon("Profile") {
+        stroke {
+            moveTo(12f, 4.6f)
+            arcToRelative(3.7f, 3.7f, 0f, true, true, 0f, 7.4f)
+            arcToRelative(3.7f, 3.7f, 0f, true, true, 0f, -7.4f)
+            close()
+        }
+        stroke {
+            moveTo(4.8f, 20.2f)
+            curveToRelative(1.4f, -3.9f, 4f, -5.9f, 7.2f, -5.9f)
+            reflectiveCurveToRelative(5.8f, 2f, 7.2f, 5.9f)
+        }
+    }
+
+    /** Forward, and the "opens a screen" mark at the end of a settings row. */
+    val ChevronRight: ImageVector = icon("ChevronRight") {
+        stroke { moveTo(9.4f, 5.4f); lineTo(15.4f, 12f); lineTo(9.4f, 18.6f) }
+    }
+
+    /** Saved article. */
+    val Heart: ImageVector = icon("Heart") {
+        stroke {
+            moveTo(12f, 20.2f)
+            curveToRelative(-6.4f, -3.9f, -9f, -7.5f, -9f, -11f)
+            arcToRelative(4.6f, 4.6f, 0f, false, true, 9f, -1.9f)
+            arcToRelative(4.6f, 4.6f, 0f, false, true, 9f, 1.9f)
+            curveToRelative(0f, 3.5f, -2.6f, 7.1f, -9f, 11f)
+            close()
+        }
+    }
+
+    /** Suv. */
+    val Drop: ImageVector = icon("Drop") {
+        stroke {
+            moveTo(12f, 3.4f)
+            curveToRelative(4.2f, 4.6f, 6.3f, 8.1f, 6.3f, 10.6f)
+            arcToRelative(6.3f, 6.3f, 0f, false, true, -12.6f, 0f)
+            curveToRelative(0f, -2.5f, 2.1f, -6f, 6.3f, -10.6f)
+            close()
+        }
+    }
+
+    /** Dorilar — a capsule split across the middle. */
+    val Pill: ImageVector = icon("Pill") {
+        stroke {
+            moveTo(5.2f, 13.2f)
+            lineTo(13.2f, 5.2f)
+            arcToRelative(4f, 4f, 0f, false, true, 5.6f, 5.6f)
+            lineTo(10.8f, 18.8f)
+            arcToRelative(4f, 4f, 0f, false, true, -5.6f, -5.6f)
+            close()
+        }
+        stroke { moveTo(9.2f, 9.2f); lineTo(14.8f, 14.8f) }
+    }
+
+    /** Kalendar. */
+    val Calendar: ImageVector = icon("Calendar") {
+        stroke {
+            moveTo(6f, 5.6f)
+            horizontalLineToRelative(12f)
+            curveToRelative(1.2f, 0f, 2f, 0.8f, 2f, 2f)
+            verticalLineToRelative(10.6f)
+            curveToRelative(0f, 1.2f, -0.8f, 2f, -2f, 2f)
+            horizontalLineToRelative(-12f)
+            curveToRelative(-1.2f, 0f, -2f, -0.8f, -2f, -2f)
+            verticalLineToRelative(-10.6f)
+            curveToRelative(0f, -1.2f, 0.8f, -2f, 2f, -2f)
+            close()
+        }
+        stroke {
+            moveTo(4f, 9.8f); lineTo(20f, 9.8f)
+            moveTo(8.4f, 3.6f); lineTo(8.4f, 7f)
+            moveTo(15.6f, 3.6f); lineTo(15.6f, 7f)
+        }
+        dot(8.6f, 13.6f, 2f)
+        dot(12f, 13.6f, 2f)
+        dot(15.4f, 13.6f, 2f)
+    }
+
+    /** Ulangan qurilmalar. */
+    val Watch: ImageVector = icon("Watch") {
+        stroke {
+            moveTo(6.4f, 8.6f)
+            arcToRelative(2f, 2f, 0f, false, true, 2f, -2f)
+            horizontalLineToRelative(7.2f)
+            arcToRelative(2f, 2f, 0f, false, true, 2f, 2f)
+            verticalLineToRelative(6.8f)
+            arcToRelative(2f, 2f, 0f, false, true, -2f, 2f)
+            horizontalLineToRelative(-7.2f)
+            arcToRelative(2f, 2f, 0f, false, true, -2f, -2f)
+            close()
+        }
+        stroke { moveTo(9f, 6.6f); lineTo(9.4f, 3.4f); lineTo(14.6f, 3.4f); lineTo(15f, 6.6f) }
+        stroke { moveTo(9f, 17.4f); lineTo(9.4f, 20.6f); lineTo(14.6f, 20.6f); lineTo(15f, 17.4f) }
+    }
+
+    /** Skan — a viewfinder's four corners around a QR code's finder squares. */
+    val Scan: ImageVector = icon("Scan") {
+        stroke { moveTo(3.8f, 8.2f); lineTo(3.8f, 5.4f); quadTo(3.8f, 3.8f, 5.4f, 3.8f); lineTo(8.2f, 3.8f) }
+        stroke { moveTo(15.8f, 3.8f); lineTo(18.6f, 3.8f); quadTo(20.2f, 3.8f, 20.2f, 5.4f); lineTo(20.2f, 8.2f) }
+        stroke { moveTo(20.2f, 15.8f); lineTo(20.2f, 18.6f); quadTo(20.2f, 20.2f, 18.6f, 20.2f); lineTo(15.8f, 20.2f) }
+        stroke { moveTo(8.2f, 20.2f); lineTo(5.4f, 20.2f); quadTo(3.8f, 20.2f, 3.8f, 18.6f); lineTo(3.8f, 15.8f) }
+        stroke { moveTo(7.6f, 7.6f); lineTo(10.6f, 7.6f); lineTo(10.6f, 10.6f); lineTo(7.6f, 10.6f); close() }
+        stroke { moveTo(13.4f, 7.6f); lineTo(16.4f, 7.6f); lineTo(16.4f, 10.6f); lineTo(13.4f, 10.6f); close() }
+        stroke { moveTo(7.6f, 13.4f); lineTo(10.6f, 13.4f); lineTo(10.6f, 16.4f); lineTo(7.6f, 16.4f); close() }
+        dot(14.2f, 14.2f, 1.8f)
+        dot(16.2f, 16.2f, 1.8f)
+    }
+
+    /** Uch nuqta — "yana" menyusi. */
+    val More: ImageVector = icon("More") {
+        dot(6f, 12f, 2.6f)
+        dot(12f, 12f, 2.6f)
+        dot(18f, 12f, 2.6f)
+    }
 }

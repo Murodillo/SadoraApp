@@ -81,6 +81,25 @@ interface RequestOptions {
  * repeats the call; if the renewal is refused the session ends everywhere at once.
  */
 export async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
+  const { response, sentWith } = await exchange(path, options)
+  return read<T>(response, sentWith)
+}
+
+/**
+ * The same call for bytes rather than JSON — a photo in a message thread, which is
+ * private and so cannot be an `<img src>` the browser fetches without her token.
+ */
+export async function requestBlob(path: string, options: Omit<RequestOptions, 'body' | 'anonymous'> = {}): Promise<Blob> {
+  const { response, sentWith } = await exchange(path, options)
+  if (!response.ok) return read<never>(response, sentWith)
+  return response.blob()
+}
+
+/** Sends, and on a 401 renews once and sends again. `sentWith` is undefined for an anonymous call. */
+async function exchange(
+  path: string,
+  options: RequestOptions,
+): Promise<{ response: Response; sentWith: string | null | undefined }> {
   const { anonymous = false } = options
   let sentWith = anonymous ? null : tokenStore.readAccess()
   let response = await send(path, options, sentWith)
@@ -96,7 +115,7 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
     }
   }
 
-  return read<T>(response, anonymous ? undefined : sentWith)
+  return { response, sentWith: anonymous ? undefined : sentWith }
 }
 
 let renewal: Promise<boolean> | null = null

@@ -178,6 +178,8 @@ class ApiCaller internal constructor(
         return when (status) {
             HttpStatusCode.Unauthorized -> ApiFailure.Unauthorized("401 with no error envelope")
             HttpStatusCode.TooManyRequests -> ApiFailure.RateLimited("429 with no error envelope", null)
+            // The public share route says an unknown or expired token with a bare 404.
+            HttpStatusCode.NotFound -> ApiFailure.NotFound("404 with no error envelope")
             else -> ApiFailure.Unexpected("http ${status.value} with no error envelope")
         }
     }

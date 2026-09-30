@@ -1,6 +1,10 @@
 package uz.sadora.doctor.ui.doctor
 
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.ui.semantics.Role
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.Box
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.animateContentSize
@@ -39,7 +43,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import kotlin.time.Instant
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
@@ -49,7 +52,6 @@ import uz.sadora.contract.DoctorDocumentKind
 import uz.sadora.contract.DoctorDocumentUpload
 import uz.sadora.contract.DoctorProfile
 import uz.sadora.contract.DoctorSpecialty
-import uz.sadora.contract.DoctorStatus
 import uz.sadora.contract.Limits
 import uz.sadora.doctor.data.DoctorController
 import uz.sadora.doctor.data.PanelState
@@ -79,6 +81,7 @@ import uz.sadora.doctor.ui.components.SelectChip
 import uz.sadora.doctor.ui.components.Skeleton
 import uz.sadora.doctor.ui.components.SuccessCheck
 import uz.sadora.doctor.ui.components.acceptText
+import uz.sadora.doctor.ui.components.noRippleToggleable
 import uz.sadora.doctor.ui.components.rememberPhotoCapture
 
 // Ported from the client app, where these screens were first written. The panel is the
@@ -90,6 +93,9 @@ import uz.sadora.doctor.ui.components.rememberPhotoCapture
 /**
  * Her page as readers see it: name, specialty, where she works, how long, her own words,
  * and what she has written — so she can check how she appears before anyone else does.
+ *
+ * As the Profile tab it has no back arrow ([onClose] is null), carries the settings
+ * button, and puts the details she may change under the header ([account] and [onSaved]).
  */
 @Composable
 fun DoctorProfileScreen(
@@ -97,8 +103,11 @@ fun DoctorProfileScreen(
     doctors: DoctorController,
     onOpenPost: (String) -> Unit,
     onNewPost: () -> Unit,
-    onClose: () -> Unit,
+    onClose: (() -> Unit)?,
     modifier: Modifier = Modifier,
+    onOpenSettings: (() -> Unit)? = null,
+    account: DoctorAccount? = null,
+    onSaved: (() -> Unit)? = null,
 ) {
     val d = strings.doctors
     val c = Sadora.colors
@@ -112,9 +121,16 @@ fun DoctorProfileScreen(
         SadoraTopBar(
             d.profileTitle,
             onBack = onClose,
-            trailing = if (profile?.isMe == true) {
-                { CircleIconButton(SadoraIcons.Plus, contentDescription = strings.community.newPost, onClick = onNewPost) }
-            } else null,
+            trailing = {
+                Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                    if (profile?.isMe == true) {
+                        CircleIconButton(SadoraIcons.Plus, contentDescription = strings.community.newPost, onClick = onNewPost)
+                    }
+                    onOpenSettings?.let {
+                        CircleIconButton(SadoraIcons.Settings, contentDescription = strings.settings.title, onClick = it)
+                    }
+                }
+            },
         )
         ScreenContent {
             error?.let { failure ->
@@ -133,6 +149,10 @@ fun DoctorProfileScreen(
                         DoctorStat(profile.experienceYears.toString(), d.statYears, Modifier.weight(1f))
                     }
                 }
+            }
+            if (account != null && onSaved != null) {
+                item { AcceptsConsultationsCard(account, doctors) }
+                item { EditDoctorCard(account, doctors, onSaved = onSaved) }
             }
             item { Text(d.disclaimer, style = Sadora.type.caption.copy(letterSpacing = TextUnit.Unspecified), color = c.muted2) }
             item { SectionHeader(d.herPosts) }
@@ -207,19 +227,17 @@ private fun DoctorSkeleton() {
 // ---------------------------------------------------------------- the panel
 
 /**
- * The doctor's own screen, whatever stage she is at: the offer before she applies,
- * the wait, the admin's note after a rejection or a suspension, and — once approved —
- * her page, her editable details and the questions still waiting for a doctor.
+ * The doctor's own screen until she is approved: the offer before she applies, the
+ * wait, the admin's note after a rejection or a suspension. Once approved the app
+ * becomes its five tabs, and this screen only shows the moment of approval on its way.
  */
 @Composable
 fun DoctorPanelScreen(
     doctors: DoctorController,
     onApply: () -> Unit,
     onOpenPage: (String) -> Unit,
-    onOpenQuestion: (String) -> Unit,
     onNewPost: () -> Unit,
     onOpenSettings: () -> Unit,
-    onToast: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val d = strings.doctors
@@ -227,10 +245,6 @@ fun DoctorPanelScreen(
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(doctors) { doctors.loadAccount(silent = false) }
-    val account = doctors.account
-    LaunchedEffect(account?.status) {
-        if (account?.status == DoctorStatus.APPROVED) doctors.loadQuestions()
-    }
 
     // The status card starts from what the panel showed last time, so a change made
     // elsewhere — the form sent, a review come back — plays here as a change.
@@ -239,17 +253,6 @@ fun DoctorPanelScreen(
     LaunchedEffect(panel) {
         shown = panel
         doctors.shownPanel = panel
-    }
-
-    // A question she has just answered is drawn once more, marked, and then let go: the
-    // list animates it out and closes the gap.
-    val rows = doctors.questionRows
-    val anyAnswered = rows.any { it.answered }
-    LaunchedEffect(anyAnswered) {
-        if (anyAnswered) {
-            delay(AnsweredLingerMillis)
-            doctors.settleAnswered()
-        }
     }
 
     Column(modifier) {
@@ -262,12 +265,7 @@ fun DoctorPanelScreen(
                 item(key = "error") {
                     ErrorStrip(
                         failure.readable(),
-                        onRetry = {
-                            scope.launch {
-                                doctors.loadAccount(silent = false)
-                                if (doctors.account?.status == DoctorStatus.APPROVED) doctors.loadQuestions()
-                            }
-                        },
+                        onRetry = { scope.launch { doctors.loadAccount(silent = false) } },
                     )
                 }
             }
@@ -305,29 +303,9 @@ fun DoctorPanelScreen(
                     }
                 }
             }
-            if (panel is PanelState.Approved) {
-                item(key = "edit") { EditDoctorCard(panel.account, doctors, onSaved = { onToast(d.saved) }) }
-                item(key = "questions-title") { SectionHeader(d.questionsTitle) }
-                item(key = "questions-hint") { Text(d.questionsHint, style = Sadora.type.body, color = c.muted) }
-                if (!doctors.questionsLoaded && doctors.error == null) {
-                    item(key = "questions-loading") { Skeleton(Modifier.fillMaxWidth().height(120.dp), shape = Radius.card) }
-                }
-                if (doctors.questionsLoaded && rows.isEmpty()) {
-                    item(key = "questions-empty") {
-                        EmptyState(title = d.questionsEmpty, body = d.questionsEmptyBody, actionText = null, onAction = {})
-                    }
-                }
-                items(rows.size, key = { rows[it].post.id }) { index ->
-                    val row = rows[index]
-                    PostCard(post = row.post, onOpen = { onOpenQuestion(row.post.id) }, answered = row.answered)
-                }
-            }
         }
     }
 }
-
-/** How long a just-answered question stays on the list, marked, before it leaves. */
-private const val AnsweredLingerMillis = 1_400L
 
 @Composable
 private fun IntroCard(onApply: () -> Unit) {
@@ -399,9 +377,48 @@ private fun ApprovedCard(account: DoctorAccount, onOpenPage: () -> Unit, onNewPo
     }
 }
 
+/**
+ * Her switch for consultations. Off, the button on her page goes and no new
+ * consultation can be opened; the ones already open carry on to their end.
+ */
+@Composable
+private fun AcceptsConsultationsCard(account: DoctorAccount, doctors: DoctorController) {
+    val t = strings.tabs
+    val c = Sadora.colors
+    val scope = rememberCoroutineScope()
+    var saving by remember { mutableStateOf(false) }
+    val on = account.acceptsConsultations
+    SadoraCard(
+        modifier = Modifier.noRippleToggleable(value = on, role = Role.Switch, enabled = !saving) { wanted ->
+            saving = true
+            scope.launch {
+                doctors.setAcceptsConsultations(wanted)
+                saving = false
+            }
+        },
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Spacing.xxs)) {
+                Text(t.acceptsTitle, style = Sadora.type.h3, color = c.text)
+                Text(t.acceptsBody, style = Sadora.type.body, color = c.muted)
+            }
+            val thumbX by animateDpAsState(if (on) 20.dp else 0.dp, tween(Motion.Quick), label = "switch")
+            Box(
+                Modifier
+                    .size(width = 48.dp, height = 28.dp)
+                    .clip(Radius.chip)
+                    .background(if (on) c.primary else c.surface2)
+                    .padding(4.dp),
+            ) {
+                Box(Modifier.offset(x = thumbX).size(20.dp).clip(Radius.chip).background(if (on) c.onPrimary else c.muted2))
+            }
+        }
+    }
+}
+
 /** Workplace and bio: what she may change without another review. */
 @Composable
-private fun EditDoctorCard(account: DoctorAccount, doctors: DoctorController, onSaved: () -> Unit) {
+internal fun EditDoctorCard(account: DoctorAccount, doctors: DoctorController, onSaved: () -> Unit) {
     val d = strings.doctors
     val c = Sadora.colors
     val scope = rememberCoroutineScope()

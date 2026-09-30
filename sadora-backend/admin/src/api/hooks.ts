@@ -28,6 +28,7 @@ import type {
   BillingSummary,
   AiUsageReport,
   CommunityStats,
+  ReportContextView,
   FeatureDefinition,
   FrequencyCaps,
   MetricMapping,
@@ -272,6 +273,42 @@ export const useResolveReport = () =>
 export const useRestrictAuthor = () =>
   useCommunityMutation(({ postId, reason, days }: { postId: string; reason: string; days?: number | null }) =>
     request(`/v1/admin/community/posts/${postId}/restrict-author`, { method: 'POST', body: { reason, days } }),
+  )
+
+export const reportContextPath = (reportId: string) => `/v1/admin/community/reports/${reportId}/context`
+export const reportImagePath = (reportId: string) => `/v1/admin/community/reports/${reportId}/image`
+
+/**
+ * The lines around a reported private message. Every fetch is written to the audit log
+ * on the server, so it runs only while the modal is open, is never refetched behind the
+ * moderator's back, and is dropped from the cache as soon as the modal closes. It lives
+ * outside the `['community']` root on purpose: a moderation write invalidates that root,
+ * and must not quietly read the thread again.
+ */
+export const useReportContext = (reportId: string | null) =>
+  useQuery({
+    queryKey: ['report-context', reportId],
+    queryFn: () => request<ReportContextView>(reportContextPath(reportId!)),
+    enabled: Boolean(reportId),
+    staleTime: Infinity,
+    gcTime: 0,
+    retry: false,
+    refetchOnWindowFocus: false,
+  })
+
+/**
+ * The reported photo. Not a query: it is fetched only when the moderator presses the
+ * button (that request is audited too), and the caller owns the blob's object URL.
+ */
+export const useReportImage = () =>
+  useMutation({
+    mutationFn: (reportId: string) => requestBlob(reportImagePath(reportId)),
+  })
+
+/** Restricts whoever sent the reported message; the panel never learns who that is. */
+export const useRestrictSender = () =>
+  useCommunityMutation(({ reportId, reason, days }: { reportId: string; reason: string; days?: number | null }) =>
+    request(`/v1/admin/community/reports/${reportId}/restrict-sender`, { method: 'POST', body: { reason, days } }),
   )
 
 // ---------------------------------------------------------------- notifications

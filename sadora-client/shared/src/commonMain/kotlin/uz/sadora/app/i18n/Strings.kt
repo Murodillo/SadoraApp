@@ -320,6 +320,42 @@ interface CommunityStrings {
     val reportConversation: String
     val newConversation: String
     fun unreadCount(count: Int): String
+
+    // ---- photos, records, ticks and typing, in any thread
+    /** The list's preview of a photo, and the attach sheet's first option. */
+    val photo: String
+    val photoNote: String
+    /** The list's preview of an attached health record. */
+    val record: String
+    val attach: String
+    val photoCaptionHint: String
+    val sendPhoto: String
+    val photoFailed: String
+    val sending: String
+    /** The ticks on her lines, as a screen reader says them. */
+    val tickSent: String
+    val tickRead: String
+    fun typing(name: String): String
+    /** Under the name in the thread's header, where the name is already said. */
+    val typingShort: String
+    /** The bubble for an attached record. */
+    val recordAttached: String
+    val recordAttachedNote: String
+    val attachRecord: String
+    val attachRecordNote: String
+    val attachRecordConfirmTitle: String
+    val attachRecordConfirmBody: String
+    val attachRecordConfirm: String
+    /** The sheet that shows her what she shared. */
+    val recordTitle: String
+    val recordNote: String
+    fun recordAge(age: Int): String
+    fun recordDays(days: Int): String
+    fun recordCycleDay(day: Int): String
+    fun recordPregnancyWeek(week: Int): String
+    val recordSymptoms: String
+    val recordMedications: String
+    val recordEmpty: String
 }
 
 /**

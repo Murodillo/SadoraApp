@@ -5,15 +5,20 @@ import uz.sadora.app.model.CommunityBadge
 import uz.sadora.app.model.CommunityComment
 import uz.sadora.app.model.CommunityPost
 import uz.sadora.app.model.CommunityTopic
+import uz.sadora.app.model.ConsultationWindow
 import uz.sadora.app.model.Conversation
 import uz.sadora.app.model.DirectMessage
+import uz.sadora.app.model.MessageImageSize
+import uz.sadora.app.model.MessageKind
 import uz.sadora.contract.CommunityBadge as WireBadge
 import uz.sadora.contract.CommunityComment as WireComment
 import uz.sadora.contract.CommunityPost as WirePost
 import uz.sadora.contract.CommunityProfile as WireProfile
 import uz.sadora.contract.CommunityTopic as WireTopic
+import uz.sadora.contract.Consultation as WireConsultation
 import uz.sadora.contract.Conversation as WireConversation
 import uz.sadora.contract.DirectMessage as WireMessage
+import uz.sadora.contract.MessageKind as WireKind
 
 /**
  * Wire posts onto the store's posts.
@@ -81,9 +86,37 @@ fun WireConversation.toAppConversation(): Conversation = Conversation(
     lastMessageAt = lastMessageAt,
     unread = unread,
     blocked = blocked,
+    doctor = doctor,
+    patient = patient,
+    consultation = consultation?.toAppWindow(),
+    lastMessageKind = lastMessageKind.toAppKind(),
+    lastMessageRead = lastMessageRead,
 )
 
-fun WireMessage.toAppMessage(): DirectMessage = DirectMessage(id, body, createdAt, isMine)
+fun WireConsultation.toAppWindow(): ConsultationWindow = ConsultationWindow(
+    openedAt = openedAt,
+    expiresAt = expiresAt,
+    closedAt = closedAt,
+    open = open,
+)
+
+fun WireMessage.toAppMessage(): DirectMessage = DirectMessage(
+    id = id,
+    body = body,
+    createdAt = createdAt,
+    isMine = isMine,
+    kind = kind.toAppKind(),
+    // A photo without its size would draw as a square and jump when it loads; a size
+    // on anything but a photo means nothing, so it is dropped rather than drawn.
+    image = image?.takeIf { kind == WireKind.IMAGE }?.let { MessageImageSize(it.width, it.height) },
+    read = read,
+)
+
+fun WireKind.toAppKind(): MessageKind = when (this) {
+    WireKind.TEXT -> MessageKind.Text
+    WireKind.IMAGE -> MessageKind.Image
+    WireKind.RECORD -> MessageKind.Record
+}
 
 fun WireTopic.toAppTopic(): CommunityTopic = when (this) {
     WireTopic.CYCLE -> CommunityTopic.Cycle

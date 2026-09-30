@@ -87,6 +87,8 @@ data class DoctorApplicationRequest(
 data class UpdateDoctorProfileRequest(
     val workplace: String? = null,
     val bio: String? = null,
+    /** Whether patients may open a consultation with her now. */
+    val acceptsConsultations: Boolean? = null,
 )
 
 /**
@@ -109,6 +111,8 @@ data class DoctorAccount(
     val reviewNote: String? = null,
     val submittedAt: Instant? = null,
     val reviewedAt: Instant? = null,
+    /** Whether patients may open a consultation with her now; she switches it herself. */
+    val acceptsConsultations: Boolean = true,
 )
 
 /** A verified doctor's public page: who she is, and what she has written in the room. */
@@ -126,6 +130,13 @@ data class DoctorProfile(
     val isMe: Boolean = false,
     /** Her recent posts, newest first. */
     val posts: List<CommunityPost> = emptyList(),
+    /**
+     * Whether the viewer may open a consultation with her: not her own page, she is
+     * taking consultations, and neither side has blocked the other.
+     */
+    val canMessage: Boolean = false,
+    /** The viewer's consultation with her, if there is one, so the button can reopen it. */
+    val conversationId: String? = null,
 )
 
 /** A doctor as the directory lists her. */

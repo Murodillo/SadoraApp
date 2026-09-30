@@ -278,14 +278,22 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
         users = userRepository,
         audit = auditService,
         notifications = notificationRepository,
+        messaging = messagingRepository,
     )
     val messagingService = MessagingService(
         messages = messagingRepository,
         community = communityService,
         identities = communityRepository,
         notifications = notificationRepository,
+        doctors = doctorRepository,
+        users = userRepository,
+        // The record a patient attaches is the document her QR code opens; read at
+        // call time, so the share service may be built further down.
+        records = { userId, language -> shareService.summaryFor(userId, language) },
+        cache = cache,
+        audit = auditService,
     )
-    val communityModerationService = CommunityModerationService(communityRepository, auditService, messagingRepository)
+    val communityModerationService = CommunityModerationService(communityRepository, auditService, messagingRepository, doctorRepository)
 
     val contentRepository = ContentRepository()
     val contentService = ContentService(

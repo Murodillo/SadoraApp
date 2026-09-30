@@ -20,6 +20,20 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import kotlin.time.Instant
 import uz.sadora.app.data.DoctorController
+import uz.sadora.app.data.MessagesController
+import uz.sadora.app.design.IconSize
+import uz.sadora.app.design.SadoraIcons
+import uz.sadora.app.model.Conversation
+import uz.sadora.app.ui.components.ButtonTone
+import uz.sadora.app.ui.components.SadoraButton
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.material3.Icon
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.draw.clip
 import uz.sadora.app.data.readable
 import uz.sadora.app.design.Radius
 import uz.sadora.app.design.Sadora
@@ -42,16 +56,25 @@ import uz.sadora.contract.DoctorProfile
 
 /**
  * A verified doctor as readers see her: name, specialty, where she works, how long,
- * her own words, and what she has written. No message button yet — paid consultations
- * are the next stage, and a button that goes nowhere is worse than none.
+ * her own words, and what she has written — and, when she takes consultations, the
+ * way to write to her.
+ *
+ * The button reads what will happen: "Suhbatni ochish" while a consultation with her is
+ * open, "Shifokorga yozish" otherwise. The second never opens anything by itself; it
+ * raises the consent sheet first, because a consultation is not anonymous and she has
+ * to know that before the first word, not after.
  */
 @Composable
 fun DoctorProfileScreen(
     doctorId: String,
     state: AppState,
     doctors: DoctorController,
+    messages: MessagesController,
     onOpenPost: (CommunityPost) -> Unit,
     onOpenMenu: (CommunityPost) -> Unit,
+    /** Raises the consent sheet; the shell owns it so it covers the tab bar. */
+    onMessage: (DoctorProfile) -> Unit,
+    onOpenConversation: (id: String, name: String) -> Unit,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -75,6 +98,16 @@ fun DoctorProfileScreen(
                 return@ScreenContent
             }
             item { DoctorHeader(profile) }
+            if (!profile.isMe) {
+                item {
+                    ConsultationAction(
+                        profile = profile,
+                        messages = messages,
+                        onMessage = { onMessage(profile) },
+                        onOpenConversation = { onOpenConversation(it, profile.fullName) },
+                    )
+                }
+            }
             item {
                 SadoraCard(padding = Spacing.sm) {
                     Row(Modifier.fillMaxWidth()) {
@@ -138,6 +171,116 @@ private fun DoctorHeader(profile: DoctorProfile) {
             )
         }
     }
+}
+
+/**
+ * The way into a consultation with her. Whether hers is still open is read from the
+ * thread list — the page knows only that one exists — so the list is fetched once if
+ * the thread is not in it yet.
+ */
+@Composable
+private fun ConsultationAction(
+    profile: DoctorProfile,
+    messages: MessagesController,
+    onMessage: () -> Unit,
+    onOpenConversation: (String) -> Unit,
+) {
+    val d = strings.doctors
+    val c = Sadora.colors
+    val conversationId = profile.conversationId
+    // By id when the page names it; by doctor when it was opened a moment ago from this
+    // page and the page has not been re-read since.
+    val existing = conversationId?.let { id -> messages.conversations.firstOrNull { it.id == id } }
+        ?: messages.conversations.firstOrNull { it.doctor?.id == profile.id }
+    LaunchedEffect(conversationId) {
+        if (conversationId != null && messages.conversations.none { it.id == conversationId }) messages.load()
+    }
+    val openId = existing?.takeIf { it.consultation?.open == true }?.id
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+        when {
+            openId != null ->
+                SadoraButton(d.openConsultation, onClick = { onOpenConversation(openId) }, icon = SadoraIcons.Message)
+            profile.canMessage -> {
+                SadoraButton(d.messageDoctor, onClick = onMessage, icon = SadoraIcons.Message)
+                Text(
+                    d.messageDoctorNote,
+                    style = Sadora.type.caption.copy(letterSpacing = TextUnit.Unspecified),
+                    color = c.muted,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+            else -> Text(
+                d.cannotMessage,
+                style = Sadora.type.body,
+                color = c.muted,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+        // A closed consultation is still her history with this doctor; it stays readable.
+        val historyId = existing?.id ?: conversationId
+        if (openId == null && historyId != null) {
+            SadoraButton(d.viewHistory, onClick = { onOpenConversation(historyId) }, tone = ButtonTone.Secondary)
+        }
+    }
+}
+
+/**
+ * What she agrees to before a consultation opens: free for now, a day long, her real
+ * name and age seen by the doctor, an answer that is not a diagnosis, 103 for an
+ * emergency. Confirming opens the consultation — or opens hers again — and the thread.
+ */
+@Composable
+fun ConsultationConsentSheetContent(
+    profile: DoctorProfile,
+    messages: MessagesController,
+    onStarted: (Conversation) -> Unit,
+    onCancel: () -> Unit,
+) {
+    val d = strings.doctors
+    val c = Sadora.colors
+    val scope = rememberCoroutineScope()
+    var working by remember { mutableStateOf(false) }
+    LaunchedEffect(profile.id) { messages.clearError() }
+
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+        DoctorAvatar(profile.fullName, size = 44.dp)
+        Column(Modifier.weight(1f)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(profile.fullName, style = Sadora.type.h3, color = c.text, modifier = Modifier.weight(1f, fill = false))
+                VerifiedMark(size = 16.dp)
+            }
+            Text(d.specialty(profile.specialty), style = Sadora.type.body, color = c.textAccent)
+        }
+    }
+    val icons = listOf(SadoraIcons.Clock, SadoraIcons.Profile, SadoraIcons.Info, SadoraIcons.Shield)
+    Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+        d.consentPoints.forEachIndexed { index, point ->
+            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm), verticalAlignment = Alignment.Top) {
+                Box(
+                    Modifier.size(32.dp).clip(Radius.chip).background(c.primary.copy(alpha = if (c.isDark) 0.24f else 0.12f)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(icons[index % icons.size], contentDescription = null, Modifier.size(IconSize.sm), tint = c.primary)
+                }
+                Text(point, style = Sadora.type.body, color = c.text, modifier = Modifier.weight(1f).padding(top = 4.dp))
+            }
+        }
+    }
+    messages.error?.let { ErrorStrip(it.readable()) }
+    SadoraButton(
+        d.consentConfirm,
+        enabled = !working,
+        onClick = {
+            working = true
+            scope.launch {
+                messages.startConsultation(profile.id)?.let(onStarted)
+                working = false
+            }
+        },
+    )
+    SadoraButton(strings.common.cancel, onClick = onCancel, tone = ButtonTone.Secondary)
 }
 
 @Composable

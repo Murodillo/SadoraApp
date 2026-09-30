@@ -102,7 +102,15 @@ data class CommunityProfile(
     val posts: List<CommunityPost> = emptyList(),
 )
 
-/** One thread as the list shows it: who, the last line, and how much is unread. */
+/**
+ * One thread as the list shows it: who, the last line, and how much is unread.
+ *
+ * Two kinds share the shape. Between two aliases, [alias] is the other one's alias. In a
+ * consultation with a verified doctor [consultation] is set and [alias] holds a real
+ * name: the doctor's, with [doctor] beside it, when the viewer is the patient; the
+ * patient's, with [patient] beside it, when the viewer is the doctor — a doctor sees who
+ * she is advising, and the patient is told so before she writes.
+ */
 @Serializable
 data class Conversation(
     val id: String,
@@ -114,6 +122,57 @@ data class Conversation(
     val unread: Int = 0,
     /** Blocked by either side; the thread stays readable but takes no more messages. */
     val blocked: Boolean = false,
+    /** The doctor on the other side, for the patient. */
+    val doctor: DoctorAuthor? = null,
+    /** The patient on the other side, for the doctor. */
+    val patient: ConsultationPatient? = null,
+    /** Set on a consultation: when it opened and until when it takes messages. */
+    val consultation: Consultation? = null,
+    /** What the last line was, so the list can say "Rasm" or "Tibbiy karta" for it. */
+    val lastMessageKind: MessageKind = MessageKind.TEXT,
+    /** The last line is the viewer's own and the other side has read it. */
+    val lastMessageRead: Boolean = false,
+)
+
+/** Who a doctor is consulting: her real name, and what a doctor needs at a glance. */
+@Serializable
+data class ConsultationPatient(
+    val name: String,
+    val age: Int? = null,
+    val lifeStage: LifeStage,
+)
+
+/**
+ * A consultation's window. It opens for [Limits.CONSULTATION_HOURS] when the patient
+ * starts it, and takes messages until then or until the doctor closes it; the patient
+ * may open it again. Free for now — the window is where a payment will sit.
+ */
+@Serializable
+data class Consultation(
+    val openedAt: Instant,
+    val expiresAt: Instant,
+    val closedAt: Instant? = null,
+    /** Worked out by the server, so every client agrees on it whatever its clock says. */
+    val open: Boolean,
+)
+
+@Serializable
+enum class MessageKind {
+    @SerialName("text") TEXT,
+
+    /** A photo, fetched separately by [DirectMessage.id]; [DirectMessage.body] is its caption. */
+    @SerialName("image") IMAGE,
+
+    /** The patient's health record, attached for her doctor and read live while the consultation is open. */
+    @SerialName("record") RECORD,
+}
+
+/** A photo's shape, so a bubble can be sized before the picture arrives. */
+@Serializable
+data class MessageImage(
+    val width: Int,
+    val height: Int,
+    val mimeType: String = "image/jpeg",
 )
 
 @Serializable
@@ -122,13 +181,24 @@ data class DirectMessage(
     val body: String,
     val createdAt: Instant,
     val isMine: Boolean,
+    val kind: MessageKind = MessageKind.TEXT,
+    val image: MessageImage? = null,
+    /** Hers, and the other side has opened the thread since it was sent: the double tick. */
+    val read: Boolean = false,
 )
 
-/** A thread opened: the conversation and its messages, oldest first. Reading marks it read. */
+/**
+ * A thread opened: the conversation and its messages, oldest first. Reading marks it read.
+ *
+ * [otherTyping] is true for a few seconds after the other side last reported typing;
+ * the apps poll the thread while it is on screen, so that is all "yozmoqda…" needs.
+ */
 @Serializable
 data class ConversationThread(
     val conversation: Conversation,
     val messages: List<DirectMessage> = emptyList(),
+    val otherTyping: Boolean = false,
+    val otherReadAt: Instant? = null,
 )
 
 /** Opens a conversation with an alias, or finds the existing one, and sends the first line. */
@@ -138,8 +208,27 @@ data class StartConversationRequest(
     val body: String,
 )
 
+/**
+ * One message. Text, or a photo with an optional caption in [body], or — in a
+ * consultation, from the patient — her health record with [attachRecord].
+ */
 @Serializable
-data class SendMessageRequest(val body: String)
+data class SendMessageRequest(
+    val body: String = "",
+    val image: MessageImageUpload? = null,
+    val attachRecord: Boolean = false,
+)
+
+/** A photo, resized by the phone and sent base64 like a document page. */
+@Serializable
+data class MessageImageUpload(
+    val imageBase64: String,
+    val mimeType: String = "image/jpeg",
+)
+
+/** Opens a consultation with a doctor — or opens it again — with an optional first line. */
+@Serializable
+data class StartConsultationRequest(val body: String? = null)
 
 /** The viewer's block on an alias, as the block and unblock calls return it. */
 @Serializable

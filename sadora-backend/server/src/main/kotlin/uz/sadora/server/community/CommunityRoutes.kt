@@ -1,9 +1,13 @@
 package uz.sadora.server.community
 
+import io.ktor.http.ContentType
+import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.auth.authenticate
 import io.ktor.server.request.receive
+import io.ktor.server.response.header
 import io.ktor.server.response.respond
+import io.ktor.server.response.respondBytes
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.delete
 import io.ktor.server.routing.get
@@ -14,6 +18,7 @@ import uz.sadora.contract.Ack
 import uz.sadora.contract.CommunityTopic
 import uz.sadora.contract.CreateCommentRequest
 import uz.sadora.contract.CreatePostRequest
+import uz.sadora.contract.Language
 import uz.sadora.contract.ReportRequest
 import uz.sadora.contract.SendMessageRequest
 import uz.sadora.contract.StartConversationRequest
@@ -58,8 +63,14 @@ fun Route.communityRoutes(community: CommunityService, messaging: MessagingServi
             }
 
             route("/conversations") {
+                /** `scope=patients` is the doctor app's list; `personal` everything else. */
                 get {
-                    call.respond(messaging.conversations(call.requireUserId()))
+                    val scope = when (call.request.queryParameters["scope"]) {
+                        "patients" -> ConversationScope.PATIENTS
+                        "personal" -> ConversationScope.PERSONAL
+                        else -> ConversationScope.ALL
+                    }
+                    call.respond(messaging.conversations(call.requireUserId(), scope))
                 }
                 post {
                     val request = call.receive<StartConversationRequest>()
@@ -72,6 +83,27 @@ fun Route.communityRoutes(community: CommunityService, messaging: MessagingServi
                     post("/messages") {
                         val request = call.receive<SendMessageRequest>()
                         call.respond(HttpStatusCode.Created, messaging.send(call.requireUserId(), call.conversationId(), request))
+                    }
+                    /** A photo in the thread. Private, so never cached on the way. */
+                    get("/messages/{messageId}/image") {
+                        val image = messaging.image(call.requireUserId(), call.conversationId(), call.messageId())
+                        call.response.header(HttpHeaders.CacheControl, "private, no-store")
+                        call.respondBytes(image.bytes, ContentType.parse(image.mimeType))
+                    }
+                    /** The record a patient attached, assembled now, in the asked language. */
+                    get("/messages/{messageId}/record") {
+                        val language = call.request.queryParameters["lang"]
+                            ?.let { raw -> Language.entries.firstOrNull { it.name.equals(raw, ignoreCase = true) } }
+                        call.response.header(HttpHeaders.CacheControl, "no-store")
+                        call.respond(messaging.record(call.requireUserId(), call.conversationId(), call.messageId(), language))
+                    }
+                    post("/typing") {
+                        messaging.typing(call.requireUserId(), call.conversationId())
+                        call.respond(Ack())
+                    }
+                    /** The doctor ends a consultation. */
+                    post("/close") {
+                        call.respond(messaging.close(call.requireUserId(), call.conversationId()))
                     }
                     post("/report") {
                         val request = call.receive<ReportRequest>()
@@ -165,6 +197,7 @@ fun Route.communityRoutes(community: CommunityService, messaging: MessagingServi
 private fun io.ktor.server.application.ApplicationCall.postId() = parseUuid(parameters["id"].orEmpty(), "id")
 private fun io.ktor.server.application.ApplicationCall.commentId() = parseUuid(parameters["id"].orEmpty(), "id")
 private fun io.ktor.server.application.ApplicationCall.conversationId() = parseUuid(parameters["id"].orEmpty(), "id")
+private fun io.ktor.server.application.ApplicationCall.messageId() = parseUuid(parameters["messageId"].orEmpty(), "messageId")
 
 private fun io.ktor.server.application.ApplicationCall.alias(): String {
     val alias = parameters["alias"].orEmpty().trim()

@@ -47,4 +47,29 @@ class NavigatorTest {
         assertEquals(AppPhase.SignIn, navigator.phase)
         assertEquals(Route.Panel, navigator.current)
     }
+
+    @Test
+    fun `choosing a tab leaves what was pushed over the last one`() {
+        val navigator = Navigator()
+        navigator.goTo(AppPhase.Main)
+        assertEquals(Tab.Home, navigator.tab)
+        navigator.push(Route.Question("q1"))
+
+        navigator.select(Tab.Scan)
+
+        assertEquals(Tab.Scan, navigator.tab)
+        assertEquals(Route.Panel, navigator.current)
+        navigator.push(Route.PatientRecord("token"))
+        assertEquals(Screen(Route.PatientRecord("token"), 1), navigator.screen)
+    }
+
+    @Test
+    fun `signing in again starts on Home`() {
+        val navigator = Navigator()
+        navigator.goTo(AppPhase.Main)
+        navigator.select(Tab.Profile)
+        navigator.goTo(AppPhase.SignIn)
+        navigator.goTo(AppPhase.Main)
+        assertEquals(Tab.Home, navigator.tab)
+    }
 }

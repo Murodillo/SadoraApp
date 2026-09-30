@@ -1,6 +1,7 @@
 package uz.sadora.app.ui.core
 
 import uz.sadora.app.data.readable
+import uz.sadora.app.ui.components.ResizeForKeyboard
 import uz.sadora.app.ui.components.ErrorStrip
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
@@ -52,6 +53,7 @@ fun PostDetailScreen(
     val t = strings.community
     val share = rememberShareAction()
     val scope = rememberCoroutineScope()
+    ResizeForKeyboard()
     val list = rememberLazyListState()
     val post = state.communityPosts.firstOrNull { it.id == postId }
 

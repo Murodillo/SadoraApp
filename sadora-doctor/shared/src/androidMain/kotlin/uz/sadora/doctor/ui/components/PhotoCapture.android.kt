@@ -20,7 +20,8 @@ import java.io.ByteArrayOutputStream
  * The system photo picker.
  *
  * It needs no runtime permission: `PickVisualMedia` returns only the image she picked,
- * which is also why the doctor app declares no storage or camera permission at all.
+ * which is also why the doctor app declares no storage permission; the camera one is
+ * the Scan tab's.
  */
 @Composable
 actual fun rememberPhotoCapture(onCaptured: (CapturedPhoto) -> Unit): PhotoCapture {

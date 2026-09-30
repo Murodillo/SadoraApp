@@ -5,14 +5,21 @@ import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.windowInsetsBottomHeight
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -21,16 +28,22 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
+import uz.sadora.contract.DoctorAccount
 import uz.sadora.doctor.data.AuthController
 import uz.sadora.doctor.data.DoctorController
 import uz.sadora.doctor.data.DoctorGraph
+import uz.sadora.doctor.data.PanelState
 import uz.sadora.doctor.data.SessionState
+import uz.sadora.doctor.design.Sadora
+import uz.sadora.doctor.design.SadoraIcons
 import uz.sadora.doctor.design.SadoraTheme
 import uz.sadora.doctor.design.Spacing
 import uz.sadora.doctor.i18n.AppLanguage
@@ -39,27 +52,34 @@ import uz.sadora.doctor.i18n.strings
 import uz.sadora.doctor.nav.AppPhase
 import uz.sadora.doctor.nav.Navigator
 import uz.sadora.doctor.nav.Route
+import uz.sadora.doctor.nav.Tab
 import uz.sadora.doctor.ui.SettingsSheet
 import uz.sadora.doctor.ui.SplashScreen
 import uz.sadora.doctor.ui.auth.SignInScreen
+import uz.sadora.doctor.ui.components.CircleIconButton
 import uz.sadora.doctor.ui.components.LocalReduceMotion
 import uz.sadora.doctor.ui.components.Motion
+import uz.sadora.doctor.ui.components.NavItemSpec
+import uz.sadora.doctor.ui.components.SadoraBottomNav
 import uz.sadora.doctor.ui.components.SadoraDialog
 import uz.sadora.doctor.ui.components.SadoraToast
+import uz.sadora.doctor.ui.components.SadoraTopBar
+import uz.sadora.doctor.ui.components.ScreenContent
 import uz.sadora.doctor.ui.components.SystemBackHandler
 import uz.sadora.doctor.ui.components.systemReducesMotion
+import uz.sadora.doctor.ui.doctor.CommunityScreen
+import uz.sadora.doctor.ui.doctor.ConversationScreen
 import uz.sadora.doctor.ui.doctor.DoctorApplyScreen
+import uz.sadora.doctor.ui.doctor.DoctorHomeScreen
 import uz.sadora.doctor.ui.doctor.DoctorPanelScreen
 import uz.sadora.doctor.ui.doctor.DoctorProfileScreen
+import uz.sadora.doctor.ui.doctor.EditDoctorCard
+import uz.sadora.doctor.ui.doctor.MessagesScreen
 import uz.sadora.doctor.ui.doctor.NewPostScreen
+import uz.sadora.doctor.ui.doctor.PatientRecordScreen
 import uz.sadora.doctor.ui.doctor.QuestionScreen
-import androidx.compose.runtime.saveable.rememberSaveableStateHolder
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.navigationBars
-import androidx.compose.foundation.layout.windowInsetsBottomHeight
-import uz.sadora.doctor.design.Sadora
+import uz.sadora.doctor.ui.doctor.RecordSource
+import uz.sadora.doctor.ui.doctor.ScanScreen
 
 /**
  * Sadora Doctor — the root composable.
@@ -133,12 +153,16 @@ fun App(graph: DoctorGraph? = null) {
                         }
                     }
 
+                    // Above the tab bar while it is there, rather than on top of it.
+                    val barShown = navigator.phase == AppPhase.Main &&
+                        doctors.panelState is PanelState.Approved &&
+                        !navigator.canGoBack
                     SadoraToast(
                         message = toast,
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
                             .navigationBarsPadding()
-                            .padding(bottom = Spacing.md),
+                            .padding(bottom = if (barShown) ToastAboveBar else Spacing.md),
                         onTimeout = { toast = null },
                     )
 
@@ -176,8 +200,10 @@ fun App(graph: DoctorGraph? = null) {
 }
 
 /**
- * The signed-in app: the panel at the root and whatever is pushed over it. The system
- * Back pops the stack; with nothing left to pop it falls through and leaves the app.
+ * The signed-in app. Before she is approved, the panel is the whole of it; once she is,
+ * five tabs — Home, Messages, Scan, Chat, Profile — each a root with screens pushed over
+ * it. The system Back pops the stack, then returns to Home; only from Home with nothing
+ * open does it fall through and leave the app.
  */
 @Composable
 private fun MainContent(
@@ -188,85 +214,207 @@ private fun MainContent(
 ) {
     val words = strings
     val c = Sadora.colors
-    // Each screen's saveable state — the panel's scroll above all — outlives a screen
-    // pushed over it, so coming back from a question lands where she left, in time to
-    // see the answered one leave the list.
+    // Each screen's saveable state — a tab's scroll above all — outlives a screen pushed
+    // over it, so coming back from a question lands where she left.
     val saved = rememberSaveableStateHolder()
-    SystemBackHandler(enabled = navigator.canGoBack, onBack = navigator::pop)
-    Box(Modifier.fillMaxSize()) {
-    // The client's route transition: a pushed screen slides in over the one it was opened
-    // from and slides back out when it is popped, so the stack reads as having a direction.
-    AnimatedContent(
-        targetState = navigator.screen,
-        transitionSpec = {
-            val opening = targetState.depth > initialState.depth
-            val slide = tween<IntOffset>(Motion.Standard, easing = Motion.Emphasized)
-            if (opening) {
-                (slideInHorizontally(slide) { it / 4 } + fadeIn(tween(Motion.Standard)))
-                    .togetherWith(fadeOut(tween(Motion.Quick)))
-            } else {
-                fadeIn(tween(Motion.Standard)).togetherWith(
-                    slideOutHorizontally(slide) { it / 4 } + fadeOut(tween(Motion.Standard)),
-                ).apply {
-                    // The page leaving stays on top while it slides away.
-                    targetContentZIndex = -1f
-                }
-            } using SizeTransform(clip = false)
-        },
-        modifier = Modifier.fillMaxSize(),
-        label = "route",
-    ) { screen ->
-        saved.SaveableStateProvider("${screen.depth}:${screen.route}") {
-        when (val route = screen.route) {
-            Route.Panel -> DoctorPanelScreen(
-                doctors = doctors,
-                onApply = { navigator.push(Route.Apply) },
-                onOpenPage = { navigator.push(Route.MyPage(it)) },
-                onOpenQuestion = { navigator.push(Route.Question(it)) },
-                onNewPost = { navigator.push(Route.NewPost) },
-                onOpenSettings = onOpenSettings,
-                onToast = onToast,
-            )
-            Route.Apply -> DoctorApplyScreen(
-                doctors = doctors,
-                onSubmitted = {
-                    navigator.pop()
-                    onToast(words.doctors.submitted)
-                },
-                onClose = navigator::pop,
-            )
-            is Route.Question -> QuestionScreen(
-                postId = route.postId,
-                doctors = doctors,
-                onClose = navigator::pop,
-            )
-            is Route.MyPage -> DoctorProfileScreen(
-                doctorId = route.profileId,
-                doctors = doctors,
-                onOpenPost = { navigator.push(Route.Question(it)) },
-                onNewPost = { navigator.push(Route.NewPost) },
-                onClose = navigator::pop,
-            )
-            Route.NewPost -> NewPostScreen(
-                doctors = doctors,
-                onPosted = {
-                    navigator.pop()
-                    onToast(words.community.published)
-                },
-                onClose = navigator::pop,
-            )
-        }
+
+    val approved = doctors.panelState as? PanelState.Approved
+    val tabbed = approved != null
+    // The unread count feeds the Messages dot from any tab, not only once she opens it.
+    LaunchedEffect(tabbed) {
+        while (tabbed) {
+            doctors.loadConversations(silent = true)
+            kotlinx.coroutines.delay(UnreadPollMillis)
         }
     }
-    // The client has its tab bar here; this app has none, so the system navigation bar
-    // gets the page colour behind it instead of the content scrolling through it.
-    Box(
-        Modifier
-            .align(Alignment.BottomCenter)
-            .fillMaxWidth()
-            .windowInsetsBottomHeight(WindowInsets.navigationBars)
-            .background(c.bg),
-    )
+
+    SystemBackHandler(enabled = navigator.canGoBack || (tabbed && navigator.tab != Tab.Home)) {
+        if (navigator.canGoBack) navigator.pop() else navigator.select(Tab.Home)
+    }
+
+    Column(Modifier.fillMaxSize()) {
+        Box(Modifier.weight(1f).fillMaxWidth()) {
+            // The client's route transition: a pushed screen slides in over the one it was
+            // opened from and slides back out when it is popped. Switching tabs is a
+            // cross-fade instead: tabs are siblings, and a slide would put one behind another.
+            AnimatedContent(
+                // The tab is part of the key only at the root: under a pushed screen it
+                // cannot change, and a tab switch should cross-fade, not snap.
+                targetState = navigator.screen to navigator.tab,
+                transitionSpec = {
+                    val opening = targetState.first.depth > initialState.first.depth
+                    val closing = targetState.first.depth < initialState.first.depth
+                    val slide = tween<IntOffset>(Motion.Standard, easing = Motion.Emphasized)
+                    when {
+                        opening -> (slideInHorizontally(slide) { it / 4 } + fadeIn(tween(Motion.Standard)))
+                            .togetherWith(fadeOut(tween(Motion.Quick)))
+                        closing -> fadeIn(tween(Motion.Standard)).togetherWith(
+                            slideOutHorizontally(slide) { it / 4 } + fadeOut(tween(Motion.Standard)),
+                        ).apply {
+                            // The page leaving stays on top while it slides away.
+                            targetContentZIndex = -1f
+                        }
+                        else -> (fadeIn(tween(Motion.Standard)) + scaleIn(tween(Motion.Standard, easing = Motion.Emphasized), initialScale = 0.97f))
+                            .togetherWith(fadeOut(tween(Motion.Quick)))
+                    } using SizeTransform(clip = false)
+                },
+                modifier = Modifier.fillMaxSize(),
+                label = "route",
+            ) { (screen, tab) ->
+                val root = screen.route == Route.Panel
+                saved.SaveableStateProvider(if (root && tabbed) "tab:$tab" else "${screen.depth}:${screen.route}") {
+                    when (val route = screen.route) {
+                        Route.Panel -> if (approved != null) {
+                            TabRoot(tab, approved.account, navigator, doctors, onOpenSettings, onToast)
+                        } else {
+                            DoctorPanelScreen(
+                                doctors = doctors,
+                                onApply = { navigator.push(Route.Apply) },
+                                onOpenPage = { navigator.push(Route.MyPage(it)) },
+                                onNewPost = { navigator.push(Route.NewPost) },
+                                onOpenSettings = onOpenSettings,
+                            )
+                        }
+                        Route.Apply -> DoctorApplyScreen(
+                            doctors = doctors,
+                            onSubmitted = {
+                                navigator.pop()
+                                onToast(words.doctors.submitted)
+                            },
+                            onClose = navigator::pop,
+                        )
+                        is Route.Question -> QuestionScreen(
+                            postId = route.postId,
+                            doctors = doctors,
+                            onClose = navigator::pop,
+                        )
+                        is Route.MyPage -> DoctorProfileScreen(
+                            doctorId = route.profileId,
+                            doctors = doctors,
+                            onOpenPost = { navigator.push(Route.Question(it)) },
+                            onNewPost = { navigator.push(Route.NewPost) },
+                            onClose = navigator::pop,
+                        )
+                        Route.NewPost -> NewPostScreen(
+                            doctors = doctors,
+                            onPosted = {
+                                navigator.pop()
+                                onToast(words.community.published)
+                            },
+                            onClose = navigator::pop,
+                        )
+                        is Route.Conversation -> ConversationScreen(
+                            id = route.id,
+                            doctors = doctors,
+                            onClose = navigator::pop,
+                            onOpenRecord = { navigator.push(Route.AttachedRecord(route.id, it)) },
+                            onToast = onToast,
+                        )
+                        is Route.PatientRecord -> PatientRecordScreen(
+                            source = RecordSource.Share(route.token),
+                            doctors = doctors,
+                            onClose = navigator::pop,
+                        )
+                        is Route.AttachedRecord -> PatientRecordScreen(
+                            source = RecordSource.Attached(route.conversationId, route.messageId),
+                            doctors = doctors,
+                            onClose = navigator::pop,
+                        )
+                    }
+                }
+            }
+        }
+
+        // The bar belongs to the roots; a pushed screen takes the whole display, its own
+        // composer included. Without the bar the system navigation bar gets the page
+        // colour behind it instead of the content scrolling through it.
+        if (tabbed && !navigator.canGoBack) {
+            SadoraBottomNav(
+                items = listOf(
+                    NavItemSpec(Tab.Home, words.tabs.home, SadoraIcons.Home, badge = doctors.questionsLoaded && doctors.questions.isNotEmpty()),
+                    NavItemSpec(Tab.Messages, words.tabs.messages, SadoraIcons.Message, badge = doctors.unreadMessages > 0),
+                    NavItemSpec(Tab.Scan, words.tabs.scan, SadoraIcons.Scan),
+                    NavItemSpec(Tab.Community, words.tabs.community, SadoraIcons.Chats),
+                    NavItemSpec(Tab.Profile, words.tabs.profile, SadoraIcons.Profile),
+                ),
+                selected = navigator.tab,
+                onSelect = navigator::select,
+            )
+        } else {
+            Box(Modifier.fillMaxWidth().windowInsetsBottomHeight(WindowInsets.navigationBars).background(c.bg))
+        }
+    }
+}
+
+/** How often the Messages dot is refreshed from any tab. */
+private const val UnreadPollMillis = 30_000L
+
+/** The tab bar's height and its margin, plus the usual gap. */
+private val ToastAboveBar = 90.dp
+
+/** One of the five tabs, as its root screen. */
+@Composable
+private fun TabRoot(
+    tab: Tab,
+    account: DoctorAccount,
+    navigator: Navigator,
+    doctors: DoctorController,
+    onOpenSettings: () -> Unit,
+    onToast: (String) -> Unit,
+) {
+    val openQuestion: (String) -> Unit = { navigator.push(Route.Question(it)) }
+    val newPost: () -> Unit = { navigator.push(Route.NewPost) }
+    val savedText = strings.doctors.saved
+    when (tab) {
+        Tab.Home -> DoctorHomeScreen(
+            account = account,
+            doctors = doctors,
+            onOpenQuestion = openQuestion,
+            onScan = { navigator.select(Tab.Scan) },
+            onMessages = { navigator.select(Tab.Messages) },
+            onProfile = { navigator.select(Tab.Profile) },
+            onOpenSettings = onOpenSettings,
+        )
+        Tab.Messages -> MessagesScreen(
+            doctors = doctors,
+            onOpen = { navigator.push(Route.Conversation(it)) },
+        )
+        Tab.Scan -> ScanScreen(
+            doctors = doctors,
+            onOpenPatient = { navigator.push(Route.PatientRecord(it)) },
+            onToast = onToast,
+        )
+        Tab.Community -> CommunityScreen(
+            doctors = doctors,
+            onOpenPost = openQuestion,
+            onNewPost = newPost,
+        )
+        Tab.Profile -> {
+            val profileId = account.profileId
+            if (profileId != null) {
+                DoctorProfileScreen(
+                    doctorId = profileId,
+                    doctors = doctors,
+                    onOpenPost = openQuestion,
+                    onNewPost = newPost,
+                    onClose = null,
+                    onOpenSettings = onOpenSettings,
+                    account = account,
+                    onSaved = { onToast(savedText) },
+                )
+            } else {
+                // Approved but without a page yet — a moment the server should never show.
+                Column {
+                    SadoraTopBar(
+                        strings.doctors.profileTitle,
+                        trailing = { CircleIconButton(SadoraIcons.Settings, contentDescription = strings.settings.title, onClick = onOpenSettings) },
+                    )
+                    ScreenContent {
+                        item { EditDoctorCard(account, doctors, onSaved = { onToast(savedText) }) }
+                    }
+                }
+            }
+        }
     }
 }
 
