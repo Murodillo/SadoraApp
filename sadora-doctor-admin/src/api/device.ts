@@ -33,6 +33,8 @@ export function deviceInfo(): DeviceInfo {
     platform: 'web',
     appVersion: `doctor-web ${version}`,
     timezone: timezone(),
+    // The server routes a doctor's patient pushes to devices marked as the doctor app.
+    app: 'doctor',
   }
 }
 

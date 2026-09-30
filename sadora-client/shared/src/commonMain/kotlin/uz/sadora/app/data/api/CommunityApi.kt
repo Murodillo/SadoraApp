@@ -16,6 +16,7 @@ import uz.sadora.contract.Conversation
 import uz.sadora.contract.ConversationThread
 import uz.sadora.contract.DirectMessage
 import uz.sadora.contract.DoctorSummary
+import uz.sadora.contract.RateConsultationRequest
 import uz.sadora.contract.StartConsultationRequest
 import kotlinx.serialization.json.JsonObject
 import uz.sadora.contract.CreateCommentRequest
@@ -109,6 +110,15 @@ class CommunityApi(private val caller: ApiCaller) {
     suspend fun startConsultation(doctorId: String, body: String? = null): ApiResult<ConversationThread> =
         caller.authenticated("v1/doctors/$doctorId/consultations", HttpMethodKind.POST) {
             setBody(StartConsultationRequest(body))
+        }
+
+    /**
+     * Her stars for the doctor's last window. 409 when she has already rated it, 400 while
+     * the doctor has not answered — the thread's `canRate` says when it may be offered.
+     */
+    suspend fun rateConsultation(conversationId: String, rating: Int, review: String?): ApiResult<Ack> =
+        caller.authenticated("v1/community/conversations/$conversationId/rating", HttpMethodKind.POST) {
+            setBody(RateConsultationRequest(rating, review))
         }
 
     suspend fun reportConversation(conversationId: String, reason: ReportReason, note: String?): ApiResult<Ack> =

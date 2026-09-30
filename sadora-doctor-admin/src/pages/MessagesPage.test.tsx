@@ -3,7 +3,16 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import { AppRoutes } from '../App'
 import { fitWithin } from '../api/image'
-import type { Conversation, ConversationThread, DirectMessage, DoctorAccount, DoctorSummary } from '../api/types'
+import type {
+  ConsultationSession,
+  Conversation,
+  ConversationThread,
+  DirectMessage,
+  DoctorAccount,
+  DoctorSummary,
+  PatientNote,
+  QuickReply,
+} from '../api/types'
 import { apiError, json, mockApi } from '../test/http'
 import { doctorAccount, renderApp, signIn } from '../test/render'
 import { consultationOpen, timeLeft } from '../api/consultation'
@@ -75,8 +84,36 @@ function summary(): DoctorSummary {
  * A small messaging backend: two consultations, the first with a patient line and her
  * record attached. Sending appends to the thread; closing closes it.
  */
+function session(id: string, overrides: Partial<ConsultationSession> = {}): ConsultationSession {
+  return {
+    id,
+    openedAt: ago(2 * HOUR),
+    expiresAt: ahead(22 * HOUR),
+    closedAt: null,
+    closedReason: null,
+    priceMinor: 0,
+    payment: 'free',
+    firstReplyAt: null,
+    summary: null,
+    rating: null,
+    review: null,
+    recordMessageIds: [],
+    ...overrides,
+  }
+}
+
+const replies: QuickReply[] = [
+  { id: 'q1', title: 'Salomlashish', body: 'Assalomu alaykum! Savolingizni batafsil yozing.', position: 0 },
+  { id: 'q2', title: 'Tahlil', body: 'Umumiy qon tahlilini topshiring.', position: 1 },
+]
+
 function messagingBackend(
-  options: { first?: Partial<Conversation>; recordStatus?: number; account?: DoctorAccount } = {},
+  options: {
+    first?: Partial<Conversation>
+    recordStatus?: number
+    account?: DoctorAccount
+    closedSessions?: ConsultationSession[]
+  } = {},
 ) {
   let malika = conversation('c1', 'Malika Rahimova', { unread: 2, ...options.first })
   const nodira = conversation('c2', 'Nodira Aliyeva', {
@@ -91,6 +128,16 @@ function messagingBackend(
     message('m2', '', { kind: 'record', createdAt: ago(4 * 60_000) }),
   ]
   let account = options.account ?? doctorAccount()
+  let note: PatientNote = { body: "Folat kislotasini so'rash", updatedAt: ago(HOUR) }
+  const closedSessions = options.closedSessions ?? [
+    session('s0', {
+      openedAt: ago(30 * HOUR),
+      expiresAt: ago(6 * HOUR),
+      closedAt: ago(8 * HOUR),
+      closedReason: 'doctor',
+      firstReplyAt: ago(29 * HOUR),
+    }),
+  ]
   const threadOf = (): ConversationThread => ({ conversation: { ...malika, unread: 0 }, messages, otherTyping: false })
 
   const api = mockApi({
@@ -117,6 +164,37 @@ function messagingBackend(
       return threadOf()
     },
     'POST /v1/community/conversations/c1/report': { ok: true },
+    'POST /v1/community/conversations/c2/close': () => ({
+      conversation: nodira,
+      messages: [message('n1', 'Rahmat!', { isMine: false })],
+    }),
+    'GET /v1/doctor/quick-replies': replies,
+    'GET /v1/doctor/patients/c1/note': () => note,
+    'PUT /v1/doctor/patients/c1/note': (call) => {
+      const body = (call.body as { body: string }).body.trim()
+      note = { body, updatedAt: body ? new Date().toISOString() : null }
+      return note
+    },
+    'GET /v1/doctor/patients/c2/note': { body: '' },
+    'GET /v1/doctor/patients/c1/history': () => ({
+      patient: { name: 'Malika Rahimova', lifeStage: 'pregnancy' },
+      sessions: [
+        session('s1', {
+          openedAt: ago(10 * 24 * HOUR),
+          expiresAt: ago(9 * 24 * HOUR),
+          closedReason: 'expired',
+          priceMinor: 5_000_000,
+          payment: 'paid',
+          firstReplyAt: new Date(Date.now() - 10 * 24 * HOUR + 12 * 60_000).toISOString(),
+          summary: "Ko'proq suv iching, bir haftadan keyin yozing.",
+          rating: 4,
+          review: 'Tez javob berdi',
+          recordMessageIds: ['m2'],
+        }),
+        session('s2', { priceMinor: 5_000_000, payment: 'paid' }),
+      ],
+    }),
+    'GET /v1/doctor/patients/c2/history': () => ({ sessions: closedSessions }),
     'GET /v1/community/conversations/c1/messages/m2/record': () =>
       options.recordStatus
         ? apiError(options.recordStatus, 'forbidden', "Konsultatsiya yopilgan — karta endi ko'rinmaydi")
@@ -345,6 +423,150 @@ describe('Xabarlar — the patient panel', () => {
     expect(await within(side).findByText('Ochilgan')).toBeInTheDocument()
     expect(within(side).getByText('Tugaydi')).toBeInTheDocument()
     expect(within(side).getByText('Homiladorlik', { selector: 'dd' })).toBeInTheDocument()
+  })
+})
+
+describe('Xabarlar — the workplace', () => {
+  it("chips a paid consultation and one still waiting on her first answer", async () => {
+    messagingBackend({ first: { consultation: { ...conversation('c1', 'x').consultation!, payment: 'paid', answered: false } } })
+    const list = await openMessages()
+
+    const malika = await within(list).findByRole('button', { name: /Malika/ })
+    expect(malika).toHaveTextContent("To'langan")
+    expect(malika).toHaveTextContent('Javob kutilmoqda')
+    const nodira = within(list).getByRole('button', { name: /Nodira/ })
+    expect(nodira).not.toHaveTextContent("To'langan")
+    expect(nodira).not.toHaveTextContent('Javob kutilmoqda')
+  })
+
+  it('drops "Javob kutilmoqda" once she has answered', async () => {
+    messagingBackend({ first: { consultation: { ...conversation('c1', 'x').consultation!, payment: 'free', answered: true } } })
+    const list = await openMessages()
+    const malika = await within(list).findByRole('button', { name: /Malika/ })
+    expect(malika).not.toHaveTextContent('Javob kutilmoqda')
+    expect(malika).not.toHaveTextContent("To'langan")
+  })
+
+  it('closes with her advice for the patient', async () => {
+    const api = messagingBackend()
+    await openMessages('/messages?c=c1')
+    const thread = screen.getByRole('region', { name: 'Yozishma' })
+
+    await userEvent.click(await within(thread).findByRole('button', { name: 'Konsultatsiyani yakunlash' }))
+    const dialog = screen.getByRole('dialog', { name: 'Konsultatsiyani yakunlash' })
+    await userEvent.type(within(dialog).getByLabelText(/Tavsiya/), '  Dam oling, suv iching.  ')
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Yakunlash' }))
+
+    await waitFor(() => expect(api.callsTo('POST', '/v1/community/conversations/c1/close')).toHaveLength(1))
+    expect(api.callsTo('POST', '/v1/community/conversations/c1/close')[0]!.body).toEqual({ summary: 'Dam oling, suv iching.' })
+  })
+
+  it('offers "Tavsiya yozish" on a window that ended without advice, and sends only the advice', async () => {
+    const api = messagingBackend()
+    await openMessages('/messages?c=c2')
+    const thread = screen.getByRole('region', { name: 'Yozishma' })
+
+    await userEvent.click(await within(thread).findByRole('button', { name: 'Tavsiya yozish' }))
+    const dialog = screen.getByRole('dialog', { name: 'Tavsiya yozish' })
+    const send = within(dialog).getByRole('button', { name: 'Yuborish' })
+    expect(send).toBeDisabled()
+    await userEvent.type(within(dialog).getByLabelText(/Tavsiya/), 'UZI qiling.')
+    await userEvent.click(send)
+
+    await waitFor(() => expect(api.callsTo('POST', '/v1/community/conversations/c2/close')).toHaveLength(1))
+    expect(api.callsTo('POST', '/v1/community/conversations/c2/close')[0]!.body).toEqual({ summary: 'UZI qiling.' })
+    expect(await screen.findByText('Tavsiya yuborildi')).toBeInTheDocument()
+  })
+
+  it('does not offer "Tavsiya yozish" when the last window has advice', async () => {
+    messagingBackend({
+      closedSessions: [session('s0', { closedAt: ago(8 * HOUR), expiresAt: ago(6 * HOUR), summary: 'Yozilgan' })],
+    })
+    await openMessages('/messages?c=c2')
+    const side = screen.getByRole('complementary', { name: 'Bemor' })
+    expect(await within(side).findByText('Yozilgan')).toBeInTheDocument()
+    const thread = screen.getByRole('region', { name: 'Yozishma' })
+    expect(within(thread).queryByRole('button', { name: 'Tavsiya yozish' })).not.toBeInTheDocument()
+  })
+
+  it('puts a quick reply into the box from the ⚡ list without sending it', async () => {
+    const api = messagingBackend()
+    await openMessages('/messages?c=c1')
+    const thread = screen.getByRole('region', { name: 'Yozishma' })
+    await within(thread).findByText(/belim og'riyapti/)
+
+    await userEvent.click(within(thread).getByRole('button', { name: 'Tayyor javoblar' }))
+    await userEvent.click(await within(thread).findByRole('option', { name: /Tahlil/ }))
+
+    expect(within(thread).getByLabelText('Xabar')).toHaveValue('Umumiy qon tahlilini topshiring.')
+    expect(within(thread).queryByRole('listbox')).not.toBeInTheDocument()
+    expect(api.callsTo('POST', '/v1/community/conversations/c1/messages')).toHaveLength(0)
+  })
+
+  it('filters quick replies with "/" and takes the highlighted one with Enter', async () => {
+    const api = messagingBackend()
+    await openMessages('/messages?c=c1')
+    const thread = screen.getByRole('region', { name: 'Yozishma' })
+    await within(thread).findByText(/belim og'riyapti/)
+
+    const box = within(thread).getByLabelText('Xabar')
+    await userEvent.type(box, '/tah')
+    const listbox = await within(thread).findByRole('listbox')
+    expect(within(listbox).getAllByRole('option')).toHaveLength(1)
+    expect(within(listbox).getByRole('option', { name: /Tahlil/ })).toHaveAttribute('aria-selected', 'true')
+
+    fireEvent.keyDown(box, { key: 'Enter' })
+    expect(box).toHaveValue('Umumiy qon tahlilini topshiring.')
+    expect(api.callsTo('POST', '/v1/community/conversations/c1/messages')).toHaveLength(0)
+
+    // Escape closes the list the slash opened.
+    await userEvent.clear(box)
+    await userEvent.type(box, '/')
+    expect(await within(thread).findByRole('listbox')).toBeInTheDocument()
+    fireEvent.keyDown(box, { key: 'Escape' })
+    expect(within(thread).queryByRole('listbox')).not.toBeInTheDocument()
+  })
+
+  it('keeps a private note on the patient', async () => {
+    const api = messagingBackend()
+    await openMessages('/messages?c=c1')
+    const side = screen.getByRole('complementary', { name: 'Bemor' })
+
+    const note = await within(side).findByLabelText('Shaxsiy eslatma')
+    await waitFor(() => expect(note).toHaveValue("Folat kislotasini so'rash"))
+    expect(within(side).getByText("Faqat siz ko'rasiz")).toBeInTheDocument()
+    const save = within(side).getByRole('button', { name: 'Saqlash' })
+    expect(save).toBeDisabled()
+
+    await userEvent.clear(note)
+    await userEvent.type(note, 'Keyingi safar UZI natijasi')
+    await userEvent.click(save)
+
+    await waitFor(() => expect(api.callsTo('PUT', '/v1/doctor/patients/c1/note')).toHaveLength(1))
+    expect(api.callsTo('PUT', '/v1/doctor/patients/c1/note')[0]!.body).toEqual({ body: 'Keyingi safar UZI natijasi' })
+    expect(await screen.findByText('Eslatma saqlandi')).toBeInTheDocument()
+    await waitFor(() => expect(within(side).getByRole('button', { name: 'Saqlash' })).toBeDisabled())
+  })
+
+  it('lists the history with payment, advice, rating and the records attached', async () => {
+    const api = messagingBackend()
+    await openMessages('/messages?c=c1')
+    const side = screen.getByRole('complementary', { name: 'Bemor' })
+
+    const history = await within(side).findByRole('region', { name: 'Konsultatsiyalar tarixi' })
+    const items = await within(history).findAllByRole('listitem')
+    expect(items).toHaveLength(2)
+    // Newest first: the open window, then the paid one with advice and a rating.
+    expect(items[0]).toHaveTextContent('Hozirgi')
+    expect(items[1]).toHaveTextContent("To'langan · 50 000 so'm")
+    expect(items[1]).toHaveTextContent("Ko'proq suv iching")
+    expect(items[1]).toHaveTextContent('Tez javob berdi')
+    expect(items[1]).toHaveTextContent('birinchi javob: 12 daqiqa')
+    expect(within(items[1]!).getByLabelText('Baho: 4 / 5')).toHaveTextContent('★★★★☆')
+
+    await userEvent.click(within(items[1]!).getByRole('button', { name: /Karta/ }))
+    await waitFor(() => expect(api.callsTo('GET', '/v1/community/conversations/c1/messages/m2/record').length).toBeGreaterThan(0))
+    expect(await within(side).findByText('Hafta')).toBeInTheDocument()
   })
 })
 

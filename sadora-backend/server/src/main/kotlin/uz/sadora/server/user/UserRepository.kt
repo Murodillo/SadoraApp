@@ -403,6 +403,7 @@ class UserRepository {
                 it[model] = device.model
                 it[pushToken] = device.pushToken
                 it[timezone] = device.timezone
+                it[app] = device.app.name.lowercase()
                 it[createdAt] = timestamp
                 it[lastSeenAt] = timestamp
             }
@@ -416,6 +417,7 @@ class UserRepository {
                 // "unregister" — keep whatever we already had.
                 device.pushToken?.let { token -> it[pushToken] = token }
                 device.timezone?.let { zone -> it[timezone] = zone }
+                it[app] = device.app.name.lowercase()
                 it[lastSeenAt] = timestamp
             }
         }

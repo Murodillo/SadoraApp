@@ -24,6 +24,13 @@ import uz.sadora.app.R
 object PushNotifications {
 
     /**
+     * Where a tap lands, as the server put it in the data payload: `sadora://conversation/{id}`.
+     * The same key in both paths — in the background the system copies the data payload
+     * onto the launch intent as extras, and [show] puts it there by hand.
+     */
+    const val EXTRA_LINK = "link"
+
+    /**
      * Created before anything is posted. A notification naming a channel that does not
      * exist is dropped on Android 8+, and FCM would fall back to a channel of its own
      * called "Miscellaneous".
@@ -40,15 +47,21 @@ object PushNotifications {
         context.getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
     }
 
-    fun show(context: Context, title: String?, body: String?, notificationId: String?) {
+    fun show(context: Context, title: String?, body: String?, notificationId: String?, link: String? = null) {
         if (!canPost(context)) return
         ensureChannel(context)
 
+        // The server's id, so a retried delivery replaces the notification instead of
+        // stacking a second copy of the same reminder.
+        val id = notificationId?.hashCode() ?: System.currentTimeMillis().toInt()
+        // One request code per notification: with a shared one, FLAG_UPDATE_CURRENT gave
+        // every notification still in the shade the newest one's link.
         val open = PendingIntent.getActivity(
             context,
-            0,
+            id,
             Intent(context, MainActivity::class.java)
-                .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP),
+                .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                .apply { if (link != null) putExtra(EXTRA_LINK, link) },
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
         val notification = NotificationCompat.Builder(context, context.getString(R.string.push_channel_id))
@@ -60,9 +73,6 @@ object PushNotifications {
             .setContentIntent(open)
             .build()
 
-        // The server's id, so a retried delivery replaces the notification instead of
-        // stacking a second copy of the same reminder.
-        val id = notificationId?.hashCode() ?: System.currentTimeMillis().toInt()
         NotificationManagerCompat.from(context).notify(id, notification)
     }
 

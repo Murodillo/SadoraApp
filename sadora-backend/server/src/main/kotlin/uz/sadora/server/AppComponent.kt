@@ -76,6 +76,9 @@ import uz.sadora.server.notify.ServiceAccountKey
 import uz.sadora.server.notify.NotificationRepository
 import uz.sadora.server.notify.NotificationScheduler
 import uz.sadora.server.notify.NotificationService
+import uz.sadora.server.consultation.ConsultationJob
+import uz.sadora.server.consultation.ConsultationRepository
+import uz.sadora.server.consultation.ConsultationService
 import uz.sadora.server.user.AccountErasureJob
 import uz.sadora.server.user.UserRepository
 import uz.sadora.server.wearable.WearableRepository
@@ -264,6 +267,7 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
     val communityRepository = CommunityRepository()
     val messagingRepository = MessagingRepository()
     val doctorRepository = DoctorRepository()
+    val consultationRepository = ConsultationRepository()
     val communityService = CommunityService(
         repository = communityRepository,
         users = userRepository,
@@ -292,6 +296,7 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
         records = { userId, language -> shareService.summaryFor(userId, language) },
         cache = cache,
         audit = auditService,
+        consultations = consultationRepository,
     )
     val communityModerationService = CommunityModerationService(communityRepository, auditService, messagingRepository, doctorRepository)
 
@@ -381,6 +386,23 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
         config = config.billing,
         environment = config.environment,
     )
+
+    val consultationService = ConsultationService(
+        repository = consultationRepository,
+        messages = messagingRepository,
+        doctors = doctorRepository,
+        users = userRepository,
+        identities = communityRepository,
+        billing = billingService,
+        notifications = notificationRepository,
+        audit = auditService,
+    ).also { service ->
+        // Billing takes the money and messaging closes the window; both hand the
+        // consequences to this service, which needs each of them in turn.
+        billingService.consultationPaid = service::onPaid
+        messagingService.onSessionClosed = service::afterClose
+    }
+    val consultationJob = ConsultationJob(consultationService)
     val paymeGateway = PaymeGateway(billingRepository, billingService, config.billing.payme)
     val clickGateway = ClickGateway(billingRepository, billingService, config.billing.click)
     val storePurchaseService = StorePurchaseService(
@@ -425,6 +447,7 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
         notificationScheduler.stop()
         wearableSyncJob.stop()
         accountErasureJob.stop()
+        consultationJob.stop()
         outboundHttpClient.close()
         cache.close()
         databaseFactory.close()

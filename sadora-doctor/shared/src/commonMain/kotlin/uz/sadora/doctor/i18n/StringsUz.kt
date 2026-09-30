@@ -105,4 +105,5 @@ object StringsUz : Strings {
 
     override val doctors: DoctorStrings = DoctorStringsUz
     override val tabs: TabStrings = TabStringsUz
+    override val work: WorkStrings = WorkStringsUz
 }

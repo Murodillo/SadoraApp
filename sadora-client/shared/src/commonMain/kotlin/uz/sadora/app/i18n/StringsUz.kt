@@ -767,6 +767,7 @@ object StringsUz : Strings {
         override val featureClosed = "Bu bo'lim hozircha yopiq."
         override val consentRequired = "Buning uchun Maxfiylik bo'limida rozilik bering."
         override val paymentFailed = "To'lov amalga oshmadi. Qayta urinib ko'ring."
+        override val paymentRequired = "Bu shifokor bilan konsultatsiya pullik — avval to'lang."
         override val unexpected = "Nimadir noto'g'ri ketdi. Qayta urinib ko'ring."
     }
 

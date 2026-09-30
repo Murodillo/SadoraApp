@@ -1,5 +1,6 @@
 package uz.sadora.doctor.data
 
+import uz.sadora.contract.ClientApp
 import uz.sadora.contract.DeviceInfo
 import uz.sadora.contract.Platform
 
@@ -12,6 +13,10 @@ interface DeviceIdentity {
     suspend fun installationId(): String
 }
 
+/**
+ * Always as the doctor app: a doctor has the women's app on the same phone too, and the
+ * server sends a patient's message to the devices registered with [ClientApp.DOCTOR].
+ */
 suspend fun DeviceIdentity.toDeviceInfo(
     appVersion: String? = null,
     pushToken: String? = null,
@@ -23,6 +28,7 @@ suspend fun DeviceIdentity.toDeviceInfo(
     model = model,
     pushToken = pushToken,
     timezone = timezone,
+    app = ClientApp.DOCTOR,
 )
 
 /** Fixed values for tests and previews. */

@@ -72,4 +72,32 @@ class NavigatorTest {
         navigator.goTo(AppPhase.Main)
         assertEquals(Tab.Home, navigator.tab)
     }
+
+    @Test
+    fun `a pushed conversation opens over Messages whatever was open before`() {
+        val navigator = Navigator()
+        navigator.goTo(AppPhase.Main)
+        navigator.select(Tab.Profile)
+        navigator.push(Route.WorkSettings)
+
+        navigator.openConversation("c-1")
+
+        assertEquals(Tab.Messages, navigator.tab)
+        assertEquals(Screen(Route.Conversation("c-1"), 1), navigator.screen)
+        navigator.pop()
+        assertEquals(Route.Panel, navigator.current)
+        assertEquals(Tab.Messages, navigator.tab)
+    }
+
+    @Test
+    fun `a push link is held until it is taken and taken once`() {
+        PushLinks.take()
+        PushLinks.offer("https://sadora.app/r/K7M2QP")
+        assertEquals(null, PushLinks.pendingConversation)
+
+        PushLinks.offer("sadora://conversation/c-9")
+        assertEquals("c-9", PushLinks.pendingConversation)
+        assertEquals("c-9", PushLinks.take())
+        assertEquals(null, PushLinks.take())
+    }
 }

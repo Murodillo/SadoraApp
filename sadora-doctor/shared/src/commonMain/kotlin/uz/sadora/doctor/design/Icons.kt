@@ -366,6 +366,50 @@ object SadoraIcons {
         dot(16.2f, 16.2f, 1.8f)
     }
 
+    /** Ma'lumot — a circle with an "i": the patient's page from a consultation. */
+    val Info: ImageVector = icon("Info") {
+        stroke {
+            moveTo(3.6f, 12f)
+            arcToRelative(8.41f, 8.41f, 0f, false, true, 16.8f, 0f)
+            arcToRelative(8.41f, 8.41f, 0f, false, true, -16.8f, 0f)
+            close()
+        }
+        stroke { moveTo(12f, 11f); lineTo(12f, 16.4f) }
+        dot(12f, 7.8f, 2f)
+    }
+
+    /** Tayyor javob — a lightning bolt: an answer in one tap. */
+    val Bolt: ImageVector = icon("Bolt") {
+        stroke {
+            moveTo(13.2f, 3.4f)
+            lineTo(5.6f, 13.4f)
+            lineTo(11.6f, 13.4f)
+            lineTo(10.8f, 20.6f)
+            lineTo(18.4f, 10.6f)
+            lineTo(12.4f, 10.6f)
+            close()
+        }
+    }
+
+    /** Daromad — a wallet with its clasp. */
+    val Wallet: ImageVector = icon("Wallet") {
+        stroke {
+            moveTo(5.6f, 6.6f)
+            horizontalLineToRelative(12.8f)
+            arcToRelative(1.8f, 1.8f, 0f, false, true, 1.8f, 1.8f)
+            verticalLineToRelative(9.2f)
+            arcToRelative(1.8f, 1.8f, 0f, false, true, -1.8f, 1.8f)
+            horizontalLineToRelative(-12.8f)
+            arcToRelative(1.8f, 1.8f, 0f, false, true, -1.8f, -1.8f)
+            verticalLineToRelative(-9.2f)
+            arcToRelative(1.8f, 1.8f, 0f, false, true, 1.8f, -1.8f)
+            close()
+        }
+        stroke { moveTo(6.4f, 6.6f); lineTo(15.4f, 3.8f); lineTo(16.2f, 6.6f) }
+        stroke { moveTo(20.2f, 10.6f); lineTo(15.8f, 10.6f); arcToRelative(2.5f, 2.5f, 0f, false, false, 0f, 4.8f); lineTo(20.2f, 15.4f) }
+        dot(15.9f, 13f, 1.6f)
+    }
+
     /** Uch nuqta — "yana" menyusi. */
     val More: ImageVector = icon("More") {
         dot(6f, 12f, 2.6f)

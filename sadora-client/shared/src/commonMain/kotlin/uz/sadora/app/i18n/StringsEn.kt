@@ -769,6 +769,7 @@ object StringsEn : Strings {
         override val featureClosed = "This section is closed for now."
         override val consentRequired = "Give consent in Privacy to use this."
         override val paymentFailed = "The payment did not go through. Try again."
+        override val paymentRequired = "This doctor's consultations are paid — pay first."
         override val unexpected = "Something went wrong. Try again."
     }
 

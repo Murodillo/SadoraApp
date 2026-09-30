@@ -1978,3 +1978,37 @@ tbody tr.selected:hover {
     max-width: 92%;
   }
 }
+
+/* ---------------------------------------------------------------- sortable tables */
+
+/* A column header that sorts: it keeps the header's small caps and only lights up. */
+.th-sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  text-transform: inherit;
+  letter-spacing: inherit;
+  cursor: pointer;
+  transition: color var(--quick) var(--gentle);
+}
+
+.th-sort:hover,
+.th-sort.active {
+  color: var(--text);
+}
+
+.th-sort .arrow {
+  width: 8px;
+  opacity: 0.8;
+}
+
+/* An amber number on the quality table: money owed back, windows left unanswered. */
+.num-alert {
+  color: var(--warn);
+  font-weight: 600;
+}

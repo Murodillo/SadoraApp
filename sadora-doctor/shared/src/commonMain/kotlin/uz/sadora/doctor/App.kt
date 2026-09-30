@@ -41,6 +41,7 @@ import uz.sadora.doctor.data.AuthController
 import uz.sadora.doctor.data.DoctorController
 import uz.sadora.doctor.data.DoctorGraph
 import uz.sadora.doctor.data.PanelState
+import uz.sadora.doctor.data.WorkController
 import uz.sadora.doctor.data.SessionState
 import uz.sadora.doctor.design.Sadora
 import uz.sadora.doctor.design.SadoraIcons
@@ -51,6 +52,7 @@ import uz.sadora.doctor.i18n.ProvideStrings
 import uz.sadora.doctor.i18n.strings
 import uz.sadora.doctor.nav.AppPhase
 import uz.sadora.doctor.nav.Navigator
+import uz.sadora.doctor.nav.PushLinks
 import uz.sadora.doctor.nav.Route
 import uz.sadora.doctor.nav.Tab
 import uz.sadora.doctor.ui.SettingsSheet
@@ -73,13 +75,17 @@ import uz.sadora.doctor.ui.doctor.DoctorApplyScreen
 import uz.sadora.doctor.ui.doctor.DoctorHomeScreen
 import uz.sadora.doctor.ui.doctor.DoctorPanelScreen
 import uz.sadora.doctor.ui.doctor.DoctorProfileScreen
+import uz.sadora.doctor.ui.doctor.EarningsScreen
 import uz.sadora.doctor.ui.doctor.EditDoctorCard
 import uz.sadora.doctor.ui.doctor.MessagesScreen
 import uz.sadora.doctor.ui.doctor.NewPostScreen
 import uz.sadora.doctor.ui.doctor.PatientRecordScreen
+import uz.sadora.doctor.ui.doctor.PatientScreen
 import uz.sadora.doctor.ui.doctor.QuestionScreen
+import uz.sadora.doctor.ui.doctor.QuickRepliesScreen
 import uz.sadora.doctor.ui.doctor.RecordSource
 import uz.sadora.doctor.ui.doctor.ScanScreen
+import uz.sadora.doctor.ui.doctor.WorkSettingsScreen
 
 /**
  * Sadora Doctor — the root composable.
@@ -94,6 +100,7 @@ fun App(graph: DoctorGraph? = null) {
     val navigator = remember { Navigator() }
     val auth = remember(graph) { graph?.authController() ?: AuthController(null) }
     val doctors = remember(graph) { graph?.doctorController() ?: DoctorController(null, null) }
+    val work = remember(graph) { graph?.workController() ?: WorkController(null) }
     val scope = rememberCoroutineScope()
 
     var language by remember { mutableStateOf(AppLanguage.fromCode(graph?.prefs?.readLanguage())) }
@@ -113,6 +120,7 @@ fun App(graph: DoctorGraph? = null) {
     LaunchedEffect(session) {
         if (session is SessionState.SignedOut && navigator.phase == AppPhase.Main) {
             doctors.reset()
+            work.reset()
             auth.reset()
             navigator.goTo(AppPhase.SignIn)
         }
@@ -141,12 +149,14 @@ fun App(graph: DoctorGraph? = null) {
                                     // The sign-in page keeps its state while it fades out;
                                     // it is cleared when the session ends.
                                     doctors.reset()
+                                    work.reset()
                                     navigator.goTo(AppPhase.Main)
                                 },
                             )
                             AppPhase.Main -> MainContent(
                                 navigator = navigator,
                                 doctors = doctors,
+                                work = work,
                                 onOpenSettings = { settingsOpen = true },
                                 onToast = { toast = it },
                             )
@@ -188,6 +198,7 @@ fun App(graph: DoctorGraph? = null) {
                             scope.launch {
                                 auth.signOut()
                                 doctors.reset()
+                                work.reset()
                                 navigator.goTo(AppPhase.SignIn)
                             }
                         },
@@ -209,6 +220,7 @@ fun App(graph: DoctorGraph? = null) {
 private fun MainContent(
     navigator: Navigator,
     doctors: DoctorController,
+    work: WorkController,
     onOpenSettings: () -> Unit,
     onToast: (String) -> Unit,
 ) {
@@ -226,6 +238,13 @@ private fun MainContent(
             doctors.loadConversations(silent = true)
             kotlinx.coroutines.delay(UnreadPollMillis)
         }
+    }
+
+    // A tapped push waits here until the tabs are there: a cold start resolves the
+    // session and her account first, and the conversation then opens over Messages.
+    val pushed = PushLinks.pendingConversation
+    LaunchedEffect(pushed, tabbed) {
+        if (pushed != null && tabbed) PushLinks.take()?.let(navigator::openConversation)
     }
 
     SystemBackHandler(enabled = navigator.canGoBack || (tabbed && navigator.tab != Tab.Home)) {
@@ -265,7 +284,7 @@ private fun MainContent(
                 saved.SaveableStateProvider(if (root && tabbed) "tab:$tab" else "${screen.depth}:${screen.route}") {
                     when (val route = screen.route) {
                         Route.Panel -> if (approved != null) {
-                            TabRoot(tab, approved.account, navigator, doctors, onOpenSettings, onToast)
+                            TabRoot(tab, approved.account, navigator, doctors, work, onOpenSettings, onToast)
                         } else {
                             DoctorPanelScreen(
                                 doctors = doctors,
@@ -306,8 +325,11 @@ private fun MainContent(
                         is Route.Conversation -> ConversationScreen(
                             id = route.id,
                             doctors = doctors,
+                            work = work,
                             onClose = navigator::pop,
                             onOpenRecord = { navigator.push(Route.AttachedRecord(route.id, it)) },
+                            onOpenPatient = { navigator.push(Route.Patient(route.id)) },
+                            onManageReplies = { navigator.push(Route.QuickReplies) },
                             onToast = onToast,
                         )
                         is Route.PatientRecord -> PatientRecordScreen(
@@ -319,6 +341,24 @@ private fun MainContent(
                             source = RecordSource.Attached(route.conversationId, route.messageId),
                             doctors = doctors,
                             onClose = navigator::pop,
+                        )
+                        Route.WorkSettings -> WorkSettingsScreen(
+                            work = work,
+                            onClose = navigator::pop,
+                            onSaved = {
+                                navigator.pop()
+                                onToast(words.doctors.saved)
+                            },
+                        )
+                        Route.Earnings -> EarningsScreen(work = work, onClose = navigator::pop)
+                        Route.QuickReplies -> QuickRepliesScreen(work = work, onClose = navigator::pop)
+                        is Route.Patient -> PatientScreen(
+                            conversationId = route.conversationId,
+                            work = work,
+                            doctors = doctors,
+                            onClose = navigator::pop,
+                            onOpenRecord = { navigator.push(Route.AttachedRecord(route.conversationId, it)) },
+                            onToast = onToast,
                         )
                     }
                 }
@@ -359,6 +399,7 @@ private fun TabRoot(
     account: DoctorAccount,
     navigator: Navigator,
     doctors: DoctorController,
+    work: WorkController,
     onOpenSettings: () -> Unit,
     onToast: (String) -> Unit,
 ) {
@@ -369,11 +410,14 @@ private fun TabRoot(
         Tab.Home -> DoctorHomeScreen(
             account = account,
             doctors = doctors,
+            work = work,
             onOpenQuestion = openQuestion,
             onScan = { navigator.select(Tab.Scan) },
             onMessages = { navigator.select(Tab.Messages) },
             onProfile = { navigator.select(Tab.Profile) },
             onOpenSettings = onOpenSettings,
+            onOpenWork = { navigator.push(Route.WorkSettings) },
+            onOpenEarnings = { navigator.push(Route.Earnings) },
         )
         Tab.Messages -> MessagesScreen(
             doctors = doctors,
@@ -401,6 +445,8 @@ private fun TabRoot(
                     onOpenSettings = onOpenSettings,
                     account = account,
                     onSaved = { onToast(savedText) },
+                    onOpenWork = { navigator.push(Route.WorkSettings) },
+                    onOpenReplies = { navigator.push(Route.QuickReplies) },
                 )
             } else {
                 // Approved but without a page yet — a moment the server should never show.

@@ -137,6 +137,13 @@ data class DoctorProfile(
     val canMessage: Boolean = false,
     /** The viewer's consultation with her, if there is one, so the button can reopen it. */
     val conversationId: String? = null,
+    /** One consultation's price, in tiyin; 0 is free. */
+    val priceMinor: Long = 0,
+    val rating: Double? = null,
+    val ratingCount: Int = 0,
+    val availability: DoctorAvailability? = null,
+    /** How a paid consultation can be paid for here; empty when it is free. */
+    val paymentProviders: List<PaymentProvider> = emptyList(),
 )
 
 /** A doctor as the directory lists her. */
@@ -148,4 +155,10 @@ data class DoctorListItem(
     val workplace: String,
     val experienceYears: Int,
     val answerCount: Int = 0,
+    /** One consultation's price, in tiyin; 0 is free. */
+    val priceMinor: Long = 0,
+    val rating: Double? = null,
+    val ratingCount: Int = 0,
+    /** Inside her hours and not marked busy. */
+    val onlineNow: Boolean = false,
 )

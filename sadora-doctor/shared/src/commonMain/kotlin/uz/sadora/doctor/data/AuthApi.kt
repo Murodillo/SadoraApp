@@ -9,6 +9,7 @@ import uz.sadora.contract.LogoutRequest
 import uz.sadora.contract.OtpChallenge
 import uz.sadora.contract.OtpRequest
 import uz.sadora.contract.OtpVerifyRequest
+import uz.sadora.contract.RegisterDeviceRequest
 
 /**
  * Signing in and out: the same phone-and-code exchange the client app uses, against the
@@ -31,6 +32,10 @@ class AuthApi internal constructor(
     }
 
     suspend fun refreshSession(): ApiResult<AuthSession> = caller.refreshSession()
+
+    /** The phone and its push token, for whoever is signed in; sending it again is an update. */
+    suspend fun registerDevice(device: DeviceInfo): ApiResult<Ack> =
+        caller.authenticated("v1/me/devices", HttpMethodKind.POST) { setBody(RegisterDeviceRequest(device)) }
 
     suspend fun logout(allDevices: Boolean = false): ApiResult<Ack> {
         val refreshToken = session.currentRefreshToken()

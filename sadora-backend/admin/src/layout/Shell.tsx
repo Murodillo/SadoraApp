@@ -31,6 +31,7 @@ const groups: NavGroup[] = [
     entries: [
       { to: '/users', label: "Ro'yxat", glyph: '◎', roles: ALL },
       { to: '/doctors', label: 'Shifokorlar', glyph: '✚', roles: ['OWNER', 'ADMIN', 'SUPPORT'] },
+      { to: '/consultations', label: 'Konsultatsiyalar', glyph: '✆', roles: ['OWNER', 'ADMIN', 'SUPPORT'] },
     ],
   },
   {
@@ -74,6 +75,7 @@ const titles: Record<string, string> = {
   '/analytics': 'Analitika',
   '/users': 'Foydalanuvchilar',
   '/doctors': 'Shifokorlar — tekshiruv',
+  '/consultations': "Konsultatsiyalar — to'lovlar va qaytarish",
   '/community': 'Chat — moderatsiya',
   '/content': 'Bilim — maqolalar',
   '/ai': 'AI xarajati',

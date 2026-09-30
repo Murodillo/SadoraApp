@@ -76,6 +76,7 @@ import uz.sadora.app.ui.core.AiChatScreen
 import uz.sadora.app.ui.core.AiFreePreviewScreen
 import uz.sadora.app.ui.core.AliasProfileScreen
 import uz.sadora.app.ui.core.ConsultationConsentSheetContent
+import uz.sadora.app.ui.core.ConsultationPaySheetContent
 import uz.sadora.app.ui.core.DoctorProfileScreen
 import uz.sadora.app.ui.core.CommunityRulesSheetContent
 import uz.sadora.app.ui.core.ConversationMenuSheetContent
@@ -296,6 +297,8 @@ private class ShellOverlays {
     var showConversationMenu by mutableStateOf(false)
     /** The doctor she is about to open a consultation with: the consent sheet is up. */
     var consultWith by mutableStateOf<DoctorProfile?>(null)
+    /** The doctor, by id, whose consultation she is paying for: the pay sheet is up. */
+    var payFor by mutableStateOf<String?>(null)
     var showSymptomSheet by mutableStateOf(false)
 
     /** The day the symptom sheet writes; null is today. Set by the calendar's day page. */
@@ -307,7 +310,7 @@ private class ShellOverlays {
 
     val anyOpen: Boolean
         get() = showWaterSheet || showSymptomSheet || menuFor != null || showCompose || showCommunityRules ||
-            showEditBio || showConversationMenu || consultWith != null
+            showEditBio || showConversationMenu || consultWith != null || payFor != null
 
     /** Closes the topmost sheet. False when none was open. */
     fun closeTop(): Boolean = when {
@@ -319,6 +322,7 @@ private class ShellOverlays {
         showEditBio -> { showEditBio = false; true }
         showConversationMenu -> { showConversationMenu = false; true }
         consultWith != null -> { consultWith = null; true }
+        payFor != null -> { payFor = null; true }
         else -> false
     }
 }
@@ -438,6 +442,18 @@ private fun MainShell(
             AppLinks.consume()
             if (navigator.current != Route.DataSources) navigator.push(Route.DataSources)
             scope.launch { controllers.wearables.onReturned(link.provider, link.ok, link.code, link.state) }
+        }
+        // A tapped push about a consultation: the doctor wrote, the window ended, money is
+        // coming back. The thread says which; it is opened over whatever tab she was on.
+        if (link is AppLink.Conversation) {
+            AppLinks.consume()
+            overlays.closeTop()
+            val open = navigator.current
+            if (open is Route.Conversation && open.id == link.id) {
+                scope.launch { controllers.messages.refreshThread(link.id) }
+            } else {
+                navigator.push(Route.Conversation(link.id, controllers.messages.conversations.firstOrNull { it.id == link.id }?.alias.orEmpty()))
+            }
         }
     }
 
@@ -676,7 +692,32 @@ private fun MainShell(
                         overlays.consultWith = null
                         navigator.push(Route.Conversation(thread.id, thread.alias))
                     },
+                    onNeedsPayment = {
+                        overlays.consultWith = null
+                        overlays.payFor = doctor.id
+                    },
                     onCancel = { overlays.consultWith = null },
+                )
+            }
+        }
+
+        SadoraBottomSheet(
+            visible = overlays.payFor != null,
+            title = strings.doctors.payTitle,
+            onDismiss = { overlays.payFor = null },
+        ) {
+            val paidToast = strings.doctors.paidToast
+            overlays.payFor?.let { doctorId ->
+                ConsultationPaySheetContent(
+                    doctorId = doctorId,
+                    doctors = controllers.doctors,
+                    onPaid = {
+                        overlays.payFor = null
+                        overlays.toast = paidToast
+                        // In the shell's scope: the sheet, and its scope, close with this.
+                        scope.launch { openPaidConsultation(doctorId, navigator, controllers) }
+                    },
+                    onCancel = { overlays.payFor = null },
                 )
             }
         }
@@ -915,6 +956,7 @@ private fun PushedScreen(
             onOpenPost = { navigator.push(Route.Post(it.id)) },
             onOpenMenu = { overlays.menuFor = it },
             onMessage = { overlays.consultWith = it },
+            onPay = { overlays.payFor = it.id },
             onOpenConversation = { id, name -> navigator.push(Route.Conversation(id, name)) },
             onClose = close,
         )
@@ -947,6 +989,7 @@ private fun PushedScreen(
             onOpenProfile = { navigator.push(Route.AliasProfile(it)) },
             onOpenDoctor = { navigator.openDoctor(it) },
             onOpenMenu = { overlays.showConversationMenu = true },
+            onPay = { overlays.payFor = it },
             onRead = onThreadRead,
             onClose = close,
         )
@@ -1002,3 +1045,22 @@ private fun PushedScreen(
 
 /** How often the unread count is re-read while she is on the Chat tab. */
 private const val UnreadRefreshMillis = 30_000L
+
+/**
+ * After a consultation is paid: her page is read again for the thread's id — the server
+ * made the thread at checkout and opened its window on the callback — and the thread is
+ * opened, or re-read when she paid from inside it.
+ */
+private suspend fun openPaidConsultation(doctorId: String, navigator: Navigator, controllers: AppControllers) {
+    val doctors = controllers.doctors
+    doctors.loadProfile(doctorId)
+    val profile = doctors.profile?.takeIf { it.id == doctorId } ?: return
+    val conversationId = profile.conversationId ?: return
+    controllers.messages.load()
+    val open = navigator.current
+    if (open is Route.Conversation && open.id == conversationId) {
+        controllers.messages.refreshThread(conversationId)
+    } else {
+        navigator.push(Route.Conversation(conversationId, profile.fullName))
+    }
+}

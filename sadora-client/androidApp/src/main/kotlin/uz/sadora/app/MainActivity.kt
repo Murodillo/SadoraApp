@@ -114,6 +114,9 @@ class MainActivity : ComponentActivity() {
         // The link the app was opened with, if any. Offered to the shared code rather
         // than parsed here, so an invite and a wearable return are read by one rule.
         intent?.dataString?.let(AppLinks::offer)
+        // A tapped push names the thread it is about. Not again after a rotation, which
+        // recreates the activity with the same intent.
+        if (savedInstanceState == null) intent?.let(::offerPushLink)
 
         setContent {
             App(graph)
@@ -124,6 +127,14 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         if (intent.action == Intent.ACTION_VIEW) intent.dataString?.let(AppLinks::offer)
+        offerPushLink(intent)
+    }
+
+    /** The `link` a push carried, if this launch came from tapping one. Taken once. */
+    private fun offerPushLink(intent: Intent) {
+        val link = intent.getStringExtra(PushNotifications.EXTRA_LINK) ?: return
+        intent.removeExtra(PushNotifications.EXTRA_LINK)
+        AppLinks.offer(link)
     }
 
     /**

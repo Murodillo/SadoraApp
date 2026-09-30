@@ -194,7 +194,9 @@ fun Route.adminBillingRoutes(billing: BillingService, repository: BillingReposit
 data class AdminPaymentView(
     val id: String,
     val userId: String,
-    val planId: String,
+    /** Null for a consultation payment. */
+    val planId: String?,
+    val consultationSessionId: String? = null,
     val provider: PaymentProvider,
     val amountMinor: Long,
     val currency: String,
@@ -208,6 +210,7 @@ private fun TransactionRecord.toView() = AdminPaymentView(
     id = id.toString(),
     userId = userId.toString(),
     planId = planId,
+    consultationSessionId = consultationSessionId?.toString(),
     provider = provider,
     amountMinor = amountMinor,
     currency = currency,

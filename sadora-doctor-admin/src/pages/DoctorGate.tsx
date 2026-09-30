@@ -5,10 +5,14 @@ import { ApprovedDoctorContext, screenFor } from '../auth/doctor'
 import { SadoraMark } from '../components/Logo'
 import { ErrorNotice } from '../components/ui'
 import { Shell } from '../layout/Shell'
+import { EarningsPage } from './EarningsPage'
 import { MessagesPage } from './MessagesPage'
 import { PostsPage } from './PostsPage'
 import { ProfilePage } from './ProfilePage'
 import { QuestionsPage } from './QuestionsPage'
+import { QuickRepliesPage } from './QuickRepliesPage'
+import { SettingsPage } from './SettingsPage'
+import { StatsPage } from './StatsPage'
 import { StatusPage } from './StatusPage'
 
 /**
@@ -60,6 +64,10 @@ export function DoctorGate() {
           <Route path="messages" element={<MessagesPage />} />
           <Route path="posts" element={<PostsPage />} />
           <Route path="profile" element={<ProfilePage />} />
+          <Route path="settings" element={<SettingsPage />} />
+          <Route path="quick-replies" element={<QuickRepliesPage />} />
+          <Route path="stats" element={<StatsPage />} />
+          <Route path="earnings" element={<EarningsPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>

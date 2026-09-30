@@ -154,6 +154,21 @@ data class Consultation(
     val closedAt: Instant? = null,
     /** Worked out by the server, so every client agrees on it whatever its clock says. */
     val open: Boolean,
+    /** The current window's session. */
+    val sessionId: String? = null,
+    /** Her price when this window was opened, in tiyin; 0 when it was free. */
+    val priceMinor: Long = 0,
+    val payment: ConsultationPayment = ConsultationPayment.FREE,
+    /** The doctor's advice from the last window she closed with one. */
+    val summary: String? = null,
+    /** The patient may rate the current or last window: the doctor answered, and it is not rated yet. */
+    val canRate: Boolean = false,
+    /** Her rating of the last window, once given. */
+    val rating: Int? = null,
+    /** The doctor has answered in the current window. */
+    val answered: Boolean = false,
+    /** Her price now: what opening the next window would cost, in tiyin. */
+    val doctorPriceMinor: Long = 0,
 )
 
 @Serializable

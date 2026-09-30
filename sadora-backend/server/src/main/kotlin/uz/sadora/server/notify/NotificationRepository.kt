@@ -132,8 +132,14 @@ class NotificationRepository {
         dedupeKey: String,
         status: NotificationStatus,
         suppressedReason: String?,
+        /** `client` or `doctor`: whose devices ring. */
+        targetApp: String = TARGET_CLIENT,
+        /** Where a tap lands, e.g. `sadora://conversation/<id>`. */
+        link: String? = null,
     ): Boolean = dbQuery {
         NotificationOutbox.insertIgnore {
+            it[NotificationOutbox.targetApp] = targetApp
+            it[NotificationOutbox.link] = link
             it[id] = Uuid.random()
             it[NotificationOutbox.userId] = userId
             it[NotificationOutbox.category] = category.dbValue()
@@ -211,6 +217,8 @@ class NotificationRepository {
         status = enumFromDb(this[NotificationOutbox.status], NotificationStatus.QUEUED),
         sentAt = this[NotificationOutbox.sentAt]?.toKotlinInstant(),
         suppressedReason = this[NotificationOutbox.suppressedReason],
+        targetApp = this[NotificationOutbox.targetApp],
+        link = this[NotificationOutbox.link],
     )
 
     private fun String.parseCategories(): Map<NotificationCategory, Boolean> =
@@ -232,6 +240,10 @@ data class OutboxRecord(
     val status: NotificationStatus,
     val sentAt: Instant?,
     val suppressedReason: String?,
+    /** `client` or `doctor`: the app whose devices ring. */
+    val targetApp: String = TARGET_CLIENT,
+    /** Where a tap lands; null opens the app. */
+    val link: String? = null,
 ) {
     fun toMessage() = NotificationMessage(
         id = id.toString(),
@@ -244,3 +256,9 @@ data class OutboxRecord(
         suppressedReason = suppressedReason,
     )
 }
+
+/** The women's app: every notification unless it is a doctor's work. */
+const val TARGET_CLIENT = "client"
+
+/** Sadora Doctor: what a doctor receives as a doctor. */
+const val TARGET_DOCTOR = "doctor"

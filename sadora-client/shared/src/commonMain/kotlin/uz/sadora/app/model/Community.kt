@@ -3,6 +3,7 @@ package uz.sadora.app.model
 import kotlin.time.Duration
 import kotlin.time.Instant
 import uz.sadora.contract.ConsultationPatient
+import uz.sadora.contract.ConsultationPayment
 import uz.sadora.contract.DoctorAuthor
 
 /**
@@ -122,6 +123,19 @@ data class ConsultationWindow(
     val expiresAt: Instant,
     val closedAt: Instant? = null,
     val open: Boolean,
+    /** The window's own id: what a rating belongs to. */
+    val sessionId: String? = null,
+    /** Her price when this window opened, in tiyin; 0 when it was free. */
+    val priceMinor: Long = 0,
+    val payment: ConsultationPayment = ConsultationPayment.FREE,
+    /** The doctor's advice from the last window she closed with one. */
+    val summary: String? = null,
+    /** The doctor answered and the window is not rated yet: the stars may be offered. */
+    val canRate: Boolean = false,
+    val rating: Int? = null,
+    val answered: Boolean = false,
+    /** The doctor's price now: what the next window costs, whatever this one did. */
+    val doctorPriceMinor: Long = 0,
 ) {
     /** What is left of the window, never negative; zero once it is shut. */
     fun remaining(now: Instant): Duration =

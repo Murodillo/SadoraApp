@@ -15,6 +15,7 @@ import io.ktor.server.routing.post
 import io.ktor.server.routing.put
 import io.ktor.server.routing.route
 import uz.sadora.contract.Ack
+import uz.sadora.contract.CloseConsultationRequest
 import uz.sadora.contract.CommunityTopic
 import uz.sadora.contract.CreateCommentRequest
 import uz.sadora.contract.CreatePostRequest
@@ -101,9 +102,10 @@ fun Route.communityRoutes(community: CommunityService, messaging: MessagingServi
                         messaging.typing(call.requireUserId(), call.conversationId())
                         call.respond(Ack())
                     }
-                    /** The doctor ends a consultation. */
+                    /** The doctor ends a consultation, with her advice for the patient if she writes one. */
                     post("/close") {
-                        call.respond(messaging.close(call.requireUserId(), call.conversationId()))
+                        val request = runCatching { call.receive<CloseConsultationRequest>() }.getOrDefault(CloseConsultationRequest())
+                        call.respond(messaging.close(call.requireUserId(), call.conversationId(), request.summary))
                     }
                     post("/report") {
                         val request = call.receive<ReportRequest>()

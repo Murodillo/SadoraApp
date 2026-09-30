@@ -11,13 +11,18 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import kotlin.time.Clock
@@ -27,6 +32,7 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import uz.sadora.contract.DoctorAccount
 import uz.sadora.doctor.data.DoctorController
+import uz.sadora.doctor.data.WorkController
 import uz.sadora.doctor.data.readable
 import uz.sadora.doctor.design.IconSize
 import uz.sadora.doctor.design.Radius
@@ -34,6 +40,7 @@ import uz.sadora.doctor.design.Sadora
 import uz.sadora.doctor.design.SadoraIcons
 import uz.sadora.doctor.design.Spacing
 import uz.sadora.doctor.i18n.strings
+import uz.sadora.doctor.ui.components.ChipFlowRow
 import uz.sadora.doctor.ui.components.CircleIconButton
 import uz.sadora.doctor.ui.components.EmptyState
 import uz.sadora.doctor.ui.components.ErrorStrip
@@ -45,23 +52,28 @@ import uz.sadora.doctor.ui.components.SectionHeader
 import uz.sadora.doctor.ui.components.Skeleton
 
 /**
- * The first tab: her day at a glance. Who she is signed in as, four numbers — questions
- * waiting, messages unread, what she has answered and written — the way to a patient's
+ * The first tab: her day at a glance. Who she is signed in as, the busy switch, four
+ * numbers — questions waiting, messages unread, what she has answered and written — her
+ * consultations in figures, her balance, her price and hours, the way to a patient's
  * record, and the questions no doctor has answered yet, which are her work list.
  */
 @Composable
 fun DoctorHomeScreen(
     account: DoctorAccount,
     doctors: DoctorController,
+    work: WorkController,
     onOpenQuestion: (String) -> Unit,
     onScan: () -> Unit,
     onMessages: () -> Unit,
     onProfile: () -> Unit,
     onOpenSettings: () -> Unit,
+    onOpenWork: () -> Unit,
+    onOpenEarnings: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val t = strings.tabs
     val d = strings.doctors
+    val w = strings.work
     val c = Sadora.colors
     val scope = rememberCoroutineScope()
 
@@ -71,7 +83,11 @@ fun DoctorHomeScreen(
         launch { doctors.loadQuestions() }
         launch { doctors.loadConversations() }
         account.profileId?.let { launch { doctors.loadProfile(it) } }
+        launch { work.loadSettings() }
+        launch { work.loadStats() }
+        launch { work.loadEarnings() }
     }
+    var switching by remember { mutableStateOf(false) }
 
     // A question she has just answered is drawn once more, marked, and then let go.
     val rows = doctors.questionRows
@@ -99,6 +115,27 @@ fun DoctorHomeScreen(
                 }
             }
             item(key = "me") { WhoCard(account) }
+            item(key = "busy") {
+                val settings = work.settings
+                if (settings == null) {
+                    Skeleton(Modifier.fillMaxWidth().height(76.dp), shape = Radius.card)
+                } else {
+                    SwitchCard(
+                        title = w.busyTitle,
+                        body = w.busyBody.takeIf { settings.busy },
+                        on = settings.busy,
+                        enabled = !switching,
+                        tint = c.warning,
+                        onToggle = { wanted ->
+                            switching = true
+                            scope.launch {
+                                work.setBusy(wanted)
+                                switching = false
+                            }
+                        },
+                    )
+                }
+            }
             item(key = "stats") {
                 Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                     Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
@@ -136,6 +173,19 @@ fun DoctorHomeScreen(
                         )
                     }
                 }
+            }
+            item(key = "consultations") { ConsultationStatsCard(work) }
+            item(key = "earnings") { EarningsCard(work, onOpenEarnings) }
+            item(key = "work") {
+                val settings = work.settings
+                NavCard(
+                    SadoraIcons.Calendar,
+                    title = w.settingsTitle,
+                    subtitle = settings?.let {
+                        priceText(it.priceMinor) + " · " + (if (it.hours.isEmpty()) w.noHours else w.workDays(it.hours.size))
+                    },
+                    onClick = onOpenWork,
+                )
             }
             item(key = "scan") { ScanCard(onScan) }
             item(key = "questions-title") { SectionHeader(d.questionsTitle) }
@@ -218,6 +268,84 @@ private fun ScanCard(onScan: () -> Unit) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Spacing.xxs)) {
                 Text(t.scanPatient, style = Sadora.type.h3, color = c.text)
                 Text(t.scanPatientBody, style = Sadora.type.body, color = c.muted)
+            }
+            Icon(SadoraIcons.ChevronRight, contentDescription = null, Modifier.size(IconSize.md), tint = c.muted2)
+        }
+    }
+}
+
+/**
+ * Her consultations in figures: this week, this month and in all, how many are open,
+ * how fast she first answers, how many ended without a word from her, her rating, and
+ * the topics she answers most in the room. A shimmer until the numbers arrive.
+ */
+@Composable
+private fun ConsultationStatsCard(work: WorkController) {
+    val w = strings.work
+    val c = Sadora.colors
+    val stats = work.stats
+    SadoraCard {
+        Text(w.statsTitle, style = Sadora.type.h3, color = c.text)
+        if (stats == null) {
+            Skeleton(Modifier.fillMaxWidth().height(96.dp))
+            return@SadoraCard
+        }
+        Row(Modifier.fillMaxWidth()) {
+            Figure(stats.consultationsWeek.toString(), w.statWeek, Modifier.weight(1f))
+            Figure(stats.consultationsMonth.toString(), w.statMonth, Modifier.weight(1f))
+            Figure(stats.consultationsTotal.toString(), w.statTotal, Modifier.weight(1f))
+        }
+        FigureLine(w.openNow, stats.openNow.toString())
+        FigureLine(w.avgReply, stats.avgFirstReplyMinutes?.let(w::duration) ?: w.noValue)
+        FigureLine(w.unanswered, stats.unansweredTotal.toString(), tint = if (stats.unansweredTotal > 0) c.danger else null)
+        FigureLine(
+            w.rating,
+            stats.rating?.let { "★ " + w.ratingValue(it.toString(), stats.ratingCount) } ?: w.noRating,
+        )
+        if (stats.topTopics.isNotEmpty()) {
+            Text(w.topTopics, style = Sadora.type.caption.copy(letterSpacing = TextUnit.Unspecified), color = c.muted2)
+            ChipFlowRow(horizontalGap = Spacing.xxs, verticalGap = Spacing.xxs) {
+                stats.topTopics.forEach { TintChip("${strings.community.topic(it.topic)} · ${it.count}", c.textAccent) }
+            }
+        }
+    }
+}
+
+@Composable
+private fun Figure(value: String, label: String, modifier: Modifier = Modifier) {
+    val c = Sadora.colors
+    Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(value, style = Sadora.type.h1, color = c.text)
+        Text(label, style = Sadora.type.caption.copy(letterSpacing = TextUnit.Unspecified), color = c.muted, textAlign = TextAlign.Center)
+    }
+}
+
+@Composable
+private fun FigureLine(label: String, value: String, tint: Color? = null) {
+    val c = Sadora.colors
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+        Text(label, style = Sadora.type.body, color = c.muted, modifier = Modifier.weight(1f))
+        Text(value, style = Sadora.type.body.copy(fontWeight = FontWeight.SemiBold), color = tint ?: c.text)
+    }
+}
+
+/** The balance still to be paid to her, and the way into the whole account of it. */
+@Composable
+private fun EarningsCard(work: WorkController, onOpen: () -> Unit) {
+    val w = strings.work
+    val c = Sadora.colors
+    val earnings = work.earnings
+    SadoraCard(onClick = onOpen) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+            IconTile(SadoraIcons.Wallet, tint = c.success, size = 44.dp)
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(w.earningsTitle, style = Sadora.type.h3, color = c.text)
+                Text(w.balance, style = Sadora.type.caption.copy(letterSpacing = TextUnit.Unspecified), color = c.muted)
+            }
+            if (earnings != null) {
+                Text(somText(earnings.balanceMinor), style = Sadora.type.h3, color = c.textAccent)
+            } else {
+                Skeleton(Modifier.size(width = 72.dp, height = 20.dp))
             }
             Icon(SadoraIcons.ChevronRight, contentDescription = null, Modifier.size(IconSize.md), tint = c.muted2)
         }

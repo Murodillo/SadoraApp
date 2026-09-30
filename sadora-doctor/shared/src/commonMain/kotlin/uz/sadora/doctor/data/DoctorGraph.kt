@@ -37,5 +37,7 @@ class DoctorGraph(
 
     fun doctorController(): DoctorController = DoctorController(doctorApi, communityApi, patientApi)
 
+    fun workController(): WorkController = WorkController(doctorApi)
+
     fun close() = client.close()
 }

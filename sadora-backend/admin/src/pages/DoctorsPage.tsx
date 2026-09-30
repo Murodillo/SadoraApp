@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useDoctor, useDoctorCounts, useDoctorDocument, useDoctors, useReviewDoctor } from '../api/hooks'
 import { limits } from '../api/limits'
-import type { AdminDoctorDetail, AdminDoctorDocument, DoctorReviewAction, DoctorStatus } from '../api/types'
+import type { AdminDoctorDetail, AdminDoctorDocument, AdminDoctorQuality, DoctorReviewAction, DoctorStatus } from '../api/types'
 import { useAuth } from '../auth/AuthContext'
 import { useToast } from '../components/toast'
 import {
@@ -31,6 +31,7 @@ import {
   reviewNoteValid,
   specialtyLabels,
 } from './doctorReview'
+import { DoctorQualityTable, EarningsSection } from './DoctorMoney'
 
 const PAGE_SIZE = 25
 
@@ -39,54 +40,75 @@ const PAGE_SIZE = 25
  * with her diploma and licence scans; an Owner or Admin approves or rejects her, and
  * can later suspend and reinstate. Support reads the queue and the documents but has no
  * buttons — the server would refuse them anyway.
+ *
+ * The last tab, "Shifokorlar sifati", sets every working doctor side by side — reply
+ * times, unanswered windows, ratings and money — and opens a doctor's card from a row.
+ * The card carries her earnings and the payout form for Owner and Admin.
  */
+type DoctorsTab = DoctorStatus | 'quality'
+
 export function DoctorsPage() {
   const counts = useDoctorCounts()
-  const [status, setStatus] = useState<DoctorStatus>('pending')
+  const [tab, setTab] = useState<DoctorsTab>('pending')
   const [offset, setOffset] = useState(0)
   const [selected, setSelected] = useState<string | null>(null)
 
-  function changeStatus(next: DoctorStatus) {
-    setStatus(next)
+  function changeTab(next: DoctorsTab) {
+    setTab(next)
     setOffset(0)
     setSelected(null)
   }
 
+  /** From the quality table to her card, on the tab of her status. */
+  function openFromQuality(doctor: AdminDoctorQuality) {
+    if (doctor.status === 'none') return
+    setTab(doctor.status)
+    setOffset(0)
+    setSelected(doctor.doctorId)
+  }
+
   return (
     <div className="grid" style={{ gap: 16 }}>
-      <Tabs<DoctorStatus>
-        value={status}
-        onChange={changeStatus}
-        items={doctorStatusOrder.map((key) => {
-          const count = counts.data?.[key]
-          return {
-            key,
-            label: (
-              <>
-                {doctorStatusLabels[key].text}
-                {count !== undefined && (
-                  <span className={`badge ${key === 'pending' && count > 0 ? 'warn' : 'free'}`} style={{ marginLeft: 6 }}>
-                    {count}
-                  </span>
-                )}
-              </>
-            ),
-          }
-        })}
+      <Tabs<DoctorsTab>
+        value={tab}
+        onChange={changeTab}
+        items={[
+          ...doctorStatusOrder.map((key) => {
+            const count = counts.data?.[key]
+            return {
+              key: key as DoctorsTab,
+              label: (
+                <>
+                  {doctorStatusLabels[key].text}
+                  {count !== undefined && (
+                    <span className={`badge ${key === 'pending' && count > 0 ? 'warn' : 'free'}`} style={{ marginLeft: 6 }}>
+                      {count}
+                    </span>
+                  )}
+                </>
+              ),
+            }
+          }),
+          { key: 'quality' as DoctorsTab, label: 'Shifokorlar sifati' },
+        ]}
       />
       {counts.error && <ErrorNotice error={counts.error} />}
 
-      <TabPanel id={status}>
-        <div className="two-col even">
-          <DoctorList status={status} offset={offset} onOffset={setOffset} selected={selected} onSelect={setSelected} />
-          {selected ? (
-            <DoctorDetail id={selected} onClose={() => setSelected(null)} />
-          ) : (
-            <Card>
-              <Empty>Tafsilotlarni ko'rish uchun ro'yxatdan shifokorni tanlang.</Empty>
-            </Card>
-          )}
-        </div>
+      <TabPanel id={tab}>
+        {tab === 'quality' ? (
+          <DoctorQualityTable onOpen={openFromQuality} />
+        ) : (
+          <div className="two-col even">
+            <DoctorList status={tab} offset={offset} onOffset={setOffset} selected={selected} onSelect={setSelected} />
+            {selected ? (
+              <DoctorDetail id={selected} onClose={() => setSelected(null)} />
+            ) : (
+              <Card>
+                <Empty>Tafsilotlarni ko'rish uchun ro'yxatdan shifokorni tanlang.</Empty>
+              </Card>
+            )}
+          </div>
+        )}
       </TabPanel>
     </div>
   )
@@ -252,6 +274,8 @@ function DoctorDetail({ id, onClose }: { id: string; onClose: () => void }) {
       )}
 
       <ConsultationsSection doctor={doctor} />
+
+      <EarningsSection doctorId={doctor.id} />
 
       <h2 style={{ marginTop: 16 }}>Hujjatlar</h2>
       {doctor.documents.length === 0 ? (

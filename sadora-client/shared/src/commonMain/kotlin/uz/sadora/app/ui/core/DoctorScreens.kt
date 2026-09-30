@@ -49,7 +49,20 @@ import uz.sadora.app.ui.components.ScreenContent
 import uz.sadora.app.ui.components.SectionHeader
 import uz.sadora.app.ui.components.Skeleton
 import uz.sadora.app.ui.components.rememberShareAction
+import androidx.compose.foundation.layout.height
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.text.font.FontWeight
+import androidx.lifecycle.compose.LifecycleResumeEffect
+import androidx.compose.runtime.DisposableEffect
+import kotlin.time.Clock
+import uz.sadora.app.i18n.availabilityLine
+import uz.sadora.app.i18n.consultationPriceLabel
+import uz.sadora.app.i18n.ratingLine
+import uz.sadora.app.ui.components.SelectChip
 import uz.sadora.contract.DoctorProfile
+import uz.sadora.contract.DoctorReview
+import uz.sadora.contract.PaymentProvider
 
 // A verified doctor's public page, as a reader opens it from the chat. Applying, the
 // panel and answering live in the doctor's own app, sadora-doctor.
@@ -74,6 +87,8 @@ fun DoctorProfileScreen(
     onOpenMenu: (CommunityPost) -> Unit,
     /** Raises the consent sheet; the shell owns it so it covers the tab bar. */
     onMessage: (DoctorProfile) -> Unit,
+    /** Raises the pay sheet, for a doctor who charges and a patient who has consented before. */
+    onPay: (DoctorProfile) -> Unit,
     onOpenConversation: (id: String, name: String) -> Unit,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
@@ -84,8 +99,12 @@ fun DoctorProfileScreen(
     val scope = rememberCoroutineScope()
     val share = rememberShareAction()
 
-    LaunchedEffect(doctorId) { doctors.loadProfile(doctorId) }
+    LaunchedEffect(doctorId) {
+        doctors.loadProfile(doctorId)
+        doctors.loadReviews(doctorId)
+    }
     val profile = doctors.profile?.takeIf { it.id == doctorId }
+    val reviews = doctors.reviews.takeIf { doctors.reviewsFor == doctorId }.orEmpty()
 
     Column(modifier) {
         SadoraTopBar(d.profileTitle, onBack = onClose)
@@ -104,6 +123,7 @@ fun DoctorProfileScreen(
                         profile = profile,
                         messages = messages,
                         onMessage = { onMessage(profile) },
+                        onPay = { onPay(profile) },
                         onOpenConversation = { onOpenConversation(it, profile.fullName) },
                     )
                 }
@@ -116,6 +136,10 @@ fun DoctorProfileScreen(
                         DoctorStat(profile.experienceYears.toString(), d.statExperience, Modifier.weight(1f))
                     }
                 }
+            }
+            if (reviews.isNotEmpty()) {
+                item { SectionHeader(d.reviewsTitle) }
+                item { ReviewsCard(reviews.take(MaxReviewsShown)) }
             }
             item { Text(d.disclaimer, style = Sadora.type.caption.copy(letterSpacing = TextUnit.Unspecified), color = c.muted2) }
             item { SectionHeader(d.herPosts) }
@@ -160,6 +184,11 @@ private fun DoctorHeader(profile: DoctorProfile) {
         }
         Text(d.specialty(profile.specialty), style = Sadora.type.h3, color = c.textAccent)
         Text(profile.workplace, style = Sadora.type.body, color = c.muted, textAlign = TextAlign.Center)
+        Text(
+            ratingLine(profile.rating, profile.ratingCount, d) ?: d.noRatingYet,
+            style = Sadora.type.body.copy(fontWeight = FontWeight.SemiBold),
+            color = if (profile.ratingCount > 0) c.text else c.muted2,
+        )
         Text(d.verifiedSince(monthYear(profile.verifiedSince)), style = Sadora.type.caption.copy(letterSpacing = TextUnit.Unspecified), color = c.muted2)
         profile.bio?.let {
             Text(
@@ -183,6 +212,7 @@ private fun ConsultationAction(
     profile: DoctorProfile,
     messages: MessagesController,
     onMessage: () -> Unit,
+    onPay: () -> Unit,
     onOpenConversation: (String) -> Unit,
 ) {
     val d = strings.doctors
@@ -196,14 +226,37 @@ private fun ConsultationAction(
         if (conversationId != null && messages.conversations.none { it.id == conversationId }) messages.load()
     }
     val openId = existing?.takeIf { it.consultation?.open == true }?.id
+    val paid = profile.priceMinor > 0
+    // She agreed to the consent points when she first wrote; a paid doctor she has
+    // written to before goes straight to paying.
+    val consented = existing != null || conversationId != null
+    val availability = availabilityLine(profile.availability, d, strings.dates, Clock.System.now())
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+        SadoraCard(padding = Spacing.sm) {
+            Row(
+                Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+            ) {
+                if (availability != null) AvailabilityRow(availability, Modifier.weight(1f)) else Box(Modifier.weight(1f))
+                Text(
+                    consultationPriceLabel(profile.priceMinor, d),
+                    style = Sadora.type.h3,
+                    color = if (paid) c.text else c.successText,
+                )
+            }
+        }
         when {
             openId != null ->
                 SadoraButton(d.openConsultation, onClick = { onOpenConversation(openId) }, icon = SadoraIcons.Message)
             profile.canMessage -> {
-                SadoraButton(d.messageDoctor, onClick = onMessage, icon = SadoraIcons.Message)
+                SadoraButton(
+                    d.messageDoctor,
+                    onClick = if (paid && consented) onPay else onMessage,
+                    icon = SadoraIcons.Message,
+                )
                 Text(
-                    d.messageDoctorNote,
+                    if (paid) d.paidNote(d.price(Fmt.sum(profile.priceMinor))) else d.messageDoctorNote,
                     style = Sadora.type.caption.copy(letterSpacing = TextUnit.Unspecified),
                     color = c.muted,
                     textAlign = TextAlign.Center,
@@ -236,6 +289,8 @@ fun ConsultationConsentSheetContent(
     profile: DoctorProfile,
     messages: MessagesController,
     onStarted: (Conversation) -> Unit,
+    /** She charges: the pay sheet takes over from here. */
+    onNeedsPayment: () -> Unit,
     onCancel: () -> Unit,
 ) {
     val d = strings.doctors
@@ -255,8 +310,11 @@ fun ConsultationConsentSheetContent(
         }
     }
     val icons = listOf(SadoraIcons.Clock, SadoraIcons.Profile, SadoraIcons.Info, SadoraIcons.Shield)
+    val paid = profile.priceMinor > 0
+    // The first point is the price: "free" for most, hers and the refund rule for a doctor who charges.
+    val points = if (paid) listOf(d.consentPaidPoint(d.price(Fmt.sum(profile.priceMinor)))) + d.consentPoints.drop(1) else d.consentPoints
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-        d.consentPoints.forEachIndexed { index, point ->
+        points.forEachIndexed { index, point ->
             Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm), verticalAlignment = Alignment.Top) {
                 Box(
                     Modifier.size(32.dp).clip(Radius.chip).background(c.primary.copy(alpha = if (c.isDark) 0.24f else 0.12f)),
@@ -270,18 +328,173 @@ fun ConsultationConsentSheetContent(
     }
     messages.error?.let { ErrorStrip(it.readable()) }
     SadoraButton(
-        d.consentConfirm,
+        if (paid) d.consentToPay else d.consentConfirm,
         enabled = !working,
         onClick = {
+            if (paid) {
+                onNeedsPayment()
+                return@SadoraButton
+            }
             working = true
             scope.launch {
-                messages.startConsultation(profile.id)?.let(onStarted)
+                val started = messages.startConsultation(profile.id)
                 working = false
+                when {
+                    started != null -> onStarted(started)
+                    // Her price was set after this page was read.
+                    messages.takePaymentRequired() -> onNeedsPayment()
+                }
             }
         },
     )
     SadoraButton(strings.common.cancel, onClick = onCancel, tone = ButtonTone.Secondary)
 }
+
+/**
+ * Paying for a window with a doctor who charges: her price, what it buys, a choice of
+ * Payme or Click, and one button. After that, the sheet waits.
+ *
+ * The provider's page opens in the browser. While the app is in front the server is
+ * asked every few seconds whether the money arrived, and asked again the moment she
+ * comes back from the browser — which is when it usually has. Paid, [onPaid] takes
+ * her into the thread; the server opened the window itself when the callback landed.
+ */
+@Composable
+fun ConsultationPaySheetContent(
+    doctorId: String,
+    doctors: DoctorController,
+    onPaid: () -> Unit,
+    onCancel: () -> Unit,
+) {
+    val d = strings.doctors
+    val c = Sadora.colors
+    val scope = rememberCoroutineScope()
+    val uriHandler = LocalUriHandler.current
+
+    LaunchedEffect(doctorId) {
+        doctors.clearPayError()
+        // Raised from a thread, the page in memory may be another doctor's, or stale.
+        if (doctors.profile?.id != doctorId || doctors.profile?.paymentProviders.isNullOrEmpty()) doctors.loadProfile(doctorId)
+    }
+    // Leaving the sheet ends the wait; the payment itself is the server's to settle.
+    DisposableEffect(doctorId) { onDispose { doctors.cancelCheckout() } }
+
+    val profile = doctors.profile?.takeIf { it.id == doctorId }
+    val waiting = doctors.checkout?.takeIf { doctors.checkoutFor == doctorId }
+
+    LifecycleResumeEffect(waiting?.transactionId) {
+        val job = if (waiting == null) null else scope.launch { if (doctors.awaitPayment()) onPaid() }
+        onPauseOrDispose { job?.cancel() }
+    }
+
+    if (profile == null) {
+        doctors.error?.let { ErrorStrip(it.readable()) } ?: Skeleton(Modifier.fillMaxWidth().height(120.dp))
+        SadoraButton(strings.common.cancel, onClick = onCancel, tone = ButtonTone.Secondary)
+        return
+    }
+
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+        DoctorAvatar(profile.fullName, size = 44.dp)
+        Column(Modifier.weight(1f)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(profile.fullName, style = Sadora.type.h3, color = c.text, modifier = Modifier.weight(1f, fill = false))
+                VerifiedMark(size = 16.dp)
+            }
+            Text(d.specialty(profile.specialty), style = Sadora.type.body, color = c.textAccent)
+        }
+    }
+    SadoraCard(padding = Spacing.md, verticalGap = Spacing.xxs) {
+        Text(d.price(Fmt.sum(profile.priceMinor)), style = Sadora.type.h1, color = c.text)
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+            Icon(SadoraIcons.Clock, contentDescription = null, Modifier.size(IconSize.sm), tint = c.muted)
+            Text(d.payWindow, style = Sadora.type.body, color = c.muted)
+        }
+    }
+
+    val providers = profile.paymentProviders.filter { it == PaymentProvider.PAYME || it == PaymentProvider.CLICK }
+    var chosen by remember(doctorId) { mutableStateOf<PaymentProvider?>(null) }
+    val provider = chosen?.takeIf { it in providers } ?: providers.firstOrNull()
+
+    if (waiting != null) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+            CircularProgressIndicator(Modifier.size(22.dp), color = c.primary, strokeWidth = 2.5.dp)
+            Text(d.payWaiting, style = Sadora.type.h3, color = c.text)
+        }
+        Text(d.payWaitingBody, style = Sadora.type.body, color = c.muted)
+        SadoraButton(d.payReopenPage, onClick = { uriHandler.openUri(waiting.url) }, tone = ButtonTone.Secondary)
+        SadoraButton(strings.common.cancel, onClick = { doctors.cancelCheckout() }, tone = ButtonTone.Ghost)
+        return
+    }
+
+    if (providers.isEmpty()) {
+        Text(d.payNoProvider, style = Sadora.type.body, color = c.muted)
+    } else {
+        Text(d.payProvider, style = Sadora.type.caption.copy(letterSpacing = TextUnit.Unspecified), color = c.muted)
+        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+            providers.forEach { option ->
+                SelectChip(
+                    label = option.displayName(),
+                    selected = option == provider,
+                    onClick = { chosen = option },
+                    modifier = Modifier.weight(1f),
+                )
+            }
+        }
+    }
+    doctors.payError?.let { ErrorStrip(it.readable()) }
+    SadoraButton(
+        d.pay,
+        enabled = provider != null && !doctors.startingCheckout,
+        onClick = {
+            val method = provider ?: return@SadoraButton
+            scope.launch {
+                val session = doctors.startCheckout(doctorId, method) ?: return@launch
+                uriHandler.openUri(session.url)
+            }
+        },
+    )
+    SadoraButton(strings.common.cancel, onClick = onCancel, tone = ButtonTone.Secondary)
+}
+
+private fun PaymentProvider.displayName(): String = when (this) {
+    PaymentProvider.PAYME -> "Payme"
+    PaymentProvider.CLICK -> "Click"
+    PaymentProvider.APP_STORE -> "App Store"
+    PaymentProvider.GOOGLE_PLAY -> "Google Play"
+}
+
+/** Her latest reviews: stars, the day, and the words when there are any. Never a name. */
+@Composable
+private fun ReviewsCard(reviews: List<DoctorReview>) {
+    val d = strings.doctors
+    val c = Sadora.colors
+    SadoraCard(padding = Spacing.md, verticalGap = Spacing.sm) {
+        reviews.forEachIndexed { index, review ->
+            if (index > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(c.line))
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                    StarRow(review.rating)
+                    Text(
+                        d.anonymousPatient + " · " + dayMonth(review.createdAt),
+                        style = Sadora.type.caption.copy(letterSpacing = TextUnit.Unspecified),
+                        color = c.muted2,
+                        maxLines = 1,
+                    )
+                }
+                review.review?.takeIf { it.isNotBlank() }?.let {
+                    Text(it, style = Sadora.type.body, color = c.text)
+                }
+            }
+        }
+    }
+}
+
+/** How many reviews her page shows; the server sends a few more than fit. */
+private const val MaxReviewsShown = 5
+
+@Composable
+private fun dayMonth(at: Instant): String =
+    strings.dates.dayMonth(at.toLocalDateTime(TimeZone.currentSystemDefault()).date)
 
 @Composable
 private fun DoctorStat(value: String, label: String, modifier: Modifier = Modifier) {

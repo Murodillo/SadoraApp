@@ -61,6 +61,18 @@ sealed class ApiFailure(open val message: String) {
     data class ConsentRequired(val consent: String, override val message: String) : ApiFailure(message)
 
     /**
+     * The doctor charges for a consultation and none is open: the answer is her pay
+     * sheet, not a message. [priceMinor] is what the server says the checkout will ask.
+     */
+    data class PaymentRequired(val priceMinor: Long?, override val message: String) : ApiFailure(message)
+
+    /**
+     * The thing is already done — rated, reported, opened. Worded as [Unexpected] unless
+     * a screen knows better; a rating that was already given is simply thanked.
+     */
+    data class Conflict(override val message: String) : ApiFailure(message)
+
+    /**
      * The checkout came back cancelled or failed.
      *
      * Not something the API rejected — the provider did — but it reaches the screen
@@ -111,6 +123,9 @@ sealed class ApiFailure(open val message: String) {
 
             ErrorCodes.FEATURE_DISABLED -> FeatureDisabled(error.details["flag"].orEmpty(), error.message)
             ErrorCodes.CONSENT_REQUIRED -> ConsentRequired(error.details["consent"].orEmpty(), error.message)
+            ErrorCodes.CONSULTATION_PAYMENT_REQUIRED ->
+                PaymentRequired(error.details["priceMinor"]?.toLongOrNull(), error.message)
+            ErrorCodes.CONFLICT -> Conflict(error.message)
 
             ErrorCodes.OTP_INVALID,
             ErrorCodes.OTP_EXPIRED,

@@ -26,7 +26,7 @@ import uz.sadora.server.flags.FlagContext
 import uz.sadora.server.user.UserRepository
 
 /**
- * Buying Premium.
+ * Buying Premium, and paying for a doctor's consultation.
  *
  * Checkout only ever creates a pending row and a link. Nothing here grants anything: a
  * subscription appears when a provider says the money arrived, through
@@ -42,6 +42,11 @@ class BillingService(
     private val config: BillingConfig,
     private val environment: Environment,
 ) {
+    /**
+     * What a paid consultation's money opens. Set once at wiring: the consultation
+     * service needs billing to take the money, and billing needs it to open the window.
+     */
+    var consultationPaid: (suspend (sessionId: Uuid, transaction: TransactionRecord) -> Unit)? = null
 
     suspend fun catalogue(userId: Uuid): BillingCatalogue {
         val user = users.findById(userId) ?: throw NotFoundException("Foydalanuvchi topilmadi")
@@ -112,7 +117,8 @@ class BillingService(
             planId = transaction.planId,
             amountMinor = transaction.amountMinor,
             paidAt = transaction.paidAt,
-            subscription = if (transaction.state == PaymentState.PAID) {
+            consultationSessionId = transaction.consultationSessionId?.toString(),
+            subscription = if (transaction.state == PaymentState.PAID && transaction.planId != null) {
                 entitlements.subscriptionStatus(userId)
             } else {
                 null
@@ -135,7 +141,16 @@ class BillingService(
             return transaction.subscriptionId
         }
 
-        val plan = repository.plan(transaction.planId) ?: return null
+        // A consultation's payment opens its window rather than granting a plan. The
+        // opening is idempotent on the session's own state, so a provider's retry of a
+        // payment already opened changes nothing.
+        transaction.consultationSessionId?.let { sessionId ->
+            if (transaction.state != PaymentState.PAID && !repository.claimPaid(transaction.id)) return null
+            consultationPaid?.invoke(sessionId, transaction)
+            return null
+        }
+
+        val plan = transaction.planId?.let { repository.plan(it) } ?: return null
         // The claim, not the state read above, decides who grants: a second delivery
         // racing this one loses here and returns what the winner recorded.
         if (transaction.state != PaymentState.PAID && !repository.claimPaid(transaction.id)) {
@@ -163,6 +178,63 @@ class BillingService(
         return subscriptionId
     }
 
+    // ---------------------------------------------------------------- consultations
+
+    /**
+     * The providers a consultation can be paid with. Outside production, with no provider
+     * configured, both are offered and the link goes to [DEV_PAY_PATH] — a page on this
+     * server that pays at once — so the whole flow can be tried without merchant keys.
+     */
+    suspend fun consultationProviders(userId: Uuid): List<PaymentProvider> {
+        val live = catalogue(userId).providers.filter { it == PaymentProvider.PAYME || it == PaymentProvider.CLICK }
+        if (live.isNotEmpty() || environment == Environment.PROD) return live
+        return listOf(PaymentProvider.PAYME, PaymentProvider.CLICK)
+    }
+
+    /** A pending payment for a consultation window, and the link that pays it. [origin] is the caller's own host. */
+    suspend fun consultationCheckout(
+        userId: Uuid,
+        sessionId: Uuid,
+        amountMinor: Long,
+        provider: PaymentProvider,
+        origin: String,
+    ): CheckoutSession {
+        if (provider !in consultationProviders(userId)) throw FeatureDisabledException(provider.name.lowercase())
+        val transaction = repository.createTransaction(
+            userId = userId,
+            planId = null,
+            provider = provider,
+            amountMinor = amountMinor,
+            currency = "UZS",
+            consultationSessionId = sessionId,
+        )
+        val live = catalogue(userId).providers.contains(provider)
+        val url = when {
+            !live -> "${origin.trimEnd('/')}$DEV_PAY_PATH/${transaction.id}"
+            provider == PaymentProvider.PAYME -> paymeUrl(transaction.id, amountMinor)
+            else -> clickUrl(transaction.id, amountMinor)
+        }
+        return CheckoutSession(
+            transactionId = transaction.id.toString(),
+            provider = provider,
+            url = url,
+            amountMinor = amountMinor,
+            currency = "UZS",
+        )
+    }
+
+    /**
+     * The development page's payment: refused in production, and only for a consultation
+     * still pending. Everything after it is the same path a real provider's callback takes.
+     */
+    suspend fun devPay(transactionId: Uuid): Boolean {
+        if (environment == Environment.PROD) return false
+        val transaction = repository.transaction(transactionId) ?: return false
+        if (transaction.consultationSessionId == null) return false
+        activate(transaction)
+        return true
+    }
+
     // ---------------------------------------------------------------- checkout links
 
     /**
@@ -170,18 +242,23 @@ class BillingService(
      * `m=<merchant>;ac.<field>=<value>;a=<amount>` form their documentation specifies.
      */
     @OptIn(ExperimentalEncodingApi::class)
-    private fun paymeUrl(transactionId: Uuid, plan: BillingPlan): String {
+    private fun paymeUrl(transactionId: Uuid, plan: BillingPlan): String = paymeUrl(transactionId, plan.priceMinor)
+
+    @OptIn(ExperimentalEncodingApi::class)
+    private fun paymeUrl(transactionId: Uuid, amountMinor: Long): String {
         val merchant = config.payme.merchantId
             ?: throw FeatureDisabledException(PAYME_FLAG)
-        val params = "m=$merchant;ac.${config.payme.accountField}=$transactionId;a=${plan.priceMinor}"
+        val params = "m=$merchant;ac.${config.payme.accountField}=$transactionId;a=$amountMinor"
         return "${config.payme.checkoutUrl}/${Base64.encode(params.encodeToByteArray())}"
     }
 
     /** Click's checkout is plain query parameters, amount in so'm rather than tiyin. */
-    private fun clickUrl(transactionId: Uuid, plan: BillingPlan): String {
+    private fun clickUrl(transactionId: Uuid, plan: BillingPlan): String = clickUrl(transactionId, plan.priceMinor)
+
+    private fun clickUrl(transactionId: Uuid, amountMinor: Long): String {
         val serviceId = config.click.serviceId ?: throw FeatureDisabledException(CLICK_FLAG)
         val merchantId = config.click.merchantId ?: throw FeatureDisabledException(CLICK_FLAG)
-        val amount = plan.priceMinor.toSum()
+        val amount = amountMinor.toSum()
         return "${config.click.checkoutUrl}?service_id=$serviceId" +
             "&merchant_id=$merchantId" +
             "&amount=$amount" +
@@ -192,6 +269,7 @@ class BillingService(
         const val PAYME_FLAG = "payme_checkout"
         const val CLICK_FLAG = "click_checkout"
         const val STORE_FLAG = "store_iap"
+        const val DEV_PAY_PATH = "/v1/billing/dev-pay"
     }
 }
 

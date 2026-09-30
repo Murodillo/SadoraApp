@@ -2,6 +2,7 @@ package uz.sadora.doctor.data
 
 import io.ktor.client.request.setBody
 import uz.sadora.contract.Ack
+import uz.sadora.contract.CloseConsultationRequest
 import uz.sadora.contract.CommunityComment
 import uz.sadora.contract.CommunityPost
 import uz.sadora.contract.CommunityTopic
@@ -55,9 +56,14 @@ class CommunityApi(private val caller: ApiCaller) {
     suspend fun typing(id: String): ApiResult<Ack> =
         caller.authenticated("v1/community/conversations/$id/typing", HttpMethodKind.POST) { setBody(Ack()) }
 
-    /** Ends a consultation before its window runs out. */
-    suspend fun close(id: String): ApiResult<ConversationThread> =
-        caller.authenticated("v1/community/conversations/$id/close", HttpMethodKind.POST) { setBody(Ack()) }
+    /**
+     * Ends a consultation before its window runs out, with her advice for the patient if
+     * she wrote one. On a window already over, the same call adds the advice it lacks.
+     */
+    suspend fun close(id: String, summary: String? = null): ApiResult<ConversationThread> =
+        caller.authenticated("v1/community/conversations/$id/close", HttpMethodKind.POST) {
+            setBody(CloseConsultationRequest(summary))
+        }
 
     suspend fun report(id: String, reason: ReportReason): ApiResult<Ack> =
         caller.authenticated("v1/community/conversations/$id/report", HttpMethodKind.POST) {

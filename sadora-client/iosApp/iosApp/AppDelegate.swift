@@ -44,4 +44,18 @@ final class AppDelegate: NSObject, UIApplicationDelegate, MessagingDelegate, UNU
     ) async -> UNNotificationPresentationOptions {
         [.banner, .list, .sound]
     }
+
+    /// A tapped notification. A message or consultation push carries `link`
+    /// (`sadora://conversation/{id}`), which goes to the shared code like any other
+    /// sadora:// link; it opens the thread once she is inside the app.
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        didReceive response: UNNotificationResponse,
+        withCompletionHandler completionHandler: @escaping () -> Void
+    ) {
+        if let link = response.notification.request.content.userInfo["link"] as? String {
+            IosAppLinks.shared.offer(url: link)
+        }
+        completionHandler()
+    }
 }

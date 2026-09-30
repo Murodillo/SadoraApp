@@ -12,8 +12,13 @@ import type {
   RewardsOverview,
   SaveShopProductBody,
   AdminMe,
+  AdminConsultationPage,
   AdminDoctorDetail,
+  AdminDoctorQuality,
   AdminDoctorRow,
+  CommissionView,
+  ConsultationPayment,
+  DoctorEarnings,
   DoctorCounts,
   DoctorReviewAction,
   DoctorStatus,
@@ -610,6 +615,85 @@ export const useReviewDoctor = () => {
       void client.invalidateQueries({ queryKey: ['doctors', 'list'] })
       void client.invalidateQueries({ queryKey: ['doctors', 'counts'] })
       void client.invalidateQueries({ queryKey: ['doctors', 'detail', id] })
+    },
+  })
+}
+
+// ---------------------------------------------------------------- paid consultations
+
+export const useAdminConsultations = (payment: ConsultationPayment, limit: number, offset: number) =>
+  useQuery({
+    queryKey: ['consultations', 'list', payment, limit, offset],
+    queryFn: () =>
+      request<AdminConsultationPage>(`/v1/admin/consultations${query({ payment, limit, offset })}`),
+    placeholderData: (previous) => previous,
+    refetchInterval: 60_000,
+  })
+
+/**
+ * Marks a refund done after the operator has returned the money in the provider's
+ * cabinet. The row changes tab and every doctor's balance may move with it.
+ */
+export const useMarkConsultationRefunded = () => {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) =>
+      request<{ ok: boolean }>(`/v1/admin/consultations/${id}/refunded`, { method: 'POST' }),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: ['consultations'] })
+      void client.invalidateQueries({ queryKey: ['doctor-quality'] })
+      void client.invalidateQueries({ queryKey: ['doctor-earnings'] })
+    },
+  })
+}
+
+export const useCommission = () =>
+  useQuery({
+    queryKey: ['commission'],
+    queryFn: () => request<CommissionView>('/v1/admin/settings/commission'),
+  })
+
+export const useSetCommission = () => {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (percent: number) =>
+      request<CommissionView>('/v1/admin/settings/commission', { method: 'PUT', body: { percent } }),
+    onSuccess: (view) => {
+      client.setQueryData(['commission'], view)
+      void client.invalidateQueries({ queryKey: ['consultations'] })
+    },
+  })
+}
+
+/** Outside the `['doctors']` root so a review does not refetch every doctor's numbers. */
+export const useDoctorQuality = (enabled = true) =>
+  useQuery({
+    queryKey: ['doctor-quality'],
+    queryFn: () => request<AdminDoctorQuality[]>('/v1/admin/doctors/quality'),
+    enabled,
+    refetchInterval: 60_000,
+  })
+
+/** Owner and Admin only on the server; the card asks only when the caller may read it. */
+export const useDoctorEarnings = (id: string, enabled = true) =>
+  useQuery({
+    queryKey: ['doctor-earnings', id],
+    queryFn: () => request<DoctorEarnings>(`/v1/admin/doctors/${id}/earnings`),
+    enabled,
+  })
+
+export const useAddDoctorPayout = () => {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, amountMinor, note }: { id: string; amountMinor: number; note?: string }) =>
+      request<DoctorEarnings>(`/v1/admin/doctors/${id}/payouts`, {
+        method: 'POST',
+        body: { amountMinor, ...(note ? { note } : {}) },
+      }),
+    onSuccess: (earnings, { id }) => {
+      client.setQueryData(['doctor-earnings', id], earnings)
+      void client.invalidateQueries({ queryKey: ['doctor-earnings', id] })
+      void client.invalidateQueries({ queryKey: ['doctor-quality'] })
     },
   })
 }

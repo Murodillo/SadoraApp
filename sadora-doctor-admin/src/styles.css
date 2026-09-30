@@ -2678,3 +2678,357 @@ input.switch:disabled {
     max-width: 85%;
   }
 }
+
+/* ---------------------------------------------------------------- the workplace */
+
+/* --- chips over a consultation: paid, waiting on her */
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 3px;
+}
+
+.conv-main > .chips {
+  margin-top: 0;
+}
+
+/* --- money in tables */
+
+th.num,
+td.num {
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* --- her week */
+
+.week {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.week-day {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr);
+  align-items: center;
+  gap: 4px 12px;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  transition: opacity var(--quick) var(--gentle);
+}
+
+.week-day.off {
+  opacity: 0.7;
+}
+
+.week-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.week-name input[type='checkbox'] {
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  accent-color: var(--primary);
+  cursor: pointer;
+}
+
+.week-times {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.week-times input[type='time'] {
+  width: 120px;
+  background: var(--surface);
+}
+
+.week-error {
+  grid-column: 2;
+}
+
+@media (max-width: 600px) {
+  .week-day {
+    grid-template-columns: 1fr;
+  }
+
+  .week-error {
+    grid-column: 1;
+  }
+}
+
+/* --- hand-drawn bars */
+
+.bars {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.bar-row {
+  display: grid;
+  grid-template-columns: 130px minmax(0, 1fr) 48px;
+  align-items: center;
+  gap: 12px;
+}
+
+.bar-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bar-track {
+  height: 12px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+
+.bar-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--brand);
+  transform-origin: left center;
+  animation: bar-grow var(--slow) var(--emphasized) both;
+}
+
+.bar-row:nth-child(2) .bar-fill { animation-delay: 60ms; }
+.bar-row:nth-child(3) .bar-fill { animation-delay: 120ms; }
+.bar-row:nth-child(4) .bar-fill { animation-delay: 180ms; }
+.bar-row:nth-child(5) .bar-fill { animation-delay: 240ms; }
+
+.bar-value {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+@keyframes bar-grow {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bar-fill {
+    animation: none;
+  }
+}
+
+/* --- quick replies: the page */
+
+.reply-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.reply-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  animation: rise var(--standard) var(--emphasized) both;
+}
+
+.reply-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.reply-body {
+  margin: 4px 0 0;
+  color: var(--text-dim);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.reply-actions {
+  display: flex;
+  gap: 6px;
+  flex: none;
+}
+
+@media (max-width: 600px) {
+  .reply-item {
+    flex-direction: column;
+  }
+}
+
+/* --- quick replies: the list over the composer */
+
+.chat-composer {
+  position: relative;
+}
+
+button.btn.chat-attach.on {
+  border-color: color-mix(in srgb, var(--primary) 60%, var(--border));
+  background: color-mix(in srgb, var(--primary) 16%, var(--surface-2));
+}
+
+.qr-pop {
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  bottom: calc(100% - 4px);
+  z-index: 5;
+  display: grid;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: 0 12px 32px rgb(0 0 0 / 28%);
+  animation: fade-up var(--quick) var(--emphasized) both;
+}
+
+.qr-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 240px;
+  overflow-y: auto;
+  display: grid;
+  gap: 2px;
+}
+
+.qr-item {
+  display: grid;
+  gap: 1px;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.qr-item .faint {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.qr-item.active {
+  background: color-mix(in srgb, var(--primary) 16%, transparent);
+}
+
+.qr-empty {
+  margin: 4px 6px;
+}
+
+.qr-empty a,
+.qr-foot a {
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.qr-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 6px 0;
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+}
+
+/* --- the patient: her note and the history */
+
+.side-note {
+  display: grid;
+  gap: 6px;
+}
+
+.side-note-head,
+.side-note-foot {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.side-note-head .side-title {
+  margin: 0;
+}
+
+.side-note textarea {
+  resize: vertical;
+  min-height: 64px;
+  background: color-mix(in srgb, var(--warn) 6%, var(--surface-2));
+}
+
+.side-note-foot {
+  align-items: center;
+  font-size: 12px;
+}
+
+.side-history {
+  display: grid;
+  gap: 8px;
+}
+
+.hist-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.hist-item {
+  display: grid;
+  gap: 4px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  font-size: 13px;
+}
+
+.hist-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.hist-meta {
+  font-size: 12px;
+}
+
+.hist-summary {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.stars {
+  color: var(--warn);
+  letter-spacing: 1px;
+}
+
+.hist-records {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}

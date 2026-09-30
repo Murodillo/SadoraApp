@@ -1,10 +1,6 @@
 package uz.sadora.doctor.ui.doctor
 
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.ui.semantics.Role
-import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.Box
-import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.animateContentSize
@@ -81,7 +77,6 @@ import uz.sadora.doctor.ui.components.SelectChip
 import uz.sadora.doctor.ui.components.Skeleton
 import uz.sadora.doctor.ui.components.SuccessCheck
 import uz.sadora.doctor.ui.components.acceptText
-import uz.sadora.doctor.ui.components.noRippleToggleable
 import uz.sadora.doctor.ui.components.rememberPhotoCapture
 
 // Ported from the client app, where these screens were first written. The panel is the
@@ -108,6 +103,9 @@ fun DoctorProfileScreen(
     onOpenSettings: (() -> Unit)? = null,
     account: DoctorAccount? = null,
     onSaved: (() -> Unit)? = null,
+    /** Her price, hours and busy switch; only on her own Profile tab. */
+    onOpenWork: (() -> Unit)? = null,
+    onOpenReplies: (() -> Unit)? = null,
 ) {
     val d = strings.doctors
     val c = Sadora.colors
@@ -152,6 +150,19 @@ fun DoctorProfileScreen(
             }
             if (account != null && onSaved != null) {
                 item { AcceptsConsultationsCard(account, doctors) }
+                onOpenWork?.let { open ->
+                    item {
+                        NavCard(
+                            SadoraIcons.Calendar,
+                            title = strings.work.settingsTitle,
+                            subtitle = priceText(profile.priceMinor),
+                            onClick = open,
+                        )
+                    }
+                }
+                onOpenReplies?.let { open ->
+                    item { NavCard(SadoraIcons.Message, title = strings.work.quickReplies, subtitle = null, onClick = open, tint = c.secondary) }
+                }
                 item { EditDoctorCard(account, doctors, onSaved = onSaved) }
             }
             item { Text(d.disclaimer, style = Sadora.type.caption.copy(letterSpacing = TextUnit.Unspecified), color = c.muted2) }
@@ -384,36 +395,21 @@ private fun ApprovedCard(account: DoctorAccount, onOpenPage: () -> Unit, onNewPo
 @Composable
 private fun AcceptsConsultationsCard(account: DoctorAccount, doctors: DoctorController) {
     val t = strings.tabs
-    val c = Sadora.colors
     val scope = rememberCoroutineScope()
     var saving by remember { mutableStateOf(false) }
-    val on = account.acceptsConsultations
-    SadoraCard(
-        modifier = Modifier.noRippleToggleable(value = on, role = Role.Switch, enabled = !saving) { wanted ->
+    SwitchCard(
+        title = t.acceptsTitle,
+        body = t.acceptsBody,
+        on = account.acceptsConsultations,
+        enabled = !saving,
+        onToggle = { wanted ->
             saving = true
             scope.launch {
                 doctors.setAcceptsConsultations(wanted)
                 saving = false
             }
         },
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Spacing.xxs)) {
-                Text(t.acceptsTitle, style = Sadora.type.h3, color = c.text)
-                Text(t.acceptsBody, style = Sadora.type.body, color = c.muted)
-            }
-            val thumbX by animateDpAsState(if (on) 20.dp else 0.dp, tween(Motion.Quick), label = "switch")
-            Box(
-                Modifier
-                    .size(width = 48.dp, height = 28.dp)
-                    .clip(Radius.chip)
-                    .background(if (on) c.primary else c.surface2)
-                    .padding(4.dp),
-            ) {
-                Box(Modifier.offset(x = thumbX).size(20.dp).clip(Radius.chip).background(if (on) c.onPrimary else c.muted2))
-            }
-        }
-    }
+    )
 }
 
 /** Workplace and bio: what she may change without another review. */

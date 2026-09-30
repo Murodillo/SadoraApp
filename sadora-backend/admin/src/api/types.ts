@@ -696,3 +696,99 @@ export interface DoctorConsultationStats {
   messagesFromPatients: number
   lastMessageAt?: string | null
 }
+
+// ---------------------------------------------------------------- paid consultations
+
+/** Where a consultation's money stands; the admin list shows only the last three. */
+export type ConsultationPayment = 'free' | 'pending' | 'paid' | 'refund_due' | 'refunded'
+
+/** `doctor` — she closed it, `expired` — the 24 hours ran out, `refund` — owed back. */
+export type ConsultationClosedReason = 'doctor' | 'expired' | 'refund'
+
+export interface AdminConsultationRow {
+  id: string
+  doctorId: string
+  doctorName: string
+  patientId: string
+  patientPhone?: string | null
+  /** Tiyin, like every amount from the API. */
+  priceMinor: number
+  commissionMinor: number
+  payment: ConsultationPayment
+  provider?: PaymentProvider | null
+  /** Ours, and the provider's own id — what the provider's cabinet searches by. */
+  transactionId?: string | null
+  providerTransactionId?: string | null
+  openedAt?: string | null
+  closedAt?: string | null
+  closedReason?: ConsultationClosedReason | string | null
+  firstReplyAt?: string | null
+  rating?: number | null
+  refundedAt?: string | null
+  createdAt: string
+}
+
+export interface AdminConsultationPage {
+  page: Page<AdminConsultationRow>
+  paid: number
+  refundDue: number
+  refunded: number
+  commissionPercent: number
+}
+
+export interface CommissionView {
+  percent: number
+}
+
+/** One doctor's work and money, a row on the quality table. */
+export interface AdminDoctorQuality {
+  doctorId: string
+  fullName: string
+  specialty: DoctorSpecialty
+  status: DoctorStatus | 'none'
+  priceMinor: number
+  busy: boolean
+  onlineNow: boolean
+  consultationsTotal: number
+  consultationsMonth: number
+  openNow: number
+  avgFirstReplyMinutes?: number | null
+  unansweredTotal: number
+  rating?: number | null
+  ratingCount: number
+  grossMinor: number
+  netMinor: number
+  paidOutMinor: number
+  balanceMinor: number
+  refundDueMinor: number
+}
+
+export interface EarningLine {
+  sessionId: string
+  patientName: string
+  openedAt?: string | null
+  priceMinor: number
+  commissionMinor: number
+  netMinor: number
+  payment: ConsultationPayment
+}
+
+export interface DoctorPayoutView {
+  id: string
+  amountMinor: number
+  note?: string | null
+  paidAt: string
+}
+
+/** What she has earned, what Sadora has paid her, and what is still hers to be paid. */
+export interface DoctorEarnings {
+  currency: string
+  grossMinor: number
+  commissionMinor: number
+  netMinor: number
+  paidOutMinor: number
+  balanceMinor: number
+  refundDueMinor: number
+  lines: EarningLine[]
+  payouts: DoctorPayoutView[]
+}

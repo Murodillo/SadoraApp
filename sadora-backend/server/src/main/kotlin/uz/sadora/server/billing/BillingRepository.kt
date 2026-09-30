@@ -34,7 +34,8 @@ import uz.sadora.server.db.enumFromDb
 data class TransactionRecord(
     val id: Uuid,
     val userId: Uuid,
-    val planId: String,
+    /** Null for a consultation's payment. */
+    val planId: String?,
     val provider: PaymentProvider,
     val amountMinor: Long,
     val currency: String,
@@ -46,6 +47,8 @@ data class TransactionRecord(
     val cancelReason: Int?,
     val subscriptionId: Uuid?,
     val createdAt: Instant,
+    /** The consultation window this payment opens, when it is for one. */
+    val consultationSessionId: Uuid? = null,
 )
 
 class BillingRepository {
@@ -68,10 +71,11 @@ class BillingRepository {
 
     suspend fun createTransaction(
         userId: Uuid,
-        planId: String,
+        planId: String?,
         provider: PaymentProvider,
         amountMinor: Long,
         currency: String,
+        consultationSessionId: Uuid? = null,
     ): TransactionRecord = dbQuery {
         val id = Uuid.random()
         val timestamp = now().toOffsetDateTime()
@@ -79,6 +83,7 @@ class BillingRepository {
             it[PaymentTransactions.id] = id
             it[PaymentTransactions.userId] = userId
             it[PaymentTransactions.planId] = planId
+            it[PaymentTransactions.consultationSessionId] = consultationSessionId
             it[PaymentTransactions.provider] = provider.dbValue()
             it[PaymentTransactions.amountMinor] = amountMinor
             it[PaymentTransactions.currency] = currency
@@ -313,6 +318,7 @@ private fun ResultRow.toRecord() = TransactionRecord(
     cancelReason = this[PaymentTransactions.cancelReason],
     subscriptionId = this[PaymentTransactions.subscriptionId],
     createdAt = this[PaymentTransactions.createdAt].toKotlinInstant(),
+    consultationSessionId = this[PaymentTransactions.consultationSessionId],
 )
 
 /** What came in over a window, for the panel's revenue card. */

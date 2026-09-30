@@ -339,9 +339,13 @@ class DoctorController(
 
     private var lastTypingSent = 0L
 
-    suspend fun closeConsultation(id: String): Boolean {
+    /**
+     * Ends the consultation, with her advice for the patient when she wrote one. On a
+     * window already over the same call adds the advice it was closed without.
+     */
+    suspend fun closeConsultation(id: String, summary: String? = null): Boolean {
         val community = community ?: return false
-        val thread = chatCalls.run { community.close(id) } ?: return false
+        val thread = chatCalls.run { community.close(id, summary?.trim()?.ifEmpty { null }) } ?: return false
         openConversation = thread
         conversations = conversations.map { if (it.id == id) thread.conversation else it }
         return true

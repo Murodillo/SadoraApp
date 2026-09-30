@@ -174,6 +174,34 @@ class MessagingRepository {
         }
     }
 
+    /**
+     * The consultation's row without opening a window: what a paid consultation hangs
+     * its checkout on. An existing row is returned as it is, open or not.
+     */
+    suspend fun ensureConsultation(patient: Uuid, doctorUser: Uuid, doctorId: Uuid): ConversationRecord = dbQuery {
+        val (first, second) = ordered(patient, doctorUser)
+        CommunityConversations.selectAll()
+            .where {
+                (CommunityConversations.userA eq first) and (CommunityConversations.userB eq second) and
+                    (CommunityConversations.doctorId eq doctorId)
+            }
+            .singleOrNull()
+            ?.toConversation()
+            ?: run {
+                val id = Uuid.random()
+                val timestamp = now()
+                CommunityConversations.insert {
+                    it[CommunityConversations.id] = id
+                    it[userA] = first
+                    it[userB] = second
+                    it[createdAt] = timestamp.toOffsetDateTime()
+                    it[lastMessageAt] = timestamp.toOffsetDateTime()
+                    it[CommunityConversations.doctorId] = doctorId
+                }
+                ConversationRecord(id, first, second, timestamp, timestamp, null, null, doctorId)
+            }
+    }
+
     suspend fun closeConsultation(id: Uuid): Unit = dbQuery {
         CommunityConversations.update({ CommunityConversations.id eq id }) {
             it[closedAt] = now().toOffsetDateTime()

@@ -17,6 +17,7 @@ describe('device', () => {
     expect(info.deviceId).toBe(deviceId())
     expect(info.appVersion).toMatch(/^doctor-web \d+\.\d+\.\d+/)
     expect(typeof info.timezone).toBe('string')
+    expect(info.app).toBe('doctor')
   })
 
   it('still makes a v4 id where randomUUID is missing (plain http)', () => {

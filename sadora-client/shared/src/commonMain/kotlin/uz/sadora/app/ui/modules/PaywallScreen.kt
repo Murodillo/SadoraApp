@@ -369,12 +369,7 @@ private fun BillingPlan.savingLabel(all: List<BillingPlan>, t: ModuleStrings): S
 }
 
 /** Thousands separated with a space, the way prices are written in Uzbek. */
-internal fun sumLabel(minor: Long): String =
-    (minor / 100).toString()
-        .reversed()
-        .chunked(3)
-        .joinToString(" ")
-        .reversed()
+internal fun sumLabel(minor: Long): String = uz.sadora.app.model.Fmt.sum(minor)
 
 private fun PaymentProvider.buttonLabel(t: ModuleStrings): String = when (this) {
     PaymentProvider.PAYME -> t.payWithPayme

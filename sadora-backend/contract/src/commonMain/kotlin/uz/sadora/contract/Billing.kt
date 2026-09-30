@@ -94,9 +94,12 @@ data class PaymentStatus(
     val transactionId: String,
     val state: PaymentState,
     val provider: PaymentProvider,
-    val planId: String,
+    /** Null for a consultation's payment, which buys no plan. */
+    val planId: String? = null,
     val amountMinor: Long,
     val paidAt: Instant? = null,
+    /** The consultation window this payment opens, when it is for one. */
+    val consultationSessionId: String? = null,
     /** The subscription this payment produced, once it has produced one. */
     val subscription: SubscriptionStatus? = null,
 )

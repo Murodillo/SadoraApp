@@ -102,6 +102,7 @@ import uz.sadora.app.ui.components.acceptText
 import uz.sadora.app.ui.components.noRippleClickable
 import uz.sadora.app.ui.components.pressable
 import uz.sadora.app.ui.components.rememberPhotoCapture
+import uz.sadora.contract.ConsultationPayment
 import uz.sadora.contract.DoctorSummary
 import uz.sadora.contract.Limits
 
@@ -310,6 +311,8 @@ fun ConversationScreen(
     onOpenProfile: (String) -> Unit,
     onOpenDoctor: (String) -> Unit,
     onOpenMenu: () -> Unit,
+    /** A new window with a doctor who charges: the shell's pay sheet, by her doctor id. */
+    onPay: (String) -> Unit,
     /** The thread was read: the unread count in the chat header and on the tab bar follows. */
     onRead: () -> Unit,
     onClose: () -> Unit,
@@ -328,6 +331,14 @@ fun ConversationScreen(
     var recordFor by remember { mutableStateOf<String?>(null) }
     var viewing by remember { mutableStateOf<DirectMessage?>(null) }
     var reopening by remember { mutableStateOf(false) }
+    /**
+     * The window she rated from this screen, by its session, so it can say thank you once
+     * the stars go. By session and not by thread: a new paid window in the same thread is
+     * rated again, and a thank-you keyed to the thread hid its stars.
+     */
+    var ratedHere by remember { mutableStateOf<String?>(null) }
+    // Its own flag: the controller's busy also blinks with every silent poll of the thread.
+    var sendingRating by remember { mutableStateOf(false) }
     val picker = rememberPhotoCapture { pendingPhoto = it }
     ResizeForKeyboard()
 
@@ -397,12 +408,20 @@ fun ConversationScreen(
                     onReopen = {
                         reopening = true
                         scope.launch {
-                            messages.reopenConsultation()
+                            // A doctor who charges answers the start with 402: that is her
+                            // pay sheet, not an error under the banner.
+                            if (!messages.reopenConsultation() && messages.takePaymentRequired()) doctor?.let { onPay(it.id) }
                             reopening = false
                         }
                     },
                     modifier = Modifier.padding(horizontal = Spacing.screen, vertical = Spacing.xxs),
                 )
+                window.summary?.let { summary ->
+                    DoctorSummaryCard(
+                        summary = summary,
+                        modifier = Modifier.padding(horizontal = Spacing.screen, vertical = Spacing.xxs),
+                    )
+                }
             }
 
             messages.error?.let { failure ->
@@ -448,6 +467,25 @@ fun ConversationScreen(
                 }
                 if (otherTyping) {
                     item(key = "typing") { TypingRow(name) }
+                }
+                val sessionKey = window?.sessionId
+                if (sessionKey != null && (window?.canRate == true || ratedHere == sessionKey)) {
+                    item(key = "rate") {
+                        if (window?.canRate == true && ratedHere != sessionKey) {
+                            RateConsultationCard(
+                                sending = sendingRating,
+                                onSend = { stars, review ->
+                                    sendingRating = true
+                                    scope.launch {
+                                        if (messages.rate(stars, review)) ratedHere = sessionKey
+                                        sendingRating = false
+                                    }
+                                },
+                            )
+                        } else {
+                            RatedThanks()
+                        }
+                    }
                 }
                 item(key = "end") { Spacer(Modifier.height(Spacing.xs)) }
             }
@@ -624,6 +662,7 @@ private fun ConsultationBanner(
 ) {
     val c = Sadora.colors
     val d = strings.doctors
+    val paid = window.payment == ConsultationPayment.PAID
     if (window.open) {
         Row(
             modifier
@@ -639,8 +678,13 @@ private fun ConsultationBanner(
                 d.consultationOpen,
                 style = Sadora.type.body.copy(fontWeight = FontWeight.SemiBold),
                 color = c.successText,
+                // The title takes what the chip and the clock leave, on one line: sharing
+                // the row half and half with a spacer broke it mid-word beside the chip.
+                maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f),
             )
+            if (paid) PaidChip()
             Icon(SadoraIcons.Clock, contentDescription = null, Modifier.size(IconSize.sm), tint = c.muted)
             Text(
                 d.timeLeft(window.remaining(now)),
@@ -657,16 +701,123 @@ private fun ConsultationBanner(
                 .padding(Spacing.sm),
             verticalArrangement = Arrangement.spacedBy(Spacing.xs),
         ) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                Text(
+                    if (window.closedByDoctor) d.consultationClosed else d.consultationExpired,
+                    style = Sadora.type.h3,
+                    color = c.text,
+                    modifier = Modifier.weight(1f, fill = false),
+                )
+                if (paid) PaidChip()
+            }
+            // A paid window the doctor never answered: the money is on its way back, and
+            // the thread is where she looks for it.
+            when (window.payment) {
+                ConsultationPayment.REFUND_DUE -> Text(d.refundDue, style = Sadora.type.body.copy(fontWeight = FontWeight.SemiBold), color = c.warning)
+                ConsultationPayment.REFUNDED -> Text(d.refunded, style = Sadora.type.body.copy(fontWeight = FontWeight.SemiBold), color = c.successText)
+                else -> Unit
+            }
             Text(
-                if (window.closedByDoctor) d.consultationClosed else d.consultationExpired,
-                style = Sadora.type.h3,
-                color = c.text,
+                if (window.doctorPriceMinor > 0) d.consultationClosedBodyPaid else d.consultationClosedBody,
+                style = Sadora.type.body,
+                color = c.muted,
             )
-            Text(d.consultationClosedBody, style = Sadora.type.body, color = c.muted)
             SadoraButton(d.reopen, onClick = onReopen, enabled = !reopening)
         }
     }
 }
+
+/**
+ * The doctor's advice, pinned under the banner: what she wrote when she closed the
+ * window, kept where the patient will look for it rather than scrolled away with the
+ * thread. Three lines until she asks for the rest.
+ */
+@Composable
+private fun DoctorSummaryCard(summary: String, modifier: Modifier = Modifier) {
+    val c = Sadora.colors
+    val d = strings.doctors
+    var expanded by remember(summary) { mutableStateOf(false) }
+    var overflows by remember(summary) { mutableStateOf(false) }
+    Column(
+        modifier
+            .fillMaxWidth()
+            .clip(Radius.cardSmall)
+            .background(c.primary.copy(alpha = if (c.isDark) 0.18f else 0.08f))
+            .noRippleClickable(enabled = overflows || expanded, role = Role.Button) { expanded = !expanded }
+            .padding(Spacing.sm),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+            Icon(SadoraIcons.Document, contentDescription = null, Modifier.size(IconSize.sm), tint = c.textAccent)
+            Text(
+                d.summaryTitle,
+                style = Sadora.type.body.copy(fontWeight = FontWeight.SemiBold),
+                color = c.textAccent,
+                modifier = Modifier.weight(1f),
+            )
+            if (overflows || expanded) {
+                Text(
+                    if (expanded) d.showLess else d.showMore,
+                    style = Sadora.type.caption.copy(letterSpacing = TextUnit.Unspecified, fontWeight = FontWeight.SemiBold),
+                    color = c.textAccent,
+                )
+            }
+        }
+        Text(
+            summary,
+            style = Sadora.type.body,
+            color = c.text,
+            maxLines = if (expanded) Int.MAX_VALUE else SummaryLines,
+            overflow = TextOverflow.Ellipsis,
+            onTextLayout = { if (!expanded) overflows = it.hasVisualOverflow },
+        )
+    }
+}
+
+/**
+ * Five stars and an optional line, once the doctor has answered. Anonymous on her page,
+ * and said so, because a rating a patient thinks the doctor will read is not honest.
+ */
+@Composable
+private fun RateConsultationCard(sending: Boolean, onSend: (Int, String?) -> Unit) {
+    val c = Sadora.colors
+    val d = strings.doctors
+    var stars by remember { mutableStateOf(0) }
+    var review by remember { mutableStateOf("") }
+    SadoraCard(padding = Spacing.md, verticalGap = Spacing.xs) {
+        Text(d.rateTitle, style = Sadora.type.h3, color = c.text)
+        Text(d.rateBody, style = Sadora.type.body, color = c.muted)
+        StarRow(stars, size = 30.dp, onSelect = { stars = it }, modifier = Modifier.align(Alignment.CenterHorizontally))
+        if (stars > 0) {
+            SadoraTextField(
+                value = review,
+                onValueChange = { review = it.take(ReviewMax) },
+                placeholder = d.reviewPlaceholder,
+                singleLine = false,
+                imeAction = androidx.compose.ui.text.input.ImeAction.Default,
+            )
+            SadoraButton(d.rateSend, onClick = { onSend(stars, review) }, enabled = !sending)
+        }
+    }
+}
+
+@Composable
+private fun RatedThanks() {
+    val c = Sadora.colors
+    Text(
+        strings.doctors.rateThanks,
+        style = Sadora.type.body.copy(fontWeight = FontWeight.SemiBold),
+        color = c.successText,
+        textAlign = TextAlign.Center,
+        modifier = Modifier.fillMaxWidth().padding(vertical = Spacing.xs),
+    )
+}
+
+/** Lines of the doctor's advice shown before "Batafsil". */
+private const val SummaryLines = 3
+
+/** The server's own limit on a review. */
+private const val ReviewMax = 1000
 
 /** Where the field would be, when nothing can be sent: says why, instead of failing on send. */
 @Composable

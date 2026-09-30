@@ -24,7 +24,18 @@ data class DeviceInfo(
     val model: String? = null,
     val pushToken: String? = null,
     val timezone: String? = null,
+    /** Which app this is: a doctor has both on one phone, and a push must ring in the right one. */
+    val app: ClientApp = ClientApp.CLIENT,
 )
+
+@Serializable
+enum class ClientApp {
+    /** The women's app. */
+    @SerialName("client") CLIENT,
+
+    /** Sadora Doctor. */
+    @SerialName("doctor") DOCTOR,
+}
 
 // ---- phone OTP ----
 

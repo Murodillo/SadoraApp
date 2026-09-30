@@ -58,6 +58,18 @@ sealed interface Route {
 
     /** The record a patient attached in a consultation. */
     data class AttachedRecord(val conversationId: String, val messageId: String) : Route
+
+    /** Her price, hours and the busy switch. */
+    data object WorkSettings : Route
+
+    /** What she has earned, been paid, and is still owed. */
+    data object Earnings : Route
+
+    /** Her quick replies: the list, adding, editing, deleting. */
+    data object QuickReplies : Route
+
+    /** The patient of a consultation: her private note and their history together. */
+    data class Patient(val conversationId: String) : Route
 }
 
 /** A route and how deep in the stack it sits: pushing goes deeper, popping comes back. */
@@ -105,5 +117,15 @@ class Navigator {
 
     fun pop() {
         stack.removeLastOrNull()
+    }
+
+    /**
+     * A conversation opened from outside — a tapped push — over the Messages tab, so
+     * Back from it lands on her list rather than on whatever she had open before.
+     */
+    fun openConversation(id: String) {
+        stack.clear()
+        tab = Tab.Messages
+        stack.add(Route.Conversation(id))
     }
 }

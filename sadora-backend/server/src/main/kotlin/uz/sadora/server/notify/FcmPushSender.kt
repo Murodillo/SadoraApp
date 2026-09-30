@@ -72,10 +72,12 @@ class FcmPushSender(
                             // The app opens the right screen from these; the visible text
                             // is in `notification` so the system can show it while the app
                             // is not running.
-                            data = mapOf(
-                                "notificationId" to record.id.toString(),
-                                "category" to record.category.name.lowercase(),
-                            ),
+                            data = buildMap {
+                                put("notificationId", record.id.toString())
+                                put("category", record.category.name.lowercase())
+                                // Where a tap lands: the app routes it like any link of its own.
+                                record.link?.let { put("link", it) }
+                            },
                         ),
                     ),
                 )

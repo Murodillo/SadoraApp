@@ -11,6 +11,7 @@ import { AuditPage } from './pages/AuditPage'
 import { CommunityPage } from './pages/CommunityPage'
 import { AiPage } from './pages/AiPage'
 import { BillingPage } from './pages/BillingPage'
+import { ConsultationsPage } from './pages/ConsultationsPage'
 import { ContentPage } from './pages/ContentPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { DoctorsPage } from './pages/DoctorsPage'
@@ -73,6 +74,10 @@ function AppRoutes() {
         <Route
           path="doctors"
           element={can(['OWNER', 'ADMIN', 'SUPPORT']) ? <DoctorsPage /> : <Navigate to="/" replace />}
+        />
+        <Route
+          path="consultations"
+          element={can(['OWNER', 'ADMIN', 'SUPPORT']) ? <ConsultationsPage /> : <Navigate to="/" replace />}
         />
         <Route path="community" element={<CommunityPage />} />
         <Route path="content" element={<ContentPage />} />

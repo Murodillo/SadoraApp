@@ -98,6 +98,14 @@ fun WireConsultation.toAppWindow(): ConsultationWindow = ConsultationWindow(
     expiresAt = expiresAt,
     closedAt = closedAt,
     open = open,
+    sessionId = sessionId,
+    priceMinor = priceMinor,
+    payment = payment,
+    summary = summary?.takeIf { it.isNotBlank() },
+    canRate = canRate,
+    rating = rating,
+    answered = answered,
+    doctorPriceMinor = doctorPriceMinor,
 )
 
 fun WireMessage.toAppMessage(): DirectMessage = DirectMessage(

@@ -19,11 +19,18 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.layout.sizeIn
+import androidx.compose.ui.semantics.Role
+import uz.sadora.app.design.MinTouchTarget
 import uz.sadora.app.design.Radius
 import uz.sadora.app.design.Sadora
 import uz.sadora.app.design.SadoraIcons
 import uz.sadora.app.design.Spacing
+import uz.sadora.app.i18n.AvailabilityLine
+import uz.sadora.app.i18n.AvailabilityTone
 import uz.sadora.app.i18n.strings
+import uz.sadora.app.ui.components.noRippleClickable
 
 /**
  * The check mark beside a verified doctor's name. Filled, in the brand colour, and
@@ -92,4 +99,93 @@ internal fun DoctorAnsweredChip(count: Int, modifier: Modifier = Modifier) {
 internal fun initials(name: String): String {
     val words = name.split(' ').filter { it.isNotBlank() && !it.trimEnd('.').equals("dr", ignoreCase = true) }
     return words.take(2).joinToString("") { it.take(1).uppercase() }.ifEmpty { name.take(1).uppercase() }
+}
+
+/** "Hozir onlayn" with a green dot, "Band" with an amber one, the next hour with a grey one. */
+@Composable
+internal fun AvailabilityRow(line: AvailabilityLine, modifier: Modifier = Modifier) {
+    val c = Sadora.colors
+    val dot = when (line.tone) {
+        AvailabilityTone.Online -> c.success
+        AvailabilityTone.Busy -> c.warning
+        AvailabilityTone.Away -> c.muted2
+    }
+    Row(modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Box(Modifier.size(8.dp).clip(Radius.chip).background(dot))
+        Text(
+            line.text,
+            style = Sadora.type.caption.copy(letterSpacing = TextUnit.Unspecified, fontWeight = FontWeight.Medium),
+            color = if (line.tone == AvailabilityTone.Online) c.successText else c.muted,
+        )
+    }
+}
+
+/** The green dot on a doctor's avatar or name while she is answering. */
+@Composable
+internal fun OnlineDot(size: Dp = 10.dp) {
+    val c = Sadora.colors
+    Box(Modifier.size(size).clip(Radius.chip).background(c.surface).padding(2.dp)) {
+        Box(Modifier.size(size - 4.dp).clip(Radius.chip).background(c.success))
+    }
+}
+
+/** "To'langan" in the consultation's banner. */
+@Composable
+internal fun PaidChip(modifier: Modifier = Modifier) {
+    val c = Sadora.colors
+    Row(
+        modifier
+            .clip(Radius.chip)
+            .background(c.success.copy(alpha = if (c.isDark) 0.22f else 0.14f))
+            .padding(horizontal = Spacing.xs, vertical = 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Icon(SadoraIcons.Check, contentDescription = null, Modifier.size(12.dp), tint = c.successText)
+        Text(
+            strings.doctors.paidChip,
+            style = Sadora.type.caption.copy(letterSpacing = TextUnit.Unspecified, fontWeight = FontWeight.SemiBold),
+            color = c.successText,
+        )
+    }
+}
+
+/**
+ * Five stars. Read-only on a review; with [onSelect], each is a button of its own, big
+ * enough for a thumb, and read out as "4 yulduz".
+ */
+@Composable
+internal fun StarRow(
+    rating: Int,
+    modifier: Modifier = Modifier,
+    size: Dp = 14.dp,
+    onSelect: ((Int) -> Unit)? = null,
+) {
+    val c = Sadora.colors
+    val d = strings.doctors
+    Row(modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(if (onSelect != null) 4.dp else 1.dp)) {
+        for (star in 1..5) {
+            val lit = star <= rating
+            val glyph = @Composable {
+                Text(
+                    "★",
+                    style = Sadora.type.h3.copy(fontSize = size.value.sp, lineHeight = size.value.sp),
+                    color = if (lit) c.warning else c.line,
+                )
+            }
+            if (onSelect == null) {
+                glyph()
+            } else {
+                val label = d.stars(star)
+                Box(
+                    Modifier
+                        .sizeIn(minWidth = MinTouchTarget, minHeight = MinTouchTarget)
+                        .clip(Radius.chip)
+                        .noRippleClickable(role = Role.Button) { onSelect(star) }
+                        .semantics { contentDescription = label },
+                    contentAlignment = Alignment.Center,
+                ) { glyph() }
+            }
+        }
+    }
 }

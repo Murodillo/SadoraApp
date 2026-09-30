@@ -26,6 +26,7 @@ import uz.sadora.server.api.requireAdminRole
 import uz.sadora.server.api.requireUserId
 import uz.sadora.server.community.CommunityService
 import uz.sadora.server.community.MessagingService
+import uz.sadora.server.consultation.ConsultationService
 import uz.sadora.server.core.parseUuid
 import uz.sadora.server.plugins.ADMIN_AUTH
 import uz.sadora.server.plugins.AdminRole
@@ -35,7 +36,12 @@ import uz.sadora.server.plugins.USER_AUTH
  * The doctor role in the app: her own application under `/doctor`, and the verified
  * doctors as readers see them under `/doctors`.
  */
-fun Route.doctorRoutes(doctors: DoctorService, community: CommunityService, messaging: MessagingService) {
+fun Route.doctorRoutes(
+    doctors: DoctorService,
+    community: CommunityService,
+    messaging: MessagingService,
+    consultations: ConsultationService,
+) {
     authenticate(USER_AUTH) {
         route("/doctor") {
             get("/me") {
@@ -63,11 +69,12 @@ fun Route.doctorRoutes(doctors: DoctorService, community: CommunityService, mess
 
         route("/doctors") {
             get {
-                call.respond(community.doctors(call.requireUserId()))
+                call.respond(consultations.decorate(community.doctors(call.requireUserId())))
             }
             get("/{id}") {
                 val id = parseUuid(call.parameters["id"].orEmpty(), "id")
-                call.respond(community.doctorProfile(call.requireUserId(), id))
+                val viewer = call.requireUserId()
+                call.respond(consultations.decorate(viewer, community.doctorProfile(viewer, id)))
             }
             /** A patient opens a consultation with her, or opens it again. */
             post("/{id}/consultations") {

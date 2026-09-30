@@ -72,6 +72,8 @@ class AuthTest {
         val sent = recording.bodyOf(HttpMethod.Post, "/v1/auth/otp/verify").orEmpty()
         assertTrue("\"challengeId\":\"ch-1\"" in sent, sent)
         assertTrue("\"platform\":\"android\"" in sent, sent)
+        // The doctor app's device, so the server rings this app for a patient's message.
+        assertTrue("\"app\":\"doctor\"" in sent, sent)
     }
 
     @Test

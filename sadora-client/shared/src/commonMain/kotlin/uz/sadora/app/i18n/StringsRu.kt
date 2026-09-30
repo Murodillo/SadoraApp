@@ -775,6 +775,7 @@ object StringsRu : Strings {
         override val featureClosed = "Этот раздел пока закрыт."
         override val consentRequired = "Для этого дайте согласие в разделе «Приватность»."
         override val paymentFailed = "Платёж не прошёл. Попробуйте ещё раз."
+        override val paymentRequired = "Консультация у этого врача платная — сначала оплатите."
         override val unexpected = "Что-то пошло не так. Попробуйте ещё раз."
     }
 

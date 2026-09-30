@@ -2038,6 +2038,164 @@ class ApiIntegrationTest {
         assertEquals(1, counts.messagesFromDoctor)
     }
 
+    @Test
+    fun `a paid consultation opens on payment and ends answered, rated, paid out, or refunded`() = api {
+        val doctor = signUp().also { onboard(it) }
+        val patient = signUp().also { onboard(it) }
+        val admin = adminToken()
+        setFlag(admin, BillingService.PAYME_FLAG, enabled = true)
+        put<uz.sadora.server.consultation.CommissionView>("/v1/admin/settings/commission", admin, uz.sadora.server.consultation.SetCommissionRequest(10))
+        val name = "Dr Pay ${Uuid.random().toString().take(6)}"
+        val jpeg = kotlin.io.encoding.Base64.encode(byteArrayOf(0xFF.toByte(), 0xD8.toByte(), 0xFF.toByte(), 0xE0.toByte(), 1, 2, 3))
+        post<DoctorAccount>(
+            "/v1/doctor/application",
+            doctor.token,
+            DoctorApplicationRequest(name, DoctorSpecialty.GYNECOLOGIST, "Klinika", 9, "LIC-P", documents = listOf(DoctorDocumentUpload(DoctorDocumentKind.DIPLOMA, jpeg))),
+        )
+        val profileId = get<Page<uz.sadora.server.doctor.AdminDoctorRow>>("/v1/admin/doctors?status=pending&limit=200", admin)
+            .items.first { it.fullName == name }.id
+        postAck("/v1/admin/doctors/$profileId/review", admin, uz.sadora.server.doctor.DoctorReviewRequest("approve"))
+
+        // Her settings: a price under Payme's minimum is refused; every day, all day.
+        val price = 5_000_000L
+        assertEquals(HttpStatusCode.BadRequest, raw { client.put("/v1/doctor/settings") { auth(doctor.token); json(uz.sadora.contract.UpdateDoctorSettingsRequest(priceMinor = 500)) } }.status)
+        val allWeek = (1..7).map { uz.sadora.contract.DoctorHours(it, 0, 1440) }
+        val settings = put<uz.sadora.contract.DoctorSettings>("/v1/doctor/settings", doctor.token, uz.sadora.contract.UpdateDoctorSettingsRequest(priceMinor = price, hours = allWeek))
+        assertEquals(price, settings.priceMinor)
+        assertEquals(10, settings.commissionPercent)
+        assertEquals(7, settings.hours.size)
+
+        paidPage(profileId, patient, price)
+        val id = payAndOpen(profileId, doctor, patient, price)
+        answerAndNote(id, doctor, patient)
+        closeRateAndEarn(id, profileId, doctor, patient, admin, price)
+        refundUnanswered(id, profileId, patient, admin)
+        // The staff panel's quality table has her, with one unanswered window.
+        val quality = get<List<uz.sadora.server.consultation.AdminDoctorQuality>>("/v1/admin/doctors/quality", admin).single { it.doctorId == profileId }
+        assertEquals(2, quality.consultationsTotal)
+        assertEquals(1, quality.unansweredTotal)
+
+        // Busy: still reachable, but not online.
+        put<uz.sadora.contract.DoctorSettings>("/v1/doctor/settings", doctor.token, uz.sadora.contract.UpdateDoctorSettingsRequest(busy = true))
+        assertEquals(false, get<uz.sadora.contract.DoctorProfile>("/v1/doctors/$profileId", patient.token).availability?.onlineNow)
+        put<uz.sadora.server.consultation.CommissionView>("/v1/admin/settings/commission", admin, uz.sadora.server.consultation.SetCommissionRequest(20))
+    }
+
+    private suspend fun Api.paidPage(profileId: String, patient: TestUser, price: Long) {
+        // Her page: the price, online now, and the ways to pay; the list says the same.
+        val page = get<uz.sadora.contract.DoctorProfile>("/v1/doctors/$profileId", patient.token)
+        assertEquals(price, page.priceMinor)
+        assertEquals(true, page.availability?.onlineNow)
+        assertTrue(PaymentProvider.PAYME in page.paymentProviders)
+        assertEquals(price, get<List<uz.sadora.contract.DoctorListItem>>("/v1/doctors", patient.token).single { it.id == profileId }.priceMinor)
+
+    }
+
+    private suspend fun Api.payAndOpen(profileId: String, doctor: TestUser, patient: TestUser, price: Long): String {
+        // Asking without paying is answered with the price, and nothing opens.
+        val refused = raw { client.post("/v1/doctors/$profileId/consultations") { auth(patient.token); json(uz.sadora.contract.StartConsultationRequest("Salom")) } }
+        assertEquals(HttpStatusCode.PaymentRequired, refused.status)
+        assertTrue(ErrorCodes.CONSULTATION_PAYMENT_REQUIRED in refused.bodyAsText())
+
+        // Checkout, then Payme's own protocol: the window opens on "performed", once.
+        val checkout = post<CheckoutSession>("/v1/doctors/$profileId/consultations/checkout", patient.token, uz.sadora.contract.ConsultationCheckoutRequest(PaymentProvider.PAYME))
+        assertEquals(price, checkout.amountMinor)
+        val again = post<CheckoutSession>("/v1/doctors/$profileId/consultations/checkout", patient.token, uz.sadora.contract.ConsultationCheckoutRequest(PaymentProvider.PAYME))
+        assertEquals(price, again.amountMinor, "a second tap reuses the pending session")
+        assertTrue(get<List<Conversation>>("/v1/community/conversations?scope=patients", doctor.token).isEmpty(), "unpaid, nothing to see")
+        val paymeId = "pm-c-${Random.nextInt(1_000_000)}"
+        payme(
+            """{"id":2,"method":"CreateTransaction","params":{"id":"$paymeId","time":1788600000000,""" +
+                """"amount":$price,"account":{"order_id":"${checkout.transactionId}"}}}""",
+        )
+        repeat(2) { payme("""{"id":4,"method":"PerformTransaction","params":{"id":"$paymeId"}}""") }
+        val status = get<PaymentStatus>("/v1/billing/payments/${checkout.transactionId}", patient.token)
+        assertEquals(PaymentState.PAID, status.state)
+        assertNotNull(status.consultationSessionId)
+        assertNull(status.subscription)
+
+        val id = assertNotNull(get<uz.sadora.contract.DoctorProfile>("/v1/doctors/$profileId", patient.token).conversationId)
+        val opened = get<ConversationThread>("/v1/community/conversations/$id", patient.token).conversation.consultation
+        assertEquals(true, opened?.open)
+        assertEquals(uz.sadora.contract.ConsultationPayment.PAID, opened?.payment)
+        assertEquals(false, opened?.canRate, "nothing to rate before she answers")
+        assertTrue(dbQuery { exec("SELECT count(*) FROM notification_outbox WHERE dedupe_key = 'consultation_paid:${status.consultationSessionId}' AND target_app = 'doctor'") { it.next(); it.getInt(1) } } == 1)
+
+        // A patient's line rings the doctor app, with a link to the thread.
+        val line = post<DirectMessage>("/v1/community/conversations/$id/messages", patient.token, SendMessageRequest("Savolim bor"))
+        val routed = dbQuery {
+            exec("SELECT target_app, link FROM notification_outbox WHERE dedupe_key = 'dm:${line.id}'") { rows -> rows.next(); rows.getString(1) to rows.getString(2) }
+        }
+        assertEquals("doctor" to "sadora://conversation/$id", routed)
+
+        return id
+    }
+
+    private suspend fun Api.answerAndNote(id: String, doctor: TestUser, patient: TestUser) {
+        // She answers with a quick reply and keeps a note of her own.
+        val reply = post<uz.sadora.contract.QuickReply>("/v1/doctor/quick-replies", doctor.token, uz.sadora.contract.SaveQuickReplyRequest("Salom", "Assalomu alaykum, eshitaman"))
+        put<uz.sadora.contract.QuickReply>("/v1/doctor/quick-replies/${reply.id}", doctor.token, uz.sadora.contract.SaveQuickReplyRequest("Salom", "Assalomu alaykum!"))
+        assertEquals("Assalomu alaykum!", get<List<uz.sadora.contract.QuickReply>>("/v1/doctor/quick-replies", doctor.token).single().body)
+        post<DirectMessage>("/v1/community/conversations/$id/messages", doctor.token, SendMessageRequest("Assalomu alaykum!"))
+        put<uz.sadora.contract.PatientNote>("/v1/doctor/patients/$id/note", doctor.token, uz.sadora.contract.SavePatientNoteRequest("Qon tahlili kerak"))
+        assertEquals("Qon tahlili kerak", get<uz.sadora.contract.PatientNote>("/v1/doctor/patients/$id/note", doctor.token).body)
+        assertEquals(HttpStatusCode.Forbidden, raw { client.get("/v1/doctor/patients/$id/note") { auth(patient.token) } }.status, "a patient is not a doctor")
+        assertEquals(true, get<ConversationThread>("/v1/community/conversations/$id", patient.token).conversation.consultation?.canRate)
+
+    }
+
+    private suspend fun Api.closeRateAndEarn(id: String, profileId: String, doctor: TestUser, patient: TestUser, admin: String, price: Long) {
+        // She closes it with her advice; the patient keeps it and rates, once.
+        post<ConversationThread>("/v1/community/conversations/$id/close", doctor.token, uz.sadora.contract.CloseConsultationRequest("Ko'proq suv iching"))
+        val closed = get<ConversationThread>("/v1/community/conversations/$id", patient.token).conversation.consultation
+        assertEquals(false, closed?.open)
+        assertEquals("Ko'proq suv iching", closed?.summary)
+        assertEquals(HttpStatusCode.Forbidden, raw { client.post("/v1/community/conversations/$id/rating") { auth(doctor.token); json(uz.sadora.contract.RateConsultationRequest(5)) } }.status)
+        postAck("/v1/community/conversations/$id/rating", patient.token, uz.sadora.contract.RateConsultationRequest(5, "Rahmat!"))
+        assertEquals(HttpStatusCode.Conflict, raw { client.post("/v1/community/conversations/$id/rating") { auth(patient.token); json(uz.sadora.contract.RateConsultationRequest(4)) } }.status)
+        val rated = get<uz.sadora.contract.DoctorProfile>("/v1/doctors/$profileId", patient.token)
+        assertEquals(5.0, rated.rating)
+        assertEquals(1, rated.ratingCount)
+        assertEquals("Rahmat!", get<List<uz.sadora.contract.DoctorReview>>("/v1/doctors/$profileId/reviews", patient.token).single().review)
+
+        // Her numbers, her history of this patient, her money.
+        val stats = get<uz.sadora.contract.DoctorStats>("/v1/doctor/stats", doctor.token)
+        assertEquals(1, stats.consultationsTotal)
+        assertEquals(0, stats.avgFirstReplyMinutes)
+        assertEquals(5.0, stats.rating)
+        val history = get<uz.sadora.contract.PatientHistory>("/v1/doctor/patients/$id/history", doctor.token)
+        assertEquals("Ko'proq suv iching", history.sessions.single().summary)
+        val earnings = get<uz.sadora.contract.DoctorEarnings>("/v1/doctor/earnings", doctor.token)
+        assertEquals(price, earnings.grossMinor)
+        assertEquals(price / 10, earnings.commissionMinor)
+        assertEquals(price - price / 10, earnings.balanceMinor)
+        val afterPayout = post<uz.sadora.contract.DoctorEarnings>("/v1/admin/doctors/$profileId/payouts", admin, uz.sadora.server.consultation.CreatePayoutRequest(1_000_000, "Oktyabr"))
+        assertEquals(price - price / 10 - 1_000_000, afterPayout.balanceMinor)
+        assertTrue("doctor.payout_recorded" in rawGet("/v1/admin/audit?action=doctor.payout_recorded&entityId=$profileId&limit=5", admin))
+
+    }
+
+    private suspend fun Api.refundUnanswered(id: String, profileId: String, patient: TestUser, admin: String) {
+        // A second window, paid on the development page and never answered: when its
+        // time is up it is owed back, and an operator marks it returned.
+        val second = post<CheckoutSession>("/v1/doctors/$profileId/consultations/checkout", patient.token, uz.sadora.contract.ConsultationCheckoutRequest(PaymentProvider.PAYME))
+        assertEquals(HttpStatusCode.OK, raw { client.post("/v1/billing/dev-pay/${second.transactionId}") }.status)
+        assertEquals(true, get<ConversationThread>("/v1/community/conversations/$id", patient.token).conversation.consultation?.open)
+        dbQuery {
+            exec("UPDATE consultation_sessions SET expires_at = now() - interval '1 minute' WHERE conversation_id = '$id' AND closed_at IS NULL")
+            exec("UPDATE community_conversations SET expires_at = now() - interval '1 minute' WHERE id = '$id'")
+        }
+        assertTrue(component.consultationService.expireDue() >= 1)
+        val owed = get<uz.sadora.server.consultation.AdminConsultationPage>("/v1/admin/consultations?payment=refund_due&limit=200", admin)
+            .page.items.single { it.doctorId == profileId }
+        assertEquals("refund", owed.closedReason)
+        assertEquals(PaymentProvider.PAYME, owed.provider)
+        postAck("/v1/admin/consultations/${owed.id}/refunded", admin, uz.sadora.contract.Ack())
+        assertEquals(HttpStatusCode.Conflict, raw { client.post("/v1/admin/consultations/${owed.id}/refunded") { auth(admin) } }.status)
+        assertTrue("consultation.refunded" in rawGet("/v1/admin/audit?action=consultation.refunded&entityId=${owed.id}&limit=5", admin))
+
+    }
+
     /** Rows a table holds for one account, by its user_id column. */
     private suspend fun countRowsFor(userId: Uuid, table: String): Int = dbQuery {
         exec("SELECT count(*) FROM $table WHERE user_id = '$userId'") { rows ->

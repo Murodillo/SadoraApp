@@ -64,6 +64,13 @@ class AuthRepository(
         }
 
     /**
+     * Hands this phone's push token to the server, marked as the doctor app's, so a
+     * patient's message rings here and not in the women's app on the same phone.
+     */
+    suspend fun registerPushToken(token: String): ApiResult<Unit> =
+        api.registerDevice(device.toDeviceInfo(appVersion, pushToken = token)).map { }
+
+    /**
      * Clears the local session even when the server call fails. A doctor who taps sign out
      * without a connection must not stay signed in; the refresh token she leaves behind
      * expires on its own.

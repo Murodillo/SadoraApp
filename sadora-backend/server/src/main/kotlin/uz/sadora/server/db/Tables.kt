@@ -113,6 +113,8 @@ object Devices : Table("devices") {
     val timezone = text("timezone").nullable()
     val createdAt = timestampWithTimeZone("created_at")
     val lastSeenAt = timestampWithTimeZone("last_seen_at")
+    /** `client` or `doctor`: which app this install is. */
+    val app = text("app")
 
     override val primaryKey = PrimaryKey(id)
 }
@@ -330,6 +332,10 @@ object NotificationOutbox : Table("notification_outbox") {
     val suppressedReason = text("suppressed_reason").nullable()
     val dedupeKey = text("dedupe_key")
     val createdAt = timestampWithTimeZone("created_at")
+    /** `client` or `doctor`: the app whose devices ring. */
+    val targetApp = text("target_app")
+    /** Where a tap lands; null opens the app. */
+    val link = text("link").nullable()
 
     override val primaryKey = PrimaryKey(id)
 }

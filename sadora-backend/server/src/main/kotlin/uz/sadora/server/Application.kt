@@ -23,6 +23,10 @@ import uz.sadora.server.share.publicShareRoutes
 import uz.sadora.server.share.shareRoutes
 import uz.sadora.server.community.adminCommunityRoutes
 import uz.sadora.server.community.communityRoutes
+import uz.sadora.server.config.Environment
+import uz.sadora.server.consultation.adminConsultationRoutes
+import uz.sadora.server.consultation.consultationRoutes
+import uz.sadora.server.consultation.devPayRoutes
 import uz.sadora.server.doctor.adminDoctorRoutes
 import uz.sadora.server.doctor.doctorRoutes
 import uz.sadora.server.admin.adminRoutes
@@ -72,6 +76,9 @@ fun main() {
 
     // Cloud wearables are pulled, not pushed: the job is the floor under the webhooks.
     component.wearableSyncJob.start()
+
+    // A consultation window nobody closed still has to end, and be refunded if unanswered.
+    component.consultationJob.start()
 
     Runtime.getRuntime().addShutdownHook(Thread { component.close() })
 
@@ -137,7 +144,9 @@ fun Application.apiModule(component: AppComponent) {
             adminWearableRoutes(component.wearableService, component.wearableRepository, component.auditService)
             communityRoutes(component.communityService, component.messagingService)
             adminCommunityRoutes(component.communityModerationService)
-            doctorRoutes(component.doctorService, component.communityService, component.messagingService)
+            doctorRoutes(component.doctorService, component.communityService, component.messagingService, component.consultationService)
+            consultationRoutes(component.consultationService)
+            adminConsultationRoutes(component.consultationService)
             adminDoctorRoutes(component.doctorService)
             aiRoutes(component.aiService, component.greetingService)
             rewardsRoutes(component.rewardsService, component.shopService, component.homeLayoutRepository)
@@ -151,6 +160,8 @@ fun Application.apiModule(component: AppComponent) {
             // The providers' own protocols; not behind the app's auth or its error envelope.
             paymeWebhook(component.paymeGateway, component.billingRepository)
             clickWebhook(component.clickGateway, component.billingRepository)
+            // Stands in for the providers where no merchant keys are set; refused in production.
+            if (config.environment != Environment.PROD) devPayRoutes(component.billingService)
             adminRoutes(
                 adminAuth = component.adminAuthService,
                 adminService = component.adminService,

@@ -1,8 +1,8 @@
 /*
  * The wire types this panel reads and writes, mirrored from `sadora-backend/contract`
- * (Common.kt, Auth.kt, Profile.kt, Doctors.kt, Community.kt, Share.kt). TypeScript cannot read the
- * Kotlin, so these are written down by hand under the same names; a field the server
- * adds is simply ignored until it is added here. Instants arrive as ISO-8601 strings.
+ * (Common.kt, Auth.kt, Profile.kt, Doctors.kt, Community.kt, Share.kt, DoctorWork.kt).
+ * TypeScript cannot read the Kotlin, so these are written down by hand under the same
+ * names; a field the server adds is simply ignored until it is added here. Instants arrive as ISO-8601 strings.
  */
 
 // ---------------------------------------------------------------- common
@@ -34,7 +34,11 @@ export interface DeviceInfo {
   model?: string
   pushToken?: string
   timezone?: string
+  /** Which app this is, so a doctor's pushes ring the doctor app and not the women's one. */
+  app?: ClientApp
 }
+
+export type ClientApp = 'client' | 'doctor'
 
 export interface OtpRequest {
   phone: string
@@ -151,6 +155,12 @@ export interface DoctorProfile {
   posts: CommunityPost[]
   canMessage?: boolean
   conversationId?: string | null
+  /** Her price in tiyin; 0 is free. */
+  priceMinor?: number
+  rating?: number | null
+  ratingCount?: number
+  availability?: DoctorAvailability | null
+  paymentProviders?: PaymentProvider[]
 }
 
 // ---------------------------------------------------------------- community
@@ -226,6 +236,17 @@ export interface Consultation {
   expiresAt: string
   closedAt?: string | null
   open: boolean
+  /** The current window's session. */
+  sessionId?: string | null
+  /** Her price when this window opened, in tiyin; 0 when it was free. */
+  priceMinor?: number
+  payment?: ConsultationPayment
+  /** Her advice from the last window she closed with one. */
+  summary?: string | null
+  canRate?: boolean
+  rating?: number | null
+  /** She has answered in the current window. */
+  answered?: boolean
 }
 
 /**
@@ -463,4 +484,142 @@ export interface DoctorSummary {
   appointments?: Appointment[]
   nutrition?: SharedNutrition | null
   wearable?: SharedWearable | null
+}
+
+// ---------------------------------------------------------------- the doctor's workplace (DoctorWork.kt)
+
+export type PaymentProvider = 'payme' | 'click' | 'app_store' | 'google_play'
+
+/** Where a consultation's money stands. */
+export type ConsultationPayment = 'free' | 'pending' | 'paid' | 'refund_due' | 'refunded'
+
+/** One weekday's hours in minutes from midnight, in her own time zone. 1 is Monday. */
+export interface DoctorHours {
+  weekday: number
+  startMinute: number
+  endMinute: number
+}
+
+export interface DoctorAvailability {
+  onlineNow: boolean
+  busy?: boolean
+  nextAvailableAt?: string | null
+  hours?: DoctorHours[]
+  timezone?: string
+}
+
+export interface DoctorSettings {
+  /** In tiyin; 0 keeps her consultations free. */
+  priceMinor: number
+  busy: boolean
+  hours: DoctorHours[]
+  timezone: string
+  acceptsConsultations: boolean
+  /** Sadora's share of a paid consultation. */
+  commissionPercent: number
+}
+
+/** An omitted field is left as it is; `hours` replaces the whole week. */
+export interface UpdateDoctorSettingsRequest {
+  priceMinor?: number
+  busy?: boolean
+  hours?: DoctorHours[]
+}
+
+export interface QuickReply {
+  id: string
+  title: string
+  body: string
+  position: number
+}
+
+export interface SaveQuickReplyRequest {
+  title: string
+  body: string
+  position?: number
+}
+
+/** Her note on a patient: hers alone. */
+export interface PatientNote {
+  body: string
+  updatedAt?: string | null
+}
+
+export interface SavePatientNoteRequest {
+  body: string
+}
+
+/** One 24-hour window of a consultation. */
+export interface ConsultationSession {
+  id: string
+  openedAt?: string | null
+  expiresAt?: string | null
+  closedAt?: string | null
+  /** `doctor`, `expired` or `refund`. */
+  closedReason?: string | null
+  priceMinor: number
+  payment: ConsultationPayment
+  firstReplyAt?: string | null
+  summary?: string | null
+  rating?: number | null
+  review?: string | null
+  /** The records the patient attached in this window, by message id. */
+  recordMessageIds: string[]
+}
+
+/** Every window she has had with one patient, oldest first. */
+export interface PatientHistory {
+  patient?: ConsultationPatient | null
+  sessions: ConsultationSession[]
+}
+
+export interface CloseConsultationRequest {
+  summary?: string
+}
+
+export interface TopicCount {
+  topic: CommunityTopic
+  count: number
+}
+
+export interface DoctorStats {
+  consultationsWeek: number
+  consultationsMonth: number
+  consultationsTotal: number
+  openNow: number
+  avgFirstReplyMinutes?: number | null
+  unansweredTotal: number
+  rating?: number | null
+  ratingCount: number
+  topTopics: TopicCount[]
+  answersTotal: number
+}
+
+export interface EarningLine {
+  sessionId: string
+  patientName: string
+  openedAt?: string | null
+  priceMinor: number
+  commissionMinor: number
+  netMinor: number
+  payment: ConsultationPayment
+}
+
+export interface DoctorPayoutView {
+  id: string
+  amountMinor: number
+  note?: string | null
+  paidAt: string
+}
+
+export interface DoctorEarnings {
+  currency: string
+  grossMinor: number
+  commissionMinor: number
+  netMinor: number
+  paidOutMinor: number
+  balanceMinor: number
+  refundDueMinor: number
+  lines: EarningLine[]
+  payouts: DoctorPayoutView[]
 }

@@ -77,6 +77,14 @@ class FeatureDisabledException(flagKey: String) : ApiException(
     mapOf("flag" to flagKey),
 )
 
+/** Her consultations cost money; [priceMinor] is what the checkout will ask. */
+class ConsultationPaymentRequiredException(priceMinor: Long) : ApiException(
+    HttpStatusCode.PaymentRequired,
+    ErrorCodes.CONSULTATION_PAYMENT_REQUIRED,
+    "Konsultatsiya pullik — avval to'lang",
+    mapOf("priceMinor" to priceMinor.toString()),
+)
+
 class EntitlementRequiredException(featureKey: String) : ApiException(
     HttpStatusCode.PaymentRequired,
     ErrorCodes.ENTITLEMENT_REQUIRED,

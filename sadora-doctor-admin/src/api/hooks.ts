@@ -3,6 +3,7 @@ import type { QueryClient } from '@tanstack/react-query'
 import { ApiFailure, query, request } from './client'
 import type {
   Ack,
+  CloseConsultationRequest,
   CommunityComment,
   CommunityPost,
   CommunityTopic,
@@ -11,11 +12,19 @@ import type {
   CreatePostRequest,
   DirectMessage,
   DoctorAccount,
+  DoctorEarnings,
   DoctorProfile,
+  DoctorSettings,
+  DoctorStats,
   DoctorSummary,
+  PatientHistory,
+  PatientNote,
+  QuickReply,
   ReportRequest,
+  SaveQuickReplyRequest,
   SendMessageRequest,
   UpdateDoctorProfileRequest,
+  UpdateDoctorSettingsRequest,
 } from './types'
 
 /** Every query key in one place, so a write invalidates exactly what it changed. */
@@ -30,6 +39,12 @@ export const keys = {
   thread: (conversationId: string) => ['community', 'thread', conversationId] as const,
   record: (conversationId: string, messageId: string, open: boolean) =>
     ['community', 'record', conversationId, messageId, open] as const,
+  settings: ['doctor', 'settings'] as const,
+  stats: ['doctor', 'stats'] as const,
+  earnings: ['doctor', 'earnings'] as const,
+  quickReplies: ['doctor', 'quick-replies'] as const,
+  note: (conversationId: string) => ['doctor', 'patients', conversationId, 'note'] as const,
+  history: (conversationId: string) => ['doctor', 'patients', conversationId, 'history'] as const,
 }
 
 /** How often the conversation list and an open thread ask the server again. */
@@ -184,15 +199,24 @@ export function sendTyping(conversationId: string): Promise<void> {
   )
 }
 
-/** The doctor ends the consultation early. The answer is the thread, closed. */
+/**
+ * The doctor ends the consultation early, with her advice for the patient if she writes
+ * one. On a window that is already over the same call only adds the advice, when none
+ * was written. The answer is the thread, closed.
+ */
 export const useCloseConsultation = (conversationId: string) => {
   const client = useQueryClient()
   return useMutation({
-    mutationFn: () => request<ConversationThread>(`${conversationPath(conversationId)}/close`, { method: 'POST', body: {} }),
+    mutationFn: (summary?: string) => {
+      const body: CloseConsultationRequest = summary?.trim() ? { summary: summary.trim() } : {}
+      return request<ConversationThread>(`${conversationPath(conversationId)}/close`, { method: 'POST', body })
+    },
     onSuccess: (thread) => {
       client.setQueryData(keys.thread(conversationId), thread)
       patchConversation(client, { ...thread.conversation, unread: 0 })
       void client.invalidateQueries({ queryKey: keys.conversations })
+      void client.invalidateQueries({ queryKey: keys.history(conversationId) })
+      void client.invalidateQueries({ queryKey: keys.stats })
     },
   })
 }
@@ -227,4 +251,104 @@ export const usePatientRecord = (conversationId: string | null, messageId: strin
       }
     },
     enabled: Boolean(conversationId && messageId),
+  })
+
+// ---------------------------------------------------------------- her workplace
+
+/** Her price, hours and "busy" switch, with Sadora's commission beside them. */
+export const useDoctorSettings = () =>
+  useQuery({
+    queryKey: keys.settings,
+    queryFn: () => request<DoctorSettings>('/v1/doctor/settings'),
+  })
+
+export const useUpdateDoctorSettings = () => {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (body: UpdateDoctorSettingsRequest) =>
+      request<DoctorSettings>('/v1/doctor/settings', { method: 'PUT', body }),
+    onSuccess: (settings) => {
+      client.setQueryData(keys.settings, settings)
+      void client.invalidateQueries({ queryKey: keys.profiles })
+    },
+  })
+}
+
+/** Her numbers; asked again every minute, since the page may stay open through a shift. */
+export const useDoctorStats = () =>
+  useQuery({
+    queryKey: keys.stats,
+    queryFn: () => request<DoctorStats>('/v1/doctor/stats'),
+    refetchInterval: 60_000,
+  })
+
+export const useDoctorEarnings = () =>
+  useQuery({
+    queryKey: keys.earnings,
+    queryFn: () => request<DoctorEarnings>('/v1/doctor/earnings'),
+  })
+
+/** Her ready answers, in her order: the page that keeps them and the composer read the same list. */
+export const useQuickReplies = () =>
+  useQuery({
+    queryKey: keys.quickReplies,
+    queryFn: () => request<QuickReply[]>('/v1/doctor/quick-replies'),
+    staleTime: 60_000,
+  })
+
+export const useSaveQuickReply = () => {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, body }: { id?: string; body: SaveQuickReplyRequest }) =>
+      id
+        ? request<QuickReply>(`/v1/doctor/quick-replies/${encodeURIComponent(id)}`, { method: 'PUT', body })
+        : request<QuickReply>('/v1/doctor/quick-replies', { method: 'POST', body }),
+    onSuccess: (saved) => {
+      client.setQueryData<QuickReply[]>(keys.quickReplies, (list) =>
+        list ? (list.some((item) => item.id === saved.id) ? list.map((item) => (item.id === saved.id ? saved : item)) : [...list, saved]) : list,
+      )
+      void client.invalidateQueries({ queryKey: keys.quickReplies })
+    },
+  })
+}
+
+export const useDeleteQuickReply = () => {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => request<Ack>(`/v1/doctor/quick-replies/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+    onSuccess: (_, id) => {
+      client.setQueryData<QuickReply[]>(keys.quickReplies, (list) => list?.filter((item) => item.id !== id))
+      void client.invalidateQueries({ queryKey: keys.quickReplies })
+    },
+  })
+}
+
+const patientPath = (conversationId: string) => `/v1/doctor/patients/${encodeURIComponent(conversationId)}`
+
+/** Her private note on the patient in this conversation. */
+export const usePatientNote = (conversationId: string, enabled = true) =>
+  useQuery({
+    queryKey: keys.note(conversationId),
+    queryFn: () => request<PatientNote>(`${patientPath(conversationId)}/note`),
+    staleTime: Infinity,
+    enabled,
+  })
+
+/** An empty body deletes the note, which is what the server does with it. */
+export const useSavePatientNote = (conversationId: string) => {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (body: string) =>
+      request<PatientNote>(`${patientPath(conversationId)}/note`, { method: 'PUT', body: { body } }),
+    onSuccess: (note) => client.setQueryData(keys.note(conversationId), note),
+  })
+}
+
+/** Every window she has had with this patient, oldest first. */
+export const usePatientHistory = (conversationId: string, enabled = true) =>
+  useQuery({
+    queryKey: keys.history(conversationId),
+    queryFn: () => request<PatientHistory>(`${patientPath(conversationId)}/history`),
+    refetchInterval: 60_000,
+    enabled,
   })

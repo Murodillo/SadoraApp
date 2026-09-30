@@ -393,6 +393,8 @@ interface ErrorStrings {
     val featureClosed: String
     val consentRequired: String
     val paymentFailed: String
+    /** A doctor's consultation costs money and none is open yet. */
+    val paymentRequired: String
     val unexpected: String
 }
 

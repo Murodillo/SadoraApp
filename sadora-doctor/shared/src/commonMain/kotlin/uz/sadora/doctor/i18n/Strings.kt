@@ -39,6 +39,7 @@ interface Strings {
     val settings: SettingsStrings
     val doctors: DoctorStrings
     val tabs: TabStrings
+    val work: WorkStrings
 }
 
 interface CommonStrings {

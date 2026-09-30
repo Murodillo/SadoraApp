@@ -10,6 +10,7 @@ import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Instant
 import kotlinx.datetime.LocalDate
 import uz.sadora.contract.CommunityTopic
+import uz.sadora.contract.ConsultationPayment
 import uz.sadora.contract.CyclePhase
 import uz.sadora.contract.DoctorDocumentKind
 import uz.sadora.contract.DoctorSpecialty
@@ -122,6 +123,28 @@ class StringsTest {
                 ),
             )
         }
+        with(t.work) {
+            ConsultationPayment.entries.forEach { add(payment(it)) }
+            (1..7).forEach { add(weekday(it)) }
+            listOf(null, "doctor", "expired", "refund", "other").forEach { add(closedReason(it)) }
+            addAll(
+                listOf(
+                    som("50 000"), free, settingsTitle, priceTitle, priceLabel, priceNote, priceTooLow,
+                    priceTooHigh, commission(20), youGet("40 000"), busyTitle, busyBody, hoursTitle, hoursNote,
+                    dayOff, hoursFrom, hoursTo, earlier, later, timezone("Asia/Tashkent"), hoursInvalid,
+                    workDays(1), workDays(5), noHours, statsTitle, statWeek, statMonth, statTotal, openNow,
+                    avgReply, duration(12), duration(65), unanswered, rating, ratingValue("4.8", 12), noRating,
+                    topTopics, noValue, earningsTitle, balance, gross, commissionLine, net, paidOut, refundDue,
+                    earningsNote, linesTitle, linesEmpty, linesEmptyBody, payoutsTitle, payoutsEmpty, details,
+                    quickReplies, quickRepliesBody, quickRepliesEmpty, quickRepliesEmptyBody, manageReplies,
+                    addReply, editReply, replyTitle, replyTitleHint, replyBody, replyBodyHint, deleteReply,
+                    deleteReplyTitle, deleteReplyBody, repliesMax(30), patientTitle, patientInfo, noteTitle,
+                    notePrivate, noteHint, noteSaved, historyTitle, historyEmpty, summaryLabel, reviewLabel,
+                    recordsLabel, recordNumber(1), closeSummaryLabel, closeSummaryHint, writeSummary,
+                    writeSummaryBody, summarySent, yourSummary, awaitingReply,
+                ),
+            )
+        }
     }
 
     @Test
@@ -155,6 +178,16 @@ class StringsTest {
             // Names, numbers and the app's own name may coincide; most lines must not.
             val same = uz.indices.count { uz[it] == other[it] }
             assertTrue(same * 10 < uz.size, "${t.language}: $same of ${uz.size} lines are the Uzbek text")
+        }
+    }
+
+    @Test
+    fun `the weekdays and payment states are told apart within each language`() {
+        languages.forEach { t ->
+            val days = (1..7).map { t.work.weekday(it) }
+            assertEquals(7, days.distinct().size, "${t.language}: $days")
+            val payments = ConsultationPayment.entries.map { t.work.payment(it) }
+            assertEquals(payments.size, payments.distinct().size, "${t.language}: $payments")
         }
     }
 

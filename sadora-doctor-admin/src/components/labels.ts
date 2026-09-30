@@ -1,4 +1,4 @@
-import type { CommunityTopic, DoctorSpecialty, DoctorStatus, LifeStage, ReportReason } from '../api/types'
+import type { CommunityTopic, ConsultationPayment, DoctorSpecialty, DoctorStatus, LifeStage, ReportReason } from '../api/types'
 
 /*
  * The words the app uses, so a doctor reads the same name for a room here as the woman
@@ -77,3 +77,23 @@ export const reportReasonLabels: Record<ReportReason, string> = {
 
 /** Under the patient's record in the panel. */
 export const RECORD_DISCLAIMER = "Bu bemor o'zi kiritgan ma'lumotlar, tashxis emas"
+
+/** Where a consultation's money stands, in a chip. */
+export const paymentLabels: Record<ConsultationPayment, { text: string; tone: string }> = {
+  free: { text: 'Bepul', tone: 'free' },
+  pending: { text: "To'lov kutilmoqda", tone: 'warn' },
+  paid: { text: "To'langan", tone: 'ok' },
+  refund_due: { text: 'Qaytarilishi kerak', tone: 'danger' },
+  refunded: { text: 'Qaytarilgan', tone: 'free' },
+}
+
+export function paymentLabel(payment: ConsultationPayment | null | undefined): { text: string; tone: string } {
+  return paymentLabels[payment ?? 'free'] ?? { text: String(payment), tone: 'free' }
+}
+
+/** Why a window ended, in the history of a patient. */
+export const closedReasonLabels: Record<string, string> = {
+  doctor: 'Siz yakunlagansiz',
+  expired: 'Muddati tugagan',
+  refund: 'Javobsiz yopilgan',
+}

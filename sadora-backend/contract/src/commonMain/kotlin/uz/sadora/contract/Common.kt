@@ -104,6 +104,9 @@ object ErrorCodes {
     const val LIMIT_REACHED = "limit_reached"
     const val FEATURE_DISABLED = "feature_disabled"
 
+    /** The doctor's consultations are paid: the window opens once a checkout comes back paid. */
+    const val CONSULTATION_PAYMENT_REQUIRED = "consultation_payment_required"
+
     /** A service the API depends on could not answer — the model behind the food scanner. */
     const val UPSTREAM_UNAVAILABLE = "upstream_unavailable"
     const val INTERNAL_ERROR = "internal_error"

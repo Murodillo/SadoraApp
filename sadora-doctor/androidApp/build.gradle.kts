@@ -5,6 +5,18 @@ plugins {
     alias(libs.plugins.composeCompiler)
 }
 
+/**
+ * Firebase's description of this app — project, sender id, API key — which the
+ * google-services plugin turns into resources the messaging library reads at start.
+ *
+ * The file is gitignored and the plugin applied only when it is there, as in
+ * sadora-client, so a fresh clone and CI still build. Such an APK simply has no push:
+ * `PushRegistration` finds no Firebase app at runtime and skips the token.
+ */
+if (file("google-services.json").exists()) {
+    apply(plugin = libs.plugins.googleServices.get().pluginId)
+}
+
 kotlin {
     compilerOptions {
         jvmTarget = JvmTarget.JVM_11
@@ -14,6 +26,13 @@ dependencies {
     implementation(project(":shared"))
 
     implementation(libs.androidx.activity.compose)
+
+    implementation(platform(libs.firebase.bom))
+    // Firebase's play-services-base still brings Fragment 1.1.0, and the Activity Result
+    // API behind the notification prompt needs 1.3 or later. Named here so the newer one
+    // wins the resolution, as in sadora-client.
+    implementation(libs.androidx.fragment)
+    implementation(libs.firebase.messaging)
 
     implementation(libs.compose.uiToolingPreview)
     debugImplementation(libs.compose.uiTooling)

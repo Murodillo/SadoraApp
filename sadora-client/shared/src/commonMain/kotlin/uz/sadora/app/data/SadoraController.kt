@@ -205,6 +205,8 @@ fun ApiFailure.readable(t: ErrorStrings): String = when (this) {
     is ApiFailure.FeatureDisabled -> t.featureClosed
     is ApiFailure.ConsentRequired -> t.consentRequired
     is ApiFailure.PaymentFailed -> t.paymentFailed
+    is ApiFailure.PaymentRequired -> t.paymentRequired
+    is ApiFailure.Conflict -> t.unexpected
     is ApiFailure.Unexpected -> t.unexpected
 }
 

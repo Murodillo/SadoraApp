@@ -258,6 +258,33 @@ class MessagesController(
         return startConsultation(doctorId) != null
     }
 
+    /**
+     * The last start was refused because the doctor charges and nothing is open: the
+     * caller raises the pay sheet instead of a banner. Clears the error it answers.
+     */
+    fun takePaymentRequired(): Boolean {
+        if (calls.error !is ApiFailure.PaymentRequired) return false
+        calls.clearError()
+        return true
+    }
+
+    /**
+     * Her stars, and a line if she wrote one, for the open thread's last window. A 409 —
+     * rated already, from another phone or a double tap — counts as done: what she wanted
+     * is true. The thread is re-read either way so `canRate` follows the server.
+     */
+    suspend fun rate(rating: Int, review: String?): Boolean {
+        val api = api ?: return true
+        val thread = current?.takeIf { it.id.isNotEmpty() && it.isConsultation } ?: return false
+        val sent = calls.run { api.rateConsultation(thread.id, rating.coerceIn(1, 5), review?.trim()?.ifEmpty { null }) }
+        val done = sent != null || calls.error is ApiFailure.Conflict
+        if (done) {
+            calls.clearError()
+            refreshThread(thread.id)
+        }
+        return done
+    }
+
     // ---------------------------------------------------------------- photos
 
     /** Bytes by message id. Bounded, oldest out first; a photo is a few hundred kilobytes. */

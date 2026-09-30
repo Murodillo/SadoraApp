@@ -36,6 +36,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -56,14 +57,18 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import org.jetbrains.compose.resources.decodeToImageBitmap
 import uz.sadora.contract.Consultation
+import uz.sadora.contract.ConsultationPayment
 import uz.sadora.contract.Conversation
 import uz.sadora.contract.DirectMessage
 import uz.sadora.contract.Limits
 import uz.sadora.contract.MessageKind
+import uz.sadora.contract.QuickReply
 import uz.sadora.contract.ReportReason
 import uz.sadora.doctor.data.ApiFailure
 import uz.sadora.doctor.data.CapturedPhotoData
 import uz.sadora.doctor.data.DoctorController
+import uz.sadora.doctor.data.WorkController
+import uz.sadora.doctor.data.insertReply
 import uz.sadora.doctor.data.readable
 import uz.sadora.doctor.design.IconSize
 import uz.sadora.doctor.design.MinTouchTarget
@@ -72,16 +77,20 @@ import uz.sadora.doctor.design.Sadora
 import uz.sadora.doctor.design.SadoraIcons
 import uz.sadora.doctor.design.Spacing
 import uz.sadora.doctor.i18n.strings
+import uz.sadora.doctor.ui.components.ButtonTone
+import uz.sadora.doctor.ui.components.ChipFlowRow
 import uz.sadora.doctor.ui.components.CircleIconButton
 import uz.sadora.doctor.ui.components.EmptyState
 import uz.sadora.doctor.ui.components.ErrorStrip
 import uz.sadora.doctor.ui.components.PillButton
 import uz.sadora.doctor.ui.components.SadoraBottomSheet
+import uz.sadora.doctor.ui.components.SadoraButton
 import uz.sadora.doctor.ui.components.SadoraCard
-import uz.sadora.doctor.ui.components.SadoraDialog
+import uz.sadora.doctor.ui.components.SadoraTextField
 import uz.sadora.doctor.ui.components.SadoraTopBar
 import uz.sadora.doctor.ui.components.ScreenContent
 import uz.sadora.doctor.ui.components.Skeleton
+import uz.sadora.doctor.ui.components.acceptText
 import uz.sadora.doctor.ui.components.noRippleClickable
 import uz.sadora.doctor.ui.components.rememberPhotoCapture
 
@@ -177,7 +186,12 @@ private fun ConversationRow(chat: Conversation, onClick: () -> Unit) {
                     )
                     if (unread) CountPill(t.unread(chat.unread))
                 }
-                chat.consultation?.let { WindowChip(it) }
+                chat.consultation?.let { window ->
+                    ChipFlowRow(horizontalGap = Spacing.xxs, verticalGap = Spacing.xxs) {
+                        WindowChip(window)
+                        ConsultationChips(window)
+                    }
+                }
             }
         }
     }
@@ -232,6 +246,22 @@ private fun WindowChip(window: Consultation) {
     )
 }
 
+/**
+ * What else she needs to know about a window at a glance: that it was paid for — or is
+ * owed back — and, while it is open, that the patient is still waiting for her first word.
+ */
+@Composable
+private fun ConsultationChips(window: Consultation) {
+    val c = Sadora.colors
+    val w = strings.work
+    when (window.payment) {
+        ConsultationPayment.PAID -> TintChip(w.payment(ConsultationPayment.PAID), c.successText)
+        ConsultationPayment.REFUND_DUE -> PaymentChip(ConsultationPayment.REFUND_DUE)
+        else -> Unit
+    }
+    if (window.open && !window.answered) TintChip(w.awaitingReply, c.warning)
+}
+
 // ---------------------------------------------------------------- one consultation
 
 /**
@@ -247,12 +277,16 @@ private fun WindowChip(window: Consultation) {
 fun ConversationScreen(
     id: String,
     doctors: DoctorController,
+    work: WorkController,
     onClose: () -> Unit,
     onOpenRecord: (messageId: String) -> Unit,
+    onOpenPatient: () -> Unit,
+    onManageReplies: () -> Unit,
     onToast: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val t = strings.tabs
+    val w = strings.work
     val c = Sadora.colors
     val scope = rememberCoroutineScope()
     val calls = doctors.chatCalls
@@ -272,7 +306,15 @@ fun ConversationScreen(
     val canWrite = thread != null && conversation?.blocked != true && window?.open != false
 
     var menuOpen by remember { mutableStateOf(false) }
-    var confirmClose by remember { mutableStateOf(false) }
+    /** The closing sheet: ending an open window, or only writing the advice a closed one lacks. */
+    var summaryMode by remember { mutableStateOf<SummaryMode?>(null) }
+    var repliesOpen by remember { mutableStateOf(false) }
+    var closing by remember { mutableStateOf(false) }
+    // Kept across a look at the patient's page and back, and across a quick reply dropped in.
+    var draft by rememberSaveable(id) { mutableStateOf("") }
+    val needsSummary = window != null && !window.open && window.summary.isNullOrBlank()
+    // A failure left from an earlier send is not the closing sheet's to show.
+    LaunchedEffect(summaryMode) { if (summaryMode != null) calls.clearError() }
     var reportOpen by remember { mutableStateOf(false) }
     var viewing by remember { mutableStateOf<DirectMessage?>(null) }
     var sendingPhoto by remember { mutableStateOf(false) }
@@ -301,7 +343,12 @@ fun ConversationScreen(
                 },
                 onBack = onClose,
                 trailing = if (thread != null) {
-                    { CircleIconButton(SadoraIcons.More, contentDescription = t.report, onClick = { menuOpen = true }) }
+                    {
+                        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                            if (window != null) CircleIconButton(SadoraIcons.Info, contentDescription = w.patientInfo, onClick = onOpenPatient)
+                            CircleIconButton(SadoraIcons.More, contentDescription = t.report, onClick = { menuOpen = true })
+                        }
+                    }
                 } else null,
             )
             window?.let {
@@ -311,6 +358,7 @@ fun ConversationScreen(
                     horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
                 ) {
                     WindowChip(it)
+                    ConsultationChips(it)
                 }
             }
             LazyColumn(
@@ -372,8 +420,10 @@ fun ConversationScreen(
                     thread == null -> Unit
                     conversation?.blocked == true ->
                         Text(t.conversationClosed, style = Sadora.type.body, color = c.muted, modifier = Modifier.padding(vertical = Spacing.sm))
-                    window?.open == false ->
-                        Text(t.consultationClosedBody, style = Sadora.type.body, color = c.muted, modifier = Modifier.padding(vertical = Spacing.sm))
+                    window?.open == false -> ClosedFooter(
+                        summary = window.summary,
+                        onWriteSummary = if (needsSummary) { { summaryMode = SummaryMode.Write } } else null,
+                    )
                     else -> Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
                         if (picker.available) {
                             Box(
@@ -388,7 +438,20 @@ fun ConversationScreen(
                                 Icon(SadoraIcons.Camera, contentDescription = t.attachPhoto, Modifier.size(IconSize.md), tint = c.text)
                             }
                         }
+                        Box(
+                            Modifier
+                                .padding(bottom = 2.dp)
+                                .size(MinTouchTarget)
+                                .clip(Radius.chip)
+                                .background(c.surface2)
+                                .noRippleClickable(enabled = canWrite, role = Role.Button, onClick = { repliesOpen = true }),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(SadoraIcons.Bolt, contentDescription = w.quickReplies, Modifier.size(IconSize.md), tint = c.text)
+                        }
                         AnswerInput(
+                            draft = draft,
+                            onDraftChange = { draft = it },
                             onSend = { body ->
                                 calls.clearError()
                                 doctors.sendMessage(id, body)
@@ -407,7 +470,10 @@ fun ConversationScreen(
 
         SadoraBottomSheet(visible = menuOpen, title = conversation?.alias.orEmpty(), onDismiss = { menuOpen = false }) {
             if (window?.open == true) {
-                PillButton(t.closeConsultation, onClick = { menuOpen = false; confirmClose = true }, modifier = Modifier.fillMaxWidth())
+                PillButton(t.closeConsultation, onClick = { menuOpen = false; summaryMode = SummaryMode.Close }, modifier = Modifier.fillMaxWidth())
+            }
+            if (needsSummary) {
+                PillButton(w.writeSummary, onClick = { menuOpen = false; summaryMode = SummaryMode.Write }, modifier = Modifier.fillMaxWidth())
             }
             PillButton(t.report, onClick = { menuOpen = false; reportOpen = true }, modifier = Modifier.fillMaxWidth())
         }
@@ -425,21 +491,141 @@ fun ConversationScreen(
             }
         }
 
-        SadoraDialog(
-            visible = confirmClose,
-            title = t.closeConfirmTitle,
-            body = t.closeConfirmBody,
-            confirmText = t.closeConfirm,
-            onConfirm = {
-                confirmClose = false
-                scope.launch { doctors.closeConsultation(id) }
+        SummarySheet(
+            mode = summaryMode,
+            // Its own flag: the thread's calls are busy with a poll every few seconds.
+            busy = closing,
+            error = calls.error?.takeIf { summaryMode != null },
+            onDismiss = { summaryMode = null },
+            onConfirm = { mode, summary ->
+                closing = true
+                calls.clearError()
+                scope.launch {
+                    if (doctors.closeConsultation(id, summary)) {
+                        summaryMode = null
+                        if (mode == SummaryMode.Write || summary.isNotBlank()) onToast(w.summarySent)
+                    }
+                    closing = false
+                }
             },
-            onDismiss = { confirmClose = false },
+        )
+
+        QuickReplySheet(
+            visible = repliesOpen,
+            work = work,
+            onPick = { reply ->
+                draft = insertReply(draft, reply.body, Limits.MESSAGE_MAX)
+                repliesOpen = false
+            },
+            onManage = {
+                repliesOpen = false
+                onManageReplies()
+            },
+            onDismiss = { repliesOpen = false },
         )
 
         viewing?.let { message ->
             PhotoViewer(message, id, doctors, onDismiss = { viewing = null })
         }
+    }
+}
+
+/** Whether the closing sheet ends the window, or only adds the advice to one already over. */
+private enum class SummaryMode { Close, Write }
+
+/**
+ * Closing a consultation, with the advice the patient keeps — optional, and the same
+ * sheet writes it for a window that ended without one. The field sits under the warning,
+ * so what "Yakunlash" does is read before it is pressed.
+ */
+@Composable
+private fun SummarySheet(
+    mode: SummaryMode?,
+    busy: Boolean,
+    error: ApiFailure?,
+    onDismiss: () -> Unit,
+    onConfirm: (SummaryMode, String) -> Unit,
+) {
+    val t = strings.tabs
+    val w = strings.work
+    val c = Sadora.colors
+    var summary by remember(mode) { mutableStateOf("") }
+    SadoraBottomSheet(
+        visible = mode != null,
+        title = if (mode == SummaryMode.Write) w.writeSummary else t.closeConfirmTitle,
+        onDismiss = onDismiss,
+    ) {
+        Text(if (mode == SummaryMode.Write) w.writeSummaryBody else t.closeConfirmBody, style = Sadora.type.body, color = c.muted)
+        SadoraTextField(
+            value = summary,
+            onValueChange = { summary = acceptText(it, SummaryMax) },
+            label = w.closeSummaryLabel,
+            placeholder = w.closeSummaryHint,
+            singleLine = false,
+        )
+        error?.let { ErrorStrip(it.readable()) }
+        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+            SadoraButton(strings.common.cancel, onDismiss, tone = ButtonTone.Secondary, modifier = Modifier.weight(1f))
+            SadoraButton(
+                if (mode == SummaryMode.Write) strings.common.send else t.closeConfirm,
+                onClick = { mode?.let { onConfirm(it, summary.trim()) } },
+                tone = if (mode == SummaryMode.Write) ButtonTone.Primary else ButtonTone.Destructive,
+                enabled = !busy && (mode != SummaryMode.Write || summary.isNotBlank()),
+                modifier = Modifier.weight(1f),
+            )
+        }
+    }
+}
+
+/** Under a closed window: that it is closed, her advice if she left some, or the way to write it. */
+@Composable
+private fun ClosedFooter(summary: String?, onWriteSummary: (() -> Unit)?) {
+    val t = strings.tabs
+    val w = strings.work
+    val c = Sadora.colors
+    Column(Modifier.padding(vertical = Spacing.xs), verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+        Text(t.consultationClosedBody, style = Sadora.type.body, color = c.muted)
+        summary?.takeIf { it.isNotBlank() }?.let {
+            Column(
+                Modifier.fillMaxWidth().clip(Radius.cardSmall).background(c.surface2).padding(Spacing.sm),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                Text(w.yourSummary, style = Sadora.type.caption.copy(letterSpacing = TextUnit.Unspecified), color = c.muted2)
+                Text(it, style = Sadora.type.body, color = c.text)
+            }
+        }
+        onWriteSummary?.let { PillButton(w.writeSummary, onClick = it, tone = ButtonTone.Primary) }
+    }
+}
+
+/**
+ * Her quick replies over the composer. A tap drops the reply's text into the field — it
+ * is not sent: she reads it over, and may add to it, first.
+ */
+@Composable
+private fun QuickReplySheet(
+    visible: Boolean,
+    work: WorkController,
+    onPick: (QuickReply) -> Unit,
+    onManage: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val w = strings.work
+    val c = Sadora.colors
+    LaunchedEffect(visible) { if (visible) work.loadQuickReplies() }
+    SadoraBottomSheet(visible = visible, title = w.quickReplies, onDismiss = onDismiss) {
+        val replies = work.quickReplies
+        when {
+            !work.quickRepliesLoaded && work.replyCalls.error == null ->
+                repeat(2) { Skeleton(Modifier.fillMaxWidth().height(64.dp), shape = Radius.card) }
+            !work.quickRepliesLoaded -> work.replyCalls.error?.let { ErrorStrip(it.readable()) }
+            replies.isEmpty() -> {
+                Text(w.quickRepliesEmpty, style = Sadora.type.h3, color = c.text)
+                Text(w.quickRepliesEmptyBody, style = Sadora.type.body, color = c.muted)
+            }
+            else -> replies.forEach { reply -> ReplyCard(reply, onClick = { onPick(reply) }) }
+        }
+        PillButton(if (replies.isEmpty()) w.addReply else w.manageReplies, onClick = onManage, modifier = Modifier.fillMaxWidth())
     }
 }
 
@@ -594,6 +780,9 @@ private fun clock(at: Instant): String {
     val time = at.toLocalDateTime(TimeZone.currentSystemDefault()).time
     return "${time.hour.toString().padStart(2, '0')}:${time.minute.toString().padStart(2, '0')}"
 }
+
+/** The longest advice the server keeps. */
+private const val SummaryMax = 2_000
 
 /** How often the time left on a consultation is worked out again. */
 private const val ChipTickMillis = 30_000L

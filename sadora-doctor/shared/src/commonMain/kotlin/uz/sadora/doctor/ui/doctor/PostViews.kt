@@ -306,9 +306,26 @@ internal fun AnswerInput(
     /** Each change of the text — what a private thread turns into "yozmoqda…". */
     onType: (() -> Unit)? = null,
 ) {
+    var draft by remember { mutableStateOf("") }
+    AnswerInput(draft, { draft = it }, onSend, modifier, placeholder, maxLength, onType)
+}
+
+/**
+ * The same field with its text held by the caller — a consultation's composer, where a
+ * quick reply is dropped into the draft and the draft outlives a look at the patient.
+ */
+@Composable
+internal fun AnswerInput(
+    draft: String,
+    onDraftChange: (String) -> Unit,
+    onSend: suspend (String) -> Boolean,
+    modifier: Modifier = Modifier,
+    placeholder: String = strings.community.answerHint,
+    maxLength: Int = Limits.COMMENT_MAX,
+    onType: (() -> Unit)? = null,
+) {
     val c = Sadora.colors
     val t = strings.common
-    var draft by remember { mutableStateOf("") }
     var sending by remember { mutableStateOf(false) }
     val sendScope = rememberCoroutineScope()
     Row(
@@ -319,8 +336,9 @@ internal fun AnswerInput(
         SadoraTextField(
             value = draft,
             onValueChange = {
-                draft = acceptText(it, maxLength)
-                if (draft.isNotBlank()) onType?.invoke()
+                val accepted = acceptText(it, maxLength)
+                onDraftChange(accepted)
+                if (accepted.isNotBlank()) onType?.invoke()
             },
             placeholder = placeholder,
             singleLine = false,
@@ -341,7 +359,7 @@ internal fun AnswerInput(
                         sending = true
                         sendScope.launch {
                             // Cleared only once it is sent: a failed answer keeps its text.
-                            if (onSend(text)) draft = ""
+                            if (onSend(text)) onDraftChange("")
                             sending = false
                         }
                     },

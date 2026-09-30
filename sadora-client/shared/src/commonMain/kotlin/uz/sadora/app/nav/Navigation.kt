@@ -142,8 +142,8 @@ fun uz.sadora.app.model.AppState.aiRoute(): Route =
 /**
  * A link the app was opened with, from outside.
  *
- * Two so far: an invite code from a shared link, and the return from a wearable
- * provider's consent page. Parsed in one place so both platforms read a URL the same
+ * Three so far: an invite code from a shared link, the return from a wearable
+ * provider's consent page, and a thread named by a tapped push. Parsed in one place so both platforms read a URL the same
  * way, and so a wearable return can never be mistaken for an invite code — which the
  * Android entry point used to do by taking the last path segment of anything.
  */
@@ -157,10 +157,14 @@ sealed interface AppLink {
         val state: String? = null,
     ) : AppLink
 
+    /** `sadora://conversation/{id}` — the link a message or consultation push carries. */
+    data class Conversation(val id: String) : AppLink
+
     companion object {
         /**
-         * `https://sadora.app/r/K7M2QP`, `sadora://invite/K7M2QP`, and
-         * `sadora://wearables/whoop?status=ok`. Anything else is nothing.
+         * `https://sadora.app/r/K7M2QP`, `sadora://invite/K7M2QP`,
+         * `sadora://wearables/whoop?status=ok` and `sadora://conversation/{id}`.
+         * Anything else is nothing.
          */
         fun parse(url: String): AppLink? {
             val withoutQuery = url.substringBefore('?')
@@ -180,6 +184,12 @@ sealed interface AppLink {
                         code = params["code"]?.takeIf { it.isNotBlank() },
                         state = params["state"]?.takeIf { it.isNotBlank() },
                     )
+                }
+                segments[0].equals("conversation", ignoreCase = true) && segments.size == 2 &&
+                    url.startsWith("sadora://", ignoreCase = true) -> {
+                    // An id is a UUID; anything else in that place is not ours to open.
+                    segments[1].takeIf { id -> id.length in 8..64 && id.all { it.isLetterOrDigit() || it == '-' } }
+                        ?.let(AppLink::Conversation)
                 }
                 segments[0].equals("invite", ignoreCase = true) || segments.getOrNull(1) == "r" ||
                     (segments.size >= 2 && segments[segments.size - 2].equals("r", ignoreCase = true)) -> {

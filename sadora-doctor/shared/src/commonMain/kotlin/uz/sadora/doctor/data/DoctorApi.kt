@@ -1,10 +1,20 @@
 package uz.sadora.doctor.data
 
 import io.ktor.client.request.setBody
+import uz.sadora.contract.Ack
 import uz.sadora.contract.CommunityPost
 import uz.sadora.contract.DoctorAccount
 import uz.sadora.contract.DoctorApplicationRequest
+import uz.sadora.contract.DoctorEarnings
 import uz.sadora.contract.DoctorProfile
+import uz.sadora.contract.DoctorSettings
+import uz.sadora.contract.DoctorStats
+import uz.sadora.contract.PatientHistory
+import uz.sadora.contract.PatientNote
+import uz.sadora.contract.QuickReply
+import uz.sadora.contract.SavePatientNoteRequest
+import uz.sadora.contract.SaveQuickReplyRequest
+import uz.sadora.contract.UpdateDoctorSettingsRequest
 import uz.sadora.contract.UpdateDoctorProfileRequest
 
 /** Her own doctor account under `/doctor`; her public page, as readers see it, under `/doctors`. */
@@ -25,4 +35,49 @@ class DoctorApi(private val caller: ApiCaller) {
 
     suspend fun profile(id: String): ApiResult<DoctorProfile> =
         caller.authenticated("v1/doctors/$id", HttpMethodKind.GET)
+
+    // ---- her working day: price, hours, the busy switch, her numbers and earnings
+
+    suspend fun settings(): ApiResult<DoctorSettings> =
+        caller.authenticated("v1/doctor/settings", HttpMethodKind.GET)
+
+    /** A null field is left as it is; hours replace the whole week. */
+    suspend fun updateSettings(request: UpdateDoctorSettingsRequest): ApiResult<DoctorSettings> =
+        caller.authenticated("v1/doctor/settings", HttpMethodKind.PUT) { setBody(request) }
+
+    suspend fun stats(): ApiResult<DoctorStats> =
+        caller.authenticated("v1/doctor/stats", HttpMethodKind.GET)
+
+    suspend fun earnings(): ApiResult<DoctorEarnings> =
+        caller.authenticated("v1/doctor/earnings", HttpMethodKind.GET)
+
+    // ---- her quick replies
+
+    suspend fun quickReplies(): ApiResult<List<QuickReply>> =
+        caller.authenticated("v1/doctor/quick-replies", HttpMethodKind.GET)
+
+    suspend fun addQuickReply(request: SaveQuickReplyRequest): ApiResult<QuickReply> =
+        caller.authenticated("v1/doctor/quick-replies", HttpMethodKind.POST) { setBody(request) }
+
+    suspend fun updateQuickReply(id: String, request: SaveQuickReplyRequest): ApiResult<QuickReply> =
+        caller.authenticated("v1/doctor/quick-replies/$id", HttpMethodKind.PUT) { setBody(request) }
+
+    suspend fun deleteQuickReply(id: String): ApiResult<Ack> =
+        caller.authenticated("v1/doctor/quick-replies/$id", HttpMethodKind.DELETE)
+
+    // ---- a patient, by the consultation she is in
+
+    /** Her private note: never shown to the patient or to staff. */
+    suspend fun note(conversationId: String): ApiResult<PatientNote> =
+        caller.authenticated("v1/doctor/patients/$conversationId/note", HttpMethodKind.GET)
+
+    /** An empty body deletes the note. */
+    suspend fun saveNote(conversationId: String, body: String): ApiResult<PatientNote> =
+        caller.authenticated("v1/doctor/patients/$conversationId/note", HttpMethodKind.PUT) {
+            setBody(SavePatientNoteRequest(body))
+        }
+
+    /** Every window she has had with this patient, oldest first. */
+    suspend fun history(conversationId: String): ApiResult<PatientHistory> =
+        caller.authenticated("v1/doctor/patients/$conversationId/history", HttpMethodKind.GET)
 }

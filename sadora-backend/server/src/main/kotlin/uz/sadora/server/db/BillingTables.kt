@@ -32,7 +32,9 @@ object BillingPlans : Table("billing_plans") {
 object PaymentTransactions : Table("payment_transactions") {
     val id = uuid("id")
     val userId = uuid("user_id").references(Users.id)
-    val planId = text("plan_id").references(BillingPlans.id)
+    /** Null for a consultation's payment, which buys no plan. */
+    val planId = text("plan_id").references(BillingPlans.id).nullable()
+    val consultationSessionId = uuid("consultation_session_id").nullable()
     val provider = text("provider")
     val amountMinor = long("amount_minor")
     val currency = text("currency")

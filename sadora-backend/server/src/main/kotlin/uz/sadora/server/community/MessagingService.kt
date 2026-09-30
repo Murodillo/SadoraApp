@@ -13,6 +13,7 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import uz.sadora.contract.AccountStatus
 import uz.sadora.contract.Consultation
+import uz.sadora.contract.ConsultationPayment
 import uz.sadora.contract.ConsultationPatient
 import uz.sadora.contract.Conversation
 import uz.sadora.contract.ConversationThread
@@ -36,7 +37,10 @@ import uz.sadora.server.audit.AuditActions
 import uz.sadora.server.audit.AuditEntry
 import uz.sadora.server.audit.AuditService
 import uz.sadora.server.cache.Cache
+import uz.sadora.server.consultation.ConsultationRepository
+import uz.sadora.server.consultation.SessionRecord
 import uz.sadora.server.core.ConflictException
+import uz.sadora.server.core.ConsultationPaymentRequiredException
 import uz.sadora.server.core.ForbiddenException
 import uz.sadora.server.core.NotFoundException
 import uz.sadora.server.core.RateLimitedException
@@ -46,6 +50,8 @@ import uz.sadora.server.db.ContentStatus
 import uz.sadora.server.doctor.DoctorRecord
 import uz.sadora.server.doctor.DoctorRepository
 import uz.sadora.server.notify.NotificationRepository
+import uz.sadora.server.notify.TARGET_CLIENT
+import uz.sadora.server.notify.TARGET_DOCTOR
 import uz.sadora.server.user.UserRecord
 import uz.sadora.server.user.UserRepository
 
@@ -83,15 +89,22 @@ class MessagingService(
     /** Where "yozmoqda…" lives for a few seconds; without it nobody is ever typing. */
     private val cache: Cache? = null,
     private val audit: AuditService? = null,
+    /** Each window's session: price, payment, first reply, summary, rating. Null in older tests. */
+    private val consultations: ConsultationRepository? = null,
     private val clock: Clock = Clock.System,
 ) {
+    /** What happens after a window is closed — the patient's push. Set at wiring. */
+    var onSessionClosed: (suspend (SessionRecord) -> Unit)? = null
 
     // ---------------------------------------------------------------- reading
 
     suspend fun conversations(userId: Uuid, scope: ConversationScope = ConversationScope.ALL): List<Conversation> {
         community.openIdentity(userId)
         val myDoctor = doctors?.byUser(userId)
+        // A paid consultation's row exists from its checkout; until the money arrives
+        // there is nothing in it for either side to see.
         val threads = messages.conversationsOf(userId, MAX_THREADS, scope, myDoctor?.id)
+            .filter { !it.isConsultation || it.openedAt != null }
         if (threads.isEmpty()) return emptyList()
         val view = viewFor(userId, threads)
         val last = messages.lastMessages(threads.map { it.id })
@@ -163,21 +176,51 @@ class MessagingService(
         val thread = if (existing != null && existing.isOpen(clock.now())) {
             existing
         } else {
-            messages.openConsultation(userId, doctor.userId, doctor.id, Limits.CONSULTATION_HOURS.hours)
+            // A paid doctor's window opens on payment, not here: the app is told the
+            // price and goes to the checkout.
+            val price = consultations?.work(doctor.id)?.priceMinor ?: 0L
+            if (price > 0) throw ConsultationPaymentRequiredException(price)
+            messages.openConsultation(userId, doctor.userId, doctor.id, Limits.CONSULTATION_HOURS.hours).also { opened ->
+                consultations?.createSession(
+                    conversationId = opened.id,
+                    doctorId = doctor.id,
+                    patientId = userId,
+                    priceMinor = 0,
+                    commissionPercent = 0,
+                    payment = ConsultationPayment.FREE,
+                    openedAt = opened.openedAt,
+                    expiresAt = opened.expiresAt,
+                )
+            }
         }
         if (firstLine != null) write(userId, thread, firstLine, MessageKind.TEXT, null)
         return thread(userId, thread.id)
     }
 
-    /** The doctor ends a consultation before its window runs out. */
-    suspend fun close(userId: Uuid, conversationId: Uuid): ConversationThread {
+    /**
+     * The doctor ends a consultation before its window runs out, or — once it has run
+     * out — adds the advice she did not get to write. [summary] is what the patient
+     * keeps as "Shifokor tavsiyasi".
+     */
+    suspend fun close(userId: Uuid, conversationId: Uuid, summary: String? = null): ConversationThread {
         community.openIdentity(userId)
         val thread = requireParticipant(userId, conversationId)
         val doctor = thread.doctorId?.let { doctors?.byId(it) }
         if (doctor == null || doctor.userId != userId) {
             throw ForbiddenException(message = "Konsultatsiyani faqat shifokor yopadi")
         }
-        if (thread.isOpen(clock.now())) messages.closeConsultation(thread.id)
+        val advice = summary?.trim()?.takeIf { it.isNotEmpty() }
+        if (advice != null && advice.length > SUMMARY_MAX) throw ValidationException("summary", "Eng ko'pi $SUMMARY_MAX belgi")
+        val at = clock.now()
+        val session = consultations?.currentSession(thread.id)
+        if (thread.isOpen(at)) {
+            messages.closeConsultation(thread.id)
+            if (session != null) {
+                consultations?.close(session.id, at, ConsultationRepository.REASON_DOCTOR, advice)?.let { onSessionClosed?.invoke(it) }
+            }
+        } else if (session != null && advice != null && session.summary == null) {
+            consultations?.setSummary(session.id, advice, at)
+        }
         return thread(userId, conversationId)
     }
 
@@ -207,6 +250,12 @@ class MessagingService(
             else -> Triple(MessageKind.TEXT, validateText(request.body), null)
         }
         val message = write(userId, thread, body, kind, image)
+        // The doctor's first line in a window is what "answered" and the reply time mean.
+        if (thread.isConsultation && thread.doctorId != null && doctors?.byId(thread.doctorId)?.userId == userId) {
+            consultations?.currentSession(thread.id)
+                ?.takeIf { it.firstReplyAt == null }
+                ?.let { consultations.markFirstReply(it.id, message.createdAt) }
+        }
         // What was written ends the "yozmoqda…" it came from.
         cache?.delete(typingKey(conversationId, userId))
         return message.toDto(userId, thread.readAt(other))
@@ -352,6 +401,9 @@ class MessagingService(
             dedupeKey = "dm:${message.id}",
             status = NotificationStatus.QUEUED,
             suppressedReason = null,
+            // A patient's line rings the doctor app; everything else the women's app.
+            targetApp = if (doctor != null && doctor.userId == recipient) TARGET_DOCTOR else TARGET_CLIENT,
+            link = "sadora://conversation/${thread.id}",
         )
     }
 
@@ -372,8 +424,11 @@ class MessagingService(
         // Patients are looked up only where the viewer is their doctor.
         val patientIds = threads.filter { t -> doctorsById[t.doctorId]?.userId == viewer }.map { it.other(viewer) }
         val patients = patientIds.distinct().mapNotNull { id -> users?.findById(id)?.let { id to it } }.toMap()
+        val consultationIds = threads.filter { it.isConsultation }.map { it.id }
         return ThreadView(
             viewer = viewer,
+            sessions = consultations?.sessionsOf(consultationIds).orEmpty(),
+            prices = consultations?.works(doctorIds)?.mapValues { it.value.priceMinor }.orEmpty(),
             identities = identities.identitiesFor(others),
             activity = identities.activityFor(others),
             doctors = doctorsById,
@@ -384,6 +439,10 @@ class MessagingService(
 
     private inner class ThreadView(
         val viewer: Uuid,
+        /** Each consultation's sessions, newest first. */
+        val sessions: Map<Uuid, List<SessionRecord>>,
+        /** Each doctor's price now, by doctor profile. */
+        val prices: Map<Uuid, Long>,
         val identities: Map<Uuid, IdentityRecord>,
         val activity: Map<Uuid, ActivityStats>,
         val doctors: Map<Uuid, DoctorRecord>,
@@ -395,11 +454,22 @@ class MessagingService(
             val identity = identities[other]
             val doctor = thread.doctorId?.let { doctors[it] }
             val consultation = if (thread.isConsultation) {
+                val all = sessions[thread.id].orEmpty()
+                val current = all.filter { it.openedAt != null }.maxByOrNull { it.openedAt!! }
+                val isPatient = doctor != null && doctor.userId != viewer
                 Consultation(
                     openedAt = thread.openedAt ?: thread.createdAt,
                     expiresAt = thread.expiresAt ?: thread.createdAt,
                     closedAt = thread.closedAt,
                     open = thread.isOpen(now),
+                    sessionId = current?.id?.toString(),
+                    priceMinor = current?.priceMinor ?: 0,
+                    payment = current?.payment ?: ConsultationPayment.FREE,
+                    summary = all.filter { it.summary != null }.maxByOrNull { it.openedAt ?: it.createdAt }?.summary,
+                    canRate = isPatient && current?.firstReplyAt != null && current.rating == null,
+                    rating = current?.rating,
+                    answered = current?.firstReplyAt != null,
+                    doctorPriceMinor = thread.doctorId?.let { prices[it] } ?: 0,
                 )
             } else {
                 null
@@ -485,6 +555,7 @@ class MessagingService(
         const val DOCTOR_UNAVAILABLE = "Shifokor hozir konsultatsiya qabul qilmayapti"
         const val CONSULTATION_CLOSED = "Konsultatsiya yopilgan — yangisini oching"
         const val PATIENT_FALLBACK = "Bemor"
+        const val SUMMARY_MAX = 2000
         val IMAGE_MIME = setOf("image/jpeg", "image/png")
     }
 }

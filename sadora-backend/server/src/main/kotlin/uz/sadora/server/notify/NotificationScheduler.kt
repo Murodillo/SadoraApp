@@ -147,7 +147,7 @@ class NotificationScheduler(
 
     private suspend fun deliverDue() {
         notifications.due(DELIVERY_BATCH).forEach { record ->
-            val tokens = pushTokens(record.userId)
+            val tokens = pushTokens(record.userId, record.targetApp)
             if (tokens.isEmpty()) {
                 notifications.markFailed(record.id, uz.sadora.contract.SuppressionReasons.NO_DEVICE)
                 return@forEach
@@ -161,11 +161,12 @@ class NotificationScheduler(
         }
     }
 
-    private suspend fun hasPushToken(userId: Uuid): Boolean = pushTokens(userId).isNotEmpty()
+    private suspend fun hasPushToken(userId: Uuid): Boolean = pushTokens(userId, TARGET_CLIENT).isNotEmpty()
 
-    private suspend fun pushTokens(userId: Uuid): List<String> = dbQuery {
+    /** The account's devices of one app: a doctor's patients ring her doctor app, not her own. */
+    private suspend fun pushTokens(userId: Uuid, app: String): List<String> = dbQuery {
         Devices.selectAll()
-            .where { (Devices.userId eq userId) and Devices.pushToken.isNotNull() }
+            .where { (Devices.userId eq userId) and Devices.pushToken.isNotNull() and (Devices.app eq app) }
             .mapNotNull { it[Devices.pushToken] }
     }
 

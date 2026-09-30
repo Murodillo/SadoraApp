@@ -25,6 +25,10 @@ object Fmt {
         return sign + body.reversed().chunked(3).joinToString(" ").reversed()
     }
 
+    /** Tiyin to so'm, grouped the way prices are written: 5 000 000 -> "50 000". */
+    fun sum(minor: Long): String =
+        (minor / 100).toString().reversed().chunked(3).joinToString(" ").reversed()
+
     /** 1.24 -> "1,2" (one decimal place). */
     fun oneDecimal(value: Float): String {
         val scaled = kotlin.math.round(value * 10).toInt()

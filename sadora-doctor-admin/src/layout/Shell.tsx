@@ -19,7 +19,8 @@ interface NavGroup {
   entries: NavEntry[]
 }
 
-// The staff panel's rail, cut down to what a doctor does: answer, write, keep her page.
+// The staff panel's rail, cut down to what a doctor does: answer, write, keep her page,
+// and run her practice — her ready answers, her numbers, her money, her hours and price.
 const groups: NavGroup[] = [
   {
     title: 'Chat',
@@ -30,8 +31,19 @@ const groups: NavGroup[] = [
     ],
   },
   {
+    title: 'Ish',
+    entries: [
+      { to: '/quick-replies', label: 'Tayyor javoblar', glyph: '⚡' },
+      { to: '/stats', label: 'Statistika', glyph: '▤' },
+      { to: '/earnings', label: 'Daromad', glyph: '◈' },
+    ],
+  },
+  {
     title: 'Hisob',
-    entries: [{ to: '/profile', label: 'Profil', glyph: '◎' }],
+    entries: [
+      { to: '/settings', label: 'Ish vaqti va narx', glyph: '◷' },
+      { to: '/profile', label: 'Profil', glyph: '◎' },
+    ],
   },
 ]
 
@@ -40,6 +52,10 @@ const titles: Record<string, string> = {
   '/messages': 'Xabarlar — bemorlar bilan konsultatsiyalar',
   '/posts': 'Postlarim',
   '/profile': 'Profil',
+  '/settings': 'Ish vaqti va narx',
+  '/quick-replies': 'Tayyor javoblar',
+  '/stats': 'Statistika',
+  '/earnings': 'Daromad',
 }
 
 export function Shell() {

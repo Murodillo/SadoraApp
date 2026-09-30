@@ -49,6 +49,12 @@ object AuditActions {
     const val COMMUNITY_REPORT_CONTEXT_VIEWED = "community.report_context_viewed"
     /** A doctor opened the health record a patient attached in a consultation. */
     const val CONSULTATION_RECORD_VIEWED = "consultation.record_viewed"
+    /** An operator returned a consultation's money through the provider's cabinet. */
+    const val CONSULTATION_REFUNDED = "consultation.refunded"
+    /** An operator recorded money paid out to a doctor. */
+    const val DOCTOR_PAYOUT_RECORDED = "doctor.payout_recorded"
+    /** An operator changed Sadora's share of a paid consultation. */
+    const val COMMISSION_CHANGED = "settings.commission_changed"
 
     // Who may write with a check mark. An approval puts a real name in front of every
     // reader, so each decision keeps its admin and its reason.
