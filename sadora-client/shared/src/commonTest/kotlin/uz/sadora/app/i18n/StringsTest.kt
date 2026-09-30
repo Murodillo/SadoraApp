@@ -86,6 +86,7 @@ class StringsTest {
                     skip, back, notAloneTitle, analysingTitle, readyTitle("Malika"), readyTitle(""),
                     readyBody, saving, startSadora, cycleSummary(28, 5), remindersOn,
                     healthDataOn, goalsChosen(3), signInTitle, signInSubtitle, noAccount, signUp,
+                    notRegisteredTitle, notRegisteredBody("90 123 45 67"), registerNow, otherNumber,
                     consentTitle, consentBody, consentHealth, consentHealthMore,
                     consentTermsPrefix, terms, and, privacyPolicy, consentAnalytics, consentAll,
                 ),

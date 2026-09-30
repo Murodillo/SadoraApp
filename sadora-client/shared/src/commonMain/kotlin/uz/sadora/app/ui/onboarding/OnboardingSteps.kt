@@ -51,6 +51,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import uz.sadora.contract.UzbekPhone
 import uz.sadora.app.data.AuthDestination
 import uz.sadora.app.data.SadoraController
 import uz.sadora.app.design.Radius
@@ -86,6 +87,7 @@ import uz.sadora.app.ui.components.acceptPhone
 import uz.sadora.app.ui.components.phoneError
 import uz.sadora.app.ui.components.phoneIsComplete
 import uz.sadora.app.ui.components.PhoneMask
+import uz.sadora.app.ui.components.SadoraDialog
 
 /** Shared layout for a numbered onboarding step: header, body, pinned footer. */
 @Composable
@@ -304,10 +306,19 @@ fun SignInScreen(
         }
     }
 
+    // A code verified for a number with no finished account: the server has opened a
+    // blank one, and rather than dropping her at the start of the app unexplained, the
+    // page says so and offers to sign up. Asked only after the code, never before it —
+    // a "not registered" answer to a bare number would tell anyone whether a given phone
+    // uses a women's health app.
+    var notRegistered by remember { mutableStateOf(false) }
+
     fun finish(destination: AuthDestination) {
-        onSignedIn(
-            if (destination == AuthDestination.Main) AppPhase.Main else AppPhase.Onboarding,
-        )
+        if (destination == AuthDestination.Onboarding) {
+            notRegistered = true
+            return
+        }
+        onSignedIn(AppPhase.Main)
     }
 
     fun sendCode() {
@@ -348,6 +359,29 @@ fun SignInScreen(
                 }
             },
             onResend = ::sendCode,
+        )
+        SadoraDialog(
+            visible = notRegistered,
+            title = t.notRegisteredTitle,
+            body = t.notRegisteredBody(UzbekPhone.format(state.phone)),
+            confirmText = t.registerNow,
+            // The questions follow; the phone and code steps at their end are skipped,
+            // because this session already proved the number.
+            onConfirm = {
+                notRegistered = false
+                onSignedIn(AppPhase.Onboarding)
+            },
+            // Another number: the blank session goes, and the phone field comes back.
+            onDismiss = {
+                notRegistered = false
+                scope.launch {
+                    controller.signOut()
+                    awaitingCode = false
+                    challenge = null
+                }
+            },
+            cancelText = t.otherNumber,
+            destructive = false,
         )
         return
     }

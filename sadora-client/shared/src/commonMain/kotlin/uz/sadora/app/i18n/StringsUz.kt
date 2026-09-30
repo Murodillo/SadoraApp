@@ -281,6 +281,10 @@ object StringsUz : Strings {
         override val signInSubtitle = "Raqamingizga kod yuboramiz"
         override val noAccount = "Hisobingiz yo'qmi? "
         override val signUp = "Ro'yxatdan o'tish"
+        override val notRegisteredTitle = "Bu raqam ro'yxatdan o'tmagan"
+        override fun notRegisteredBody(phone: String) = "+998 $phone raqami bilan Sadora'da hisob hali yo'q. Ro'yxatdan o'tib, bir necha savol bilan ilovani o'zingizga moslang — raqamingiz tasdiqlandi, SMS qayta kelmaydi."
+        override val registerNow = "Ro'yxatdan o'tish"
+        override val otherNumber = "Boshqa raqam"
 
         override val consentTitle = "Tanangiz. Ma'lumotingiz."
         override val consentBody = "Salomatlik ma'lumotlaringiz SADORA'dan tashqarida " +

@@ -57,6 +57,10 @@ class SadoraController(
         return session.user.destination()
     }
 
+    /** True once a code has been verified: the phone is proven and a session exists. */
+    val isSignedIn: Boolean
+        get() = repository?.state?.value is SessionState.SignedIn
+
     /** Who is signed in, for stamping a store purchase with its account. */
     val currentUserId: String?
         get() = (repository?.state?.value as? SessionState.SignedIn)?.user?.id

@@ -136,7 +136,11 @@ fun OnboardingFlow(
     onSignInInstead: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var step by remember { mutableStateOf(OnboardingStep.Welcome) }
+    // Signed in already means she has seen the welcome page on the way to the code; the
+    // questions start at the language.
+    var step by remember {
+        mutableStateOf(if (controller.isSignedIn) OnboardingStep.Language else OnboardingStep.Welcome)
+    }
     // True when the code was already in the store before the question was reached —
     // it came from a shared link, and the field says so rather than looking prefilled
     // for no reason.
@@ -173,6 +177,11 @@ fun OnboardingFlow(
         OnboardingStep.SensitiveNotice,
         OnboardingStep.BirthControl,
         -> !state.lifeStage.predictsCycle
+
+        // A session already proved the number — she verified a code on the sign-in page,
+        // or reopened the app half-way — so the flow does not ask for it, or send a
+        // second SMS, again.
+        OnboardingStep.Phone, OnboardingStep.Otp -> controller.isSignedIn
 
         OnboardingStep.Conception -> state.lifeStage != LifeStage.TryingToConceive
         OnboardingStep.DueDate -> state.lifeStage != LifeStage.Pregnancy

@@ -281,6 +281,10 @@ object StringsEn : Strings {
         override val signInSubtitle = "We will send a code to your number"
         override val noAccount = "No account yet? "
         override val signUp = "Sign up"
+        override val notRegisteredTitle = "This number is not registered"
+        override fun notRegisteredBody(phone: String) = "There is no Sadora account for +998 $phone yet. Sign up and make the app yours in a few questions — your number is already confirmed, so no second SMS."
+        override val registerNow = "Sign up"
+        override val otherNumber = "Another number"
 
         override val consentTitle = "Your body. Your data."
         override val consentBody = "Your health data never leaves SADORA for anyone else, " +

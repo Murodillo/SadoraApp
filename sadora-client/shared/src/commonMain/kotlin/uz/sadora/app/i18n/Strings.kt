@@ -676,6 +676,12 @@ interface OnboardingStrings {
     val signInSubtitle: String
     val noAccount: String
     val signUp: String
+    /** Signing in with a number that has no finished account behind it. */
+    val notRegisteredTitle: String
+    /** [phone] arrives formatted: `90 123 45 67`. */
+    fun notRegisteredBody(phone: String): String
+    val registerNow: String
+    val otherNumber: String
 
     // ---- the consent gate
     val consentTitle: String

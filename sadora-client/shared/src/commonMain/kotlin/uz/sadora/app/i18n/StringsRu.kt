@@ -284,6 +284,10 @@ object StringsRu : Strings {
         override val signInSubtitle = "Отправим код на ваш номер"
         override val noAccount = "Нет аккаунта? "
         override val signUp = "Зарегистрироваться"
+        override val notRegisteredTitle = "Этот номер не зарегистрирован"
+        override fun notRegisteredBody(phone: String) = "С номером +998 $phone ещё нет аккаунта в Sadora. Зарегистрируйтесь и настройте приложение под себя за пару вопросов — номер уже подтверждён, SMS больше не придёт."
+        override val registerNow = "Зарегистрироваться"
+        override val otherNumber = "Другой номер"
 
         override val consentTitle = "Ваше тело. Ваши данные."
         override val consentBody = "Данные о вашем здоровье не передаются никому за пределы " +
