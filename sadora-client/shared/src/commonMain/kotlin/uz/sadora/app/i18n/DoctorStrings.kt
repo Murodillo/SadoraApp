@@ -1,10 +1,12 @@
 package uz.sadora.app.i18n
 
 import kotlin.time.Duration
+import uz.sadora.app.model.DoctorSort
 import uz.sadora.contract.DoctorSpecialty
 
 /**
- * Doctors as the chat shows them: the check mark, a doctor's answer, her public page.
+ * Doctors as the chat shows them: the check mark, a doctor's answer, her public page,
+ * and the directory of all of them.
  * The panel a doctor applies and works from is in sadora-doctor, with its own strings.
  * Its own file, like [LegalTexts], with the three languages beside the interface so a
  * new line is added to all of them at once.
@@ -80,7 +82,8 @@ interface DoctorStrings {
     fun ratingLabel(rating: String, count: Int): String
     /** Uzbek and Russian write "4,8"; English "4.8". */
     val decimalPoint: Char get() = ','
-    val noRatingYet: String
+    /** In place of the stars while fewer than [uz.sadora.contract.Limits.DOCTOR_RATING_MIN] have rated her. */
+    val newDoctor: String
     val onlineNow: String
     val busy: String
     val offlineNow: String
@@ -121,6 +124,28 @@ interface DoctorStrings {
     val refunded: String
     /** Under a shut window whose doctor charges: a new one is paid for again. */
     val consultationClosedBodyPaid: String
+
+    // ---- the directory: every doctor, and the ways into it
+    val directoryTitle: String
+    /** Beside the green dot on a card. */
+    val online: String
+    val fastReply: String
+    /** "odatda ~15 daqiqada javob beradi" — see [replyTimeLabel] for when it turns to hours. */
+    fun replyMinutes(minutes: Int): String
+    fun replyHours(hours: Int): String
+    fun consultations(count: Int): String
+    val sortTitle: String
+    fun sortLabel(sort: DoctorSort): String
+    val directoryEmpty: String
+    val directoryEmptyBody: String
+    val filteredEmpty: String
+    val filteredEmptyBody: String
+    val resetFilters: String
+    /** "Hammasi →" at the end of the chat's strip of doctors. */
+    val seeAll: String
+    /** The card on Bugun. */
+    val askDoctorTitle: String
+    val askDoctorBody: String
 }
 
 object DoctorStringsUz : DoctorStrings {
@@ -184,7 +209,7 @@ object DoctorStringsUz : DoctorStrings {
     override fun pricePerWindow(sum: String) = "$sum so'm / 24 soat"
     override fun price(sum: String) = "$sum so'm"
     override fun ratingLabel(rating: String, count: Int) = "★ $rating · $count baho"
-    override val noRatingYet = "Hali baho yo'q"
+    override val newDoctor = "Yangi shifokor"
     override val onlineNow = "Hozir onlayn"
     override val busy = "Band"
     override val offlineNow = "Hozir javob bermaydi"
@@ -219,6 +244,28 @@ object DoctorStringsUz : DoctorStrings {
     override val refundDue = "Shifokor javob bermadi — to'lov qaytariladi"
     override val refunded = "To'lov qaytarildi"
     override val consultationClosedBodyPaid = "Yozishni davom ettirish uchun yangi konsultatsiya oching — yana 24 soat, to'lovdan so'ng."
+
+    override val directoryTitle = "Shifokorlar"
+    override val online = "Onlayn"
+    override val fastReply = "Tez javob beradi"
+    override fun replyMinutes(minutes: Int) = "odatda ~$minutes daqiqada javob beradi"
+    override fun replyHours(hours: Int) = "odatda ~$hours soatda javob beradi"
+    override fun consultations(count: Int) = "$count konsultatsiya"
+    override val sortTitle = "Saralash"
+    override fun sortLabel(sort: DoctorSort) = when (sort) {
+        DoctorSort.Recommended -> "Tavsiya etilgan"
+        DoctorSort.Rating -> "Reyting"
+        DoctorSort.Price -> "Narx (arzonidan)"
+        DoctorSort.FastReply -> "Tez javob"
+    }
+    override val directoryEmpty = "Hozircha shifokorlar yo'q"
+    override val directoryEmptyBody = "Tasdiqlangan shifokorlar qo'shilganda shu yerda ko'rinadi."
+    override val filteredEmpty = "Bu filtrga mos shifokor yo'q"
+    override val filteredEmptyBody = "Filtrni o'zgartiring yoki tozalang."
+    override val resetFilters = "Filtrni tozalash"
+    override val seeAll = "Hammasi"
+    override val askDoctorTitle = "Shifokordan so'rang"
+    override val askDoctorBody = "Tasdiqlangan shifokorlar 24 soat ichida javob beradi"
 }
 
 object DoctorStringsRu : DoctorStrings {
@@ -282,7 +329,7 @@ object DoctorStringsRu : DoctorStrings {
     override fun pricePerWindow(sum: String) = "$sum сум / 24 часа"
     override fun price(sum: String) = "$sum сум"
     override fun ratingLabel(rating: String, count: Int) = "★ $rating · $count " + ru(count, "оценка", "оценки", "оценок")
-    override val noRatingYet = "Оценок пока нет"
+    override val newDoctor = "Новый врач"
     override val onlineNow = "Сейчас онлайн"
     override val busy = "Перерыв"
     override val offlineNow = "Сейчас не отвечает"
@@ -317,6 +364,28 @@ object DoctorStringsRu : DoctorStrings {
     override val refundDue = "Врач не ответил — оплата будет возвращена"
     override val refunded = "Оплата возвращена"
     override val consultationClosedBodyPaid = "Чтобы продолжить, откройте новую консультацию — ещё 24 часа, после оплаты."
+
+    override val directoryTitle = "Врачи"
+    override val online = "Онлайн"
+    override val fastReply = "Отвечает быстро"
+    override fun replyMinutes(minutes: Int) = "обычно отвечает за ~$minutes мин"
+    override fun replyHours(hours: Int) = "обычно отвечает за ~$hours ч"
+    override fun consultations(count: Int) = "$count " + ru(count, "консультация", "консультации", "консультаций")
+    override val sortTitle = "Сортировка"
+    override fun sortLabel(sort: DoctorSort) = when (sort) {
+        DoctorSort.Recommended -> "Рекомендуемые"
+        DoctorSort.Rating -> "По рейтингу"
+        DoctorSort.Price -> "Сначала дешевле"
+        DoctorSort.FastReply -> "Быстрый ответ"
+    }
+    override val directoryEmpty = "Пока нет врачей"
+    override val directoryEmptyBody = "Когда подтверждённые врачи присоединятся, они появятся здесь."
+    override val filteredEmpty = "Под этот фильтр врачей нет"
+    override val filteredEmptyBody = "Измените фильтр или сбросьте его."
+    override val resetFilters = "Сбросить фильтр"
+    override val seeAll = "Все"
+    override val askDoctorTitle = "Спросите врача"
+    override val askDoctorBody = "Подтверждённые врачи отвечают в течение 24 часов"
 }
 
 object DoctorStringsEn : DoctorStrings {
@@ -381,7 +450,7 @@ object DoctorStringsEn : DoctorStrings {
     override fun price(sum: String) = "$sum UZS"
     override val decimalPoint = '.'
     override fun ratingLabel(rating: String, count: Int) = "★ $rating · " + if (count == 1) "1 rating" else "$count ratings"
-    override val noRatingYet = "No ratings yet"
+    override val newDoctor = "New doctor"
     override val onlineNow = "Online now"
     override val busy = "Busy"
     override val offlineNow = "Not answering now"
@@ -416,4 +485,26 @@ object DoctorStringsEn : DoctorStrings {
     override val refundDue = "The doctor did not answer — the payment will be returned"
     override val refunded = "The payment was returned"
     override val consultationClosedBodyPaid = "To keep writing, open a new consultation — another 24 hours, after payment."
+
+    override val directoryTitle = "Doctors"
+    override val online = "Online"
+    override val fastReply = "Replies fast"
+    override fun replyMinutes(minutes: Int) = "usually replies in ~$minutes min"
+    override fun replyHours(hours: Int) = "usually replies in ~$hours h"
+    override fun consultations(count: Int) = if (count == 1) "1 consultation" else "$count consultations"
+    override val sortTitle = "Sort"
+    override fun sortLabel(sort: DoctorSort) = when (sort) {
+        DoctorSort.Recommended -> "Recommended"
+        DoctorSort.Rating -> "Rating"
+        DoctorSort.Price -> "Price (lowest first)"
+        DoctorSort.FastReply -> "Fastest reply"
+    }
+    override val directoryEmpty = "No doctors yet"
+    override val directoryEmptyBody = "Verified doctors show up here once they join."
+    override val filteredEmpty = "No doctors match this filter"
+    override val filteredEmptyBody = "Change the filter or clear it."
+    override val resetFilters = "Clear filters"
+    override val seeAll = "See all"
+    override val askDoctorTitle = "Ask a doctor"
+    override val askDoctorBody = "Verified doctors reply within 24 hours"
 }

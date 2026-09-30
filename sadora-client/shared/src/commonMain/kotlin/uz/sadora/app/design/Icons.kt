@@ -716,6 +716,33 @@ object SadoraIcons {
         }
     }
 
+    /**
+     * Shifokorlar — a stethoscope: the two ear tubes, the line down, and the chest
+     * piece. The one icon in the set that says "a doctor" rather than "a message".
+     */
+    val Stethoscope: ImageVector = icon("Stethoscope") {
+        stroke {
+            moveTo(6f, 3.8f)
+            verticalLineTo(9f)
+            curveTo(6f, 11.4f, 7.8f, 13.2f, 10f, 13.2f)
+            curveTo(12.2f, 13.2f, 14f, 11.4f, 14f, 9f)
+            verticalLineTo(3.8f)
+        }
+        stroke {
+            moveTo(10f, 13.2f)
+            verticalLineTo(16f)
+            curveTo(10f, 18.5f, 11.8f, 20.2f, 14.1f, 20.2f)
+            curveTo(16.4f, 20.2f, 18f, 18.5f, 18f, 16.2f)
+            verticalLineTo(15.2f)
+        }
+        stroke {
+            moveTo(15.8f, 13f)
+            arcToRelative(2.2f, 2.2f, 0f, true, true, 4.4f, 0f)
+            arcToRelative(2.2f, 2.2f, 0f, true, true, -4.4f, 0f)
+            close()
+        }
+    }
+
     /** Xavfsiz maydon — a shield with a tick. */
     val Shield: ImageVector = icon("Shield") {
         stroke {

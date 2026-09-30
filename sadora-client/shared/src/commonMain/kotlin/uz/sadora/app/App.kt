@@ -77,6 +77,7 @@ import uz.sadora.app.ui.core.AiFreePreviewScreen
 import uz.sadora.app.ui.core.AliasProfileScreen
 import uz.sadora.app.ui.core.ConsultationConsentSheetContent
 import uz.sadora.app.ui.core.ConsultationPaySheetContent
+import uz.sadora.app.ui.core.DoctorDirectoryScreen
 import uz.sadora.app.ui.core.DoctorProfileScreen
 import uz.sadora.app.ui.core.CommunityRulesSheetContent
 import uz.sadora.app.ui.core.ConversationMenuSheetContent
@@ -775,6 +776,7 @@ private fun RootTab(
                 health = controllers.health,
                 insights = controllers.insights,
                 learn = controllers.learn,
+                doctors = controllers.doctors,
                 isLoading = !controllers.health.loaded,
             )
         }
@@ -805,10 +807,12 @@ private fun RootTab(
         Tab.SecretChat -> SecretChatScreen(
             state = state,
             community = controllers.community,
+            doctors = controllers.doctors,
             onOpenPost = { navigator.push(Route.Post(it.id)) },
             onOpenProfile = { navigator.push(Route.AliasProfile(it)) },
             onOpenMessages = { navigator.push(Route.Messages) },
             onOpenDoctor = { navigator.push(Route.Doctor(it)) },
+            onOpenDoctors = { navigator.push(Route.Doctors) },
             onOpenMenu = { overlays.menuFor = it },
             onCompose = { overlays.showCompose = true },
             onOpenRules = { overlays.showCommunityRules = true },
@@ -930,10 +934,12 @@ private fun PushedScreen(
         Route.SecretChat -> SecretChatScreen(
             state = state,
             community = controllers.community,
+            doctors = controllers.doctors,
             onOpenPost = { navigator.push(Route.Post(it.id)) },
             onOpenProfile = { navigator.push(Route.AliasProfile(it)) },
             onOpenMessages = { navigator.push(Route.Messages) },
             onOpenDoctor = { navigator.push(Route.Doctor(it)) },
+            onOpenDoctors = { navigator.push(Route.Doctors) },
             onOpenMenu = { overlays.menuFor = it },
             onCompose = { overlays.showCompose = true },
             onOpenRules = { overlays.showCommunityRules = true },
@@ -958,6 +964,11 @@ private fun PushedScreen(
             onMessage = { overlays.consultWith = it },
             onPay = { overlays.payFor = it.id },
             onOpenConversation = { id, name -> navigator.push(Route.Conversation(id, name)) },
+            onClose = close,
+        )
+        Route.Doctors -> DoctorDirectoryScreen(
+            doctors = controllers.doctors,
+            onOpenDoctor = { navigator.push(Route.Doctor(it)) },
             onClose = close,
         )
         is Route.AliasProfile -> AliasProfileScreen(

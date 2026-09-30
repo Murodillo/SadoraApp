@@ -8,7 +8,6 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -17,6 +16,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -44,6 +44,7 @@ import uz.sadora.app.model.deviceNow
 import uz.sadora.app.nav.Route
 import uz.sadora.app.nav.Tab
 import uz.sadora.app.nav.aiRoute
+import uz.sadora.app.data.DoctorController
 import uz.sadora.app.data.HealthController
 import uz.sadora.app.data.InsightsController
 import uz.sadora.app.data.LearnController
@@ -92,8 +93,12 @@ fun TodayScreen(
     health: HealthController? = null,
     insights: InsightsController? = null,
     learn: LearnController? = null,
+    /** For "Shifokordan so'rang"; without it — a preview, a test — the card is skipped. */
+    doctors: DoctorController? = null,
 ) {
     val t = strings.today
+    // Quiet: the card appears once there are doctors to show, and a failure only hides it.
+    if (doctors != null) LaunchedEffect(doctors) { doctors.loadDirectory(quiet = true) }
     Column(modifier) {
         TodayHeader(
             state = state,
@@ -115,9 +120,19 @@ fun TodayScreen(
         // server keeps it, so this list is the layout rather than a hard-coded deck.
         // Everything below is a `when` over that list and nothing else.
         val widgets = state.homeWidgets()
+        // "Shifokordan so'rang" is not one of her arrangeable widgets — the layout is the
+        // server's list, and a key it does not know would be dropped from it. So it is
+        // placed here, after today's plan, or at the end of the deck when she hid the plan.
+        val directory = doctors?.directory.orEmpty()
+        val askAfter = widgets.indexOf(HomeWidgets.PLAN).takeIf { it >= 0 } ?: widgets.lastIndex
         ScreenContent(stagger = false) {
             itemsIndexed(widgets, key = { _, key -> key }) { index, key ->
-                Box(Modifier.appearFromBelow(index.coerceAtMost(5))) {
+                // A column rather than a box, so the doctors' card can follow its anchor
+                // inside the same entry and the deck's keys and stagger stay hers.
+                Column(
+                    Modifier.appearFromBelow(index.coerceAtMost(5)),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+                ) {
                     when (key) {
                         HomeWidgets.AI -> AiWidget(state, t, onOpen)
                         HomeWidgets.SCORE -> HealthScoreCard(
@@ -149,6 +164,9 @@ fun TodayScreen(
                         // A key from a newer release than this app. Skipped rather than
                         // dropped from her layout, so updating brings the card back.
                         else -> Unit
+                    }
+                    if (index == askAfter && directory.isNotEmpty()) {
+                        AskDoctorCard(directory, onOpen = { onOpen(Route.Doctors) })
                     }
                 }
             }

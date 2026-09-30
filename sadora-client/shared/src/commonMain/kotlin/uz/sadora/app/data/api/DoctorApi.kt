@@ -7,6 +7,7 @@ import uz.sadora.app.data.HttpMethodKind
 import uz.sadora.contract.CheckoutSession
 import uz.sadora.contract.ConsultationCheckoutRequest
 import uz.sadora.contract.DoctorAccount
+import uz.sadora.contract.DoctorListItem
 import uz.sadora.contract.DoctorProfile
 import uz.sadora.contract.DoctorReview
 import uz.sadora.contract.PaymentProvider
@@ -18,6 +19,10 @@ class DoctorApi(private val caller: ApiCaller) {
     /** Her own doctor status — only "approved" changes anything here. */
     suspend fun account(): ApiResult<DoctorAccount> =
         caller.authenticated("v1/doctor/me", HttpMethodKind.GET)
+
+    /** Every verified doctor, already in the server's recommended order. */
+    suspend fun list(): ApiResult<List<DoctorListItem>> =
+        caller.authenticated("v1/doctors", HttpMethodKind.GET)
 
     suspend fun profile(id: String): ApiResult<DoctorProfile> =
         caller.authenticated("v1/doctors/$id", HttpMethodKind.GET)

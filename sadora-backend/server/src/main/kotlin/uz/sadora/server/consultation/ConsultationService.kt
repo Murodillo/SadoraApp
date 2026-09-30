@@ -171,21 +171,51 @@ class ConsultationService(
         )
     }
 
+    /**
+     * The directory: each doctor with her price, rating, hours and reply habits, in the
+     * "recommended" order. The apps re-sort for rating, price or speed; this order is
+     * what a patient sees first, so it is the one decided here.
+     */
     suspend fun decorate(list: List<DoctorListItem>): List<DoctorListItem> {
         val ids = list.map { Uuid.parse(it.id) }
         val works = repository.works(ids)
         val ratings = repository.ratings(ids)
         val records = doctors.byIds(ids)
-        return list.map { item ->
+        val scored = list.map { item ->
             val id = Uuid.parse(item.id)
             val work = works[id]
-            item.copy(
+            val figures = figuresOf(repository.sessionsOfDoctor(id))
+            val answered = figures.total - figures.unanswered
+            val decorated = item.copy(
                 priceMinor = work?.priceMinor ?: 0,
                 rating = ratings[id]?.first?.roundTo1(),
                 ratingCount = ratings[id]?.second ?: 0,
                 onlineNow = work != null && availability(work, records[id]?.acceptsConsultations == true).onlineNow,
+                avgFirstReplyMinutes = figures.avgFirstReplyMinutes,
+                consultationsTotal = figures.total,
+                fastReply = answered >= Limits.DOCTOR_RATING_MIN &&
+                    (figures.avgFirstReplyMinutes ?: Int.MAX_VALUE) <= Limits.DOCTOR_FAST_REPLY_MINUTES,
             )
+            decorated to recommendScore(decorated, ratings[id], figures)
         }
+        return scored.sortedWith(compareByDescending<Pair<DoctorListItem, Double>> { it.second }.thenByDescending { it.first.answerCount })
+            .map { it.first }
+    }
+
+    /**
+     * The "recommended" order. The rating is a Bayesian average — pulled towards
+     * [PRIOR_RATING] by [PRIOR_WEIGHT] imaginary ratings — so 4.9 from fifty outranks
+     * 5.0 from two. Then small nudges: online now, a fast reply habit, and a penalty for
+     * the share of windows she left unanswered.
+     */
+    private fun recommendScore(item: DoctorListItem, rating: Pair<Double, Int>?, figures: Figures): Double {
+        val (average, count) = rating ?: (0.0 to 0)
+        val bayes = (PRIOR_RATING * PRIOR_WEIGHT + average * count) / (PRIOR_WEIGHT + count)
+        val unansweredShare = if (figures.total == 0) 0.0 else figures.unanswered.toDouble() / figures.total
+        return bayes +
+            (if (item.onlineNow) 0.3 else 0.0) +
+            (if (item.fastReply) 0.2 else 0.0) -
+            unansweredShare
     }
 
     suspend fun reviews(doctorId: Uuid): List<DoctorReview> =
@@ -667,6 +697,10 @@ class ConsultationService(
         const val TOP_TOPICS = 5
         const val EXPIRE_BATCH = 200
         const val MAX_QUALITY_ROWS = 500
+
+        /** What a doctor with no ratings is assumed to be, for ordering only. */
+        const val PRIOR_RATING = 4.5
+        const val PRIOR_WEIGHT = 5
         private val MONEY = setOf(ConsultationPayment.PAID, ConsultationPayment.REFUND_DUE, ConsultationPayment.REFUNDED)
 
         fun conversationLink(conversationId: Uuid) = "sadora://conversation/$conversationId"

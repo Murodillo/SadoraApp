@@ -367,11 +367,14 @@ class StringsTest {
                     messageDoctor, openConsultation, viewHistory, messageDoctorNote, cannotMessage, consentTitle,
                     consentConfirm, consultationOpen, hoursLeft(23), minutesLeft(40), consultationExpired,
                     consultationClosed, consultationClosedBody, reopen, composerClosed, chipOpen, chipClosed,
-                    threadNote, doctorPage,
+                    threadNote, doctorPage, newDoctor, directoryTitle, online, fastReply, replyMinutes(15),
+                    replyHours(2), consultations(3), sortTitle, directoryEmpty, directoryEmptyBody, filteredEmpty,
+                    filteredEmptyBody, resetFilters, seeAll, askDoctorTitle, askDoctorBody,
                 ),
             )
             addAll(consentPoints)
             uz.sadora.contract.DoctorSpecialty.entries.forEach { add(specialty(it)) }
+            uz.sadora.app.model.DoctorSort.entries.forEach { add(sortLabel(it)) }
         }
         with(t.share) {
             addAll(
@@ -535,6 +538,9 @@ class StringsTest {
             assertNotEquals(StringsUz.doctors.nothingYetBody, t.doctors.nothingYetBody)
             assertNotEquals(StringsUz.doctors.threadNote, t.doctors.threadNote)
             assertNotEquals(StringsUz.doctors.consultationClosedBody, t.doctors.consultationClosedBody)
+            assertNotEquals(StringsUz.doctors.directoryEmptyBody, t.doctors.directoryEmptyBody)
+            assertNotEquals(StringsUz.doctors.askDoctorBody, t.doctors.askDoctorBody)
+            assertNotEquals(StringsUz.doctors.replyMinutes(15), t.doctors.replyMinutes(15))
             StringsUz.doctors.consentPoints.zip(t.doctors.consentPoints).forEach { (uz, other) -> assertNotEquals(uz, other) }
             assertNotEquals(StringsUz.community.attachRecordConfirmBody, t.community.attachRecordConfirmBody)
             assertNotEquals(StringsUz.community.recordNote, t.community.recordNote)

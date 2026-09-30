@@ -59,6 +59,7 @@ import kotlin.time.Clock
 import uz.sadora.app.i18n.availabilityLine
 import uz.sadora.app.i18n.consultationPriceLabel
 import uz.sadora.app.i18n.ratingLine
+import uz.sadora.app.model.hasEnoughRatings
 import uz.sadora.app.ui.components.SelectChip
 import uz.sadora.contract.DoctorProfile
 import uz.sadora.contract.DoctorReview
@@ -184,10 +185,11 @@ private fun DoctorHeader(profile: DoctorProfile) {
         }
         Text(d.specialty(profile.specialty), style = Sadora.type.h3, color = c.textAccent)
         Text(profile.workplace, style = Sadora.type.body, color = c.muted, textAlign = TextAlign.Center)
+        // "Yangi shifokor" until enough patients have rated her — the same rule as her card.
         Text(
-            ratingLine(profile.rating, profile.ratingCount, d) ?: d.noRatingYet,
+            ratingLine(profile.rating, profile.ratingCount, d),
             style = Sadora.type.body.copy(fontWeight = FontWeight.SemiBold),
-            color = if (profile.ratingCount > 0) c.text else c.muted2,
+            color = if (hasEnoughRatings(profile.ratingCount)) c.text else c.muted2,
         )
         Text(d.verifiedSince(monthYear(profile.verifiedSince)), style = Sadora.type.caption.copy(letterSpacing = TextUnit.Unspecified), color = c.muted2)
         profile.bio?.let {

@@ -2157,6 +2157,11 @@ class ApiIntegrationTest {
         assertEquals(5.0, rated.rating)
         assertEquals(1, rated.ratingCount)
         assertEquals("Rahmat!", get<List<uz.sadora.contract.DoctorReview>>("/v1/doctors/$profileId/reviews", patient.token).single().review)
+        // The directory carries her reply habit; one answered window is too few for the badge.
+        val listed = get<List<uz.sadora.contract.DoctorListItem>>("/v1/doctors", patient.token).single { it.id == profileId }
+        assertEquals(1, listed.consultationsTotal)
+        assertEquals(0, listed.avgFirstReplyMinutes)
+        assertFalse(listed.fastReply)
 
         // Her numbers, her history of this patient, her money.
         val stats = get<uz.sadora.contract.DoctorStats>("/v1/doctor/stats", doctor.token)

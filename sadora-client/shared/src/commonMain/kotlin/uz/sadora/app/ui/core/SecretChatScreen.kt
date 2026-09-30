@@ -60,6 +60,7 @@ import uz.sadora.app.design.Sadora
 import uz.sadora.app.design.SadoraIcons
 import uz.sadora.app.design.Spacing
 import uz.sadora.app.data.CommunityController
+import uz.sadora.app.data.DoctorController
 import uz.sadora.app.model.AppState
 import uz.sadora.app.model.CommunityComment
 import uz.sadora.app.model.CommunityFilter
@@ -108,6 +109,8 @@ private fun avatarTints(): List<Color> {
 fun SecretChatScreen(
     state: AppState,
     community: CommunityController,
+    /** The directory, for the strip of doctors at the top of the feed. */
+    doctors: DoctorController,
     /** Opens the post's own page: the whole text and the comments. */
     onOpenPost: (CommunityPost) -> Unit,
     /** An alias's page — an author's from a card, her own from the header. */
@@ -115,6 +118,8 @@ fun SecretChatScreen(
     onOpenMessages: () -> Unit,
     /** A verified doctor's page, by her doctor id. */
     onOpenDoctor: (String) -> Unit,
+    /** The directory of every verified doctor: the header's button and the strip's "Hammasi". */
+    onOpenDoctors: () -> Unit,
     /**
      * Raises the post menu.
      *
@@ -137,6 +142,8 @@ fun SecretChatScreen(
     // The server's feed replaces the samples on open; the samples are what a build
     // with no backend keeps showing.
     LaunchedEffect(community) { community.load() }
+    // Quiet: without the list the strip is simply not drawn, and the feed is the point.
+    LaunchedEffect(doctors) { doctors.loadDirectory(quiet = true) }
 
     Box(modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {
@@ -152,6 +159,12 @@ fun SecretChatScreen(
                         horizontalArrangement = Arrangement.spacedBy(Spacing.xxs),
                     ) {
                         RoundIconButton(SadoraIcons.Info, onClick = onOpenRules, filled = false, contentDescription = t.rulesTitle)
+                        RoundIconButton(
+                            SadoraIcons.Stethoscope,
+                            onClick = onOpenDoctors,
+                            filled = false,
+                            contentDescription = strings.doctors.directoryTitle,
+                        )
                         UnreadIconButton(count = state.communityUnread, onClick = onOpenMessages, contentDescription = t.messagesTitle)
                         RoundIconButton(SadoraIcons.Pencil, onClick = onCompose, contentDescription = t.compose)
                     }
@@ -264,6 +277,16 @@ fun SecretChatScreen(
                         ),
                         verticalArrangement = Arrangement.spacedBy(Spacing.sm),
                     ) {
+                        // The doctors lead the feed rather than its saved or own halves,
+                        // and only once there are some: an empty strip is a promise broken.
+                        val directory = doctors.directory
+                        if (state.communityFilter == CommunityFilter.Feed && directory.isNotEmpty()) {
+                            item(key = "doctors") {
+                                Box(Modifier.appearFromBelow(0)) {
+                                    DoctorStrip(directory, onOpenDoctor = onOpenDoctor, onOpenAll = onOpenDoctors)
+                                }
+                            }
+                        }
                         itemsIndexed(posts, key = { _, post -> post.id }) { index, post ->
                             Box(Modifier.appearFromBelow(index.coerceAtMost(6))) {
                                 PostCard(

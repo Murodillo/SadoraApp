@@ -161,4 +161,13 @@ data class DoctorListItem(
     val ratingCount: Int = 0,
     /** Inside her hours and not marked busy. */
     val onlineNow: Boolean = false,
+    /** Her usual first reply over the windows she answered; null before she has any. */
+    val avgFirstReplyMinutes: Int? = null,
+    /** Windows opened with her, free and paid. */
+    val consultationsTotal: Int = 0,
+    /**
+     * Answers quickly as a habit: at least [Limits.DOCTOR_RATING_MIN] answered windows,
+     * with a usual first reply of [Limits.DOCTOR_FAST_REPLY_MINUTES] minutes or less.
+     */
+    val fastReply: Boolean = false,
 )

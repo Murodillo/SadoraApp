@@ -7,11 +7,13 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.plus
 import kotlinx.datetime.toLocalDateTime
 import uz.sadora.app.model.Fmt
+import uz.sadora.app.model.hasEnoughRatings
 import uz.sadora.contract.DoctorAvailability
 
-// A doctor's price, rating and hours in words. Plain functions over the string tables,
-// so the rules — "Bepul" at zero, today's hour said as today, one decimal on a rating —
-// are pinned by tests rather than by looking at a screen.
+// A doctor's price, rating, reply time and hours in words. Plain functions over the
+// string tables, so the rules — "Bepul" at zero, "Yangi shifokor" under three ratings,
+// today's hour said as today, one decimal on a rating — are pinned by tests rather
+// than by looking at a screen.
 
 /** "Bepul", or "50 000 so'm / 24 soat". */
 fun consultationPriceLabel(priceMinor: Long, d: DoctorStrings): String =
@@ -26,11 +28,25 @@ fun ratingValue(rating: Double, decimalPoint: Char = ','): String {
     return "${tenths / 10}$decimalPoint${tenths % 10}"
 }
 
-/** "★ 4,8 · 12 baho", or null while nobody has rated her. */
-fun ratingLine(rating: Double?, count: Int, d: DoctorStrings): String? {
-    if (rating == null || count <= 0) return null
+/**
+ * "★ 4,8 · 12 baho" once [hasEnoughRatings] — and "Yangi shifokor" until then, on her
+ * page and on her card alike: two ratings are not yet a reputation, good or bad.
+ */
+fun ratingLine(rating: Double?, count: Int, d: DoctorStrings): String {
+    if (rating == null || !hasEnoughRatings(count)) return d.newDoctor
     return d.ratingLabel(ratingValue(rating, d.decimalPoint), count)
 }
+
+/** "Bepul", or "50 000 so'm" on its own — the directory's card has no room for "/ 24 soat". */
+fun doctorPriceLabel(priceMinor: Long, d: DoctorStrings): String =
+    if (priceMinor <= 0) d.free else d.price(Fmt.sum(priceMinor))
+
+/**
+ * "odatda ~15 daqiqada javob beradi", and from an hour up "~2 soatda", rounded to the
+ * nearest hour: "~95 daqiqada" is a number to work out rather than a sense of the wait.
+ */
+fun replyTimeLabel(minutes: Int, d: DoctorStrings): String =
+    if (minutes >= 60) d.replyHours((minutes + 30) / 60) else d.replyMinutes(minutes.coerceAtLeast(1))
 
 /** Which dot sits beside the availability line. */
 enum class AvailabilityTone { Online, Busy, Away }

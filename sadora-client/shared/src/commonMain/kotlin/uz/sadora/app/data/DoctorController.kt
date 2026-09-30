@@ -7,7 +7,11 @@ import kotlinx.coroutines.delay
 import uz.sadora.app.data.api.DoctorApi
 import uz.sadora.app.model.AppState
 import uz.sadora.app.model.CommunityPost
+import uz.sadora.app.model.DoctorFilter
+import uz.sadora.app.model.DoctorSort
+import uz.sadora.app.model.arrangeDoctors
 import uz.sadora.contract.CheckoutSession
+import uz.sadora.contract.DoctorListItem
 import uz.sadora.contract.DoctorProfile
 import uz.sadora.contract.DoctorReview
 import uz.sadora.contract.DoctorStatus
@@ -23,8 +27,8 @@ private const val PayPollAttempts = 100
 private const val PayPollIntervalMillis = 3_000L
 
 /**
- * Doctors as the chat shows them: a verified doctor's public page, and whether she —
- * the woman holding this phone — is one herself.
+ * Doctors as the chat shows them: the directory of every verified doctor, a doctor's
+ * public page, and whether she — the woman holding this phone — is one herself.
  *
  * Applying, the panel and answering questions live in the doctor's own app
  * (sadora-doctor). An approved doctor who also uses this app still writes under her
@@ -79,6 +83,50 @@ class DoctorController(
             reviews = it
             reviewsFor = id
         }
+    }
+
+    // ---------------------------------------------------------------- the directory
+
+    /**
+     * The directory's calls, apart from [calls]: a list that failed to refresh behind
+     * Bugun must not raise a banner on the doctor page she opens next, nor the other way.
+     */
+    val directoryCalls = ApiCallState()
+
+    /** Every verified doctor, in the server's recommended order. */
+    var directory by mutableStateOf<List<DoctorListItem>>(emptyList())
+        private set
+
+    /** Whether the list has been heard at least once, so "none" can be told from "not yet". */
+    var directoryLoaded by mutableStateOf(false)
+        private set
+
+    /** Kept here rather than on the screen so a doctor's page and back finds the same view. */
+    var directoryFilter by mutableStateOf(DoctorFilter())
+    var directorySort by mutableStateOf(DoctorSort.Recommended)
+
+    /** The directory as the screen draws it: filtered, then sorted. */
+    val arrangedDirectory: List<DoctorListItem>
+        get() = arrangeDoctors(directory, directoryFilter, directorySort)
+
+    /**
+     * Reads the list. [quiet] is for the chat's strip and Bugun's card: a failure there
+     * hides the card rather than raising a banner over a screen about something else.
+     */
+    suspend fun loadDirectory(quiet: Boolean = false) {
+        val api = api ?: run {
+            // No backend — a preview, a test: an empty directory, not one forever loading.
+            directoryLoaded = true
+            return
+        }
+        directoryCalls.run(silent = quiet) { api.list() }?.let {
+            directory = it
+            directoryLoaded = true
+        }
+    }
+
+    fun resetDirectoryFilter() {
+        directoryFilter = DoctorFilter()
     }
 
     // ---------------------------------------------------------------- paying

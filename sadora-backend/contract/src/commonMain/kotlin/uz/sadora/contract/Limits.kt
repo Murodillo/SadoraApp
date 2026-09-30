@@ -72,6 +72,15 @@ object Limits {
     const val MESSAGE_IMAGE_MAX_BYTES = 3_000_000
     /** How long a consultation takes messages once the patient opens it. */
     const val CONSULTATION_HOURS = 24
+
+    /**
+     * Ratings a doctor needs before her average is shown as a number; below it the
+     * apps say "Yangi shifokor". One five-star rating is not a reputation.
+     */
+    const val DOCTOR_RATING_MIN = 3
+
+    /** Her usual first reply, in minutes, at or under which she wears "Tez javob beradi". */
+    const val DOCTOR_FAST_REPLY_MINUTES = 30
     /** How long "yozmoqda…" lasts after the last keystroke report. */
     const val TYPING_SECONDS = 6
 

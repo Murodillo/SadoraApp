@@ -93,6 +93,8 @@ sealed interface Route {
     data class Conversation(val id: String?, val alias: String) : Route
     /** A verified doctor's page, by her doctor id. */
     data class Doctor(val id: String) : Route
+    /** Every verified doctor, from the chat's header and strip and from Bugun's card. */
+    data object Doctors : Route
 
     // Gul — the wallet, the shop and the invite screen.
     data object Rewards : Route
