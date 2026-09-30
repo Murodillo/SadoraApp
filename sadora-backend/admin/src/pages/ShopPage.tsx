@@ -9,12 +9,37 @@ import type { AdminShopProduct, SaveShopProductBody, ShopKind } from '../api/typ
 import { useAuth } from '../auth/AuthContext'
 import { acceptSlug, slugPattern } from '../api/limits'
 import { useToast } from '../components/toast'
-import { Card, ErrorNotice, Field, Loading, Modal, Spinner, Switch } from '../components/ui'
+import { Card, ErrorNotice, Field, Loading, Modal, Spinner, Switch, TabPanel, Tabs } from '../components/ui'
 
 const KINDS: { value: ShopKind; label: string }[] = [
-  { value: 'premium', label: 'Premium' },
-  { value: 'vitamin', label: 'Vitamin' },
+  { value: 'premium', label: 'Obuna (Premium)' },
   { value: 'device', label: 'Qurilma' },
+  { value: 'vitamin', label: 'Dori va vitamin' },
+]
+
+/** One tab per kind: the three live in one table, but nobody manages them together. */
+const TABS: { kind: ShopKind; label: string; title: string; add: string; notice: string }[] = [
+  {
+    kind: 'premium',
+    label: 'Obunalar',
+    title: 'Premium obunalar',
+    add: 'Yangi obuna',
+    notice: 'Premium server tomonidan darhol beriladi, shuning uchun unga narx emas, kunlar soni yoziladi.',
+  },
+  {
+    kind: 'device',
+    label: 'Qurilmalar',
+    title: 'Qurilmalar',
+    add: 'Yangi qurilma',
+    notice: 'Soat, bilaguzuk va uzuklar hamkor do‘konlarda sotiladi — bu yerda faqat chegirma foizi va u qancha gul turishi belgilanadi.',
+  },
+  {
+    kind: 'vitamin',
+    label: 'Dorilar',
+    title: 'Dorilar va vitaminlar',
+    add: 'Yangi dori',
+    notice: 'Vitamin va dorilar hamkor dorixonalarda sotiladi — bu yerda faqat chegirma foizi va u qancha gul turishi belgilanadi.',
+  },
 ]
 
 const EMPTY: SaveShopProductBody = {
@@ -33,7 +58,7 @@ const EMPTY: SaveShopProductBody = {
 }
 
 /**
- * The Gul shop's catalogue.
+ * The Gul shop's catalogue, a tab per kind: subscriptions, devices, medicines.
  *
  * Two shapes of row live in one table, and the form switches between them, because the
  * server refuses anything else: a Premium row grants days and has no price, a partner
@@ -57,12 +82,15 @@ export function ShopPage() {
   const [creating, setCreating] = useState(false)
   const [slug, setSlug] = useState('')
   const [form, setForm] = useState<SaveShopProductBody>(EMPTY)
+  const [tab, setTab] = useState<ShopKind>('premium')
 
   if (products.isLoading) return <Loading rows={8} />
   if (products.error) return <ErrorNotice error={products.error} />
 
   function openCreate() {
-    setForm(EMPTY)
+    // A new product starts as the tab it was added from. A Premium row has no price and
+    // no discount, so it starts with days instead.
+    setForm(tab === 'premium' ? { ...EMPTY, kind: tab, discountPercent: 0, premiumDays: 30 } : { ...EMPTY, kind: tab })
     setSlug('')
     setEditing(null)
     setCreating(true)
@@ -123,111 +151,134 @@ export function ShopPage() {
     }
   }
 
-  const rows = products.data ?? []
+  const all = products.data ?? []
+  const current = TABS.find((t) => t.kind === tab) ?? TABS[0]!
+  const rows = all.filter((product) => product.kind === tab)
+  const premium = tab === 'premium'
   const open = creating || editing !== null
 
   return (
     <div className="grid" style={{ gap: 16 }}>
-      <div className="notice">
-        Vitamin va qurilmalar hamkorlarda sotiladi — bu yerda faqat <b>chegirma foizi</b>{' '}
-        va u qancha gul turishi belgilanadi. Premium esa server tomonidan darhol
-        beriladi, shuning uchun unga narx emas, <b>kunlar soni</b> yoziladi.
-      </div>
+      <Tabs<ShopKind>
+        value={tab}
+        onChange={setTab}
+        items={TABS.map((t) => ({
+          key: t.kind,
+          label: (
+            <>
+              {t.label}
+              <span className="badge" style={{ marginLeft: 6 }}>
+                {all.filter((product) => product.kind === t.kind).length}
+              </span>
+            </>
+          ),
+        }))}
+      />
 
-      {(create.error || update.error || remove.error) && (
-        <ErrorNotice error={create.error ?? update.error ?? remove.error} />
-      )}
+      <TabPanel id={tab}>
+        <div className="grid" style={{ gap: 16 }}>
+          <div className="notice">{current.notice}</div>
 
-      <Card
-        title="Mahsulotlar"
-        action={
-          editable && (
-            <button className="btn small" onClick={openCreate}>
-              Yangi mahsulot
-            </button>
-          )
-        }
-      >
-        <div className="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Mahsulot</th>
-                <th>Turi</th>
-                <th>Narx</th>
-                <th>Chegirma</th>
-                <th>Gul</th>
-                <th>Qolgan</th>
-                <th>Olingan</th>
-                <th>Faol</th>
-                <th />
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((product) => (
-                <tr key={product.id} style={{ opacity: product.active ? 1 : 0.55 }}>
-                  <td>
-                    <div>
-                      {product.emoji} {product.title}
-                    </div>
-                    <div className="faint">
-                      {product.brand ? `${product.brand} · ` : ''}
-                      <span className="mono">{product.slug}</span>
-                    </div>
-                  </td>
-                  <td>{KINDS.find((k) => k.value === product.kind)?.label}</td>
-                  <td>{product.priceUzs ? product.priceUzs.toLocaleString('ru-RU') : '—'}</td>
-                  <td>
-                    {product.kind === 'premium'
-                      ? `${product.premiumDays} kun`
-                      : `${product.discountPercent}%`}
-                  </td>
-                  <td>{product.coinCost.toLocaleString('ru-RU')}</td>
-                  <td>{product.stock ?? '∞'}</td>
-                  <td>{product.redeemed}</td>
-                  <td>{product.active ? 'ha' : 'yo‘q'}</td>
-                  <td style={{ whiteSpace: 'nowrap' }}>
-                    {editable && (
+          {(create.error || update.error || remove.error) && (
+            <ErrorNotice error={create.error ?? update.error ?? remove.error} />
+          )}
+
+          <Card
+            title={current.title}
+            action={
+              editable && (
+                <button className="btn small" onClick={openCreate}>
+                  {current.add}
+                </button>
+              )
+            }
+          >
+            <div className="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Mahsulot</th>
+                    {premium ? <th>Muddati</th> : (
                       <>
-                        <button className="btn ghost small" onClick={() => openEdit(product)}>
-                          Tahrirlash
-                        </button>{' '}
-                        <button
-                          className="btn ghost small"
-                          onClick={() => {
-                            const warning = product.redeemed
-                              ? `${product.title}: ${product.redeemed} ta kod berilgan, shuning uchun o‘chirilmaydi — faqat yashiriladi. Davom etamizmi?`
-                              : `${product.title} o‘chirilsinmi?`
-                            if (confirm(warning)) {
-                              remove.mutate(product.id, {
-                                onSuccess: () =>
-                                  notify(product.redeemed ? `${product.title} yashirildi` : `${product.title} o‘chirildi`, 'info'),
-                              })
-                            }
-                          }}
-                        >
-                          O‘chirish
-                        </button>
+                        <th>Narx</th>
+                        <th>Chegirma</th>
                       </>
                     )}
-                  </td>
-                </tr>
-              ))}
-              {!rows.length && (
-                <tr>
-                  <td colSpan={9} className="faint">
-                    Katalog bo‘sh
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+                    <th>Gul</th>
+                    <th>Qolgan</th>
+                    <th>Olingan</th>
+                    <th>Faol</th>
+                    <th />
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((product) => (
+                    <tr key={product.id} style={{ opacity: product.active ? 1 : 0.55 }}>
+                      <td>
+                        <div>
+                          {product.emoji} {product.title}
+                        </div>
+                        <div className="faint">
+                          {product.brand ? `${product.brand} · ` : ''}
+                          <span className="mono">{product.slug}</span>
+                        </div>
+                      </td>
+                      {premium ? (
+                        <td>{product.premiumDays} kun</td>
+                      ) : (
+                        <>
+                          <td>{product.priceUzs ? product.priceUzs.toLocaleString('ru-RU') : '—'}</td>
+                          <td>{product.discountPercent}%</td>
+                        </>
+                      )}
+                      <td>{product.coinCost.toLocaleString('ru-RU')}</td>
+                      <td>{product.stock ?? '∞'}</td>
+                      <td>{product.redeemed}</td>
+                      <td>{product.active ? 'ha' : 'yo‘q'}</td>
+                      <td style={{ whiteSpace: 'nowrap' }}>
+                        {editable && (
+                          <>
+                            <button className="btn ghost small" onClick={() => openEdit(product)}>
+                              Tahrirlash
+                            </button>{' '}
+                            <button
+                              className="btn ghost small"
+                              onClick={() => {
+                                const warning = product.redeemed
+                                  ? `${product.title}: ${product.redeemed} ta kod berilgan, shuning uchun o‘chirilmaydi — faqat yashiriladi. Davom etamizmi?`
+                                  : `${product.title} o‘chirilsinmi?`
+                                if (confirm(warning)) {
+                                  remove.mutate(product.id, {
+                                    onSuccess: () =>
+                                      notify(product.redeemed ? `${product.title} yashirildi` : `${product.title} o‘chirildi`, 'info'),
+                                  })
+                                }
+                              }}
+                            >
+                              O‘chirish
+                            </button>
+                          </>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                  {!rows.length && (
+                    <tr>
+                      <td colSpan={premium ? 7 : 8} className="faint">
+                        Bu bo‘limda hozircha mahsulot yo‘q
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </Card>
         </div>
-      </Card>
+      </TabPanel>
 
       {open && (
       <Modal
-        title={editing ? editing.title : 'Yangi mahsulot'}
+        title={editing ? editing.title : current.add}
         onClose={() => {
           setCreating(false)
           setEditing(null)
