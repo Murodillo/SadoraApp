@@ -1,6 +1,6 @@
 # Staging web front: the admin panel, the API behind it, and the landing page.
 #
-# Plain HTTP on two internal ports. TLS is terminated by the Cloudflare tunnels in
+# Plain HTTP on three internal ports. TLS is terminated by the Cloudflare tunnels in
 # front, and once a domain arrives this file is replaced by deploy/Caddyfile, which
 # obtains real certificates itself.
 
@@ -35,6 +35,31 @@
 	# anything that is not an asset falls back to index.html.
 	handle {
 		root * /srv/admin
+		try_files {path} /index.html
+		file_server
+	}
+}
+
+# The doctors' panel (sadora-doctor-admin), and the API behind it, on an origin of its own.
+#
+# The same arrangement as :8081 — its client also calls a relative `/v1` — on a separate
+# port, so it can be published under its own hostname: a quick tunnel today, and
+# doctor.sadora.app once the domain's named tunnel points that hostname here.
+:8083 {
+	encode gzip
+
+	handle /v1/* {
+		reverse_proxy api:8080 {
+			header_up X-Forwarded-For {http.request.header.CF-Connecting-IP}
+		}
+	}
+
+	handle /health/* {
+		reverse_proxy api:8080
+	}
+
+	handle {
+		root * /srv/doctor-admin
 		try_files {path} /index.html
 		file_server
 	}

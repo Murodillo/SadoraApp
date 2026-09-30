@@ -5,7 +5,8 @@
 #   ./tools/deploy_stage.sh
 #
 # Ships the source, builds the API image on the server, and brings up Postgres, Redis,
-# the API, the web front (admin panel + landing page) and two Cloudflare tunnels. Prints
+# the API, the web front (admin panel, doctors' panel, landing page) and three Cloudflare
+# tunnels. Prints
 # the public URLs at the end and writes them to build/stage/urls.txt.
 #
 # Access is by key only. The script never asks for a password and never passes one:
@@ -62,8 +63,9 @@ if ! remote 'command -v docker >/dev/null 2>&1 && docker compose version >/dev/n
 fi
 remote 'docker --version'
 
-echo "==> admin panel"
+echo "==> admin panels"
 npm --prefix sadora-backend/admin run build >/dev/null
+npm --prefix sadora-doctor-admin run build >/dev/null
 
 echo "==> source"
 remote "mkdir -p $DIR"
@@ -79,6 +81,9 @@ COPYFILE_DISABLE=1 tar -czf - \
   --exclude='./downloads' --exclude='./releases' --exclude='./backups' --exclude='./.release.env' \
   --exclude='*/coverage' \
   -C sadora-backend . -C .. landing | remote "tar -xzf - -C $DIR"
+# The doctors' panel is its own project; only its build goes, as $DIR/doctor-admin/dist.
+COPYFILE_DISABLE=1 tar -czf - -C sadora-doctor-admin dist \
+  | remote "rm -rf $DIR/doctor-admin/dist && mkdir -p $DIR/doctor-admin && tar -xzf - -C $DIR/doctor-admin"
 
 echo "==> environment"
 if remote "test -f $DIR/server/.env.stage"; then
@@ -146,10 +151,11 @@ url_of() {
 for i in {1..40}; do
   APP=$(url_of tunnel-app || true)
   LANDING=$(url_of tunnel-landing || true)
-  [[ -n $APP && -n $LANDING ]] && break
+  DOCTOR=$(url_of tunnel-doctor || true)
+  [[ -n $APP && -n $LANDING && -n $DOCTOR ]] && break
   sleep 3
 done
-[[ -n $APP && -n $LANDING ]] || { echo "Tunnels did not report a URL; see: docker logs sadora-tunnel-app-1"; exit 1; }
+[[ -n $APP && -n $LANDING && -n $DOCTOR ]] || { echo "Tunnels did not report a URL; see: docker logs sadora-tunnel-app-1"; exit 1; }
 
 echo "==> CORS for the panel's origin"
 # The panel and the API share an origin behind Caddy, but a browser still sends an Origin
@@ -157,7 +163,10 @@ echo "==> CORS for the panel's origin"
 # without this, login answers 403 in a browser while curl gets 200. The tunnel hostname
 # is random, so it is written into the allowlist each time it is read, and only the API
 # container is recreated: the tunnels, and therefore the URL, stay exactly as they are.
-remote "cd $DIR && sed -i 's#^CORS_ALLOWED_ORIGINS=.*#CORS_ALLOWED_ORIGINS=http://localhost:5173,http://localhost:4173,$APP#' server/.env.stage"
+# Fixed hostnames (https://doctor.sadora.app once the domain is live) live in
+# CORS_EXTRA_ORIGINS, which the API ignores and this line — and the CI gate — append.
+EXTRA=$(remote "sed -n 's/^CORS_EXTRA_ORIGINS=//p' $DIR/server/.env.stage | tail -1")
+remote "cd $DIR && sed -i 's#^CORS_ALLOWED_ORIGINS=.*#CORS_ALLOWED_ORIGINS=http://localhost:5173,http://localhost:4173,$APP,$DOCTOR${EXTRA:+,$EXTRA}#' server/.env.stage"
 remote "cd $DIR && $COMPOSE up -d api"
 for i in {1..60}; do
   remote 'curl -sf http://127.0.0.1:8081/health/ready >/dev/null 2>&1 || wget -qO- http://127.0.0.1:8081/health/ready >/dev/null 2>&1' && break
@@ -166,5 +175,6 @@ done
 
 {
   echo "App API + admin: $APP"
+  echo "Doctors' panel:  $DOCTOR"
   echo "Landing:         $LANDING"
 } | tee "$OUT/urls.txt"

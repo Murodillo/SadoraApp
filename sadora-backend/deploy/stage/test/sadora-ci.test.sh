@@ -39,6 +39,7 @@ echo "docker $*" >> "$FAKE/calls"
 case "$1 ${2:-}" in
   "logs sadora-tunnel-app-1") echo "INF |  https://app-one.trycloudflare.com  |" ;;
   "logs sadora-tunnel-landing-1") echo "INF |  https://landing-one.trycloudflare.com  |" ;;
+  "logs sadora-tunnel-doctor-1") [[ -e $FAKE/no-doctor-tunnel ]] || echo "INF |  https://doctor-one.trycloudflare.com  |" ;;
   "image inspect") grep -qxF "$3" "$FAKE/images" ;;
   "image rm") echo "$3" >> "$FAKE/removed" ;;
   "login ghcr.io") cat > "$FAKE/login-token"; echo "$DOCKER_CONFIG" > "$FAKE/login-config"; [[ ! -e $FAKE/login-fails ]] ;;
@@ -97,7 +98,7 @@ t_refuses_a_shell() {
 }
 
 t_url_is_json() {
-  gate url; expect_status 0 && expect_out '{"app":"https://app-one.trycloudflare.com","landing":"https://landing-one.trycloudflare.com"}'
+  gate url; expect_status 0 && expect_out '{"app":"https://app-one.trycloudflare.com","landing":"https://landing-one.trycloudflare.com","doctor":"https://doctor-one.trycloudflare.com"}'
 }
 
 t_deploy_validates_arguments() {
@@ -136,13 +137,32 @@ t_deploy_happy_path() {
   expect_file "$SADORA_ROOT/admin/dist/index.html" "admin $SHA1" || return 1
   expect_file "$SADORA_ROOT/landing/index.html" "landing $SHA1" || return 1
   expect_file "$SADORA_ROOT/releases/HISTORY" "$SHA1 $IMG1 ok" || return 1
-  expect_file "$SADORA_ROOT/server/.env.stage" "CORS_ALLOWED_ORIGINS=http://localhost:5173,http://localhost:4173,https://app-one.trycloudflare.com" || return 1
+  expect_file "$SADORA_ROOT/server/.env.stage" "CORS_ALLOWED_ORIGINS=http://localhost:5173,http://localhost:4173,https://app-one.trycloudflare.com,https://doctor-one.trycloudflare.com" || return 1
   expect_file "$FAKE/calls" "up -d --no-build --force-recreate api web" || return 1
   ls "$SADORA_ROOT"/backups/*-1111111.sql.gz >/dev/null 2>&1 || { fail "no database backup"; return 1; }
   # The token reached docker login, and nothing kept it.
   expect_file "$FAKE/login-token" "tok-secret-9" || return 1
   [[ ! -e $(cat "$FAKE/login-config") ]] || { fail "the temporary docker config survived"; return 1; }
   if grep -rqF tok-secret-9 "$SADORA_ROOT" "$HOME"; then fail "the token was written to disk"; return 1; fi
+}
+
+t_deploy_ships_the_doctor_panel_and_keeps_fixed_origins() {
+  echo "CORS_EXTRA_ORIGINS=https://doctor.sadora.app" >> "$SADORA_ROOT/server/.env.stage"
+  bundle "$SHA1" "doctor-admin/dist/index.html=doctor $SHA1"
+  deploy "$SHA1" "$IMG1"; expect_status 0 || return 1
+  expect_file "$SADORA_ROOT/doctor-admin/dist/index.html" "doctor $SHA1" || return 1
+  expect_file "$SADORA_ROOT/server/.env.stage" "https://doctor-one.trycloudflare.com,https://doctor.sadora.app" || return 1
+  # A release from before the doctors' panel was bundled leaves the one that is there.
+  bundle "$SHA2"; echo "$IMG2" >> "$FAKE/images"
+  deploy "$SHA2" "$IMG2"; expect_status 0 || return 1
+  expect_file "$SADORA_ROOT/doctor-admin/dist/index.html" "doctor $SHA1"
+}
+
+t_deploy_without_a_doctor_tunnel_keeps_the_old_origins() {
+  touch "$FAKE/no-doctor-tunnel"
+  bundle "$SHA1"; deploy "$SHA1" "$IMG1"; expect_status 0 || return 1
+  expect_file "$SADORA_ROOT/server/.env.stage" "CORS_ALLOWED_ORIGINS=http://localhost:5173,http://localhost:4173,https://app-one.trycloudflare.com"
+  if grep -q "doctor" "$SADORA_ROOT/server/.env.stage"; then fail "named a doctor origin that does not exist"; return 1; fi
 }
 
 t_deploy_skips_pull_and_cors_when_unchanged() {

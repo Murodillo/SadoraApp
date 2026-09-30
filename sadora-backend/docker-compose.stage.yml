@@ -12,6 +12,8 @@
 #                    behind them — on plain HTTP inside the compose network
 #   tunnel-app       a Cloudflare quick tunnel to the admin panel and API
 #   tunnel-landing   a second one for the landing page
+#   tunnel-doctor    a third for the doctors' panel (sadora-doctor-admin) on :8083 —
+#                    doctor.sadora.app points there once the domain arrives
 #
 # The admin panel and the API share an origin on purpose: the panel's client calls a
 # relative `/v1`, so it works with no build-time URL, and the phone uses that same origin
@@ -31,6 +33,8 @@ services:
     volumes:
       - ./deploy/stage/Caddyfile:/etc/caddy/Caddyfile:ro
       - ./admin/dist:/srv/admin:ro
+      # The doctors' panel, built from sadora-doctor-admin and shipped beside the admin.
+      - ./doctor-admin/dist:/srv/doctor-admin:ro
       - ./landing:/srv/landing:ro
       # APKs published by CI (`sadora-ci publish-apk`). Outside the source tree, so a
       # deploy that replaces the landing page never takes the download with it.
@@ -40,6 +44,7 @@ services:
     ports:
       - "127.0.0.1:8081:8081"
       - "127.0.0.1:8082:8082"
+      - "127.0.0.1:8083:8083"
 
   tunnel-app:
     image: cloudflare/cloudflared:latest
@@ -52,3 +57,9 @@ services:
     restart: unless-stopped
     depends_on: [web]
     command: ["tunnel", "--no-autoupdate", "--url", "http://web:8082"]
+
+  tunnel-doctor:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    depends_on: [web]
+    command: ["tunnel", "--no-autoupdate", "--url", "http://web:8083"]

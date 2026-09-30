@@ -67,7 +67,8 @@ read_token() { # first stdin line, when stdin is not a terminal; empty is allowe
 }
 
 cmd_url() {
-  printf '{"app":"%s","landing":"%s"}\n' "$(tunnel_url tunnel-app)" "$(tunnel_url tunnel-landing)"
+  printf '{"app":"%s","landing":"%s","doctor":"%s"}\n' \
+    "$(tunnel_url tunnel-app)" "$(tunnel_url tunnel-landing)" "$(tunnel_url tunnel-doctor)"
 }
 
 # A bundle may hold regular files and directories under a few known prefixes. No absolute
@@ -78,9 +79,9 @@ check_bundle() {
   if grep -qvE '^[-d]' <<<"$listing"; then die "the bundle contains links or special files"; fi
   while IFS= read -r name; do
     name=${name#./}
-    [[ -z $name || $name == . || $name == admin || $name == admin/ ]] && continue
+    [[ -z $name || $name == . || $name =~ ^(doctor-)?admin/?$ ]] && continue
     [[ $name == /* || $name == *..* ]] && die "unsafe path in bundle: $name"
-    [[ $name =~ ^(admin/dist|landing|infra)(/|$) || $name == RELEASE ]] || die "unexpected path in bundle: $name"
+    [[ $name =~ ^(admin/dist|doctor-admin/dist|landing|infra)(/|$) || $name == RELEASE ]] || die "unexpected path in bundle: $name"
   done < <(tar -tzPf "$1")
 }
 
@@ -135,11 +136,17 @@ swap_dir() { # atomically enough: the web container is restarted right after
   rm -rf "$dst.old"
 }
 
-sync_cors() { # the panel's origin is the tunnel's random hostname; see tools/deploy_stage.sh
-  local app line env=$ROOT/server/.env.stage
+sync_cors() { # the panels' origins are the tunnels' random hostnames; see tools/deploy_stage.sh
+  local app doctor extra line env=$ROOT/server/.env.stage
   app=$(tunnel_url tunnel-app)
   [[ -n $app ]] || { warn "the app tunnel has no URL yet — CORS left as it is"; return 1; }
-  line="CORS_ALLOWED_ORIGINS=http://localhost:5173,http://localhost:4173,$app"
+  # The doctors' panel is optional here: a server set up before it had no tunnel for it.
+  doctor=$(tunnel_url tunnel-doctor)
+  # Fixed hostnames (https://doctor.sadora.app once the domain is live) are written once
+  # into CORS_EXTRA_ORIGINS in .env.stage, which the API ignores; they are kept here
+  # every time the tunnel hostnames are rewritten.
+  extra=$(sed -n 's/^CORS_EXTRA_ORIGINS=//p' "$env" | tail -1)
+  line="CORS_ALLOWED_ORIGINS=http://localhost:5173,http://localhost:4173,$app${doctor:+,$doctor}${extra:+,$extra}"
   grep -qxF "$line" "$env" && return 1
   if grep -q '^CORS_ALLOWED_ORIGINS=' "$env"; then
     sed -i "s#^CORS_ALLOWED_ORIGINS=.*#$line#" "$env"
@@ -164,6 +171,11 @@ wait_healthy() {
 activate() { # <release dir> <sha> <image>
   local rel=$1 sha=$2 image=$3 recreate=()
   swap_dir "$rel/admin/dist" "$ROOT/admin/dist"
+  # Releases from before the doctors' panel was bundled carry none; a rollback to one
+  # leaves the panel that is there.
+  if [[ -f $rel/doctor-admin/dist/index.html ]]; then
+    swap_dir "$rel/doctor-admin/dist" "$ROOT/doctor-admin/dist"
+  fi
   swap_dir "$rel/landing" "$ROOT/landing"
   printf 'SADORA_API_IMAGE=%s\nSADORA_RELEASE=%s\n' "$image" "$sha" > "$ROOT/.release.env.new"
   mv "$ROOT/.release.env.new" "$ROOT/.release.env"
