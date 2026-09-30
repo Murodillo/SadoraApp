@@ -397,7 +397,7 @@ jobs:
       matrix:
         app:
           - { name: Sadora, dir: sadora-client, asc_app_id: '6811085950' }
-          - { name: Sadora Doctor, dir: sadora-doctor, asc_app_id: '' }
+          - { name: Sadora Doctor, dir: sadora-doctor, asc_app_id: '6817900879' }
     concurrency:
       group: stage-testflight-${{ matrix.app.dir }}
       cancel-in-progress: false
