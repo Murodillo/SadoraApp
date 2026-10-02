@@ -2,7 +2,14 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { act, renderHook, waitFor } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { describe, expect, it, vi } from 'vitest'
-import { useDoctor, useReportContext, useReportImage, useRestrictSender } from './hooks'
+import {
+  useDoctor,
+  useDoctorQuality,
+  useMoreDoctorEarnings,
+  useReportContext,
+  useReportImage,
+  useRestrictSender,
+} from './hooks'
 
 function json(body: unknown): Response {
   return new Response(JSON.stringify(body), { status: 200 })
@@ -77,5 +84,42 @@ describe('useDoctor', () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
     expect(result.current.data?.acceptsConsultations).toBe(false)
     expect(result.current.data?.consultations).toEqual(detail.consultations)
+  })
+})
+
+describe('doctor money, a page at a time', () => {
+  it('asks the quality table for one page by limit and offset', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(json({ items: [], total: 120, limit: 50, offset: 50 }))
+    vi.stubGlobal('fetch', fetchMock)
+    const { wrapper } = withClient()
+
+    const { result } = renderHook(() => useDoctorQuality(50, 50), { wrapper })
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    expect(fetchMock.mock.calls[0]?.[0]).toBe('/v1/admin/doctors/quality?limit=50&offset=50')
+    expect(result.current.data?.total).toBe(120)
+  })
+
+  it('reads earnings lines on from the first page only when asked, until the total is reached', async () => {
+    const line = (id: string) => ({ sessionId: id, patientName: id, priceMinor: 1, commissionMinor: 0, netMinor: 1, payment: 'paid' })
+    const fetchMock = vi.fn((path: string) => {
+      const offset = Number(new URL(path, 'http://admin.test').searchParams.get('offset'))
+      const items = offset === 50 ? Array.from({ length: 50 }, (_, i) => line(`s${50 + i}`)) : [line('s100')]
+      return Promise.resolve(json({ items, total: 101, limit: 50, offset }))
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    const { wrapper } = withClient()
+
+    const idle = renderHook(() => useMoreDoctorEarnings('d1', 'lines', 50, false), { wrapper })
+    expect(idle.result.current.fetchStatus).toBe('idle')
+    expect(fetchMock).not.toHaveBeenCalled()
+
+    const { result } = renderHook(() => useMoreDoctorEarnings('d1', 'lines', 50, true), { wrapper })
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    expect(fetchMock.mock.calls[0]?.[0]).toBe('/v1/admin/doctors/d1/earnings/lines?limit=50&offset=50')
+    expect(result.current.hasNextPage).toBe(true)
+
+    await act(() => result.current.fetchNextPage())
+    expect(fetchMock.mock.calls[1]?.[0]).toBe('/v1/admin/doctors/d1/earnings/lines?limit=50&offset=100')
+    await waitFor(() => expect(result.current.hasNextPage).toBe(false))
   })
 })

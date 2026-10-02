@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { fieldsOf, messageOf } from '../api/client'
-import { QUESTIONS_LIMIT, useAnswer, useDoctorProfile, useQuestions } from '../api/hooks'
+import { uniqueRows, useAnswer, useDoctorProfile, useQuestions } from '../api/hooks'
 import { limits } from '../api/limits'
 import type { CommunityPost, CommunityTopic } from '../api/types'
 import { useApprovedDoctor } from '../auth/doctor'
@@ -50,8 +50,16 @@ export function QuestionsPage() {
   // Every topic, for the header count — the same query the rail's badge reads.
   const everything = useQuestions()
   const questions = useQuestions(filter === 'all' ? undefined : filter)
+  const loaded = useMemo(
+    () => (questions.data ? uniqueRows(questions.data.pages, questionKey) : undefined),
+    [questions.data],
+  )
+  const waitingAll = useMemo(
+    () => (everything.data ? uniqueRows(everything.data.pages, questionKey).length : undefined),
+    [everything.data],
+  )
   const profile = useDoctorProfile(doctor.profileId)
-  const shown = usePresence(questions.data, questionKey, { resetKey: filter })
+  const shown = usePresence(loaded, questionKey, { resetKey: filter })
   const [selected, setSelected] = useState<CommunityPost | null>(null)
   const [drafts, setDrafts] = useState<Record<string, string>>({})
   const [answered, setAnswered] = useState<ReadonlySet<string>>(new Set())
@@ -59,29 +67,28 @@ export function QuestionsPage() {
   // Keep the open copy current while it is on the list, and open the first question
   // when nothing is open — the list is a queue, and the top of it is where work starts.
   useEffect(() => {
-    const items = questions.data
+    const items = loaded
     if (!items) return
     setSelected((current) => {
       if (current) return items.find((item) => item.id === current.id) ?? current
       return items[0] ?? null
     })
-  }, [questions.data])
+  }, [loaded])
 
   function changeFilter(next: Filter) {
     setFilter(next)
     setSelected(null)
   }
 
-  const list = questions.data ?? []
+  const list = loaded ?? []
   const next = list.find((item) => item.id !== selected?.id) ?? null
-  const waiting = everything.data?.length
 
   return (
     <div className="grid" style={{ gap: 16 }}>
       <div className="grid stat-row">
         <Stat
           label="Javob kutmoqda"
-          value={waiting === undefined ? '—' : waiting >= QUESTIONS_LIMIT ? `${QUESTIONS_LIMIT}+` : waiting}
+          value={waitingAll === undefined ? '—' : everything.hasNextPage ? `${waitingAll}+` : waitingAll}
           hint="barcha bo'limlarda"
         />
         <Stat
@@ -112,7 +119,9 @@ export function QuestionsPage() {
             </Empty>
           ) : (
             <>
-              <div className="list-head faint">{list.length} ta javobsiz savol · eng yangisi tepada</div>
+              <div className="list-head faint">
+                {`${list.length}${questions.hasNextPage ? '+' : ''} ta javobsiz savol · eng yangisi tepada`}
+              </div>
               <ul className="question-list">
                 {shown.map(({ item: question, leaving }) => (
                   <li key={question.id} className={leaving ? 'leaving' : undefined} aria-hidden={leaving || undefined}>
@@ -127,6 +136,19 @@ export function QuestionsPage() {
                   </li>
                 ))}
               </ul>
+              {questions.hasNextPage && (
+                <div className="row" style={{ justifyContent: 'center', marginTop: 8 }}>
+                  <button
+                    type="button"
+                    className="btn ghost small"
+                    disabled={questions.isFetchingNextPage}
+                    onClick={() => void questions.fetchNextPage()}
+                  >
+                    {questions.isFetchingNextPage && <Spinner />}
+                    {questions.isFetchingNextPage ? 'Yuklanmoqda…' : 'Yana savollar'}
+                  </button>
+                </div>
+              )}
             </>
           )}
         </section>

@@ -1,14 +1,63 @@
-import { useDoctorEarnings } from '../api/hooks'
+import { useState } from 'react'
+import { uniqueRows, useDoctorEarnings, useMoreEarnings } from '../api/hooks'
+import type { DoctorPayoutView, EarningLine } from '../api/types'
 import { formatSom } from '../api/work'
 import { paymentLabel } from '../components/labels'
-import { Card, Empty, ErrorNotice, formatDate, formatDateTime, Loading, Stat } from '../components/ui'
+import { Card, Empty, ErrorNotice, formatDate, formatDateTime, Loading, Spinner, Stat } from '../components/ui'
+
+/**
+ * One list of the page — consultations or payouts — as the first page the totals came
+ * with, plus whatever pages she has asked for since, each row once.
+ */
+function useEarningsList<T extends EarningLine | DoctorPayoutView>(
+  list: 'lines' | 'payouts',
+  first: T[],
+  total: number | undefined,
+  keyOf: (item: T) => string,
+) {
+  const [asked, setAsked] = useState(false)
+  const more = useMoreEarnings<T>(list, first.length, asked)
+  const rows = uniqueRows([first, ...(more.data?.pages.map((page) => page.items) ?? [])], keyOf)
+  // Before she asks, the totals' count says whether there is more; after, the last page does.
+  const hasMore = asked ? Boolean(more.hasNextPage) || more.isPending : first.length < (total ?? 0)
+  return {
+    rows,
+    hasMore,
+    loading: asked && (more.isPending || more.isFetchingNextPage),
+    error: more.error,
+    loadMore: () => {
+      if (!asked) setAsked(true)
+      else if (more.data) void more.fetchNextPage()
+      else void more.refetch()
+    },
+  }
+}
+
+function MoreButton({ loading, onClick }: { loading: boolean; onClick: () => void }) {
+  return (
+    <div className="row" style={{ justifyContent: 'center', marginTop: 8 }}>
+      <button type="button" className="btn ghost small" disabled={loading} onClick={onClick}>
+        {loading && <Spinner />}
+        {loading ? 'Yuklanmoqda…' : "Ko'proq ko'rsatish"}
+      </button>
+    </div>
+  )
+}
 
 /**
  * "Daromad": what her paid consultations brought, Sadora's share, what has been paid out
- * to her and what is still hers. Every sum arrives in tiyin and is shown in so'm.
+ * to her and what is still hers. Every sum arrives in tiyin and is shown in so'm. The
+ * totals cover everything; the two lists come a page at a time, the latest first.
  */
 export function EarningsPage() {
   const earnings = useDoctorEarnings()
+  const lines = useEarningsList<EarningLine>('lines', earnings.data?.lines ?? [], earnings.data?.linesTotal, (line) => line.sessionId)
+  const payouts = useEarningsList<DoctorPayoutView>(
+    'payouts',
+    earnings.data?.payouts ?? [],
+    earnings.data?.payoutsTotal,
+    (payout) => payout.id,
+  )
 
   if (earnings.isPending) {
     return (
@@ -35,13 +84,17 @@ export function EarningsPage() {
         <Stat label="Jami tushum" value={formatSom(data.grossMinor)} hint="to'langan konsultatsiyalar" />
         <Stat label="Sadora ulushi" value={formatSom(data.commissionMinor)} hint="komissiya" />
         <Stat label="Sizning daromadingiz" value={formatSom(data.netMinor)} hint="komissiyadan keyin" />
-        <Stat label="To'lab berilgan" value={formatSom(data.paidOutMinor)} hint={`${data.payouts.length} ta to'lov`} />
+        <Stat
+          label="To'lab berilgan"
+          value={formatSom(data.paidOutMinor)}
+          hint={`${data.payoutsTotal ?? data.payouts.length} ta to'lov`}
+        />
         <Stat label="Qoldiq" value={formatSom(data.balanceMinor)} hint="sizga to'lanadi" />
         <Stat label="Qaytariladi" value={formatSom(data.refundDueMinor)} hint="javobsiz qolganlar" />
       </div>
 
       <Card title="Konsultatsiyalar">
-        {data.lines.length ? (
+        {lines.rows.length ? (
           <div className="table-wrap">
             <table>
               <thead>
@@ -55,7 +108,7 @@ export function EarningsPage() {
                 </tr>
               </thead>
               <tbody>
-                {data.lines.map((line) => {
+                {lines.rows.map((line) => {
                   const payment = paymentLabel(line.payment)
                   return (
                     <tr key={line.sessionId}>
@@ -81,10 +134,12 @@ export function EarningsPage() {
             <div className="faint">Narxni "Ish vaqti va narx" sahifasida belgilaysiz.</div>
           </Empty>
         )}
+        {lines.error && <ErrorNotice error={lines.error} onRetry={lines.loadMore} />}
+        {lines.hasMore && <MoreButton loading={lines.loading} onClick={lines.loadMore} />}
       </Card>
 
       <Card title="To'lovlar">
-        {data.payouts.length ? (
+        {payouts.rows.length ? (
           <div className="table-wrap">
             <table>
               <thead>
@@ -95,7 +150,7 @@ export function EarningsPage() {
                 </tr>
               </thead>
               <tbody>
-                {data.payouts.map((payout) => (
+                {payouts.rows.map((payout) => (
                   <tr key={payout.id}>
                     <td title={formatDateTime(payout.paidAt)}>{formatDate(payout.paidAt)}</td>
                     <td className="num">
@@ -110,6 +165,8 @@ export function EarningsPage() {
         ) : (
           <Empty>Sadora hali sizga to'lov o'tkazmagan.</Empty>
         )}
+        {payouts.error && <ErrorNotice error={payouts.error} onRetry={payouts.loadMore} />}
+        {payouts.hasMore && <MoreButton loading={payouts.loading} onClick={payouts.loadMore} />}
         <p className="faint" style={{ marginBottom: 0 }}>
           Qoldiq Sadora tomonidan sizga o'tkaziladi. Savollar bo'lsa, qo'llab-quvvatlash xizmatiga yozing.
         </p>

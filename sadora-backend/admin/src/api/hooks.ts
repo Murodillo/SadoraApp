@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { query, request, requestBlob } from './client'
 import type {
   AdminAnalytics,
@@ -19,6 +19,8 @@ import type {
   CommissionView,
   ConsultationPayment,
   DoctorEarnings,
+  DoctorPayoutView,
+  EarningLine,
   DoctorCounts,
   DoctorReviewAction,
   DoctorStatus,
@@ -233,10 +235,22 @@ export const useModerationPosts = (filters: ModerationFilters) =>
     placeholderData: (previous) => previous,
   })
 
-export const useModerationComments = (postId: string | null) =>
-  useQuery({
-    queryKey: ['community', 'comments', postId],
-    queryFn: () => request<ModerationComment[]>(`/v1/admin/community/posts/${postId}/comments`),
+/**
+ * A post's thread for the moderation drawer, oldest first, read a page at a time.
+ *
+ * "Load more" rather than prev/next: the drawer reads like the thread does in the app,
+ * and a moderator following a pile-on wants the earlier replies still on screen. Hiding a
+ * comment invalidates ['community'], which refetches every page already loaded.
+ */
+export const useModerationComments = (postId: string | null, pageSize = 50) =>
+  useInfiniteQuery({
+    queryKey: ['community', 'comments', postId, pageSize],
+    queryFn: ({ pageParam }) =>
+      request<Page<ModerationComment>>(
+        `/v1/admin/community/posts/${postId}/comments${query({ limit: pageSize, offset: pageParam })}`,
+      ),
+    initialPageParam: 0,
+    getNextPageParam: (last) => (last.offset + last.items.length < last.total ? last.offset + last.items.length : undefined),
     enabled: Boolean(postId),
   })
 
@@ -432,10 +446,11 @@ export const useBillingPlans = () =>
     queryFn: () => request<BillingPlan[]>('/v1/admin/billing/plans'),
   })
 
-export const usePayments = (state?: string) =>
+export const usePayments = (state: string | undefined, limit: number, offset: number) =>
   useQuery({
-    queryKey: ['billing', 'payments', state ?? 'all'],
-    queryFn: () => request<AdminPayment[]>(`/v1/admin/billing/payments${query({ state, limit: '100' })}`),
+    queryKey: ['billing', 'payments', state ?? 'all', limit, offset],
+    queryFn: () => request<Page<AdminPayment>>(`/v1/admin/billing/payments${query({ state, limit, offset })}`),
+    placeholderData: (previous) => previous,
   })
 
 // ---------------------------------------------------------------- the operator's own account
@@ -536,10 +551,11 @@ export const useDeleteShopProduct = () => {
   })
 }
 
-export const useRedemptions = (limit = 50) =>
+export const useRedemptions = (limit: number, offset: number) =>
   useQuery({
-    queryKey: ['redemptions', limit],
-    queryFn: () => request<AdminRedemption[]>(`/v1/admin/shop/redemptions${query({ limit })}`),
+    queryKey: ['redemptions', limit, offset],
+    queryFn: () => request<Page<AdminRedemption>>(`/v1/admin/shop/redemptions${query({ limit, offset })}`),
+    placeholderData: (previous) => previous,
   })
 
 export const useUpdateRedemption = () => {
@@ -665,22 +681,53 @@ export const useSetCommission = () => {
   })
 }
 
-/** Outside the `['doctors']` root so a review does not refetch every doctor's numbers. */
-export const useDoctorQuality = (enabled = true) =>
+/**
+ * A page of the quality table, the busiest this month first. Outside the `['doctors']`
+ * root so a review does not refetch every doctor's numbers.
+ */
+export const useDoctorQuality = (limit: number, offset: number, enabled = true) =>
   useQuery({
-    queryKey: ['doctor-quality'],
-    queryFn: () => request<AdminDoctorQuality[]>('/v1/admin/doctors/quality'),
+    queryKey: ['doctor-quality', limit, offset],
+    queryFn: () => request<Page<AdminDoctorQuality>>(`/v1/admin/doctors/quality${query({ limit, offset })}`),
     enabled,
     refetchInterval: 60_000,
+    placeholderData: (previous) => previous,
   })
 
-/** Owner and Admin only on the server; the card asks only when the caller may read it. */
+/**
+ * Owner and Admin only on the server; the card asks only when the caller may read it.
+ * The totals cover everything; the lines and payouts are their first pages.
+ */
 export const useDoctorEarnings = (id: string, enabled = true) =>
   useQuery({
     queryKey: ['doctor-earnings', id],
     queryFn: () => request<DoctorEarnings>(`/v1/admin/doctors/${id}/earnings`),
     enabled,
   })
+
+/** How many earnings lines or payouts one "more" brings. */
+export const EARNINGS_PAGE = 50
+
+/**
+ * Her consultations or payouts past the first page the card already has, read on by
+ * offset from [from]. Off until asked for, so opening a card costs one request. Under the
+ * card's key: a payout recorded refreshes these with the totals.
+ */
+export function useMoreDoctorEarnings<T extends EarningLine | DoctorPayoutView>(
+  id: string,
+  list: 'lines' | 'payouts',
+  from: number,
+  enabled: boolean,
+) {
+  return useInfiniteQuery({
+    queryKey: ['doctor-earnings', id, list, from],
+    queryFn: ({ pageParam }) =>
+      request<Page<T>>(`/v1/admin/doctors/${id}/earnings/${list}${query({ limit: EARNINGS_PAGE, offset: pageParam })}`),
+    initialPageParam: from,
+    getNextPageParam: (last) => (last.offset + last.items.length < last.total ? last.offset + last.items.length : undefined),
+    enabled,
+  })
+}
 
 export const useAddDoctorPayout = () => {
   const client = useQueryClient()

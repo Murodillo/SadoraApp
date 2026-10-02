@@ -299,7 +299,9 @@ function CommentsPanel({ postId, editable }: { postId: string; editable: boolean
   const [hiding, setHiding] = useState<ModerationComment | null>(null)
   if (comments.isLoading) return <Loading rows={2} />
   if (comments.error) return <ErrorNotice error={comments.error} />
-  const items = comments.data ?? []
+  const pages = comments.data?.pages ?? []
+  const items = pages.flatMap((page) => page.items)
+  const total = pages[pages.length - 1]?.total ?? 0
   if (!items.length) return <p className="faint" style={{ margin: 0 }}>Izoh yo'q.</p>
   return (
     <>
@@ -339,6 +341,19 @@ function CommentsPanel({ postId, editable }: { postId: string; editable: boolean
         ))}
       </tbody>
     </table>
+    {/* A long thread arrives in pages; the count says how much is still unread so a
+        moderator does not mistake the first page for the whole pile-on. */}
+    <div className="row" style={{ justifyContent: 'space-between', marginTop: 8 }}>
+      <span className="faint">
+        {items.length} / {total}
+      </span>
+      {comments.hasNextPage && (
+        <button className="btn small" disabled={comments.isFetchingNextPage} onClick={() => void comments.fetchNextPage()}>
+          {comments.isFetchingNextPage && <Spinner />}
+          Yana ko'rsatish
+        </button>
+      )}
+    </div>
     </>
   )
 }

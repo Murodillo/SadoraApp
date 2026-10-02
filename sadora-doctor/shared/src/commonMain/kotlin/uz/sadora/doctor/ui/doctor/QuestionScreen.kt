@@ -42,6 +42,7 @@ import uz.sadora.doctor.design.Radius
 import uz.sadora.doctor.design.Sadora
 import uz.sadora.doctor.design.Spacing
 import uz.sadora.doctor.i18n.strings
+import uz.sadora.doctor.ui.components.LoadMoreRow
 import uz.sadora.doctor.ui.components.ErrorStrip
 import uz.sadora.doctor.ui.components.Motion
 import uz.sadora.doctor.ui.components.SadoraTopBar
@@ -101,7 +102,8 @@ fun QuestionScreen(
                 }
             } else {
                 item { PostCard(post = post, onOpen = null, foldable = false) }
-                item { SectionHeader(t.commentsCount(comments.size)) }
+                // The post's count: a long thread arrives a page at a time.
+                item { SectionHeader(t.commentsCount(maxOf(post.commentCount, comments.size))) }
                 when {
                     !doctors.threadLoaded && calls.error == null -> item {
                         Skeleton(Modifier.fillMaxWidth().height(64.dp))
@@ -121,6 +123,9 @@ fun QuestionScreen(
                             ),
                         )
                     }
+                }
+                if (doctors.threadLoaded && doctors.threadHasMore) {
+                    item(key = "more") { LoadMoreRow(comments.size, onLoadMore = { doctors.loadMoreComments() }) }
                 }
             }
         }

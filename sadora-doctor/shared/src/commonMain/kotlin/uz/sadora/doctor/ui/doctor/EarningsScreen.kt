@@ -26,6 +26,7 @@ import uz.sadora.doctor.design.Spacing
 import uz.sadora.doctor.i18n.strings
 import uz.sadora.doctor.ui.components.EmptyState
 import uz.sadora.doctor.ui.components.ErrorStrip
+import uz.sadora.doctor.ui.components.LoadMoreRow
 import uz.sadora.doctor.ui.components.SadoraCard
 import uz.sadora.doctor.ui.components.SadoraTopBar
 import uz.sadora.doctor.ui.components.ScreenContent
@@ -35,7 +36,8 @@ import uz.sadora.doctor.ui.components.Skeleton
 /**
  * What her paid consultations have brought in: the totals — gross, Sadora's share, hers,
  * what has been paid out and the balance still owed her, and what is to go back to
- * patients — then every paid consultation and every payout, newest first.
+ * patients — then every paid consultation and every payout, newest first, read a page
+ * at a time as she scrolls.
  */
 @Composable
 fun EarningsScreen(
@@ -77,20 +79,28 @@ fun EarningsScreen(
                 }
             }
 
+            // Both lists in the server's order, the latest first, a page at a time: the end of
+            // each, once drawn, asks for its next page.
             item(key = "lines-title") { SectionHeader(w.linesTitle) }
-            val lines = earnings.lines.sortedByDescending { it.openedAt }
+            val lines = earnings.lines
             if (lines.isEmpty()) {
                 item(key = "lines-empty") { EmptyState(title = w.linesEmpty, body = w.linesEmptyBody, actionText = null, onAction = {}) }
             } else {
                 items(lines.size, key = { "line-" + lines[it].sessionId }) { EarningRow(lines[it]) }
             }
+            if (work.linesHaveMore) {
+                item(key = "lines-more") { LoadMoreRow(work.linesRead, onLoadMore = { work.loadMoreLines() }) }
+            }
 
             item(key = "payouts-title") { SectionHeader(w.payoutsTitle) }
-            val payouts = earnings.payouts.sortedByDescending { it.paidAt }
+            val payouts = earnings.payouts
             if (payouts.isEmpty()) {
                 item(key = "payouts-empty") { Text(w.payoutsEmpty, style = Sadora.type.body, color = c.muted) }
             } else {
                 items(payouts.size, key = { "payout-" + payouts[it].id }) { PayoutRow(payouts[it]) }
+            }
+            if (work.payoutsHaveMore) {
+                item(key = "payouts-more") { LoadMoreRow(work.payoutsRead, onLoadMore = { work.loadMorePayouts() }) }
             }
         }
     }

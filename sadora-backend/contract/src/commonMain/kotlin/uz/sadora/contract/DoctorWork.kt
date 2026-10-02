@@ -177,7 +177,12 @@ data class DoctorPayoutView(
     val paidAt: Instant,
 )
 
-/** What she has earned, what Sadora has paid her, and what is still hers to be paid. */
+/**
+ * What she has earned, what Sadora has paid her, and what is still hers to be paid.
+ *
+ * The totals cover everything; [lines] and [payouts] are only their first pages, the
+ * latest first. The rest is read from `earnings/lines` and `earnings/payouts` by offset.
+ */
 @Serializable
 data class DoctorEarnings(
     val currency: String = "UZS",
@@ -189,7 +194,18 @@ data class DoctorEarnings(
     val refundDueMinor: Long = 0,
     val lines: List<EarningLine> = emptyList(),
     val payouts: List<DoctorPayoutView> = emptyList(),
-)
+    /** How many lines and payouts there are in all. Zero from a server that sent every one. */
+    val linesTotal: Long = 0,
+    val payoutsTotal: Long = 0,
+) {
+    val linesHaveMore: Boolean get() = lines.size < linesTotal
+    val payoutsHaveMore: Boolean get() = payouts.size < payoutsTotal
+
+    companion object {
+        /** The first page of each list, and the page the rest is read in. */
+        const val PAGE = 50
+    }
+}
 
 /** Paying for a consultation with a doctor whose price is not zero. */
 @Serializable

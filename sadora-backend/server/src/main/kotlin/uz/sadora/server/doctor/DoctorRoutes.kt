@@ -55,26 +55,51 @@ fun Route.doctorRoutes(
                 val request = call.receive<DoctorApplicationRequest>()
                 call.respond(doctors.apply(call.requireUserId(), request))
             }
-            /** Questions no doctor has answered yet — the panel's work list. */
+            /**
+             * Questions no doctor has answered yet — the panel's work list, newest first.
+             * A list, not a page, as the first builds read it: a page shorter than `limit`
+             * is the last, and `offset` reads on from where the panel is.
+             */
             get("/questions") {
                 call.respond(
                     community.doctorQuestions(
                         viewer = call.requireUserId(),
                         topic = call.enumParameter<CommunityTopic>("topic"),
                         limit = call.intParameter("limit", default = 50, max = 100),
+                        offset = call.intParameter("offset", default = 0, max = Int.MAX_VALUE).toLong(),
                     ),
                 )
             }
         }
 
         route("/doctors") {
+            /**
+             * The directory, `limit` doctors from `offset`. The recommended order weighs
+             * ratings and who is online now, so it is decided over every doctor and the
+             * page is cut from it afterwards; no limit is the whole list, as old builds read it.
+             */
             get {
-                call.respond(consultations.decorate(community.doctors(call.requireUserId())))
+                val limit = call.intParameter("limit", default = CommunityService.DIRECTORY_MAX, max = CommunityService.DIRECTORY_MAX)
+                val offset = call.intParameter("offset", default = 0, max = Int.MAX_VALUE)
+                val ordered = consultations.decorate(community.doctors(call.requireUserId()))
+                call.respond(ordered.drop(offset).take(limit))
             }
             get("/{id}") {
                 val id = parseUuid(call.parameters["id"].orEmpty(), "id")
                 val viewer = call.requireUserId()
                 call.respond(consultations.decorate(viewer, community.doctorProfile(viewer, id)))
+            }
+            /** Her posts a page at a time; her page carries only the first few. */
+            get("/{id}/posts") {
+                val id = parseUuid(call.parameters["id"].orEmpty(), "id")
+                call.respond(
+                    community.doctorPosts(
+                        viewer = call.requireUserId(),
+                        doctorId = id,
+                        limit = call.intParameter("limit", default = CommunityService.PROFILE_POSTS, max = CommunityService.MAX_PROFILE_POSTS),
+                        offset = call.intParameter("offset", default = 0, max = Int.MAX_VALUE).toLong(),
+                    ),
+                )
             }
             /** A patient opens a consultation with her, or opens it again. */
             post("/{id}/consultations") {

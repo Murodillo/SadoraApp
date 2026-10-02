@@ -12,6 +12,8 @@ import { useAuth } from '../auth/AuthContext'
 import { useToast } from '../components/toast'
 import { Card, ErrorNotice, Loading, Stat, Switch, formatDateTime } from '../components/ui'
 
+const REDEMPTIONS_PAGE = 50
+
 /**
  * The Gul economy, in one page.
  *
@@ -32,7 +34,9 @@ export function RewardsPage() {
   const overview = useRewardsOverview(readsRules)
   const rules = useCoinRules(readsRules)
   const save = useSaveCoinRule()
-  const redemptions = useRedemptions(50)
+  const [redemptionOffset, setRedemptionOffset] = useState(0)
+  const redemptions = useRedemptions(REDEMPTIONS_PAGE, redemptionOffset)
+  const codes = redemptions.data
   const updateRedemption = useUpdateRedemption()
   const { notify } = useToast()
   const editable = can(['OWNER', 'ADMIN'])
@@ -166,7 +170,7 @@ export function RewardsPage() {
               </tr>
             </thead>
             <tbody>
-              {(redemptions.data ?? []).map((redemption) => (
+              {(codes?.items ?? []).map((redemption) => (
                 <tr key={redemption.id}>
                   <td className="faint">{formatDateTime(redemption.createdAt)}</td>
                   <td>{redemption.userName}</td>
@@ -199,7 +203,7 @@ export function RewardsPage() {
                   </td>
                 </tr>
               ))}
-              {!redemptions.data?.length && (
+              {!codes?.items.length && (
                 <tr>
                   <td colSpan={6} className="faint">
                     Hozircha kod berilmagan
@@ -209,6 +213,30 @@ export function RewardsPage() {
             </tbody>
           </table>
         </div>
+
+        {codes && codes.items.length > 0 && (
+          <div className="row" style={{ justifyContent: 'space-between', marginTop: 12 }}>
+            <span className="faint">
+              {redemptionOffset + 1}–{redemptionOffset + codes.items.length} / {codes.total}
+            </span>
+            <div className="row">
+              <button
+                className="btn small"
+                disabled={redemptionOffset === 0}
+                onClick={() => setRedemptionOffset(Math.max(0, redemptionOffset - REDEMPTIONS_PAGE))}
+              >
+                Oldingi
+              </button>
+              <button
+                className="btn small"
+                disabled={redemptionOffset + codes.items.length >= codes.total}
+                onClick={() => setRedemptionOffset(redemptionOffset + REDEMPTIONS_PAGE)}
+              >
+                Keyingi
+              </button>
+            </div>
+          </div>
+        )}
       </Card>
     </div>
   )

@@ -17,6 +17,7 @@ import uz.sadora.doctor.design.Radius
 import uz.sadora.doctor.design.SadoraIcons
 import uz.sadora.doctor.design.Spacing
 import uz.sadora.doctor.i18n.strings
+import uz.sadora.doctor.ui.components.LoadMoreRow
 import uz.sadora.doctor.ui.components.CircleIconButton
 import uz.sadora.doctor.ui.components.EmptyState
 import uz.sadora.doctor.ui.components.ErrorStrip
@@ -69,6 +70,9 @@ fun CommunityScreen(
             items(posts.size, key = { posts[it].id }) { index ->
                 val post = posts[index]
                 PostCard(post = post, onOpen = { onOpenPost(post.id) })
+            }
+            if (doctors.feedHasMore) {
+                item(key = "more") { LoadMoreRow(doctors.feedOffset, onLoadMore = { doctors.loadMoreFeed() }) }
             }
         }
     }

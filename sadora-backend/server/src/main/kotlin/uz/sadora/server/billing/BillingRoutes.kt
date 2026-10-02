@@ -17,6 +17,7 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import kotlinx.serialization.Serializable
 import uz.sadora.contract.CheckoutRequest
+import uz.sadora.contract.Page
 import uz.sadora.contract.PaymentProvider
 import uz.sadora.contract.PaymentState
 import uz.sadora.contract.StorePurchaseRequest
@@ -178,7 +179,10 @@ fun Route.adminBillingRoutes(billing: BillingService, repository: BillingReposit
                 call.requireAdminRole(AdminRole.OWNER, AdminRole.ADMIN, AdminRole.SUPPORT, AdminRole.ANALYST)
                 val state = call.request.queryParameters["state"]
                     ?.let { wanted -> PaymentState.entries.firstOrNull { it.name.equals(wanted, ignoreCase = true) } }
-                call.respond(repository.recent(limit = call.intParameter("limit", 50, 200), state = state).map { it.toView() })
+                val limit = call.intParameter("limit", default = 50, max = 200)
+                val offset = call.intParameter("offset", default = 0, max = Int.MAX_VALUE)
+                val (rows, total) = repository.recent(limit = limit, offset = offset.toLong(), state = state)
+                call.respond(Page(rows.map { it.toView() }, total, limit, offset))
             }
 
             get("/summary") {

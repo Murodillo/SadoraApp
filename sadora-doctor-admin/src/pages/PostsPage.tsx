@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { fieldsOf, messageOf } from '../api/client'
-import { useCreatePost, useDoctorProfile } from '../api/hooks'
+import { uniqueRows, useCreatePost, useDoctorProfile, useMoreDoctorPosts } from '../api/hooks'
 import { lengthProblem, limits } from '../api/limits'
 import type { CommunityPost, CommunityTopic } from '../api/types'
 import { useApprovedDoctor } from '../auth/doctor'
@@ -60,17 +60,53 @@ export function PostsPage() {
           ) : !profile.data.posts.length ? (
             <Empty>Hali post yozmagansiz. Chapdagi shakl orqali birinchisini yozing.</Empty>
           ) : (
-            <ul className="my-posts">
-              {profile.data.posts.map((post) => (
-                <li key={post.id}>
-                  <MyPost post={post} />
-                </li>
-              ))}
-            </ul>
+            <MyPosts profileId={doctor.profileId} first={profile.data.posts} total={profile.data.postCount} />
           )}
         </Card>
       </div>
     </div>
+  )
+}
+
+/**
+ * Her posts: the few her page carries, then older ones a page at a time when she asks —
+ * the page used to stop at twenty with no way to reach the rest.
+ */
+function MyPosts({ profileId, first, total }: { profileId: string; first: CommunityPost[]; total: number }) {
+  const [asked, setAsked] = useState(false)
+  const more = useMoreDoctorPosts(profileId, first.length, asked)
+  const posts = uniqueRows([first, ...(more.data?.pages.map((page) => page.items) ?? [])], (post) => post.id)
+  // Before she asks, her post count says whether there is more; after, the last page does.
+  const hasMore = asked ? Boolean(more.hasNextPage) || more.isPending : first.length < total
+  const loading = asked && (more.isPending || more.isFetchingNextPage)
+
+  return (
+    <>
+      <ul className="my-posts">
+        {posts.map((post) => (
+          <li key={post.id}>
+            <MyPost post={post} />
+          </li>
+        ))}
+      </ul>
+      {more.isError && <ErrorNotice error={more.error} onRetry={() => void more.refetch()} />}
+      {hasMore && !more.isError && (
+        <div className="row" style={{ justifyContent: 'center', marginTop: 8 }}>
+          <button
+            type="button"
+            className="btn ghost small"
+            disabled={loading}
+            onClick={() => {
+              if (!asked) setAsked(true)
+              else void more.fetchNextPage()
+            }}
+          >
+            {loading && <Spinner />}
+            {loading ? 'Yuklanmoqda…' : 'Yana postlar'}
+          </button>
+        </div>
+      )}
+    </>
   )
 }
 

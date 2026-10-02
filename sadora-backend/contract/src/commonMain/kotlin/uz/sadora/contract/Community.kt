@@ -214,6 +214,15 @@ data class ConversationThread(
     val messages: List<DirectMessage> = emptyList(),
     val otherTyping: Boolean = false,
     val otherReadAt: Instant? = null,
+    /** Older lines exist before [messages]: `GET …/messages?before=<first id>` reads them. */
+    val hasMore: Boolean = false,
+)
+
+/** Older lines of a thread, oldest first, read upward from a line the phone already has. */
+@Serializable
+data class MessagePage(
+    val messages: List<DirectMessage> = emptyList(),
+    val hasMore: Boolean = false,
 )
 
 /** Opens a conversation with an alias, or finds the existing one, and sends the first line. */

@@ -26,6 +26,7 @@ import uz.sadora.contract.Limits
 import uz.sadora.contract.MessageImage
 import uz.sadora.contract.MessageImageUpload
 import uz.sadora.contract.MessageKind
+import uz.sadora.contract.MessagePage
 import uz.sadora.contract.NotificationCategory
 import uz.sadora.contract.NotificationStatus
 import uz.sadora.contract.ReportRequest
@@ -98,13 +99,19 @@ class MessagingService(
 
     // ---------------------------------------------------------------- reading
 
-    suspend fun conversations(userId: Uuid, scope: ConversationScope = ConversationScope.ALL): List<Conversation> {
+    /**
+     * Her threads, most recently written first, [limit] at a time. The next page is the
+     * threads last written before [before] — the `lastMessageAt` of the last one she has.
+     */
+    suspend fun conversations(
+        userId: Uuid,
+        scope: ConversationScope = ConversationScope.ALL,
+        limit: Int = MAX_THREADS,
+        before: Instant? = null,
+    ): List<Conversation> {
         community.openIdentity(userId)
         val myDoctor = doctors?.byUser(userId)
-        // A paid consultation's row exists from its checkout; until the money arrives
-        // there is nothing in it for either side to see.
-        val threads = messages.conversationsOf(userId, MAX_THREADS, scope, myDoctor?.id)
-            .filter { !it.isConsultation || it.openedAt != null }
+        val threads = messages.conversationsOf(userId, limit.coerceIn(1, MAX_THREADS), scope, myDoctor?.id, before)
         if (threads.isEmpty()) return emptyList()
         val view = viewFor(userId, threads)
         val last = messages.lastMessages(threads.map { it.id })
@@ -120,11 +127,11 @@ class MessagingService(
     }
 
     /** Opens the thread and marks it read: what is on screen has been seen. */
-    suspend fun thread(userId: Uuid, conversationId: Uuid): ConversationThread {
+    suspend fun thread(userId: Uuid, conversationId: Uuid, limit: Int = MAX_MESSAGES): ConversationThread {
         community.openIdentity(userId)
         val thread = requireParticipant(userId, conversationId)
         val other = thread.other(userId)
-        val lines = messages.messagesOf(conversationId, MAX_MESSAGES)
+        val (lines, hasMore) = messages.messagesOf(conversationId, limit.coerceIn(1, MAX_MESSAGES))
         messages.markRead(thread, userId)
         val otherReadAt = thread.readAt(other)
         return ConversationThread(
@@ -137,7 +144,22 @@ class MessagingService(
             messages = lines.map { it.toDto(userId, otherReadAt) },
             otherTyping = cache?.get(typingKey(conversationId, other)) != null,
             otherReadAt = otherReadAt,
+            hasMore = hasMore,
         )
+    }
+
+    /**
+     * The lines written before [beforeId], scrolling up a long thread. Reads only: what
+     * is on screen was marked read when the thread was opened.
+     */
+    suspend fun olderMessages(userId: Uuid, conversationId: Uuid, beforeId: Uuid, limit: Int): MessagePage {
+        community.openIdentity(userId)
+        val thread = requireParticipant(userId, conversationId)
+        val anchor = messages.messageById(beforeId)?.takeIf { it.conversationId == conversationId }
+            ?: throw NotFoundException("Xabar topilmadi")
+        val (lines, hasMore) = messages.messagesOf(conversationId, limit.coerceIn(1, MAX_MESSAGES), before = anchor)
+        val otherReadAt = thread.readAt(thread.other(userId))
+        return MessagePage(lines.map { it.toDto(userId, otherReadAt) }, hasMore)
     }
 
     // ---------------------------------------------------------------- starting

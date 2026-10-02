@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
-import { useAddDoctorPayout, useDoctorEarnings, useDoctorQuality } from '../api/hooks'
-import type { AdminDoctorQuality } from '../api/types'
+import { useAddDoctorPayout, useDoctorEarnings, useDoctorQuality, useMoreDoctorEarnings } from '../api/hooks'
+import type { AdminDoctorQuality, DoctorPayoutView, EarningLine } from '../api/types'
 import { useAuth } from '../auth/AuthContext'
 import { useToast } from '../components/toast'
 import { Card, Empty, ErrorNotice, Field, formatDate, formatDateTime, Loading, Spinner } from '../components/ui'
@@ -17,18 +17,22 @@ import type { QualitySort, QualitySortKey } from './consultations'
 import { doctorStatusLabels, specialtyLabels } from './doctorReview'
 
 const NOTE_MAX = 500
+const QUALITY_PAGE = 50
 
 // ---------------------------------------------------------------- quality table
 
 /**
- * Every approved or suspended doctor side by side: how fast she answers, how many she
- * leaves unanswered, how she is rated, and where her money stands. A click opens her
- * card on the Doctors page, where payouts are recorded.
+ * The approved and suspended doctors side by side, a page at a time: how fast she
+ * answers, how many she leaves unanswered, how she is rated, and where her money stands.
+ * The server pages the busiest this month first; the column headers sort the page on
+ * screen. A click opens her card on the Doctors page, where payouts are recorded.
  */
 export function DoctorQualityTable({ onOpen }: { onOpen: (doctor: AdminDoctorQuality) => void }) {
-  const quality = useDoctorQuality()
+  const [offset, setOffset] = useState(0)
+  const quality = useDoctorQuality(QUALITY_PAGE, offset)
   const [sort, setSort] = useState<QualitySort>({ key: 'consultationsMonth', descending: true })
-  const rows = useMemo(() => (quality.data ? sortQuality(quality.data, sort) : []), [quality.data, sort])
+  const page = quality.data
+  const rows = useMemo(() => (page ? sortQuality(page.items, sort) : []), [page, sort])
 
   const head = (key: QualitySortKey, label: string, right = false) => {
     const active = sort.key === key
@@ -137,9 +141,33 @@ export function DoctorQualityTable({ onOpen }: { onOpen: (doctor: AdminDoctorQua
               </tbody>
             </table>
           </div>
+          {page && page.total > page.items.length && (
+            <div className="row" style={{ justifyContent: 'space-between', marginTop: 12 }}>
+              <span className="faint">
+                {offset + 1}–{offset + page.items.length} / {page.total}
+              </span>
+              <div className="row">
+                <button
+                  className="btn small"
+                  disabled={offset === 0}
+                  onClick={() => setOffset(Math.max(0, offset - QUALITY_PAGE))}
+                >
+                  Oldingi
+                </button>
+                <button
+                  className="btn small"
+                  disabled={offset + page.items.length >= page.total}
+                  onClick={() => setOffset(offset + QUALITY_PAGE)}
+                >
+                  Keyingi
+                </button>
+              </div>
+            </div>
+          )}
           <p className="faint" style={{ marginBottom: 0 }}>
             Oy — shu oydagi konsultatsiyalar. Sof — Sadora ulushidan keyin shifokorga tegishli summa; qoldiq —
-            undan hali to'lanmagani. Shifokor kartasini ochish uchun qatorni bosing.
+            undan hali to'lanmagani. Sahifalar shu oyda eng ko'p konsultatsiya qilganlardan boshlanadi; ustun
+            sarlavhasi shu sahifani saralaydi. Shifokor kartasini ochish uchun qatorni bosing.
           </p>
         </>
       )}
@@ -158,12 +186,11 @@ export function EarningsSection({ doctorId }: { doctorId: string }) {
   const { session } = useAuth()
   const allowed = canManageMoney(session?.role)
   const earnings = useDoctorEarnings(doctorId, allowed)
-  const [showAll, setShowAll] = useState(false)
+  const data = earnings.data
+  const lines = useEarningsList<EarningLine>(doctorId, 'lines', data?.lines, data?.linesTotal, (line) => line.sessionId)
+  const payouts = useEarningsList<DoctorPayoutView>(doctorId, 'payouts', data?.payouts, data?.payoutsTotal, (payout) => payout.id)
 
   if (!allowed) return null
-
-  const data = earnings.data
-  const lines = data ? (showAll ? data.lines : data.lines.slice(0, 8)) : []
 
   return (
     <>
@@ -189,37 +216,40 @@ export function EarningsSection({ doctorId }: { doctorId: string }) {
           <PayoutForm doctorId={doctorId} balanceMinor={data.balanceMinor} />
 
           <h3 style={{ marginTop: 16, marginBottom: 6 }}>To'lovlar tarixi</h3>
-          {data.payouts.length === 0 ? (
+          {payouts.shown.length === 0 ? (
             <p className="faint" style={{ margin: 0 }}>
               Hali to'lov qilinmagan.
             </p>
           ) : (
-            <div className="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Sana</th>
-                    <th style={{ textAlign: 'right' }}>Summa</th>
-                    <th>Izoh</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.payouts.map((payout) => (
-                    <tr key={payout.id}>
-                      <td className="faint" style={{ whiteSpace: 'nowrap' }}>
-                        {formatDateTime(payout.paidAt)}
-                      </td>
-                      <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>{formatSom(payout.amountMinor)}</td>
-                      <td className="muted">{payout.note || '—'}</td>
+            <>
+              <div className="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Sana</th>
+                      <th style={{ textAlign: 'right' }}>Summa</th>
+                      <th>Izoh</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {payouts.shown.map((payout) => (
+                      <tr key={payout.id}>
+                        <td className="faint" style={{ whiteSpace: 'nowrap' }}>
+                          {formatDateTime(payout.paidAt)}
+                        </td>
+                        <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>{formatSom(payout.amountMinor)}</td>
+                        <td className="muted">{payout.note || '—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <MoreRows list={payouts} />
+            </>
           )}
 
           <h3 style={{ marginTop: 16, marginBottom: 6 }}>Pullik konsultatsiyalar</h3>
-          {data.lines.length === 0 ? (
+          {lines.shown.length === 0 ? (
             <p className="faint" style={{ margin: 0 }}>
               Pullik konsultatsiya bo'lmagan.
             </p>
@@ -237,7 +267,7 @@ export function EarningsSection({ doctorId }: { doctorId: string }) {
                     </tr>
                   </thead>
                   <tbody>
-                    {lines.map((line) => {
+                    {lines.shown.map((line) => {
                       const payment = paymentLabels[line.payment] ?? { text: line.payment, tone: 'free' }
                       return (
                         <tr key={line.sessionId}>
@@ -256,15 +286,73 @@ export function EarningsSection({ doctorId }: { doctorId: string }) {
                   </tbody>
                 </table>
               </div>
-              {data.lines.length > lines.length || showAll ? (
-                <button className="btn ghost small" style={{ marginTop: 8 }} onClick={() => setShowAll(!showAll)}>
-                  {showAll ? 'Kamroq' : `Hammasi (${data.lines.length})`}
-                </button>
-              ) : null}
+              <MoreRows list={lines} />
             </>
           )}
         </>
       ) : null}
+    </>
+  )
+}
+
+/** The card shows this many consultations until "more" is asked for. */
+const LINES_PREVIEW = 8
+
+/**
+ * One list of the card — consultations or payouts: the first page the totals came with,
+ * then the pages asked for since, each row once (a payout recorded in between shifts the
+ * offsets). [preview] keeps the card short until the first "more".
+ */
+function useEarningsList<T extends EarningLine | DoctorPayoutView>(
+  doctorId: string,
+  list: 'lines' | 'payouts',
+  first: T[] | undefined,
+  total: number | undefined,
+  keyOf: (item: T) => string,
+  preview = list === 'lines' ? LINES_PREVIEW : Infinity,
+) {
+  const [asked, setAsked] = useState(false)
+  const [expanded, setExpanded] = useState(false)
+  const firstPage = first ?? []
+  const more = useMoreDoctorEarnings<T>(doctorId, list, firstPage.length, asked)
+  const rows: T[] = []
+  const seen = new Set<string>()
+  for (const item of [firstPage, ...(more.data?.pages.map((page) => page.items) ?? [])].flat()) {
+    if (!seen.has(keyOf(item))) {
+      seen.add(keyOf(item))
+      rows.push(item)
+    }
+  }
+  // Before the first fetch the totals' count says whether the server has more; after, the last page does.
+  const serverHasMore = asked ? Boolean(more.hasNextPage) || more.isPending : firstPage.length < (total ?? 0)
+  const shown = expanded ? rows : rows.slice(0, preview)
+  return {
+    shown,
+    total: Math.max(total ?? 0, rows.length),
+    hasMore: shown.length < rows.length || serverHasMore,
+    loading: asked && (more.isPending || more.isFetchingNextPage),
+    error: more.error,
+    loadMore: () => {
+      setExpanded(true)
+      // What is already here is shown first; the server is asked only past it.
+      if (shown.length < rows.length) return
+      if (!asked) setAsked(true)
+      else if (more.data) void more.fetchNextPage()
+      else void more.refetch()
+    },
+  }
+}
+
+function MoreRows({ list }: { list: ReturnType<typeof useEarningsList> }) {
+  return (
+    <>
+      {list.error && <ErrorNotice error={list.error} />}
+      {list.hasMore && (
+        <button className="btn ghost small" style={{ marginTop: 8 }} disabled={list.loading} onClick={list.loadMore}>
+          {list.loading && <Spinner />}
+          {list.loading ? 'Yuklanmoqda…' : `Ko'proq (${list.shown.length} / ${list.total})`}
+        </button>
+      )}
     </>
   )
 }

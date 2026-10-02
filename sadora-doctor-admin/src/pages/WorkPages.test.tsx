@@ -230,6 +230,48 @@ describe('Daromad', () => {
     expect(within(payouts!).getByText('Sentyabr, 1-qism').closest('tr')).toHaveTextContent("40 000 so'm")
   })
 
+  it('brings the consultations past the first page when she asks, each once', async () => {
+    const line = (id: string, name: string) => ({
+      sessionId: id,
+      patientName: name,
+      openedAt: '2026-09-20T09:00:00Z',
+      priceMinor: 5_000_000,
+      commissionMinor: 750_000,
+      netMinor: 4_250_000,
+      payment: 'paid' as const,
+    })
+    const api = mockApi({
+      ...base,
+      'GET /v1/doctor/earnings': {
+        currency: 'UZS',
+        grossMinor: 15_000_000,
+        commissionMinor: 2_250_000,
+        netMinor: 12_750_000,
+        paidOutMinor: 0,
+        balanceMinor: 12_750_000,
+        refundDueMinor: 0,
+        lines: [line('s1', 'Malika Rahimova'), line('s2', 'Nodira Aliyeva')],
+        payouts: [],
+        linesTotal: 3,
+        payoutsTotal: 0,
+      } satisfies DoctorEarnings,
+      // A line paid in between shifts the offsets: s2 comes again and is shown once.
+      'GET /v1/doctor/earnings/lines': { items: [line('s2', 'Nodira Aliyeva'), line('s3', 'Zarina Tosheva')], total: 4, limit: 50, offset: 2 },
+    })
+    open('/earnings')
+
+    expect(await screen.findByText('Malika Rahimova')).toBeInTheDocument()
+    expect(screen.queryByText('Zarina Tosheva')).not.toBeInTheDocument()
+    expect(api.callsTo('GET', '/v1/doctor/earnings/lines')).toHaveLength(0)
+
+    await userEvent.click(screen.getByRole('button', { name: "Ko'proq ko'rsatish" }))
+
+    expect(await screen.findByText('Zarina Tosheva')).toBeInTheDocument()
+    expect(screen.getAllByText('Nodira Aliyeva')).toHaveLength(1)
+    expect(api.callsTo('GET', '/v1/doctor/earnings/lines')[0]!.search.get('offset')).toBe('2')
+    await waitFor(() => expect(screen.queryByRole('button', { name: "Ko'proq ko'rsatish" })).not.toBeInTheDocument())
+  })
+
   it('has words for no paid consultations yet', async () => {
     mockApi({
       ...base,

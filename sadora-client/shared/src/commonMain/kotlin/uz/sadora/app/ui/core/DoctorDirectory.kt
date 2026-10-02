@@ -58,6 +58,7 @@ import uz.sadora.app.model.hasEnoughRatings
 import uz.sadora.app.model.specialtiesIn
 import uz.sadora.app.ui.components.EmptyState
 import uz.sadora.app.ui.components.ErrorStrip
+import uz.sadora.app.ui.components.LoadMoreRow
 import uz.sadora.app.ui.components.SadoraCard
 import uz.sadora.app.ui.components.SadoraTopBar
 import uz.sadora.app.ui.components.ScreenContent
@@ -89,6 +90,11 @@ fun DoctorDirectoryScreen(
     // A list already in hand (from Bugun or the chat) is shown at once and refreshed
     // behind it; only a first read may put an error in her way.
     LaunchedEffect(doctors) { doctors.loadDirectory(quiet = doctors.directory.isNotEmpty()) }
+    // The list arrives a page at a time in the server's order. A filter or another order
+    // is over every doctor, so choosing one reads the rest first.
+    LaunchedEffect(doctors.directoryFilter, doctors.directorySort, doctors.directoryLoaded) {
+        if (doctors.directoryFilter.isActive || doctors.directorySort != DoctorSort.Recommended) doctors.loadWholeDirectory()
+    }
     val reload: () -> Unit = { scope.launch { doctors.loadDirectory() } }
 
     val all = doctors.directory
@@ -115,6 +121,10 @@ fun DoctorDirectoryScreen(
                 onAction = {},
                 glyph = "🩺",
             )
+            // Nobody matches yet, but the rest of the list is still on its way.
+            shown.isEmpty() && doctors.directoryHasMore -> ScreenContent {
+                item(key = "more") { LoadMoreRow(all.size, onLoadMore = { doctors.loadMoreDirectory() }) }
+            }
             shown.isEmpty() -> EmptyState(
                 title = d.filteredEmpty,
                 body = d.filteredEmptyBody,
@@ -127,6 +137,9 @@ fun DoctorDirectoryScreen(
                 items(shown.size, key = { shown[it].id }) { index ->
                     val doctor = shown[index]
                     DoctorListCard(doctor, onClick = { onOpenDoctor(doctor.id) })
+                }
+                if (doctors.directoryHasMore) {
+                    item(key = "more") { LoadMoreRow(all.size, onLoadMore = { doctors.loadMoreDirectory() }) }
                 }
             }
         }

@@ -25,6 +25,8 @@ const stateClass: Record<PaymentState, string> = {
   failed: 'badge danger',
 }
 
+const PAGE_SIZE = 50
+
 /** Tiyin to "299 000 so'm" — the panel never shows a minor unit to a person. */
 function sum(minor: number): string {
   const whole = Math.round(minor / 100)
@@ -41,9 +43,11 @@ function sum(minor: number): string {
 export function BillingPage() {
   const [days, setDays] = useState(30)
   const [state, setState] = useState<PaymentState | undefined>(undefined)
+  const [offset, setOffset] = useState(0)
   const summary = useBillingSummary(days)
   const plans = useBillingPlans()
-  const payments = usePayments(state)
+  const payments = usePayments(state, PAGE_SIZE, offset)
+  const page = payments.data
 
   return (
     <div className="grid" style={{ gap: 16 }}>
@@ -146,7 +150,11 @@ export function BillingPage() {
               <button
                 key={option ?? 'all'}
                 className={option === state ? 'active' : undefined}
-                onClick={() => setState(option as PaymentState | undefined)}
+                onClick={() => {
+                  // A new filter is a new list; page 3 of "all" means nothing for "failed".
+                  setState(option as PaymentState | undefined)
+                  setOffset(0)
+                }}
               >
                 {option ? stateLabels[option] : 'Barchasi'}
               </button>
@@ -155,8 +163,9 @@ export function BillingPage() {
         }
       >
         <ErrorNotice error={payments.error} />
-        {payments.data && payments.data.length === 0 && <Empty>To'lov topilmadi.</Empty>}
-        {payments.data && payments.data.length > 0 && (
+        {page && page.items.length === 0 && <Empty>To'lov topilmadi.</Empty>}
+        {page && page.items.length > 0 && (
+          <>
           <table>
             <thead>
               <tr>
@@ -170,7 +179,7 @@ export function BillingPage() {
               </tr>
             </thead>
             <tbody>
-              {payments.data.map((payment) => (
+              {page.items.map((payment) => (
                 <tr key={payment.id}>
                   <td className="faint">{formatDateTime(payment.paidAt ?? payment.createdAt)}</td>
                   <td>{providerLabels[payment.provider]}</td>
@@ -187,6 +196,25 @@ export function BillingPage() {
               ))}
             </tbody>
           </table>
+
+          <div className="row" style={{ justifyContent: 'space-between', marginTop: 12 }}>
+            <span className="faint">
+              {offset + 1}–{offset + page.items.length} / {page.total}
+            </span>
+            <div className="row">
+              <button className="btn small" disabled={offset === 0} onClick={() => setOffset(Math.max(0, offset - PAGE_SIZE))}>
+                Oldingi
+              </button>
+              <button
+                className="btn small"
+                disabled={offset + page.items.length >= page.total}
+                onClick={() => setOffset(offset + PAGE_SIZE)}
+              >
+                Keyingi
+              </button>
+            </div>
+          </div>
+          </>
         )}
       </Card>
     </div>

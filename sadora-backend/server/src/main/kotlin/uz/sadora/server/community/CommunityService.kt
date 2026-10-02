@@ -130,6 +130,18 @@ class CommunityService(
         )
     }
 
+    /**
+     * An alias's posts past the [PROFILE_POSTS] her page carries: the page is unchanged
+     * for builds that never ask, and scrolling to its end reads on from here.
+     */
+    suspend fun profilePosts(viewer: Uuid, alias: String, limit: Int, offset: Long): Page<CommunityPost> {
+        requireOpen(viewer)
+        val identity = repository.identityByAlias(alias) ?: throw NotFoundException("Taxallus topilmadi")
+        val page = limit.coerceIn(1, MAX_PROFILE_POSTS)
+        val posts = repository.postsBy(identity.userId, page, offset)
+        return Page(project(viewer, posts), repository.postCountBy(identity.userId), page, offset.toInt())
+    }
+
     suspend fun setBlocked(viewer: Uuid, alias: String, blocked: Boolean): BlockState {
         requireOpen(viewer)
         val identity = repository.identityByAlias(alias) ?: throw NotFoundException("Taxallus topilmadi")
@@ -231,17 +243,17 @@ class CommunityService(
 
     // ---------------------------------------------------------------- comments
 
-    suspend fun comments(userId: Uuid, postId: Uuid): List<CommunityComment> {
+    /** A page of a post's comments; the phone asks for the next one by [offset] as it scrolls. */
+    suspend fun comments(userId: Uuid, postId: Uuid, limit: Int = MAX_COMMENTS, offset: Long = 0): List<CommunityComment> {
         requireOpen(userId)
         requireVisiblePost(postId)
-        val comments = repository.commentsOf(postId)
+        val comments = repository.commentsOf(postId, limit.coerceIn(1, MAX_COMMENTS), offset)
         val identities = repository.identitiesFor(comments.filter { it.doctorId == null }.map { it.userId })
         val bylines = repository.doctorBylines(comments.mapNotNull { it.doctorId })
         val badges = badgesFor(comments.filter { it.doctorId == null }.map { it.userId })
-        // A doctor's answer is the one the asker came for, so answers lead the thread;
-        // each group keeps its own order.
+        // A doctor's answer is the one the asker came for, so answers lead the thread —
+        // the repository orders them so, across pages.
         return comments
-            .sortedBy { if (it.doctorId != null) 0 else 1 }
             .map { comment ->
                 val byline = comment.doctorId?.let { bylines[it] }
                 if (byline != null) {
@@ -314,7 +326,7 @@ class CommunityService(
                 experienceYears = doctor.experienceYears,
                 answerCount = activity[doctor.id]?.second ?: 0,
             )
-        }.sortedByDescending { it.answerCount }
+        }.sortedWith(compareByDescending<DoctorListItem> { it.answerCount }.thenBy { it.id })
     }
 
     /** A verified doctor's public page. A pending or suspended one is not there. */
@@ -344,14 +356,24 @@ class CommunityService(
         )
     }
 
+    /** A doctor's posts past the [PROFILE_POSTS] her page carries, a page at a time. */
+    suspend fun doctorPosts(viewer: Uuid, doctorId: Uuid, limit: Int, offset: Long): Page<CommunityPost> {
+        requireOpen(viewer)
+        val doctor = doctors?.byId(doctorId)?.takeIf { it.status == uz.sadora.contract.DoctorStatus.APPROVED }
+            ?: throw NotFoundException("Shifokor topilmadi")
+        val page = limit.coerceIn(1, MAX_PROFILE_POSTS)
+        val posts = repository.doctorPosts(doctor.id, page, offset)
+        return Page(project(viewer, posts), repository.doctorPostCount(doctor.id), page, offset.toInt())
+    }
+
     /**
      * The doctor panel's work list: recent questions nobody with a check mark has
      * answered yet. Only an approved doctor may ask for it.
      */
-    suspend fun doctorQuestions(viewer: Uuid, topic: CommunityTopic?, limit: Int): List<CommunityPost> {
+    suspend fun doctorQuestions(viewer: Uuid, topic: CommunityTopic?, limit: Int, offset: Long = 0): List<CommunityPost> {
         requireOpen(viewer)
         repository.approvedDoctorOf(viewer) ?: throw ForbiddenException(message = "Faqat tasdiqlangan shifokorlar uchun")
-        return project(viewer, repository.unansweredQuestions(topic, now() - QUESTION_WINDOW_DAYS.days, limit))
+        return project(viewer, repository.unansweredQuestions(topic, now() - QUESTION_WINDOW_DAYS.days, limit, offset))
     }
 
     // ---------------------------------------------------------------- reactions
@@ -479,12 +501,21 @@ class CommunityService(
         const val MAX_POSTS_PER_DAY = 10
         const val MAX_COMMENTS_PER_DAY = 60
         const val MAX_DOCTOR_COMMENTS_PER_DAY = 300
+        /** One page of comments; also what a phone that sends no limit gets. */
+        const val MAX_COMMENTS = 200
         const val QUESTION_WINDOW_DAYS = 30
         const val PUSH_PREVIEW = 120
         const val AUTO_HIDE_REPORTS = 5
         const val AUTO_HIDE_REASON = "auto_reports"
         const val FALLBACK_ALIAS = "Anonim"
         const val PROFILE_POSTS = 20
+        /** The most one page of a profile's posts may hold. */
+        const val MAX_PROFILE_POSTS = 50
+        /**
+         * The directory a build that sends no limit gets: the whole list, as it always
+         * had, under a ceiling generous enough never to bite while doctors number hundreds.
+         */
+        const val DIRECTORY_MAX = 500
         private const val MAX_ALIAS_ATTEMPTS = 12
     }
 }

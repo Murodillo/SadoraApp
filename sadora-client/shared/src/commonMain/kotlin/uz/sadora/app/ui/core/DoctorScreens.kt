@@ -43,6 +43,7 @@ import uz.sadora.app.model.AppState
 import uz.sadora.app.model.CommunityPost
 import uz.sadora.app.model.Fmt
 import uz.sadora.app.ui.components.ErrorStrip
+import uz.sadora.app.ui.components.LoadMoreRow
 import uz.sadora.app.ui.components.SadoraCard
 import uz.sadora.app.ui.components.SadoraTopBar
 import uz.sadora.app.ui.components.ScreenContent
@@ -106,6 +107,7 @@ fun DoctorProfileScreen(
     }
     val profile = doctors.profile?.takeIf { it.id == doctorId }
     val reviews = doctors.reviews.takeIf { doctors.reviewsFor == doctorId }.orEmpty()
+    var allReviews by remember(doctorId) { mutableStateOf(false) }
 
     Column(modifier) {
         SadoraTopBar(d.profileTitle, onBack = onClose)
@@ -139,8 +141,19 @@ fun DoctorProfileScreen(
                 }
             }
             if (reviews.isNotEmpty()) {
-                item { SectionHeader(d.reviewsTitle) }
-                item { ReviewsCard(reviews.take(MaxReviewsShown)) }
+                // A few at first; "Hammasi" opens every one, read on a page at a time.
+                val folded = !allReviews && (reviews.size > MaxReviewsShown || doctors.reviewsHasMore)
+                item {
+                    SectionHeader(
+                        d.reviewsTitle,
+                        action = d.seeAll.takeIf { folded },
+                        onAction = { allReviews = true },
+                    )
+                }
+                item { ReviewsCard(if (allReviews) reviews else reviews.take(MaxReviewsShown)) }
+                if (allReviews && doctors.reviewsHasMore) {
+                    item(key = "more-reviews") { LoadMoreRow(reviews.size, onLoadMore = { doctors.loadMoreReviews() }) }
+                }
             }
             item { Text(d.disclaimer, style = Sadora.type.caption.copy(letterSpacing = TextUnit.Unspecified), color = c.muted2) }
             item { SectionHeader(d.herPosts) }
@@ -163,6 +176,9 @@ fun DoctorProfileScreen(
                         onShare = { share("${post.body}\n\n" + t.shareSuffix) },
                         onMore = { onOpenMenu(post) },
                     )
+                }
+                if (doctors.profilePostsHasMore) {
+                    item(key = "more-posts") { LoadMoreRow(posts.size, onLoadMore = { doctors.loadMoreProfilePosts() }) }
                 }
             }
         }
@@ -491,7 +507,7 @@ private fun ReviewsCard(reviews: List<DoctorReview>) {
     }
 }
 
-/** How many reviews her page shows; the server sends a few more than fit. */
+/** How many reviews her page shows before "Hammasi" opens the rest. */
 private const val MaxReviewsShown = 5
 
 @Composable

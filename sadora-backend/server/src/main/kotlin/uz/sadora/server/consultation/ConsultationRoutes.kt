@@ -20,6 +20,7 @@ import io.ktor.server.routing.route
 import uz.sadora.contract.Ack
 import uz.sadora.contract.ConsultationCheckoutRequest
 import uz.sadora.contract.ConsultationPayment
+import uz.sadora.contract.DoctorEarnings
 import uz.sadora.contract.RateConsultationRequest
 import uz.sadora.contract.SavePatientNoteRequest
 import uz.sadora.contract.SaveQuickReplyRequest
@@ -81,8 +82,17 @@ fun Route.consultationRoutes(consultations: ConsultationService) {
             get("/stats") {
                 call.respond(consultations.stats(call.requireUserId()))
             }
+            /** The totals and the first page of lines and payouts; the rest by offset below. */
             get("/earnings") {
                 call.respond(consultations.earnings(call.requireUserId()))
+            }
+            get("/earnings/lines") {
+                val (limit, offset) = call.earningsPage()
+                call.respond(consultations.earningLines(call.requireUserId(), limit, offset))
+            }
+            get("/earnings/payouts") {
+                val (limit, offset) = call.earningsPage()
+                call.respond(consultations.payouts(call.requireUserId(), limit, offset))
             }
         }
 
@@ -97,7 +107,13 @@ fun Route.consultationRoutes(consultations: ConsultationService) {
             }
             get("/reviews") {
                 call.requireUserId()
-                call.respond(consultations.reviews(call.uuid("id")))
+                call.respond(
+                    consultations.reviews(
+                        doctorId = call.uuid("id"),
+                        limit = call.intParameter("limit", default = ConsultationService.MAX_REVIEWS, max = ConsultationService.MAX_REVIEWS),
+                        offset = call.intParameter("offset", default = 0, max = Int.MAX_VALUE).toLong(),
+                    ),
+                )
             }
         }
 
@@ -178,11 +194,26 @@ fun Route.adminConsultationRoutes(consultations: ConsultationService) {
         route("/admin/doctors") {
             get("/quality") {
                 call.requireAdminRole(AdminRole.OWNER, AdminRole.ADMIN, AdminRole.SUPPORT)
-                call.respond(consultations.quality())
+                call.respond(
+                    consultations.quality(
+                        limit = call.intParameter("limit", default = ConsultationService.QUALITY_PAGE, max = ConsultationService.MAX_QUALITY_PAGE),
+                        offset = call.intParameter("offset", default = 0, max = Int.MAX_VALUE).toLong(),
+                    ),
+                )
             }
             get("/{id}/earnings") {
                 call.requireAdminRole(AdminRole.OWNER, AdminRole.ADMIN)
                 call.respond(consultations.adminEarnings(call.uuid("id")))
+            }
+            get("/{id}/earnings/lines") {
+                call.requireAdminRole(AdminRole.OWNER, AdminRole.ADMIN)
+                val (limit, offset) = call.earningsPage()
+                call.respond(consultations.adminEarningLines(call.uuid("id"), limit, offset))
+            }
+            get("/{id}/earnings/payouts") {
+                call.requireAdminRole(AdminRole.OWNER, AdminRole.ADMIN)
+                val (limit, offset) = call.earningsPage()
+                call.respond(consultations.adminPayouts(call.uuid("id"), limit, offset))
             }
             post("/{id}/payouts") {
                 val admin = call.requireAdminRole(AdminRole.OWNER, AdminRole.ADMIN)
@@ -194,6 +225,11 @@ fun Route.adminConsultationRoutes(consultations: ConsultationService) {
 }
 
 private fun ApplicationCall.uuid(name: String) = parseUuid(parameters[name].orEmpty(), name)
+
+/** `limit` and `offset` for a page of earnings lines or payouts. */
+private fun ApplicationCall.earningsPage(): Pair<Int, Long> =
+    intParameter("limit", default = DoctorEarnings.PAGE, max = ConsultationService.MAX_EARNINGS_PAGE) to
+        intParameter("offset", default = 0, max = Int.MAX_VALUE).toLong()
 
 /**
  * The host the app reached us on, as the tunnel and Caddy pass it along: the development

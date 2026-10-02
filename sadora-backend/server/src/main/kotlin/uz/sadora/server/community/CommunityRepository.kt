@@ -262,17 +262,25 @@ class CommunityRepository {
      * Her visible alias posts, newest first, for the profile page. What she wrote as a
      * doctor is left out: on her alias page it would put her name next to her alias.
      */
-    suspend fun postsBy(userId: Uuid, limit: Int): List<PostRecord> = dbQuery {
+    suspend fun postsBy(userId: Uuid, limit: Int, offset: Long = 0): List<PostRecord> = dbQuery {
         CommunityPosts.selectAll()
-            .where {
-                (CommunityPosts.userId eq userId) and
-                    (CommunityPosts.status eq ContentStatus.VISIBLE.dbValue()) and
-                    CommunityPosts.doctorId.isNull()
-            }
-            .orderBy(CommunityPosts.createdAt to SortOrder.DESC)
+            .where { aliasPostsOf(userId) }
+            // The id breaks a tie in the time, so a page boundary never repeats or skips one.
+            .orderBy(CommunityPosts.createdAt to SortOrder.DESC, CommunityPosts.id to SortOrder.DESC)
             .limit(limit)
+            .offset(offset)
             .map { it.toPost() }
     }
+
+    /** How many posts [postsBy] can page through. */
+    suspend fun postCountBy(userId: Uuid): Long = dbQuery {
+        CommunityPosts.selectAll().where { aliasPostsOf(userId) }.count()
+    }
+
+    private fun aliasPostsOf(userId: Uuid): Op<Boolean> =
+        (CommunityPosts.userId eq userId) and
+            (CommunityPosts.status eq ContentStatus.VISIBLE.dbValue()) and
+            CommunityPosts.doctorId.isNull()
 
     // ---------------------------------------------------------------- blocks
 
@@ -394,10 +402,20 @@ class CommunityRepository {
 
     // ---------------------------------------------------------------- comments
 
-    suspend fun commentsOf(postId: Uuid): List<CommentRecord> = dbQuery {
+    /**
+     * A page of a post's comments: doctors' answers first, then everyone else, each group
+     * oldest first. Ordered here and not after the read, so the pages line up.
+     */
+    suspend fun commentsOf(postId: Uuid, limit: Int, offset: Long): List<CommentRecord> = dbQuery {
         CommunityComments.selectAll()
             .where { (CommunityComments.postId eq postId) and readerVisibleComment() }
-            .orderBy(CommunityComments.createdAt to SortOrder.ASC)
+            .orderBy(
+                CommunityComments.doctorId.isNull() to SortOrder.ASC,
+                CommunityComments.createdAt to SortOrder.ASC,
+                CommunityComments.id to SortOrder.ASC,
+            )
+            .limit(limit)
+            .offset(offset)
             .map { it.toComment() }
     }
 
@@ -667,12 +685,23 @@ class CommunityRepository {
         } to total
     }
 
-    suspend fun commentsForModeration(postId: Uuid): List<ModerationCommentRow> = dbQuery {
-        val comments = CommunityComments.selectAll()
-            .where { CommunityComments.postId eq postId }
-            .orderBy(CommunityComments.createdAt to SortOrder.ASC)
+    /**
+     * One page of a post's thread, oldest first as it reads in the app, with the thread's
+     * size. The id breaks createdAt ties so "load more" never repeats or skips a comment.
+     */
+    suspend fun commentsForModeration(
+        postId: Uuid,
+        limit: Int,
+        offset: Long,
+    ): Pair<List<ModerationCommentRow>, Long> = dbQuery {
+        val query = CommunityComments.selectAll().where { CommunityComments.postId eq postId }
+        val total = query.count()
+        val comments = query
+            .orderBy(CommunityComments.createdAt to SortOrder.ASC, CommunityComments.id to SortOrder.ASC)
+            .limit(limit)
+            .offset(offset)
             .map { it.toComment() }
-        if (comments.isEmpty()) return@dbQuery emptyList()
+        if (comments.isEmpty()) return@dbQuery emptyList<ModerationCommentRow>() to total
         val identities = identitiesIn(comments.map { it.userId })
         val doctorNames = doctorNamesIn(comments.mapNotNull { it.doctorId })
         val reports = openReportCounts(CommunityReports.commentId, comments.map { it.id })
@@ -691,7 +720,7 @@ class CommunityRepository {
                 openReports = reports[comment.id] ?: 0,
                 byDoctor = comment.doctorId != null,
             )
-        }
+        } to total
     }
 
     private fun openReportCounts(column: Column<Uuid?>, ids: List<Uuid>): Map<Uuid, Int> {
@@ -863,13 +892,22 @@ class CommunityRepository {
             ?.toByline()
     }
 
-    suspend fun doctorPosts(doctorId: Uuid, limit: Int): List<PostRecord> = dbQuery {
+    suspend fun doctorPosts(doctorId: Uuid, limit: Int, offset: Long = 0): List<PostRecord> = dbQuery {
         CommunityPosts.selectAll()
-            .where { (CommunityPosts.doctorId eq doctorId) and (CommunityPosts.status eq ContentStatus.VISIBLE.dbValue()) }
-            .orderBy(CommunityPosts.createdAt to SortOrder.DESC)
+            .where { doctorPostsOf(doctorId) }
+            .orderBy(CommunityPosts.createdAt to SortOrder.DESC, CommunityPosts.id to SortOrder.DESC)
             .limit(limit)
+            .offset(offset)
             .map { it.toPost() }
     }
+
+    /** How many posts [doctorPosts] can page through. */
+    suspend fun doctorPostCount(doctorId: Uuid): Long = dbQuery {
+        CommunityPosts.selectAll().where { doctorPostsOf(doctorId) }.count()
+    }
+
+    private fun doctorPostsOf(doctorId: Uuid): Op<Boolean> =
+        (CommunityPosts.doctorId eq doctorId) and (CommunityPosts.status eq ContentStatus.VISIBLE.dbValue())
 
     /** Visible posts and distinct threads answered, per doctor. */
     suspend fun doctorActivity(doctorIds: Collection<Uuid>): Map<Uuid, Pair<Int, Int>> = dbQuery {
@@ -893,9 +931,10 @@ class CommunityRepository {
 
     /**
      * Questions still waiting for a doctor: visible alias posts since [since] that no
-     * doctor has answered, newest first. The doctor panel's work list.
+     * doctor has answered, newest first. The doctor panel's work list. The id breaks ties
+     * in time, so reading on by [offset] neither repeats nor skips a question.
      */
-    suspend fun unansweredQuestions(topic: CommunityTopic?, since: Instant, limit: Int): List<PostRecord> = dbQuery {
+    suspend fun unansweredQuestions(topic: CommunityTopic?, since: Instant, limit: Int, offset: Long = 0): List<PostRecord> = dbQuery {
         val answered = CommunityComments.select(CommunityComments.postId)
             .where { CommunityComments.doctorId.isNotNull() and (CommunityComments.status eq ContentStatus.VISIBLE.dbValue()) }
         var query = CommunityPosts.selectAll()
@@ -906,7 +945,10 @@ class CommunityRepository {
                     (CommunityPosts.id notInSubQuery answered)
             }
         topic?.let { query = query.andWhere { CommunityPosts.topic eq it.dbValue() } }
-        query.orderBy(CommunityPosts.createdAt to SortOrder.DESC).limit(limit).map { it.toPost() }
+        query.orderBy(CommunityPosts.createdAt to SortOrder.DESC, CommunityPosts.id to SortOrder.DESC)
+            .limit(limit)
+            .offset(offset)
+            .map { it.toPost() }
     }
 
     private fun doctorNamesIn(ids: Collection<Uuid>): Map<Uuid, String> {

@@ -61,6 +61,7 @@ import uz.sadora.doctor.i18n.strings
 import uz.sadora.doctor.ui.components.ButtonTone
 import uz.sadora.doctor.ui.components.CapturedPhoto
 import uz.sadora.doctor.ui.components.ChipFlowRow
+import uz.sadora.doctor.ui.components.LoadMoreRow
 import uz.sadora.doctor.ui.components.CircleIconButton
 import uz.sadora.doctor.ui.components.EmptyState
 import uz.sadora.doctor.ui.components.ErrorStrip
@@ -181,6 +182,9 @@ fun DoctorProfileScreen(
                 items(posts.size, key = { posts[it].id }) { index ->
                     val post = posts[index]
                     PostCard(post = post, onOpen = { onOpenPost(post.id) })
+                }
+                if (doctors.profilePostsHasMore) {
+                    item(key = "more") { LoadMoreRow(posts.size, onLoadMore = { doctors.loadMoreProfilePosts() }) }
                 }
             }
         }

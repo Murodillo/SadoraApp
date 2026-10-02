@@ -29,8 +29,15 @@ class NotificationApi(private val caller: ApiCaller) {
     ): ApiResult<NotificationSettings> =
         caller.authenticated("v1/notifications/settings", HttpMethodKind.PUT) { setBody(request) }
 
-    suspend fun history(limit: Int = 50): ApiResult<List<NotificationMessage>> =
-        caller.authenticated("v1/notifications/history?limit=$limit", HttpMethodKind.GET)
+    /** The newest [limit], or the [limit] queued before her notification [beforeId]. */
+    suspend fun history(limit: Int = HISTORY_PAGE, beforeId: String? = null): ApiResult<List<NotificationMessage>> {
+        val before = beforeId?.let { "&before=$it" }.orEmpty()
+        return caller.authenticated("v1/notifications/history?limit=$limit$before", HttpMethodKind.GET)
+    }
+
+    companion object {
+        const val HISTORY_PAGE = 50
+    }
 }
 
 /**

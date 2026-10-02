@@ -37,6 +37,7 @@ import io.ktor.http.content.TextContent
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.int
+import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.serializer
@@ -50,6 +51,7 @@ import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.TestInstance
 import uz.sadora.contract.AdminArticle
 import uz.sadora.contract.AdjustCoinsRequest
+import uz.sadora.contract.AdminRedemption
 import uz.sadora.contract.AiGreeting
 import uz.sadora.contract.AddWaterRequest
 import uz.sadora.contract.ClaimReferralRequest
@@ -96,6 +98,7 @@ import uz.sadora.contract.CommunityProfile
 import io.ktor.http.encodeURLPathPart
 import uz.sadora.contract.Conversation
 import uz.sadora.contract.ConversationThread
+import uz.sadora.contract.MessagePage
 import uz.sadora.contract.DirectMessage
 import uz.sadora.contract.SendMessageRequest
 import uz.sadora.contract.StartConversationRequest
@@ -161,6 +164,7 @@ import uz.sadora.server.admin.TotpEnrolment
 import uz.sadora.server.admin.AdminAnalytics
 import uz.sadora.server.admin.AdminStats
 import uz.sadora.server.auth.PasswordHasher
+import uz.sadora.server.billing.AdminPaymentView
 import uz.sadora.server.billing.BillingService
 import uz.sadora.server.community.CommunityBadges
 import uz.sadora.contract.DoctorAccount
@@ -173,6 +177,7 @@ import uz.sadora.contract.DoctorSpecialty
 import uz.sadora.contract.DoctorStatus
 import uz.sadora.contract.UpdateDoctorProfileRequest
 import uz.sadora.server.community.HideRequest
+import uz.sadora.server.community.ModerationCommentView
 import uz.sadora.server.community.ModerationPostView
 import uz.sadora.server.community.ModerationReportView
 import uz.sadora.server.community.ResolveReportRequest
@@ -1147,6 +1152,200 @@ class ApiIntegrationTest {
     }
 
     /**
+     * The chat's long lists page. A thread gives its newest lines and says older ones
+     * exist; `/messages?before=` reads them upward and never past another thread's line;
+     * the threads list reads on by `before`; comments page with doctors' answers first.
+     */
+    @Test
+    fun `threads, the threads list and comments are read a page at a time`() = api {
+        val her = signUp().also { onboard(it) }
+        val him = signUp().also { onboard(it) }
+        val third = signUp().also { onboard(it) }
+        val herAlias = get<CommunityIdentity>("/v1/community/me", her.token).alias
+        val thirdAlias = get<CommunityIdentity>("/v1/community/me", third.token).alias
+
+        val started = post<ConversationThread>("/v1/community/conversations", him.token, StartConversationRequest(herAlias, "line 0"))
+        val id = started.conversation.id
+        (1..5).forEach { post<DirectMessage>("/v1/community/conversations/$id/messages", him.token, SendMessageRequest("line $it")) }
+
+        val newest = get<ConversationThread>("/v1/community/conversations/$id?limit=3", her.token)
+        assertEquals(listOf("line 3", "line 4", "line 5"), newest.messages.map { it.body })
+        assertTrue(newest.hasMore)
+        val older = get<MessagePage>("/v1/community/conversations/$id/messages?before=${newest.messages.first().id}&limit=2", her.token)
+        assertEquals(listOf("line 1", "line 2"), older.messages.map { it.body })
+        assertTrue(older.hasMore)
+        val oldest = get<MessagePage>("/v1/community/conversations/$id/messages?before=${older.messages.first().id}&limit=2", her.token)
+        assertEquals(listOf("line 0"), oldest.messages.map { it.body })
+        assertFalse(oldest.hasMore)
+        assertFalse(get<ConversationThread>("/v1/community/conversations/$id", her.token).hasMore, "no limit: the whole short thread")
+        assertEquals(HttpStatusCode.NotFound, raw { client.get("/v1/community/conversations/$id/messages?before=${newest.messages.first().id}") { auth(third.token) } }.status)
+
+        // A line of another thread is not a cursor into this one.
+        val other = post<ConversationThread>("/v1/community/conversations", him.token, StartConversationRequest(thirdAlias, "boshqa"))
+        val foreign = other.messages.single().id
+        assertEquals(HttpStatusCode.NotFound, raw { client.get("/v1/community/conversations/$id/messages?before=$foreign") { auth(him.token) } }.status)
+
+        // His two threads, one per page, newest first.
+        val first = get<List<Conversation>>("/v1/community/conversations?limit=1", him.token)
+        assertEquals(listOf(other.conversation.id), first.map { it.id })
+        val before = first.single().lastMessageAt.toString().replace("+", "%2B")
+        val second = get<List<Conversation>>("/v1/community/conversations?limit=1&before=$before", him.token)
+        assertEquals(listOf(id), second.map { it.id })
+        assertTrue(get<List<Conversation>>("/v1/community/conversations?limit=1&before=${second.single().lastMessageAt}", him.token).isEmpty())
+        assertEquals(HttpStatusCode.BadRequest, raw { client.get("/v1/community/conversations?before=kecha") { auth(him.token) } }.status)
+
+        // Comments: three, read two and then one, in the order they were written.
+        val postId = post<CommunityPost>("/v1/community/posts", her.token, CreatePostRequest(CommunityTopic.WELLBEING, "Sahifa test ${Uuid.random()}")).id
+        (1..3).forEach { post<CommunityComment>("/v1/community/posts/$postId/comments", him.token, CreateCommentRequest("izoh $it")) }
+        val top = get<List<CommunityComment>>("/v1/community/posts/$postId/comments?limit=2", her.token)
+        assertEquals(listOf("izoh 1", "izoh 2"), top.map { it.body })
+        val rest = get<List<CommunityComment>>("/v1/community/posts/$postId/comments?limit=2&offset=2", her.token)
+        assertEquals(listOf("izoh 3"), rest.map { it.body })
+        assertEquals(3, get<List<CommunityComment>>("/v1/community/posts/$postId/comments", her.token).size)
+    }
+
+    /**
+     * Lists that used to stop at a cap now read on: the doctor directory and her reviews
+     * by offset, an alias's and a doctor's posts past the few their page carries, and the
+     * notification history below a cursor. A build that asks for no page gets each one
+     * exactly as before.
+     */
+    @Test
+    fun `the directory, reviews, profile posts and notification history read on past their first page`() = api {
+        val doctor = signUp().also { onboard(it) }
+        val patient = signUp().also { onboard(it) }
+        val writer = signUp().also { onboard(it) }
+        val admin = adminToken()
+        val profileId = approvedDoctor(doctor, admin, "Dr Page ${Uuid.random().toString().take(6)}")
+
+        // The directory: pages cut from the one recommended order; no limit is the whole list.
+        val whole = get<List<DoctorListItem>>("/v1/doctors", patient.token)
+        assertTrue(whole.any { it.id == profileId })
+        val paged = (0 until 3).flatMap { get<List<DoctorListItem>>("/v1/doctors?limit=2&offset=${it * 2}", patient.token) }
+        assertEquals(whole.take(6).map { it.id }, paged.map { it.id })
+        assertTrue(get<List<DoctorListItem>>("/v1/doctors?limit=2&offset=${whole.size}", patient.token).isEmpty())
+
+        // Reviews: newest first, two and then one; no paging asked is the latest, as before.
+        val opened = post<ConversationThread>("/v1/doctors/$profileId/consultations", patient.token, uz.sadora.contract.StartConsultationRequest("Salom"))
+        dbQuery {
+            (1..3).forEach { n ->
+                exec(
+                    "INSERT INTO consultation_sessions (conversation_id, doctor_id, patient_id, rating, review, rated_at, opened_at, closed_at) " +
+                        "VALUES ('${opened.conversation.id}', '$profileId', '${patient.userId}', $n, 'sharh $n', now() + interval '$n minutes', now(), now())",
+                )
+            }
+        }
+        val reviews = "/v1/doctors/$profileId/reviews"
+        assertEquals(listOf("sharh 3", "sharh 2"), get<List<uz.sadora.contract.DoctorReview>>("$reviews?limit=2", patient.token).map { it.review })
+        assertEquals(listOf("sharh 1"), get<List<uz.sadora.contract.DoctorReview>>("$reviews?limit=2&offset=2", patient.token).map { it.review })
+        assertEquals(listOf("sharh 3", "sharh 2", "sharh 1"), get<List<uz.sadora.contract.DoctorReview>>(reviews, patient.token).map { it.review })
+
+        // A doctor's posts: her page still carries the latest; `/posts` reads on with a total.
+        val doctorBodies = (1..3).map {
+            post<CommunityPost>("/v1/community/posts", doctor.token, CreatePostRequest(CommunityTopic.WELLBEING, "Shifokor posti $it ${Uuid.random()}")).body
+        }.reversed()
+        assertEquals(doctorBodies, get<DoctorProfile>("/v1/doctors/$profileId", patient.token).posts.map { it.body })
+        val doctorFirst = get<Page<CommunityPost>>("/v1/doctors/$profileId/posts?limit=2", patient.token)
+        assertEquals(doctorBodies.take(2), doctorFirst.items.map { it.body })
+        assertEquals(3L, doctorFirst.total)
+        assertTrue(doctorFirst.hasMore)
+        val doctorRest = get<Page<CommunityPost>>("/v1/doctors/$profileId/posts?limit=2&offset=2", patient.token)
+        assertEquals(doctorBodies.drop(2), doctorRest.items.map { it.body })
+        assertFalse(doctorRest.hasMore)
+        assertEquals(doctorBodies, get<Page<CommunityPost>>("/v1/doctors/$profileId/posts", patient.token).items.map { it.body })
+        assertEquals(HttpStatusCode.NotFound, raw { client.get("/v1/doctors/${Uuid.random()}/posts") { auth(patient.token) } }.status)
+
+        // An alias's posts, the same way.
+        val alias = get<CommunityIdentity>("/v1/community/me", writer.token).alias
+        val aliasBodies = (1..3).map {
+            post<CommunityPost>("/v1/community/posts", writer.token, CreatePostRequest(CommunityTopic.WELLBEING, "Taxallus posti $it ${Uuid.random()}")).body
+        }.reversed()
+        val profilePath = "/v1/community/profiles/${alias.encodeURLPathPart()}"
+        assertEquals(aliasBodies, get<CommunityProfile>(profilePath, patient.token).posts.map { it.body })
+        val aliasFirst = get<Page<CommunityPost>>("$profilePath/posts?limit=2", patient.token)
+        assertEquals(aliasBodies.take(2), aliasFirst.items.map { it.body })
+        assertEquals(3L, aliasFirst.total)
+        assertTrue(aliasFirst.hasMore)
+        val aliasRest = get<Page<CommunityPost>>("$profilePath/posts?limit=2&offset=2", patient.token)
+        assertEquals(aliasBodies.drop(2), aliasRest.items.map { it.body })
+        assertEquals(2, aliasRest.offset)
+        assertFalse(aliasRest.hasMore)
+        assertEquals(HttpStatusCode.NotFound, raw { client.get("/v1/community/profiles/yoq-${Uuid.random()}/posts") { auth(patient.token) } }.status)
+
+        // Notification history: the newest, then below a cursor that must be one of hers.
+        dbQuery {
+            (1..3).forEach { n ->
+                exec(
+                    "INSERT INTO notification_outbox (user_id, category, title, body, scheduled_for, status, dedupe_key, created_at) " +
+                        "VALUES ('${patient.userId}', 'system', 'xabar $n', 'matn', now(), 'sent', 'page-test-$n', now() + interval '$n minutes')",
+                )
+            }
+        }
+        val newest = get<List<uz.sadora.contract.NotificationMessage>>("/v1/notifications/history?limit=2", patient.token)
+        assertEquals(listOf("xabar 3", "xabar 2"), newest.map { it.title })
+        val below = get<List<uz.sadora.contract.NotificationMessage>>("/v1/notifications/history?limit=2&before=${newest.last().id}", patient.token)
+        assertEquals("xabar 1", below.first().title)
+        assertTrue(below.none { it.id in newest.map { line -> line.id } })
+        val all = get<List<uz.sadora.contract.NotificationMessage>>("/v1/notifications/history", patient.token)
+        assertEquals(listOf("xabar 3", "xabar 2", "xabar 1"), all.take(3).map { it.title }, "no cursor: the newest, as before")
+        assertEquals(HttpStatusCode.NotFound, raw { client.get("/v1/notifications/history?before=${newest.first().id}") { auth(writer.token) } }.status)
+        assertEquals(HttpStatusCode.BadRequest, raw { client.get("/v1/notifications/history?before=kecha") { auth(patient.token) } }.status)
+    }
+
+    /**
+     * The panel's payments, issued codes and comment drawer used to stop at their first
+     * page, so an older row could not be reached at all. Each now pages with a total.
+     */
+    @Test
+    fun `the panel pages payments, issued codes and a post's comments with a total`() = api {
+        val user = signUp().also { onboard(it) }
+        val admin = adminToken()
+
+        // Payments: three pending checkouts, newest first, two and then one.
+        setFlag(admin, BillingService.PAYME_FLAG, enabled = true)
+        val orders = (1..3).map {
+            post<CheckoutSession>("/v1/billing/checkout", user.token, CheckoutRequest("premium_year", PaymentProvider.PAYME)).transactionId
+        }
+        val payments = get<Page<AdminPaymentView>>("/v1/admin/billing/payments?state=pending&limit=2", admin)
+        assertEquals(listOf(orders[2], orders[1]), payments.items.map { it.id })
+        assertTrue(payments.total >= 3 && payments.hasMore)
+        assertTrue(payments.items.all { it.state == PaymentState.PENDING })
+        val nextPayments = get<Page<AdminPaymentView>>("/v1/admin/billing/payments?state=pending&limit=1&offset=2", admin)
+        assertEquals(listOf(orders[0]), nextPayments.items.map { it.id })
+        assertEquals(2, nextPayments.offset)
+        val pastPayments = get<Page<AdminPaymentView>>("/v1/admin/billing/payments?state=pending&offset=${payments.total}", admin)
+        assertTrue(pastPayments.items.isEmpty())
+        assertEquals(payments.total, pastPayments.total, "the total does not depend on the page asked for")
+
+        // Issued codes: three vitamin redemptions, the same way.
+        val vitamin = assertNotNull(get<ShopCatalog>("/v1/shop", user.token).products.firstOrNull { it.kind == ShopKind.VITAMIN })
+        post<CoinBalance>(
+            "/v1/admin/rewards/users/${user.userId}/adjust",
+            admin,
+            AdjustCoinsRequest(amount = vitamin.coinCost * 3, note = "integration test"),
+        )
+        val codes = (1..3).map { post<RedeemResult>("/v1/shop/redeem", user.token, RedeemRequest(vitamin.id)).redemption.code }
+        val redemptions = get<Page<AdminRedemption>>("/v1/admin/shop/redemptions?limit=2", admin)
+        assertEquals(listOf(codes[2], codes[1]), redemptions.items.map { it.code })
+        assertTrue(redemptions.total >= 3 && redemptions.hasMore)
+        val nextRedemptions = get<Page<AdminRedemption>>("/v1/admin/shop/redemptions?limit=1&offset=2", admin)
+        assertEquals(listOf(codes[0]), nextRedemptions.items.map { it.code })
+        assertEquals(redemptions.total, nextRedemptions.total)
+
+        // Comments: the moderation drawer reads the thread oldest first, a page at a time.
+        val postId = post<CommunityPost>("/v1/community/posts", user.token, CreatePostRequest(CommunityTopic.WELLBEING, "Panel sahifa ${Uuid.random()}")).id
+        (1..3).forEach { post<CommunityComment>("/v1/community/posts/$postId/comments", user.token, CreateCommentRequest("izoh $it")) }
+        val firstComments = get<Page<ModerationCommentView>>("/v1/admin/community/posts/$postId/comments?limit=2", admin)
+        assertEquals(listOf("izoh 1", "izoh 2"), firstComments.items.map { it.body })
+        assertEquals(3L, firstComments.total)
+        assertTrue(firstComments.hasMore)
+        val moreComments = get<Page<ModerationCommentView>>("/v1/admin/community/posts/$postId/comments?limit=2&offset=2", admin)
+        assertEquals(listOf("izoh 3"), moreComments.items.map { it.body })
+        assertFalse(moreComments.hasMore)
+        assertEquals(3, get<Page<ModerationCommentView>>("/v1/admin/community/posts/$postId/comments", admin).items.size)
+    }
+
+    /**
      * Profiles and private messages. The alias is the only handle on the wire; a block
      * or a closed door reads as the same refusal; and moderation sees a reported
      * message as text with an alias, like everything else in the room.
@@ -2071,7 +2270,7 @@ class ApiIntegrationTest {
         closeRateAndEarn(id, profileId, doctor, patient, admin, price)
         refundUnanswered(id, profileId, patient, admin)
         // The staff panel's quality table has her, with one unanswered window.
-        val quality = get<List<uz.sadora.server.consultation.AdminDoctorQuality>>("/v1/admin/doctors/quality", admin).single { it.doctorId == profileId }
+        val quality = qualityRow(profileId, admin)
         assertEquals(2, quality.consultationsTotal)
         assertEquals(1, quality.unansweredTotal)
 
@@ -2199,6 +2398,145 @@ class ApiIntegrationTest {
         assertEquals(HttpStatusCode.Conflict, raw { client.post("/v1/admin/consultations/${owed.id}/refunded") { auth(admin) } }.status)
         assertTrue("consultation.refunded" in rawGet("/v1/admin/audit?action=consultation.refunded&entityId=${owed.id}&limit=5", admin))
 
+    }
+
+    /**
+     * A busy doctor's money and work list come a page at a time: the totals are summed
+     * over everything while the lines and payouts page by offset; the staff's quality
+     * table pages with its total; the questions read on by offset. A call with no
+     * parameters still answers as the installed apps read it.
+     */
+    @Test
+    fun `earnings, the quality table and the questions list come a page at a time`() = api {
+        val doctor = signUp().also { onboard(it) }
+        val patient = signUp().also { onboard(it) }
+        val admin = adminToken()
+        val profileId = approvedDoctor(doctor, admin, "Dr Pages ${Uuid.random().toString().take(6)}")
+        // A free consultation: the conversation the money sessions below belong to.
+        val conversationId = post<ConversationThread>(
+            "/v1/doctors/$profileId/consultations",
+            patient.token,
+            uz.sadora.contract.StartConsultationRequest("Salom"),
+        ).conversation.id
+        // 60 paid windows answered in five minutes, at 15 % rounded down per window; three
+        // owed back and two returned, never answered; 55 payouts.
+        val paidCount = 60
+        dbQuery {
+            val columns = "conversation_id, doctor_id, patient_id, opened_at, expires_at, closed_at, closed_reason, " +
+                "price_minor, commission_percent, payment_state, first_reply_at, created_at"
+            val at = "now() - (i || ' hours')::interval"
+            exec(
+                "INSERT INTO consultation_sessions ($columns) " +
+                    "SELECT '$conversationId', '$profileId', '${patient.userId}', $at, $at + interval '1 day', $at + interval '1 hour', " +
+                    "'doctor', 100000 + i, 15, 'paid', $at + interval '5 minutes', $at FROM generate_series(1, $paidCount) AS i",
+            )
+            exec(
+                "INSERT INTO consultation_sessions ($columns) " +
+                    "SELECT '$conversationId', '$profileId', '${patient.userId}', $at, $at + interval '1 day', $at + interval '1 day', " +
+                    "'refund', 200000, 15, CASE WHEN i <= 103 THEN 'refund_due' ELSE 'refunded' END, NULL, $at " +
+                    "FROM generate_series(101, 105) AS i",
+            )
+            exec(
+                "INSERT INTO doctor_payouts (doctor_id, amount_minor, note, paid_at, created_by) " +
+                    "SELECT '$profileId', 1000 * i, 'p' || i, now() - (i || ' days')::interval, gen_random_uuid() FROM generate_series(1, 55) AS i",
+            )
+        }
+        val gross = (1..paidCount).sumOf { 100_000L + it }
+        val commission = (1..paidCount).sumOf { (100_000L + it) * 15 / 100 }
+        val paidOut = (1..55).sumOf { 1000L * it }
+
+        // The call the installed apps make: totals over everything, the first page of each list.
+        val shape = Json.parseToJsonElement(rawGet("/v1/doctor/earnings", doctor.token)).jsonObject
+        assertEquals(50, shape["lines"]!!.jsonArray.size)
+        assertEquals(50, shape["payouts"]!!.jsonArray.size)
+        val earnings = get<uz.sadora.contract.DoctorEarnings>("/v1/doctor/earnings", doctor.token)
+        assertEquals(gross, earnings.grossMinor)
+        assertEquals(commission, earnings.commissionMinor)
+        assertEquals(gross - commission, earnings.netMinor)
+        assertEquals(paidOut, earnings.paidOutMinor)
+        assertEquals(gross - commission - paidOut, earnings.balanceMinor)
+        assertEquals(3 * 200_000L, earnings.refundDueMinor)
+        assertEquals(paidCount + 5L, earnings.linesTotal, "the free window is no line")
+        assertEquals(55L, earnings.payoutsTotal)
+        assertTrue(earnings.linesHaveMore && earnings.payoutsHaveMore)
+        assertEquals(100_001L, earnings.lines.first().priceMinor, "the latest opened first")
+
+        // The rest by offset; together the pages are every line once, and they add up to the totals.
+        val restLines = get<Page<uz.sadora.contract.EarningLine>>("/v1/doctor/earnings/lines?offset=50", doctor.token)
+        assertEquals(15, restLines.items.size)
+        assertFalse(restLines.hasMore)
+        val allLines = earnings.lines + restLines.items
+        assertEquals(paidCount + 5, allLines.map { it.sessionId }.toSet().size)
+        assertEquals(earnings.netMinor, allLines.sumOf { it.netMinor })
+        assertEquals(earnings.commissionMinor, allLines.sumOf { it.commissionMinor })
+        val restPayouts = get<Page<uz.sadora.contract.DoctorPayoutView>>("/v1/doctor/earnings/payouts?limit=10&offset=50", doctor.token)
+        assertEquals(5, restPayouts.items.size)
+        assertEquals(paidOut, (earnings.payouts + restPayouts.items).sumOf { it.amountMinor })
+
+        // Staff read the same, and their own pages.
+        val staff = get<uz.sadora.contract.DoctorEarnings>("/v1/admin/doctors/$profileId/earnings", admin)
+        assertEquals(earnings.balanceMinor, staff.balanceMinor)
+        assertEquals(5, get<Page<uz.sadora.contract.EarningLine>>("/v1/admin/doctors/$profileId/earnings/lines?limit=20&offset=60", admin).items.size)
+        assertEquals(55L, get<Page<uz.sadora.contract.DoctorPayoutView>>("/v1/admin/doctors/$profileId/earnings/payouts?limit=1", admin).total)
+
+        // The quality table: pages that meet without overlap, and her numbers summed in SQL.
+        val firstTwo = get<Page<uz.sadora.server.consultation.AdminDoctorQuality>>("/v1/admin/doctors/quality?limit=2", admin)
+        val one = get<Page<uz.sadora.server.consultation.AdminDoctorQuality>>("/v1/admin/doctors/quality?limit=1", admin)
+        val two = get<Page<uz.sadora.server.consultation.AdminDoctorQuality>>("/v1/admin/doctors/quality?limit=1&offset=1", admin)
+        assertEquals(firstTwo.items.map { it.doctorId }, (one.items + two.items).map { it.doctorId })
+        assertEquals(firstTwo.total, one.total)
+        assertTrue(firstTwo.items.first().consultationsMonth >= firstTwo.items.last().consultationsMonth)
+        val row = qualityRow(profileId, admin)
+        assertEquals(paidCount + 5 + 1, row.consultationsTotal)
+        assertEquals(paidCount + 5 + 1, row.consultationsMonth)
+        assertEquals(5, row.unansweredTotal)
+        assertEquals(5, row.avgFirstReplyMinutes)
+        assertEquals(gross, row.grossMinor)
+        assertEquals(gross - commission, row.netMinor)
+        assertEquals(paidOut, row.paidOutMinor)
+        assertEquals(3 * 200_000L, row.refundDueMinor)
+        // Her Home and the patients' directory count from the same grouped read.
+        val stats = get<uz.sadora.contract.DoctorStats>("/v1/doctor/stats", doctor.token)
+        assertEquals(row.consultationsTotal, stats.consultationsTotal)
+        assertEquals(row.consultationsMonth, stats.consultationsMonth)
+        assertEquals(row.unansweredTotal, stats.unansweredTotal)
+        assertEquals(row.avgFirstReplyMinutes, stats.avgFirstReplyMinutes)
+        val listed = get<List<uz.sadora.contract.DoctorListItem>>("/v1/doctors", doctor.token).single { it.id == profileId }
+        assertEquals(row.consultationsTotal, listed.consultationsTotal)
+        assertEquals(row.avgFirstReplyMinutes, listed.avgFirstReplyMinutes)
+
+        // The questions read on by offset, in one stable order; no offset is the old first page.
+        repeat(4) { post<CommunityPost>("/v1/community/posts", patient.token, CreatePostRequest(CommunityTopic.CYCLE, "Sahifa savoli $it ${Uuid.random()}")) }
+        val firstFour = get<List<CommunityPost>>("/v1/doctor/questions?limit=4", doctor.token)
+        val pageOne = get<List<CommunityPost>>("/v1/doctor/questions?limit=2", doctor.token)
+        val pageTwo = get<List<CommunityPost>>("/v1/doctor/questions?limit=2&offset=2", doctor.token)
+        assertEquals(4, firstFour.size)
+        assertEquals(firstFour.map { it.id }, (pageOne + pageTwo).map { it.id })
+        assertEquals(firstFour.map { it.id }, get<List<CommunityPost>>("/v1/doctor/questions", doctor.token).take(4).map { it.id })
+    }
+
+    /** Her row of the quality table, read page by page as the staff panel would. */
+    private suspend fun Api.qualityRow(profileId: String, admin: String): uz.sadora.server.consultation.AdminDoctorQuality {
+        var offset = 0
+        while (true) {
+            val page = get<Page<uz.sadora.server.consultation.AdminDoctorQuality>>("/v1/admin/doctors/quality?limit=200&offset=$offset", admin)
+            page.items.firstOrNull { it.doctorId == profileId }?.let { return it }
+            if (!page.hasMore) error("doctor $profileId is not in the quality table")
+            offset += page.items.size
+        }
+    }
+
+    private suspend fun Api.approvedDoctor(doctor: TestUser, admin: String, name: String): String {
+        val jpeg = kotlin.io.encoding.Base64.encode(byteArrayOf(0xFF.toByte(), 0xD8.toByte(), 0xFF.toByte(), 0xE0.toByte(), 1, 2, 3))
+        post<DoctorAccount>(
+            "/v1/doctor/application",
+            doctor.token,
+            DoctorApplicationRequest(name, DoctorSpecialty.GYNECOLOGIST, "Klinika", 9, "LIC-F", documents = listOf(DoctorDocumentUpload(DoctorDocumentKind.DIPLOMA, jpeg))),
+        )
+        val profileId = get<Page<uz.sadora.server.doctor.AdminDoctorRow>>("/v1/admin/doctors?status=pending&limit=200", admin)
+            .items.first { it.fullName == name }.id
+        postAck("/v1/admin/doctors/$profileId/review", admin, uz.sadora.server.doctor.DoctorReviewRequest("approve"))
+        return profileId
     }
 
     /** Rows a table holds for one account, by its user_id column. */

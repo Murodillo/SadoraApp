@@ -32,13 +32,54 @@ class NotificationsController(private val api: NotificationApi?) {
     var sent by mutableStateOf<List<NotificationMessage>>(emptyList())
         private set
 
+    /** Older ones than the last read are still on the server. */
+    var sentHasMore by mutableStateOf(false)
+        private set
+
+    /**
+     * Every row read so far in the server's order, suppressed ones included: the cursor
+     * for the next page is the last of these, not the last one shown.
+     */
+    private var history by mutableStateOf<List<NotificationMessage>>(emptyList())
+    private var loadingSent = false
+
+    /** How many rows have been read, shown or not — the key that asks for the next page. */
+    val historyLoaded: Int get() = history.size
+
+    /** Reads the newest page. Pages she has already scrolled to stay under it. */
     suspend fun loadSent() {
         val api = api ?: return
-        calls.run(silent = true) { api.history(limit = 50) }?.let { history ->
-            // Suppressed and failed ones never arrived; showing them would be news to her.
-            sent = history.filter { it.status == NotificationStatus.SENT }
-                .sortedByDescending { it.sentAt ?: it.scheduledFor }
+        calls.run(silent = true) { api.history() }?.let { latest ->
+            val full = latest.size >= NotificationApi.HISTORY_PAGE
+            val ids = latest.mapTo(HashSet()) { it.id }
+            val edge = history.indexOfFirst { it.id == latest.lastOrNull()?.id }
+            val tail = if (full && edge >= 0) history.drop(edge + 1).filter { it.id !in ids } else emptyList()
+            showHistory(latest + tail)
+            sentHasMore = full && (tail.isEmpty() || sentHasMore)
         }
+    }
+
+    /** The next page, below the oldest row read. */
+    suspend fun loadMoreSent() {
+        val api = api ?: return
+        val oldest = history.lastOrNull() ?: return
+        if (!sentHasMore || loadingSent) return
+        loadingSent = true
+        try {
+            val page = calls.run(silent = true) { api.history(beforeId = oldest.id) } ?: return
+            val known = history.mapTo(HashSet()) { it.id }
+            showHistory(history + page.filter { it.id !in known })
+            sentHasMore = page.size >= NotificationApi.HISTORY_PAGE
+        } finally {
+            loadingSent = false
+        }
+    }
+
+    private fun showHistory(rows: List<NotificationMessage>) {
+        history = rows
+        // Suppressed and failed ones never arrived; showing them would be news to her.
+        sent = rows.filter { it.status == NotificationStatus.SENT }
+            .sortedByDescending { it.sentAt ?: it.scheduledFor }
     }
 
     suspend fun load() {

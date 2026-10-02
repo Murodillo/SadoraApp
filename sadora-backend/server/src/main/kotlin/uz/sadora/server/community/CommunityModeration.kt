@@ -188,8 +188,10 @@ class CommunityModerationService(
         return Page(rows.map { it.toView() }, total, limit, offset.toInt())
     }
 
-    suspend fun comments(postId: Uuid): List<ModerationCommentView> =
-        repository.commentsForModeration(postId).map { it.toView() }
+    suspend fun comments(postId: Uuid, limit: Int, offset: Long): Page<ModerationCommentView> {
+        val (rows, total) = repository.commentsForModeration(postId, limit, offset)
+        return Page(rows.map { it.toView() }, total, limit, offset.toInt())
+    }
 
     suspend fun reports(openOnly: Boolean, limit: Int, offset: Long): Page<ModerationReportView> {
         val (rows, total) = repository.listReports(openOnly, limit, offset)
@@ -477,7 +479,13 @@ fun Route.adminCommunityRoutes(moderation: CommunityModerationService) {
 
             get("/posts/{id}/comments") {
                 call.requireAdminRole(AdminRole.OWNER, AdminRole.ADMIN, AdminRole.SUPPORT, AdminRole.ANALYST)
-                call.respond(moderation.comments(parseUuid(call.parameters["id"].orEmpty(), "id")))
+                call.respond(
+                    moderation.comments(
+                        parseUuid(call.parameters["id"].orEmpty(), "id"),
+                        limit = call.intParameter("limit", default = 50, max = 200),
+                        offset = call.intParameter("offset", default = 0, max = Int.MAX_VALUE).toLong(),
+                    ),
+                )
             }
 
             post("/posts/{id}/hide") {

@@ -181,10 +181,14 @@ class ConsultationService(
         val works = repository.works(ids)
         val ratings = repository.ratings(ids)
         val records = doctors.byIds(ids)
+        // Every doctor's reply habits in one grouped read; it used to be one read of all
+        // her sessions per doctor, on every open of the directory.
+        val at = clock.now()
+        val totals = repository.totals(ids, at, at - 7.days, at - 30.days)
         val scored = list.map { item ->
             val id = Uuid.parse(item.id)
             val work = works[id]
-            val figures = figuresOf(repository.sessionsOfDoctor(id))
+            val figures = totals[id] ?: DoctorTotals()
             val answered = figures.total - figures.unanswered
             val decorated = item.copy(
                 priceMinor = work?.priceMinor ?: 0,
@@ -198,8 +202,12 @@ class ConsultationService(
             )
             decorated to recommendScore(decorated, ratings[id], figures)
         }
-        return scored.sortedWith(compareByDescending<Pair<DoctorListItem, Double>> { it.second }.thenByDescending { it.first.answerCount })
-            .map { it.first }
+        // The id settles a full tie, so the directory read in pages cuts the same order each time.
+        return scored.sortedWith(
+            compareByDescending<Pair<DoctorListItem, Double>> { it.second }
+                .thenByDescending { it.first.answerCount }
+                .thenBy { it.first.id },
+        ).map { it.first }
     }
 
     /**
@@ -208,7 +216,7 @@ class ConsultationService(
      * 5.0 from two. Then small nudges: online now, a fast reply habit, and a penalty for
      * the share of windows she left unanswered.
      */
-    private fun recommendScore(item: DoctorListItem, rating: Pair<Double, Int>?, figures: Figures): Double {
+    private fun recommendScore(item: DoctorListItem, rating: Pair<Double, Int>?, figures: DoctorTotals): Double {
         val (average, count) = rating ?: (0.0 to 0)
         val bayes = (PRIOR_RATING * PRIOR_WEIGHT + average * count) / (PRIOR_WEIGHT + count)
         val unansweredShare = if (figures.total == 0) 0.0 else figures.unanswered.toDouble() / figures.total
@@ -218,8 +226,10 @@ class ConsultationService(
             unansweredShare
     }
 
-    suspend fun reviews(doctorId: Uuid): List<DoctorReview> =
-        repository.reviewsOf(doctorId, MAX_REVIEWS).map { DoctorReview(it.rating!!, it.review, it.ratedAt ?: it.createdAt) }
+    /** Her reviews, newest first, [limit] from [offset]; no paging asked is the latest [MAX_REVIEWS]. */
+    suspend fun reviews(doctorId: Uuid, limit: Int = MAX_REVIEWS, offset: Long = 0): List<DoctorReview> =
+        repository.reviewsOf(doctorId, limit.coerceIn(1, MAX_REVIEWS), offset)
+            .map { DoctorReview(it.rating!!, it.review, it.ratedAt ?: it.createdAt) }
 
     // ---------------------------------------------------------------- paying
 
@@ -410,8 +420,10 @@ class ConsultationService(
 
     suspend fun stats(userId: Uuid): DoctorStats {
         val doctor = requireApprovedDoctor(userId)
-        val sessions = repository.sessionsOfDoctor(doctor.id)
-        val figures = figuresOf(sessions)
+        // Counted by the database: a busy doctor's Home used to load every session she
+        // ever held to add them up.
+        val at = clock.now()
+        val figures = repository.totals(listOf(doctor.id), at, at - 7.days, at - 30.days)[doctor.id] ?: DoctorTotals()
         val topics = repository.answeredTopics(doctor.id)
         return DoctorStats(
             consultationsWeek = figures.week,
@@ -420,80 +432,71 @@ class ConsultationService(
             openNow = figures.openNow,
             avgFirstReplyMinutes = figures.avgFirstReplyMinutes,
             unansweredTotal = figures.unanswered,
-            rating = figures.rating,
+            rating = figures.rating?.roundTo1(),
             ratingCount = figures.ratingCount,
             topTopics = topics.entries.sortedByDescending { it.value }.take(TOP_TOPICS).map { TopicCount(it.key, it.value) },
             answersTotal = topics.values.sum(),
         )
     }
 
-    suspend fun earnings(userId: Uuid): DoctorEarnings = earningsOf(requireApprovedDoctor(userId).id, withLines = true)
+    suspend fun earnings(userId: Uuid): DoctorEarnings = earningsOf(requireApprovedDoctor(userId).id)
 
-    private suspend fun earningsOf(doctorId: Uuid, withLines: Boolean): DoctorEarnings {
-        val sessions = repository.sessionsOfDoctor(doctorId).filter { it.payment in MONEY }
-        val payouts = repository.payouts(doctorId)
-        val money = moneyOf(sessions, payouts.sumOf { it.amountMinor })
-        val names = if (withLines) {
-            sessions.map { it.patientId }.distinct().associateWith { id -> users.findById(id)?.name?.ifBlank { null } ?: "Bemor" }
-        } else {
-            emptyMap()
-        }
-        return money.copy(
-            lines = if (!withLines) emptyList() else sessions.map { s ->
-                val earns = s.payment == ConsultationPayment.PAID
-                EarningLine(
-                    sessionId = s.id.toString(),
-                    patientName = names[s.patientId] ?: "Bemor",
-                    openedAt = s.openedAt,
-                    priceMinor = s.priceMinor,
-                    commissionMinor = if (earns) s.commissionMinor else 0,
-                    netMinor = if (earns) s.priceMinor - s.commissionMinor else 0,
-                    payment = s.payment,
-                )
-            },
-            payouts = payouts.map { DoctorPayoutView(it.id.toString(), it.amountMinor, it.note, it.paidAt) },
-        )
-    }
+    suspend fun earningLines(userId: Uuid, limit: Int, offset: Long): Page<EarningLine> =
+        linesOf(requireApprovedDoctor(userId).id, limit, offset)
 
-    private fun moneyOf(sessions: List<SessionRecord>, paidOut: Long): DoctorEarnings {
-        val paid = sessions.filter { it.payment == ConsultationPayment.PAID }
-        val gross = paid.sumOf { it.priceMinor }
-        val commission = paid.sumOf { it.commissionMinor }
-        return DoctorEarnings(
-            grossMinor = gross,
-            commissionMinor = commission,
-            netMinor = gross - commission,
-            paidOutMinor = paidOut,
-            balanceMinor = gross - commission - paidOut,
-            refundDueMinor = sessions.filter { it.payment == ConsultationPayment.REFUND_DUE }.sumOf { it.priceMinor },
-        )
-    }
+    suspend fun payouts(userId: Uuid, limit: Int, offset: Long): Page<DoctorPayoutView> =
+        payoutsOf(requireApprovedDoctor(userId).id, limit, offset)
 
-    private class Figures(
-        val week: Int,
-        val month: Int,
-        val total: Int,
-        val openNow: Int,
-        val avgFirstReplyMinutes: Int?,
-        val unanswered: Int,
-        val rating: Double?,
-        val ratingCount: Int,
-    )
-
-    private fun figuresOf(all: List<SessionRecord>): Figures {
+    /**
+     * The totals, summed by the database over every session and payout, and the first
+     * page of each list. A doctor with years of consultations costs the same as a new one.
+     */
+    private suspend fun earningsOf(doctorId: Uuid): DoctorEarnings {
         val at = clock.now()
-        val opened = all.filter { it.openedAt != null }
-        val replies = opened.mapNotNull { s -> s.firstReplyAt?.let { (it - s.openedAt!!).inWholeMinutes } }
-        val ratings = opened.mapNotNull { it.rating }
-        return Figures(
-            week = opened.count { it.openedAt!! >= at - 7.days },
-            month = opened.count { it.openedAt!! >= at - 30.days },
-            total = opened.size,
-            openNow = opened.count { it.isOpen(at) },
-            avgFirstReplyMinutes = replies.takeIf { it.isNotEmpty() }?.average()?.toInt(),
-            unanswered = opened.count { it.closedAt != null && it.firstReplyAt == null },
-            rating = ratings.takeIf { it.isNotEmpty() }?.average()?.roundTo1(),
-            ratingCount = ratings.size,
+        val totals = repository.totals(listOf(doctorId), at, at - 7.days, at - 30.days)[doctorId] ?: DoctorTotals()
+        val paidOut = repository.payoutTotals(listOf(doctorId))[doctorId] ?: 0
+        val lines = linesOf(doctorId, DoctorEarnings.PAGE, 0)
+        val payouts = payoutsOf(doctorId, DoctorEarnings.PAGE, 0)
+        return moneyOf(totals, paidOut).copy(
+            lines = lines.items,
+            payouts = payouts.items,
+            linesTotal = lines.total,
+            payoutsTotal = payouts.total,
+        )
+    }
+
+    private suspend fun linesOf(doctorId: Uuid, limit: Int, offset: Long): Page<EarningLine> {
+        val (sessions, total) = repository.moneySessions(doctorId, limit, offset)
+        val names = repository.patientNames(sessions.map { it.patientId })
+        val lines = sessions.map { s ->
+            val earns = s.payment == ConsultationPayment.PAID
+            EarningLine(
+                sessionId = s.id.toString(),
+                patientName = names[s.patientId]?.ifBlank { null } ?: "Bemor",
+                openedAt = s.openedAt,
+                priceMinor = s.priceMinor,
+                commissionMinor = if (earns) s.commissionMinor else 0,
+                netMinor = if (earns) s.priceMinor - s.commissionMinor else 0,
+                payment = s.payment,
+            )
+        }
+        return Page(lines, total, limit, offset.toInt())
+    }
+
+    private suspend fun payoutsOf(doctorId: Uuid, limit: Int, offset: Long): Page<DoctorPayoutView> {
+        val (payouts, total) = repository.payouts(doctorId, limit, offset)
+        return Page(payouts.map { DoctorPayoutView(it.id.toString(), it.amountMinor, it.note, it.paidAt) }, total, limit, offset.toInt())
+    }
+
+    private fun moneyOf(totals: DoctorTotals, paidOut: Long): DoctorEarnings {
+        val net = totals.grossMinor - totals.commissionMinor
+        return DoctorEarnings(
+            grossMinor = totals.grossMinor,
+            commissionMinor = totals.commissionMinor,
+            netMinor = net,
+            paidOutMinor = paidOut,
+            balanceMinor = net - paidOut,
+            refundDueMinor = totals.refundDueMinor,
         )
     }
 
@@ -582,16 +585,20 @@ class ConsultationService(
         return CommissionView(percent)
     }
 
-    /** Every approved or suspended doctor, with how she answers and what she is owed. */
-    suspend fun quality(): List<AdminDoctorQuality> {
-        val (records, _) = doctors.list(null, MAX_QUALITY_ROWS, 0)
-        val shown = records.filter { it.status == DoctorStatus.APPROVED || it.status == DoctorStatus.SUSPENDED }
-        val works = repository.works(shown.map { it.id })
-        val paidOut = repository.payoutTotals(shown.map { it.id })
-        return shown.map { doctor ->
-            val sessions = repository.sessionsOfDoctor(doctor.id)
-            val figures = figuresOf(sessions)
-            val money = moneyOf(sessions.filter { it.payment in MONEY }, paidOut[doctor.id] ?: 0)
+    /**
+     * A page of the approved and suspended doctors, the busiest this month first, with
+     * how each answers and what she is owed. A handful of reads per page, not per doctor.
+     */
+    suspend fun quality(limit: Int, offset: Long): Page<AdminDoctorQuality> {
+        val at = clock.now()
+        val (ids, total) = repository.qualityPage(at - 30.days, limit, offset)
+        val records = doctors.byIds(ids)
+        val works = repository.works(ids)
+        val paidOut = repository.payoutTotals(ids)
+        val totals = repository.totals(ids, at, at - 7.days, at - 30.days)
+        val rows = ids.mapNotNull { records[it] }.map { doctor ->
+            val figures = totals[doctor.id] ?: DoctorTotals()
+            val money = moneyOf(figures, paidOut[doctor.id] ?: 0)
             val work = works[doctor.id]
             AdminDoctorQuality(
                 doctorId = doctor.id.toString(),
@@ -606,7 +613,7 @@ class ConsultationService(
                 openNow = figures.openNow,
                 avgFirstReplyMinutes = figures.avgFirstReplyMinutes,
                 unansweredTotal = figures.unanswered,
-                rating = figures.rating,
+                rating = figures.rating?.roundTo1(),
                 ratingCount = figures.ratingCount,
                 grossMinor = money.grossMinor,
                 netMinor = money.netMinor,
@@ -614,12 +621,23 @@ class ConsultationService(
                 balanceMinor = money.balanceMinor,
                 refundDueMinor = money.refundDueMinor,
             )
-        }.sortedByDescending { it.consultationsMonth }
+        }
+        return Page(rows, total, limit, offset.toInt())
     }
 
     suspend fun adminEarnings(doctorId: Uuid): DoctorEarnings {
         doctors.byId(doctorId) ?: throw NotFoundException("Shifokor topilmadi")
-        return earningsOf(doctorId, withLines = true)
+        return earningsOf(doctorId)
+    }
+
+    suspend fun adminEarningLines(doctorId: Uuid, limit: Int, offset: Long): Page<EarningLine> {
+        doctors.byId(doctorId) ?: throw NotFoundException("Shifokor topilmadi")
+        return linesOf(doctorId, limit, offset)
+    }
+
+    suspend fun adminPayouts(doctorId: Uuid, limit: Int, offset: Long): Page<DoctorPayoutView> {
+        doctors.byId(doctorId) ?: throw NotFoundException("Shifokor topilmadi")
+        return payoutsOf(doctorId, limit, offset)
     }
 
     suspend fun addPayout(doctorId: Uuid, request: CreatePayoutRequest, admin: AdminPrincipal, context: RequestContext): DoctorEarnings {
@@ -641,7 +659,7 @@ class ConsultationService(
                 userAgent = context.userAgent,
             ),
         )
-        return earningsOf(doctorId, withLines = true)
+        return earningsOf(doctorId)
     }
 
     // ---------------------------------------------------------------- helpers
@@ -696,12 +714,17 @@ class ConsultationService(
         const val MAX_REVIEWS = 50
         const val TOP_TOPICS = 5
         const val EXPIRE_BATCH = 200
-        const val MAX_QUALITY_ROWS = 500
+
+        /** The quality table's page, and the most one request may ask for. */
+        const val QUALITY_PAGE = 50
+        const val MAX_QUALITY_PAGE = 200
+
+        /** The most earnings lines or payouts one request may ask for. */
+        const val MAX_EARNINGS_PAGE = 200
 
         /** What a doctor with no ratings is assumed to be, for ordering only. */
         const val PRIOR_RATING = 4.5
         const val PRIOR_WEIGHT = 5
-        private val MONEY = setOf(ConsultationPayment.PAID, ConsultationPayment.REFUND_DUE, ConsultationPayment.REFUNDED)
 
         fun conversationLink(conversationId: Uuid) = "sadora://conversation/$conversationId"
 

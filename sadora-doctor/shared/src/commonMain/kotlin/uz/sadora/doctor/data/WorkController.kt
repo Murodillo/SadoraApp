@@ -85,12 +85,77 @@ class WorkController(private val api: DoctorApi?) {
         statsCalls.run(silent = stats != null) { api.stats() }?.let { stats = it }
     }
 
+    /**
+     * The totals over everything, with her consultations and payouts as far as she has
+     * scrolled: the first page of each comes with the totals, the rest through
+     * [loadMoreLines] and [loadMorePayouts].
+     */
     var earnings by mutableStateOf<DoctorEarnings?>(null)
         private set
 
+    /** More consultations, or payouts, than [earnings] holds are on the server. */
+    var linesHaveMore by mutableStateOf(false)
+        private set
+    var payoutsHaveMore by mutableStateOf(false)
+        private set
+
+    /**
+     * Rows the server has given of each list — the next page's offset, overlaps included.
+     * Observable: the screen asks again on it, so a page that was all overlap still
+     * brings the next one.
+     */
+    var linesRead by mutableStateOf(0)
+        private set
+    var payoutsRead by mutableStateOf(0)
+        private set
+    private var loadingLines = false
+    private var loadingPayouts = false
+
+    /** The totals and the first pages; what was scrolled to starts over from the top. */
     suspend fun loadEarnings(silent: Boolean = earnings != null) {
         val api = api ?: return
-        earningsCalls.run(silent = silent) { api.earnings() }?.let { earnings = it }
+        earningsCalls.run(silent = silent) { api.earnings() }?.let {
+            earnings = it
+            linesRead = it.lines.size
+            payoutsRead = it.payouts.size
+            linesHaveMore = it.linesHaveMore
+            payoutsHaveMore = it.payoutsHaveMore
+        }
+    }
+
+    /** The next page of her paid consultations, under the last one on screen. */
+    suspend fun loadMoreLines() {
+        val api = api ?: return
+        if (!linesHaveMore || loadingLines) return
+        loadingLines = true
+        try {
+            val page = earningsCalls.run(silent = true) { api.earningLines(offset = linesRead) } ?: return
+            val shown = earnings ?: return
+            // A consultation paid in between shifts the offsets; the overlap is dropped by id.
+            val known = shown.lines.mapTo(HashSet()) { it.sessionId }
+            earnings = shown.copy(lines = shown.lines + page.items.filter { it.sessionId !in known })
+            linesRead += page.items.size
+            linesHaveMore = page.hasMore && page.items.isNotEmpty()
+        } finally {
+            loadingLines = false
+        }
+    }
+
+    /** The next page of her payouts. */
+    suspend fun loadMorePayouts() {
+        val api = api ?: return
+        if (!payoutsHaveMore || loadingPayouts) return
+        loadingPayouts = true
+        try {
+            val page = earningsCalls.run(silent = true) { api.payouts(offset = payoutsRead) } ?: return
+            val shown = earnings ?: return
+            val known = shown.payouts.mapTo(HashSet()) { it.id }
+            earnings = shown.copy(payouts = shown.payouts + page.items.filter { it.id !in known })
+            payoutsRead += page.items.size
+            payoutsHaveMore = page.hasMore && page.items.isNotEmpty()
+        } finally {
+            loadingPayouts = false
+        }
     }
 
     // ---------------------------------------------------------------- quick replies
@@ -171,6 +236,10 @@ class WorkController(private val api: DoctorApi?) {
         settings = null
         stats = null
         earnings = null
+        linesHaveMore = false
+        payoutsHaveMore = false
+        linesRead = 0
+        payoutsRead = 0
         quickReplies = emptyList()
         quickRepliesLoaded = false
         note = null

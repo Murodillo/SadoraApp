@@ -22,6 +22,7 @@ import org.jetbrains.exposed.v1.jdbc.upsert
 import uz.sadora.contract.CommunityTopic
 import uz.sadora.contract.ConsultationPayment
 import uz.sadora.contract.DoctorHours
+import uz.sadora.contract.DoctorStatus
 import uz.sadora.contract.MessageKind
 import uz.sadora.contract.PaymentProvider
 import uz.sadora.contract.PaymentState
@@ -40,6 +41,7 @@ import uz.sadora.server.db.DoctorPayouts
 import uz.sadora.server.db.DoctorProfiles
 import uz.sadora.server.db.DoctorQuickReplies
 import uz.sadora.server.db.PaymentTransactions
+import uz.sadora.server.db.Users
 import uz.sadora.server.db.dbQuery
 import uz.sadora.server.db.dbValue
 import uz.sadora.server.db.enumFromDb
@@ -76,6 +78,23 @@ data class PaidTransaction(val id: Uuid, val provider: PaymentProvider, val exte
 data class QuickReplyRecord(val id: Uuid, val title: String, val body: String, val position: Int)
 
 data class PayoutRecord(val id: Uuid, val doctorId: Uuid, val amountMinor: Long, val note: String?, val paidAt: Instant)
+
+/** A doctor's sessions summed up: how she answers, and the money on them. */
+data class DoctorTotals(
+    val total: Int = 0,
+    val week: Int = 0,
+    val month: Int = 0,
+    val openNow: Int = 0,
+    val avgFirstReplyMinutes: Int? = null,
+    val unanswered: Int = 0,
+    val rating: Double? = null,
+    val ratingCount: Int = 0,
+    val grossMinor: Long = 0,
+    val commissionMinor: Long = 0,
+    val refundDueMinor: Long = 0,
+    /** Sessions with money on them: paid, owed back or returned — her earnings' lines. */
+    val moneyLines: Long = 0,
+)
 
 /** A doctor's own consultation settings as they are stored. */
 data class DoctorWorkRecord(
@@ -236,13 +255,6 @@ class ConsultationRepository {
         } > 0
     }
 
-    /** A doctor's sessions, newest first; [since] limits to those created after it. */
-    suspend fun sessionsOfDoctor(doctorId: Uuid, since: Instant? = null): List<SessionRecord> = dbQuery {
-        var query = ConsultationSessions.selectAll().where { ConsultationSessions.doctorId eq doctorId }
-        since?.let { query = query.andWhere { ConsultationSessions.createdAt greaterEq it.toOffsetDateTime() } }
-        query.orderBy(ConsultationSessions.createdAt to SortOrder.DESC).map { it.toSession() }
-    }
-
     /** Every session with money on it, for the operators; [payment] narrows to one state. */
     suspend fun paidSessions(payment: ConsultationPayment?, limit: Int, offset: Long): Pair<List<SessionRecord>, Long> = dbQuery {
         var query = ConsultationSessions.selectAll()
@@ -255,6 +267,109 @@ class ConsultationRepository {
             .map { it.toSession() } to total
     }
 
+    /**
+     * A page of one doctor's sessions with money on them, the latest opened first — the
+     * lines under her earnings. The id breaks ties, so an offset never repeats or skips one.
+     */
+    suspend fun moneySessions(doctorId: Uuid, limit: Int, offset: Long): Pair<List<SessionRecord>, Long> = dbQuery {
+        val query = ConsultationSessions.selectAll()
+            .where { (ConsultationSessions.doctorId eq doctorId) and (ConsultationSessions.paymentState inList MONEY_STATES) }
+        val total = query.count()
+        query.orderBy(
+            ConsultationSessions.openedAt to SortOrder.DESC_NULLS_LAST,
+            ConsultationSessions.createdAt to SortOrder.DESC,
+            ConsultationSessions.id to SortOrder.DESC,
+        )
+            .limit(limit)
+            .offset(offset)
+            .map { it.toSession() } to total
+    }
+
+    /** The patients' names for a page of lines, in one read. */
+    suspend fun patientNames(userIds: Collection<Uuid>): Map<Uuid, String> = dbQuery {
+        if (userIds.isEmpty()) return@dbQuery emptyMap()
+        Users.select(Users.id, Users.name)
+            .where { Users.id inList userIds.distinct() }
+            .associate { it[Users.id] to it[Users.name] }
+    }
+
+    /**
+     * Each doctor's numbers, added up by the database — one row per doctor however many
+     * sessions she has. The same rules as the service's own count over a list: a window
+     * counts once opened; a reply time is whole minutes, cut down; Sadora's share is
+     * rounded down per session, so the sum matches the lines.
+     */
+    suspend fun totals(doctorIds: Collection<Uuid>, at: Instant, weekSince: Instant, monthSince: Instant): Map<Uuid, DoctorTotals> =
+        dbQuery {
+            if (doctorIds.isEmpty()) return@dbQuery emptyMap()
+            // Spliced in, not bound: every value is a parsed UUID or an instant formatted
+            // here, so nothing a caller typed reaches the statement.
+            val ids = doctorIds.distinct().joinToString(",") { "'$it'" }
+            val opened = "opened_at IS NOT NULL"
+            val paid = "payment_state = '${ConsultationPayment.PAID.dbValue()}'"
+            val sql = """
+                SELECT doctor_id,
+                    count(*) FILTER (WHERE $opened),
+                    count(*) FILTER (WHERE opened_at >= '$weekSince'::timestamptz),
+                    count(*) FILTER (WHERE opened_at >= '$monthSince'::timestamptz),
+                    count(*) FILTER (WHERE $opened AND closed_at IS NULL AND expires_at > '$at'::timestamptz),
+                    avg(trunc(extract(epoch FROM first_reply_at - opened_at) / 60)) FILTER (WHERE $opened AND first_reply_at IS NOT NULL),
+                    count(*) FILTER (WHERE $opened AND closed_at IS NOT NULL AND first_reply_at IS NULL),
+                    avg(rating) FILTER (WHERE $opened AND rating IS NOT NULL),
+                    count(rating) FILTER (WHERE $opened),
+                    coalesce(sum(price_minor) FILTER (WHERE $paid), 0),
+                    coalesce(sum(price_minor * commission_percent / 100) FILTER (WHERE $paid), 0),
+                    coalesce(sum(price_minor) FILTER (WHERE payment_state = '${ConsultationPayment.REFUND_DUE.dbValue()}'), 0),
+                    count(*) FILTER (WHERE payment_state IN (${MONEY_STATES.joinToString(",") { "'$it'" }}))
+                FROM consultation_sessions
+                WHERE doctor_id IN ($ids)
+                GROUP BY doctor_id
+            """.trimIndent()
+            val result = HashMap<Uuid, DoctorTotals>()
+            exec(sql) { rows ->
+                while (rows.next()) {
+                    result[Uuid.parse(rows.getString(1))] = DoctorTotals(
+                        total = rows.getInt(2),
+                        week = rows.getInt(3),
+                        month = rows.getInt(4),
+                        openNow = rows.getInt(5),
+                        avgFirstReplyMinutes = rows.getBigDecimal(6)?.toDouble()?.toInt(),
+                        unanswered = rows.getInt(7),
+                        rating = rows.getBigDecimal(8)?.toDouble(),
+                        ratingCount = rows.getInt(9),
+                        grossMinor = rows.getLong(10),
+                        commissionMinor = rows.getLong(11),
+                        refundDueMinor = rows.getLong(12),
+                        moneyLines = rows.getLong(13),
+                    )
+                }
+            }
+            result
+        }
+
+    /**
+     * A page of the staff's quality table: approved and suspended doctors, the busiest
+     * this month first, then the latest to apply. Ordered here, not after loading, so a
+     * page is the same slice whatever the offset.
+     */
+    suspend fun qualityPage(monthSince: Instant, limit: Int, offset: Long): Pair<List<Uuid>, Long> = dbQuery {
+        val shown = listOf(DoctorStatus.APPROVED, DoctorStatus.SUSPENDED).map { it.dbValue() }
+        val total = DoctorProfiles.selectAll().where { DoctorProfiles.status inList shown }.count()
+        val statuses = shown.joinToString(",") { "'$it'" }
+        val sql = """
+            SELECT d.id
+            FROM doctor_profiles d
+            LEFT JOIN consultation_sessions s ON s.doctor_id = d.id AND s.opened_at >= '$monthSince'::timestamptz
+            WHERE d.status IN ($statuses)
+            GROUP BY d.id, d.submitted_at
+            ORDER BY count(s.id) DESC, d.submitted_at DESC, d.id
+            LIMIT $limit OFFSET $offset
+        """.trimIndent()
+        val ids = ArrayList<Uuid>()
+        exec(sql) { rows -> while (rows.next()) ids += Uuid.parse(rows.getString(1)) }
+        ids to total
+    }
+
     suspend fun countByPayment(): Map<ConsultationPayment, Long> = dbQuery {
         val counter = ConsultationSessions.id.count()
         ConsultationSessions.select(ConsultationSessions.paymentState, counter)
@@ -263,11 +378,13 @@ class ConsultationRepository {
     }
 
     /** Rated sessions of a doctor, newest first. */
-    suspend fun reviewsOf(doctorId: Uuid, limit: Int): List<SessionRecord> = dbQuery {
+    suspend fun reviewsOf(doctorId: Uuid, limit: Int, offset: Long = 0): List<SessionRecord> = dbQuery {
         ConsultationSessions.selectAll()
             .where { (ConsultationSessions.doctorId eq doctorId) and ConsultationSessions.rating.isNotNull() }
-            .orderBy(ConsultationSessions.ratedAt to SortOrder.DESC)
+            // The id breaks a tie in the time, so pages read by offset neither repeat nor skip one.
+            .orderBy(ConsultationSessions.ratedAt to SortOrder.DESC, ConsultationSessions.id to SortOrder.DESC)
             .limit(limit)
+            .offset(offset)
             .map { it.toSession() }
     }
 
@@ -450,11 +567,14 @@ class ConsultationRepository {
         }
     }
 
-    suspend fun payouts(doctorId: Uuid): List<PayoutRecord> = dbQuery {
-        DoctorPayouts.selectAll()
-            .where { DoctorPayouts.doctorId eq doctorId }
-            .orderBy(DoctorPayouts.paidAt to SortOrder.DESC)
-            .map { it.toPayout() }
+    /** A page of a doctor's payouts, the latest first, with how many there are in all. */
+    suspend fun payouts(doctorId: Uuid, limit: Int, offset: Long): Pair<List<PayoutRecord>, Long> = dbQuery {
+        val query = DoctorPayouts.selectAll().where { DoctorPayouts.doctorId eq doctorId }
+        val total = query.count()
+        query.orderBy(DoctorPayouts.paidAt to SortOrder.DESC, DoctorPayouts.id to SortOrder.DESC)
+            .limit(limit)
+            .offset(offset)
+            .map { it.toPayout() } to total
     }
 
     suspend fun payoutTotals(doctorIds: Collection<Uuid>): Map<Uuid, Long> = dbQuery {

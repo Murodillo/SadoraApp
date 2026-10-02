@@ -39,6 +39,7 @@ import uz.sadora.app.ui.components.BadgeChip
 import uz.sadora.app.ui.components.ButtonTone
 import uz.sadora.app.ui.components.ChipFlowRow
 import uz.sadora.app.ui.components.ErrorStrip
+import uz.sadora.app.ui.components.LoadMoreRow
 import uz.sadora.app.ui.components.PillButton
 import uz.sadora.app.ui.components.SadoraButton
 import uz.sadora.app.ui.components.SadoraCard
@@ -164,6 +165,9 @@ fun AliasProfileScreen(
                         onShare = { share("${post.body}\n\n" + t.shareSuffix) },
                         onMore = { onOpenMenu(post) },
                     )
+                }
+                if (community.profileHasMore) {
+                    item(key = "more") { LoadMoreRow(profile.posts.size, onLoadMore = { community.loadMoreProfilePosts() }) }
                 }
             }
         }

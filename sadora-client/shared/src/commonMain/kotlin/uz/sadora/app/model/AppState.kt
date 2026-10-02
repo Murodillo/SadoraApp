@@ -540,13 +540,25 @@ class AppState {
         savedPosts.addAll(saved)
     }
 
-    /** The server's comments for one post; her optimistic ones are now among them. */
-    fun replaceComments(postId: String, comments: List<CommunityComment>) {
+    /**
+     * The server's comments for one post; her optimistic ones are now among them. Not
+     * [complete] when more pages are left on the server: the count is then the feed's.
+     */
+    fun replaceComments(postId: String, comments: List<CommunityComment>, complete: Boolean = true) {
         val index = communityPosts.indexOfFirst { it.id == postId }
         if (index >= 0) {
-            communityPosts[index] = communityPosts[index].copy(comments = comments, commentCount = comments.size)
+            val post = communityPosts[index]
+            val count = if (complete) comments.size else maxOf(post.commentCount, comments.size)
+            communityPosts[index] = post.copy(comments = comments, commentCount = count)
         }
         ownComments.remove(postId)
+    }
+
+    /** A further page of the feed, under the posts already held. */
+    fun appendCommunityFeed(posts: List<CommunityPost>, liked: Set<String>, saved: Set<String>) {
+        communityPosts.addAll(posts)
+        likedPosts.addAll(liked)
+        savedPosts.addAll(saved)
     }
 
     /** The posts the feed should show, given the room and the saved filter. */

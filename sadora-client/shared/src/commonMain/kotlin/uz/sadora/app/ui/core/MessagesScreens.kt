@@ -37,6 +37,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -88,6 +89,7 @@ import uz.sadora.app.ui.components.ButtonTone
 import uz.sadora.app.ui.components.CapturedPhoto
 import uz.sadora.app.ui.components.CircleIconButton
 import uz.sadora.app.ui.components.ErrorStrip
+import uz.sadora.app.ui.components.LoadMoreRow
 import uz.sadora.app.ui.components.RoundIconButton
 import uz.sadora.app.ui.components.SadoraBottomSheet
 import uz.sadora.app.ui.components.SadoraButton
@@ -171,6 +173,11 @@ fun ConversationsScreen(
             } else {
                 items(messages.conversations.size, key = { messages.conversations[it].id }) { index ->
                     ConversationRow(messages.conversations[index], onClick = { onOpen(messages.conversations[index]) })
+                }
+                if (messages.hasMoreConversations) {
+                    item(key = "more") {
+                        LoadMoreRow(messages.conversations.size, onLoadMore = { messages.loadMoreConversations() })
+                    }
                 }
             }
         }
@@ -363,13 +370,26 @@ fun ConversationScreen(
         }
     }
     val otherTyping = messages.otherTyping
-    LaunchedEffect(messages.messages.size, otherTyping) {
+    // Older lines may be read in only once the thread has come to rest at its newest line;
+    // before that the top of the list is on screen for a frame and would ask for them.
+    var settled by remember(conversationId) { mutableStateOf(false) }
+    // Keyed on the newest line, not the count: a page of older lines read in above must
+    // not throw her back to the bottom.
+    LaunchedEffect(messages.messages.lastOrNull()?.id, otherTyping) {
         if (messages.messages.isEmpty()) return@LaunchedEffect
         // Counted rather than read from the layout, which has not caught up with the
-        // new line yet when this runs: the note, the lines, "yozmoqda", the end spacer.
+        // new line yet when this runs: the spinner, the note, the lines, "yozmoqda", the end spacer.
+        val older = if (messages.hasOlder) 1 else 0
         val note = if (messages.current?.consultation != null) 1 else 0
         val typing = if (otherTyping) 1 else 0
-        list.animateScrollToItem(note + messages.messages.size + typing)
+        list.animateScrollToItem(older + note + messages.messages.size + typing)
+        settled = true
+    }
+    // Near the top, the page above. Prepended lines keep the one she is reading in place,
+    // so the index jumps past the threshold and this does not ask again until she scrolls.
+    LaunchedEffect(list) {
+        snapshotFlow { Triple(settled && list.firstVisibleItemIndex <= OlderThreshold, messages.hasOlder, messages.current?.id) }
+            .collect { (nearTop, more, _) -> if (nearTop && more) messages.loadOlder() }
     }
 
     // The window's clock, for the banner. The server's own verdict arrives with each poll.
@@ -434,6 +454,9 @@ fun ConversationScreen(
                 contentPadding = PaddingValues(horizontal = Spacing.screen, vertical = Spacing.sm),
                 verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
+                if (messages.hasOlder) {
+                    item(key = "older") { LoadMoreRow(Unit, onLoadMore = {}) }
+                }
                 if (window != null) {
                     item(key = "note") {
                         Text(
@@ -1225,5 +1248,8 @@ private fun decodeBase64(value: String): ByteArray? = runCatching { Base64.decod
 
 private val PhotoWidth = 232.dp
 private const val PollMillis = 3_000L
+
+/** How close to the top of a thread, in items, the page above is asked for. */
+private const val OlderThreshold = 4
 private const val ListRefreshMillis = 20_000L
 private const val ClockTickMillis = 30_000L

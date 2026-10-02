@@ -55,6 +55,17 @@ fun Route.communityRoutes(community: CommunityService, messaging: MessagingServi
                 get {
                     call.respond(community.profile(call.requireUserId(), call.alias()))
                 }
+                /** Her posts a page at a time; the page above carries only the first few. */
+                get("/posts") {
+                    call.respond(
+                        community.profilePosts(
+                            viewer = call.requireUserId(),
+                            alias = call.alias(),
+                            limit = call.intParameter("limit", default = CommunityService.PROFILE_POSTS, max = CommunityService.MAX_PROFILE_POSTS),
+                            offset = call.intParameter("offset", default = 0, max = Int.MAX_VALUE).toLong(),
+                        ),
+                    )
+                }
                 put("/block") {
                     call.respond(community.setBlocked(call.requireUserId(), call.alias(), blocked = true))
                 }
@@ -71,15 +82,30 @@ fun Route.communityRoutes(community: CommunityService, messaging: MessagingServi
                         "personal" -> ConversationScope.PERSONAL
                         else -> ConversationScope.ALL
                     }
-                    call.respond(messaging.conversations(call.requireUserId(), scope))
+                    call.respond(
+                        messaging.conversations(
+                            userId = call.requireUserId(),
+                            scope = scope,
+                            limit = call.intParameter("limit", default = MessagingService.MAX_THREADS, max = MessagingService.MAX_THREADS),
+                            before = call.instantParameter("before"),
+                        ),
+                    )
                 }
                 post {
                     val request = call.receive<StartConversationRequest>()
                     call.respond(HttpStatusCode.Created, messaging.start(call.requireUserId(), request))
                 }
                 route("/{id}") {
+                    /** The latest `limit` lines; older ones come from `/messages?before=`. */
                     get {
-                        call.respond(messaging.thread(call.requireUserId(), call.conversationId()))
+                        val limit = call.intParameter("limit", default = MessagingService.MAX_MESSAGES, max = MessagingService.MAX_MESSAGES)
+                        call.respond(messaging.thread(call.requireUserId(), call.conversationId(), limit))
+                    }
+                    /** Scrolling up: the `limit` lines before the message `before`. */
+                    get("/messages") {
+                        val before = parseUuid(call.request.queryParameters["before"].orEmpty(), "before")
+                        val limit = call.intParameter("limit", default = MESSAGE_PAGE, max = MessagingService.MAX_MESSAGES)
+                        call.respond(messaging.olderMessages(call.requireUserId(), call.conversationId(), before, limit))
                     }
                     post("/messages") {
                         val request = call.receive<SendMessageRequest>()
@@ -145,7 +171,14 @@ fun Route.communityRoutes(community: CommunityService, messaging: MessagingServi
                     }
 
                     get("/comments") {
-                        call.respond(community.comments(call.requireUserId(), call.postId()))
+                        call.respond(
+                            community.comments(
+                                userId = call.requireUserId(),
+                                postId = call.postId(),
+                                limit = call.intParameter("limit", default = CommunityService.MAX_COMMENTS, max = CommunityService.MAX_COMMENTS),
+                                offset = call.intParameter("offset", default = 0, max = Int.MAX_VALUE).toLong(),
+                            ),
+                        )
                     }
 
                     post("/comments") {
@@ -193,6 +226,16 @@ fun Route.communityRoutes(community: CommunityService, messaging: MessagingServi
                 }
             }
         }
+    }
+}
+
+private const val MESSAGE_PAGE = 50
+
+/** An ISO-8601 instant in the query, or null when it is absent. */
+private fun io.ktor.server.application.ApplicationCall.instantParameter(name: String): kotlin.time.Instant? {
+    val raw = request.queryParameters[name]?.takeIf { it.isNotBlank() } ?: return null
+    return runCatching { kotlin.time.Instant.parse(raw) }.getOrElse {
+        throw uz.sadora.server.core.ValidationException(name, "Sana noto'g'ri")
     }
 }
 

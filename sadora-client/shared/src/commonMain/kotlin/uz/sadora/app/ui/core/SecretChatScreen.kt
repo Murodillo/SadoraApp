@@ -3,6 +3,7 @@ package uz.sadora.app.ui.core
 import androidx.compose.ui.semantics.Role
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
+import uz.sadora.app.ui.components.LoadMoreRow
 import uz.sadora.app.ui.components.EmptyState
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
@@ -302,6 +303,14 @@ fun SecretChatScreen(
                                     onShare = { share("${post.body}\n\n" + t.shareSuffix) },
                                     onMore = { onOpenMenu(post) },
                                 )
+                            }
+                        }
+                        // Her own and her saved posts are filtered from what is loaded; only
+                        // the feed itself pages on, or a short filtered list would read the
+                        // whole room through one page at a time.
+                        if (community.feedHasMore && state.communityFilter == CommunityFilter.Feed) {
+                            item(key = "more") {
+                                LoadMoreRow(community.feedLoadedCount, onLoadMore = { community.loadMoreFeed() })
                             }
                         }
                     }

@@ -244,9 +244,17 @@ class MessagingRepository {
         limit: Int,
         scope: ConversationScope = ConversationScope.ALL,
         doctorId: Uuid? = null,
+        before: Instant? = null,
     ): List<ConversationRecord> = dbQuery {
+        // A paid consultation's row exists from its checkout; until the money arrives
+        // there is nothing in it for either side. Left out here and not after the read,
+        // so a page that comes back short really is the last one.
         var query = CommunityConversations.selectAll()
-            .where { (CommunityConversations.userA eq userId) or (CommunityConversations.userB eq userId) }
+            .where {
+                ((CommunityConversations.userA eq userId) or (CommunityConversations.userB eq userId)) and
+                    (CommunityConversations.doctorId.isNull() or CommunityConversations.openedAt.isNotNull())
+            }
+        if (before != null) query = query.andWhere { CommunityConversations.lastMessageAt less before.toOffsetDateTime() }
         when (scope) {
             ConversationScope.ALL -> Unit
             ConversationScope.PATIENTS ->
@@ -303,18 +311,29 @@ class MessagingRepository {
         )
     }
 
-    /** The visible messages of a thread, oldest first, the last [limit] of them, with photo sizes. */
-    suspend fun messagesOf(conversationId: Uuid, limit: Int): List<MessageRecord> = dbQuery {
-        val lines = CommunityMessages.selectAll()
+    /**
+     * The visible messages of a thread, oldest first, the last [limit] of them — or the
+     * last [limit] written before [before] — with photo sizes, and whether older ones exist.
+     */
+    suspend fun messagesOf(conversationId: Uuid, limit: Int, before: MessageRecord? = null): Pair<List<MessageRecord>, Boolean> = dbQuery {
+        var query = CommunityMessages.selectAll()
             .where {
                 (CommunityMessages.conversationId eq conversationId) and
                     (CommunityMessages.status eq ContentStatus.VISIBLE.dbValue())
             }
-            .orderBy(CommunityMessages.createdAt to SortOrder.DESC)
-            .limit(limit)
+        if (before != null) {
+            // Two lines can share a timestamp; the id breaks the tie the same way the order does.
+            val at = before.createdAt.toOffsetDateTime()
+            query = query.andWhere {
+                (CommunityMessages.createdAt less at) or
+                    ((CommunityMessages.createdAt eq at) and (CommunityMessages.id less before.id))
+            }
+        }
+        val read = query
+            .orderBy(CommunityMessages.createdAt to SortOrder.DESC, CommunityMessages.id to SortOrder.DESC)
+            .limit(limit + 1)
             .map { it.toMessage() }
-            .asReversed()
-        withImageSizes(lines)
+        withImageSizes(read.take(limit).asReversed()) to (read.size > limit)
     }
 
     /**

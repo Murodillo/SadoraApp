@@ -17,6 +17,7 @@ import uz.sadora.app.nav.Route
 import uz.sadora.app.ui.components.CardLabel
 import uz.sadora.app.ui.components.CircleIconButton
 import uz.sadora.app.ui.components.EmptyState
+import uz.sadora.app.ui.components.LoadMoreRow
 import uz.sadora.app.ui.components.SadoraCard
 import uz.sadora.app.ui.components.SadoraTopBar
 import uz.sadora.app.ui.components.ScreenContent
@@ -89,7 +90,12 @@ fun NotificationInboxScreen(
                 }
             }
 
-            if (due.isEmpty() && sent.isEmpty()) {
+            // Outside the card: a page of suppressed rows shows nothing, and the next one is still worth asking for.
+            if (notifications.sentHasMore) {
+                item(key = "more") { LoadMoreRow(notifications.historyLoaded, onLoadMore = { notifications.loadMoreSent() }) }
+            }
+
+            if (due.isEmpty() && sent.isEmpty() && !notifications.sentHasMore) {
                 item {
                     EmptyState(
                         title = t.inboxEmpty,

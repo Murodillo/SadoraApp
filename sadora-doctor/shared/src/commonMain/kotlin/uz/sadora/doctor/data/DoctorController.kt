@@ -85,6 +85,20 @@ class DoctorController(
     var questionsLoaded by mutableStateOf(false)
         private set
 
+    /** Older questions than the last one in [questions] are on the server. */
+    var questionsHasMore by mutableStateOf(false)
+        private set
+
+    /**
+     * Where the next page starts on the server: the rows it has given, less the ones she
+     * answered since — those left its list, and every row after them moved up one. Not
+     * [questions]' size: a page that only repeats rows (newer questions pushed them down)
+     * still moves it on, so the list never asks for the same page twice.
+     */
+    var questionsOffset by mutableStateOf(0)
+        private set
+    private var loadingQuestions = false
+
     /**
      * Questions she has answered since the panel last drew them, with where they stood.
      *
@@ -127,6 +141,11 @@ class DoctorController(
     var threadLoaded by mutableStateOf(false)
         private set
 
+    /** The open post has comments past [threadComments] on the server. */
+    var threadHasMore by mutableStateOf(false)
+        private set
+    private var loadingComments = false
+
     // ---------------------------------------------------------------- the panel
 
     suspend fun loadAccount(silent: Boolean = true) {
@@ -156,20 +175,92 @@ class DoctorController(
         return true
     }
 
+    /**
+     * The newest page. The pages she scrolled to stay under it, as the feed's do: Home
+     * reads this on every visit, and the list must not fold back to its first page.
+     */
     suspend fun loadQuestions() {
         val api = api ?: return
         calls.run(silent = questionsLoaded) { api.questions() }?.let { posts ->
-            questions = posts
+            val full = posts.size >= DoctorApi.QUESTION_PAGE
+            val tail = if (full && questionsLoaded) {
+                val ids = posts.mapTo(HashSet()) { it.id }
+                val edge = posts.last().createdAt
+                questions.filter { it.id !in ids && it.createdAt < edge }
+            } else {
+                emptyList()
+            }
+            questions = posts + tail
+            questionsOffset = questions.size
+            questionsHasMore = full && (tail.isEmpty() || questionsHasMore)
             questionsLoaded = true
+        }
+    }
+
+    /** The next page of the work list, under what is on screen. */
+    suspend fun loadMoreQuestions() {
+        val api = api ?: return
+        if (!questionsHasMore || loadingQuestions) return
+        loadingQuestions = true
+        try {
+            val page = calls.run(silent = true) { api.questions(offset = questionsOffset) } ?: return
+            // Offsets shift when a question is asked in between; the overlap is dropped by id.
+            val known = questions.mapTo(HashSet()) { it.id }
+            questions = questions + page.filter { it.id !in known }
+            questionsOffset += page.size
+            questionsHasMore = page.size >= DoctorApi.QUESTION_PAGE
+        } finally {
+            loadingQuestions = false
         }
     }
 
     // ---------------------------------------------------------------- her page
 
+    /** Her posts go on past what [profile] holds. */
+    var profilePostsHasMore by mutableStateOf(false)
+        private set
+
+    /** How many of her posts have been read: the next page's offset. */
+    private var profilePostsOffset = 0
+    private var loadingProfilePosts = false
+
     suspend fun loadProfile(id: String) {
         val api = api ?: return
         if (profile?.id != id) profile = null
-        profileCalls.run(silent = profile != null) { api.profile(id) }?.let { profile = it }
+        profileCalls.run(silent = profile != null) { api.profile(id) }?.let { page ->
+            // A refresh keeps the posts she had scrolled to under the few her page carries.
+            // They live on [profile] itself, so a new photo or answer count reaches them too.
+            val shown = profile?.takeIf { it.id == id }?.posts.orEmpty()
+            val ids = page.posts.mapTo(HashSet()) { it.id }
+            val edge = page.posts.lastOrNull()?.createdAt
+            val tail = if (edge != null && page.posts.size < page.postCount) {
+                shown.filter { it.id !in ids && it.createdAt < edge }
+            } else {
+                emptyList()
+            }
+            profile = page.copy(posts = page.posts + tail)
+            profilePostsOffset = page.posts.size + tail.size
+            profilePostsHasMore = profilePostsOffset < page.postCount
+        }
+    }
+
+    /** The next page of the open page's posts, under what is on screen. */
+    suspend fun loadMoreProfilePosts() {
+        val api = api ?: return
+        val id = profile?.id ?: return
+        if (!profilePostsHasMore || loadingProfilePosts) return
+        loadingProfilePosts = true
+        try {
+            val page = profileCalls.run(silent = true) { api.posts(id, offset = profilePostsOffset) } ?: return
+            val current = profile?.takeIf { it.id == id } ?: return
+            // Offsets shift when she posts in between; the overlap is dropped by id.
+            val known = current.posts.mapTo(HashSet()) { it.id }
+            profile = current.copy(posts = current.posts + page.items.filter { it.id !in known })
+            profilePostsOffset += page.items.size
+            profilePostsHasMore = page.hasMore && page.items.isNotEmpty()
+        } finally {
+            loadingProfilePosts = false
+        }
     }
 
     // ---------------------------------------------------------------- a question
@@ -184,6 +275,7 @@ class DoctorController(
             thread = (questions + profilePosts + feed).firstOrNull { it.id == postId }
             threadComments = emptyList()
             threadLoaded = false
+            threadHasMore = false
         }
         val community = community ?: return
         // One call as far as the page is concerned: a thread without its post, or a post
@@ -198,7 +290,25 @@ class DoctorController(
         if (openThreadId != postId) return
         thread = loaded.first
         threadComments = loaded.second
+        threadHasMore = loaded.second.size >= CommunityApi.COMMENT_PAGE
         threadLoaded = true
+    }
+
+    /** The next page of the open post's comments, by offset. */
+    suspend fun loadMoreComments() {
+        val community = community ?: return
+        val postId = openThreadId ?: return
+        if (!threadHasMore || loadingComments) return
+        loadingComments = true
+        try {
+            val page = threadCalls.run(silent = true) { community.comments(postId, offset = threadComments.size) } ?: return
+            if (openThreadId != postId) return
+            val known = threadComments.mapTo(HashSet()) { it.id }
+            threadComments = threadComments + page.filter { it.id !in known }
+            threadHasMore = page.size >= CommunityApi.COMMENT_PAGE
+        } finally {
+            loadingComments = false
+        }
     }
 
     /** The post whose page is open, so a late answer for an earlier one is dropped. */
@@ -221,6 +331,9 @@ class DoctorController(
             val answered = questions[index].let { it.copy(commentCount = it.commentCount + 1, doctorAnswers = it.doctorAnswers + 1) }
             answeredQuestions = answeredQuestions + AnsweredQuestion(answered, index)
             questions = questions.filterNot { it.id == postId }
+            // It has left the server's list too: the rows after it moved up one, and the
+            // next page starts one sooner, or it would skip the row that took its place.
+            questionsOffset = (questionsOffset - 1).coerceAtLeast(0)
         }
         profile = profile?.let { page ->
             page.copy(
@@ -248,11 +361,49 @@ class DoctorController(
             feedDoctorsOnly = doctorsOnly
             feed = emptyList()
             feedLoaded = false
+            feedHasMore = false
         }
-        val posts = feedCalls.run(silent = feedLoaded) { community.feed(doctorsOnly) }?.items ?: return
+        val page = feedCalls.run(silent = feedLoaded) { community.feed(doctorsOnly) } ?: return
         if (doctorsOnly == feedDoctorsOnly) {
-            feed = posts
+            // The pages she scrolled to stay under the fresh first one.
+            val tail = if (page.hasMore && feedLoaded) {
+                val ids = page.items.mapTo(HashSet()) { it.id }
+                val edge = page.items.lastOrNull()?.createdAt
+                feed.filter { it.id !in ids && edge != null && it.createdAt < edge }
+            } else {
+                emptyList()
+            }
+            feed = page.items + tail
+            feedOffset = feed.size
+            feedHasMore = page.hasMore && (tail.isEmpty() || feedHasMore)
             feedLoaded = true
+        }
+    }
+
+    /** Older posts than the last one in [feed] are on the server. */
+    var feedHasMore by mutableStateOf(false)
+        private set
+    /** Server rows read so far, the next page's offset; the feed's end asks again on it. */
+    var feedOffset by mutableStateOf(0)
+        private set
+    private var loadingFeed = false
+
+    /** The next page of the feed, under what is on screen. */
+    suspend fun loadMoreFeed() {
+        val community = community ?: return
+        if (!feedHasMore || loadingFeed) return
+        val doctorsOnly = feedDoctorsOnly
+        loadingFeed = true
+        try {
+            val page = feedCalls.run(silent = true) { community.feed(doctorsOnly, offset = feedOffset) } ?: return
+            if (doctorsOnly != feedDoctorsOnly) return
+            // Offsets shift when someone posts in between; the overlap is dropped by id.
+            val known = feed.mapTo(HashSet()) { it.id }
+            feed = feed + page.items.filter { it.id !in known }
+            feedOffset += page.items.size
+            feedHasMore = page.hasMore && page.items.isNotEmpty()
+        } finally {
+            loadingFeed = false
         }
     }
 
@@ -274,11 +425,45 @@ class DoctorController(
     /** Photos already fetched, by message id, so a thread polled every few seconds fetches each once. */
     private val images = mutableMapOf<String, ByteArray>()
 
+    /** Consultations last written before the oldest in [conversations] are on the server. */
+    var hasMoreConversations by mutableStateOf(false)
+        private set
+    private var loadingConversations = false
+
+    /**
+     * The newest page. The pages she scrolled to stay under it: the list is re-read every
+     * few seconds while it is up, and must not fold back to its first page.
+     */
     suspend fun loadConversations(silent: Boolean = conversationsLoaded) {
         val community = community ?: return
-        chatCalls.run(silent = silent) { community.consultations() }?.let {
-            conversations = it
+        chatCalls.run(silent = silent) { community.consultations() }?.let { latest ->
+            val full = latest.size >= CommunityApi.CONVERSATION_PAGE
+            val tail = if (full) {
+                val ids = latest.mapTo(HashSet()) { it.id }
+                val edge = latest.last().lastMessageAt
+                conversations.filter { it.id !in ids && it.lastMessageAt < edge }
+            } else {
+                emptyList()
+            }
+            conversations = latest + tail
+            hasMoreConversations = full && (tail.isEmpty() || hasMoreConversations)
             conversationsLoaded = true
+        }
+    }
+
+    /** The next page of consultations, under the oldest one on screen. */
+    suspend fun loadMoreConversations() {
+        val community = community ?: return
+        val oldest = conversations.lastOrNull() ?: return
+        if (!hasMoreConversations || loadingConversations) return
+        loadingConversations = true
+        try {
+            val page = chatCalls.run(silent = true) { community.consultations(before = oldest.lastMessageAt) } ?: return
+            val known = conversations.mapTo(HashSet()) { it.id }
+            conversations = conversations + page.filter { it.id !in known }
+            hasMoreConversations = page.size >= CommunityApi.CONVERSATION_PAGE
+        } finally {
+            loadingConversations = false
         }
     }
 
@@ -290,9 +475,43 @@ class DoctorController(
         val community = community ?: return
         if (openConversation?.conversation?.id != id) openConversation = null
         val thread = chatCalls.run(silent = poll || openConversation != null) { community.conversation(id) } ?: return
-        openConversation = thread
+        openConversation = withOlderKept(thread)
         // Read now: the list's count for it goes, and with it, perhaps, the tab's dot.
         conversations = conversations.map { if (it.id == id) thread.conversation else it }
+    }
+
+    /**
+     * A read of a thread brings its newest page only. The lines she scrolled up to stay
+     * above it while the two still meet; when they do not — a burst longer than a page
+     * between two polls — the newest page alone stands, and scrolling up reads the rest.
+     */
+    private fun withOlderKept(latest: ConversationThread): ConversationThread {
+        val shown = openConversation?.takeIf { it.conversation.id == latest.conversation.id } ?: return latest
+        val first = latest.messages.firstOrNull() ?: return latest
+        if (!latest.hasMore || shown.messages.none { it.id == first.id }) return latest
+        return latest.copy(messages = shown.messages.takeWhile { it.id != first.id } + latest.messages, hasMore = shown.hasMore)
+    }
+
+    private var loadingOlder = false
+
+    /** The page of lines above the first one of the open thread. */
+    suspend fun loadOlderMessages(id: String) {
+        val community = community ?: return
+        val shown = openConversation?.takeIf { it.conversation.id == id && it.hasMore } ?: return
+        val first = shown.messages.firstOrNull() ?: return
+        if (loadingOlder) return
+        loadingOlder = true
+        try {
+            val page = chatCalls.run(silent = true) { community.olderMessages(id, first.id) } ?: return
+            val current = openConversation?.takeIf { it.conversation.id == id } ?: return
+            val known = current.messages.mapTo(HashSet()) { it.id }
+            openConversation = current.copy(
+                messages = page.messages.filter { it.id !in known } + current.messages,
+                hasMore = page.hasMore,
+            )
+        } finally {
+            loadingOlder = false
+        }
     }
 
     /** False when it did not go; the composer then keeps the text. */
@@ -346,7 +565,7 @@ class DoctorController(
     suspend fun closeConsultation(id: String, summary: String? = null): Boolean {
         val community = community ?: return false
         val thread = chatCalls.run { community.close(id, summary?.trim()?.ifEmpty { null }) } ?: return false
-        openConversation = thread
+        openConversation = withOlderKept(thread)
         conversations = conversations.map { if (it.id == id) thread.conversation else it }
         return true
     }
@@ -435,11 +654,14 @@ class DoctorController(
     fun reset() {
         account = null
         profile = null
+        profilePostsHasMore = false
+        profilePostsOffset = 0
         feed = emptyList()
         feedLoaded = false
         feedDoctorsOnly = false
         conversations = emptyList()
         conversationsLoaded = false
+        hasMoreConversations = false
         openConversation = null
         images.clear()
         lastTypingSent = 0L
@@ -449,12 +671,17 @@ class DoctorController(
         lastScannedToken = null
         questions = emptyList()
         questionsLoaded = false
+        questionsHasMore = false
+        questionsOffset = 0
         answeredQuestions = emptyList()
         shownPanel = null
         openThreadId = null
         thread = null
         threadComments = emptyList()
         threadLoaded = false
+        threadHasMore = false
+        feedHasMore = false
+        feedOffset = 0
         listOf(calls, applyCalls, profileCalls, threadCalls, composeCalls, feedCalls, chatCalls, patientCalls).forEach { it.clearError() }
     }
 }

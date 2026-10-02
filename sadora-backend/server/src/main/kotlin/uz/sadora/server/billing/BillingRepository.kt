@@ -114,13 +114,25 @@ class BillingRepository {
             ?.toRecord()
     }
 
-    suspend fun recent(limit: Int = 50, state: PaymentState? = null): List<TransactionRecord> = dbQuery {
+    /**
+     * One page of the payment ledger, newest first, with the count of everything the
+     * filter matches. The id breaks ties on createdAt so a row cannot appear on two pages,
+     * or on none, when several payments land in the same instant.
+     */
+    suspend fun recent(
+        limit: Int = 50,
+        offset: Long = 0,
+        state: PaymentState? = null,
+    ): Pair<List<TransactionRecord>, Long> = dbQuery {
         var query = PaymentTransactions.selectAll()
         state?.let { wanted -> query = query.andWhere { PaymentTransactions.state eq wanted.dbValue() } }
-        query
-            .orderBy(PaymentTransactions.createdAt to SortOrder.DESC)
+        val total = query.count()
+        val rows = query
+            .orderBy(PaymentTransactions.createdAt to SortOrder.DESC, PaymentTransactions.id to SortOrder.DESC)
             .limit(limit)
+            .offset(offset)
             .map { it.toRecord() }
+        rows to total
     }
 
     suspend fun forUser(userId: Uuid, limit: Int = 20): List<TransactionRecord> = dbQuery {

@@ -50,6 +50,8 @@ data class CommunityComment(
     val badges: List<CommunityBadge> = emptyList(),
     /** A verified doctor's answer; the thread draws it apart and lists it first. */
     val doctor: DoctorAuthor? = null,
+    /** The server's id; empty on her optimistic copy and on samples. Pages are joined by it. */
+    val id: String = "",
 )
 
 /**

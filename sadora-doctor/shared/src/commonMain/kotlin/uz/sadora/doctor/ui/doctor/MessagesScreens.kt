@@ -38,6 +38,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -77,6 +78,7 @@ import uz.sadora.doctor.design.Sadora
 import uz.sadora.doctor.design.SadoraIcons
 import uz.sadora.doctor.design.Spacing
 import uz.sadora.doctor.i18n.strings
+import uz.sadora.doctor.ui.components.LoadMoreRow
 import uz.sadora.doctor.ui.components.ButtonTone
 import uz.sadora.doctor.ui.components.ChipFlowRow
 import uz.sadora.doctor.ui.components.CircleIconButton
@@ -137,6 +139,9 @@ fun MessagesScreen(
             items(chats.size, key = { chats[it].id }) { index ->
                 val chat = chats[index]
                 ConversationRow(chat, onClick = { onOpen(chat.id) })
+            }
+            if (doctors.hasMoreConversations) {
+                item(key = "more") { LoadMoreRow(chats.size, onLoadMore = { doctors.loadMoreConversations() }) }
             }
         }
     }
@@ -328,10 +333,25 @@ fun ConversationScreen(
     }
 
     // The newest message is at the bottom; the list starts there and follows new ones.
+    // Keyed on the newest line, not the count: older lines read in above must not throw
+    // her back to the bottom.
     val list = rememberLazyListState()
-    LaunchedEffect(messages.size, thread?.otherTyping) {
+    val hasOlder = thread?.hasMore == true
+    // Older lines are asked for only once the thread has come to rest at its newest line;
+    // before that its top is on screen for a frame.
+    var settled by remember(id) { mutableStateOf(false) }
+    LaunchedEffect(messages.lastOrNull()?.id, thread?.otherTyping) {
         val last = messages.size + (if (thread?.otherTyping == true) 1 else 0)
-        if (last > 0) list.animateScrollToItem(last)
+        if (last > 0) {
+            list.animateScrollToItem(last + if (hasOlder) 1 else 0)
+            settled = true
+        }
+    }
+    // Near the top, the page above. Prepended lines keep the one she is reading in place,
+    // so the index jumps past the threshold and this does not ask again until she scrolls.
+    LaunchedEffect(list, id) {
+        snapshotFlow { (settled && list.firstVisibleItemIndex <= OlderThreshold) to (doctors.openConversation?.hasMore == true) }
+            .collect { (nearTop, more) -> if (nearTop && more) doctors.loadOlderMessages(id) }
     }
 
     Box(modifier.fillMaxSize()) {
@@ -367,6 +387,9 @@ fun ConversationScreen(
                 contentPadding = PaddingValues(horizontal = Spacing.screen, vertical = Spacing.xs),
                 verticalArrangement = Arrangement.spacedBy(Spacing.xs),
             ) {
+                if (hasOlder) {
+                    item(key = "older") { LoadMoreRow(Unit, onLoadMore = {}) }
+                }
                 item(key = "notice") {
                     Text(
                         t.namesNotice,
@@ -792,3 +815,6 @@ private const val ListPollMillis = 12_000L
 
 /** How often an open thread is read again: new lines, ticks and "yozmoqda…". */
 private const val ThreadPollMillis = 3_000L
+
+/** How close to the top of a thread, in items, the page above is asked for. */
+private const val OlderThreshold = 4

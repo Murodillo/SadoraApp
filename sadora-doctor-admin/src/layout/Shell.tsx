@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
-import { QUESTIONS_LIMIT, useConversations, useQuestions } from '../api/hooks'
+import { uniqueRows, useConversations, useQuestions } from '../api/hooks'
 import { useAuth } from '../auth/AuthContext'
 import { useApprovedDoctor } from '../auth/doctor'
 import { SadoraTile } from '../components/Logo'
@@ -79,7 +79,7 @@ export function Shell() {
   }, [navOpen])
 
   const title = titles[location.pathname] ?? 'SADORA'
-  const waiting = questions.data?.length ?? 0
+  const waiting = uniqueRows(questions.data?.pages, (question) => question.id).length
   const unread = conversations.data?.reduce((sum, conversation) => sum + (conversation.unread ?? 0), 0) ?? 0
 
   return (
@@ -111,7 +111,7 @@ export function Shell() {
                 {entry.to === '/' && waiting > 0 && (
                   // Re-keyed on the number, so a question arriving or leaving bumps it.
                   <span key={waiting} className="badge warn nav-count" aria-label={`${waiting} ta javobsiz savol`}>
-                    {waiting >= QUESTIONS_LIMIT ? `${QUESTIONS_LIMIT}+` : waiting}
+                    {questions.hasNextPage ? `${waiting}+` : waiting}
                   </span>
                 )}
                 {entry.to === '/messages' && unread > 0 && (

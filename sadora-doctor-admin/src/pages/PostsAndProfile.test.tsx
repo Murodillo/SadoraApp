@@ -61,6 +61,45 @@ describe('Postlarim', () => {
     await waitFor(() => expect(screen.getAllByRole('article')).toHaveLength(2))
     expect(screen.getByLabelText('Matn')).toHaveValue('')
   })
+
+  it('reads her older posts past the twenty her page carries, a page at a time', async () => {
+    signIn()
+    const all = Array.from({ length: 23 }, (_, n) => question(`p${n}`, `Post raqami ${n}`))
+    const api = mockApi({
+      'GET /v1/doctor/me': doctorAccount(),
+      'GET /v1/doctor/questions': [],
+      'GET /v1/doctors/doc-1': {
+        id: 'doc-1',
+        fullName: 'Dilnoza Karimova',
+        specialty: 'gynecologist',
+        workplace: 'Toshkent',
+        experienceYears: 12,
+        verifiedSince: '2026-09-02T09:00:00Z',
+        postCount: all.length,
+        answerCount: 0,
+        posts: all.slice(0, 20),
+      },
+      'GET /v1/doctors/doc-1/posts': (call) => {
+        const offset = Number(call.search.get('offset'))
+        const limit = Number(call.search.get('limit'))
+        // One post came in between: the page starts one earlier, and the repeat is shown once.
+        const from = offset - 1
+        return { items: all.slice(from, from + limit), total: all.length, limit, offset: from }
+      },
+    })
+    renderApp(<AppRoutes />, { route: '/posts' })
+
+    expect(await screen.findByText('Post raqami 19')).toBeInTheDocument()
+    expect(screen.queryByText('Post raqami 20')).not.toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Yana postlar' }))
+
+    expect(await screen.findByText('Post raqami 22')).toBeInTheDocument()
+    expect(screen.getAllByText('Post raqami 19')).toHaveLength(1)
+    expect(screen.getAllByRole('article')).toHaveLength(23)
+    expect(api.callsTo('GET', '/v1/doctors/doc-1/posts')[0]!.search.get('offset')).toBe('20')
+    expect(screen.queryByRole('button', { name: 'Yana postlar' })).not.toBeInTheDocument()
+  })
 })
 
 describe('Profil', () => {

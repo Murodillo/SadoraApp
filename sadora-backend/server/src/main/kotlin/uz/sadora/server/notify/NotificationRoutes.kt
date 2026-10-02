@@ -19,6 +19,7 @@ import uz.sadora.server.api.requireUserId
 import uz.sadora.server.audit.ActorType
 import uz.sadora.server.audit.AuditEntry
 import uz.sadora.server.audit.AuditService
+import uz.sadora.server.core.parseUuid
 import uz.sadora.server.plugins.ADMIN_AUTH
 import uz.sadora.server.plugins.AdminRole
 import uz.sadora.server.plugins.USER_AUTH
@@ -45,10 +46,14 @@ fun Route.notificationRoutes(notifications: NotificationService) {
                 call.respond(notifications.updateSettings(call.requireUserId(), request))
             }
 
-            /** What she was actually sent, so "why didn't I get it" has an answer. */
+            /**
+             * What she was actually sent, so "why didn't I get it" has an answer. The
+             * newest `limit`; `before=<id>` reads on below the last one she has.
+             */
             get("/history") {
+                val before = call.request.queryParameters["before"]?.takeIf { it.isNotBlank() }?.let { parseUuid(it, "before") }
                 call.respond(
-                    notifications.history(call.requireUserId(), call.intParameter("limit", 50, 200)),
+                    notifications.history(call.requireUserId(), call.intParameter("limit", 50, 200), before),
                 )
             }
         }

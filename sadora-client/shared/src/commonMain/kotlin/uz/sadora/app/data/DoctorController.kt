@@ -11,6 +11,7 @@ import uz.sadora.app.model.DoctorFilter
 import uz.sadora.app.model.DoctorSort
 import uz.sadora.app.model.arrangeDoctors
 import uz.sadora.contract.CheckoutSession
+import uz.sadora.contract.CommunityPost as WirePost
 import uz.sadora.contract.DoctorListItem
 import uz.sadora.contract.DoctorProfile
 import uz.sadora.contract.DoctorReview
@@ -53,13 +54,34 @@ class DoctorController(
     /** The doctor page on screen, replaced on every open. */
     var profile by mutableStateOf<DoctorProfile?>(null)
         private set
-    val profilePosts: List<CommunityPost> get() = profile?.posts.orEmpty().map { it.toAppPost() }
+
+    /** Her posts past the few [profile] carries, read as she scrolls; dropped when another page opens. */
+    private var olderPosts by mutableStateOf<List<WirePost>>(emptyList())
+
+    val profilePosts: List<CommunityPost>
+        get() {
+            val first = profile?.posts.orEmpty()
+            val ids = first.mapTo(HashSet()) { it.id }
+            return (first + olderPosts.filter { it.id !in ids }).map { it.toAppPost() }
+        }
+
+    /** Her posts go on past [profilePosts]. */
+    var profilePostsHasMore by mutableStateOf(false)
+        private set
+    private var profilePostsOffset = 0
+    private var loadingProfilePosts = false
 
     /** Her latest reviews, for the page on screen; [reviewsFor] says whose they are. */
     var reviews by mutableStateOf<List<DoctorReview>>(emptyList())
         private set
     var reviewsFor by mutableStateOf<String?>(null)
         private set
+
+    /** More of her reviews are on the server than [reviews] holds. */
+    var reviewsHasMore by mutableStateOf(false)
+        private set
+    private var reviewsOffset = 0
+    private var loadingReviews = false
 
     /** Whether she is an approved doctor; quiet, since most accounts are not. */
     suspend fun loadAccount() {
@@ -71,17 +93,80 @@ class DoctorController(
 
     suspend fun loadProfile(id: String) {
         val api = api ?: return
-        if (profile?.id != id) profile = null
-        calls.run(silent = profile != null) { api.profile(id) }?.let { profile = it }
+        if (profile?.id != id) {
+            profile = null
+            olderPosts = emptyList()
+        }
+        calls.run(silent = profile != null) { api.profile(id) }?.let { page ->
+            profile = page
+            // A refresh keeps the pages she scrolled to; their offset stays where it was.
+            if (olderPosts.isEmpty()) {
+                profilePostsOffset = page.posts.size
+                profilePostsHasMore = page.posts.size < page.postCount
+            }
+        }
     }
 
-    /** Quiet: a page without its reviews is still her page. */
+    /** The next page of the open doctor's posts, under what is on screen. */
+    suspend fun loadMoreProfilePosts() {
+        val api = api ?: return
+        val id = profile?.id ?: return
+        if (!profilePostsHasMore || loadingProfilePosts) return
+        loadingProfilePosts = true
+        try {
+            val page = calls.run(silent = true) {
+                api.posts(id, limit = DoctorApi.POSTS_PAGE, offset = profilePostsOffset)
+            } ?: return
+            if (profile?.id != id) return
+            // Offsets shift when she posts in between; the overlap is dropped by id.
+            val known = (profile?.posts.orEmpty() + olderPosts).mapTo(HashSet()) { it.id }
+            olderPosts = olderPosts + page.items.filter { it.id !in known }
+            profilePostsOffset += page.items.size
+            profilePostsHasMore = page.hasMore && page.items.isNotEmpty()
+        } finally {
+            loadingProfilePosts = false
+        }
+    }
+
+    /**
+     * Quiet: a page without its reviews is still her page. Reads the newest page; the
+     * pages she had already read stay under it.
+     */
     suspend fun loadReviews(id: String) {
         val api = api ?: return
-        if (reviewsFor != id) reviews = emptyList()
-        calls.run(silent = true) { api.reviews(id) }?.let {
-            reviews = it
+        val same = reviewsFor == id
+        if (!same) {
+            reviews = emptyList()
+            reviewsHasMore = false
+        }
+        calls.run(silent = true) { api.reviews(id, limit = DoctorApi.REVIEW_PAGE) }?.let { latest ->
+            val full = latest.size >= DoctorApi.REVIEW_PAGE
+            // A review has no id; the newest page's last date is the edge, and equal rows are one.
+            val edge = latest.lastOrNull()?.createdAt
+            val tail = if (full && same && edge != null) reviews.filter { it.createdAt < edge } else emptyList()
+            reviews = (latest + tail).distinct()
             reviewsFor = id
+            reviewsOffset = latest.size + tail.size
+            reviewsHasMore = full && (tail.isEmpty() || reviewsHasMore)
+        }
+    }
+
+    /** The next page of her reviews, under the ones on screen. */
+    suspend fun loadMoreReviews() {
+        val api = api ?: return
+        val id = reviewsFor ?: return
+        if (!reviewsHasMore || loadingReviews) return
+        loadingReviews = true
+        try {
+            val page = calls.run(silent = true) {
+                api.reviews(id, limit = DoctorApi.REVIEW_PAGE, offset = reviewsOffset)
+            } ?: return
+            if (reviewsFor != id) return
+            reviews = (reviews + page).distinct()
+            reviewsOffset += page.size
+            reviewsHasMore = page.size >= DoctorApi.REVIEW_PAGE
+        } finally {
+            loadingReviews = false
         }
     }
 
@@ -93,7 +178,7 @@ class DoctorController(
      */
     val directoryCalls = ApiCallState()
 
-    /** Every verified doctor, in the server's recommended order. */
+    /** The verified doctors read so far, a page at a time, in the server's recommended order. */
     var directory by mutableStateOf<List<DoctorListItem>>(emptyList())
         private set
 
@@ -119,9 +204,52 @@ class DoctorController(
             directoryLoaded = true
             return
         }
-        directoryCalls.run(silent = quiet) { api.list() }?.let {
+        // At least a page, and as many as she had already scrolled through: the order is
+        // the server's, not a time, so the pages under the first cannot be kept by an edge.
+        val limit = directoryOffset.coerceIn(DoctorApi.DIRECTORY_PAGE, DoctorApi.DIRECTORY_MAX)
+        directoryCalls.run(silent = quiet) { api.list(limit = limit) }?.let {
             directory = it
+            directoryOffset = it.size
+            directoryHasMore = it.size >= limit
             directoryLoaded = true
+        }
+    }
+
+    /** More doctors follow [directory] in the server's order. */
+    var directoryHasMore by mutableStateOf(false)
+        private set
+    private var directoryOffset = 0
+    private var loadingDirectory = false
+
+    /** The next page of the directory, under what is on screen. */
+    suspend fun loadMoreDirectory() {
+        val api = api ?: return
+        if (!directoryHasMore || loadingDirectory) return
+        loadingDirectory = true
+        try {
+            val page = directoryCalls.run(silent = true) {
+                api.list(limit = DoctorApi.DIRECTORY_PAGE, offset = directoryOffset)
+            } ?: return
+            // The order can shift between reads — someone came online; a doctor is shown once.
+            val known = directory.mapTo(HashSet()) { it.id }
+            directory = directory + page.filter { it.id !in known }
+            directoryOffset += page.size
+            directoryHasMore = page.size >= DoctorApi.DIRECTORY_PAGE
+        } finally {
+            loadingDirectory = false
+        }
+    }
+
+    /**
+     * Reads every page that is left. A filter or another order is over the whole
+     * directory: "cheapest first" from the first page alone would be a wrong answer.
+     */
+    suspend fun loadWholeDirectory() {
+        while (directoryHasMore) {
+            val before = directoryOffset
+            loadMoreDirectory()
+            // A failed or busy read moved nothing; stop rather than spin.
+            if (directoryOffset == before) return
         }
     }
 

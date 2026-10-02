@@ -187,11 +187,18 @@ class ShopRepository {
             .map { it.toRedemption() }
     }
 
-    suspend fun recentRedemptions(limit: Int): List<AdminRedemption> = dbQuery {
-        (ShopRedemptions leftJoin ShopProducts leftJoin Users)
+    /**
+     * One page of issued codes, newest first, with the total. Counted on the redemptions
+     * table alone: the joins only add names to a row and never add or drop one. The id
+     * breaks createdAt ties so paging cannot skip or repeat a code.
+     */
+    suspend fun recentRedemptions(limit: Int, offset: Long): Pair<List<AdminRedemption>, Long> = dbQuery {
+        val total = ShopRedemptions.selectAll().count()
+        val rows = (ShopRedemptions leftJoin ShopProducts leftJoin Users)
             .selectAll()
-            .orderBy(ShopRedemptions.createdAt to SortOrder.DESC)
+            .orderBy(ShopRedemptions.createdAt to SortOrder.DESC, ShopRedemptions.id to SortOrder.DESC)
             .limit(limit)
+            .offset(offset)
             .map { row ->
                 AdminRedemption(
                     id = row[ShopRedemptions.id].toString(),
@@ -207,6 +214,7 @@ class ShopRepository {
                     usedAt = row[ShopRedemptions.usedAt]?.toKotlinInstant(),
                 )
             }
+        rows to total
     }
 
     /** Puts a unit back when the redemption it was taken for could not be paid. */

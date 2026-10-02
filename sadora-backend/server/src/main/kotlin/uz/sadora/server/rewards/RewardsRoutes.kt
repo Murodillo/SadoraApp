@@ -215,7 +215,12 @@ fun Route.adminRewardsRoutes(
 
             get("/redemptions") {
                 call.requireAdminRole(AdminRole.OWNER, AdminRole.ADMIN, AdminRole.SUPPORT, AdminRole.ANALYST)
-                call.respond(shop.recentRedemptions(call.intParameter("limit", 50, 200)))
+                call.respond(
+                    shop.recentRedemptions(
+                        limit = call.intParameter("limit", default = 50, max = 200),
+                        offset = call.intParameter("offset", default = 0, max = Int.MAX_VALUE),
+                    ),
+                )
             }
 
             put("/redemptions/{id}") {

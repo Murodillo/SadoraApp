@@ -54,11 +54,21 @@ class MessagesController(
     var loaded by mutableStateOf(false)
         private set
 
+    /** Threads last written before the oldest one in [conversations] are still on the server. */
+    var hasMoreConversations by mutableStateOf(false)
+        private set
+    private var loadingConversations = false
+
     /** The thread on screen, or null while nothing is open or the alias has no thread yet. */
     var current by mutableStateOf<Conversation?>(null)
         private set
     var messages by mutableStateOf<List<DirectMessage>>(emptyList())
         private set
+
+    /** Lines older than the first of [messages] are still on the server; scrolling up reads them. */
+    var hasOlder by mutableStateOf(false)
+        private set
+    private var loadingOlder = false
 
     /** The other side reported typing in the last few seconds, as of the last read. */
     var otherTyping by mutableStateOf(false)
@@ -78,11 +88,42 @@ class MessagesController(
 
     val unreadTotal: Int get() = conversations.sumOf { it.unread }
 
+    /**
+     * Reads the newest page of threads. Pages she has already scrolled to stay under it:
+     * the refresh runs every few seconds while the list is up, and it used to cut the
+     * list back to its first page under her finger.
+     */
     suspend fun load() {
         val api = api ?: return
-        calls.run(silent = loaded) { api.conversations() }?.let {
-            conversations = it.map { thread -> thread.toAppConversation() }
+        calls.run(silent = loaded) { api.conversations() }?.let { page ->
+            val latest = page.map { thread -> thread.toAppConversation() }
+            val full = latest.size >= CommunityApi.CONVERSATION_PAGE
+            val tail = if (full) {
+                val ids = latest.mapTo(HashSet()) { it.id }
+                val edge = latest.last().lastMessageAt
+                conversations.filter { it.id !in ids && it.lastMessageAt < edge }
+            } else {
+                emptyList()
+            }
+            conversations = latest + tail
+            hasMoreConversations = full && (tail.isEmpty() || hasMoreConversations)
             loaded = true
+        }
+    }
+
+    /** The next page of threads, under the oldest one on screen. */
+    suspend fun loadMoreConversations() {
+        val api = api ?: return
+        val oldest = conversations.lastOrNull() ?: return
+        if (!hasMoreConversations || loadingConversations) return
+        loadingConversations = true
+        try {
+            val page = calls.run(silent = true) { api.conversations(before = oldest.lastMessageAt) } ?: return
+            val known = conversations.mapTo(HashSet()) { it.id }
+            conversations = conversations + page.map { it.toAppConversation() }.filter { it.id !in known }
+            hasMoreConversations = page.size >= CommunityApi.CONVERSATION_PAGE
+        } finally {
+            loadingConversations = false
         }
     }
 
@@ -93,6 +134,7 @@ class MessagesController(
     suspend fun open(conversationId: String?, alias: String) {
         current = conversationId?.let { id -> conversations.firstOrNull { it.id == id } }
         messages = emptyList()
+        hasOlder = false
         otherTyping = false
         otherReadAt = null
         lastTypingSent = null
@@ -126,8 +168,9 @@ class MessagesController(
 
     private fun apply(thread: ConversationThread) {
         val conversation = thread.conversation.toAppConversation()
+        val shown = if (current?.id == conversation.id) messages else emptyList()
         current = conversation
-        messages = thread.messages.map { it.toAppMessage() }
+        mergeLatest(shown, thread.messages.map { it.toAppMessage() }, thread.hasMore)
         otherTyping = thread.otherTyping
         otherReadAt = thread.otherReadAt
         // Opening it read it; the list's count follows without a reload, and so does
@@ -140,9 +183,45 @@ class MessagesController(
         }
     }
 
+    /**
+     * The poll reads only the newest page. What she scrolled up to stays above it as long
+     * as the two still meet; when they do not — a burst longer than a page between two
+     * polls — the newest page alone is shown and scrolling up reads the rest again.
+     */
+    private fun mergeLatest(shown: List<DirectMessage>, latest: List<DirectMessage>, latestHasMore: Boolean) {
+        val first = latest.firstOrNull()
+        val meets = first != null && shown.any { it.id == first.id }
+        if (!latestHasMore || !meets) {
+            messages = latest
+            hasOlder = latestHasMore
+            return
+        }
+        messages = shown.takeWhile { it.id != first.id } + latest
+    }
+
+    /** The page of lines above the first one on screen. */
+    suspend fun loadOlder() {
+        val api = api ?: return
+        val thread = current?.takeIf { it.id.isNotEmpty() } ?: return
+        val first = messages.firstOrNull() ?: return
+        if (!hasOlder || loadingOlder) return
+        loadingOlder = true
+        try {
+            val page = calls.run(silent = true) { api.olderMessages(thread.id, first.id) } ?: return
+            // She may have left, or opened another thread, while it was on its way.
+            if (current?.id != thread.id) return
+            val known = messages.mapTo(HashSet()) { it.id }
+            messages = page.messages.map { it.toAppMessage() }.filter { it.id !in known } + messages
+            hasOlder = page.hasMore
+        } finally {
+            loadingOlder = false
+        }
+    }
+
     fun close() {
         current = null
         messages = emptyList()
+        hasOlder = false
         otherTyping = false
         otherReadAt = null
         record = null

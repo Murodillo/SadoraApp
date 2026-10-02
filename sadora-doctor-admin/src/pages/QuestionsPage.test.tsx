@@ -76,7 +76,8 @@ describe('Savollar — the answer flow', () => {
     expect(screen.getByText(/2 ta javobsiz savol/)).toBeInTheDocument()
     expect(screen.getByText('Javob kutmoqda')).toBeInTheDocument()
     expect(screen.getByText(DISCLAIMER)).toBeInTheDocument()
-    expect(api.callsTo('GET', '/v1/doctor/questions')[0]!.search.get('limit')).toBe('100')
+    expect(api.callsTo('GET', '/v1/doctor/questions')[0]!.search.get('limit')).toBe('50')
+    expect(api.callsTo('GET', '/v1/doctor/questions')[0]!.search.get('offset')).toBeNull()
   })
 
   it('sends an answer, says so, drops the question from the list and shows the answer in the thread', async () => {
@@ -174,6 +175,31 @@ describe('Savollar — the answer flow', () => {
     expect(await screen.findByRole('status')).toHaveTextContent("Ma'lumotlar noto'g'ri")
     expect(screen.getByRole('alert')).toHaveTextContent("Eng ko'pi 1000 belgi")
     expect(box).toHaveValue('Javob matni')
+  })
+
+  it('reads on past a full page by offset and keeps each question once', async () => {
+    signIn()
+    let waiting = Array.from({ length: 55 }, (_, index) => question(`q${index}`, `Savol raqami ${index}`))
+    const api = mockApi({
+      'GET /v1/doctor/me': doctorAccount(),
+      'GET /v1/doctor/questions': (call) => {
+        const offset = Number(call.search.get('offset') ?? 0)
+        return waiting.slice(offset, offset + Number(call.search.get('limit')))
+      },
+      'GET /v1/community/posts/q0/comments': [],
+    })
+    renderApp(<AppRoutes />)
+    expect(await screen.findByText(/^50\+ ta javobsiz savol/)).toBeInTheDocument()
+
+    // A question asked meanwhile shifts every offset by one: the overlap is dropped by id.
+    waiting = [question('fresh', 'Yangi savol'), ...waiting]
+    await userEvent.click(screen.getByRole('button', { name: 'Yana savollar' }))
+
+    expect(await screen.findByText(/^55 ta javobsiz savol/)).toBeInTheDocument()
+    expect(api.callsTo('GET', '/v1/doctor/questions').some((call) => call.search.get('offset') === '50')).toBe(true)
+    expect(screen.getAllByText('Savol raqami 49', { selector: '.q-body' })).toHaveLength(1)
+    expect(screen.getByText('Savol raqami 54', { selector: '.q-body' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Yana savollar' })).not.toBeInTheDocument()
   })
 
   it('says so when there is nothing to answer', async () => {

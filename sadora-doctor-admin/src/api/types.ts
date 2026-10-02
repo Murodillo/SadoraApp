@@ -24,6 +24,14 @@ export interface Ack {
   ok: boolean
 }
 
+/** One slice of a longer list, with how long the whole list is. */
+export interface Page<T> {
+  items: T[]
+  total: number
+  limit: number
+  offset: number
+}
+
 // ---------------------------------------------------------------- auth
 
 export interface DeviceInfo {
@@ -620,6 +628,10 @@ export interface DoctorEarnings {
   paidOutMinor: number
   balanceMinor: number
   refundDueMinor: number
+  /** The first page of each, the latest first; the rest from `earnings/lines` and `earnings/payouts`. */
   lines: EarningLine[]
   payouts: DoctorPayoutView[]
+  /** How many there are in all. Absent from a server that sent every one at once. */
+  linesTotal?: number
+  payoutsTotal?: number
 }

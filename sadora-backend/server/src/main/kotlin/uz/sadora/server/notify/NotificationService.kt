@@ -5,6 +5,7 @@ import uz.sadora.contract.FrequencyCaps
 import uz.sadora.contract.NotificationMessage
 import uz.sadora.contract.NotificationSettings
 import uz.sadora.contract.UpdateNotificationSettingsRequest
+import uz.sadora.server.core.NotFoundException
 import uz.sadora.server.core.ValidationException
 
 class NotificationService(private val repository: NotificationRepository) {
@@ -35,8 +36,10 @@ class NotificationService(private val repository: NotificationRepository) {
         return updated
     }
 
-    suspend fun history(userId: Uuid, limit: Int): List<NotificationMessage> =
-        repository.history(userId, limit.coerceIn(1, 200))
+    /** Newest first; [beforeId], one of hers, reads on below it. */
+    suspend fun history(userId: Uuid, limit: Int, beforeId: Uuid? = null): List<NotificationMessage> =
+        repository.history(userId, limit.coerceIn(1, 200), beforeId)
+            ?: throw NotFoundException("Bildirishnoma topilmadi")
 
     suspend fun caps(): FrequencyCaps = repository.caps()
 

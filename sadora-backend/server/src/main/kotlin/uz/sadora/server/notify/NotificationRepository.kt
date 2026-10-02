@@ -6,8 +6,12 @@ import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.greaterEq
+import org.jetbrains.exposed.v1.core.less
 import org.jetbrains.exposed.v1.core.lessEq
+import org.jetbrains.exposed.v1.core.or
+import org.jetbrains.exposed.v1.jdbc.andWhere
 import org.jetbrains.exposed.v1.jdbc.insertIgnore
+import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.update
 import org.jetbrains.exposed.v1.jdbc.upsert
@@ -190,10 +194,25 @@ class NotificationRepository {
             .toInt()
     }
 
-    suspend fun history(userId: Uuid, limit: Int): List<NotificationMessage> = dbQuery {
-        NotificationOutbox.selectAll()
-            .where { NotificationOutbox.userId eq userId }
-            .orderBy(NotificationOutbox.createdAt to SortOrder.DESC)
+    /**
+     * Her notifications, newest first: the latest [limit], or the [limit] queued before
+     * her notification [beforeId]. Null when [beforeId] is not one of hers.
+     */
+    suspend fun history(userId: Uuid, limit: Int, beforeId: Uuid? = null): List<NotificationMessage>? = dbQuery {
+        var query = NotificationOutbox.selectAll().where { NotificationOutbox.userId eq userId }
+        if (beforeId != null) {
+            val at = NotificationOutbox.select(NotificationOutbox.createdAt)
+                .where { (NotificationOutbox.id eq beforeId) and (NotificationOutbox.userId eq userId) }
+                .singleOrNull()
+                ?.get(NotificationOutbox.createdAt)
+                ?: return@dbQuery null
+            // A batch queued together shares a timestamp; the id breaks the tie the same way the order does.
+            query = query.andWhere {
+                (NotificationOutbox.createdAt less at) or
+                    ((NotificationOutbox.createdAt eq at) and (NotificationOutbox.id less beforeId))
+            }
+        }
+        query.orderBy(NotificationOutbox.createdAt to SortOrder.DESC, NotificationOutbox.id to SortOrder.DESC)
             .limit(limit)
             .map { it.toOutbox().toMessage() }
     }

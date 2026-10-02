@@ -45,6 +45,7 @@ import uz.sadora.doctor.ui.components.CircleIconButton
 import uz.sadora.doctor.ui.components.EmptyState
 import uz.sadora.doctor.ui.components.ErrorStrip
 import uz.sadora.doctor.ui.components.IconTile
+import uz.sadora.doctor.ui.components.LoadMoreRow
 import uz.sadora.doctor.ui.components.SadoraCard
 import uz.sadora.doctor.ui.components.SadoraTopBar
 import uz.sadora.doctor.ui.components.ScreenContent
@@ -140,7 +141,11 @@ fun DoctorHomeScreen(
                 Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                     Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                         StatTile(
-                            value = if (doctors.questionsLoaded) doctors.questions.size.toString() else null,
+                            value = if (doctors.questionsLoaded) {
+                                doctors.questions.size.toString() + if (doctors.questionsHasMore) "+" else ""
+                            } else {
+                                null
+                            },
                             label = t.statWaiting,
                             icon = SadoraIcons.Document,
                             tint = c.secondary,
@@ -201,6 +206,11 @@ fun DoctorHomeScreen(
             items(rows.size, key = { rows[it].post.id }) { index ->
                 val row = rows[index]
                 PostCard(post = row.post, onOpen = { onOpenQuestion(row.post.id) }, answered = row.answered)
+            }
+            if (doctors.questionsHasMore) {
+                // Keyed on the server offset, not the rows: a page that only repeated rows
+                // still moves it, so the next one is asked for.
+                item(key = "questions-more") { LoadMoreRow(doctors.questionsOffset, onLoadMore = { doctors.loadMoreQuestions() }) }
             }
         }
     }

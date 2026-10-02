@@ -1,6 +1,7 @@
 package uz.sadora.app.ui.core
 
 import uz.sadora.app.data.readable
+import uz.sadora.app.ui.components.LoadMoreRow
 import uz.sadora.app.ui.components.ResizeForKeyboard
 import uz.sadora.app.ui.components.ErrorStrip
 import androidx.compose.foundation.background
@@ -99,12 +100,18 @@ fun PostDetailScreen(
                     foldable = false,
                 )
             }
-            item { SectionHeader(t.commentsCount(comments.size)) }
+            // The post's count, not the loaded list's: a long thread arrives a page at a time.
+            item { SectionHeader(t.commentsCount(state.commentCountOf(post))) }
             if (comments.isEmpty()) {
                 item { Text(t.noComments, style = Sadora.type.body, color = c.muted) }
             } else {
                 items(comments) { comment ->
                     CommentRow(comment, onOpenAuthor = { comment.doctor?.let { onOpenDoctor(it.id) } ?: onOpenProfile(comment.alias) })
+                }
+                if (post.id in community.commentsWithMore) {
+                    item(key = "more") {
+                        LoadMoreRow(comments.size, onLoadMore = { community.loadMoreComments(post.id) })
+                    }
                 }
             }
         }

@@ -18,10 +18,11 @@ import uz.sadora.contract.UpdateIdentityRequest
 /**
  * The secret chat's data, mirrored onto the store the screen already reads.
  *
- * The feed is loaded whole — newest hundred, every room — and filtered on the phone,
+ * The feed is loaded a page at a time, every room together, and filtered on the phone,
  * because the screen switches rooms with a chip and a round trip per tap would make
- * the chips feel broken. Writes go up and the affected part of the store is refreshed
- * from the server's answer, so a like count on screen is always the server's count.
+ * the chips feel broken; scrolling to its end reads the next page. Writes go up and the
+ * affected part of the store is refreshed from the server's answer, so a like count on
+ * screen is always the server's count.
  *
  * A null API means no backend, and the sample feed in the store stays as it is.
  */
@@ -68,11 +69,55 @@ class CommunityController(
     var profile by mutableStateOf<AliasProfile?>(null)
         private set
 
+    /** Her posts go on past what [profile] holds. */
+    var profileHasMore by mutableStateOf(false)
+        private set
+
+    /** How many of her posts have been read: the next page's offset. */
+    private var profileLoadedCount = 0
+    private var loadingProfilePosts = false
+
     suspend fun loadProfile(alias: String) {
         val api = api ?: return
         if (profile?.alias != alias) profile = null
         // Loud while there is nothing to show: the skeleton used to sit there for good.
-        calls.run(silent = profile != null) { api.profile(alias) }?.let { profile = it.toAppProfile() }
+        calls.run(silent = profile != null) { api.profile(alias) }?.let { wire ->
+            val fresh = wire.toAppProfile()
+            // A refresh — her bio saved, a block — keeps the posts she had scrolled to
+            // under the few the page carries, rather than folding the list back up.
+            val shown = profile?.takeIf { it.alias == alias }?.posts.orEmpty()
+            val ids = fresh.posts.mapTo(HashSet()) { it.id }
+            val edge = fresh.posts.lastOrNull()?.createdAt
+            val tail = if (edge != null && fresh.posts.size < fresh.postCount) {
+                shown.filter { it.id !in ids && it.createdAt < edge }
+            } else {
+                emptyList()
+            }
+            profile = fresh.copy(posts = fresh.posts + tail)
+            profileLoadedCount = fresh.posts.size + tail.size
+            profileHasMore = profileLoadedCount < fresh.postCount
+        }
+    }
+
+    /** The next page of the open profile's posts, under what is on screen. */
+    suspend fun loadMoreProfilePosts() {
+        val api = api ?: return
+        val alias = profile?.alias ?: return
+        if (!profileHasMore || loadingProfilePosts) return
+        loadingProfilePosts = true
+        try {
+            val page = calls.run(silent = true) {
+                api.profilePosts(alias, limit = CommunityApi.PROFILE_POSTS_PAGE, offset = profileLoadedCount)
+            } ?: return
+            val current = profile?.takeIf { it.alias == alias } ?: return
+            // Offsets shift when she posts in between; the overlap is dropped by id.
+            val known = current.posts.mapTo(HashSet()) { it.id }
+            profile = current.copy(posts = current.posts + page.items.map { it.toAppPost() }.filter { it.id !in known })
+            profileLoadedCount += page.items.size
+            profileHasMore = page.hasMore && page.items.isNotEmpty()
+        } finally {
+            loadingProfilePosts = false
+        }
     }
 
     /** Her bio and her door. Null leaves a field as it is. */
@@ -96,24 +141,106 @@ class CommunityController(
         return true
     }
 
+    /** Older posts than the last one loaded are still on the server. */
+    var feedHasMore by mutableStateOf(false)
+        private set
+
+    /**
+     * How many of the server's posts have been read: the next page's offset. Observable,
+     * so the feed's end asks again even after a page that was all overlap.
+     */
+    var feedLoadedCount by mutableStateOf(0)
+        private set
+    private var loadingFeed = false
+
+    /**
+     * Reads the newest page. The pages she has scrolled to stay under it, so a like or a
+     * new post no longer cuts the feed back to its first page.
+     */
     suspend fun refreshFeed() {
         val api = api ?: return
         // Quiet once there is a feed to keep showing. The first read is not: offline it
         // failed without a word, and the screen said "hali post yo'q — birinchisini yozing".
-        calls.run(silent = loaded) { api.feed(limit = FEED_LIMIT) }?.let { page ->
+        calls.run(silent = loaded) { api.feed(limit = CommunityApi.FEED_PAGE) }?.let { page ->
+            val latest = page.items.map { it.toAppPost() }
+            val tail = if (page.hasMore && loaded) {
+                val ids = latest.mapTo(HashSet()) { it.id }
+                val edge = latest.lastOrNull()?.createdAt
+                state.communityPosts.filter { it.id !in ids && edge != null && it.createdAt < edge }
+            } else {
+                emptyList()
+            }
+            val tailIds = tail.mapTo(HashSet()) { it.id }
             state.replaceCommunityFeed(
-                posts = page.items.map { it.toAppPost() },
-                liked = page.items.filter { it.liked }.map { it.id }.toSet(),
-                saved = page.items.filter { it.saved }.map { it.id }.toSet(),
+                posts = latest + tail,
+                liked = page.items.filter { it.liked }.map { it.id }.toSet() + state.likedPosts.filter { it in tailIds },
+                saved = page.items.filter { it.saved }.map { it.id }.toSet() + state.savedPosts.filter { it in tailIds },
             )
+            feedLoadedCount = latest.size + tail.size
+            feedHasMore = page.hasMore && (tail.isEmpty() || feedHasMore)
             loaded = true
         }
     }
 
+    /** The next page of the feed, appended under what is on screen. */
+    suspend fun loadMoreFeed() {
+        val api = api ?: return
+        if (!feedHasMore || loadingFeed) return
+        loadingFeed = true
+        try {
+            val page = calls.run(silent = true) { api.feed(limit = CommunityApi.FEED_PAGE, offset = feedLoadedCount) } ?: return
+            // Offsets shift when someone posts in between; the overlap is dropped by id.
+            val known = state.communityPosts.mapTo(HashSet()) { it.id }
+            val fresh = page.items.filter { it.id !in known }
+            state.appendCommunityFeed(
+                posts = fresh.map { it.toAppPost() },
+                liked = fresh.filter { it.liked }.map { it.id }.toSet(),
+                saved = fresh.filter { it.saved }.map { it.id }.toSet(),
+            )
+            feedLoadedCount += page.items.size
+            feedHasMore = page.hasMore && page.items.isNotEmpty()
+        } finally {
+            loadingFeed = false
+        }
+    }
+
+    /** Posts whose comments go on past what the store holds, by id. */
+    var commentsWithMore by mutableStateOf<Set<String>>(emptySet())
+        private set
+    private var loadingComments = false
+
+    /**
+     * Reads a post's comments from the top — at least a page, and as many as she had
+     * already scrolled through, so a new comment does not fold the list back up.
+     */
     suspend fun loadComments(postId: String) {
         val api = api ?: return
-        calls.run(silent = true) { api.comments(postId) }?.let { comments ->
-            state.replaceComments(postId, comments.map { it.toAppComment() })
+        val shown = state.communityPosts.firstOrNull { it.id == postId }?.comments?.size ?: 0
+        val limit = (shown + 1).coerceIn(CommunityApi.COMMENT_PAGE, MAX_COMMENTS)
+        calls.run(silent = true) { api.comments(postId, limit = limit) }?.let { comments ->
+            val more = comments.size >= limit
+            state.replaceComments(postId, comments.map { it.toAppComment() }, complete = !more)
+            commentsWithMore = if (more) commentsWithMore + postId else commentsWithMore - postId
+        }
+    }
+
+    /** The next page of a post's comments. */
+    suspend fun loadMoreComments(postId: String) {
+        val api = api ?: return
+        if (postId !in commentsWithMore || loadingComments) return
+        val shown = state.communityPosts.firstOrNull { it.id == postId }?.comments ?: return
+        loadingComments = true
+        try {
+            val page = calls.run(silent = true) {
+                api.comments(postId, limit = CommunityApi.COMMENT_PAGE, offset = shown.size)
+            } ?: return
+            val known = shown.mapTo(HashSet()) { it.id }
+            val fresh = page.map { it.toAppComment() }.filter { it.id !in known }
+            val more = page.size >= CommunityApi.COMMENT_PAGE
+            state.replaceComments(postId, shown + fresh, complete = !more)
+            commentsWithMore = if (more) commentsWithMore + postId else commentsWithMore - postId
+        } finally {
+            loadingComments = false
         }
     }
 
@@ -177,7 +304,8 @@ class CommunityController(
     }
 
     private companion object {
-        const val FEED_LIMIT = 100
+        /** The server's cap on one read of comments. */
+        const val MAX_COMMENTS = 200
     }
 }
 

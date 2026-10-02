@@ -6,6 +6,7 @@ import kotlin.uuid.Uuid
 import uz.sadora.contract.AdminRedemption
 import uz.sadora.contract.AdminShopProduct
 import uz.sadora.contract.CreateShopProductRequest
+import uz.sadora.contract.Page
 import uz.sadora.contract.Redemption
 import uz.sadora.contract.RedemptionStatus
 import uz.sadora.contract.RedeemResult
@@ -134,7 +135,10 @@ class ShopService(
         return shop.delete(id)
     }
 
-    suspend fun recentRedemptions(limit: Int): List<AdminRedemption> = shop.recentRedemptions(limit)
+    suspend fun recentRedemptions(limit: Int, offset: Int): Page<AdminRedemption> {
+        val (rows, total) = shop.recentRedemptions(limit, offset.toLong())
+        return Page(rows, total, limit, offset)
+    }
 
     suspend fun setRedemptionStatus(id: Uuid, status: RedemptionStatus) {
         if (!shop.setStatus(id, status)) throw NotFoundException("Xarid topilmadi")

@@ -51,6 +51,7 @@ fun WireComment.toAppComment(): CommunityComment = CommunityComment(
     isMine = isMine,
     badges = badges.map { it.toAppBadge() },
     doctor = doctor,
+    id = id,
 )
 
 fun WireBadge.toAppBadge(): CommunityBadge = when (this) {

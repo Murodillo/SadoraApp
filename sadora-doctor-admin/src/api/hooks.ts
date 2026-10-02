@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { QueryClient } from '@tanstack/react-query'
 import { ApiFailure, query, request } from './client'
 import type {
@@ -13,10 +13,13 @@ import type {
   DirectMessage,
   DoctorAccount,
   DoctorEarnings,
+  DoctorPayoutView,
   DoctorProfile,
   DoctorSettings,
   DoctorStats,
   DoctorSummary,
+  EarningLine,
+  Page,
   PatientHistory,
   PatientNote,
   QuickReply,
@@ -51,8 +54,24 @@ export const keys = {
 export const CONVERSATIONS_POLL_MS = 10_000
 export const THREAD_POLL_MS = 3_000
 
-/** The questions list asks for the server's ceiling; a doctor works down one list, not pages. */
-export const QUESTIONS_LIMIT = 100
+/** The questions list is read this many at a time; she asks for more at its end. */
+export const QUESTIONS_PAGE = 50
+
+/** The pages read so far as one list, in order; a row met twice — offsets shift as rows come and go — is kept once. */
+export function uniqueRows<T>(pages: readonly (readonly T[])[] | undefined, keyOf: (item: T) => string): T[] {
+  const seen = new Set<string>()
+  const rows: T[] = []
+  for (const page of pages ?? []) {
+    for (const item of page) {
+      const key = keyOf(item)
+      if (!seen.has(key)) {
+        seen.add(key)
+        rows.push(item)
+      }
+    }
+  }
+  return rows
+}
 
 /** Her own doctor account — the status that decides what the panel shows at all. */
 export const useDoctorAccount = () =>
@@ -75,13 +94,24 @@ export const useUpdateDoctorProfile = () => {
 }
 
 /**
- * Questions no doctor has answered yet, newest first. Polled, because this is the page a
- * doctor leaves open: a question asked while she reads another should appear by itself.
+ * Questions no doctor has answered yet, newest first, a page at a time. Polled, because
+ * this is the page a doctor leaves open: a question asked while she reads another should
+ * appear by itself.
+ *
+ * The server answers a plain list; a page shorter than asked for is the last. The next
+ * offset counts what the server gave, page by page, and a refetch works it out again from
+ * the fresh pages — so a question answered in between moves the rest up rather than
+ * pushing one past the next page. Read the pages through [uniqueRows].
  */
 export const useQuestions = (topic?: CommunityTopic) =>
-  useQuery({
+  useInfiniteQuery({
     queryKey: keys.questionsFor(topic),
-    queryFn: () => request<CommunityPost[]>(`/v1/doctor/questions${query({ limit: QUESTIONS_LIMIT, topic })}`),
+    queryFn: ({ pageParam }) =>
+      request<CommunityPost[]>(
+        `/v1/doctor/questions${query({ limit: QUESTIONS_PAGE, offset: pageParam || undefined, topic })}`,
+      ),
+    initialPageParam: 0,
+    getNextPageParam: (last, _pages, lastOffset) => (last.length < QUESTIONS_PAGE ? undefined : lastOffset + last.length),
     refetchInterval: 60_000,
   })
 
@@ -118,6 +148,26 @@ export const useDoctorProfile = (profileId: string | null | undefined) =>
     queryKey: keys.profile(profileId ?? ''),
     queryFn: () => request<DoctorProfile>(`/v1/doctors/${encodeURIComponent(profileId ?? '')}`),
     enabled: Boolean(profileId),
+  })
+
+/** How many of her older posts one "more" brings. */
+export const PROFILE_POSTS_PAGE = 20
+
+/**
+ * Her posts past the few [useDoctorProfile] carries, read on by offset from [from]. Off
+ * until she asks for more. Under her profile's key, so a new post or answer that
+ * refreshes the page refreshes these with it.
+ */
+export const useMoreDoctorPosts = (profileId: string | null | undefined, from: number, enabled: boolean) =>
+  useInfiniteQuery({
+    queryKey: [...keys.profile(profileId ?? ''), 'posts', from],
+    queryFn: ({ pageParam }) =>
+      request<Page<CommunityPost>>(
+        `/v1/doctors/${encodeURIComponent(profileId ?? '')}/posts${query({ limit: PROFILE_POSTS_PAGE, offset: pageParam })}`,
+      ),
+    initialPageParam: from,
+    getNextPageParam: (last) => (last.offset + last.items.length < last.total ? last.offset + last.items.length : undefined),
+    enabled: enabled && Boolean(profileId),
   })
 
 export const useCreatePost = () => {
@@ -282,11 +332,35 @@ export const useDoctorStats = () =>
     refetchInterval: 60_000,
   })
 
+/** The totals over everything, and the first page of her consultations and of her payouts. */
 export const useDoctorEarnings = () =>
   useQuery({
     queryKey: keys.earnings,
     queryFn: () => request<DoctorEarnings>('/v1/doctor/earnings'),
   })
+
+/** How many earnings lines or payouts one "more" brings. */
+export const EARNINGS_PAGE = 50
+
+/**
+ * Her consultations or payouts past the first page [useDoctorEarnings] already has, read
+ * on by offset from [from]. Off until she asks for more, so the page costs one request.
+ * Under the earnings key: whatever refreshes the totals refreshes these with them.
+ */
+export function useMoreEarnings<T extends EarningLine | DoctorPayoutView>(
+  list: 'lines' | 'payouts',
+  from: number,
+  enabled: boolean,
+) {
+  return useInfiniteQuery({
+    queryKey: [...keys.earnings, list, from],
+    queryFn: ({ pageParam }) =>
+      request<Page<T>>(`/v1/doctor/earnings/${list}${query({ limit: EARNINGS_PAGE, offset: pageParam })}`),
+    initialPageParam: from,
+    getNextPageParam: (last) => (last.offset + last.items.length < last.total ? last.offset + last.items.length : undefined),
+    enabled,
+  })
+}
 
 /** Her ready answers, in her order: the page that keeps them and the composer read the same list. */
 export const useQuickReplies = () =>
