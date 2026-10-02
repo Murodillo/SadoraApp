@@ -24,6 +24,7 @@ import uz.sadora.server.auth.RequestContext
 import uz.sadora.server.core.ConflictException
 import uz.sadora.server.core.ForbiddenException
 import uz.sadora.server.core.NotFoundException
+import uz.sadora.server.core.Photos
 import uz.sadora.server.core.ValidationException
 import uz.sadora.server.core.now
 import uz.sadora.server.notify.NotificationRepository
@@ -48,6 +49,8 @@ data class AdminDoctorRow(
     val documentCount: Int,
     val submittedAt: Instant,
     val reviewedAt: Instant? = null,
+    /** Her photo, through the admin route; null when she has none. */
+    val photoUrl: String? = null,
 )
 
 @Serializable
@@ -80,6 +83,7 @@ data class AdminDoctorDetail(
     val acceptsConsultations: Boolean = true,
     /** Counts only: how busy her consultations are, never what was said in them. */
     val consultations: DoctorConsultationStats? = null,
+    val photoUrl: String? = null,
 )
 
 @Serializable
@@ -198,6 +202,7 @@ class DoctorService(
                     documentCount = documents[it.id] ?: 0,
                     submittedAt = it.submittedAt,
                     reviewedAt = it.reviewedAt,
+                    photoUrl = it.photoUpdatedAt?.let { at -> Photos.adminDoctorUrl(it.id, at) },
                 )
             },
             total,
@@ -240,6 +245,7 @@ class DoctorService(
             },
             acceptsConsultations = record.acceptsConsultations,
             consultations = messaging?.consultationStats(record.id, record.userId),
+            photoUrl = record.photoUpdatedAt?.let { Photos.adminDoctorUrl(record.id, it) },
         )
     }
 
@@ -367,6 +373,7 @@ class DoctorService(
         submittedAt = submittedAt,
         reviewedAt = reviewedAt,
         acceptsConsultations = acceptsConsultations,
+        photoUrl = photoUpdatedAt?.let { Photos.doctorUrl(id, it) },
     )
 
     companion object {

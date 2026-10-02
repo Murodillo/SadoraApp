@@ -50,6 +50,8 @@ fun SadoraTopBar(
     step: String? = null,
     centered: Boolean = false,
     subtitle: String? = null,
+    /** Drawn between the back chevron and the title — a conversation's avatar. */
+    leading: @Composable (() -> Unit)? = null,
     trailing: @Composable (() -> Unit)? = null,
 ) {
     val c = Sadora.colors
@@ -67,6 +69,7 @@ fun SadoraTopBar(
         if (step != null) {
             Text(step, style = Sadora.type.body, color = c.muted)
         }
+        leading?.invoke()
         if (title.isNotEmpty()) {
             Column(
                 Modifier.weight(1f),

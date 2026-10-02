@@ -14,6 +14,7 @@ import uz.sadora.app.data.api.AppointmentApi
 import uz.sadora.app.data.api.MindApi
 import uz.sadora.app.data.api.NotificationApi
 import uz.sadora.app.data.api.NutritionApi
+import uz.sadora.app.data.api.PhotoApi
 import uz.sadora.app.data.api.RewardsApi
 import uz.sadora.app.data.api.ShareApi
 import uz.sadora.app.data.api.WearableApi
@@ -84,6 +85,7 @@ class SadoraGraph(
     val billingApi: BillingApi = BillingApi(caller)
     val rewardsApi: RewardsApi = RewardsApi(caller)
     val shareApi: ShareApi = ShareApi(caller)
+    val photoApi: PhotoApi = PhotoApi(caller)
     val repository: SadoraRepository = SadoraRepository(api, session, device, appVersion)
 
     /** One per process: its lock is what keeps a resume and a tap from reading twice at once. */
@@ -117,6 +119,8 @@ class SadoraGraph(
 
     fun rewardsController(state: uz.sadora.app.model.AppState): RewardsController =
         RewardsController(rewardsApi, state, icons)
+
+    fun photoController(state: uz.sadora.app.model.AppState): PhotoController = PhotoController(photoApi, state)
 
     fun shareController(): ShareController = ShareController(shareApi, analytics)
 

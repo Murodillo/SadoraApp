@@ -109,4 +109,5 @@ object StringsEn : Strings {
     override val doctors: DoctorStrings = DoctorStringsEn
     override val tabs: TabStrings = TabStringsEn
     override val work: WorkStrings = WorkStringsEn
+    override val photo: PhotoStrings = PhotoStringsEn
 }

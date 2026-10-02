@@ -14,6 +14,7 @@ import io.ktor.client.request.put
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.HttpResponse
 import io.ktor.client.statement.bodyAsText
+import io.ktor.client.statement.readRawBytes
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.parameters
@@ -2524,6 +2525,56 @@ class ApiIntegrationTest {
             if (!page.hasMore) error("doctor $profileId is not in the quality table")
             offset += page.items.size
         }
+    }
+
+    @Test
+    fun `photos reach who they are for - hers her doctors and a doctors everyone`() = api {
+        val doctor = signUp().also { onboard(it) }
+        val patient = signUp().also { onboard(it) }
+        val stranger = signUp().also { onboard(it) }
+        val admin = adminToken()
+        val profileId = approvedDoctor(doctor, admin, "Dr Photo ${Uuid.random().toString().take(6)}")
+
+        // Hers: any shape in, a square JPEG out, on her own profile.
+        val wide = java.awt.image.BufferedImage(300, 200, java.awt.image.BufferedImage.TYPE_INT_RGB)
+        val png = java.io.ByteArrayOutputStream().also { javax.imageio.ImageIO.write(wide, "png", it) }.toByteArray()
+        val upload = uz.sadora.contract.PhotoUpload(kotlin.io.encoding.Base64.encode(png), "image/png")
+        val mine = put<uz.sadora.contract.PhotoView>("/v1/me/photo", patient.token, upload)
+        assertEquals(mine.photoUrl, get<uz.sadora.contract.UserProfile>("/v1/me", patient.token).avatarUrl)
+        val served = raw { client.get(assertNotNull(mine.photoUrl)) { auth(patient.token) } }
+        assertEquals("image/jpeg", served.headers["Content-Type"])
+        val square = javax.imageio.ImageIO.read(java.io.ByteArrayInputStream(served.readRawBytes()))
+        assertEquals(200, square.width)
+        assertEquals(200, square.height)
+        assertEquals(HttpStatusCode.BadRequest, raw { client.put("/v1/me/photo") { auth(patient.token); json(uz.sadora.contract.PhotoUpload("bm90IGFuIGltYWdl", "image/png")) } }.status)
+
+        // A doctor's: on her page, her own account, and to any reader.
+        val hers = put<uz.sadora.contract.PhotoView>("/v1/doctor/photo", doctor.token, upload)
+        assertEquals(hers.photoUrl, get<uz.sadora.contract.DoctorProfile>("/v1/doctors/$profileId", stranger.token).photoUrl)
+        assertEquals(hers.photoUrl, get<DoctorAccount>("/v1/doctor/me", doctor.token).photoUrl)
+        assertEquals(HttpStatusCode.OK, raw { client.get(assertNotNull(hers.photoUrl)) { auth(stranger.token) } }.status)
+        assertEquals(HttpStatusCode.Forbidden, raw { client.put("/v1/doctor/photo") { auth(stranger.token); json(upload) } }.status)
+
+        // In a consultation each side sees the other; a stranger, and an alias thread, see nothing.
+        val thread = post<ConversationThread>("/v1/doctors/$profileId/consultations", patient.token, uz.sadora.contract.StartConsultationRequest("Salom"))
+        val id = thread.conversation.id
+        assertEquals(hers.photoUrl, thread.conversation.doctor?.photoUrl)
+        val held = get<List<Conversation>>("/v1/community/conversations?scope=patients", doctor.token).single { it.id == id }
+        val patientPhoto = assertNotNull(held.patient?.photoUrl)
+        assertTrue(patientPhoto.startsWith("/v1/community/conversations/$id/photo?v="))
+        assertEquals(HttpStatusCode.OK, raw { client.get(patientPhoto) { auth(doctor.token) } }.status)
+        assertEquals(HttpStatusCode.NotFound, raw { client.get("/v1/community/conversations/$id/photo") { auth(stranger.token) } }.status)
+        assertFalse(rawGet("/v1/community/me", patient.token).contains("/photo"), "the room never carries her photo")
+
+        // Staff take a doctor's photo down, and it is gone everywhere.
+        assertEquals(HttpStatusCode.OK, raw { client.get("/v1/admin/doctors/$profileId/photo") { auth(admin) } }.status)
+        assertEquals(HttpStatusCode.OK, raw { client.delete("/v1/admin/doctors/$profileId/photo") { auth(admin); json(uz.sadora.server.photo.RemovePhotoRequest("Yuz ko'rinmaydi")) } }.status)
+        assertNull(get<uz.sadora.contract.DoctorProfile>("/v1/doctors/$profileId", patient.token).photoUrl)
+        assertTrue("doctor.photo_removed" in rawGet("/v1/admin/audit?action=doctor.photo_removed&entityId=$profileId&limit=5", admin))
+
+        // She removes hers.
+        assertEquals(HttpStatusCode.OK, raw { client.delete("/v1/me/photo") { auth(patient.token) } }.status)
+        assertNull(get<uz.sadora.contract.UserProfile>("/v1/me", patient.token).avatarUrl)
     }
 
     private suspend fun Api.approvedDoctor(doctor: TestUser, admin: String, name: String): String {

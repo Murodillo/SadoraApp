@@ -99,6 +99,11 @@ class AppState {
     // numbers went up with every onboarding whose body and birth-year questions were
     // skipped: the request sends whatever is in here, and the server stored it as hers.
     var email by mutableStateOf("")
+    /**
+     * Her photo, as the server's versioned path; null draws her initial. Private: it is
+     * drawn on her own screens and nowhere in the Chat, where she is her alias.
+     */
+    var avatarUrl by mutableStateOf<String?>(null)
     var phone by mutableStateOf("")
     var birthDate by mutableStateOf("")
     var heightCm by mutableStateOf("")

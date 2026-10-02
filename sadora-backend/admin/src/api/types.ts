@@ -650,6 +650,8 @@ export interface AdminDoctorRow {
   documentCount: number
   submittedAt: string
   reviewedAt?: string | null
+  /** `/v1/admin/doctors/{id}/photo?v=…` — versioned, so safe to cache by URL. Null: no photo. */
+  photoUrl?: string | null
 }
 
 export interface DoctorCounts {
@@ -687,6 +689,8 @@ export interface AdminDoctorDetail {
   acceptsConsultations: boolean
   /** Counts only: how busy her consultations are, never what was said in them. */
   consultations?: DoctorConsultationStats | null
+  /** `/v1/admin/doctors/{id}/photo?v=…` — versioned, so safe to cache by URL. Null: no photo. */
+  photoUrl?: string | null
 }
 
 export interface DoctorConsultationStats {
@@ -761,6 +765,11 @@ export interface AdminDoctorQuality {
   paidOutMinor: number
   balanceMinor: number
   refundDueMinor: number
+  /**
+   * Her admin photo path, when the server sends one. The quality endpoint does not carry
+   * it yet; until it does the row shows her initials.
+   */
+  photoUrl?: string | null
 }
 
 export interface EarningLine {

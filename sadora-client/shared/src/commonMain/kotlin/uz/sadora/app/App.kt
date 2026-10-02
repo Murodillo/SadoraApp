@@ -2,6 +2,8 @@ package uz.sadora.app
 
 import uz.sadora.app.ui.components.systemReducesMotion
 import uz.sadora.app.ui.components.LocalReduceMotion
+import uz.sadora.app.ui.components.LocalPhotoSource
+import uz.sadora.app.ui.components.PhotoSource
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.SizeTransform
@@ -77,6 +79,7 @@ import uz.sadora.app.ui.core.AiFreePreviewScreen
 import uz.sadora.app.ui.core.AliasProfileScreen
 import uz.sadora.app.ui.core.ConsultationConsentSheetContent
 import uz.sadora.app.ui.core.ConsultationPaySheetContent
+import uz.sadora.app.ui.core.ProfilePhotoSheets
 import uz.sadora.app.ui.core.DoctorDirectoryScreen
 import uz.sadora.app.ui.core.DoctorProfileScreen
 import uz.sadora.app.ui.core.CommunityRulesSheetContent
@@ -197,7 +200,12 @@ fun App(graph: SadoraGraph? = null) {
         // once, which is what changing language is.
         ProvideStrings(state.language) {
             // The phone's "less motion" setting, read once for every endless animation.
-            CompositionLocalProvider(LocalReduceMotion provides systemReducesMotion()) {
+            // Every face drawn from a photoUrl loads through this session's photo controller.
+            val photoSource = remember(controllers) { PhotoSource { controllers.photos.bytes(it) } }
+            CompositionLocalProvider(
+                LocalReduceMotion provides systemReducesMotion(),
+                LocalPhotoSource provides photoSource,
+            ) {
                 AnimatedContent(
                     targetState = navigator.phase,
                     transitionSpec = { fadeIn() togetherWith fadeOut() },
@@ -301,6 +309,8 @@ private class ShellOverlays {
     /** The doctor, by id, whose consultation she is paying for: the pay sheet is up. */
     var payFor by mutableStateOf<String?>(null)
     var showSymptomSheet by mutableStateOf(false)
+    /** Her profile photo sheet: at shell level so it covers the tab bar, like every sheet here. */
+    var showPhotoSheet by mutableStateOf(false)
 
     /** The day the symptom sheet writes; null is today. Set by the calendar's day page. */
     var symptomSheetDate by mutableStateOf<kotlinx.datetime.LocalDate?>(null)
@@ -311,7 +321,7 @@ private class ShellOverlays {
 
     val anyOpen: Boolean
         get() = showWaterSheet || showSymptomSheet || menuFor != null || showCompose || showCommunityRules ||
-            showEditBio || showConversationMenu || consultWith != null || payFor != null
+            showEditBio || showConversationMenu || consultWith != null || payFor != null || showPhotoSheet
 
     /** Closes the topmost sheet. False when none was open. */
     fun closeTop(): Boolean = when {
@@ -324,6 +334,7 @@ private class ShellOverlays {
         showConversationMenu -> { showConversationMenu = false; true }
         consultWith != null -> { consultWith = null; true }
         payFor != null -> { payFor = null; true }
+        showPhotoSheet -> { showPhotoSheet = false; true }
         else -> false
     }
 }
@@ -599,6 +610,8 @@ private fun MainShell(
             onDismiss = { overlays.showSymptomSheet = false },
             date = overlays.symptomSheetDate ?: state.today,
         )
+
+        ProfilePhotoSheets(state, controllers.photos, visible = overlays.showPhotoSheet, onDismiss = { overlays.showPhotoSheet = false })
 
         // Kept mounted through the exit animation so the sheet does not blank as it closes.
         val lastMenu = remember { mutableStateOf<CommunityPost?>(null) }
@@ -1010,6 +1023,8 @@ private fun PushedScreen(
             state = state,
             controller = controllers.account,
             health = health,
+            photos = controllers.photos,
+            onEditPhoto = { overlays.showPhotoSheet = true },
             onOpen = {
                 when (it) {
                     Route.Paywall -> upgrade()

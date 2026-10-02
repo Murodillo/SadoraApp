@@ -43,6 +43,10 @@ class CameraShutter {
  *
  * [onCaptured] receives the frame already resized and JPEG-encoded, exactly as
  * [rememberPhotoCapture] delivers a gallery pick, so both roads join before the upload.
+ *
+ * [front] starts on the selfie camera — her profile photo — and falls back to the back
+ * one on a device that has no front camera. The scanner points at a plate and keeps
+ * the default.
  */
 @Composable
 expect fun LiveCamera(
@@ -50,6 +54,7 @@ expect fun LiveCamera(
     onAccess: (CameraAccess) -> Unit,
     onCaptured: (CapturedPhoto) -> Unit,
     modifier: Modifier = Modifier,
+    front: Boolean = false,
 )
 
 /** Opens this app's page in the system settings — the only way back from a refused permission. */

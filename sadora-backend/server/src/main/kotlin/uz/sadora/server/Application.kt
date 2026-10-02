@@ -28,6 +28,8 @@ import uz.sadora.server.consultation.adminConsultationRoutes
 import uz.sadora.server.consultation.consultationRoutes
 import uz.sadora.server.consultation.devPayRoutes
 import uz.sadora.server.doctor.adminDoctorRoutes
+import uz.sadora.server.photo.adminPhotoRoutes
+import uz.sadora.server.photo.photoRoutes
 import uz.sadora.server.doctor.doctorRoutes
 import uz.sadora.server.admin.adminRoutes
 import uz.sadora.server.api.healthCheckRoutes
@@ -147,6 +149,8 @@ fun Application.apiModule(component: AppComponent) {
             doctorRoutes(component.doctorService, component.communityService, component.messagingService, component.consultationService)
             consultationRoutes(component.consultationService)
             adminConsultationRoutes(component.consultationService)
+            photoRoutes(component.photoService)
+            adminPhotoRoutes(component.photoService)
             adminDoctorRoutes(component.doctorService)
             aiRoutes(component.aiService, component.greetingService)
             rewardsRoutes(component.rewardsService, component.shopService, component.homeLayoutRepository)

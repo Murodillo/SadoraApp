@@ -14,6 +14,8 @@ import uz.sadora.contract.DoctorStats
 import uz.sadora.contract.Page
 import uz.sadora.contract.PatientHistory
 import uz.sadora.contract.PatientNote
+import uz.sadora.contract.PhotoUpload
+import uz.sadora.contract.PhotoView
 import uz.sadora.contract.QuickReply
 import uz.sadora.contract.SavePatientNoteRequest
 import uz.sadora.contract.SaveQuickReplyRequest
@@ -31,6 +33,23 @@ class DoctorApi(private val caller: ApiCaller) {
 
     suspend fun update(request: UpdateDoctorProfileRequest): ApiResult<DoctorAccount> =
         caller.authenticated("v1/doctor/me", HttpMethodKind.PUT) { setBody(request) }
+
+    /**
+     * Her photo, on her page, in the directory and on every byline. Accepted while the
+     * application is still pending too, so the form can ask for it right after it is sent.
+     */
+    suspend fun uploadPhoto(upload: PhotoUpload): ApiResult<PhotoView> =
+        caller.authenticated("v1/doctor/photo", HttpMethodKind.PUT) { setBody(upload) }
+
+    suspend fun deletePhoto(): ApiResult<Ack> =
+        caller.authenticated("v1/doctor/photo", HttpMethodKind.DELETE)
+
+    /**
+     * A photo's bytes, by the whole URL [photoRequestUrl] made of a `photoUrl` — hers, a
+     * patient's through their consultation, or another doctor's.
+     */
+    suspend fun photo(url: String): ApiResult<ByteArray> =
+        caller.authenticated(url, HttpMethodKind.GET)
 
     /** Questions no doctor has answered yet. */
     suspend fun questions(offset: Int = 0): ApiResult<List<CommunityPost>> =

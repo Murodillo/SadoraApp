@@ -1,5 +1,6 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { query, request, requestBlob } from './client'
+import { adminPhotoPath } from './photos'
 import type {
   AdminAnalytics,
   AdminArticle,
@@ -631,6 +632,42 @@ export const useReviewDoctor = () => {
       void client.invalidateQueries({ queryKey: ['doctors', 'list'] })
       void client.invalidateQueries({ queryKey: ['doctors', 'counts'] })
       void client.invalidateQueries({ queryKey: ['doctors', 'detail', id] })
+    },
+  })
+}
+
+/**
+ * A doctor's photo, by the versioned path the server hands out. A new photo is a new
+ * `?v=`, so the bytes under one key never go stale; the image lives under its own root
+ * so a review, which invalidates `['doctors']`, does not download every face again.
+ * A path that is not the panel's own API is never fetched — the bearer header goes with it.
+ */
+export const useDoctorPhoto = (photoUrl: string | null | undefined) => {
+  const path = adminPhotoPath(photoUrl)
+  return useQuery({
+    queryKey: ['doctor-photo', path],
+    queryFn: ({ signal }) => requestBlob(path as string, { signal }),
+    enabled: path !== null,
+    staleTime: Infinity,
+    gcTime: 10 * 60_000,
+    // A missing photo is a 404, and the initials already stand in for it.
+    retry: false,
+  })
+}
+
+/**
+ * Takes a doctor's photo down (Owner and Admin). She is told by push, with the reason;
+ * the list, her card and the quality table all show her initials after.
+ */
+export const useRemoveDoctorPhoto = () => {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, reason }: { id: string; reason?: string }) =>
+      request<{ ok: boolean }>(`/v1/admin/doctors/${id}/photo`, { method: 'DELETE', body: { reason } }),
+    onSuccess: (_, { id }) => {
+      void client.invalidateQueries({ queryKey: ['doctors', 'list'] })
+      void client.invalidateQueries({ queryKey: ['doctors', 'detail', id] })
+      void client.invalidateQueries({ queryKey: ['doctor-quality'] })
     },
   })
 }

@@ -1,6 +1,7 @@
 import { cloneElement, isValidElement, useEffect, useId, useRef, useState } from 'react'
-import type { ReactElement, ReactNode } from 'react'
+import type { CSSProperties, ReactElement, ReactNode } from 'react'
 import { createPortal } from 'react-dom'
+import { usePhoto } from '../api/photos'
 import { useCountUp } from './motion'
 
 export { useCountUp } from './motion'
@@ -280,20 +281,46 @@ export function VerifiedMark({ title = 'Tasdiqlangan shifokor' }: { title?: stri
   )
 }
 
+/** The letter an avatar without a photo shows: the name's first, or `?` for none. */
+export function initialOf(name: string): string {
+  return name.trim().charAt(0).toUpperCase() || '?'
+}
+
 /**
- * An alias's initial on one of the app's avatar tints. Aliases have no photo on purpose;
- * the tint index is all the server sends.
+ * A person's photo in a circle, or — with no photo, while it loads, or when it cannot be
+ * had — her initial on one of the app's avatar tints (a doctor's on the brand gradient).
+ *
+ * `url` is a photo path from the API (`photoUrl`), fetched with her token and cached by
+ * URL; see `api/photos`. Pass it only for a doctor's byline or a consultation's patient:
+ * an alias in the anonymous chat has no photo on purpose, and the tint index is all the
+ * server sends for one.
  */
-export function Avatar({ name, tint, doctor = false }: { name: string; tint: number; doctor?: boolean }) {
-  const initial = name.trim().charAt(0).toUpperCase() || '?'
+export function Avatar({
+  name,
+  tint = 0,
+  doctor = false,
+  url,
+  size,
+}: {
+  name: string
+  tint?: number
+  doctor?: boolean
+  url?: string | null
+  /** In pixels; the stylesheet's 34 when omitted. */
+  size?: number
+}) {
+  const photo = usePhoto(url)
   const index = ((Math.trunc(tint) % 6) + 6) % 6
+  const style: CSSProperties = {}
+  if (!doctor) style.background = `var(--c${index + 1})`
+  if (size) Object.assign(style, { width: size, height: size, fontSize: Math.round(size * 0.41) })
   return (
     <span
-      className={`avatar${doctor ? ' doctor' : ''}`}
-      style={doctor ? undefined : { background: `var(--c${index + 1})` }}
+      className={`avatar${doctor ? ' doctor' : ''}${photo ? ' photo' : ''}`}
+      style={Object.keys(style).length ? style : undefined}
       aria-hidden="true"
     >
-      {initial}
+      {photo ? <img src={photo} alt="" draggable={false} /> : initialOf(name)}
     </span>
   )
 }

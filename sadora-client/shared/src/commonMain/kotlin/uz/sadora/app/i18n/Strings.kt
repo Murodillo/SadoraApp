@@ -774,6 +774,23 @@ interface ProfileStrings {
     val shareProfile: String
     val shareProfileNote: String
     val devices: String
+
+    // ---- her photo, behind the avatar on the account card
+    val photoTitle: String
+    /** What the avatar button says to a screen reader. */
+    val photoChange: String
+    val photoGallery: String
+    val photoGalleryNote: String
+    val photoCamera: String
+    val photoCameraNote: String
+    val photoRemove: String
+    val photoRemoveNote: String
+    /** Said beside the picker: who sees it, and that the Chat never does. */
+    val photoPrivacy: String
+    val photoPreviewTitle: String
+    val photoSave: String
+    val photoSaving: String
+    val photoRemoving: String
 }
 
 interface SettingsStrings {

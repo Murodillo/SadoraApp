@@ -30,6 +30,7 @@ import uz.sadora.server.core.ConflictException
 import uz.sadora.server.core.FeatureDisabledException
 import uz.sadora.server.core.ForbiddenException
 import uz.sadora.server.core.NotFoundException
+import uz.sadora.server.core.Photos
 import uz.sadora.server.core.RateLimitedException
 import uz.sadora.server.core.ValidationException
 import uz.sadora.server.core.now
@@ -212,7 +213,8 @@ class CommunityService(
         }
     }
 
-    private fun DoctorByline.toAuthor() = DoctorAuthor(id.toString(), fullName, specialty)
+    private fun DoctorByline.toAuthor() =
+        DoctorAuthor(id.toString(), fullName, specialty, photoAt?.let { Photos.doctorUrl(id, it) })
 
     private suspend fun badgesFor(userIds: List<Uuid>): Map<Uuid, List<uz.sadora.contract.CommunityBadge>> {
         val at = now()
@@ -325,6 +327,7 @@ class CommunityService(
                 workplace = doctor.workplace,
                 experienceYears = doctor.experienceYears,
                 answerCount = activity[doctor.id]?.second ?: 0,
+                photoUrl = doctor.photoUpdatedAt?.let { Photos.doctorUrl(doctor.id, it) },
             )
         }.sortedWith(compareByDescending<DoctorListItem> { it.answerCount }.thenBy { it.id })
     }
@@ -353,6 +356,7 @@ class CommunityService(
             canMessage = !isMe && doctor.acceptsConsultations && messaging != null &&
                 !repository.blockedEitherWay(viewer, doctor.userId),
             conversationId = existing?.id?.toString(),
+            photoUrl = doctor.photoUpdatedAt?.let { Photos.doctorUrl(doctor.id, it) },
         )
     }
 

@@ -23,14 +23,16 @@ import platform.UIKit.UINavigationControllerDelegateProtocol
 import platform.darwin.NSObject
 
 /**
- * `UIImagePickerController` for the library.
+ * `UIImagePickerController` for the library, and for the camera when she takes a new
+ * profile photo. Either way the image is redrawn before encoding, which applies its
+ * `imageOrientation`, so it reaches the server upright.
  *
  * The delegate is held by the returned object rather than by the picker, because
  * UIKit's delegate reference is weak and a delegate that is only referenced by the
  * presentation would be collected before the user finishes choosing.
  *
- * Info.plist must carry `NSPhotoLibraryUsageDescription`; without it iOS terminates
- * the app on present.
+ * Info.plist must carry `NSPhotoLibraryUsageDescription` and `NSCameraUsageDescription`;
+ * without them iOS terminates the app on present.
  */
 @OptIn(ExperimentalForeignApi::class)
 @Composable
@@ -61,6 +63,12 @@ actual fun rememberPhotoCapture(onCaptured: (CapturedPhoto) -> Unit): PhotoCaptu
 
             override fun pickFromGallery() =
                 present(UIImagePickerControllerSourceType.UIImagePickerControllerSourceTypePhotoLibrary)
+
+            override val cameraAvailable: Boolean =
+                UIImagePickerController.isSourceTypeAvailable(UIImagePickerControllerSourceType.UIImagePickerControllerSourceTypeCamera)
+
+            override fun takePhoto() =
+                present(UIImagePickerControllerSourceType.UIImagePickerControllerSourceTypeCamera)
 
             private fun present(source: UIImagePickerControllerSourceType) {
                 if (!UIImagePickerController.isSourceTypeAvailable(source)) return

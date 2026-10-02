@@ -90,7 +90,7 @@ internal fun PostCard(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
         ) {
-            if (doctor != null) DoctorAvatar(post.alias) else AliasAvatar(post.alias, post.tint)
+            if (doctor != null) DoctorAvatar(post.alias, photoUrl = doctor.photoUrl) else AliasAvatar(post.alias, post.tint)
             Column(Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.xxs)) {
                     Text(
@@ -268,7 +268,7 @@ private fun DoctorCommentRow(comment: CommunityComment, modifier: Modifier = Mod
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
         ) {
-            DoctorAvatar(comment.alias, size = 30.dp)
+            DoctorAvatar(comment.alias, size = 30.dp, photoUrl = doctor.photoUrl)
             Column(Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.xxs)) {
                     Text(

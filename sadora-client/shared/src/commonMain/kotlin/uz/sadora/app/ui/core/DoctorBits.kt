@@ -5,6 +5,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
@@ -30,6 +31,7 @@ import uz.sadora.app.design.Spacing
 import uz.sadora.app.i18n.AvailabilityLine
 import uz.sadora.app.i18n.AvailabilityTone
 import uz.sadora.app.i18n.strings
+import uz.sadora.app.ui.components.RemoteAvatar
 import uz.sadora.app.ui.components.noRippleClickable
 
 /**
@@ -53,22 +55,28 @@ internal fun VerifiedMark(size: Dp = 16.dp) {
 }
 
 /**
- * A doctor's avatar: her initials on a solid ring, with the check mark on its shoulder.
- * Solid where an alias's is a soft tint, so the two never read as the same kind of name.
+ * A doctor's avatar: her photo, or her initials, on a solid ring, with the check mark on
+ * its shoulder. Solid where an alias's is a soft tint, so the two never read as the same
+ * kind of name. Her photo is public like her name; initials stand in until it loads, and
+ * for good when she has none or it will not load.
  */
 @Composable
-internal fun DoctorAvatar(name: String, size: Dp = 36.dp) {
+internal fun DoctorAvatar(name: String, size: Dp = 36.dp, photoUrl: String? = null) {
     val c = Sadora.colors
     Box(Modifier.size(size + 4.dp)) {
-        Box(
-            Modifier
-                .size(size)
-                .clip(Radius.chip)
-                .background(c.primary.copy(alpha = if (c.isDark) 0.28f else 0.14f))
-                .border(1.5.dp, c.primary, Radius.chip),
-            contentAlignment = Alignment.Center,
+        RemoteAvatar(
+            url = photoUrl,
+            initials = initials(name),
+            size = size,
+            // The ring is drawn over the photo as well: it is what says "doctor".
+            modifier = Modifier.border(1.5.dp, c.primary, Radius.chip),
         ) {
-            Text(initials(name), style = Sadora.type.h3, color = c.primary)
+            Box(
+                Modifier.fillMaxSize().background(c.primary.copy(alpha = if (c.isDark) 0.28f else 0.14f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(initials(name), style = Sadora.type.h3, color = c.primary)
+            }
         }
         Box(Modifier.align(Alignment.BottomEnd)) { VerifiedMark(size = (size.value * 0.42f).dp) }
     }

@@ -1,5 +1,6 @@
 import { QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter } from 'react-router-dom'
+import { clearPhotoCache } from './api/photos'
 import { createQueryClient } from './api/queryClient'
 import { AuthProvider, useAuth } from './auth/AuthContext'
 import { LoginPage } from './auth/LoginPage'
@@ -12,7 +13,13 @@ const queryClient = createQueryClient()
 export function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider onSessionEnd={() => queryClient.clear()}>
+      <AuthProvider
+        onSessionEnd={() => {
+          queryClient.clear()
+          // Photos are held as object URLs outside the query cache; they go with it.
+          clearPhotoCache()
+        }}
+      >
         <ToastProvider>
           <BrowserRouter>
             <ErrorBoundary>

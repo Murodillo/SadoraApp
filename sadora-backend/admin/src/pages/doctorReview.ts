@@ -85,3 +85,17 @@ export function formatBytes(bytes: number): string {
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
+
+/** Owner and Admin may take a doctor's photo down; Support sees it and nothing more. */
+export function canRemovePhoto(role: AdminRole | undefined): boolean {
+  return !!role && reviewers.includes(role)
+}
+
+/** One-tap reasons for taking a photo down. The doctor reads whichever is sent. */
+export const photoRemovalReasons = ["Yuz ko'rinmaydi", 'Professional emas', 'Boshqa odamning rasmi', 'Sifati past']
+
+/** The reason as sent: trimmed, and left out entirely when blank. */
+export function photoRemovalReason(raw: string): string | undefined {
+  const trimmed = raw.trim()
+  return trimmed ? trimmed.slice(0, limits.photoReasonMax) : undefined
+}

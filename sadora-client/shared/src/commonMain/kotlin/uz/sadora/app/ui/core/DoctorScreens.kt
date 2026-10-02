@@ -194,7 +194,7 @@ private fun DoctorHeader(profile: DoctorProfile) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(Spacing.xs),
     ) {
-        DoctorAvatar(profile.fullName, size = 84.dp)
+        DoctorAvatar(profile.fullName, size = 84.dp, photoUrl = profile.photoUrl)
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
             Text(profile.fullName, style = Sadora.type.h2, color = c.text, textAlign = TextAlign.Center)
             VerifiedMark(size = 20.dp)
@@ -318,7 +318,7 @@ fun ConsultationConsentSheetContent(
     LaunchedEffect(profile.id) { messages.clearError() }
 
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-        DoctorAvatar(profile.fullName, size = 44.dp)
+        DoctorAvatar(profile.fullName, size = 44.dp, photoUrl = profile.photoUrl)
         Column(Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(profile.fullName, style = Sadora.type.h3, color = c.text, modifier = Modifier.weight(1f, fill = false))
@@ -412,7 +412,7 @@ fun ConsultationPaySheetContent(
     }
 
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-        DoctorAvatar(profile.fullName, size = 44.dp)
+        DoctorAvatar(profile.fullName, size = 44.dp, photoUrl = profile.photoUrl)
         Column(Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(profile.fullName, style = Sadora.type.h3, color = c.text, modifier = Modifier.weight(1f, fill = false))

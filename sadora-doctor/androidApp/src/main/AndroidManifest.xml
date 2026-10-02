@@ -14,8 +14,8 @@
          MainActivity asks once she is signed in. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
-    <!-- Nothing else: the document photos come through the system photo picker, which
-         needs no permission and hands over only the image she picked. -->
+    <!-- Nothing else: the document and profile photos come through the system photo
+         picker, which needs no permission and hands over only the image she picked. -->
 
     <application
         android:allowBackup="true"
@@ -42,6 +42,18 @@
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_channel_id"
             android:value="@string/push_channel_id" />
+
+        <!-- The file the phone's camera app writes her profile photo into: one file in the
+             cache, shared for the length of the capture and deleted once it is read. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.photos"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/photo_paths" />
+        </provider>
 
         <activity
             android:exported="true"

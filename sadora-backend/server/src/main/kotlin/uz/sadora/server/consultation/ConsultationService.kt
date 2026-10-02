@@ -56,6 +56,7 @@ import uz.sadora.server.community.MessagingRepository
 import uz.sadora.server.core.ConflictException
 import uz.sadora.server.core.ForbiddenException
 import uz.sadora.server.core.NotFoundException
+import uz.sadora.server.core.Photos
 import uz.sadora.server.core.ValidationException
 import uz.sadora.server.doctor.DoctorRecord
 import uz.sadora.server.doctor.DoctorRepository
@@ -393,7 +394,9 @@ class ConsultationService(
         val records = repository.recordMessages(thread.id, patientId)
         val patient = users.findById(patientId)
         return PatientHistory(
-            patient = patient?.let { ConsultationPatient(it.name.ifBlank { "Bemor" }, null, it.lifeStage) },
+            patient = patient?.let {
+                ConsultationPatient(it.name.ifBlank { "Bemor" }, null, it.lifeStage, Photos.conversationUrlFor(thread.id, it.avatarUrl))
+            },
             sessions = sessions.map { session ->
                 val end = session.closedAt ?: session.expiresAt
                 ConsultationSession(
@@ -620,6 +623,7 @@ class ConsultationService(
                 paidOutMinor = money.paidOutMinor,
                 balanceMinor = money.balanceMinor,
                 refundDueMinor = money.refundDueMinor,
+                photoUrl = doctor.photoUpdatedAt?.let { Photos.adminDoctorUrl(doctor.id, it) },
             )
         }
         return Page(rows, total, limit, offset.toInt())
@@ -798,4 +802,5 @@ data class AdminDoctorQuality(
     val paidOutMinor: Long,
     val balanceMinor: Long,
     val refundDueMinor: Long,
+    val photoUrl: String? = null,
 )

@@ -41,6 +41,8 @@ data class DoctorRecord(
     val verifiedAt: Instant?,
     val submittedAt: Instant,
     val acceptsConsultations: Boolean = true,
+    /** When her photo was last set; null when she has none. */
+    val photoUpdatedAt: Instant? = null,
 )
 
 /** The fields an application sets, whether it is the first or a resubmission. */
@@ -244,5 +246,6 @@ class DoctorRepository {
         verifiedAt = this[DoctorProfiles.verifiedAt]?.toKotlinInstant(),
         submittedAt = this[DoctorProfiles.submittedAt].toKotlinInstant(),
         acceptsConsultations = this[DoctorProfiles.acceptsConsultations],
+        photoUpdatedAt = this[DoctorProfiles.photoUpdatedAt]?.toKotlinInstant(),
     )
 }

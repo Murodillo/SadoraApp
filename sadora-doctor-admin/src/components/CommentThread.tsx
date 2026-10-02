@@ -37,7 +37,8 @@ function Comment({ comment, arrived }: { comment: CommunityComment; arrived: boo
   const classes = ['comment', doctor && 'doctor', comment.isMine && 'mine', arrived && 'arrived'].filter(Boolean).join(' ')
   return (
     <li className={classes}>
-      <Avatar name={doctor?.fullName ?? comment.alias} tint={comment.tint} doctor={Boolean(doctor)} />
+      {/* A doctor's byline carries her public photo; an alias never has one. */}
+      <Avatar name={doctor?.fullName ?? comment.alias} tint={comment.tint} doctor={Boolean(doctor)} url={doctor?.photoUrl} />
       <div className="comment-main">
         <div className="comment-head">
           <b>{doctor?.fullName ?? comment.alias}</b>

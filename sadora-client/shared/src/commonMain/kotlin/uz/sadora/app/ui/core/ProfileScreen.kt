@@ -2,7 +2,9 @@ package uz.sadora.app.ui.core
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -11,6 +13,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -19,6 +25,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import uz.sadora.app.data.HealthController
+import uz.sadora.app.data.PhotoController
 import uz.sadora.app.data.SadoraController
 import uz.sadora.app.design.IconSize
 import uz.sadora.app.design.Radius
@@ -29,7 +36,6 @@ import uz.sadora.app.i18n.strings
 import uz.sadora.app.model.AppState
 import uz.sadora.app.model.Fmt
 import uz.sadora.app.nav.Route
-import uz.sadora.app.ui.components.Avatar
 import uz.sadora.app.ui.components.BadgeTone
 import uz.sadora.app.ui.components.ButtonTone
 import uz.sadora.app.ui.components.ChipFlowRow
@@ -56,6 +62,9 @@ fun ProfileScreen(
     state: AppState,
     controller: SadoraController,
     health: HealthController,
+    photos: PhotoController,
+    /** Opens the photo sheet, which the shell hosts so that it covers the tab bar. */
+    onEditPhoto: () -> Unit,
     onOpen: (Route) -> Unit,
     onSignedOut: () -> Unit,
     onClose: () -> Unit,
@@ -72,142 +81,146 @@ fun ProfileScreen(
         health.loadSources()
     }
 
-    Column(modifier) {
-        SadoraTopBar(t.title, onBack = onClose)
+    Box(modifier) {
+        Column(Modifier.fillMaxSize()) {
+            SadoraTopBar(t.title, onBack = onClose)
 
-        ScreenContent {
-            item {
-                SadoraCard(onClick = { onOpen(Route.PersonalDetails) }) {
-                    Row(
-                        Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-                    ) {
-                        Avatar(state.name, size = 52.dp)
-                        Column(
-                            Modifier.weight(1f),
-                            verticalArrangement = Arrangement.spacedBy(2.dp),
+            ScreenContent {
+                item {
+                    SadoraCard(onClick = { onOpen(Route.PersonalDetails) }) {
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                         ) {
-                            Text(
-                                state.name.ifBlank { t.unnamed },
-                                style = Sadora.type.h3,
-                                color = c.text,
-                            )
-                            // A phone-only account has no email; the number is what she signed in with.
-                            Text(
-                                state.email.ifBlank { "+${uz.sadora.contract.UzbekPhone.COUNTRY_CODE} ${uz.sadora.contract.UzbekPhone.format(state.phone)}" },
-                                style = Sadora.type.body,
-                                color = c.muted,
-                            )
+                            // Her photo is changed from the avatar itself; the rest of the
+                            // card still opens her details.
+                            EditableAvatar(state, photos, size = 52.dp, onClick = onEditPhoto)
+                            Column(
+                                Modifier.weight(1f),
+                                verticalArrangement = Arrangement.spacedBy(2.dp),
+                            ) {
+                                Text(
+                                    state.name.ifBlank { t.unnamed },
+                                    style = Sadora.type.h3,
+                                    color = c.text,
+                                )
+                                // A phone-only account has no email; the number is what she signed in with.
+                                Text(
+                                    state.email.ifBlank { "+${uz.sadora.contract.UzbekPhone.COUNTRY_CODE} ${uz.sadora.contract.UzbekPhone.format(state.phone)}" },
+                                    style = Sadora.type.body,
+                                    color = c.muted,
+                                )
+                            }
+                            Icon(SadoraIcons.ChevronRight, contentDescription = null, Modifier.size(IconSize.md), tint = c.muted2)
                         }
-                        Icon(SadoraIcons.ChevronRight, contentDescription = null, Modifier.size(IconSize.md), tint = c.muted2)
                     }
                 }
-            }
 
-            item {
-                if (state.isPremium) PremiumStatusCard(state) else UpgradeCard { onOpen(Route.Paywall) }
-            }
+                item {
+                    if (state.isPremium) PremiumStatusCard(state) else UpgradeCard { onOpen(Route.Paywall) }
+                }
 
-            // The QR code for a doctor, first among the actions: it is the one thing on
-            // this screen she opens while someone is waiting.
-            item {
-                SadoraCard(onClick = { onOpen(Route.ShareProfile) }) {
-                    Row(
-                        Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-                    ) {
-                        IconTile(SadoraIcons.Shield, tint = c.primary, size = 44.dp)
-                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                            Text(t.shareProfile, style = Sadora.type.h3, color = c.text)
-                            Text(t.shareProfileNote, style = Sadora.type.body, color = c.muted)
+                // The QR code for a doctor, first among the actions: it is the one thing on
+                // this screen she opens while someone is waiting.
+                item {
+                    SadoraCard(onClick = { onOpen(Route.ShareProfile) }) {
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                        ) {
+                            IconTile(SadoraIcons.Shield, tint = c.primary, size = 44.dp)
+                            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                Text(t.shareProfile, style = Sadora.type.h3, color = c.text)
+                                Text(t.shareProfileNote, style = Sadora.type.body, color = c.muted)
+                            }
+                            Icon(SadoraIcons.ChevronRight, contentDescription = null, Modifier.size(IconSize.md), tint = c.muted2)
                         }
-                        Icon(SadoraIcons.ChevronRight, contentDescription = null, Modifier.size(IconSize.md), tint = c.muted2)
                     }
                 }
-            }
 
-            item {
-                SadoraCard(padding = Spacing.xs) {
-                    // Gul sits above the modules rather than among the settings: it is
-                    // something she uses, not something she configures.
-                    SettingsRow(
-                        SadoraIcons.Bloom,
-                        t.rewards,
-                        value = if (state.coins > 0) Fmt.int(state.coins) else null,
-                        iconTint = c.secondary,
-                    ) { onOpen(Route.Rewards) }
-                    SettingsRow(SadoraIcons.Bookmark, t.shop) { onOpen(Route.Shop) }
-                    SettingsRow(SadoraIcons.Share, t.referral) { onOpen(Route.Referral) }
-                }
-            }
-
-            item {
-                SadoraCard(padding = Spacing.xs) {
-                    SettingsRow(SadoraIcons.Moon, t.sleep) { onOpen(Route.Sleep) }
-                    SettingsRow(SadoraIcons.Pill, t.medications) { onOpen(Route.Medications) }
-                    if (state.communityEnabled) {
-                        SettingsRow(SadoraIcons.Chats, t.secretChat, iconTint = c.secondary) { onOpen(Route.SecretChat) }
+                item {
+                    SadoraCard(padding = Spacing.xs) {
+                        // Gul sits above the modules rather than among the settings: it is
+                        // something she uses, not something she configures.
+                        SettingsRow(
+                            SadoraIcons.Bloom,
+                            t.rewards,
+                            value = if (state.coins > 0) Fmt.int(state.coins) else null,
+                            iconTint = c.secondary,
+                        ) { onOpen(Route.Rewards) }
+                        SettingsRow(SadoraIcons.Bookmark, t.shop) { onOpen(Route.Shop) }
+                        SettingsRow(SadoraIcons.Share, t.referral) { onOpen(Route.Referral) }
                     }
-                    SettingsRow(SadoraIcons.Chart, t.insights) { onOpen(Route.Insights) }
-                    SettingsRow(SadoraIcons.Book, t.knowledge) { onOpen(Route.Knowledge) }
                 }
-            }
 
-            item {
-                SadoraCard(padding = Spacing.xs) {
-                    SettingsRow(SadoraIcons.Profile, t.personalDetails) { onOpen(Route.PersonalDetails) }
-                    SettingsRow(SadoraIcons.Target, t.goals) { onOpen(Route.GoalsSettings) }
-                    SettingsRow(
-                        SadoraIcons.Journey,
-                        t.lifeStage,
-                        value = strings.stages.title(state.lifeStage),
-                    ) { onOpen(Route.LifeStageSettings) }
-                    // Blank until the providers have loaded: a "2" that was never true
-                    // is worse than nothing next to a row you are about to open.
-                    val connected = health.sources.count { it.connected }
-                    SettingsRow(
-                        SadoraIcons.Watch,
-                        t.devices,
-                        value = if (health.sources.isEmpty()) null else "$connected",
-                    ) {
-                        onOpen(Route.DataSources)
-                    }
-                    SettingsRow(SadoraIcons.Home, t.homeLayout) { onOpen(Route.HomeLayout) }
-                    SettingsRow(SadoraIcons.Bell, t.notifications) { onOpen(Route.Notifications) }
-                    SettingsRow(SadoraIcons.Lock, t.privacyAndSecurity) { onOpen(Route.PrivacySecurity) }
-                }
-            }
-
-            item {
-                SadoraCard(padding = Spacing.xs) {
-                    SettingsRow(
-                        SadoraIcons.Globe,
-                        t.language,
-                        value = state.language.native,
-                    ) { onOpen(Route.LanguageSettings) }
-                    SettingsRow(
-                        if (state.darkTheme) SadoraIcons.Moon else SadoraIcons.Today,
-                        t.theme,
-                        value = if (state.darkTheme) t.themeDark else t.themeLight,
-                    ) { state.darkTheme = !state.darkTheme }
-                    SettingsRow(SadoraIcons.Info, t.about) { onOpen(Route.About) }
-                }
-            }
-
-            item {
-                SadoraButton(
-                    if (controller.busy) t.signingOut else t.signOut,
-                    tone = ButtonTone.Secondary,
-                    enabled = !controller.busy,
-                    onClick = {
-                        scope.launch {
-                            controller.signOut()
-                            onSignedOut()
+                item {
+                    SadoraCard(padding = Spacing.xs) {
+                        SettingsRow(SadoraIcons.Moon, t.sleep) { onOpen(Route.Sleep) }
+                        SettingsRow(SadoraIcons.Pill, t.medications) { onOpen(Route.Medications) }
+                        if (state.communityEnabled) {
+                            SettingsRow(SadoraIcons.Chats, t.secretChat, iconTint = c.secondary) { onOpen(Route.SecretChat) }
                         }
-                    },
-                )
+                        SettingsRow(SadoraIcons.Chart, t.insights) { onOpen(Route.Insights) }
+                        SettingsRow(SadoraIcons.Book, t.knowledge) { onOpen(Route.Knowledge) }
+                    }
+                }
+
+                item {
+                    SadoraCard(padding = Spacing.xs) {
+                        SettingsRow(SadoraIcons.Profile, t.personalDetails) { onOpen(Route.PersonalDetails) }
+                        SettingsRow(SadoraIcons.Target, t.goals) { onOpen(Route.GoalsSettings) }
+                        SettingsRow(
+                            SadoraIcons.Journey,
+                            t.lifeStage,
+                            value = strings.stages.title(state.lifeStage),
+                        ) { onOpen(Route.LifeStageSettings) }
+                        // Blank until the providers have loaded: a "2" that was never true
+                        // is worse than nothing next to a row you are about to open.
+                        val connected = health.sources.count { it.connected }
+                        SettingsRow(
+                            SadoraIcons.Watch,
+                            t.devices,
+                            value = if (health.sources.isEmpty()) null else "$connected",
+                        ) {
+                            onOpen(Route.DataSources)
+                        }
+                        SettingsRow(SadoraIcons.Home, t.homeLayout) { onOpen(Route.HomeLayout) }
+                        SettingsRow(SadoraIcons.Bell, t.notifications) { onOpen(Route.Notifications) }
+                        SettingsRow(SadoraIcons.Lock, t.privacyAndSecurity) { onOpen(Route.PrivacySecurity) }
+                    }
+                }
+
+                item {
+                    SadoraCard(padding = Spacing.xs) {
+                        SettingsRow(
+                            SadoraIcons.Globe,
+                            t.language,
+                            value = state.language.native,
+                        ) { onOpen(Route.LanguageSettings) }
+                        SettingsRow(
+                            if (state.darkTheme) SadoraIcons.Moon else SadoraIcons.Today,
+                            t.theme,
+                            value = if (state.darkTheme) t.themeDark else t.themeLight,
+                        ) { state.darkTheme = !state.darkTheme }
+                        SettingsRow(SadoraIcons.Info, t.about) { onOpen(Route.About) }
+                    }
+                }
+
+                item {
+                    SadoraButton(
+                        if (controller.busy) t.signingOut else t.signOut,
+                        tone = ButtonTone.Secondary,
+                        enabled = !controller.busy,
+                        onClick = {
+                            scope.launch {
+                                controller.signOut()
+                                onSignedOut()
+                            }
+                        },
+                    )
+                }
             }
         }
     }

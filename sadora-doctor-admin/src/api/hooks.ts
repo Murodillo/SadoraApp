@@ -22,6 +22,8 @@ import type {
   Page,
   PatientHistory,
   PatientNote,
+  PhotoUpload,
+  PhotoView,
   QuickReply,
   ReportRequest,
   SaveQuickReplyRequest,
@@ -91,6 +93,33 @@ export const useUpdateDoctorProfile = () => {
       void client.invalidateQueries({ queryKey: keys.profiles })
     },
   })
+}
+
+/**
+ * Her photo, up or away. The answer is only the new URL, so it is written into her
+ * account (which the header, the nudge and the profile page all read) at once; her
+ * public page and the bylines under her answers are asked again so they carry it too.
+ */
+export const useSetDoctorPhoto = () => {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (upload: PhotoUpload) => request<PhotoView>('/v1/doctor/photo', { method: 'PUT', body: upload }),
+    onSuccess: (view) => afterPhoto(client, view.photoUrl ?? null),
+  })
+}
+
+export const useRemoveDoctorPhoto = () => {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: () => request<Ack>('/v1/doctor/photo', { method: 'DELETE' }),
+    onSuccess: () => afterPhoto(client, null),
+  })
+}
+
+function afterPhoto(client: QueryClient, photoUrl: string | null) {
+  client.setQueryData<DoctorAccount>(keys.account, (account) => (account ? { ...account, photoUrl } : account))
+  void client.invalidateQueries({ queryKey: keys.profiles })
+  void client.invalidateQueries({ queryKey: ['community', 'comments'] })
 }
 
 /**

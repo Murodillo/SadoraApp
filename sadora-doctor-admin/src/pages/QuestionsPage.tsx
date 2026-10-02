@@ -359,6 +359,7 @@ function AnswerComposer({
         <span className="faint row" style={{ gap: 6 }}>
           Siz shifokor sifatida yozasiz:{' '}
           <b className="row" style={{ gap: 4 }}>
+            <Avatar name={doctor.fullName ?? ''} doctor url={doctor.photoUrl} size={20} />
             {doctor.fullName}
             <VerifiedMark />
           </b>

@@ -145,6 +145,15 @@ class StringsTest {
                 ),
             )
         }
+        with(t.photo) {
+            addAll(
+                listOf(
+                    askTitle, askBody, guidance, choose, change, remove, fromGallery, takePhoto, later,
+                    uploading, saved, removed, removeTitle, removeBody, sectionTitle, afterApplyTitle,
+                    afterApplyBody, done, photoOf("Dr. Nodira"),
+                ),
+            )
+        }
     }
 
     @Test

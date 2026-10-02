@@ -79,6 +79,7 @@ import uz.sadora.server.notify.NotificationService
 import uz.sadora.server.consultation.ConsultationJob
 import uz.sadora.server.consultation.ConsultationRepository
 import uz.sadora.server.consultation.ConsultationService
+import uz.sadora.server.photo.PhotoService
 import uz.sadora.server.user.AccountErasureJob
 import uz.sadora.server.user.UserRepository
 import uz.sadora.server.wearable.WearableRepository
@@ -403,6 +404,13 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
         messagingService.onSessionClosed = service::afterClose
     }
     val consultationJob = ConsultationJob(consultationService)
+
+    val photoService = PhotoService(
+        doctors = doctorRepository,
+        messages = messagingRepository,
+        notifications = notificationRepository,
+        audit = auditService,
+    )
     val paymeGateway = PaymeGateway(billingRepository, billingService, config.billing.payme)
     val clickGateway = ClickGateway(billingRepository, billingService, config.billing.click)
     val storePurchaseService = StorePurchaseService(

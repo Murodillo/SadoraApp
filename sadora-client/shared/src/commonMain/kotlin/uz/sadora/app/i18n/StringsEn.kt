@@ -355,6 +355,21 @@ object StringsEn : Strings {
         override val shareProfile = "Show my doctor"
         override val shareProfileNote = "A QR code your doctor scans to see your records"
         override val devices = "Devices"
+
+        override val photoTitle = "Profile photo"
+        override val photoChange = "Change photo"
+        override val photoGallery = "Choose from gallery"
+        override val photoGalleryNote = "From the photos on your phone"
+        override val photoCamera = "Take a photo"
+        override val photoCameraNote = "With the front camera, right here"
+        override val photoRemove = "Remove photo"
+        override val photoRemoveNote = "Your initial takes its place"
+        override val photoPrivacy = "Only you and a doctor you write to can see your photo. " +
+            "In the Chat you stay under your alias."
+        override val photoPreviewTitle = "New photo"
+        override val photoSave = "Save"
+        override val photoSaving = "Uploading…"
+        override val photoRemoving = "Removing…"
     }
 
     override val settings = object : SettingsStrings {

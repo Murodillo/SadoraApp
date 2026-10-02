@@ -121,6 +121,8 @@ export interface DoctorAuthor {
   id: string
   fullName: string
   specialty: DoctorSpecialty
+  /** Her public photo (a path under the API, versioned by `?v=`); null draws her initial. */
+  photoUrl?: string | null
 }
 
 /** The caller's own doctor account: the status, and what she sent. */
@@ -139,6 +141,22 @@ export interface DoctorAccount {
   reviewedAt?: string | null
   /** Whether patients may open a consultation with her now; she switches it herself. Defaults to true. */
   acceptsConsultations?: boolean
+  /** Her own photo; null until she adds one, which the panel keeps asking her to do. */
+  photoUrl?: string | null
+}
+
+/**
+ * A profile photo on its way up: JPEG or PNG, upright, as base64 without a `data:` prefix.
+ * The server crops it to a centred square, scales it to at most 512px and re-encodes it.
+ */
+export interface PhotoUpload {
+  imageBase64: string
+  mimeType: 'image/jpeg' | 'image/png'
+}
+
+/** What a photo upload answers: where the new photo is served. */
+export interface PhotoView {
+  photoUrl?: string | null
 }
 
 /** What an approved doctor may change without a new review. Omitted leaves it as it is. */
@@ -160,6 +178,7 @@ export interface DoctorProfile {
   postCount: number
   answerCount: number
   isMe?: boolean
+  photoUrl?: string | null
   posts: CommunityPost[]
   canMessage?: boolean
   conversationId?: string | null
@@ -236,6 +255,11 @@ export interface ConsultationPatient {
   name: string
   age?: number | null
   lifeStage: LifeStage
+  /**
+   * Her photo, shown to the doctor she consults and only through the consultation. Never
+   * drawn anywhere an alias stands — the anonymous chat keeps her initial and tint.
+   */
+  photoUrl?: string | null
 }
 
 /** A consultation's window. `open` is computed by the server when the answer was made. */

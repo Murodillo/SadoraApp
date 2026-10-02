@@ -53,6 +53,8 @@ object AuditActions {
     const val CONSULTATION_REFUNDED = "consultation.refunded"
     /** An operator recorded money paid out to a doctor. */
     const val DOCTOR_PAYOUT_RECORDED = "doctor.payout_recorded"
+    /** Staff took down a doctor's photo that was not a portrait of her. */
+    const val DOCTOR_PHOTO_REMOVED = "doctor.photo_removed"
     /** An operator changed Sadora's share of a paid consultation. */
     const val COMMISSION_CHANGED = "settings.commission_changed"
 

@@ -16,6 +16,7 @@ import uz.sadora.contract.DoctorStatus
 import uz.sadora.contract.DoctorSummary
 import uz.sadora.contract.Language
 import uz.sadora.contract.MessageImageUpload
+import uz.sadora.contract.PhotoUpload
 import uz.sadora.contract.ReportReason
 import uz.sadora.contract.SendMessageRequest
 import uz.sadora.contract.UpdateDoctorProfileRequest
@@ -58,6 +59,9 @@ class DoctorController(
 
     /** A patient's record, opened from her QR code. */
     val patientCalls = ApiCallState()
+
+    /** Her photo: putting one up, taking it down. */
+    val photoCalls = ApiCallState()
 
     val busy: Boolean get() = calls.busy
     val error: ApiFailure? get() = calls.error
@@ -173,6 +177,45 @@ class DoctorController(
         val result = calls.run { api.update(UpdateDoctorProfileRequest(workplace = workplace, bio = bio)) } ?: return false
         account = result
         return true
+    }
+
+    // ---------------------------------------------------------------- her photo
+
+    /**
+     * Whether the one-time "add your photo" sheet has been shown in this launch of the
+     * app. Not cleared on sign-out: once per launch is the promise, whoever signs in.
+     */
+    var photoNudgeAsked: Boolean = false
+
+    /** Puts up her photo; false when it did not go, with the reason in [photoCalls]. */
+    suspend fun setPhoto(photo: CapturedPhotoData): Boolean {
+        val api = api ?: return false
+        val view = photoCalls.run { api.uploadPhoto(PhotoUpload(photo.base64, photo.mimeType)) } ?: return false
+        showPhoto(view.photoUrl)
+        return true
+    }
+
+    /** Takes her photo down; her page goes back to her initials. */
+    suspend fun removePhoto(): Boolean {
+        val api = api ?: return false
+        photoCalls.run { api.deletePhoto() } ?: return false
+        showPhoto(null)
+        return true
+    }
+
+    /**
+     * The new URL everywhere she is already drawn — her account, her page, her posts and
+     * answers — so the change shows at once rather than on the next reload.
+     */
+    private fun showPhoto(photoUrl: String?) {
+        account = account?.copy(photoUrl = photoUrl)
+        val me = account?.profileId ?: profile?.takeIf { it.isMe }?.id ?: return
+        profile = profile?.let { page ->
+            if (page.id == me) page.copy(photoUrl = photoUrl, posts = page.posts.withDoctorPhoto(me, photoUrl)) else page
+        }
+        feed = feed.withDoctorPhoto(me, photoUrl)
+        thread = thread?.let { listOf(it).withDoctorPhoto(me, photoUrl).first() }
+        threadComments = threadComments.withDoctorCommentPhoto(me, photoUrl)
     }
 
     /**
@@ -682,7 +725,8 @@ class DoctorController(
         threadHasMore = false
         feedHasMore = false
         feedOffset = 0
-        listOf(calls, applyCalls, profileCalls, threadCalls, composeCalls, feedCalls, chatCalls, patientCalls).forEach { it.clearError() }
+        listOf(calls, applyCalls, profileCalls, threadCalls, composeCalls, feedCalls, chatCalls, patientCalls, photoCalls)
+            .forEach { it.clearError() }
     }
 }
 

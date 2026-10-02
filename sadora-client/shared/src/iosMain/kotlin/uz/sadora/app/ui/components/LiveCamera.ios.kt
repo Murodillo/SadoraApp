@@ -17,6 +17,8 @@ import platform.AVFoundation.AVAuthorizationStatusAuthorized
 import platform.AVFoundation.AVAuthorizationStatusNotDetermined
 import platform.AVFoundation.AVCaptureDevice
 import platform.AVFoundation.AVCaptureDeviceInput
+import platform.AVFoundation.AVCaptureDevicePositionFront
+import platform.AVFoundation.AVCaptureDeviceTypeBuiltInWideAngleCamera
 import platform.AVFoundation.AVCapturePhoto
 import platform.AVFoundation.AVCapturePhotoCaptureDelegateProtocol
 import platform.AVFoundation.AVCapturePhotoOutput
@@ -27,6 +29,7 @@ import platform.AVFoundation.AVCaptureVideoPreviewLayer
 import platform.AVFoundation.AVLayerVideoGravityResizeAspectFill
 import platform.AVFoundation.AVMediaTypeVideo
 import platform.AVFoundation.authorizationStatusForMediaType
+import platform.AVFoundation.defaultDeviceWithDeviceType
 import platform.AVFoundation.fileDataRepresentation
 import platform.AVFoundation.requestAccessForMediaType
 import platform.CoreGraphics.CGRectZero
@@ -58,6 +61,7 @@ actual fun LiveCamera(
     onAccess: (CameraAccess) -> Unit,
     onCaptured: (CapturedPhoto) -> Unit,
     modifier: Modifier,
+    front: Boolean,
 ) {
     val access = rememberUpdatedState(onAccess)
     val captured = rememberUpdatedState(onCaptured)
@@ -88,7 +92,7 @@ actual fun LiveCamera(
         return
     }
 
-    val camera = remember { IosCamera() }
+    val camera = remember(front) { IosCamera(front) }
     DisposableEffect(camera) {
         if (camera.start()) {
             shutter.onFire = { camera.capture { photo -> captured.value(photo) } }
@@ -117,7 +121,7 @@ actual fun rememberOpenAppSettings(): () -> Unit = remember {
 
 /** The session, its one input and one output, and the view that shows it. */
 @OptIn(ExperimentalForeignApi::class)
-private class IosCamera {
+private class IosCamera(private val front: Boolean) {
     private val session = AVCaptureSession()
     private val output = AVCapturePhotoOutput()
     private val previewLayer = AVCaptureVideoPreviewLayer(session = session).apply {
@@ -131,7 +135,18 @@ private class IosCamera {
 
     /** False when there is no camera to open — the simulator, or a device that refuses. */
     fun start(): Boolean {
-        val device = AVCaptureDevice.defaultDeviceWithMediaType(AVMediaTypeVideo) ?: return false
+        // The selfie camera when asked for; the default one — the back — otherwise, and
+        // whenever the front one is not there.
+        val selfie = if (front) {
+            AVCaptureDevice.defaultDeviceWithDeviceType(
+                AVCaptureDeviceTypeBuiltInWideAngleCamera,
+                mediaType = AVMediaTypeVideo,
+                position = AVCaptureDevicePositionFront,
+            )
+        } else {
+            null
+        }
+        val device = selfie ?: AVCaptureDevice.defaultDeviceWithMediaType(AVMediaTypeVideo) ?: return false
         val input = AVCaptureDeviceInput.deviceInputWithDevice(device, error = null) ?: return false
         if (!session.canAddInput(input) || !session.canAddOutput(output)) return false
 

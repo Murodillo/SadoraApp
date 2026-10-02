@@ -35,6 +35,14 @@ class DoctorGraph(
 
     fun authController(): AuthController = AuthController(repository)
 
+    /**
+     * A `photoUrl` from any response, fetched with her token. One that does not point at
+     * this app's own server is refused here, before a request is made.
+     */
+    suspend fun photo(photoUrl: String): ApiResult<ByteArray> =
+        photoRequestUrl(environment.baseUrl, photoUrl)?.let { doctorApi.photo(it) }
+            ?: ApiResult.Failure(ApiFailure.NotFound("not a photo on this server: $photoUrl"))
+
     fun doctorController(): DoctorController = DoctorController(doctorApi, communityApi, patientApi)
 
     fun workController(): WorkController = WorkController(doctorApi)

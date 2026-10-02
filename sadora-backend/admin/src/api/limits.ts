@@ -17,6 +17,8 @@ export const limits = {
   },
   /** Every destructive admin action asks why, and the answer goes into the audit log. */
   reasonMax: 500,
+  /** Why a doctor's photo came down — the server keeps the first 300 characters. */
+  photoReasonMax: 300,
 } as const
 
 /** A slug is lowercase letters, digits and hyphens — the same rule the server applies. */

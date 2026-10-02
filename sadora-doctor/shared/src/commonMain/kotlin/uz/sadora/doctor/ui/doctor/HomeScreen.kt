@@ -71,6 +71,7 @@ fun DoctorHomeScreen(
     onOpenWork: () -> Unit,
     onOpenEarnings: () -> Unit,
     modifier: Modifier = Modifier,
+    onToast: (String) -> Unit = {},
 ) {
     val t = strings.tabs
     val d = strings.doctors
@@ -115,7 +116,14 @@ fun DoctorHomeScreen(
                     ErrorStrip(failure.readable(), onRetry = { scope.launch { doctors.loadQuestions() } })
                 }
             }
-            item(key = "me") { WhoCard(account) }
+            // Asked for at the top until she has one: a face is what a patient looks for first.
+            if (account.photoUrl == null) {
+                item(key = "photo") {
+                    val saved = strings.photo.saved
+                    AskForPhotoCard(account, doctors, onSaved = { onToast(saved) })
+                }
+            }
+            item(key = "me") { WhoCard(account, onClick = onProfile) }
             item(key = "busy") {
                 val settings = work.settings
                 if (settings == null) {
@@ -219,14 +227,14 @@ fun DoctorHomeScreen(
 /** How long a just-answered question stays on the list, marked, before it leaves. */
 private const val AnsweredLingerMillis = 1_400L
 
-/** Her name, check mark and specialty: the account this phone is working as. */
+/** Her photo, name, check mark and specialty: the account this phone is working as. */
 @Composable
-private fun WhoCard(account: DoctorAccount) {
+private fun WhoCard(account: DoctorAccount, onClick: () -> Unit) {
     val d = strings.doctors
     val c = Sadora.colors
-    SadoraCard {
+    SadoraCard(onClick = onClick) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-            DoctorAvatar(account.fullName.orEmpty(), size = 52.dp)
+            DoctorAvatar(account.fullName.orEmpty(), size = 52.dp, photoUrl = account.photoUrl)
             Column(Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.xxs)) {
                     Text(account.fullName.orEmpty(), style = Sadora.type.h3, color = c.text, modifier = Modifier.weight(1f, fill = false))

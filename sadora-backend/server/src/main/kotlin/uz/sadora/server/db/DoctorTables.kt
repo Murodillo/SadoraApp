@@ -25,6 +25,7 @@ object DoctorProfiles : Table("doctor_profiles") {
     val consultationPriceMinor = long("consultation_price_minor")
     val busy = bool("busy")
     val timezone = text("timezone")
+    val photoUpdatedAt = timestampWithTimeZone("photo_updated_at").nullable()
 
     override val primaryKey = PrimaryKey(id)
 }
@@ -115,4 +116,24 @@ object AppSettings : Table("app_settings") {
     val updatedBy = uuid("updated_by").nullable()
 
     override val primaryKey = PrimaryKey(key)
+}
+
+/** A woman's photo: hers and her doctors', never the room's. */
+object UserPhotos : Table("user_photos") {
+    val userId = uuid("user_id").references(Users.id)
+    val content = binary("content")
+    val sizePx = integer("size_px")
+    val updatedAt = timestampWithTimeZone("updated_at")
+
+    override val primaryKey = PrimaryKey(userId)
+}
+
+/** A doctor's public photo. */
+object DoctorPhotos : Table("doctor_photos") {
+    val doctorId = uuid("doctor_id").references(DoctorProfiles.id)
+    val content = binary("content")
+    val sizePx = integer("size_px")
+    val updatedAt = timestampWithTimeZone("updated_at")
+
+    override val primaryKey = PrimaryKey(doctorId)
 }

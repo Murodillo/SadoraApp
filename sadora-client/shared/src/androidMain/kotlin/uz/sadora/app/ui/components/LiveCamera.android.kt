@@ -57,6 +57,7 @@ actual fun LiveCamera(
     onAccess: (CameraAccess) -> Unit,
     onCaptured: (CapturedPhoto) -> Unit,
     modifier: Modifier,
+    front: Boolean,
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -92,7 +93,7 @@ actual fun LiveCamera(
         }
     }
 
-    DisposableEffect(lifecycleOwner, previewView) {
+    DisposableEffect(lifecycleOwner, previewView, front) {
         val main = ContextCompat.getMainExecutor(context)
         val future = ProcessCameraProvider.getInstance(context)
         var provider: ProcessCameraProvider? = null
@@ -114,8 +115,8 @@ actual fun LiveCamera(
             if (disposed) return@addListener
             try {
                 val cameras = future.get().also { provider = it }
-                val lens = listOf(CameraSelector.DEFAULT_BACK_CAMERA, CameraSelector.DEFAULT_FRONT_CAMERA)
-                    .firstOrNull { cameras.hasCamera(it) }
+                val preferred = listOf(CameraSelector.DEFAULT_BACK_CAMERA, CameraSelector.DEFAULT_FRONT_CAMERA)
+                val lens = (if (front) preferred.reversed() else preferred).firstOrNull { cameras.hasCamera(it) }
                 if (lens == null) {
                     access.value(CameraAccess.Missing)
                     return@addListener

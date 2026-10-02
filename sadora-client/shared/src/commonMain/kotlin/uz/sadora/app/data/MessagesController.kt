@@ -8,8 +8,6 @@ import kotlin.io.encoding.ExperimentalEncodingApi
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import uz.sadora.app.data.api.CommunityApi
 import uz.sadora.app.model.Conversation
 import uz.sadora.app.model.DirectMessage
@@ -367,8 +365,7 @@ class MessagesController(
     // ---------------------------------------------------------------- photos
 
     /** Bytes by message id. Bounded, oldest out first; a photo is a few hundred kilobytes. */
-    private val imageCache = LinkedHashMap<String, ByteArray>()
-    private val imageLock = Mutex()
+    private val imageCache = ImageBytesCache(ImageCacheSize)
 
     /**
      * A photo's bytes, from memory when it has been fetched before. Never written to
@@ -376,22 +373,14 @@ class MessagesController(
      * one backup away from somewhere she never sent it.
      */
     suspend fun imageBytes(conversationId: String, messageId: String): ByteArray? {
-        imageLock.withLock { imageCache[messageId] }?.let { return it }
-        val api = api ?: return null
-        val bytes = (api.messageImage(conversationId, messageId) as? ApiResult.Success)?.value ?: return null
-        imageLock.withLock {
-            imageCache.remove(messageId)
-            imageCache[messageId] = bytes
-            while (imageCache.size > ImageCacheSize) imageCache.remove(imageCache.keys.first())
+        val api = api ?: return imageCache.get(messageId)
+        return imageCache.getOrFetch(messageId) {
+            (api.messageImage(conversationId, messageId) as? ApiResult.Success)?.value
         }
-        return bytes
     }
 
     /** Remembers a photo she just sent, so her own bubble does not download what she has. */
-    suspend fun rememberImage(messageId: String, bytes: ByteArray) = imageLock.withLock {
-        imageCache[messageId] = bytes
-        while (imageCache.size > ImageCacheSize) imageCache.remove(imageCache.keys.first())
-    }
+    suspend fun rememberImage(messageId: String, bytes: ByteArray) = imageCache.put(messageId, bytes)
 
     // ---------------------------------------------------------------- her record
 

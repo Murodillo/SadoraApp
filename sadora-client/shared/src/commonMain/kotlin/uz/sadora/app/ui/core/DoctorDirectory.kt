@@ -262,7 +262,7 @@ private fun DoctorListCard(doctor: DoctorListItem, onClick: () -> Unit) {
     val rated = hasEnoughRatings(doctor.ratingCount)
     SadoraCard(onClick = onClick, verticalGap = Spacing.xs) {
         Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm), verticalAlignment = Alignment.Top) {
-            DoctorAvatar(doctor.fullName, size = 52.dp)
+            DoctorAvatar(doctor.fullName, size = 52.dp, photoUrl = doctor.photoUrl)
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(doctor.fullName, style = Sadora.type.h3, color = c.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text(
@@ -440,7 +440,7 @@ private fun CompactDoctorCard(doctor: DoctorListItem, onClick: () -> Unit) {
             .padding(Spacing.sm),
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        DoctorAvatar(doctor.fullName, size = 40.dp)
+        DoctorAvatar(doctor.fullName, size = 40.dp, photoUrl = doctor.photoUrl)
         Text(doctor.fullName, style = Sadora.type.h3, color = c.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
         Text(
             d.specialty(doctor.specialty),
@@ -481,7 +481,7 @@ internal fun AskDoctorCard(doctors: List<DoctorListItem>, onOpen: () -> Unit) {
             val step = 22.dp
             Box(Modifier.width(face + 4.dp + step * (faces.size - 1).coerceAtLeast(0)).height(face + 4.dp)) {
                 faces.forEachIndexed { index, doctor ->
-                    Box(Modifier.offset(x = step * index)) { DoctorAvatar(doctor.fullName, size = face) }
+                    Box(Modifier.offset(x = step * index)) { DoctorAvatar(doctor.fullName, size = face, photoUrl = doctor.photoUrl) }
                 }
             }
             Icon(SadoraIcons.ChevronRight, contentDescription = null, Modifier.size(IconSize.md), tint = c.muted)

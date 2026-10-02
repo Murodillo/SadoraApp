@@ -1,6 +1,8 @@
 package uz.sadora.doctor.ui.components
 
+import android.Manifest
 import android.content.Context
+import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Matrix
@@ -14,14 +16,21 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import java.io.ByteArrayOutputStream
+import java.io.File
 
 /**
- * The system photo picker.
+ * The system photo picker, and the system camera for a profile photo.
  *
- * It needs no runtime permission: `PickVisualMedia` returns only the image she picked,
- * which is also why the doctor app declares no storage permission; the camera one is
- * the Scan tab's.
+ * The picker needs no runtime permission: `PickVisualMedia` returns only the image she
+ * picked, which is also why the doctor app declares no storage permission.
+ *
+ * The camera is the phone's own camera app, writing into a file of ours shared through
+ * the `<package>.photos` FileProvider the app's manifest declares. Because the manifest
+ * also declares CAMERA (for the Scan tab), Android refuses `ACTION_IMAGE_CAPTURE` until
+ * that permission is granted, so it is asked for first.
  */
 @Composable
 actual fun rememberPhotoCapture(onCaptured: (CapturedPhoto) -> Unit): PhotoCapture {
@@ -35,7 +44,23 @@ actual fun rememberPhotoCapture(onCaptured: (CapturedPhoto) -> Unit): PhotoCaptu
         context.decodeSampled(uri)?.let { (bitmap, rotation) -> bitmap.encode(rotation) }?.let { callback.value(it) }
     }
 
-    return remember(gallery) {
+    val camera = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { saved ->
+        val file = context.captureFile()
+        if (saved) {
+            context.decodeSampled(context.captureUri(file))
+                ?.let { (bitmap, rotation) -> bitmap.encode(rotation) }
+                ?.let { callback.value(it) }
+        }
+        file.delete()
+    }
+    val openCamera: () -> Unit = {
+        runCatching { camera.launch(context.captureUri(context.captureFile())) }
+    }
+    val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) openCamera()
+    }
+
+    return remember(gallery, camera, permission) {
         object : PhotoCapture {
             override val available = true
 
@@ -46,9 +71,29 @@ actual fun rememberPhotoCapture(onCaptured: (CapturedPhoto) -> Unit): PhotoCaptu
                     )
                 }
             }
+
+            override val cameraAvailable: Boolean =
+                context.packageManager.hasSystemFeature(PackageManager.FEATURE_CAMERA_ANY)
+
+            override fun takePhoto() {
+                val granted = ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) ==
+                    PackageManager.PERMISSION_GRANTED
+                if (granted) openCamera() else runCatching { permission.launch(Manifest.permission.CAMERA) }
+            }
         }
     }
 }
+
+/**
+ * Where the camera app writes: one fixed file in the cache, so a result that arrives
+ * after the activity was recreated still knows where to look, and nothing is left in
+ * her gallery.
+ */
+private fun Context.captureFile(): File =
+    File(cacheDir, "photos").apply { mkdirs() }.let { File(it, "capture.jpg") }
+
+private fun Context.captureUri(file: File): Uri =
+    FileProvider.getUriForFile(this, "$packageName.photos", file)
 
 /**
  * The picked image, decoded no larger than it needs to be, with the turn its EXIF asks for.

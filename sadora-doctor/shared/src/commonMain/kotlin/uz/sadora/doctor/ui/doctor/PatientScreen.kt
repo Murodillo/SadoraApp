@@ -124,14 +124,20 @@ fun PatientScreen(
             item(key = "who") {
                 // The list's copy carries her age; the history's may not.
                 val patient = conversation?.patient ?: history?.patient
+                val name = patient?.name ?: conversation?.alias.orEmpty()
                 SadoraCard {
-                    Text(patient?.name ?: conversation?.alias.orEmpty(), style = Sadora.type.h2, color = c.text)
-                    patient?.let { p ->
-                        Text(
-                            listOfNotNull(p.age?.let(t::age), t.lifeStage(p.lifeStage)).joinToString(" · "),
-                            style = Sadora.type.body,
-                            color = c.muted,
-                        )
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                        PatientAvatar(name, photoUrl = patient?.photoUrl, size = 56.dp)
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Spacing.xxs)) {
+                            Text(name, style = Sadora.type.h2, color = c.text)
+                            patient?.let { p ->
+                                Text(
+                                    listOfNotNull(p.age?.let(t::age), t.lifeStage(p.lifeStage)).joinToString(" · "),
+                                    style = Sadora.type.body,
+                                    color = c.muted,
+                                )
+                            }
+                        }
                     }
                 }
             }

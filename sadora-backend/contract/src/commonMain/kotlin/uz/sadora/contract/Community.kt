@@ -140,6 +140,8 @@ data class ConsultationPatient(
     val name: String,
     val age: Int? = null,
     val lifeStage: LifeStage,
+    /** Her photo, served through the consultation; null draws her initials. */
+    val photoUrl: String? = null,
 )
 
 /**

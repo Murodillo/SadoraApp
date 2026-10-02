@@ -56,7 +56,23 @@ data class DoctorAuthor(
     val id: String,
     val fullName: String,
     val specialty: DoctorSpecialty,
+    /** Her photo, a path under the API with a version; null draws her initials. */
+    val photoUrl: String? = null,
 )
+
+/**
+ * A profile photo, base64 like a chat photo, upright. The server crops it to a square,
+ * scales it down and re-encodes it, so any size and orientation metadata is fine.
+ */
+@Serializable
+data class PhotoUpload(
+    val imageBase64: String,
+    val mimeType: String = "image/jpeg",
+)
+
+/** Where the photo just saved is served: a path under the API, versioned. */
+@Serializable
+data class PhotoView(val photoUrl: String? = null)
 
 /** One page of proof, photographed by the phone and sent base64 like a food scan. */
 @Serializable
@@ -113,6 +129,8 @@ data class DoctorAccount(
     val reviewedAt: Instant? = null,
     /** Whether patients may open a consultation with her now; she switches it herself. */
     val acceptsConsultations: Boolean = true,
+    /** Her photo; null until she adds one, which the apps keep asking her to do. */
+    val photoUrl: String? = null,
 )
 
 /** A verified doctor's public page: who she is, and what she has written in the room. */
@@ -144,6 +162,7 @@ data class DoctorProfile(
     val availability: DoctorAvailability? = null,
     /** How a paid consultation can be paid for here; empty when it is free. */
     val paymentProviders: List<PaymentProvider> = emptyList(),
+    val photoUrl: String? = null,
 )
 
 /** A doctor as the directory lists her. */
@@ -170,4 +189,5 @@ data class DoctorListItem(
      * with a usual first reply of [Limits.DOCTOR_FAST_REPLY_MINUTES] minutes or less.
      */
     val fastReply: Boolean = false,
+    val photoUrl: String? = null,
 )

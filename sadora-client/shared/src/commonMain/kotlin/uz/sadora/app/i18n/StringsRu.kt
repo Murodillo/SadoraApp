@@ -358,6 +358,21 @@ object StringsRu : Strings {
         override val shareProfile = "Показать врачу"
         override val shareProfileNote = "QR-код — врач сканирует и видит ваши записи"
         override val devices = "Устройства"
+
+        override val photoTitle = "Фото профиля"
+        override val photoChange = "Изменить фото"
+        override val photoGallery = "Выбрать из галереи"
+        override val photoGalleryNote = "Из фотографий на телефоне"
+        override val photoCamera = "Сделать снимок"
+        override val photoCameraNote = "Фронтальной камерой, прямо здесь"
+        override val photoRemove = "Удалить фото"
+        override val photoRemoveNote = "Вместо него будет первая буква имени"
+        override val photoPrivacy = "Ваше фото видите только вы и врач, которому вы написали. " +
+            "В чате вы остаётесь под своим псевдонимом."
+        override val photoPreviewTitle = "Новое фото"
+        override val photoSave = "Сохранить"
+        override val photoSaving = "Загружается…"
+        override val photoRemoving = "Удаляется…"
     }
 
     override val settings = object : SettingsStrings {

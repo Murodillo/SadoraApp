@@ -10,6 +10,7 @@ import uz.sadora.app.data.HealthController
 import uz.sadora.app.data.InsightsController
 import uz.sadora.app.data.LearnController
 import uz.sadora.app.data.NotificationsController
+import uz.sadora.app.data.PhotoController
 import uz.sadora.app.data.RewardsController
 import uz.sadora.app.data.SadoraController
 import uz.sadora.app.data.SadoraGraph
@@ -39,6 +40,7 @@ class AppControllers(
     val billing: BillingController,
     val rewards: RewardsController,
     val share: ShareController,
+    val photos: PhotoController,
     val wearables: WearableController,
     val notifications: NotificationsController,
     val analytics: Analytics,
@@ -56,6 +58,7 @@ class AppControllers(
             billing = graph?.billingController() ?: BillingController(null),
             rewards = graph?.rewardsController(state) ?: RewardsController(null, state),
             share = graph?.shareController() ?: ShareController(null),
+            photos = graph?.photoController(state) ?: PhotoController(null, state),
             wearables = graph?.wearableController() ?: WearableController(null),
             notifications = graph?.notificationsController() ?: NotificationsController(null),
             analytics = graph?.analytics ?: Analytics.None,

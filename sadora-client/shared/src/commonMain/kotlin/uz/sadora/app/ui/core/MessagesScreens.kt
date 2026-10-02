@@ -197,7 +197,7 @@ private fun ConversationRow(thread: Conversation, onClick: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
         ) {
-            if (doctor != null) DoctorAvatar(thread.alias, size = 44.dp) else AliasAvatar(thread.alias, thread.tint, size = 44.dp)
+            if (doctor != null) DoctorAvatar(thread.alias, size = 44.dp, photoUrl = doctor.photoUrl) else AliasAvatar(thread.alias, thread.tint, size = 44.dp)
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.xxs)) {
                     Text(
@@ -636,7 +636,7 @@ private fun ConversationHeader(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
         ) {
-            if (doctor != null) DoctorAvatar(name, size = 36.dp) else AliasAvatar(name, thread?.tint ?: 0, size = 40.dp)
+            if (doctor != null) DoctorAvatar(name, size = 36.dp, photoUrl = doctor.photoUrl) else AliasAvatar(name, thread?.tint ?: 0, size = 40.dp)
             Column(Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(

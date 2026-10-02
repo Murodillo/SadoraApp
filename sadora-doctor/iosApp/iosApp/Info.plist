@@ -28,12 +28,13 @@
 	     SADORA_DEV_HOST to the development machine, which the phone can reach. -->
 	<key>SadoraDevHost</key>
 	<string>$(SADORA_DEV_HOST)</string>
-	<!-- The application's documents: iOS terminates the app on presenting the photo
-	     library without this. -->
+	<!-- The application's documents and her profile photo: iOS terminates the app on
+	     presenting the photo library without this. -->
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Diplom va litsenziyangiz rasmini galereyadan tanlab, shifokor arizasiga qo'shasiz.</string>
-	<!-- The Scan tab: iOS terminates the app on opening the camera without this. -->
+	<string>Diplom va litsenziyangiz rasmini hamda profil rasmingizni galereyadan tanlaysiz.</string>
+	<!-- The Scan tab and the profile photo: iOS terminates the app on opening the camera
+	     without this. -->
 	<key>NSCameraUsageDescription</key>
-	<string>Bemor ko'rsatgan Sadora QR kodini skanerlab, uning ma'lumotlarini ochasiz.</string>
+	<string>Bemor ko'rsatgan Sadora QR kodini skanerlaysiz va profil rasmingizni suratga olasiz.</string>
 </dict>
 </plist>

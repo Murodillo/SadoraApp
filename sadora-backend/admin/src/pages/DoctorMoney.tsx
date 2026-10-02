@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useAddDoctorPayout, useDoctorEarnings, useDoctorQuality, useMoreDoctorEarnings } from '../api/hooks'
 import type { AdminDoctorQuality, DoctorPayoutView, EarningLine } from '../api/types'
 import { useAuth } from '../auth/AuthContext'
+import { Avatar } from '../components/Avatar'
 import { useToast } from '../components/toast'
 import { Card, Empty, ErrorNotice, Field, formatDate, formatDateTime, Loading, Spinner } from '../components/ui'
 import {
@@ -87,8 +88,13 @@ export function DoctorQualityTable({ onOpen }: { onOpen: (doctor: AdminDoctorQua
                   return (
                     <tr key={doctor.doctorId} className="clickable" onClick={() => onOpen(doctor)}>
                       <td>
-                        <div style={{ fontWeight: 600 }}>{doctor.fullName}</div>
-                        <div className="faint">{specialtyLabels[doctor.specialty] ?? doctor.specialty}</div>
+                        <div className="person">
+                          <Avatar name={doctor.fullName} photoUrl={doctor.photoUrl} size={32} />
+                          <div style={{ minWidth: 0 }}>
+                            <div style={{ fontWeight: 600 }}>{doctor.fullName}</div>
+                            <div className="faint">{specialtyLabels[doctor.specialty] ?? doctor.specialty}</div>
+                          </div>
+                        </div>
                       </td>
                       <td>
                         <div className="row" style={{ gap: 4, flexWrap: 'nowrap' }}>

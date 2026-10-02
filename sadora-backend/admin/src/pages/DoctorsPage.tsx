@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useDoctor, useDoctorCounts, useDoctorDocument, useDoctors, useReviewDoctor } from '../api/hooks'
+import { useDoctor, useDoctorCounts, useDoctorDocument, useDoctors, useRemoveDoctorPhoto, useReviewDoctor } from '../api/hooks'
 import { limits } from '../api/limits'
 import type { AdminDoctorDetail, AdminDoctorDocument, AdminDoctorQuality, DoctorReviewAction, DoctorStatus } from '../api/types'
 import { useAuth } from '../auth/AuthContext'
+import { Avatar } from '../components/Avatar'
 import { useToast } from '../components/toast'
 import {
   Card,
@@ -21,10 +22,13 @@ import {
 } from '../components/ui'
 import {
   allowedReviewActions,
+  canRemovePhoto,
   documentKindLabels,
   doctorStatusLabels,
   doctorStatusOrder,
   formatBytes,
+  photoRemovalReason,
+  photoRemovalReasons,
   reviewActionDone,
   reviewActionLabels,
   reviewNeedsNote,
@@ -161,7 +165,19 @@ function DoctorList({
                     onClick={() => onSelect(doctor.id)}
                     aria-selected={selected === doctor.id}
                   >
-                    <td style={{ fontWeight: 600 }}>{doctor.fullName}</td>
+                    <td>
+                      <div className="person">
+                        <Avatar name={doctor.fullName} photoUrl={doctor.photoUrl} size={32} />
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ fontWeight: 600 }}>{doctor.fullName}</div>
+                          {status === 'pending' && !doctor.photoUrl && (
+                            <span className="badge warn" title="Shifokordan rasm qo'shishni so'rang">
+                              Rasm yo'q
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </td>
                     <td className="muted">{specialtyLabels[doctor.specialty] ?? doctor.specialty}</td>
                     <td className="muted">{doctor.workplace}</td>
                     <td style={{ whiteSpace: 'nowrap' }}>{doctor.experienceYears} yil</td>
@@ -203,6 +219,7 @@ function DoctorDetail({ id, onClose }: { id: string; onClose: () => void }) {
   const detail = useDoctor(id)
   const { session } = useAuth()
   const [action, setAction] = useState<DoctorReviewAction | null>(null)
+  const [removingPhoto, setRemovingPhoto] = useState(false)
 
   if (detail.isLoading) {
     return (
@@ -232,9 +249,27 @@ function DoctorDetail({ id, onClose }: { id: string; onClose: () => void }) {
         </button>
       }
     >
-      <div className="row" style={{ marginBottom: 12 }}>
-        <span className={`badge ${status.tone}`}>{status.text}</span>
-        <span className="mono faint">{doctor.id}</span>
+      <div className="doctor-head">
+        <Avatar name={doctor.fullName} photoUrl={doctor.photoUrl} size={88} zoomable />
+        <div className="doctor-head-info">
+          <div className="row">
+            <span className={`badge ${status.tone}`}>{status.text}</span>
+            <span className="mono faint">{doctor.id}</span>
+          </div>
+          {doctor.photoUrl ? (
+            canRemovePhoto(session?.role) && (
+              <button className="btn danger small" onClick={() => setRemovingPhoto(true)}>
+                Rasmni olib tashlash
+              </button>
+            )
+          ) : (
+            <span className="faint">
+              {doctor.status === 'pending'
+                ? "Rasm yo'q — tasdiqlashdan oldin shifokordan rasm qo'shishni so'rang."
+                : "Rasm yo'q — ilovada ismining bosh harflari ko'rinadi."}
+            </span>
+          )}
+        </div>
       </div>
 
       <table>
@@ -305,6 +340,7 @@ function DoctorDetail({ id, onClose }: { id: string; onClose: () => void }) {
       )}
 
       {action && <ReviewDialog doctor={doctor} action={action} onClose={() => setAction(null)} />}
+      {removingPhoto && <RemovePhotoDialog doctor={doctor} onClose={() => setRemovingPhoto(false)} />}
     </Card>
   )
 }
@@ -453,6 +489,67 @@ function ReviewDialog({
         >
           {review.isPending && <Spinner />}
           {review.isPending ? 'Yuborilmoqda…' : reviewActionLabels[action]}
+        </button>
+      </div>
+    </Modal>
+  )
+}
+
+/**
+ * Takes a doctor's photo down. Her photo is public — her page, the directory, her
+ * bylines — so a face that is missing, blurred or not hers comes down here; she gets a
+ * push with the reason and can upload another from the app.
+ */
+function RemovePhotoDialog({ doctor, onClose }: { doctor: AdminDoctorDetail; onClose: () => void }) {
+  const remove = useRemoveDoctorPhoto()
+  const { notify } = useToast()
+  const [reason, setReason] = useState('')
+
+  function submit() {
+    remove.mutate(
+      { id: doctor.id, reason: photoRemovalReason(reason) },
+      {
+        onSuccess: () => {
+          notify('Rasm olib tashlandi', 'info')
+          onClose()
+        },
+        onError: (error) => notify(error instanceof Error ? error.message : String(error), 'error'),
+      },
+    )
+  }
+
+  return (
+    <Modal title={`Rasmni olib tashlash: ${doctor.fullName}`} onClose={onClose}>
+      <div className="photo-preview">
+        <Avatar name={doctor.fullName} photoUrl={doctor.photoUrl} size={120} />
+      </div>
+      <p className="faint" style={{ margin: 0 }}>
+        Rasm shifokor sahifasidan, katalogdan va konsultatsiyalardan olib tashlanadi, o'rnida ismining bosh harflari
+        ko'rinadi. Shifokorga bildirishnoma boradi va u yangi rasm yuklay oladi.
+      </p>
+      <div className="reason-chips">
+        {photoRemovalReasons.map((preset) => (
+          <button
+            key={preset}
+            type="button"
+            className={`btn small${reason.trim() === preset ? ' primary' : ' ghost'}`}
+            onClick={() => setReason(preset)}
+          >
+            {preset}
+          </button>
+        ))}
+      </div>
+      <Field label={`Sabab (shifokor ko'radi, ixtiyoriy, ${reason.trim().length}/${limits.photoReasonMax})`}>
+        <textarea rows={3} value={reason} onChange={(event) => setReason(event.target.value)} maxLength={limits.photoReasonMax} />
+      </Field>
+      {remove.error && <ErrorNotice error={remove.error} />}
+      <div className="row" style={{ justifyContent: 'flex-end' }}>
+        <button className="btn ghost" onClick={onClose}>
+          Bekor qilish
+        </button>
+        <button className="btn danger" disabled={remove.isPending} onClick={submit}>
+          {remove.isPending && <Spinner />}
+          {remove.isPending ? 'Yuborilmoqda…' : 'Olib tashlash'}
         </button>
       </div>
     </Modal>

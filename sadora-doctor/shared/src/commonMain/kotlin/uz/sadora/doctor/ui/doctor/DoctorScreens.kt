@@ -13,6 +13,7 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -29,6 +30,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -51,6 +53,7 @@ import uz.sadora.contract.DoctorSpecialty
 import uz.sadora.contract.Limits
 import uz.sadora.doctor.data.DoctorController
 import uz.sadora.doctor.data.PanelState
+import uz.sadora.doctor.data.photoStepAfterApply
 import uz.sadora.doctor.data.readable
 import uz.sadora.doctor.design.IconSize
 import uz.sadora.doctor.design.Radius
@@ -61,15 +64,16 @@ import uz.sadora.doctor.i18n.strings
 import uz.sadora.doctor.ui.components.ButtonTone
 import uz.sadora.doctor.ui.components.CapturedPhoto
 import uz.sadora.doctor.ui.components.ChipFlowRow
-import uz.sadora.doctor.ui.components.LoadMoreRow
 import uz.sadora.doctor.ui.components.CircleIconButton
 import uz.sadora.doctor.ui.components.EmptyState
 import uz.sadora.doctor.ui.components.ErrorStrip
 import uz.sadora.doctor.ui.components.IconTile
+import uz.sadora.doctor.ui.components.LoadMoreRow
 import uz.sadora.doctor.ui.components.Motion
 import uz.sadora.doctor.ui.components.PillButton
 import uz.sadora.doctor.ui.components.SadoraButton
 import uz.sadora.doctor.ui.components.SadoraCard
+import uz.sadora.doctor.ui.components.SadoraDialog
 import uz.sadora.doctor.ui.components.SadoraTextField
 import uz.sadora.doctor.ui.components.SadoraTopBar
 import uz.sadora.doctor.ui.components.ScreenContent
@@ -77,6 +81,7 @@ import uz.sadora.doctor.ui.components.SectionHeader
 import uz.sadora.doctor.ui.components.SelectChip
 import uz.sadora.doctor.ui.components.Skeleton
 import uz.sadora.doctor.ui.components.SuccessCheck
+import uz.sadora.doctor.ui.components.SystemBackHandler
 import uz.sadora.doctor.ui.components.acceptText
 import uz.sadora.doctor.ui.components.rememberPhotoCapture
 
@@ -107,87 +112,115 @@ fun DoctorProfileScreen(
     /** Her price, hours and busy switch; only on her own Profile tab. */
     onOpenWork: (() -> Unit)? = null,
     onOpenReplies: (() -> Unit)? = null,
+    /** Said after her photo is put up or taken down; only on her own Profile tab. */
+    onToast: ((String) -> Unit)? = null,
 ) {
     val d = strings.doctors
+    val p = strings.photo
     val c = Sadora.colors
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(doctorId) { doctors.loadProfile(doctorId) }
     val profile = doctors.profile?.takeIf { it.id == doctorId }
     val error = doctors.profileCalls.error
+    var confirmRemovePhoto by remember { mutableStateOf(false) }
 
-    Column(modifier) {
-        SadoraTopBar(
-            d.profileTitle,
-            onBack = onClose,
-            trailing = {
-                Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-                    if (profile?.isMe == true) {
-                        CircleIconButton(SadoraIcons.Plus, contentDescription = strings.community.newPost, onClick = onNewPost)
+    Box(modifier) {
+        Column {
+            SadoraTopBar(
+                d.profileTitle,
+                onBack = onClose,
+                trailing = {
+                    Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                        if (profile?.isMe == true) {
+                            CircleIconButton(SadoraIcons.Plus, contentDescription = strings.community.newPost, onClick = onNewPost)
+                        }
+                        onOpenSettings?.let {
+                            CircleIconButton(SadoraIcons.Settings, contentDescription = strings.settings.title, onClick = it)
+                        }
                     }
-                    onOpenSettings?.let {
-                        CircleIconButton(SadoraIcons.Settings, contentDescription = strings.settings.title, onClick = it)
-                    }
+                },
+            )
+            ScreenContent {
+                error?.let { failure ->
+                    item { ErrorStrip(failure.readable(), onRetry = { scope.launch { doctors.loadProfile(doctorId) } }) }
                 }
-            },
-        )
-        ScreenContent {
-            error?.let { failure ->
-                item { ErrorStrip(failure.readable(), onRetry = { scope.launch { doctors.loadProfile(doctorId) } }) }
-            }
-            if (profile == null) {
-                if (error == null) item { DoctorSkeleton() }
-                return@ScreenContent
-            }
-            item { DoctorHeader(profile) }
-            item {
-                SadoraCard(padding = Spacing.sm) {
-                    Row(Modifier.fillMaxWidth()) {
-                        DoctorStat(profile.postCount.toString(), d.statPosts, Modifier.weight(1f))
-                        DoctorStat(profile.answerCount.toString(), d.statAnswers, Modifier.weight(1f))
-                        DoctorStat(profile.experienceYears.toString(), d.statYears, Modifier.weight(1f))
-                    }
+                if (profile == null) {
+                    if (error == null) item { DoctorSkeleton() }
+                    return@ScreenContent
                 }
-            }
-            if (account != null && onSaved != null) {
-                item { AcceptsConsultationsCard(account, doctors) }
-                onOpenWork?.let { open ->
+                item { DoctorHeader(profile) }
+                if (account != null && onSaved != null) {
                     item {
-                        NavCard(
-                            SadoraIcons.Calendar,
-                            title = strings.work.settingsTitle,
-                            subtitle = priceText(profile.priceMinor),
-                            onClick = open,
+                        MyPhotoCard(
+                            account = account,
+                            doctors = doctors,
+                            onSaved = { onToast?.invoke(p.saved) },
+                            onRemove = { confirmRemovePhoto = true },
                         )
                     }
                 }
-                onOpenReplies?.let { open ->
-                    item { NavCard(SadoraIcons.Message, title = strings.work.quickReplies, subtitle = null, onClick = open, tint = c.secondary) }
-                }
-                item { EditDoctorCard(account, doctors, onSaved = onSaved) }
-            }
-            item { Text(d.disclaimer, style = Sadora.type.caption.copy(letterSpacing = TextUnit.Unspecified), color = c.muted2) }
-            item { SectionHeader(d.herPosts) }
-            val posts = doctors.profilePosts
-            if (posts.isEmpty()) {
                 item {
-                    EmptyState(
-                        title = d.noPosts,
-                        body = d.noPostsBody,
-                        actionText = strings.community.newPost.takeIf { profile.isMe },
-                        onAction = onNewPost,
-                    )
+                    SadoraCard(padding = Spacing.sm) {
+                        Row(Modifier.fillMaxWidth()) {
+                            DoctorStat(profile.postCount.toString(), d.statPosts, Modifier.weight(1f))
+                            DoctorStat(profile.answerCount.toString(), d.statAnswers, Modifier.weight(1f))
+                            DoctorStat(profile.experienceYears.toString(), d.statYears, Modifier.weight(1f))
+                        }
+                    }
                 }
-            } else {
-                items(posts.size, key = { posts[it].id }) { index ->
-                    val post = posts[index]
-                    PostCard(post = post, onOpen = { onOpenPost(post.id) })
+                if (account != null && onSaved != null) {
+                    item { AcceptsConsultationsCard(account, doctors) }
+                    onOpenWork?.let { open ->
+                        item {
+                            NavCard(
+                                SadoraIcons.Calendar,
+                                title = strings.work.settingsTitle,
+                                subtitle = priceText(profile.priceMinor),
+                                onClick = open,
+                            )
+                        }
+                    }
+                    onOpenReplies?.let { open ->
+                        item { NavCard(SadoraIcons.Message, title = strings.work.quickReplies, subtitle = null, onClick = open, tint = c.secondary) }
+                    }
+                    item { EditDoctorCard(account, doctors, onSaved = onSaved) }
                 }
-                if (doctors.profilePostsHasMore) {
-                    item(key = "more") { LoadMoreRow(posts.size, onLoadMore = { doctors.loadMoreProfilePosts() }) }
+                item { Text(d.disclaimer, style = Sadora.type.caption.copy(letterSpacing = TextUnit.Unspecified), color = c.muted2) }
+                item { SectionHeader(d.herPosts) }
+                val posts = doctors.profilePosts
+                if (posts.isEmpty()) {
+                    item {
+                        EmptyState(
+                            title = d.noPosts,
+                            body = d.noPostsBody,
+                            actionText = strings.community.newPost.takeIf { profile.isMe },
+                            onAction = onNewPost,
+                        )
+                    }
+                } else {
+                    items(posts.size, key = { posts[it].id }) { index ->
+                        val post = posts[index]
+                        PostCard(post = post, onOpen = { onOpenPost(post.id) })
+                    }
+                    if (doctors.profilePostsHasMore) {
+                        item(key = "more") { LoadMoreRow(posts.size, onLoadMore = { doctors.loadMoreProfilePosts() }) }
+                    }
                 }
             }
         }
+
+        SadoraDialog(
+            visible = confirmRemovePhoto,
+            title = p.removeTitle,
+            body = p.removeBody,
+            confirmText = p.remove,
+            onConfirm = {
+                confirmRemovePhoto = false
+                scope.launch { if (doctors.removePhoto()) onToast?.invoke(p.removed) }
+            },
+            onDismiss = { confirmRemovePhoto = false },
+        )
     }
 }
 
@@ -200,7 +233,7 @@ private fun DoctorHeader(profile: DoctorProfile) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(Spacing.xs),
     ) {
-        DoctorAvatar(profile.fullName, size = 84.dp)
+        DoctorAvatar(profile.fullName, size = 84.dp, photoUrl = profile.photoUrl)
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
             Text(profile.fullName, style = Sadora.type.h2, color = c.text, textAlign = TextAlign.Center)
             VerifiedMark(size = 20.dp)
@@ -318,6 +351,11 @@ fun DoctorPanelScreen(
                     }
                 }
             }
+            // While she waits, the photo her page will open with.
+            val waiting = doctors.account?.takeIf { panel is PanelState.Pending && it.photoUrl == null }
+            if (waiting != null) {
+                item(key = "photo") { AskForPhotoCard(waiting, doctors, onSaved = {}) }
+            }
         }
     }
 }
@@ -376,7 +414,7 @@ private fun ApprovedCard(account: DoctorAccount, onOpenPage: () -> Unit, onNewPo
     val c = Sadora.colors
     SadoraCard {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-            DoctorAvatar(account.fullName.orEmpty(), size = 52.dp)
+            DoctorAvatar(account.fullName.orEmpty(), size = 52.dp, photoUrl = account.photoUrl)
             Column(Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.xxs)) {
                     Text(account.fullName.orEmpty(), style = Sadora.type.h3, color = c.text, modifier = Modifier.weight(1f, fill = false))
@@ -486,6 +524,9 @@ fun DoctorApplyScreen(
     var bio by remember { mutableStateOf(previous?.bio.orEmpty()) }
     val documents = remember { mutableStateListOf<PickedDocument>() }
     var sending by remember { mutableStateOf(false) }
+    // Sent, and now asking for her photo; Back and "Keyinroq" both leave as sent.
+    var askingPhoto by rememberSaveable { mutableStateOf(false) }
+    SystemBackHandler(enabled = askingPhoto, onBack = onSubmitted)
 
     // The next page is a diploma until there is one, then a licence, then "other".
     val picker = rememberPhotoCapture { photo ->
@@ -509,6 +550,16 @@ fun DoctorApplyScreen(
         license.isNotBlank() &&
         documents.isNotEmpty() &&
         !sending
+
+    if (askingPhoto) {
+        Column(modifier) {
+            SadoraTopBar(strings.photo.afterApplyTitle, onBack = onSubmitted)
+            ScreenContent {
+                item { AfterApplyPhotoStep(doctors.account, doctors, onDone = onSubmitted) }
+            }
+        }
+        return
+    }
 
     Column(modifier) {
         SadoraTopBar(d.applyTitle, onBack = onClose)
@@ -639,7 +690,9 @@ fun DoctorApplyScreen(
                                 ),
                             )
                             sending = false
-                            if (ok) onSubmitted()
+                            if (ok) {
+                                if (photoStepAfterApply(doctors.account)) askingPhoto = true else onSubmitted()
+                            }
                         }
                     },
                 )

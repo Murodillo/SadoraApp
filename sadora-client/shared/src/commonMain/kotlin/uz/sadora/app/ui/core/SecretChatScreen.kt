@@ -436,7 +436,7 @@ internal fun PostCard(
         ) {
             // The name and the avatar open the author's page; the rest of the card, the post.
             Box(Modifier.clip(Radius.chip).noRippleClickable(onClick = onOpenAuthor)) {
-                if (doctor != null) DoctorAvatar(post.alias) else AliasAvatar(post.alias, post.tint)
+                if (doctor != null) DoctorAvatar(post.alias, photoUrl = doctor.photoUrl) else AliasAvatar(post.alias, post.tint)
             }
             Column(Modifier.weight(1f).noRippleClickable(onClick = onOpenAuthor)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.xxs)) {
@@ -656,7 +656,7 @@ private fun DoctorCommentRow(comment: CommunityComment, onOpenDoctor: () -> Unit
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
         ) {
-            DoctorAvatar(comment.alias, size = 30.dp)
+            DoctorAvatar(comment.alias, size = 30.dp, photoUrl = doctor.photoUrl)
             Column(Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.xxs)) {
                     Text(

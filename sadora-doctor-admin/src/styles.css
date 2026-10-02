@@ -1521,6 +1521,86 @@ kbd {
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary) 30%, transparent);
 }
 
+/* A photo fills the circle; the server already cropped it square, a local preview is cropped here. */
+.avatar {
+  overflow: hidden;
+}
+
+.avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  animation: fade var(--quick) var(--gentle) both;
+}
+
+.avatar.photo {
+  background: var(--surface-2);
+}
+
+/* --- her photo: the nudge across the shell and the card on the profile page */
+
+.photo-nudge {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 12px 20px 0;
+  border-left-color: var(--primary);
+  color: var(--text);
+  flex: none;
+  animation: fade-up var(--standard) var(--emphasized) both;
+}
+
+.photo-nudge .photo-nudge-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.header .who-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 999px;
+}
+
+.header .who-link:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.photo-editor {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.photo-editor .photo-actions {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.photo-editor .photo-actions .row {
+  flex-wrap: wrap;
+}
+
+.photo-editor .avatar.preview {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 45%, transparent);
+}
+
+@media (max-width: 900px) {
+  .photo-nudge {
+    margin: 10px 12px 0;
+  }
+}
+
+@media (max-width: 600px) {
+  .photo-editor {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
 /* --- questions: the list on the left, the open question on the right */
 
 .workspace {
@@ -3031,4 +3111,10 @@ button.btn.chat-attach.on {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
+}
+
+/* Her photo in the rail, in place of the Profil glyph. */
+.nav-item .glyph .avatar {
+  vertical-align: middle;
+  box-shadow: none;
 }

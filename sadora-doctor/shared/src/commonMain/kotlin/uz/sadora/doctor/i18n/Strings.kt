@@ -40,6 +40,7 @@ interface Strings {
     val doctors: DoctorStrings
     val tabs: TabStrings
     val work: WorkStrings
+    val photo: PhotoStrings
 }
 
 interface CommonStrings {

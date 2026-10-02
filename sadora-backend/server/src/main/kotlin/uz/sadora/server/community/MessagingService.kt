@@ -44,6 +44,7 @@ import uz.sadora.server.core.ConflictException
 import uz.sadora.server.core.ConsultationPaymentRequiredException
 import uz.sadora.server.core.ForbiddenException
 import uz.sadora.server.core.NotFoundException
+import uz.sadora.server.core.Photos
 import uz.sadora.server.core.RateLimitedException
 import uz.sadora.server.core.ValidationException
 import uz.sadora.server.core.now
@@ -519,7 +520,12 @@ class MessagingService(
                         alias = patient?.name?.takeIf { it.isNotBlank() } ?: PATIENT_FALLBACK,
                         badges = emptyList(),
                         patient = patient?.let {
-                            ConsultationPatient(it.name.ifBlank { PATIENT_FALLBACK }, it.birthDate?.let(::ageOf), it.lifeStage)
+                            ConsultationPatient(
+                                it.name.ifBlank { PATIENT_FALLBACK },
+                                it.birthDate?.let(::ageOf),
+                                it.lifeStage,
+                                Photos.conversationUrlFor(thread.id, it.avatarUrl),
+                            )
                         },
                     )
                 }
@@ -527,7 +533,12 @@ class MessagingService(
                 else -> base.copy(
                     alias = doctor.fullName,
                     badges = emptyList(),
-                    doctor = DoctorAuthor(doctor.id.toString(), doctor.fullName, doctor.specialty),
+                    doctor = DoctorAuthor(
+                        doctor.id.toString(),
+                        doctor.fullName,
+                        doctor.specialty,
+                        doctor.photoUpdatedAt?.let { Photos.doctorUrl(doctor.id, it) },
+                    ),
                 )
             }
         }

@@ -222,6 +222,7 @@ private fun TodayHeader(
             name = state.name.trim().substringBefore(' '),
             onAvatarClick = { onOpen(Route.Profile) },
             onNotificationsClick = { onOpen(Route.NotificationInbox) },
+            photoUrl = state.avatarUrl,
             // No dot: the inbox has no read state yet, and a dot tied to pending doses
             // could not be cleared by opening what the bell opens.
             hasUnread = false,

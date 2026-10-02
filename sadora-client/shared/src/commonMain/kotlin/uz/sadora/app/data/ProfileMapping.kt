@@ -42,6 +42,7 @@ import uz.sadora.contract.UzbekPhone
 fun AppState.applyServerProfile(profile: UserProfile, entitlements: Entitlements) {
     name = profile.name
     email = profile.email.orEmpty()
+    avatarUrl = profile.avatarUrl
     // The field shows the local part behind a fixed "+998"; the wire carries the whole
     // number, so the prefix comes off here or the screen would show it twice.
     phone = profile.phone.orEmpty().toLocalPhone()

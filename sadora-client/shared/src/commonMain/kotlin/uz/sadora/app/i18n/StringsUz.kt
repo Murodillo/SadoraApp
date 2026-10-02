@@ -355,6 +355,21 @@ object StringsUz : Strings {
         override val shareProfile = "Shifokorga ko'rsatish"
         override val shareProfileNote = "QR kod — shifokor skanerlab, yozuvlaringizni ko'radi"
         override val devices = "Qurilmalar"
+
+        override val photoTitle = "Profil rasmi"
+        override val photoChange = "Rasmni o'zgartirish"
+        override val photoGallery = "Galereyadan tanlash"
+        override val photoGalleryNote = "Telefoningizdagi rasmlardan"
+        override val photoCamera = "Suratga olish"
+        override val photoCameraNote = "Old kamera bilan, shu yerning o'zida"
+        override val photoRemove = "Rasmni o'chirish"
+        override val photoRemoveNote = "O'rniga ismingizning bosh harfi turadi"
+        override val photoPrivacy = "Rasmingizni faqat siz va siz yozgan shifokor ko'radi. " +
+            "Chatda taxallusingiz bilan qolasiz."
+        override val photoPreviewTitle = "Yangi rasm"
+        override val photoSave = "Saqlash"
+        override val photoSaving = "Yuklanmoqda…"
+        override val photoRemoving = "O'chirilmoqda…"
     }
 
     override val settings = object : SettingsStrings {

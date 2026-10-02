@@ -200,7 +200,7 @@ function NewPostCard() {
         <Modal title="Post chatda shunday ko'rinadi" onClose={() => setPreviewing(false)} wide>
           <article className="preview-post">
             <header className="question-head">
-              <Avatar name={doctor.fullName ?? ''} tint={0} doctor />
+              <Avatar name={doctor.fullName ?? ''} doctor url={doctor.photoUrl} />
               <div>
                 <b className="row" style={{ gap: 4 }}>
                   {doctor.fullName}

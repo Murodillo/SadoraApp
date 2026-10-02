@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import { limits } from '../api/limits'
-import { allowedReviewActions, formatBytes, reviewNeedsNote, reviewNoteValid } from './doctorReview'
+import {
+  allowedReviewActions,
+  canRemovePhoto,
+  formatBytes,
+  photoRemovalReason,
+  reviewNeedsNote,
+  reviewNoteValid,
+} from './doctorReview'
 
 describe('allowedReviewActions', () => {
   it('follows the server transitions for a reviewer', () => {
@@ -46,5 +53,21 @@ describe('formatBytes', () => {
     expect(formatBytes(1536)).toBe('1.5 KB')
     expect(formatBytes(2 * 1024 * 1024)).toBe('2.0 MB')
     expect(formatBytes(-1)).toBe('—')
+  })
+})
+
+describe('photo moderation', () => {
+  it('is for Owner and Admin only', () => {
+    expect(canRemovePhoto('OWNER')).toBe(true)
+    expect(canRemovePhoto('ADMIN')).toBe(true)
+    expect(canRemovePhoto('SUPPORT')).toBe(false)
+    expect(canRemovePhoto('ANALYST')).toBe(false)
+    expect(canRemovePhoto(undefined)).toBe(false)
+  })
+
+  it('sends a trimmed reason, none when blank, and no more than the server keeps', () => {
+    expect(photoRemovalReason("  Yuz ko'rinmaydi ")).toBe("Yuz ko'rinmaydi")
+    expect(photoRemovalReason('   ')).toBeUndefined()
+    expect(photoRemovalReason('x'.repeat(limits.photoReasonMax + 20))).toHaveLength(limits.photoReasonMax)
   })
 })

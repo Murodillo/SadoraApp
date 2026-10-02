@@ -155,7 +155,7 @@ private fun ConversationRow(chat: Conversation, onClick: () -> Unit) {
     val patient = chat.patient
     SadoraCard(onClick = onClick, padding = Spacing.sm) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-            AliasAvatar(chat.alias, chat.alias.hashCode(), size = 46.dp)
+            PatientAvatar(chat.alias, photoUrl = patient?.photoUrl, size = 46.dp)
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
@@ -358,6 +358,9 @@ fun ConversationScreen(
         Column(Modifier.fillMaxSize()) {
             SadoraTopBar(
                 conversation?.alias.orEmpty(),
+                leading = conversation?.let { chat ->
+                    { PatientAvatar(chat.alias, photoUrl = chat.patient?.photoUrl, size = 40.dp) }
+                },
                 subtitle = conversation?.patient?.let { p ->
                     listOfNotNull(p.age?.let(t::age), t.lifeStage(p.lifeStage)).joinToString(" · ")
                 },

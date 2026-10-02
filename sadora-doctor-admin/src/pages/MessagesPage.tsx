@@ -19,7 +19,7 @@ import {
 import { formatBytes, ImageProblem, prepareImage } from '../api/image'
 import type { PreparedImage } from '../api/image'
 import { limits } from '../api/limits'
-import type { Conversation, ConsultationSession, DirectMessage, QuickReply, ReportReason } from '../api/types'
+import type { Conversation, ConsultationSession, DirectMessage, PatientHistory, QuickReply, ReportReason } from '../api/types'
 import { consultationOpen, timeLeft } from '../api/consultation'
 import {
   durationLabel,
@@ -78,6 +78,15 @@ function useNow(everyMs = 30_000): number {
 
 function patientName(conversation: Conversation): string {
   return conversation.patient?.name || conversation.alias
+}
+
+/**
+ * Her photo, for the doctor she consults. Only a consultation's patient has one: an alias
+ * who wrote without a consultation stays an initial on a tint, as in the chat.
+ */
+function patientPhoto(conversation: Conversation, history?: PatientHistory): string | null {
+  if (conversation.patient) return conversation.patient.photoUrl ?? null
+  return history?.patient?.photoUrl ?? null
 }
 
 function patientLine(conversation: Conversation): string {
@@ -274,7 +283,7 @@ function ConversationItem({
       aria-current={active ? 'true' : undefined}
       onClick={onOpen}
     >
-      <Avatar name={patientName(conversation)} tint={conversation.tint} />
+      <Avatar name={patientName(conversation)} tint={conversation.tint} url={patientPhoto(conversation)} />
       <span className="conv-main">
         <span className="conv-top">
           <b className="conv-name">{patientName(conversation)}</b>
@@ -363,7 +372,7 @@ function ChatThread({
           <button type="button" className="btn ghost small chat-back" onClick={onBack}>
             ← Suhbatlar
           </button>
-          {conversation && <Avatar name={name} tint={conversation.tint} />}
+          {conversation && <Avatar name={name} tint={conversation.tint} url={patientPhoto(conversation, history.data)} />}
           <div className="chat-head-who">
             <b>{name || '…'}</b>
             {conversation?.patient && <div className="faint">{patientLine(conversation)}</div>}
@@ -1059,6 +1068,8 @@ function PatientPanel({
   const consultation = conversation.consultation
   const patient = conversation.patient
   const recordBlock = useRef<HTMLDivElement>(null)
+  // The same query the history below reads, so this costs nothing extra.
+  const history = usePatientHistory(conversationId, Boolean(consultation))
 
   // A record opened from the thread or the history is brought into view where it opens.
   useEffect(() => {
@@ -1068,7 +1079,7 @@ function PatientPanel({
   return (
     <div className="side-body">
       <div className="side-person">
-        <Avatar name={patientName(conversation)} tint={conversation.tint} />
+        <Avatar name={patientName(conversation)} tint={conversation.tint} url={patientPhoto(conversation, history.data)} size={44} />
         <div>
           <b>{patientName(conversation)}</b>
           {patient && <div className="faint">{patientLine(conversation)}</div>}

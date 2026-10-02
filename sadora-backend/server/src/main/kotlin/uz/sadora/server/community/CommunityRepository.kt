@@ -89,6 +89,8 @@ data class DoctorByline(
     val userId: Uuid,
     val fullName: String,
     val specialty: DoctorSpecialty,
+    /** When her photo was last set; null when she has none. */
+    val photoAt: kotlin.time.Instant? = null,
 )
 
 data class CommentRecord(
@@ -963,6 +965,7 @@ class CommunityRepository {
         userId = this[DoctorProfiles.userId],
         fullName = this[DoctorProfiles.fullName],
         specialty = enumFromDb(this[DoctorProfiles.specialty], DoctorSpecialty.OTHER),
+        photoAt = this[DoctorProfiles.photoUpdatedAt]?.toKotlinInstant(),
     )
 
     // ---------------------------------------------------------------- mapping

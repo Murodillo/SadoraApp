@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react'
-import { NavLink, Outlet, useLocation } from 'react-router-dom'
+import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { uniqueRows, useConversations, useQuestions } from '../api/hooks'
 import { useAuth } from '../auth/AuthContext'
 import { useApprovedDoctor } from '../auth/doctor'
 import { SadoraTile } from '../components/Logo'
 import { specialtyLabel } from '../components/labels'
 import { ThemeToggle } from '../components/theme'
-import { VerifiedMark } from '../components/ui'
+import { Avatar, VerifiedMark } from '../components/ui'
 
 interface NavEntry {
   to: string
@@ -105,7 +105,12 @@ export function Shell() {
                 className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}
               >
                 <span className="glyph" aria-hidden="true">
-                  {entry.glyph}
+                  {/* Her own face on her own page's entry, once she has one. */}
+                  {entry.to === '/profile' && doctor.photoUrl ? (
+                    <Avatar name={doctor.fullName ?? ''} doctor url={doctor.photoUrl} size={18} />
+                  ) : (
+                    entry.glyph
+                  )}
                 </span>
                 {entry.label}
                 {entry.to === '/' && waiting > 0 && (
@@ -141,16 +146,21 @@ export function Shell() {
           <div className="spacer" />
           <ThemeToggle />
           <span className="faint who">
-            <span className="who-name">
-              {doctor.fullName}
-              <VerifiedMark />
-            </span>{' '}
+            <Link to="/profile" className="who-link" aria-label="Profil" title="Profil">
+              <Avatar name={doctor.fullName ?? ''} doctor url={doctor.photoUrl} size={28} />
+              <span className="who-name">
+                {doctor.fullName}
+                <VerifiedMark />
+              </span>
+            </Link>{' '}
             · <span className="badge free">{specialtyLabel(doctor.specialty)}</span>
           </span>
           <button className="btn small" onClick={signOut}>
             Chiqish
           </button>
         </header>
+
+        {!doctor.photoUrl && location.pathname !== '/profile' && <PhotoNudge profileId={doctor.profileId} />}
 
         <main className="content">
           {/* Keyed on the path so every page plays its entrance, not only the first. */}
@@ -159,6 +169,48 @@ export function Shell() {
           </div>
         </main>
       </div>
+    </div>
+  )
+}
+
+const NUDGE_KEY = 'sadora.doctor.photo-nudge-dismissed'
+
+function readDismissed(profileId: string | null | undefined): boolean {
+  try {
+    return sessionStorage.getItem(NUDGE_KEY) === (profileId ?? 'me')
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Asks a doctor with no photo to add one, on every page but the one where she would.
+ * Closing it lasts for this tab's session only — the next sign-in asks again, because
+ * a face is what makes a patient write to her. Keyed by her profile, so on a shared
+ * computer the next doctor to sign in is asked in her own right.
+ */
+function PhotoNudge({ profileId }: { profileId: string | null | undefined }) {
+  const [dismissed, setDismissed] = useState(() => readDismissed(profileId))
+  if (dismissed) return null
+
+  function dismiss() {
+    setDismissed(true)
+    try {
+      sessionStorage.setItem(NUDGE_KEY, profileId ?? 'me')
+    } catch {
+      // Storage refused: it stays closed until the page reloads, which is enough.
+    }
+  }
+
+  return (
+    <div className="notice photo-nudge">
+      <span className="photo-nudge-text">Rasmingizni qo'ying — bemorlar rasmli shifokorga ko'proq yozadi</span>
+      <Link to="/profile" className="btn small primary">
+        Rasm qo'yish
+      </Link>
+      <button type="button" className="btn ghost small" onClick={dismiss} aria-label="Eslatmani yopish">
+        ✕
+      </button>
     </div>
   )
 }

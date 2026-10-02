@@ -213,6 +213,8 @@ fun GreetingHeader(
     onAvatarClick: () -> Unit = {},
     onNotificationsClick: () -> Unit = {},
     hasUnread: Boolean = true,
+    /** Her photo, when she has added one. */
+    photoUrl: String? = null,
 ) {
     val c = Sadora.colors
     Row(
@@ -240,7 +242,7 @@ fun GreetingHeader(
         }
         // The deck puts the face next to the bell: the avatar is the way into the
         // profile, so the greeting itself is left as plain text.
-        Avatar(name, size = MinTouchTarget, onClick = onAvatarClick)
+        Avatar(name, size = MinTouchTarget, photoUrl = photoUrl, onClick = onAvatarClick)
         Box {
             CircleIconButton(SadoraIcons.Bell, contentDescription = strings.profile.notifications, onClick = onNotificationsClick)
             if (hasUnread) {
@@ -257,28 +259,33 @@ fun GreetingHeader(
     }
 }
 
-/** Gradient initial avatar. */
+/**
+ * Her avatar: her photo when she has added one, the gradient initial otherwise — and
+ * while the photo loads, or if it will not. Hers only; the Chat draws her alias instead.
+ */
 @Composable
 fun Avatar(
     name: String,
     modifier: Modifier = Modifier,
     size: androidx.compose.ui.unit.Dp = 44.dp,
+    photoUrl: String? = null,
     onClick: (() -> Unit)? = null,
 ) {
     val c = Sadora.colors
-    Box(
-        modifier
-            .size(size)
-            .clip(Radius.chip)
-            .background(c.heroGradient)
-            .then(if (onClick != null) Modifier.pressable(pressedScale = 0.9f, onClick = onClick) else Modifier),
-        contentAlignment = Alignment.Center,
+    val initial = name.take(1).uppercase()
+    RemoteAvatar(
+        url = photoUrl,
+        initials = initial,
+        size = size,
+        modifier = modifier.then(if (onClick != null) Modifier.pressable(pressedScale = 0.9f, onClick = onClick) else Modifier),
     ) {
-        Text(
-            name.take(1).uppercase(),
-            style = Sadora.type.h3.copy(fontWeight = FontWeight.Bold),
-            color = c.onPrimary,
-        )
+        Box(Modifier.fillMaxSize().background(c.heroGradient), contentAlignment = Alignment.Center) {
+            Text(
+                initial,
+                style = Sadora.type.h3.copy(fontWeight = FontWeight.Bold),
+                color = c.onPrimary,
+            )
+        }
     }
 }
 

@@ -32,15 +32,19 @@ import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.decodeToImageBitmap
 import uz.sadora.contract.DoctorAccount
 import uz.sadora.doctor.data.AuthController
 import uz.sadora.doctor.data.DoctorController
 import uz.sadora.doctor.data.DoctorGraph
 import uz.sadora.doctor.data.PanelState
+import uz.sadora.doctor.data.RemoteImages
+import uz.sadora.doctor.data.photoNudgeDue
 import uz.sadora.doctor.data.WorkController
 import uz.sadora.doctor.data.SessionState
 import uz.sadora.doctor.design.Sadora
@@ -60,6 +64,7 @@ import uz.sadora.doctor.ui.SplashScreen
 import uz.sadora.doctor.ui.auth.SignInScreen
 import uz.sadora.doctor.ui.components.CircleIconButton
 import uz.sadora.doctor.ui.components.LocalReduceMotion
+import uz.sadora.doctor.ui.components.LocalRemoteImages
 import uz.sadora.doctor.ui.components.Motion
 import uz.sadora.doctor.ui.components.NavItemSpec
 import uz.sadora.doctor.ui.components.SadoraBottomNav
@@ -81,6 +86,7 @@ import uz.sadora.doctor.ui.doctor.MessagesScreen
 import uz.sadora.doctor.ui.doctor.NewPostScreen
 import uz.sadora.doctor.ui.doctor.PatientRecordScreen
 import uz.sadora.doctor.ui.doctor.PatientScreen
+import uz.sadora.doctor.ui.doctor.PhotoNudgeSheet
 import uz.sadora.doctor.ui.doctor.QuestionScreen
 import uz.sadora.doctor.ui.doctor.QuickRepliesScreen
 import uz.sadora.doctor.ui.doctor.RecordSource
@@ -101,6 +107,10 @@ fun App(graph: DoctorGraph? = null) {
     val auth = remember(graph) { graph?.authController() ?: AuthController(null) }
     val doctors = remember(graph) { graph?.doctorController() ?: DoctorController(null, null) }
     val work = remember(graph) { graph?.workController() ?: WorkController(null) }
+    // Every avatar's photo, fetched with her token and kept by URL for the whole launch.
+    val photos = remember(graph) {
+        graph?.let { g -> RemoteImages<ImageBitmap>(fetch = g::photo, decode = { it.decodeToImageBitmap() }) }
+    }
     val scope = rememberCoroutineScope()
 
     var language by remember { mutableStateOf(AppLanguage.fromCode(graph?.prefs?.readLanguage())) }
@@ -119,6 +129,7 @@ fun App(graph: DoctorGraph? = null) {
     val session = graph?.session?.state?.collectAsState()?.value
     LaunchedEffect(session) {
         if (session is SessionState.SignedOut && navigator.phase == AppPhase.Main) {
+            photos?.clear()
             doctors.reset()
             work.reset()
             auth.reset()
@@ -130,8 +141,12 @@ fun App(graph: DoctorGraph? = null) {
     SadoraTheme(darkTheme = isSystemInDarkTheme()) {
         // One language for the whole tree: a change recomposes every screen at once.
         ProvideStrings(language) {
-            // The phone's "less motion" setting, read once for every endless animation.
-            CompositionLocalProvider(LocalReduceMotion provides systemReducesMotion()) {
+            // The phone's "less motion" setting, read once for every endless animation, and
+            // the photo loader every avatar reads.
+            CompositionLocalProvider(
+                LocalReduceMotion provides systemReducesMotion(),
+                LocalRemoteImages provides photos,
+            ) {
                 val words = strings
                 Box(Modifier.fillMaxSize()) {
                     AnimatedContent(
@@ -197,6 +212,7 @@ fun App(graph: DoctorGraph? = null) {
                             confirmSignOut = false
                             scope.launch {
                                 auth.signOut()
+                                photos?.clear()
                                 doctors.reset()
                                 work.reset()
                                 navigator.goTo(AppPhase.SignIn)
@@ -251,140 +267,164 @@ private fun MainContent(
         if (navigator.canGoBack) navigator.pop() else navigator.select(Tab.Home)
     }
 
-    Column(Modifier.fillMaxSize()) {
-        Box(Modifier.weight(1f).fillMaxWidth()) {
-            // The client's route transition: a pushed screen slides in over the one it was
-            // opened from and slides back out when it is popped. Switching tabs is a
-            // cross-fade instead: tabs are siblings, and a slide would put one behind another.
-            AnimatedContent(
-                // The tab is part of the key only at the root: under a pushed screen it
-                // cannot change, and a tab switch should cross-fade, not snap.
-                targetState = navigator.screen to navigator.tab,
-                transitionSpec = {
-                    val opening = targetState.first.depth > initialState.first.depth
-                    val closing = targetState.first.depth < initialState.first.depth
-                    val slide = tween<IntOffset>(Motion.Standard, easing = Motion.Emphasized)
-                    when {
-                        opening -> (slideInHorizontally(slide) { it / 4 } + fadeIn(tween(Motion.Standard)))
-                            .togetherWith(fadeOut(tween(Motion.Quick)))
-                        closing -> fadeIn(tween(Motion.Standard)).togetherWith(
-                            slideOutHorizontally(slide) { it / 4 } + fadeOut(tween(Motion.Standard)),
-                        ).apply {
-                            // The page leaving stays on top while it slides away.
-                            targetContentZIndex = -1f
-                        }
-                        else -> (fadeIn(tween(Motion.Standard)) + scaleIn(tween(Motion.Standard, easing = Motion.Emphasized), initialScale = 0.97f))
-                            .togetherWith(fadeOut(tween(Motion.Quick)))
-                    } using SizeTransform(clip = false)
-                },
-                modifier = Modifier.fillMaxSize(),
-                label = "route",
-            ) { (screen, tab) ->
-                val root = screen.route == Route.Panel
-                saved.SaveableStateProvider(if (root && tabbed) "tab:$tab" else "${screen.depth}:${screen.route}") {
-                    when (val route = screen.route) {
-                        Route.Panel -> if (approved != null) {
-                            TabRoot(tab, approved.account, navigator, doctors, work, onOpenSettings, onToast)
-                        } else {
-                            DoctorPanelScreen(
+    // Once per launch, an approved doctor with no photo is asked for one — a moment after
+    // the app opens, and not over a conversation a push has just opened.
+    var photoNudge by remember { mutableStateOf(false) }
+    val nudgeDue = photoNudgeDue(approved?.account, doctors.photoNudgeAsked) && !navigator.canGoBack
+    LaunchedEffect(nudgeDue) {
+        if (!nudgeDue) return@LaunchedEffect
+        kotlinx.coroutines.delay(PhotoNudgeDelayMillis)
+        doctors.photoNudgeAsked = true
+        photoNudge = true
+    }
+
+    Box(Modifier.fillMaxSize()) {
+        Column(Modifier.fillMaxSize()) {
+            Box(Modifier.weight(1f).fillMaxWidth()) {
+                // The client's route transition: a pushed screen slides in over the one it was
+                // opened from and slides back out when it is popped. Switching tabs is a
+                // cross-fade instead: tabs are siblings, and a slide would put one behind another.
+                AnimatedContent(
+                    // The tab is part of the key only at the root: under a pushed screen it
+                    // cannot change, and a tab switch should cross-fade, not snap.
+                    targetState = navigator.screen to navigator.tab,
+                    transitionSpec = {
+                        val opening = targetState.first.depth > initialState.first.depth
+                        val closing = targetState.first.depth < initialState.first.depth
+                        val slide = tween<IntOffset>(Motion.Standard, easing = Motion.Emphasized)
+                        when {
+                            opening -> (slideInHorizontally(slide) { it / 4 } + fadeIn(tween(Motion.Standard)))
+                                .togetherWith(fadeOut(tween(Motion.Quick)))
+                            closing -> fadeIn(tween(Motion.Standard)).togetherWith(
+                                slideOutHorizontally(slide) { it / 4 } + fadeOut(tween(Motion.Standard)),
+                            ).apply {
+                                // The page leaving stays on top while it slides away.
+                                targetContentZIndex = -1f
+                            }
+                            else -> (fadeIn(tween(Motion.Standard)) + scaleIn(tween(Motion.Standard, easing = Motion.Emphasized), initialScale = 0.97f))
+                                .togetherWith(fadeOut(tween(Motion.Quick)))
+                        } using SizeTransform(clip = false)
+                    },
+                    modifier = Modifier.fillMaxSize(),
+                    label = "route",
+                ) { (screen, tab) ->
+                    val root = screen.route == Route.Panel
+                    saved.SaveableStateProvider(if (root && tabbed) "tab:$tab" else "${screen.depth}:${screen.route}") {
+                        when (val route = screen.route) {
+                            Route.Panel -> if (approved != null) {
+                                TabRoot(tab, approved.account, navigator, doctors, work, onOpenSettings, onToast)
+                            } else {
+                                DoctorPanelScreen(
+                                    doctors = doctors,
+                                    onApply = { navigator.push(Route.Apply) },
+                                    onOpenPage = { navigator.push(Route.MyPage(it)) },
+                                    onNewPost = { navigator.push(Route.NewPost) },
+                                    onOpenSettings = onOpenSettings,
+                                )
+                            }
+                            Route.Apply -> DoctorApplyScreen(
                                 doctors = doctors,
-                                onApply = { navigator.push(Route.Apply) },
-                                onOpenPage = { navigator.push(Route.MyPage(it)) },
+                                onSubmitted = {
+                                    navigator.pop()
+                                    onToast(words.doctors.submitted)
+                                },
+                                onClose = navigator::pop,
+                            )
+                            is Route.Question -> QuestionScreen(
+                                postId = route.postId,
+                                doctors = doctors,
+                                onClose = navigator::pop,
+                            )
+                            is Route.MyPage -> DoctorProfileScreen(
+                                doctorId = route.profileId,
+                                doctors = doctors,
+                                onOpenPost = { navigator.push(Route.Question(it)) },
                                 onNewPost = { navigator.push(Route.NewPost) },
-                                onOpenSettings = onOpenSettings,
+                                onClose = navigator::pop,
+                            )
+                            Route.NewPost -> NewPostScreen(
+                                doctors = doctors,
+                                onPosted = {
+                                    navigator.pop()
+                                    onToast(words.community.published)
+                                },
+                                onClose = navigator::pop,
+                            )
+                            is Route.Conversation -> ConversationScreen(
+                                id = route.id,
+                                doctors = doctors,
+                                work = work,
+                                onClose = navigator::pop,
+                                onOpenRecord = { navigator.push(Route.AttachedRecord(route.id, it)) },
+                                onOpenPatient = { navigator.push(Route.Patient(route.id)) },
+                                onManageReplies = { navigator.push(Route.QuickReplies) },
+                                onToast = onToast,
+                            )
+                            is Route.PatientRecord -> PatientRecordScreen(
+                                source = RecordSource.Share(route.token),
+                                doctors = doctors,
+                                onClose = navigator::pop,
+                            )
+                            is Route.AttachedRecord -> PatientRecordScreen(
+                                source = RecordSource.Attached(route.conversationId, route.messageId),
+                                doctors = doctors,
+                                onClose = navigator::pop,
+                            )
+                            Route.WorkSettings -> WorkSettingsScreen(
+                                work = work,
+                                onClose = navigator::pop,
+                                onSaved = {
+                                    navigator.pop()
+                                    onToast(words.doctors.saved)
+                                },
+                            )
+                            Route.Earnings -> EarningsScreen(work = work, onClose = navigator::pop)
+                            Route.QuickReplies -> QuickRepliesScreen(work = work, onClose = navigator::pop)
+                            is Route.Patient -> PatientScreen(
+                                conversationId = route.conversationId,
+                                work = work,
+                                doctors = doctors,
+                                onClose = navigator::pop,
+                                onOpenRecord = { navigator.push(Route.AttachedRecord(route.conversationId, it)) },
+                                onToast = onToast,
                             )
                         }
-                        Route.Apply -> DoctorApplyScreen(
-                            doctors = doctors,
-                            onSubmitted = {
-                                navigator.pop()
-                                onToast(words.doctors.submitted)
-                            },
-                            onClose = navigator::pop,
-                        )
-                        is Route.Question -> QuestionScreen(
-                            postId = route.postId,
-                            doctors = doctors,
-                            onClose = navigator::pop,
-                        )
-                        is Route.MyPage -> DoctorProfileScreen(
-                            doctorId = route.profileId,
-                            doctors = doctors,
-                            onOpenPost = { navigator.push(Route.Question(it)) },
-                            onNewPost = { navigator.push(Route.NewPost) },
-                            onClose = navigator::pop,
-                        )
-                        Route.NewPost -> NewPostScreen(
-                            doctors = doctors,
-                            onPosted = {
-                                navigator.pop()
-                                onToast(words.community.published)
-                            },
-                            onClose = navigator::pop,
-                        )
-                        is Route.Conversation -> ConversationScreen(
-                            id = route.id,
-                            doctors = doctors,
-                            work = work,
-                            onClose = navigator::pop,
-                            onOpenRecord = { navigator.push(Route.AttachedRecord(route.id, it)) },
-                            onOpenPatient = { navigator.push(Route.Patient(route.id)) },
-                            onManageReplies = { navigator.push(Route.QuickReplies) },
-                            onToast = onToast,
-                        )
-                        is Route.PatientRecord -> PatientRecordScreen(
-                            source = RecordSource.Share(route.token),
-                            doctors = doctors,
-                            onClose = navigator::pop,
-                        )
-                        is Route.AttachedRecord -> PatientRecordScreen(
-                            source = RecordSource.Attached(route.conversationId, route.messageId),
-                            doctors = doctors,
-                            onClose = navigator::pop,
-                        )
-                        Route.WorkSettings -> WorkSettingsScreen(
-                            work = work,
-                            onClose = navigator::pop,
-                            onSaved = {
-                                navigator.pop()
-                                onToast(words.doctors.saved)
-                            },
-                        )
-                        Route.Earnings -> EarningsScreen(work = work, onClose = navigator::pop)
-                        Route.QuickReplies -> QuickRepliesScreen(work = work, onClose = navigator::pop)
-                        is Route.Patient -> PatientScreen(
-                            conversationId = route.conversationId,
-                            work = work,
-                            doctors = doctors,
-                            onClose = navigator::pop,
-                            onOpenRecord = { navigator.push(Route.AttachedRecord(route.conversationId, it)) },
-                            onToast = onToast,
-                        )
                     }
                 }
             }
+
+            // The bar belongs to the roots; a pushed screen takes the whole display, its own
+            // composer included. Without the bar the system navigation bar gets the page
+            // colour behind it instead of the content scrolling through it.
+            if (tabbed && !navigator.canGoBack) {
+                SadoraBottomNav(
+                    items = listOf(
+                        NavItemSpec(Tab.Home, words.tabs.home, SadoraIcons.Home, badge = doctors.questionsLoaded && doctors.questions.isNotEmpty()),
+                        NavItemSpec(Tab.Messages, words.tabs.messages, SadoraIcons.Message, badge = doctors.unreadMessages > 0),
+                        NavItemSpec(Tab.Scan, words.tabs.scan, SadoraIcons.Scan),
+                        NavItemSpec(Tab.Community, words.tabs.community, SadoraIcons.Chats),
+                        NavItemSpec(Tab.Profile, words.tabs.profile, SadoraIcons.Profile),
+                    ),
+                    selected = navigator.tab,
+                    onSelect = navigator::select,
+                )
+            } else {
+                Box(Modifier.fillMaxWidth().windowInsetsBottomHeight(WindowInsets.navigationBars).background(c.bg))
+            }
         }
 
-        // The bar belongs to the roots; a pushed screen takes the whole display, its own
-        // composer included. Without the bar the system navigation bar gets the page
-        // colour behind it instead of the content scrolling through it.
-        if (tabbed && !navigator.canGoBack) {
-            SadoraBottomNav(
-                items = listOf(
-                    NavItemSpec(Tab.Home, words.tabs.home, SadoraIcons.Home, badge = doctors.questionsLoaded && doctors.questions.isNotEmpty()),
-                    NavItemSpec(Tab.Messages, words.tabs.messages, SadoraIcons.Message, badge = doctors.unreadMessages > 0),
-                    NavItemSpec(Tab.Scan, words.tabs.scan, SadoraIcons.Scan),
-                    NavItemSpec(Tab.Community, words.tabs.community, SadoraIcons.Chats),
-                    NavItemSpec(Tab.Profile, words.tabs.profile, SadoraIcons.Profile),
-                ),
-                selected = navigator.tab,
-                onSelect = navigator::select,
-            )
-        } else {
-            Box(Modifier.fillMaxWidth().windowInsetsBottomHeight(WindowInsets.navigationBars).background(c.bg))
-        }
+        PhotoNudgeSheet(
+            visible = photoNudge,
+            account = approved?.account,
+            doctors = doctors,
+            onSaved = { onToast(words.photo.saved) },
+            onDismiss = { photoNudge = false },
+        )
     }
 }
+
+/** How long after the tabs appear the one-time photo sheet rises. */
+private const val PhotoNudgeDelayMillis = 1_200L
 
 /** How often the Messages dot is refreshed from any tab. */
 private const val UnreadPollMillis = 30_000L
@@ -418,6 +458,7 @@ private fun TabRoot(
             onOpenSettings = onOpenSettings,
             onOpenWork = { navigator.push(Route.WorkSettings) },
             onOpenEarnings = { navigator.push(Route.Earnings) },
+            onToast = onToast,
         )
         Tab.Messages -> MessagesScreen(
             doctors = doctors,
@@ -447,6 +488,7 @@ private fun TabRoot(
                     onSaved = { onToast(savedText) },
                     onOpenWork = { navigator.push(Route.WorkSettings) },
                     onOpenReplies = { navigator.push(Route.QuickReplies) },
+                    onToast = onToast,
                 )
             } else {
                 // Approved but without a page yet — a moment the server should never show.
