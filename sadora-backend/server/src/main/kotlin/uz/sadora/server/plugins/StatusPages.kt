@@ -4,6 +4,7 @@ import io.ktor.server.request.path
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.Application
+import io.ktor.server.application.call
 import io.ktor.server.application.install
 import io.ktor.server.plugins.BadRequestException
 import io.ktor.server.plugins.CannotTransformContentToTypeException
@@ -11,13 +12,17 @@ import io.ktor.server.plugins.PayloadTooLargeException
 import io.ktor.server.plugins.UnsupportedMediaTypeException
 import io.ktor.server.plugins.callid.callId
 import io.ktor.server.plugins.statuspages.StatusPages
+import io.ktor.server.response.ApplicationSendPipeline
 import io.ktor.server.response.respond
 import kotlinx.serialization.SerializationException
 import org.slf4j.LoggerFactory
 import uz.sadora.contract.ApiError
 import uz.sadora.contract.ApiErrorResponse
 import uz.sadora.contract.ErrorCodes
+import uz.sadora.contract.Language
 import uz.sadora.server.core.ApiException
+import uz.sadora.server.i18n.ErrorText
+import uz.sadora.server.i18n.errorLanguageOf
 
 /**
  * The single place an error becomes a response body.
@@ -28,6 +33,8 @@ import uz.sadora.server.core.ApiException
  */
 fun Application.configureStatusPages() {
     val logger = LoggerFactory.getLogger("uz.sadora.server.errors")
+
+    translateErrors()
 
     install(StatusPages) {
         exception<ApiException> { call, cause ->
@@ -160,4 +167,34 @@ private suspend fun io.ktor.server.application.ApplicationCall.respondUnsupporte
             ),
         ),
     )
+}
+
+/**
+ * Puts every error body into the language the app asked for in `Accept-Language`.
+ *
+ * It sits on the send pipeline rather than in each handler above so that the refusals
+ * sent from elsewhere — the authenticator's 401, the account gate's 403 — are covered
+ * too, and at its first phase, while the body is still an [ApiErrorResponse] and not
+ * yet JSON. The message and each field's reason are translated; codes and the other
+ * details are what clients branch on and stay exactly as they were.
+ */
+private fun Application.translateErrors() {
+    sendPipeline.intercept(ApplicationSendPipeline.Before) { body ->
+        if (body !is ApiErrorResponse) return@intercept
+        val language = errorLanguageOf(call.request.headers[HttpHeaders.AcceptLanguage])
+        if (language == Language.UZ) return@intercept
+        val error = body.error
+        proceedWith(
+            body.copy(
+                error = error.copy(
+                    message = ErrorText.translate(error.message, language),
+                    details = if (error.code == ErrorCodes.VALIDATION_FAILED) {
+                        error.details.mapValues { (_, reason) -> ErrorText.translate(reason, language) }
+                    } else {
+                        error.details
+                    },
+                ),
+            ),
+        )
+    }
 }

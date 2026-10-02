@@ -202,6 +202,9 @@ async function send(path: string, options: RequestOptions, token: string | null)
       signal,
       headers: {
         'Content-Type': 'application/json',
+        // The panel speaks Uzbek, and the server words its refusals in the language asked
+        // for — a browser's own Accept-Language would get them in Russian or English.
+        'Accept-Language': 'uz',
         ...headers,
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },

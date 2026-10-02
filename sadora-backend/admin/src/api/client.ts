@@ -51,6 +51,13 @@ interface RequestOptions {
   anonymous?: boolean
 }
 
+/**
+ * The panel speaks Uzbek, and the server words its refusals in the language a request
+ * asks for — left to the browser's own Accept-Language they would come back in Russian
+ * or English.
+ */
+const UZBEK = { 'Accept-Language': 'uz' }
+
 export async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const { method = 'GET', body, signal, anonymous = false } = options
   const token = tokenStore.read()
@@ -62,6 +69,7 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
       signal,
       headers: {
         'Content-Type': 'application/json',
+        ...UZBEK,
         ...(token && !anonymous ? { Authorization: `Bearer ${token}` } : {}),
       },
       body: body === undefined ? undefined : JSON.stringify(body),
@@ -92,7 +100,7 @@ export async function requestBlob(path: string, options: { signal?: AbortSignal 
   try {
     response = await fetch(path, {
       signal: options.signal,
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      headers: { ...UZBEK, ...(token ? { Authorization: `Bearer ${token}` } : {}) },
     })
   } catch (cause) {
     if (options.signal?.aborted) throw cause

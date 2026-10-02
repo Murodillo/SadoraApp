@@ -1895,6 +1895,32 @@ class ApiIntegrationTest {
      * [ApplicationTestBuilder] has a `client` of its own that knows no JSON, and a member
      * always wins over an extension.
      */
+    /**
+     * A refusal reaches her in the language her app is in. The code and the field names
+     * are what the app branches on, so they stay exactly the same in every language.
+     */
+    @Test
+    fun `a refusal is worded in the language the app asked for`() = api {
+        suspend fun refusal(language: String?) = client.post("/v1/auth/otp/request") {
+            language?.let { header(HttpHeaders.AcceptLanguage, it) }
+            json(OtpRequest("12345"))
+        }.body<ApiErrorResponse>().error
+
+        val uzbek = refusal(null)
+        val ru = refusal("ru")
+        val en = refusal("en-US,en;q=0.9")
+
+        assertEquals(ErrorCodes.VALIDATION_FAILED, ru.code)
+        assertEquals(uzbek.code, en.code)
+        assertEquals(uzbek.details.keys, ru.details.keys)
+        assertEquals("So'rov ma'lumotlari noto'g'ri", uzbek.message)
+        assertEquals("Неверные данные запроса", ru.message)
+        assertEquals("The request data is invalid", en.message)
+        val reason = uzbek.details.values.single()
+        assertEquals(uz.sadora.server.i18n.ErrorText.translate(reason, uz.sadora.contract.Language.RU), ru.details.values.single())
+        assertTrue(ru.details.values.single() != reason, "the reason stayed in Uzbek: $reason")
+    }
+
     private class Api(val client: HttpClient)
 
     /**

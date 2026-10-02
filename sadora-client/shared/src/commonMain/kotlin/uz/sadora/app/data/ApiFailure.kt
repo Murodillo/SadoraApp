@@ -67,8 +67,8 @@ sealed class ApiFailure(open val message: String) {
     data class PaymentRequired(val priceMinor: Long?, override val message: String) : ApiFailure(message)
 
     /**
-     * The thing is already done — rated, reported, opened. Worded as [Unexpected] unless
-     * a screen knows better; a rating that was already given is simply thanked.
+     * The thing is already done — rated, reported, opened. The server's sentence says
+     * which, in her language; a rating that was already given is simply thanked.
      */
     data class Conflict(override val message: String) : ApiFailure(message)
 

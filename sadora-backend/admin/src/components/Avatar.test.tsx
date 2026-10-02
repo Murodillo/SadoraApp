@@ -65,7 +65,7 @@ describe('Avatar', () => {
     expect(image).toHaveAttribute('src', 'blob:face')
     const [path, init] = fetchMock.mock.calls[0] as [string, RequestInit]
     expect(path).toBe('/v1/admin/doctors/d1/photo?v=7')
-    expect(init.headers).toEqual({ Authorization: 'Bearer tkn' })
+    expect(init.headers).toMatchObject({ Authorization: 'Bearer tkn' })
 
     unmount()
     expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:face')

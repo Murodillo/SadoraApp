@@ -3,6 +3,7 @@ package uz.sadora.app.i18n
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.ReadOnlyComposable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.staticCompositionLocalOf
 import uz.sadora.app.model.AppLanguage
 
@@ -31,5 +32,18 @@ val strings: Strings
 /** Wraps [content] in one language. [App] does this once, around the whole tree. */
 @Composable
 fun ProvideStrings(language: AppLanguage, content: @Composable () -> Unit) {
+    SideEffect { RequestLanguage.tag = language.code.lowercase() }
     CompositionLocalProvider(LocalStrings provides stringsFor(language), content = content)
+}
+
+/**
+ * The language every API request asks the server to answer in, as `Accept-Language`.
+ *
+ * The HTTP client lives outside composition, so [ProvideStrings] copies the screens'
+ * language here whenever it changes; a refusal the server words — a field's reason, a
+ * wrong code — then arrives in the language she is reading, not in Uzbek.
+ */
+object RequestLanguage {
+    var tag: String = "uz"
+        internal set
 }

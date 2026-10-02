@@ -183,9 +183,11 @@ class SadoraController(
  * What a failure says on screen.
  *
  * Written per case rather than passing the server's message through: the server speaks
- * to several clients and its wording is not always what a phone should show. Two cases
- * do prefer the server's text — a validation message names the field she just typed in,
- * and an OTP message says which of the several ways a code can be wrong it was.
+ * to several clients and its wording is not always what a phone should show. Three
+ * cases do prefer the server's text — a validation message names the field she just
+ * typed in, an OTP message says which of the several ways a code can be wrong it was,
+ * and a conflict says what is already done ("this post has already been reported").
+ * The server words them in the language the app sends as `Accept-Language`.
  *
  * It takes the strings rather than reading them, so a failure stored in the controller
  * is a failure and not a sentence: one worded when it happened would stay in the
@@ -206,7 +208,7 @@ fun ApiFailure.readable(t: ErrorStrings): String = when (this) {
     is ApiFailure.ConsentRequired -> t.consentRequired
     is ApiFailure.PaymentFailed -> t.paymentFailed
     is ApiFailure.PaymentRequired -> t.paymentRequired
-    is ApiFailure.Conflict -> t.unexpected
+    is ApiFailure.Conflict -> message.ifBlank { t.unexpected }
     is ApiFailure.Unexpected -> t.unexpected
 }
 

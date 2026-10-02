@@ -6,6 +6,9 @@ import io.ktor.client.engine.HttpClientEngine
 import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.defaultRequest
+import io.ktor.client.request.header
+import io.ktor.http.HttpHeaders
+import uz.sadora.doctor.i18n.RequestLanguage
 import io.ktor.client.plugins.logging.LogLevel
 import io.ktor.client.plugins.logging.Logging
 import io.ktor.http.ContentType
@@ -61,5 +64,7 @@ internal fun HttpClientConfig<*>.configureSadoraClient(environment: SadoraEnviro
     defaultRequest {
         url(environment.baseUrl.trimEnd('/') + "/")
         contentType(ContentType.Application.Json)
+        // Read per request, so a language switch applies to the very next call.
+        header(HttpHeaders.AcceptLanguage, RequestLanguage.tag)
     }
 }
