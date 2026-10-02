@@ -105,6 +105,10 @@ fun AppState.applyNutrition(day: NutritionDay) {
     )
 }
 
+/** "Magniy B6 1 tabletka"; a unit with no amount before it says nothing, so it is left out. */
+internal fun courseTitle(name: String, dosage: String?, unit: String?): String =
+    listOfNotNull(name, dosage?.let { amount -> listOfNotNull(amount, unit).joinToString(" ") }).joinToString(" ")
+
 /**
  * The screens list a day's doses, so a twice-daily course appears twice — once per dose,
  * each with its own status. The medication row supplies the pack figure.
@@ -118,9 +122,7 @@ fun AppState.applyMedications(day: MedicationDay, courses: List<Medication>) {
             AppMedication(
                 id = "${dose.medicationId}@${dose.dueAt}",
                 emoji = dose.emoji ?: "💊",
-                name = listOfNotNull(dose.name, dose.dosage, course?.unit)
-                    .joinToString(" ")
-                    .trim(),
+                name = courseTitle(dose.name, dose.dosage, course?.unit),
                 time = dose.dueAt.toString().take(5),
                 schedule = course?.schedule?.kind ?: ScheduleKind.DAILY,
                 note = course?.note,

@@ -74,6 +74,8 @@ sealed interface Route {
     data object MindJournal : Route
     data object Medications : Route
     data object AddMedication : Route
+    /** The same form, filled with one course, with Save and Delete. */
+    data class EditMedication(val id: String) : Route
     data object MedicationHistory : Route
     data object Sleep : Route
     data object Insights : Route

@@ -30,6 +30,12 @@ import uz.sadora.app.model.AppLanguage
 import uz.sadora.app.model.AppState
 import uz.sadora.app.model.Goal
 import uz.sadora.app.model.LifeStage
+import uz.sadora.app.model.deviceToday
+import uz.sadora.app.data.recountStageWeeks
+import uz.sadora.app.ui.onboarding.CalendarPicker
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.minus
+import kotlinx.datetime.plus
 import uz.sadora.app.nav.Route
 import uz.sadora.app.ui.components.ButtonTone
 import uz.sadora.app.ui.components.CardLabel
@@ -193,10 +199,31 @@ private fun GoalsSettings(state: AppState, controller: SadoraController, onClose
     }
 }
 
+/**
+ * Her stage, and for pregnancy and postpartum the date the weeks are counted from.
+ *
+ * The choice is held here until Save. Tapping a stage used to rebuild the Journey tab at
+ * once, before there was a date to count from — so a switch to pregnancy showed week 24
+ * to everyone, and there was no way to give the due date afterwards.
+ */
 @Composable
 private fun LifeStageSettings(state: AppState, controller: SadoraController, onClose: () -> Unit) {
     val t = strings.settings
     val stages = strings.stages
+    val o = strings.onboarding
+    val c = Sadora.colors
+    val scope = rememberCoroutineScope()
+    val today = remember { deviceToday() }
+
+    var chosen by remember { mutableStateOf(state.lifeStage) }
+    var due by remember { mutableStateOf(state.dueDate) }
+    var born by remember { mutableStateOf(state.childBirthDate ?: state.babyBirthDate) }
+    val ready = when (chosen) {
+        LifeStage.Pregnancy -> due != null
+        LifeStage.Postpartum -> born != null
+        else -> true
+    }
+
     SadoraTopBar(t.lifeStageTitle, onBack = onClose)
     ScreenContent {
         items(LifeStage.entries.size) { index ->
@@ -205,12 +232,71 @@ private fun LifeStageSettings(state: AppState, controller: SadoraController, onC
                 title = stages.title(stage),
                 subtitle = stages.subtitle(stage),
                 leading = stage.glyph,
-                selected = state.lifeStage == stage,
-                onClick = { state.lifeStage = stage },
+                selected = chosen == stage,
+                onClick = { chosen = stage },
             )
         }
+        if (chosen == LifeStage.Pregnancy) {
+            item {
+                SadoraCard {
+                    CardLabel(o.dueDateTitle)
+                    Text(o.dueDateSubtitle, style = Sadora.type.body, color = c.muted)
+                    CalendarPicker(
+                        isSelected = { it == due },
+                        onSelect = { due = it },
+                        today = today,
+                        monthsBack = 0,
+                        monthsForward = 9,
+                        range = today..today.plus(10, DateTimeUnit.MONTH),
+                    )
+                }
+            }
+        }
+        if (chosen == LifeStage.Postpartum) {
+            item {
+                SadoraCard {
+                    CardLabel(o.birthDateTitle)
+                    Text(o.birthDateSubtitle, style = Sadora.type.body, color = c.muted)
+                    CalendarPicker(
+                        isSelected = { it == born },
+                        onSelect = { born = it },
+                        today = today,
+                        monthsBack = 12,
+                        range = today.minus(24, DateTimeUnit.MONTH)..today,
+                    )
+                }
+            }
+        }
         item { DisclaimerNote(t.lifeStageNote) }
-        item { SaveButton(controller, onClose) }
+        item {
+            Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                controller.error?.let { ErrorStrip(it.readable()) }
+                SadoraButton(
+                    if (controller.busy) strings.common.saving else strings.common.save,
+                    enabled = ready && !controller.busy,
+                    onClick = {
+                        val previous = Triple(state.lifeStage, state.dueDate, state.childBirthDate)
+                        state.lifeStage = chosen
+                        when (chosen) {
+                            LifeStage.Pregnancy -> state.dueDate = due
+                            LifeStage.Postpartum -> state.childBirthDate = born
+                            else -> Unit
+                        }
+                        scope.launch {
+                            if (controller.saveProfile(withStageDate = true)) {
+                                state.recountStageWeeks()
+                                onClose()
+                            } else {
+                                // Refused: the app goes back to the stage the server still has.
+                                state.lifeStage = previous.first
+                                state.dueDate = previous.second
+                                state.childBirthDate = previous.third
+                            }
+                        }
+                    },
+                )
+            }
+        }
     }
 }
 

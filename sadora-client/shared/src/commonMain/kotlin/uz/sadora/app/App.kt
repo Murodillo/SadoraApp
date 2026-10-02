@@ -911,8 +911,9 @@ private fun PushedScreen(
         Route.Balance -> BalanceScreen(state, close)
 
         Route.MindJournal -> MindJournalScreen(state, close)
-        Route.Medications -> MedicationsScreen(state, close, navigator::push)
+        Route.Medications -> MedicationsScreen(state, health, close, navigator::push)
         Route.AddMedication -> AddMedicationScreen(health, close)
+        is Route.EditMedication -> AddMedicationScreen(health, close, editingId = route.id)
         Route.MedicationHistory -> MedicationHistoryScreen(health, close)
         Route.Sleep -> SleepScreen(state, health, insights, close, onToast = toast)
         Route.Insights -> InsightsScreen(state, insights, close, upgrade)

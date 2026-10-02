@@ -94,9 +94,11 @@ class SadoraController(
         return true
     }
 
-    suspend fun saveProfile(): Boolean {
+    suspend fun saveProfile(withStageDate: Boolean = false): Boolean {
         val repo = repository ?: return true
-        return call { repo.updateProfile(state.toUpdateProfileRequest(timezoneOrDefault())) } != null
+        return call {
+            repo.updateProfile(state.toUpdateProfileRequest(timezoneOrDefault(), withStageDate))
+        } != null
     }
 
     suspend fun loadConsents() {

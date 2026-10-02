@@ -20,7 +20,10 @@ import uz.sadora.server.auth.RequestContext
 import uz.sadora.server.config.AppConfig
 import uz.sadora.server.core.NotFoundException
 import uz.sadora.server.core.ValidationException
+import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.minus
+import kotlinx.datetime.plus
 import uz.sadora.server.core.DEFAULT_TIMEZONE
 import uz.sadora.server.core.dayIn
 import uz.sadora.contract.Limits
@@ -104,6 +107,7 @@ class UserService(
         request.heightCm?.let(::validateHeight)
         request.weightKg?.let(::validateWeight)
         request.birthDate?.let(::validateBirthDate)
+        request.stage?.let(::validateStageDates)
 
         users.updateProfile(
             userId = userId,
@@ -116,6 +120,7 @@ class UserService(
             weightKg = request.weightKg,
         )
         request.goals?.let { users.replaceGoals(userId, it) }
+        request.stage?.let { users.mergeStageDates(userId, dueDate = it.dueDate, childBirthDate = it.birthDate) }
 
         audit.record(
             AuditEntry(
@@ -324,8 +329,33 @@ class UserService(
         }
     }
 
+    /**
+     * A due date is at most ten months ahead and, for a birth that is a little late, two
+     * weeks behind; a child's birth date is in the past and within the postpartum years.
+     * Anything else is a slip of the calendar, and a week counted from it would be wrong.
+     */
+    private fun validateStageDates(stage: uz.sadora.contract.StageBaseline) {
+        val today = now().dayIn(DEFAULT_TIMEZONE)
+        stage.dueDate?.let { due ->
+            if (due < today.minus(DUE_DATE_LATE_DAYS, DateTimeUnit.DAY) ||
+                due > today.plus(DUE_DATE_AHEAD_DAYS, DateTimeUnit.DAY)
+            ) {
+                throw ValidationException("stage.dueDate", "Sana noto'g'ri")
+            }
+        }
+        stage.birthDate?.let { born ->
+            if (born > today) throw ValidationException("stage.birthDate", "Kelajakdagi sana bo'lishi mumkin emas")
+            if (born < today.minus(CHILD_AGE_MAX_DAYS, DateTimeUnit.DAY)) {
+                throw ValidationException("stage.birthDate", "Sana juda eski")
+            }
+        }
+    }
+
     private companion object {
         const val DELETE_CONFIRMATION = "DELETE"
+        const val DUE_DATE_LATE_DAYS = 14
+        const val DUE_DATE_AHEAD_DAYS = 320
+        const val CHILD_AGE_MAX_DAYS = 3 * 366
     }
 }
 
@@ -339,4 +369,5 @@ private fun UpdateProfileRequest.changedFields(): List<String> = buildList {
     if (heightCm != null) add("heightCm")
     if (weightKg != null) add("weightKg")
     if (goals != null) add("goals")
+    if (stage != null) add("stage")
 }

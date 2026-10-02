@@ -252,6 +252,29 @@ class UserRepository {
         }
     }
 
+    /**
+     * Writes the dates given and leaves the rest of her anchor alone — a new due date
+     * from Settings must not erase the last period the cycle stages still count from.
+     */
+    suspend fun mergeStageDates(userId: Uuid, dueDate: LocalDate?, childBirthDate: LocalDate?) = dbQuery {
+        if (dueDate == null && childBirthDate == null) return@dbQuery
+        val exists = StageBaselines.selectAll().where { StageBaselines.userId eq userId }.any()
+        if (exists) {
+            StageBaselines.update({ StageBaselines.userId eq userId }) {
+                dueDate?.let { date -> it[StageBaselines.dueDate] = date }
+                childBirthDate?.let { date -> it[StageBaselines.childBirthDate] = date }
+                it[updatedAt] = now().toOffsetDateTime()
+            }
+        } else {
+            StageBaselines.insert {
+                it[StageBaselines.userId] = userId
+                it[StageBaselines.dueDate] = dueDate
+                it[StageBaselines.childBirthDate] = childBirthDate
+                it[updatedAt] = now().toOffsetDateTime()
+            }
+        }
+    }
+
     fun applyConsents(
         userId: Uuid,
         grants: ConsentGrants,

@@ -1041,6 +1041,11 @@ interface JourneyStrings {
     val pregnancyTitle: String
     fun trimester(week: Int): String
     val weekCaps: String
+    /**
+     * Gestational age as a doctor writes it, 26+3: completed weeks and the days past
+     * them. Cardinal on purpose — "26-hafta, 3-kun" reads as the 26th week and the 3rd
+     * day, which is a week and a day earlier than the count it showed.
+     */
     fun weekAndDay(week: Int, day: Int): String
     fun weekOnly(week: Int): String
     fun dueOn(date: String, daysLeft: Int): String
@@ -1341,6 +1346,12 @@ interface ModuleStrings {
     val medStockUnit: String
     val medEndDate: String
     val medNone: String
+    val editMedTitle: String
+    val deleteMedication: String
+    val deleteMedTitle: String
+    val deleteMedBody: String
+    val removeTime: String
+    val medTimesRepeat: String
 
     // ---- dose history
     val doseHistoryTitle: String

@@ -37,6 +37,13 @@ import uz.sadora.app.ui.components.ScreenContent
 import uz.sadora.app.ui.components.SelectChip
 import uz.sadora.app.ui.components.noRippleClickable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.key
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import uz.sadora.app.ui.components.ButtonTone
+import uz.sadora.app.ui.components.PillButton
+import uz.sadora.app.ui.components.SadoraDialog
+import uz.sadora.contract.Medication
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
 import uz.sadora.app.data.HealthController
@@ -60,11 +67,13 @@ import uz.sadora.app.ui.components.typedTimeError
 import uz.sadora.contract.Limits
 
 /**
- * "Dori qo'shish" — the add-medication form.
+ * "Dori qo'shish" — the add-medication form, and with [editingId] the same form filled
+ * with one course, saving over it and offering to delete it.
  *
  * It saves to the server. It used to append a row to the in-memory store and close,
  * so the course she had just entered was gone the next time the app started — and the
- * reminders she was promised had nothing to fire from.
+ * reminders she was promised had nothing to fire from. There was also no way back to a
+ * course once saved: a wrong time or a finished pack stayed as typed.
  *
  * Stock and end date are optional; the app tracks supply only if the user opts in
  * by filling them.
@@ -74,27 +83,68 @@ fun AddMedicationScreen(
     health: HealthController,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
+    editingId: String? = null,
+) {
+    val t = strings.modules
+    val existing = editingId?.let { id -> health.medications.firstOrNull { it.id == id } }
+
+    if (editingId != null && existing == null) {
+        // Opened from a link or after a restart, before the list arrived.
+        LaunchedEffect(editingId) { health.refreshMedications() }
+        Column(modifier) {
+            SadoraTopBar(t.editMedTitle, onBack = onClose)
+            ScreenContent {
+                item { health.error?.let { ErrorStrip(it.readable()) } }
+            }
+        }
+        return
+    }
+    // Keyed by the course, so the fields start from it once — not again on every refresh.
+    key(existing?.id) { MedicationForm(health, existing, onClose, modifier) }
+}
+
+@Composable
+private fun MedicationForm(
+    health: HealthController,
+    existing: Medication?,
+    onClose: () -> Unit,
+    modifier: Modifier,
 ) {
     val c = Sadora.colors
     val t = strings.modules
     val scope = rememberCoroutineScope()
 
-    var name by remember { mutableStateOf("") }
-    var dose by remember { mutableStateOf("") }
-    var unit by remember { mutableStateOf("mg") }
-    var time by remember { mutableStateOf("20:00") }
-    val weekdays = remember { mutableStateListOf(*Weekday.entries.toTypedArray()) }
-    var withFood by remember { mutableStateOf(FoodRelation.AFTER) }
-    var stock by remember { mutableStateOf("") }
+    var name by remember { mutableStateOf(existing?.name.orEmpty()) }
+    var dose by remember { mutableStateOf(existing?.dosage.orEmpty()) }
+    var unit by remember { mutableStateOf(existing?.unit ?: "mg") }
+    val times = remember {
+        mutableStateListOf(
+            *(existing?.schedule?.times?.map { it.toString().take(TimeFieldMax) } ?: listOf("20:00")).toTypedArray(),
+        )
+    }
+    val weekdays = remember {
+        val chosen = existing?.schedule
+            ?.takeIf { it.kind == ScheduleKind.WEEKDAYS }
+            ?.weekdays
+            ?: Weekday.entries
+        mutableStateListOf(*chosen.toTypedArray())
+    }
+    // Every N days cannot be drawn as weekdays; a course set that way keeps its rule.
+    val keepsInterval = existing?.schedule?.kind == ScheduleKind.INTERVAL
+    var withFood by remember { mutableStateOf(existing?.foodRelation ?: FoodRelation.AFTER) }
+    var stock by remember { mutableStateOf(existing?.stockUnits?.toString().orEmpty()) }
     var saving by remember { mutableStateOf(false) }
+    var confirmDelete by remember { mutableStateOf(false) }
 
-    val at = parseTypedTime(time)
+    val parsed = times.map { parseTypedTime(it) }
+    val repeated = parsed.filterNotNull().let { it.size != it.distinct().size }
     val nameError = requiredTextError(name, Limits.MEDICATION_NAME_MAX)
-    val timeError = typedTimeError(time, required = true)
     val stockError = numberError(stock, 1..Limits.MEDICATION_STOCK_MAX)
+    val valid = name.isNotBlank() && nameError == null && stockError == null &&
+        parsed.all { it != null } && !repeated && (keepsInterval || weekdays.isNotEmpty())
 
     Column(modifier) {
-        SadoraTopBar(t.addMedTitle, onBack = onClose)
+        SadoraTopBar(if (existing == null) t.addMedTitle else t.editMedTitle, onBack = onClose)
 
         ScreenContent {
             item {
@@ -128,41 +178,73 @@ fun AddMedicationScreen(
             item {
                 SadoraCard {
                     CardLabel(t.medTime)
-                    SadoraTextField(
-                        time,
-                        { time = acceptText(it, TimeFieldMax) },
-                        label = t.medTime,
-                        placeholder = "20:00",
-                        error = timeError,
-                    )
+                    times.forEachIndexed { index, value ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+                        ) {
+                            SadoraTextField(
+                                value,
+                                { times[index] = acceptText(it, TimeFieldMax) },
+                                label = t.medTime,
+                                placeholder = "20:00",
+                                // A row just added is empty, not wrong: Save waits for it
+                                // without painting it red before she has typed.
+                                error = typedTimeError(value, required = false)
+                                    ?: t.medTimesRepeat.takeIf {
+                                        repeated && parsed[index] != null &&
+                                            parsed.indexOf(parsed[index]) != index
+                                    },
+                                modifier = Modifier.weight(1f),
+                            )
+                            if (times.size > 1) {
+                                Box(
+                                    Modifier
+                                        .size(40.dp)
+                                        .clip(Radius.chip)
+                                        .background(c.surface2)
+                                        .semantics { contentDescription = t.removeTime }
+                                        .noRippleClickable { times.removeAt(index) },
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Text("✕", style = Sadora.type.body, color = c.muted)
+                                }
+                            }
+                        }
+                    }
+                    if (times.size < Limits.MEDICATION_TIMES_PER_DAY_MAX) {
+                        PillButton(t.addTime, { times.add("") })
+                    }
                 }
             }
 
-            item {
-                SadoraCard {
-                    CardLabel(t.medDays)
-                    Row(
-                        Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    ) {
-                        Weekday.entries.forEachIndexed { index, weekday ->
-                            val on = weekday in weekdays
-                            Box(
-                                Modifier
-                                    .weight(1f)
-                                    .aspectRatio(1f)
-                                    .clip(Radius.chip)
-                                    .background(if (on) c.primary else c.surface2)
-                                    .noRippleClickable {
-                                        if (!weekdays.remove(weekday)) weekdays.add(weekday)
-                                    },
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Text(
-                                    strings.dates.weekdaysShort[index],
-                                    style = Sadora.type.caption,
-                                    color = if (on) c.onPrimary else c.muted,
-                                )
+            if (!keepsInterval) {
+                item {
+                    SadoraCard {
+                        CardLabel(t.medDays)
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        ) {
+                            Weekday.entries.forEachIndexed { index, weekday ->
+                                val on = weekday in weekdays
+                                Box(
+                                    Modifier
+                                        .weight(1f)
+                                        .aspectRatio(1f)
+                                        .clip(Radius.chip)
+                                        .background(if (on) c.primary else c.surface2)
+                                        .noRippleClickable {
+                                            if (!weekdays.remove(weekday)) weekdays.add(weekday)
+                                        },
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Text(
+                                        strings.dates.weekdaysShort[index],
+                                        style = Sadora.type.caption,
+                                        color = if (on) c.onPrimary else c.muted,
+                                    )
+                                }
                             }
                         }
                     }
@@ -199,45 +281,82 @@ fun AddMedicationScreen(
             }
 
             item {
-                health.error?.let { ErrorStrip(it.readable()) }
-                SadoraButton(
-                    if (saving) strings.common.saving else strings.common.save,
-                    enabled = !saving && name.isNotBlank() && at != null &&
-                        weekdays.isNotEmpty() && nameError == null && stockError == null,
-                    onClick = {
-                        val chosen = at ?: return@SadoraButton
-                        saving = true
-                        scope.launch {
-                            val saved = health.addMedication(
-                                SaveMedicationRequest(
-                                    name = name.trim(),
-                                    emoji = "💊",
-                                    dosage = dose.trim().takeIf { it.isNotEmpty() },
-                                    unit = unit.trim().takeIf { it.isNotEmpty() },
-                                    foodRelation = withFood,
-                                    schedule = MedicationSchedule(
-                                        // Every day is "daily" rather than seven weekdays:
-                                        // the server derives the doses from the kind, and
-                                        // the two are not the same rule to it.
-                                        kind = if (weekdays.size == Weekday.entries.size) {
-                                            ScheduleKind.DAILY
-                                        } else {
-                                            ScheduleKind.WEEKDAYS
-                                        },
-                                        times = listOf(chosen),
-                                        weekdays = weekdays.sortedBy { it.ordinal },
-                                    ),
-                                    stockUnits = stock.toIntOrNull(),
-                                ),
+                Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                    health.error?.let { ErrorStrip(it.readable()) }
+                    SadoraButton(
+                        if (saving) strings.common.saving else strings.common.save,
+                        enabled = !saving && valid,
+                        onClick = {
+                            val chosen = parsed.filterNotNull().sorted()
+                            val schedule = existing?.schedule?.takeIf { keepsInterval }?.copy(times = chosen)
+                                ?: MedicationSchedule(
+                                    // Every day is "daily" rather than seven weekdays: the
+                                    // server derives the doses from the kind, and the two are
+                                    // not the same rule to it.
+                                    kind = if (weekdays.size == Weekday.entries.size) {
+                                        ScheduleKind.DAILY
+                                    } else {
+                                        ScheduleKind.WEEKDAYS
+                                    },
+                                    times = chosen,
+                                    weekdays = weekdays.sortedBy { it.ordinal },
+                                )
+                            // What the form does not show is carried over, not reset.
+                            val request = SaveMedicationRequest(
+                                name = name.trim(),
+                                emoji = existing?.emoji ?: "💊",
+                                dosage = dose.trim().takeIf { it.isNotEmpty() },
+                                unit = unit.trim().takeIf { it.isNotEmpty() },
+                                foodRelation = withFood,
+                                note = existing?.note,
+                                schedule = schedule,
+                                remindersEnabled = existing?.remindersEnabled ?: true,
+                                startedOn = existing?.startedOn,
+                                endedOn = existing?.endedOn,
+                                stockUnits = stock.toIntOrNull(),
                             )
-                            saving = false
-                            if (saved) onClose()
-                        }
-                    },
-                )
+                            saving = true
+                            scope.launch {
+                                val saved = if (existing == null) {
+                                    health.addMedication(request)
+                                } else {
+                                    health.updateMedication(existing.id, request)
+                                }
+                                saving = false
+                                if (saved) onClose()
+                            }
+                        },
+                    )
+                    if (existing != null) {
+                        SadoraButton(
+                            t.deleteMedication,
+                            { confirmDelete = true },
+                            tone = ButtonTone.Destructive,
+                            enabled = !saving,
+                        )
+                    }
+                }
             }
         }
     }
+
+    SadoraDialog(
+        visible = confirmDelete,
+        title = t.deleteMedTitle,
+        body = t.deleteMedBody,
+        confirmText = strings.common.delete,
+        onConfirm = {
+            confirmDelete = false
+            val id = existing?.id ?: return@SadoraDialog
+            saving = true
+            scope.launch {
+                val deleted = health.archiveMedication(id)
+                saving = false
+                if (deleted) onClose()
+            }
+        },
+        onDismiss = { confirmDelete = false },
+    )
 }
 
 /**
@@ -385,6 +504,7 @@ fun MedicationHistoryScreen(
 
 /** "20:00" — nothing longer is a time of day. */
 private const val TimeFieldMax = 5
+
 
 /** "mg", "mkg", "ml", "tabletka" — a unit, not a sentence. */
 private const val UnitMax = 12

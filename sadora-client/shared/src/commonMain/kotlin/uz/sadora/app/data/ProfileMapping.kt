@@ -217,8 +217,14 @@ private fun AppState.toStageBaseline(): StageBaseline? = when (lifeStage) {
     else -> lastPeriodStart?.let { StageBaseline(lastPeriodStart = it) }
 }
 
-/** A partial update carrying only the fields the profile screens can edit. */
-fun AppState.toUpdateProfileRequest(timezone: String? = null): UpdateProfileRequest =
+/**
+ * A partial update carrying only the fields the profile screens can edit.
+ *
+ * [withStageDate] is for the life-stage screen alone: it sends the date the new stage
+ * counts from. Every other screen leaves it out, so saving a name never re-validates a
+ * due date that has since passed.
+ */
+fun AppState.toUpdateProfileRequest(timezone: String? = null, withStageDate: Boolean = false): UpdateProfileRequest =
     UpdateProfileRequest(
         name = name,
         language = language.toWire(),
@@ -228,7 +234,15 @@ fun AppState.toUpdateProfileRequest(timezone: String? = null): UpdateProfileRequ
         heightCm = heightCm.toIntOrNull(),
         weightKg = weightKg.toIntOrNull(),
         goals = goals.map { it.toWire() },
+        stage = if (withStageDate) stageDate() else null,
     )
+
+/** The date the chosen stage counts its weeks from; null for the stages that have none. */
+private fun AppState.stageDate(): StageBaseline? = when (lifeStage) {
+    LifeStage.Pregnancy -> dueDate?.let { StageBaseline(dueDate = it) }
+    LifeStage.Postpartum -> childBirthDate?.let { StageBaseline(birthDate = it) }
+    else -> null
+}
 
 fun AppState.toConsentGrants(): ConsentGrants = ConsentGrants(
     storeHealth = consentStoreHealth,

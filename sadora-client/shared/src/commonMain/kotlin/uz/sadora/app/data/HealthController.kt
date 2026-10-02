@@ -624,6 +624,17 @@ class HealthController(
         return true
     }
 
+    suspend fun updateMedication(id: String, request: uz.sadora.contract.SaveMedicationRequest): Boolean {
+        val api = medicationApi ?: return true
+        calls.run { api.update(id, request) } ?: return false
+        refreshMedications()
+        return true
+    }
+
+    /**
+     * Stops the course. The server archives rather than deletes it, so the doses she
+     * already recorded stay in her history.
+     */
     suspend fun archiveMedication(id: String): Boolean {
         val api = medicationApi ?: return true
         calls.run { api.archive(id) } ?: return false

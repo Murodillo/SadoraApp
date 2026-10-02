@@ -86,6 +86,9 @@ import uz.sadora.contract.CompleteAppointmentRequest
 import uz.sadora.contract.SaveAppointmentRequest
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalTime
+import kotlinx.datetime.minus
+import kotlinx.datetime.plus
+import kotlinx.datetime.todayIn
 import uz.sadora.contract.StageBaseline
 import uz.sadora.contract.AuthSession
 import uz.sadora.contract.BillingCatalogue
@@ -952,6 +955,47 @@ class ApiIntegrationTest {
             UpdateProfileRequest(name = "Malika", heightCm = 164, birthDate = LocalDate.parse("1994-03-14")),
         )
         assertEquals("Malika", ok.name)
+    }
+
+    /**
+     * Moving to pregnancy or postpartum in Settings carries the date the weeks are
+     * counted from. Without it the app could only show a week it made up.
+     */
+    @Test
+    fun `a stage changed in Settings brings its date and keeps the others`() = api {
+        val her = signUp()
+        onboard(her)
+        val today = kotlin.time.Clock.System.todayIn(kotlinx.datetime.TimeZone.of("Asia/Tashkent"))
+        val due = today.plus(100, kotlinx.datetime.DateTimeUnit.DAY)
+
+        val pregnant = patch<UserProfile>(
+            "/v1/me",
+            her.token,
+            UpdateProfileRequest(lifeStage = LifeStage.PREGNANCY, stage = StageBaseline(dueDate = due)),
+        )
+        assertEquals(LifeStage.PREGNANCY, pregnant.lifeStage)
+        assertEquals(due, pregnant.stage?.dueDate)
+
+        val tooFar = client.patch("/v1/me") {
+            auth(her.token)
+            json(UpdateProfileRequest(stage = StageBaseline(dueDate = today.plus(400, kotlinx.datetime.DateTimeUnit.DAY))))
+        }
+        assertEquals(HttpStatusCode.BadRequest, tooFar.status, tooFar.bodyAsTextSafe())
+        val unborn = client.patch("/v1/me") {
+            auth(her.token)
+            json(UpdateProfileRequest(stage = StageBaseline(birthDate = today.plus(1, kotlinx.datetime.DateTimeUnit.DAY))))
+        }
+        assertEquals(HttpStatusCode.BadRequest, unborn.status, unborn.bodyAsTextSafe())
+
+        val born = today.minus(10, kotlinx.datetime.DateTimeUnit.DAY)
+        val after = patch<UserProfile>(
+            "/v1/me",
+            her.token,
+            UpdateProfileRequest(lifeStage = LifeStage.POSTPARTUM, stage = StageBaseline(birthDate = born)),
+        )
+        assertEquals(LifeStage.POSTPARTUM, after.lifeStage)
+        assertEquals(born, after.stage?.birthDate)
+        assertEquals(due, after.stage?.dueDate, "the due date was not hers to lose")
     }
 
     /**

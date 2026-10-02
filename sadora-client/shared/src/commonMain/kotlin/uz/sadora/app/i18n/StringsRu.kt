@@ -1031,8 +1031,9 @@ object StringsRu : Strings {
             else -> "3-й триместр"
         }
         override val weekCaps = "  НЕДЕЛЯ"
-        override fun weekAndDay(week: Int, day: Int) = "$week-я неделя, $day-й день"
-        override fun weekOnly(week: Int) = "$week-я неделя"
+        override fun weekAndDay(week: Int, day: Int) =
+            "$week ${ru(week, "неделя", "недели", "недель")} $day ${ru(day, "день", "дня", "дней")}"
+        override fun weekOnly(week: Int) = "$week ${ru(week, "неделя", "недели", "недель")}"
         override fun dueOn(date: String, daysLeft: Int) = "Дата родов — $date · осталось $daysLeft дн."
         override fun dueOnPast(date: String) = "Дата родов — $date"
         override val babyDevelopment = "Развитие ребёнка"
@@ -1363,6 +1364,12 @@ object StringsRu : Strings {
         override val medStockUnit = "шт."
         override val medEndDate = "Дата окончания"
         override val medNone = "Нет"
+        override val editMedTitle = "Изменить препарат"
+        override val deleteMedication = "Удалить препарат"
+        override val deleteMedTitle = "Удалить этот препарат?"
+        override val deleteMedBody = "Напоминания прекратятся. История приёма сохранится."
+        override val removeTime = "Убрать время"
+        override val medTimesRepeat = "Время не должно повторяться"
 
         override val doseHistoryTitle = "История приёма"
         override val takenCount = "Принято"

@@ -56,6 +56,12 @@ data class UpdateProfileRequest(
     val heightCm: Int? = null,
     val weightKg: Int? = null,
     val goals: List<Goal>? = null,
+    /**
+     * A new due date or child's birth date, sent with the stage it belongs to when she
+     * changes stage in Settings. Only the dates it carries are written; the others are
+     * left as they were.
+     */
+    val stage: StageBaseline? = null,
 )
 
 /** How long she has been trying to conceive, asked once during onboarding. */

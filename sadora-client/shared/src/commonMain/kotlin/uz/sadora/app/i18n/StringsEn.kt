@@ -1025,8 +1025,9 @@ object StringsEn : Strings {
             else -> "3rd trimester"
         }
         override val weekCaps = "  WEEK"
-        override fun weekAndDay(week: Int, day: Int) = "Week $week, day $day"
-        override fun weekOnly(week: Int) = "Week $week"
+        override fun weekAndDay(week: Int, day: Int) =
+            "$week ${if (week == 1) "week" else "weeks"} $day ${if (day == 1) "day" else "days"}"
+        override fun weekOnly(week: Int) = "$week ${if (week == 1) "week" else "weeks"}"
         override fun dueOn(date: String, daysLeft: Int) = "Due $date · $daysLeft days to go"
         override fun dueOnPast(date: String) = "Due $date"
         override val babyDevelopment = "Your baby's development"
@@ -1356,6 +1357,12 @@ object StringsEn : Strings {
         override val medStockUnit = "units"
         override val medEndDate = "End date"
         override val medNone = "None"
+        override val editMedTitle = "Edit medication"
+        override val deleteMedication = "Delete medication"
+        override val deleteMedTitle = "Delete this medication?"
+        override val deleteMedBody = "Reminders will stop. The dose history stays."
+        override val removeTime = "Remove time"
+        override val medTimesRepeat = "Times must not repeat"
 
         override val doseHistoryTitle = "Dose history"
         override val takenCount = "Taken"

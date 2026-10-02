@@ -1024,8 +1024,8 @@ object StringsUz : Strings {
             else -> "3-trimestr"
         }
         override val weekCaps = "  HAFTA"
-        override fun weekAndDay(week: Int, day: Int) = "$week-hafta, $day-kun"
-        override fun weekOnly(week: Int) = "$week-hafta"
+        override fun weekAndDay(week: Int, day: Int) = "$week hafta $day kun"
+        override fun weekOnly(week: Int) = "$week hafta"
         override fun dueOn(date: String, daysLeft: Int) = "Tug'ish sanasi — $date · $daysLeft kun qoldi"
         override fun dueOnPast(date: String) = "Tug'ish sanasi — $date"
         override val babyDevelopment = "Bolaning rivojlanishi"
@@ -1356,6 +1356,12 @@ object StringsUz : Strings {
         override val medStockUnit = "dona"
         override val medEndDate = "Tugash sanasi"
         override val medNone = "Yo'q"
+        override val editMedTitle = "Dorini tahrirlash"
+        override val deleteMedication = "Dorini o'chirish"
+        override val deleteMedTitle = "Bu dori o'chirilsinmi?"
+        override val deleteMedBody = "Eslatmalar to'xtaydi. Qabul tarixi saqlanib qoladi."
+        override val removeTime = "Vaqtni olib tashlash"
+        override val medTimesRepeat = "Vaqtlar takrorlanmasin"
 
         override val doseHistoryTitle = "Qabul tarixi"
         override val takenCount = "Qabul qilingan"
