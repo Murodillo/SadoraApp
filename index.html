@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>SADORA</title>
-<meta name="description" content="SADORA — ayollar salomatligi ilovasi. Sikl, homiladorlik, menopauza, uyqu, ovqatlanish va kayfiyat bir joyda. Android va iOS.">
+<meta name="description" content="SADORA — ayollar salomatligi ilovasi. Sikl, homiladorlik, menopauza, uyqu, ovqatlanish va kayfiyat bir joyda, tasdiqlangan shifokorlar bilan. Android va iOS, o'zbek, rus va ingliz tillarida.">
 <meta property="og:title" content="SADORA — Har bir ayol. Har bir lahza.">
-<meta property="og:description" content="Ayollar salomatligi ilovasi: sikl, homiladorlik, menopauza, uyqu, ovqatlanish va kayfiyat bir joyda.">
+<meta property="og:description" content="Ayollar salomatligi ilovasi: sikl, homiladorlik, menopauza, uyqu, ovqatlanish va kayfiyat bir joyda — va kerak bo'lganda tasdiqlangan shifokor.">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -153,14 +153,19 @@ body {
 .lockup .mark { height: 30px; width: auto; }
 .lockup .word { height: 13px; width: auto; color: var(--text); }
 .word { fill: none; stroke: currentColor; stroke-width: 3.2; stroke-linecap: round; stroke-linejoin: round; }
-.nav-links { display: flex; gap: 4px; }
+.nav-links { display: flex; gap: 4px; position: relative; }
+.nav-links a { position: relative; z-index: 1; }
+.nav-links a[aria-current="true"] { color: var(--text); }
+.nav-ind { position: absolute; z-index: 0; top: 0; left: 0; height: 100%; width: 0; border-radius: 999px; background: var(--surface-2);
+  opacity: 0; transition: transform .55s var(--ease), width .55s var(--ease), opacity .3s var(--gentle); pointer-events: none; }
+.nav-ind.on { opacity: 1; }
 .nav-links a {
   font-size: 14px; font-weight: 500; color: var(--muted); padding: 8px 12px; border-radius: 999px;
   transition: color .2s var(--gentle), background-color .2s var(--gentle);
 }
 .nav-links a:hover { color: var(--text); background: var(--surface-2); }
 @media (max-width: 900px) { .nav-links { display: none; } }
-@media (max-width: 540px) { .nav .btn-sm { display: none; } .nav-in { gap: 14px; } }
+@media (max-width: 540px) { .nav .btn-sm { display: none; } .nav .btn-sm.apk:not([hidden]) { display: inline-flex; } .nav-in { gap: 14px; } }
 .nav-progress { position: absolute; left: 0; bottom: -1px; height: 2px; width: 100%; transform-origin: left; transform: scaleX(0); background: linear-gradient(90deg, var(--b1), var(--b3)); }
 
 .theme-btn {
@@ -181,18 +186,29 @@ body {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
   min-height: 46px; padding: 0 22px; border-radius: 999px;
   font-size: 15px; font-weight: 600; letter-spacing: -.005em; white-space: nowrap;
-  transition: transform .3s var(--ease), box-shadow .3s var(--gentle), background-color .2s, border-color .2s, color .2s;
+  translate: var(--tx, 0px) var(--ty, 0px);
+  transition: transform .3s var(--ease), translate .6s var(--ease), box-shadow .3s var(--gentle), background-color .2s, border-color .2s, color .2s;
 }
 .btn-fill {
+  position: relative; overflow: hidden; isolation: isolate;
   color: #fff;
   background: linear-gradient(120deg, var(--primary), var(--secondary));
   box-shadow: 0 10px 26px -12px var(--primary);
 }
 .btn-fill:hover { transform: translateY(-2px); box-shadow: 0 18px 34px -14px var(--primary); }
 .btn-fill:active { transform: translateY(0) scale(.98); }
+/* Yaltirash — kursor ustiga kelganda bir marta o'tadi */
+.btn-fill::after {
+  content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background: linear-gradient(105deg, transparent 30%, rgba(255,255,255,.34) 48%, rgba(255,255,255,.12) 54%, transparent 70%);
+  transform: translateX(-120%); transition: transform 1s var(--ease);
+}
+.btn-fill:hover::after { transform: translateX(120%); }
 .btn-ghost { border: 1px solid var(--line); background: var(--surface); }
 .btn-ghost:hover { transform: translateY(-2px); border-color: var(--muted-2); }
 .btn-sm { min-height: 40px; padding: 0 16px; font-size: 14px; }
+/* The APK link exists only on the staging server, where download/latest.json does. */
+.nav .btn[hidden] { display: none; }
 .btn svg { flex: none; }
 
 /* ---------- Hero ---------- */
@@ -241,6 +257,8 @@ body {
 /* ---------- Telefon ---------- */
 .phone-stage { display: flex; justify-content: center; perspective: 1600px; }
 .phone-tilt { transition: transform .6s var(--ease); transform-style: preserve-3d; will-change: transform; }
+.phone-float { animation: float 7s ease-in-out 2.4s infinite; }
+@keyframes float { 0%, 100% { translate: 0 0; } 50% { translate: 0 -9px; } }
 .phone {
   width: 352px; max-width: 100%; border-radius: 50px; padding: 12px;
   background: linear-gradient(160deg, #EDE8FF, #C9C0F2);
@@ -260,8 +278,18 @@ body {
 .sbar span:last-child { display: flex; gap: 5px; align-items: center; }
 .sbar b { display: block; width: 15px; height: 8px; border-radius: 2px; background: var(--text); opacity: .85; }
 .scr-body { flex: 1; display: flex; flex-direction: column; gap: 12px; padding: 22px 14px 12px; overflow: hidden; }
+.scr-body > * { flex-shrink: 0; }
 .scr-greet h4 { font-family: var(--disp); font-size: 21px; font-weight: 700; letter-spacing: -.02em; line-height: 1.15; }
 .scr-greet p { font-size: 11.5px; color: var(--muted); margin-top: 3px; }
+.scr-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.gulpill { position: relative; flex: none; display: inline-flex; align-items: center; gap: 5px; margin-top: 2px;
+  font-size: 11px; font-weight: 700; padding: 5px 9px 5px 7px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line); color: var(--text); }
+.gulpill svg { width: 14px; height: 14px; color: var(--secondary); transition: transform .6s var(--pop); }
+.gulpill.bump svg { transform: rotate(72deg) scale(1.25); }
+.gulpill .plus { position: absolute; right: 6px; top: -4px; font-size: 10.5px; font-weight: 800; color: var(--secondary); opacity: 0; pointer-events: none; }
+.gulpill.bump .plus { animation: plusup 1.4s var(--ease) forwards; }
+@keyframes plusup { 0% { opacity: 0; transform: translateY(4px); } 20% { opacity: 1; } 100% { opacity: 0; transform: translateY(-18px); } }
+.streak { font-size: 10.5px; font-weight: 700; color: var(--warning); display: inline-flex; gap: 4px; align-items: center; }
 
 /* AI xulosa — gradient ruxsat etilgan joy */
 .ai-card {
@@ -269,7 +297,12 @@ body {
   background: linear-gradient(118deg, var(--primary), var(--secondary)); color: #fff;
   display: grid; grid-template-columns: 34px 1fr; gap: 12px; align-items: start;
   box-shadow: 0 10px 24px -14px var(--primary);
+  position: relative; overflow: hidden;
 }
+.ai-card::after { content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(110deg, transparent 35%, rgba(255,255,255,.22) 50%, transparent 65%);
+  transform: translateX(-130%); animation: sheen 7s var(--gentle) 3s infinite; }
+@keyframes sheen { 0% { transform: translateX(-130%); } 22%, 100% { transform: translateX(130%); } }
 .ai-card b { display: block; font-size: 12.5px; font-weight: 700; margin-bottom: 3px; }
 .ai-card p { font-size: 11.5px; line-height: 1.45; opacity: .95; }
 .ai-card small { display: block; font-size: 9.5px; opacity: .78; margin-top: 6px; letter-spacing: .04em; }
@@ -402,7 +435,7 @@ body {
 
 /* Ovqat — kkal va makrolar */
 .kcal { display: grid; grid-template-columns: 96px 1fr; gap: 16px; align-items: center; }
-.ring-96 { width: 96px; height: 96px; } .ring-96 .mid b { font-size: 24px; } .ring-96 .mid span { font-size: 9px; color: var(--muted); letter-spacing: .1em; text-transform: uppercase; font-weight: 700; }
+.ring-96 { width: 96px; height: 96px; } .ring-96 .mid b { font-size: 24px; } .ring-96 .mid span { font-size: 8.5px; color: var(--muted); letter-spacing: .03em; white-space: nowrap; text-transform: uppercase; font-weight: 700; }
 .ring-96 .arc { stroke: var(--warm); }
 .macro { display: grid; gap: 9px; }
 .macro div { display: grid; grid-template-columns: 68px 1fr auto; gap: 10px; align-items: center; font-size: 12px; }
@@ -455,18 +488,25 @@ body {
 .stagescope { --sa: #7B61FF; --sb: #FF6FB8; --st: #6247E0; }
 .stages-grid { display: grid; grid-template-columns: minmax(0, .95fr) minmax(0, 1.05fr); gap: clamp(28px, 4vw, 56px); align-items: start; }
 @media (max-width: 900px) { .stages-grid { grid-template-columns: minmax(0,1fr); } }
-.stage-list { display: grid; gap: 6px; }
+.stage-list { display: grid; gap: 6px; position: relative; }
+.stage-list li { position: relative; z-index: 1; }
+/* Tanlangan bosqich ostidagi karta — tugmadan tugmaga sirpanadi */
+.stage-glide { position: absolute; z-index: 0; left: 0; right: 0; top: 0; height: 0; border-radius: var(--r-lg);
+  background: var(--surface); border: 1px solid var(--line); box-shadow: 0 10px 30px -22px var(--shadow-2);
+  transition: transform .6s var(--ease), height .6s var(--ease); pointer-events: none; }
 .stage-btn {
   display: grid; grid-template-columns: 40px 1fr auto; gap: 14px; align-items: center; text-align: left;
   padding: 14px 16px; border-radius: var(--r-lg); border: 1px solid transparent;
   transition: background-color .3s var(--gentle), border-color .3s, transform .3s var(--ease);
 }
 .stage-btn:hover { background: var(--surface-2); }
-.stage-btn[aria-pressed="true"] { background: var(--surface); border-color: var(--line); box-shadow: 0 10px 30px -22px var(--shadow-2); }
+.stage-btn[aria-pressed="true"]:hover { background: transparent; }
+.no-glide .stage-btn[aria-pressed="true"] { background: var(--surface); border-color: var(--line); }
+.stage-btn { width: 100%; }
 .stage-btn .sw { width: 40px; height: 40px; border-radius: 13px; display: grid; place-items: center; font-size: 18px; color: #fff;
   background: linear-gradient(135deg, var(--a), var(--b)); transition: transform .4s var(--pop); }
 .stage-btn[aria-pressed="true"] .sw { transform: scale(1.08); }
-.stage-btn b { display: block; font-family: var(--disp); font-size: 16.5px; font-weight: 600; letter-spacing: -.01em; }
+.stage-btn b { color: var(--text); display: block; font-family: var(--disp); font-size: 16.5px; font-weight: 600; letter-spacing: -.01em; }
 .stage-btn span { font-size: 12.5px; color: var(--muted); }
 .stage-btn .tab { font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted-2); padding: 5px 9px; border: 1px solid var(--line); border-radius: 999px; }
 .stage-btn[aria-pressed="true"] .tab { color: var(--st); border-color: color-mix(in srgb, var(--st) 40%, transparent); }
@@ -527,8 +567,17 @@ body {
 .chat-hd span { font-size: 12px; color: rgba(243,240,250,.6); }
 .chat .bub.ai { font-size: 14px; }
 .chat .bub { opacity: 0; transform: translateY(10px); transition: opacity .5s var(--gentle), transform .6s var(--ease); }
-.chat .bub:nth-child(1) { transition-delay: .1s; } .chat .bub:nth-child(2) { transition-delay: .5s; } .chat .bub:nth-child(3) { transition-delay: 1.1s; }
-.chat.in .bub, .in .chat .bub { opacity: 1; transform: none; }
+.chat .bub.on { opacity: 1; transform: none; }
+.typing { display: inline-flex; gap: 4px; align-items: center; align-self: flex-start; padding: 11px 13px; border-radius: 16px; border-bottom-left-radius: 5px;
+  background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.1);
+  opacity: 0; transform: translateY(6px) scale(.96); transform-origin: 0 100%; transition: opacity .35s var(--gentle), transform .45s var(--ease); }
+.typing.on { opacity: 1; transform: none; }
+.chat, .thread { position: relative; }
+.chat .typing, .thread .typing { position: absolute; }
+.typing[hidden] { display: none; }
+.typing i { width: 6px; height: 6px; border-radius: 999px; background: currentColor; opacity: .5; animation: dot 1.2s ease-in-out infinite; }
+.typing i:nth-child(2) { animation-delay: .15s; } .typing i:nth-child(3) { animation-delay: .3s; }
+@keyframes dot { 0%, 60%, 100% { transform: translateY(0); opacity: .35; } 30% { transform: translateY(-4px); opacity: .9; } }
 .chat-foot { font-size: 11.5px; color: rgba(243,240,250,.5); letter-spacing: .02em; }
 
 /* Maxfiy chat */
@@ -547,13 +596,16 @@ body {
 /* ---------- Manbalar ---------- */
 .sources { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 12px; }
 @media (max-width: 900px) { .sources { grid-template-columns: repeat(2, minmax(0,1fr)); } }
-.src { border: 1px solid var(--line); border-radius: var(--r-lg); padding: 16px 18px; background: var(--surface); display: grid; gap: 8px; min-height: 118px; transition: transform .35s var(--ease), border-color .3s; }
+.src { border: 1px solid var(--line); border-radius: var(--r-lg); padding: 16px 18px; background: var(--surface); display: flex; flex-direction: column; align-items: flex-start; gap: 8px; min-height: 118px; transition: transform .35s var(--ease), border-color .3s; }
 .src:hover { transform: translateY(-3px); border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); }
 .src b { font-family: var(--disp); font-size: 15.5px; font-weight: 600; }
 .src span { font-size: 12.5px; color: var(--muted); }
 .src .st { display: inline-flex; align-items: center; gap: 7px; font-size: 11.5px; font-weight: 600; margin-top: auto; }
 .src .st i { width: 8px; height: 8px; border-radius: 999px; }
-.st.on { color: var(--success); } .st.on i { background: var(--success); box-shadow: 0 0 0 3px color-mix(in srgb, var(--success) 20%, transparent); }
+.st.on { color: var(--success); } .st.on i { background: var(--success); position: relative; }
+.st.on i::after { content: ''; position: absolute; inset: 0; border-radius: inherit; background: var(--success); animation: ping 2.6s var(--gentle) infinite; }
+@keyframes ping { 0% { transform: scale(1); opacity: .5; } 70%, 100% { transform: scale(3); opacity: 0; } }
+.src .kind { font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted-2); }
 .st.exp { color: var(--warning); } .st.exp i { background: var(--warning); }
 .st.off { color: var(--muted-2); } .st.off i { background: var(--line); }
 .metrics { display: flex; flex-wrap: wrap; gap: 5px; }
@@ -605,7 +657,9 @@ body {
 .sw-g { width: 34px; height: 24px; border-radius: 7px; background: linear-gradient(120deg, var(--primary), var(--secondary)); }
 .sw-f { width: 34px; height: 24px; border-radius: 7px; background: var(--surface-2); border: 1px solid var(--line); }
 .claim { font-size: 13.5px; display: flex; align-items: center; gap: 9px; width: 100%; }
-.claim.bad { color: var(--muted-2); text-decoration: line-through; text-decoration-color: var(--danger); }
+.claim.bad { color: var(--muted-2); }
+.claim .strike { background: linear-gradient(var(--danger), var(--danger)) no-repeat 0 56% / 0 1.5px; transition: background-size .9s var(--ease) .7s; }
+.in .claim .strike { background-size: 100% 1.5px; }
 .claim.good { font-weight: 500; }
 .claim i { width: 5px; height: 5px; border-radius: 999px; background: currentColor; flex: none; }
 .locked { position: relative; width: 100%; border-radius: var(--r-sm); border: 1px solid var(--line); background: var(--surface-2); padding: 11px 13px; overflow: hidden; }
@@ -724,12 +778,155 @@ body {
 
 /* CTA atrofidagi gulchambar */
 .close-art { position: relative; display: grid; place-items: center; }
-.close-art .wreath { position: absolute; inset: -12%; pointer-events: none; }
+.close-art .wreath { position: absolute; inset: -12%; pointer-events: none; animation: spin 90s linear infinite; }
 .close-art .wreath .fl { position: absolute; opacity: 0; animation: blpop .8s var(--pop) forwards; animation-delay: var(--dl); }
 
-/* ---------- Skroll bilan paydo bo'lish ---------- */
-.js .r { opacity: 0; transform: translateY(22px); transition: opacity .9s var(--ease), transform .9s var(--ease); transition-delay: var(--d, 0ms); }
-.js .r.in { opacity: 1; transform: none; }
+
+/* ---------- Gul va seriya ---------- */
+.gul-row { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
+.gul-day { display: flex; flex-direction: column; align-items: center; gap: 7px; font-size: 10.5px; color: var(--muted-2); font-weight: 600; }
+.gul-day .cup { width: 100%; aspect-ratio: 1; max-width: 46px; border-radius: 14px; display: grid; place-items: center;
+  background: var(--surface-2); border: 1px solid var(--line); transition: background-color .5s var(--gentle), border-color .5s; transition-delay: calc(var(--i) * 140ms + .2s); }
+.gul-day .cup svg { width: 58%; height: 58%; color: var(--secondary); transform: scale(0) rotate(-90deg); opacity: 0;
+  transition: transform .7s var(--pop), opacity .4s; transition-delay: calc(var(--i) * 140ms + .25s); }
+.in .gul-day .cup { background: color-mix(in srgb, var(--secondary) 12%, var(--surface)); border-color: color-mix(in srgb, var(--secondary) 30%, var(--line)); }
+.in .gul-day .cup svg { transform: none; opacity: 1; }
+.gul-day.today .cup { border-style: dashed; }
+.in .gul-day.today .cup { background: var(--surface-2); border-color: color-mix(in srgb, var(--secondary) 50%, transparent); }
+.in .gul-day.today .cup svg { opacity: .35; }
+.gul-sum { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 18px; margin-top: 14px; }
+.gul-sum b { font-family: var(--disp); font-size: 26px; font-weight: 800; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+.gul-sum > span { font-size: 12.5px; color: var(--muted); }
+.earn { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.earn span { font-size: 11.5px; font-weight: 600; padding: 5px 10px; border-radius: 999px; background: var(--surface-2); color: var(--text); }
+.earn span b { color: var(--secondary); margin-left: 4px; }
+
+/* ---------- Uch til ---------- */
+.langs { display: grid; gap: 10px; }
+.lang-say { font-family: var(--disp); font-size: clamp(30px, 3.4vw, 40px); font-weight: 700; letter-spacing: -.03em; line-height: 1.1;
+  height: 1.15em; position: relative; overflow: hidden; }
+.lang-say span { position: absolute; left: 0; top: 0; white-space: nowrap; transform: translateY(110%); opacity: 0;
+  transition: transform .8s var(--ease), opacity .6s var(--gentle); }
+.lang-say span.on { transform: none; opacity: 1; }
+.lang-say span.off { transform: translateY(-110%); opacity: 0; }
+.lang-tabs { display: flex; gap: 6px; }
+.lang-tabs i { font-style: normal; font-size: 11px; font-weight: 700; letter-spacing: .08em; padding: 5px 10px; border-radius: 999px;
+  border: 1px solid var(--line); color: var(--muted); transition: background-color .4s, color .4s, border-color .4s; }
+.lang-tabs i.on { background: var(--primary); border-color: var(--primary); color: #fff; }
+
+/* ---------- Shifokorlar ---------- */
+.doc-grid { display: grid; grid-template-columns: minmax(0, .95fr) minmax(0, 1.05fr); gap: clamp(20px, 3vw, 32px); align-items: start; }
+@media (max-width: 900px) { .doc-grid { grid-template-columns: minmax(0,1fr); } }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-xl); padding: 20px; box-shadow: 0 1px 2px var(--shadow-2), 0 30px 60px -44px var(--shadow-2); }
+.panel-hd { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.panel-hd b { font-family: var(--disp); font-size: 17px; font-weight: 700; letter-spacing: -.015em; }
+.filters { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.filters span { font-size: 12px; font-weight: 600; padding: 6px 11px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); }
+.filters span.on { background: var(--text); border-color: var(--text); color: var(--bg); }
+.docs { display: grid; gap: 8px; }
+.doc { display: grid; grid-template-columns: 48px 1fr auto; gap: 12px; align-items: center; padding: 12px; border-radius: var(--r-lg);
+  border: 1px solid var(--line); background: var(--bg);
+  opacity: 0; transform: translateX(-14px); transition: opacity .6s var(--gentle), transform .7s var(--ease), border-color .3s; transition-delay: calc(var(--i) * 110ms + .2s); }
+.in .doc { opacity: 1; transform: none; }
+.doc:hover { border-color: color-mix(in srgb, var(--primary) 35%, var(--line)); }
+.av-doc { position: relative; width: 48px; height: 48px; border-radius: 16px; display: grid; place-items: center; color: #fff;
+  font-family: var(--disp); font-weight: 700; font-size: 16px; letter-spacing: -.02em; }
+.av-doc .on-dot { position: absolute; right: -2px; bottom: -2px; width: 13px; height: 13px; border-radius: 999px; background: var(--success); border: 2.5px solid var(--bg); }
+.av-doc .on-dot::after { content: ''; position: absolute; inset: -2.5px; border-radius: inherit; background: var(--success); animation: ping 2.6s var(--gentle) infinite; z-index: -1; }
+.doc .nm { display: flex; align-items: center; gap: 6px; font-weight: 700; font-size: 14px; }
+.vf { width: 16px; height: 16px; flex: none; color: var(--primary); }
+.vf path { stroke-dasharray: 20; stroke-dashoffset: 20; transition: stroke-dashoffset .6s var(--ease); transition-delay: calc(var(--i, 0) * 110ms + .8s); }
+.in .vf path { stroke-dashoffset: 0; }
+.doc .sp { font-size: 12px; color: var(--muted); }
+.doc .meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin-top: 4px; font-size: 11.5px; color: var(--muted); }
+.stars { display: inline-flex; gap: 1px; color: var(--warm); }
+.stars svg { width: 11px; height: 11px; transform: scale(0); transition: transform .5s var(--pop); transition-delay: calc(var(--i, 0) * 110ms + .9s + var(--s) * 70ms); }
+.in .stars svg { transform: none; }
+.doc .meta b { color: var(--text); font-weight: 700; font-variant-numeric: tabular-nums; }
+.fast { font-size: 10.5px; font-weight: 700; padding: 3px 8px; border-radius: 999px; color: var(--success); background: color-mix(in srgb, var(--success) 12%, transparent); }
+.newdoc { font-size: 10.5px; font-weight: 700; padding: 3px 8px; border-radius: 999px; color: var(--ink); background: var(--surface-2); }
+.doc .price { text-align: right; font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.doc .price span { display: block; font-size: 10.5px; font-weight: 500; color: var(--muted); }
+
+.consult { display: grid; gap: 12px; }
+.c-hd { display: flex; align-items: center; gap: 12px; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
+.c-hd .who { flex: 1; min-width: 0; }
+.c-hd .who b { display: flex; align-items: center; gap: 6px; font-size: 14.5px; }
+.c-hd .who span { font-size: 12px; color: var(--muted); }
+.timer { position: relative; width: 52px; height: 52px; flex: none; }
+.timer svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.timer .trk { fill: none; stroke: var(--surface-2); }
+.timer .arc { fill: none; stroke: url(#brandGrad); stroke-linecap: round; transition: stroke-dashoffset 1.8s var(--ease) .4s; }
+.timer .t { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; font-size: 10.5px; font-weight: 800; line-height: 1.05; font-variant-numeric: tabular-nums; }
+.timer .t small { display: block; font-size: 8px; font-weight: 600; color: var(--muted); letter-spacing: .04em; }
+.thread { display: flex; flex-direction: column; gap: 8px; min-height: 250px; }
+.thread .bub { font-size: 13.5px; opacity: 0; transform: translateY(10px); transition: opacity .5s var(--gentle), transform .6s var(--ease); }
+.thread .bub.on { opacity: 1; transform: none; }
+.thread .bub.ai { background: var(--surface-2); border: 1px solid var(--line); color: var(--text); }
+.thread .typing { background: var(--surface-2); border-color: var(--line); color: var(--muted); }
+.ticks { display: flex; justify-content: flex-end; align-items: center; gap: 4px; margin-top: 4px; font-size: 10px; opacity: .85; }
+.ticks svg { width: 16px; height: 10px; }
+.ticks .second { opacity: 0; transform: translateX(-3px); transition: opacity .4s, transform .4s var(--ease); }
+.ticks.read .second { opacity: 1; transform: none; }
+.ticks.read { color: #fff; }
+.rec { display: grid; grid-template-columns: 30px 1fr; gap: 10px; align-items: center; margin-top: 8px; padding: 9px 10px; border-radius: 12px; background: rgba(255,255,255,.18); }
+.rec i { width: 30px; height: 30px; border-radius: 9px; background: rgba(255,255,255,.22); display: grid; place-items: center; font-style: normal; }
+.rec b { display: block; font-size: 12px; } .rec span { font-size: 10.5px; opacity: .85; }
+.c-foot { display: flex; gap: 10px; align-items: flex-start; font-size: 12.5px; color: var(--muted); padding-top: 12px; border-top: 1px dashed var(--line); }
+.c-foot svg { flex: none; color: var(--success); margin-top: 2px; }
+
+.doc-points { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 12px; margin-top: clamp(20px, 3vw, 32px); }
+@media (max-width: 960px) { .doc-points { grid-template-columns: repeat(2, minmax(0,1fr)); } }
+@media (max-width: 520px) { .doc-points { grid-template-columns: minmax(0,1fr); } }
+.dpt { border: 1px solid var(--line); border-radius: var(--r-lg); padding: 18px; background: var(--surface); display: grid; gap: 8px; align-content: start;
+  overflow: hidden; transition: transform .4s var(--ease), border-color .3s; }
+.dpt:hover { transform: translateY(-3px); border-color: color-mix(in srgb, var(--primary) 30%, var(--line)); }
+.dpt .ico { width: 36px; height: 36px; border-radius: 12px; display: grid; place-items: center; background: var(--surface-2); color: var(--ink); }
+.dpt b { font-family: var(--disp); font-size: 16px; font-weight: 600; letter-spacing: -.01em; }
+.dpt p { font-size: 13px; color: var(--muted); line-height: 1.55; }
+.qr-wrap { display: grid; gap: 8px; }
+.qr { width: 76px; height: 76px; padding: 6px; border-radius: 12px; background: #fff; border: 1px solid var(--line); }
+.qr rect { fill: #1A1630; transform-box: fill-box; transform-origin: center; transform: scale(0); transition: transform .35s var(--pop); transition-delay: var(--q); }
+.in .qr rect { transform: none; }
+.doc-app { display: flex; align-items: center; gap: 12px; margin-top: 18px; padding: 14px 16px; border-radius: var(--r-lg); border: 1px dashed var(--line); font-size: 13.5px; color: var(--muted); }
+.doc-app b { color: var(--text); }
+.doc-app .mk { width: 34px; height: 34px; border-radius: 10px; flex: none; display: grid; place-items: center; background: linear-gradient(135deg, var(--accent), var(--primary)); }
+.doc-app .mk svg { height: 60%; width: auto; }
+
+/* Chat: taxallus nishonlari va shifokor posti */
+.post .bdg { font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 999px; background: rgba(255,255,255,.1); color: rgba(243,240,250,.85); }
+.post.dr { background: rgba(255,255,255,.08); border-color: color-mix(in srgb, var(--b1) 45%, transparent); }
+.post.dr .av { border-radius: 10px; }
+.post .vf { color: var(--b1); }
+.chat-feats { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+.chat-feats span { font-size: 12.5px; padding: 7px 12px; border-radius: 999px; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.12); color: rgba(243,240,250,.85); }
+
+/* ---------- Skroll bilan paydo bo'lish ----------
+   Element xiralikdan chiqib, sal ko'tariladi. Tugagach `.r` olib tashlanadi —
+   kartaning o'z hover o'tishlari kechikishsiz qaytadi. */
+.js .r { opacity: 0; transform: translateY(24px); filter: blur(6px);
+  transition: opacity .9s var(--ease), transform 1.05s var(--ease), filter .9s var(--ease); transition-delay: var(--d, 0ms); }
+.js .r.in { opacity: 1; transform: none; filter: blur(0); }
+.js .sec-head.r { filter: none; transform: none; }
+.js .r .lede, .js .r .eyebrow { opacity: 0; transform: translateY(10px); transition: opacity .8s var(--ease), transform .9s var(--ease); }
+.js .r .lede { transition-delay: calc(var(--d, 0ms) + 320ms); }
+.js .r.in .lede, .js .r.in .eyebrow { opacity: 1; transform: none; }
+
+/* Sarlavha so'zma-so'z ko'tariladi */
+.ws .w { display: inline-block; overflow: hidden; vertical-align: top; padding-bottom: .14em; margin-bottom: -.14em; }
+.ws .w > span { display: inline-block; transform: translateY(108%) rotate(3deg); transform-origin: 0 100%;
+  transition: transform 1s var(--ease); transition-delay: calc(var(--d, 0ms) + 80ms + var(--wi) * 42ms); }
+.in .ws .w > span, .ws.in .w > span { transform: none; }
+
+/* Karta ustida kursor yorug'i */
+.spot { position: relative; }
+.spot::after { content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; z-index: 0;
+  background: radial-gradient(380px circle at var(--mx, 50%) var(--my, 50%), color-mix(in srgb, var(--primary) 11%, transparent), transparent 62%);
+  opacity: 0; transition: opacity .5s var(--gentle); }
+.spot:hover::after { opacity: 1; }
+.spot > * { position: relative; z-index: 1; }
+.ai-tile.spot::after, .post.spot::after { background: radial-gradient(360px circle at var(--mx, 50%) var(--my, 50%), rgba(255,255,255,.08), transparent 62%); }
+.plan.hi.spot::after { background: radial-gradient(360px circle at var(--mx, 50%) var(--my, 50%), rgba(255,255,255,.18), transparent 62%); }
 
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
@@ -742,6 +939,13 @@ body {
   .pen { stroke-dashoffset: 0 !important; }
   .mark-dot { transform: scale(1) !important; opacity: 1 !important; }
   .play .word path { opacity: 1; transform: none; }
+  .js .r, .js .r .lede, .js .r .eyebrow { filter: none !important; opacity: 1 !important; transform: none !important; }
+  .ws .w > span, .doc, .stars svg, .qr rect, .gul-day .cup svg { transform: none !important; opacity: 1; }
+  .thread .bub, .typing { opacity: 1 !important; transform: none !important; }
+  .typing { display: none; }
+  .vf path { stroke-dashoffset: 0 !important; }
+  .claim .strike { background-size: 100% 1.5px !important; }
+  .lang-say span { transition: none; }
 }
 </style>
 </head>
@@ -796,14 +1000,20 @@ body {
     <nav class="nav-links" aria-label="Bo'limlar">
       <a href="#ilova">Ilova</a>
       <a href="#bosqichlar">Bosqichlar</a>
-      <a href="#ai">AI</a>
+      <a href="#ai">AI va Chat</a>
+      <a href="#shifokorlar">Shifokorlar</a>
       <a href="#premium">Premium</a>
       <a href="#holat">Holat</a>
+      <span class="nav-ind" id="navInd" aria-hidden="true"></span>
     </nav>
     <button class="theme-btn" id="themeBtn" type="button" aria-label="Mavzuni almashtirish">
       <svg class="sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
       <svg class="moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
     </button>
+    <a class="btn btn-ghost btn-sm apk" id="apkLink" href="download.html" hidden>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0-5-5m5 5 5-5M5 21h14"/></svg>
+      APK
+    </a>
     <a class="btn btn-fill btn-sm" href="#yakun">Sinovga yozilish</a>
     <span class="nav-progress" id="navProgress" aria-hidden="true"></span>
   </div>
@@ -844,8 +1054,8 @@ body {
       <h1 class="display lift" style="--d:1500ms">Har bir ayol.<br><span class="grad-text">Har bir lahza.</span></h1>
       <p class="lede lift" style="--d:1640ms">
         Sikl, homiladorlik, tug'ruqdan keyingi davr va menopauza &mdash; uyqu, ovqatlanish
-        va kayfiyat bilan bir joyda. Har bir hayot bosqichi o'z ekraniga, o'z asosiy
-        ko'rsatkichiga va o'z tiliga ega.
+        va kayfiyat bilan bir joyda. Har bir bosqich o'z ekraniga ega, savol tug'ilsa &mdash;
+        tasdiqlangan shifokor bir teginishda.
       </p>
       <div class="hero-cta lift" style="--d:1780ms">
         <a class="btn btn-fill" href="#yakun">
@@ -855,23 +1065,27 @@ body {
         <a class="btn btn-ghost" href="#ilova">Ilovani ko'rish</a>
       </div>
       <div class="hero-foot lift" style="--d:1900ms">
-        <span class="small"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 13l4 4L19 7"/></svg>Android va iOS &mdash; bitta umumiy UI</span>
+        <span class="small"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 13l4 4L19 7"/></svg>Android va iOS</span>
         <span class="dotsep" aria-hidden="true"></span>
-        <span class="small"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 13l4 4L19 7"/></svg>O'zbek, rus va ingliz tillari</span>
+        <span class="small"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 13l4 4L19 7"/></svg>O'zbek, rus va ingliz &mdash; AI ham</span>
         <span class="dotsep" aria-hidden="true"></span>
-        <span class="small"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 13l4 4L19 7"/></svg>Payme va Click</span>
+        <span class="small"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 13l4 4L19 7"/></svg>Tasdiqlangan shifokorlar</span>
       </div>
     </div>
 
     <div class="phone-stage lift" style="--d:900ms" id="phoneStage">
       <div class="phone-tilt" id="phoneTilt">
+        <div class="phone-float">
         <div class="phone">
           <div class="screen">
             <div class="sbar" aria-hidden="true"><span class="tnum">9:41</span><span><b></b><b></b><b style="width:22px;border-radius:3px"></b></span></div>
             <div class="scr-body">
-              <div class="scr-greet">
-                <h4>Xayrli tong, Malika</h4>
-                <p>Bugun o'zingizga g'amxo'rlik qilish uchun ajoyib kun 🌸</p>
+              <div class="scr-top">
+                <div class="scr-greet">
+                  <h4>Xayrli tong, Malika</h4>
+                  <p><span class="streak">🔥 12 kunlik seriya</span></p>
+                </div>
+                <span class="gulpill" id="gulPill" aria-label="Gul balansi"><svg viewBox="-11 -11 22 22" aria-hidden="true"><use href="#bloomArt"/></svg><span class="tnum" id="gulNum">340</span><span class="plus">+10</span></span>
               </div>
 
               <div class="ai-card">
@@ -918,18 +1132,19 @@ body {
                 <div><i><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h9l4 4v14H6z"/><path d="M9 12h6M9 16h6"/></svg></i>Jurnal</div>
                 <div><i><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.5"/><path d="M4 20c1-4 4-6 8-6s7 2 8 6"/></svg></i>Meditatsiya</div>
                 <div><i><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h11a3 3 0 1 0-3-3M3 12h15a3 3 0 1 1-3 3M3 16h8"/></svg></i>Nafas</div>
-                <div><i><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4z"/><path d="M10 21h4"/></svg></i>Eslatmalar</div>
+                <div><i><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3v5a3 3 0 0 0 6 0V3"/><path d="M12 11v4a4 4 0 0 0 8 0v-1"/><circle cx="20" cy="12" r="2"/></svg></i>Shifokor</div>
               </div>
             </div>
 
             <nav class="tabbar" aria-label="Ilova tablari">
               <button type="button" aria-current="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5.5 9.5V20h13V9.5"/></svg><span>Bugun</span></button>
               <button type="button"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.5A4 4 0 0 1 19 10c0 5.5-7 10-7 10z"/></svg><span>Ong</span></button>
+              <button type="button"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h11a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H9l-4 3v-3H4z"/><path d="M19 9h1v8h-1v3l-3-3h-5"/></svg><span>Chat</span></button>
               <button type="button"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5 20c0-6 6-4 6-9S6 6 6 4"/><circle cx="17.5" cy="7" r="2.5"/><circle cx="6" cy="19.5" r="1.6"/></svg><span>Sikl</span></button>
-              <button type="button"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6c-4 0-7 3-7 7.5S8 21 12 21s7-3 7-7.5S16 6 12 6z"/><path d="M12 6c0-2 1-3 3-3"/></svg><span>Ovqat</span></button>
-              <button type="button"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8.5" r="3.6"/><path d="M4.5 20c1.4-3.6 4.2-5.4 7.5-5.4S18.1 16.4 19.5 20"/></svg><span>Profil</span></button>
+              <button type="button"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 16l.7 1.8 1.8.7-1.8.7L19 21l-.7-1.8-1.8-.7 1.8-.7z"/></svg><span>Premium</span></button>
             </nav>
           </div>
+        </div>
         </div>
       </div>
     </div>
@@ -941,11 +1156,11 @@ body {
   <div class="wrap stats-in r">
     <div class="stat"><b><span data-count="6">0</span></b><span>hayot bosqichi</span></div>
     <div class="stat"><b><span data-count="5">0</span></b><span>asosiy tab</span></div>
-    <div class="stat"><b><span data-count="8">0</span></b><span>modul</span></div>
-    <div class="stat"><b><span data-count="8">0</span></b><span>ma'lumot manbai</span></div>
-    <div class="stat"><b><span data-count="3">0</span></b><span>interfeys tili</span></div>
-    <div class="stat"><b><span data-count="2">0</span></b><span>to'lov tizimi</span></div>
-    <div class="stat"><b><span data-count="1">0</span><small>UI</small></b><span>ikki platformaga</span></div>
+    <div class="stat"><b><span data-count="3">0</span></b><span>til &mdash; interfeys va AI</span></div>
+    <div class="stat"><b><span data-count="5">0</span></b><span>ulanadigan manba</span></div>
+    <div class="stat"><b><span data-count="24">0</span><small>soat</small></b><span>shifokor bilan oyna</span></div>
+    <div class="stat"><b><span data-count="4">0</span></b><span>to'lov yo'li</span></div>
+    <div class="stat"><b><span data-count="2">0</span></b><span>ilova: Sadora va Doctor</span></div>
   </div>
 </section>
 
@@ -1020,7 +1235,7 @@ body {
 
     <div class="bento">
       <!-- Sikl -->
-      <article class="tile t-6 r" style="--d:0ms">
+      <article class="tile spot t-6 r" style="--d:0ms">
         <div class="tile-hd">
           <span class="tile-ico" style="background:var(--ph-period)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c2 3 5 5 5 9a5 5 0 0 1-10 0c0-4 3-6 5-9z"/><path d="M12 21v-4"/></svg></span>
           <h3>Sikl</h3>
@@ -1044,7 +1259,7 @@ body {
       </article>
 
       <!-- Kayfiyat -->
-      <article class="tile t-6 r" style="--d:60ms">
+      <article class="tile spot t-6 r" style="--d:60ms">
         <div class="tile-hd">
           <span class="tile-ico" style="background:var(--warm)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8.5 14.5c1 1.3 2.2 2 3.5 2s2.5-.7 3.5-2"/><path d="M9 9.5h.01M15 9.5h.01"/></svg></span>
           <h3>Kayfiyat</h3>
@@ -1065,12 +1280,12 @@ body {
       </article>
 
       <!-- Ovqatlanish -->
-      <article class="tile t-4 r" style="--d:0ms">
+      <article class="tile spot t-4 r" style="--d:0ms">
         <div class="tile-hd">
           <span class="tile-ico" style="background:var(--success)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6c-4 0-7 3-7 7.5S8 21 12 21s7-3 7-7.5S16 6 12 6z"/><path d="M12 6c0-2 1-3 3-3"/></svg></span>
           <h3>Ovqatlanish</h3>
         </div>
-        <p>Kamera bilan skaner, o'zbekcha taomlar katalogi, kaloriya va makrolar.</p>
+        <p>Kamera sahifaning o'zida ochiladi: taomni suratga oling, AI kaloriya va makrolarni o'qiydi. O'zbekcha taomlar katalogi ham bor.</p>
         <div class="viz">
           <div class="kcal">
             <div class="ring ring-96">
@@ -1088,12 +1303,12 @@ body {
       </article>
 
       <!-- Dorilar -->
-      <article class="tile t-4 r" style="--d:60ms">
+      <article class="tile spot t-4 r" style="--d:60ms">
         <div class="tile-hd">
           <span class="tile-ico" style="background:var(--accent)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="8" rx="4" transform="rotate(-45 12 12)"/><path d="M8.5 15.5l7-7"/></svg></span>
           <h3>Vitamin va dorilar</h3>
         </div>
-        <p>Qabul jadvali, tasdiq va zaxira. Ilova o'tkazib yuborilgan qabul haqida maslahat bermaydi &mdash; farmatsevtga yo'naltiradi.</p>
+        <p>Qabul jadvali, tasdiq va zaxira; dorini tahrirlash yoki o'chirish mumkin. O'tkazib yuborilgan qabul haqida maslahat bermaydi &mdash; farmatsevtga yo'naltiradi.</p>
         <div class="viz meds">
           <div class="med"><span class="em">🌿</span><div><b>Folik kislota 400 mkg</b><span>08:00 &middot; Har kuni &middot; Ovqatdan keyin</span></div><span class="badge ok">Qabul qilindi</span></div>
           <div class="med"><span class="em">🩸</span><div><b>Temir 30 mg</b><span>20:00 &middot; Har kuni &middot; Zaxira 12 kun</span></div><span class="badge wait">Kutilmoqda</span></div>
@@ -1101,7 +1316,7 @@ body {
       </article>
 
       <!-- AI -->
-      <article class="tile t-4 ai-tile r" style="--d:120ms">
+      <article class="tile spot t-4 ai-tile r" style="--d:120ms">
         <div class="tile-hd">
           <div class="orb" aria-hidden="true"><div class="sphere"></div><div class="rim"></div><div class="in-mark"><svg viewBox="20 -10 160 250"><use href="#markWhite"/></svg></div></div>
           <h3>SADORA AI</h3>
@@ -1115,7 +1330,7 @@ body {
       </article>
 
       <!-- Tahlillar -->
-      <article class="tile t-12 r" style="--d:0ms">
+      <article class="tile spot t-12 r" style="--d:0ms">
         <div class="tile-hd">
           <span class="tile-ico" style="background:var(--ph-fert)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V5M4 19h16"/><path d="M7 15l4-5 3 3 5-7"/></svg></span>
           <h3>Tahlil va tavsiyalar</h3>
@@ -1148,6 +1363,34 @@ body {
             <p style="font-size:14px;line-height:1.6">Uyqu 7 soatdan uzun bo'lgan kunlarda kayfiyat balli o'rtacha <b style="color:var(--text)">0,8 punkt</b> yuqori bo'lgan. Bu sabab emas &mdash; <b style="color:var(--text)">ko'pincha birga kuzatilgan</b>.</p>
             <p class="note" style="margin-top:12px">Kamida sakkiz kunlik yozuv kerak, farq sezilarli bo'lishi shart &mdash; aks holda ilova hech narsa yozmaydi.</p>
           </div>
+        </div>
+      </article>
+
+      <!-- Seriya va Gul -->
+      <article class="tile spot t-8 r" style="--d:0ms">
+        <div class="tile-hd">
+          <span class="tile-ico" style="background:var(--secondary)"><svg width="20" height="20" viewBox="-11 -11 22 22" aria-hidden="true" style="color:#fff"><use href="#bloomArt"/></svg></span>
+          <h3>Seriya va Gul</h3>
+          <span class="small" style="margin-left:auto;white-space:nowrap">Bepul rejada ham</span>
+        </div>
+        <p>Har kuni qaytish o'z-o'zidan yoqimli bo'lsin: kirish, suv maqsadi, dori qabuli, kundalik yozuvi Gul olib keladi. Gul do'konda sarflanadi, do'stni taklif qilsangiz ikkalangizga sovg'a. Ilova belgisi ham seriyangizga qarab o'zgaradi.</p>
+        <div class="viz">
+          <div class="gul-row" aria-label="Haftalik seriya: olti kun bajarilgan, bugun kutilmoqda"><div class="gul-day" style="--i:0"><span class="cup"><svg viewBox="-11 -11 22 22" aria-hidden="true"><use href="#bloomArt"/></svg></span>Du</div><div class="gul-day" style="--i:1"><span class="cup"><svg viewBox="-11 -11 22 22" aria-hidden="true"><use href="#bloomArt"/></svg></span>Se</div><div class="gul-day" style="--i:2"><span class="cup"><svg viewBox="-11 -11 22 22" aria-hidden="true"><use href="#bloomArt"/></svg></span>Ch</div><div class="gul-day" style="--i:3"><span class="cup"><svg viewBox="-11 -11 22 22" aria-hidden="true"><use href="#bloomArt"/></svg></span>Pa</div><div class="gul-day" style="--i:4"><span class="cup"><svg viewBox="-11 -11 22 22" aria-hidden="true"><use href="#bloomArt"/></svg></span>Ju</div><div class="gul-day" style="--i:5"><span class="cup"><svg viewBox="-11 -11 22 22" aria-hidden="true"><use href="#bloomArt"/></svg></span>Sh</div><div class="gul-day today" style="--i:6"><span class="cup"><svg viewBox="-11 -11 22 22" aria-hidden="true"><use href="#bloomArt"/></svg></span>Ya</div></div>
+          <div class="gul-sum"><b><span data-count="340">0</span> Gul</b><span>12 kunlik seriya &middot; bugun yana bitta belgi</span></div>
+          <div class="earn"><span>Kunlik kirish<b>+10</b></span><span>Suv maqsadi<b>+10</b></span><span>Dori qabul qilindi<b>+3</b></span><span>Do'st taklifi<b>+200</b></span></div>
+        </div>
+      </article>
+
+      <!-- Uch til -->
+      <article class="tile spot t-4 r" style="--d:80ms">
+        <div class="tile-hd">
+          <span class="tile-ico" style="background:var(--primary)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.6 2.8 3.8 5.8 3.8 9s-1.2 6.2-3.8 9c-2.6-2.8-3.8-5.8-3.8-9S9.4 5.8 12 3z"/></svg></span>
+          <h3>Uch tilda</h3>
+        </div>
+        <p>Har bir ekran, xato xabari va AI javobi &mdash; ilova qaysi tilda bo'lsa, o'sha tilda.</p>
+        <div class="viz langs">
+          <div class="lang-say" id="langSay" aria-live="off"><span class="on">Xayrli tong</span><span>Доброе утро</span><span>Good morning</span></div>
+          <div class="lang-tabs" id="langTabs" aria-hidden="true"><i class="on">UZ</i><i>RU</i><i>EN</i></div>
         </div>
       </article>
     </div>
@@ -1203,18 +1446,18 @@ body {
   </div>
 </section>
 
-<!-- ==================== AI + MAXFIY CHAT ==================== -->
+<!-- ==================== AI + CHAT ==================== -->
 <section class="sec band" id="ai">
   <div class="wrap">
     <div class="band-grid">
       <div class="band-copy r">
         <p class="eyebrow"><svg class="eb" viewBox="-11 -11 22 22" aria-hidden="true"><use href="#bloomArt"/></svg>SADORA AI</p>
         <h2 class="h1">Javobni model yozadi. Chegarani qoidalar belgilaydi.</h2>
-        <p class="lede">AI Gateway serverda: javobni Gemini yozadi, kalit bo'lmasa yoki model o'chirilgan bo'lsa qoidalar javob beradi. Har bir so'rov narxi bilan jurnalga tushadi.</p>
+        <p class="lede">AI Gateway serverda: javobni Gemini yozadi &mdash; o'zbek, rus yoki ingliz tilida, ilova qaysi tilda bo'lsa. Model o'chirilgan bo'lsa qoidalar javob beradi. Har bir so'rov narxi bilan jurnalga tushadi.</p>
         <ul class="rules-mini">
           <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 13l4 4L19 7"/></svg><span>Sabab-natija da'vo qilinmaydi &mdash; faqat &laquo;ko'pincha birga kuzatilgan&raquo;.</span></li>
           <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 13l4 4L19 7"/></svg><span>Tashxis qo'ymaydi, dori tayinlamaydi. Yagona istisno &mdash; homiladorlikda bola harakati kamaysa, darhol shifokorga.</span></li>
-          <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 13l4 4L19 7"/></svg><span>Bepulda ko'rish mumkin, Premium'da kuniga 20 ta suhbat.</span></li>
+          <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 13l4 4L19 7"/></svg><span>Bepulda tanishib chiqish mumkin, Premium'da kuniga 20 ta suhbat.</span></li>
         </ul>
       </div>
 
@@ -1226,30 +1469,132 @@ body {
         <span class="bub me">Energiyamni qanday barqaror ushlasam bo'ladi?</span>
         <span class="bub ai">Bu oy energiya balli 4/5 bo'lgan kunlarning ko'pchiligida suv maqsadi bajarilgan va uyqu 7 soatdan oshgan. Bugun 1,2 litr ichdingiz &mdash; kechgacha yana 800 ml qoldi.</span>
         <span class="bub ai">Bu bog'liqlik, sabab emas. Sikl 14-kuni &mdash; energiya odatda cho'qqida, faol kunlar uchun foydalaning.</span>
+        <span class="typing" hidden aria-hidden="true"><i></i><i></i><i></i></span>
         <span class="chat-foot">Ma'lumotlaringiz asosida &middot; AI tomonidan yaratilgan &middot; Tibbiy ko'rsatma emas</span>
       </div>
     </div>
 
-    <div class="sec-head r" style="margin-top:clamp(64px,8vw,104px);margin-bottom:0">
-      <p class="eyebrow"><svg class="eb" viewBox="-11 -11 22 22" aria-hidden="true"><use href="#bloomArt"/></svg>Maxfiy chat</p>
-      <h2 class="h2" style="color:#fff">Ovoz chiqarib so'rashga uyaladigan savollar &mdash; taxallus ostida, hukmsiz.</h2>
+    <div class="sec-head split r" style="margin-top:clamp(64px,8vw,104px);margin-bottom:0;max-width:none">
+      <div>
+        <p class="eyebrow"><svg class="eb" viewBox="-11 -11 22 22" aria-hidden="true"><use href="#bloomArt"/></svg>Chat</p>
+        <h2 class="h2" style="color:#fff;margin-top:12px">Ovoz chiqarib so'rashga uyaladigan savollar &mdash; taxallus ostida, hukmsiz.</h2>
+      </div>
+      <p class="lede">Taxallus &mdash; sizning ochiq ismingiz: profil, qisqa bio, nishonlar va shaxsiy xabarlar. Haqiqiy ism hech qachon ko'rinmaydi. Shifokor esa o'z ismi va <span style="color:var(--b1)">&#10003;</span> belgisi bilan javob beradi.</p>
     </div>
     <div class="posts">
-      <article class="post r" style="--d:0ms">
-        <div class="who"><span class="av" style="background:linear-gradient(135deg,var(--b2),var(--b3))"><svg viewBox="-11 -11 22 22" style="color:#fff" aria-hidden="true"><use href="#bloomArt"/></svg></span><b>Anonim</b><span>&middot; Sikl &middot; 20 daqiqa oldin</span></div>
+      <article class="post spot r" style="--d:0ms">
+        <div class="who"><span class="av" style="background:linear-gradient(135deg,var(--b2),var(--b3))"><svg viewBox="-11 -11 22 22" style="color:#fff" aria-hidden="true"><use href="#bloomArt"/></svg></span><b>Sokin Bulut</b><span class="bdg">Birinchilardan</span></div>
         <p>Siklim har oy 3&ndash;4 kunga surilib ketyapti. Shifokorga borishim kerakmi, yoki bu normami? 24 yoshdaman.</p>
-        <div class="acts"><span>♡ 34</span><span>💬 2</span></div>
+        <div class="acts"><span>♡ 34</span><span>💬 3</span><span>Sikl &middot; 20 daqiqa</span></div>
       </article>
-      <article class="post r" style="--d:70ms">
-        <div class="who"><span class="av" style="background:linear-gradient(135deg,var(--warm),var(--b3))"><svg viewBox="-11 -11 22 22" style="color:#fff" aria-hidden="true"><use href="#bloomArt"/></svg></span><b>Anonim</b><span>&middot; Kayfiyat &middot; 1 soat oldin</span></div>
-        <p>Hayzdan oldingi hafta juda asabiy bo'lib qolaman va keyin o'zimni ayblayman. Shu bilan qanday kurashasizlar?</p>
-        <div class="acts"><span>♡ 78</span><span>💬 1</span></div>
+      <article class="post spot dr r" style="--d:70ms">
+        <div class="who"><span class="av" style="background:linear-gradient(135deg,var(--accent),var(--b1));font-family:var(--disp);font-weight:700;font-size:11px;color:#fff">NK</span><b>Nodira Karimova</b><svg class="vf" viewBox="0 0 16 16" fill="none" aria-label="Tasdiqlangan"><circle cx="8" cy="8" r="7.2" fill="currentColor" opacity=".16"/><path d="M4.8 8.3l2.1 2.1 4.3-4.6" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg><span>&middot; Ginekolog</span></div>
+        <p>@Sokin Bulut, 3&ndash;4 kunlik siljish ko'pincha me'yor ichida. Lekin sikl 21 kundan qisqa yoki 35 kundan uzun bo'lsa, ko'rikka keling.</p>
+        <div class="acts"><span>♡ 112</span><span class="topic">Shifokor javobi</span></div>
       </article>
-      <article class="post r" style="--d:140ms">
-        <div class="who"><span class="av" style="background:linear-gradient(135deg,var(--accent),var(--b1))"><svg viewBox="-11 -11 22 22" style="color:#fff" aria-hidden="true"><use href="#bloomArt"/></svg></span><b>Anonim</b><span>&middot; Sikl &middot; 2 kun oldin</span></div>
-        <p>Birinchi marta shu ilovada siklimni kuzata boshladim va nihoyat tanamni tushunayotgandekman. Kimga qiyin bo'lsa &mdash; boshlang, arziydi.</p>
-        <div class="acts"><span>♡ 142</span><span>💬 0</span></div>
+      <article class="post spot r" style="--d:140ms">
+        <div class="who"><span class="av" style="background:linear-gradient(135deg,var(--warm),var(--b3))"><svg viewBox="-11 -11 22 22" style="color:#fff" aria-hidden="true"><use href="#bloomArt"/></svg></span><b>Iliq Shabnam</b><span class="bdg">Yordamchi</span></div>
+        <p>Birinchi marta siklimni kuzata boshladim va nihoyat tanamni tushunayotgandekman. Kimga qiyin bo'lsa &mdash; boshlang, arziydi.</p>
+        <div class="acts"><span>♡ 142</span><span>💬 8</span><span>Kayfiyat &middot; 2 kun</span></div>
       </article>
+    </div>
+    <div class="chat-feats r" style="--d:120ms"><span>Lenta &middot; Saqlangan &middot; Meniki</span><span>Shaxsiy xabarlar &mdash; eshikni o'zingiz yopasiz</span><span>Bloklash va shikoyat</span><span>Moderatsiya admin panelda</span></div>
+  </div>
+</section>
+
+
+<!-- ==================== SHIFOKORLAR ==================== -->
+<section class="sec" id="shifokorlar">
+  <div class="wrap">
+    <div class="sec-head split r">
+      <div>
+        <p class="eyebrow"><svg class="eb" viewBox="-11 -11 22 22" aria-hidden="true"><use href="#bloomArt"/></svg>Shifokorlar</p>
+        <h2 class="h1" style="margin-top:12px">Savol jiddiy bo&rsquo;lsa &mdash; javobni shifokor beradi.</h2>
+      </div>
+      <p class="lede">Diplomi tekshirilgan shifokorlar katalogi, ishonsa bo&rsquo;ladigan reyting va 24 soatlik yozishma oynasi. Shifokor javob bermasa &mdash; pul qaytariladi.</p>
+    </div>
+
+    <div class="doc-grid">
+      <div class="panel r" style="--d:0ms">
+        <div class="panel-hd"><b>Shifokorlar</b><span class="pred">Namuna</span></div>
+        <div class="filters" aria-hidden="true"><span class="on">Tavsiya</span><span>Reyting</span><span>Narx</span><span>Hozir onlayn</span><span>Bepul</span></div>
+        <div class="docs">
+          <div class="doc" style="--i:0">
+            <span class="av-doc" style="background:linear-gradient(135deg,#63D8FF,#7B61FF)">NK<i class="on-dot" aria-label="Onlayn"></i></span>
+            <div>
+              <div class="nm">Nodira Karimova<svg class="vf" style="--i:0" viewBox="0 0 16 16" fill="none" aria-label="Tasdiqlangan"><circle cx="8" cy="8" r="7.2" fill="currentColor" opacity=".16"/><path d="M4.8 8.3l2.1 2.1 4.3-4.6" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+              <div class="sp">Ginekolog &middot; 12 yil</div>
+              <div class="meta"><span class="stars" aria-hidden="true"><svg viewBox="0 0 12 12" style="--s:0" aria-hidden="true"><path fill="currentColor" d="M6 .8l1.6 3.3 3.6.5-2.6 2.5.6 3.6L6 9l-3.2 1.7.6-3.6L.8 4.6l3.6-.5z"/></svg><svg viewBox="0 0 12 12" style="--s:1" aria-hidden="true"><path fill="currentColor" d="M6 .8l1.6 3.3 3.6.5-2.6 2.5.6 3.6L6 9l-3.2 1.7.6-3.6L.8 4.6l3.6-.5z"/></svg><svg viewBox="0 0 12 12" style="--s:2" aria-hidden="true"><path fill="currentColor" d="M6 .8l1.6 3.3 3.6.5-2.6 2.5.6 3.6L6 9l-3.2 1.7.6-3.6L.8 4.6l3.6-.5z"/></svg><svg viewBox="0 0 12 12" style="--s:3" aria-hidden="true"><path fill="currentColor" d="M6 .8l1.6 3.3 3.6.5-2.6 2.5.6 3.6L6 9l-3.2 1.7.6-3.6L.8 4.6l3.6-.5z"/></svg><svg viewBox="0 0 12 12" style="--s:4" aria-hidden="true"><path fill="currentColor" d="M6 .8l1.6 3.3 3.6.5-2.6 2.5.6 3.6L6 9l-3.2 1.7.6-3.6L.8 4.6l3.6-.5z"/></svg></span><span><b>4,9</b> (128)</span><span class="fast">Tez javob beradi</span></div>
+            </div>
+            <div class="price">49 000<span>so&rsquo;m &middot; 24 soat</span></div>
+          </div>
+          <div class="doc" style="--i:1">
+            <span class="av-doc" style="background:linear-gradient(135deg,#FF8AA3,#FFB020)">DR<i class="on-dot" aria-label="Onlayn"></i></span>
+            <div>
+              <div class="nm">Dilnoza Rahimova<svg class="vf" style="--i:1" viewBox="0 0 16 16" fill="none" aria-label="Tasdiqlangan"><circle cx="8" cy="8" r="7.2" fill="currentColor" opacity=".16"/><path d="M4.8 8.3l2.1 2.1 4.3-4.6" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+              <div class="sp">Endokrinolog &middot; 9 yil</div>
+              <div class="meta"><span class="stars" aria-hidden="true"><svg viewBox="0 0 12 12" style="--s:0" aria-hidden="true"><path fill="currentColor" d="M6 .8l1.6 3.3 3.6.5-2.6 2.5.6 3.6L6 9l-3.2 1.7.6-3.6L.8 4.6l3.6-.5z"/></svg><svg viewBox="0 0 12 12" style="--s:1" aria-hidden="true"><path fill="currentColor" d="M6 .8l1.6 3.3 3.6.5-2.6 2.5.6 3.6L6 9l-3.2 1.7.6-3.6L.8 4.6l3.6-.5z"/></svg><svg viewBox="0 0 12 12" style="--s:2" aria-hidden="true"><path fill="currentColor" d="M6 .8l1.6 3.3 3.6.5-2.6 2.5.6 3.6L6 9l-3.2 1.7.6-3.6L.8 4.6l3.6-.5z"/></svg><svg viewBox="0 0 12 12" style="--s:3" aria-hidden="true"><path fill="currentColor" d="M6 .8l1.6 3.3 3.6.5-2.6 2.5.6 3.6L6 9l-3.2 1.7.6-3.6L.8 4.6l3.6-.5z"/></svg><svg viewBox="0 0 12 12" style="--s:4" aria-hidden="true"><path fill="currentColor" d="M6 .8l1.6 3.3 3.6.5-2.6 2.5.6 3.6L6 9l-3.2 1.7.6-3.6L.8 4.6l3.6-.5z"/></svg></span><span><b>4,8</b> (64)</span></div>
+            </div>
+            <div class="price">35 000<span>so&rsquo;m &middot; 24 soat</span></div>
+          </div>
+          <div class="doc" style="--i:2">
+            <span class="av-doc" style="background:linear-gradient(135deg,#2FBF8F,#63D8FF)">KY</span>
+            <div>
+              <div class="nm">Kamola Yusupova<svg class="vf" style="--i:2" viewBox="0 0 16 16" fill="none" aria-label="Tasdiqlangan"><circle cx="8" cy="8" r="7.2" fill="currentColor" opacity=".16"/><path d="M4.8 8.3l2.1 2.1 4.3-4.6" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+              <div class="sp">Psixoterapevt &middot; 6 yil</div>
+              <div class="meta"><span class="newdoc">Yangi shifokor</span></div>
+            </div>
+            <div class="price">Bepul<span>hozircha</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel consult r" style="--d:120ms" aria-label="Konsultatsiya namunasi">
+        <div class="c-hd">
+          <span class="av-doc" style="background:linear-gradient(135deg,#63D8FF,#7B61FF)">NK<i class="on-dot"></i></span>
+          <div class="who"><b>Nodira Karimova <svg class="vf" viewBox="0 0 16 16" fill="none" aria-label="Tasdiqlangan"><circle cx="8" cy="8" r="7.2" fill="currentColor" opacity=".16"/><path d="M4.8 8.3l2.1 2.1 4.3-4.6" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg></b><span>Ginekolog &middot; odatda 20 daqiqada javob beradi</span></div>
+          <div class="timer" aria-label="Oyna yopilishiga 23 soat 41 daqiqa">
+            <svg viewBox="0 0 52 52"><circle class="trk" cx="26" cy="26" r="22" stroke-width="5"/><circle class="arc" cx="26" cy="26" r="22" stroke-width="5" stroke-dasharray="138.2" stroke-dashoffset="138.2" data-pct=".987"/></svg>
+            <div class="t"><div>23:41<small>qoldi</small></div></div>
+          </div>
+        </div>
+        <div class="thread" id="thread">
+          <span class="bub me">Siklim 3 oydir 36&ndash;38 kun. Xulosamni biriktirdim.
+            <span class="rec"><i>📋</i><span><b>Sog&rsquo;liq xulosasi</b><span>Sikl, uyqu, dorilar &middot; faqat oyna ochiq paytda</span></span></span>
+            <span class="ticks" aria-label="O'qildi"><svg viewBox="0 0 16 10" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M1 5.5l3 3L10 1.5"/><path class="second" d="M6 8.5L13 1.5"/></svg>10:24</span>
+          </span>
+          <span class="bub ai">Rahmat, ko&rsquo;rdim. Oxirgi uch siklda ikkinchi yarmi uzaygan. Qalqonsimon bez tahlilini topshiring va natijani shu yerga rasm qilib yuboring.</span>
+          <span class="typing" hidden aria-hidden="true"><i></i><i></i><i></i></span>
+          <span class="bub ai">Natijaga qarab, kerak bo&rsquo;lsa ko&rsquo;rikka yozaman. Oyna ertaga 10:05 gacha ochiq.</span>
+        </div>
+        <div class="c-foot"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 5-3.5 8.5-7 10-3.5-1.5-7-5-7-10V6z"/><path d="M9 12l2 2 4-4"/></svg><span>Konsultatsiyada shifokor taxallusni emas, ismingiz va yoshingizni ko&rsquo;radi. Javob 24 soat ichida kelmasa, to&rsquo;lov qaytariladi.</span></div>
+      </div>
+    </div>
+
+    <div class="doc-points">
+      <div class="dpt spot r" style="--d:0ms">
+        <span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 5-3.5 8.5-7 10-3.5-1.5-7-5-7-10V6z"/><path d="M9 12l2 2 4-4"/></svg></span>
+        <b>Tasdiqlangan</b>
+        <p>Shifokor diplom va litsenziyani yuklaydi, admin tekshiradi. &#10003; belgisi faqat shundan keyin.</p>
+      </div>
+      <div class="dpt spot r" style="--d:70ms">
+        <span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.6 5.4 5.9.8-4.3 4.1 1 5.8L12 16.4 6.8 19.1l1-5.8L3.5 9.2l5.9-.8z"/></svg></span>
+        <b>Halol reyting</b>
+        <p>Uchtadan kam baho bo&rsquo;lsa &mdash; raqam emas, &laquo;Yangi shifokor&raquo;. Javobsiz qolgan oynalar reytingni tushiradi.</p>
+      </div>
+      <div class="dpt spot r" style="--d:140ms">
+        <span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="13" rx="3"/><path d="M3 10h18M7 15h4"/></svg></span>
+        <b>Payme va Click</b>
+        <p>Narxni shifokor belgilaydi. To&rsquo;lov tasdiqlangach oyna ochiladi: rasm, o&rsquo;qildi belgisi, &laquo;yozmoqda&hellip;&raquo;.</p>
+      </div>
+      <div class="dpt spot r" style="--d:210ms">
+        <div class="qr-wrap"><svg class="qr" viewBox="0 0 21 21" shape-rendering="crispEdges" aria-hidden="true"><rect x="0" y="0" width="1" height="1" style="--q:110ms"/><rect x="0" y="1" width="1" height="1" style="--q:88ms"/><rect x="1" y="0" width="1" height="1" style="--q:91ms"/><rect x="0" y="2" width="1" height="1" style="--q:118ms"/><rect x="2" y="0" width="1" height="1" style="--q:58ms"/><rect x="0" y="3" width="1" height="1" style="--q:136ms"/><rect x="3" y="0" width="1" height="1" style="--q:105ms"/><rect x="0" y="4" width="1" height="1" style="--q:112ms"/><rect x="2" y="2" width="1" height="1" style="--q:207ms"/><rect x="4" y="0" width="1" height="1" style="--q:132ms"/><rect x="0" y="5" width="1" height="1" style="--q:196ms"/><rect x="2" y="3" width="1" height="1" style="--q:227ms"/><rect x="3" y="2" width="1" height="1" style="--q:206ms"/><rect x="5" y="0" width="1" height="1" style="--q:179ms"/><rect x="0" y="6" width="1" height="1" style="--q:230ms"/><rect x="2" y="4" width="1" height="1" style="--q:234ms"/><rect x="3" y="3" width="1" height="1" style="--q:262ms"/><rect x="4" y="2" width="1" height="1" style="--q:180ms"/><rect x="6" y="0" width="1" height="1" style="--q:235ms"/><rect x="1" y="6" width="1" height="1" style="--q:225ms"/><rect x="3" y="4" width="1" height="1" style="--q:229ms"/><rect x="4" y="3" width="1" height="1" style="--q:288ms"/><rect x="6" y="1" width="1" height="1" style="--q:256ms"/><rect x="0" y="8" width="1" height="1" style="--q:291ms"/><rect x="2" y="6" width="1" height="1" style="--q:315ms"/><rect x="4" y="4" width="1" height="1" style="--q:333ms"/><rect x="6" y="2" width="1" height="1" style="--q:277ms"/><rect x="8" y="0" width="1" height="1" style="--q:297ms"/><rect x="0" y="9" width="1" height="1" style="--q:312ms"/><rect x="1" y="8" width="1" height="1" style="--q:313ms"/><rect x="3" y="6" width="1" height="1" style="--q:335ms"/><rect x="6" y="3" width="1" height="1" style="--q:306ms"/><rect x="8" y="1" width="1" height="1" style="--q:315ms"/><rect x="9" y="0" width="1" height="1" style="--q:309ms"/><rect x="1" y="9" width="1" height="1" style="--q:392ms"/><rect x="2" y="8" width="1" height="1" style="--q:363ms"/><rect x="4" y="6" width="1" height="1" style="--q:385ms"/><rect x="6" y="4" width="1" height="1" style="--q:393ms"/><rect x="10" y="0" width="1" height="1" style="--q:311ms"/><rect x="0" y="11" width="1" height="1" style="--q:375ms"/><rect x="2" y="9" width="1" height="1" style="--q:421ms"/><rect x="3" y="8" width="1" height="1" style="--q:408ms"/><rect x="5" y="6" width="1" height="1" style="--q:324ms"/><rect x="6" y="5" width="1" height="1" style="--q:322ms"/><rect x="1" y="11" width="1" height="1" style="--q:389ms"/><rect x="2" y="10" width="1" height="1" style="--q:344ms"/><rect x="6" y="6" width="1" height="1" style="--q:364ms"/><rect x="8" y="4" width="1" height="1" style="--q:344ms"/><rect x="10" y="2" width="1" height="1" style="--q:416ms"/><rect x="12" y="0" width="1" height="1" style="--q:430ms"/><rect x="1" y="12" width="1" height="1" style="--q:471ms"/><rect x="4" y="9" width="1" height="1" style="--q:382ms"/><rect x="5" y="8" width="1" height="1" style="--q:449ms"/><rect x="9" y="4" width="1" height="1" style="--q:443ms"/><rect x="10" y="3" width="1" height="1" style="--q:381ms"/><rect x="11" y="2" width="1" height="1" style="--q:469ms"/><rect x="12" y="1" width="1" height="1" style="--q:480ms"/><rect x="0" y="14" width="1" height="1" style="--q:418ms"/><rect x="2" y="12" width="1" height="1" style="--q:506ms"/><rect x="5" y="9" width="1" height="1" style="--q:439ms"/><rect x="10" y="4" width="1" height="1" style="--q:450ms"/><rect x="11" y="3" width="1" height="1" style="--q:510ms"/><rect x="12" y="2" width="1" height="1" style="--q:491ms"/><rect x="14" y="0" width="1" height="1" style="--q:411ms"/><rect x="0" y="15" width="1" height="1" style="--q:471ms"/><rect x="1" y="14" width="1" height="1" style="--q:481ms"/><rect x="3" y="12" width="1" height="1" style="--q:460ms"/><rect x="4" y="11" width="1" height="1" style="--q:443ms"/><rect x="6" y="9" width="1" height="1" style="--q:458ms"/><rect x="7" y="8" width="1" height="1" style="--q:506ms"/><rect x="11" y="4" width="1" height="1" style="--q:422ms"/><rect x="12" y="3" width="1" height="1" style="--q:486ms"/><rect x="14" y="1" width="1" height="1" style="--q:472ms"/><rect x="15" y="0" width="1" height="1" style="--q:422ms"/><rect x="0" y="16" width="1" height="1" style="--q:487ms"/><rect x="2" y="14" width="1" height="1" style="--q:522ms"/><rect x="4" y="12" width="1" height="1" style="--q:509ms"/><rect x="5" y="11" width="1" height="1" style="--q:455ms"/><rect x="10" y="6" width="1" height="1" style="--q:566ms"/><rect x="11" y="5" width="1" height="1" style="--q:542ms"/><rect x="12" y="4" width="1" height="1" style="--q:564ms"/><rect x="14" y="2" width="1" height="1" style="--q:460ms"/><rect x="16" y="0" width="1" height="1" style="--q:479ms"/><rect x="0" y="17" width="1" height="1" style="--q:480ms"/><rect x="3" y="14" width="1" height="1" style="--q:569ms"/><rect x="6" y="11" width="1" height="1" style="--q:508ms"/><rect x="7" y="10" width="1" height="1" style="--q:491ms"/><rect x="8" y="9" width="1" height="1" style="--q:526ms"/><rect x="10" y="7" width="1" height="1" style="--q:585ms"/><rect x="12" y="5" width="1" height="1" style="--q:574ms"/><rect x="14" y="3" width="1" height="1" style="--q:507ms"/><rect x="17" y="0" width="1" height="1" style="--q:493ms"/><rect x="0" y="18" width="1" height="1" style="--q:614ms"/><rect x="2" y="16" width="1" height="1" style="--q:572ms"/><rect x="4" y="14" width="1" height="1" style="--q:588ms"/><rect x="6" y="12" width="1" height="1" style="--q:514ms"/><rect x="7" y="11" width="1" height="1" style="--q:510ms"/><rect x="9" y="9" width="1" height="1" style="--q:586ms"/><rect x="12" y="6" width="1" height="1" style="--q:555ms"/><rect x="14" y="4" width="1" height="1" style="--q:512ms"/><rect x="16" y="2" width="1" height="1" style="--q:616ms"/><rect x="18" y="0" width="1" height="1" style="--q:580ms"/><rect x="0" y="19" width="1" height="1" style="--q:628ms"/><rect x="2" y="17" width="1" height="1" style="--q:542ms"/><rect x="3" y="16" width="1" height="1" style="--q:634ms"/><rect x="5" y="14" width="1" height="1" style="--q:539ms"/><rect x="8" y="11" width="1" height="1" style="--q:635ms"/><rect x="12" y="7" width="1" height="1" style="--q:586ms"/><rect x="14" y="5" width="1" height="1" style="--q:572ms"/><rect x="16" y="3" width="1" height="1" style="--q:598ms"/><rect x="17" y="2" width="1" height="1" style="--q:643ms"/><rect x="19" y="0" width="1" height="1" style="--q:564ms"/><rect x="0" y="20" width="1" height="1" style="--q:575ms"/><rect x="2" y="18" width="1" height="1" style="--q:623ms"/><rect x="3" y="17" width="1" height="1" style="--q:588ms"/><rect x="4" y="16" width="1" height="1" style="--q:573ms"/><rect x="6" y="14" width="1" height="1" style="--q:579ms"/><rect x="8" y="12" width="1" height="1" style="--q:566ms"/><rect x="12" y="8" width="1" height="1" style="--q:584ms"/><rect x="14" y="6" width="1" height="1" style="--q:597ms"/><rect x="16" y="4" width="1" height="1" style="--q:596ms"/><rect x="17" y="3" width="1" height="1" style="--q:651ms"/><rect x="18" y="2" width="1" height="1" style="--q:594ms"/><rect x="20" y="0" width="1" height="1" style="--q:620ms"/><rect x="1" y="20" width="1" height="1" style="--q:609ms"/><rect x="3" y="18" width="1" height="1" style="--q:629ms"/><rect x="4" y="17" width="1" height="1" style="--q:590ms"/><rect x="6" y="15" width="1" height="1" style="--q:618ms"/><rect x="12" y="9" width="1" height="1" style="--q:589ms"/><rect x="15" y="6" width="1" height="1" style="--q:675ms"/><rect x="17" y="4" width="1" height="1" style="--q:654ms"/><rect x="18" y="3" width="1" height="1" style="--q:610ms"/><rect x="20" y="1" width="1" height="1" style="--q:644ms"/><rect x="2" y="20" width="1" height="1" style="--q:728ms"/><rect x="4" y="18" width="1" height="1" style="--q:628ms"/><rect x="6" y="16" width="1" height="1" style="--q:714ms"/><rect x="8" y="14" width="1" height="1" style="--q:667ms"/><rect x="10" y="12" width="1" height="1" style="--q:675ms"/><rect x="12" y="10" width="1" height="1" style="--q:716ms"/><rect x="13" y="9" width="1" height="1" style="--q:663ms"/><rect x="16" y="6" width="1" height="1" style="--q:676ms"/><rect x="18" y="4" width="1" height="1" style="--q:698ms"/><rect x="20" y="2" width="1" height="1" style="--q:733ms"/><rect x="3" y="20" width="1" height="1" style="--q:685ms"/><rect x="6" y="17" width="1" height="1" style="--q:743ms"/><rect x="9" y="14" width="1" height="1" style="--q:728ms"/><rect x="10" y="13" width="1" height="1" style="--q:720ms"/><rect x="11" y="12" width="1" height="1" style="--q:692ms"/><rect x="13" y="10" width="1" height="1" style="--q:685ms"/><rect x="17" y="6" width="1" height="1" style="--q:650ms"/><rect x="20" y="3" width="1" height="1" style="--q:659ms"/><rect x="4" y="20" width="1" height="1" style="--q:680ms"/><rect x="6" y="18" width="1" height="1" style="--q:760ms"/><rect x="8" y="16" width="1" height="1" style="--q:702ms"/><rect x="9" y="15" width="1" height="1" style="--q:691ms"/><rect x="10" y="14" width="1" height="1" style="--q:682ms"/><rect x="13" y="11" width="1" height="1" style="--q:772ms"/><rect x="18" y="6" width="1" height="1" style="--q:776ms"/><rect x="20" y="4" width="1" height="1" style="--q:752ms"/><rect x="5" y="20" width="1" height="1" style="--q:733ms"/><rect x="6" y="19" width="1" height="1" style="--q:729ms"/><rect x="12" y="13" width="1" height="1" style="--q:735ms"/><rect x="13" y="12" width="1" height="1" style="--q:755ms"/><rect x="16" y="9" width="1" height="1" style="--q:718ms"/><rect x="19" y="6" width="1" height="1" style="--q:753ms"/><rect x="20" y="5" width="1" height="1" style="--q:731ms"/><rect x="6" y="20" width="1" height="1" style="--q:843ms"/><rect x="9" y="17" width="1" height="1" style="--q:844ms"/><rect x="12" y="14" width="1" height="1" style="--q:793ms"/><rect x="14" y="12" width="1" height="1" style="--q:757ms"/><rect x="20" y="6" width="1" height="1" style="--q:843ms"/><rect x="9" y="18" width="1" height="1" style="--q:793ms"/><rect x="10" y="17" width="1" height="1" style="--q:798ms"/><rect x="12" y="15" width="1" height="1" style="--q:756ms"/><rect x="13" y="14" width="1" height="1" style="--q:801ms"/><rect x="14" y="13" width="1" height="1" style="--q:812ms"/><rect x="18" y="9" width="1" height="1" style="--q:816ms"/><rect x="9" y="19" width="1" height="1" style="--q:808ms"/><rect x="10" y="18" width="1" height="1" style="--q:844ms"/><rect x="11" y="17" width="1" height="1" style="--q:784ms"/><rect x="12" y="16" width="1" height="1" style="--q:815ms"/><rect x="13" y="15" width="1" height="1" style="--q:794ms"/><rect x="14" y="14" width="1" height="1" style="--q:831ms"/><rect x="15" y="13" width="1" height="1" style="--q:789ms"/><rect x="17" y="11" width="1" height="1" style="--q:786ms"/><rect x="18" y="10" width="1" height="1" style="--q:820ms"/><rect x="19" y="9" width="1" height="1" style="--q:811ms"/><rect x="20" y="8" width="1" height="1" style="--q:854ms"/><rect x="9" y="20" width="1" height="1" style="--q:875ms"/><rect x="10" y="19" width="1" height="1" style="--q:902ms"/><rect x="11" y="18" width="1" height="1" style="--q:890ms"/><rect x="12" y="17" width="1" height="1" style="--q:897ms"/><rect x="16" y="13" width="1" height="1" style="--q:917ms"/><rect x="20" y="9" width="1" height="1" style="--q:858ms"/><rect x="10" y="20" width="1" height="1" style="--q:879ms"/><rect x="11" y="19" width="1" height="1" style="--q:958ms"/><rect x="15" y="15" width="1" height="1" style="--q:857ms"/><rect x="16" y="14" width="1" height="1" style="--q:926ms"/><rect x="19" y="11" width="1" height="1" style="--q:917ms"/><rect x="20" y="10" width="1" height="1" style="--q:845ms"/><rect x="13" y="18" width="1" height="1" style="--q:968ms"/><rect x="15" y="16" width="1" height="1" style="--q:975ms"/><rect x="16" y="15" width="1" height="1" style="--q:943ms"/><rect x="18" y="13" width="1" height="1" style="--q:956ms"/><rect x="19" y="12" width="1" height="1" style="--q:965ms"/><rect x="12" y="20" width="1" height="1" style="--q:912ms"/><rect x="14" y="18" width="1" height="1" style="--q:958ms"/><rect x="15" y="17" width="1" height="1" style="--q:956ms"/><rect x="16" y="16" width="1" height="1" style="--q:996ms"/><rect x="18" y="14" width="1" height="1" style="--q:992ms"/><rect x="20" y="12" width="1" height="1" style="--q:995ms"/><rect x="13" y="20" width="1" height="1" style="--q:994ms"/><rect x="14" y="19" width="1" height="1" style="--q:1031ms"/><rect x="15" y="18" width="1" height="1" style="--q:1005ms"/><rect x="16" y="17" width="1" height="1" style="--q:1007ms"/><rect x="18" y="15" width="1" height="1" style="--q:951ms"/><rect x="20" y="13" width="1" height="1" style="--q:927ms"/><rect x="15" y="19" width="1" height="1" style="--q:967ms"/><rect x="17" y="17" width="1" height="1" style="--q:995ms"/><rect x="20" y="14" width="1" height="1" style="--q:964ms"/><rect x="17" y="19" width="1" height="1" style="--q:1108ms"/><rect x="18" y="18" width="1" height="1" style="--q:1075ms"/><rect x="19" y="17" width="1" height="1" style="--q:1083ms"/><rect x="20" y="16" width="1" height="1" style="--q:1083ms"/><rect x="20" y="17" width="1" height="1" style="--q:1117ms"/><rect x="19" y="20" width="1" height="1" style="--q:1150ms"/><rect x="20" y="20" width="1" height="1" style="--q:1120ms"/></svg><div><b>Qabulda &mdash; QR</b><p style="margin-top:8px">Shifokor ilovasi QR&rsquo;ni o&rsquo;qib, xulosangizni ochadi. Havolani istalgan payt bekor qilasiz.</p></div></div>
+      </div>
+    </div>
+
+    <div class="doc-app r" style="--d:120ms">
+      <span class="mk" aria-hidden="true"><svg viewBox="20 -10 160 250"><use href="#markWhite"/></svg></span>
+      <span><b>Sadora Doctor</b> &mdash; shifokorlar uchun alohida ilova va veb panel: ish soatlari, tezkor javoblar, bemor bo&rsquo;yicha shaxsiy eslatma, daromad va to&rsquo;lovlar.</span>
     </div>
   </div>
 </section>
@@ -1262,17 +1607,17 @@ body {
         <p class="eyebrow"><svg class="eb" viewBox="-11 -11 22 22" aria-hidden="true"><use href="#bloomArt"/></svg>Ma'lumot manbalari</p>
         <h2 class="h1" style="margin-top:12px">Qaysi raqam qayerdan kelgani ko'rinadi.</h2>
       </div>
-      <p class="lede">Sakkiz platforma. Ulangan manba oxirgi sinxron vaqtini va nima berayotganini ko'rsatadi; muddati o'tgan ruxsat yashirilmaydi.</p>
+      <p class="lede">Apple Health va Health Connect telefonning o'zidan, butun tarixi bilan o'qiladi &mdash; faqat ilova ishlatadigan 14 tur so'raladi. WHOOP va Oura hisob orqali ulanadi. Har bir manba oxirgi sinxron vaqtini ko'rsatadi; muddati o'tgan ruxsat yashirilmaydi.</p>
     </div>
     <div class="sources">
-      <div class="src r" style="--d:0ms"><b>Apple Health</b><span>Apple Watch Series 9 &middot; 12:40</span><div class="metrics"><span>Qadamlar</span><span>Puls</span><span>Mashqlar</span><span>Energiya</span></div><span class="st on"><i></i>Ulangan</span></div>
-      <div class="src r" style="--d:50ms"><b>Oura</b><span>Oura Ring Gen3 &middot; 07:05</span><div class="metrics"><span>Uyqu</span><span>HRV</span><span>Tiklanish</span></div><span class="st on"><i></i>Ulangan</span></div>
-      <div class="src r" style="--d:100ms"><b>Garmin</b><span>Ruxsat muddati tugagan</span><span class="st exp"><i></i>Qayta ulash kerak</span></div>
-      <div class="src r" style="--d:150ms"><b>Health Connect</b><span>Android</span><span class="st off"><i></i>Ulanmagan</span></div>
-      <div class="src r" style="--d:200ms"><b>Samsung Health</b><span>Galaxy Watch</span><span class="st off"><i></i>Ulanmagan</span></div>
-      <div class="src r" style="--d:250ms"><b>Huawei Health</b><span>Huawei Watch, Band</span><span class="st off"><i></i>Ulanmagan</span></div>
-      <div class="src r" style="--d:300ms"><b>WHOOP</b><span>Strap 4.0</span><span class="st off"><i></i>Ulanmagan</span></div>
-      <div class="src r" style="--d:350ms"><b>Fitbit</b><span>Charge, Sense</span><span class="st off"><i></i>Ulanmagan</span></div>
+      <div class="src spot r" style="--d:0ms"><span class="kind">Telefonda</span><b>Apple Health</b><span>iPhone, Apple Watch</span><div class="metrics"><span>Uyqu</span><span>Qadam</span><span>Puls</span><span>Hayz</span></div><span class="st on"><i></i>Ulanadi</span></div>
+      <div class="src spot r" style="--d:50ms"><span class="kind">Telefonda</span><b>Health Connect</b><span>Android soatlari va ilovalari</span><div class="metrics"><span>Uyqu</span><span>Qadam</span><span>SpO&#8322;</span><span>Harorat</span></div><span class="st on"><i></i>Ulanadi</span></div>
+      <div class="src spot r" style="--d:100ms"><span class="kind">Telefonda</span><b>Samsung Health</b><span>Galaxy Watch &mdash; Health Connect orqali</span><span class="st on"><i></i>Ulanadi</span></div>
+      <div class="src spot r" style="--d:150ms"><span class="kind">Hisob orqali</span><b>WHOOP</b><span>4.0 &middot; 07:05</span><div class="metrics"><span>Tiklanish</span><span>Yuklama</span><span>HRV</span><span>Uyqu</span></div><span class="st on"><i></i>Ulangan</span></div>
+      <div class="src spot r" style="--d:200ms"><span class="kind">Hisob orqali</span><b>Oura</b><span>Uzuk: uyqu va tiklanish</span><span class="st on"><i></i>Ulanadi</span></div>
+      <div class="src spot r" style="--d:250ms"><span class="kind">Hisob orqali</span><b>Garmin</b><span>Sport soatlari</span><span class="st off"><i></i>Rejada</span></div>
+      <div class="src spot r" style="--d:300ms"><span class="kind">Hisob orqali</span><b>Fitbit</b><span>Charge, Sense</span><span class="st off"><i></i>Rejada</span></div>
+      <div class="src spot r" style="--d:350ms"><span class="kind">Har doim</span><b>Qo'lda</b><span>Soat yo'q bo'lsa &mdash; uyquni o'zingiz yozasiz</span><span class="st off"><i></i>Har doim</span></div>
     </div>
   </div>
 </section>
@@ -1283,7 +1628,7 @@ body {
     <div class="sec-head r">
       <p class="eyebrow"><svg class="eb" viewBox="-11 -11 22 22" aria-hidden="true"><use href="#bloomArt"/></svg>SADORA Premium</p>
       <h2 class="h1">Premium bloklovchi emas. Bepul rejadagi hamma narsa qoladi.</h2>
-      <p class="lede">Narxlar serverda, to'lovni server tasdiqlaydi. Qulflangan bloklar yashirilmaydi &mdash; xiralashgan holda ko'rinadi, foydalanuvchi nima qo'shilishini biladi.</p>
+      <p class="lede">Narx xariddan oldin ko'rinadi, to'lovni server tasdiqlaydi. Qulflangan bloklar yashirilmaydi &mdash; xiralashgan holda ko'rinadi, foydalanuvchi nima qo'shilishini biladi.</p>
     </div>
     <div class="plans">
       <div class="ftable r">
@@ -1292,28 +1637,30 @@ body {
           <tbody>
             <tr><td>Sikl va kayfiyat</td><td class="ck">✓</td><td class="ck">✓</td></tr>
             <tr><td>Ovqat kundaligi</td><td class="ck">✓</td><td class="ck">✓</td></tr>
-            <tr><td>Maxfiy chat</td><td class="ck">✓</td><td class="ck">✓</td></tr>
-            <tr><td>AI suhbat</td><td class="no">&mdash;</td><td class="pr">20 / kun</td></tr>
-            <tr><td>Ovqat skaneri</td><td class="no">&mdash;</td><td class="pr">30 / oy</td></tr>
+            <tr><td>Chat va shifokorlar katalogi</td><td class="ck">✓</td><td class="ck">✓</td></tr>
+            <tr><td>Seriya, Gul va do'kon</td><td class="ck">✓</td><td class="ck">✓</td></tr>
+            <tr><td>Telefon va soatdan ma'lumot</td><td class="ck">✓</td><td class="ck">✓</td></tr>
+            <tr><td>AI suhbat</td><td class="no">Tanishuv</td><td class="pr">20 / kun</td></tr>
+            <tr><td>Ovqat skaneri</td><td class="no">&mdash;</td><td class="pr">10 / kun</td></tr>
             <tr><td>30 va 90 kunlik tahlil</td><td class="no">&mdash;</td><td class="ck">✓</td></tr>
             <tr><td>Kuzatilgan bog'liqliklar</td><td class="no">&mdash;</td><td class="ck">✓</td></tr>
           </tbody>
         </table>
       </div>
       <div class="plan-cards">
-        <div class="plan hi r" style="--d:80ms">
+        <div class="plan hi spot r" style="--d:80ms">
           <div class="nm">Yillik <span class="tag">7 kun bepul</span></div>
           <div class="price"><span class="tnum">299 000</span> <small>so'm / yil</small></div>
           <div class="sub">Oyiga &asymp; 24 900 so'm &middot; oylikdan 38% arzon</div>
-          <div class="pay"><span>Payme</span><span>Click</span></div>
+          <div class="pay"><span>Google Play</span><span>App Store</span></div>
         </div>
-        <div class="plan r" style="--d:140ms">
+        <div class="plan spot r" style="--d:140ms">
           <div class="nm">Oylik</div>
           <div class="price"><span class="tnum">39 900</span> <small>so'm / oy</small></div>
           <div class="sub">Istalgan vaqtda bekor qilish mumkin</div>
-          <div class="pay"><span>Payme</span><span>Click</span></div>
+          <div class="pay"><span>Google Play</span><span>App Store</span></div>
         </div>
-        <p class="plan-note r" style="--d:200ms">Paywall'da &laquo;Hozir emas&raquo; tugmasi &laquo;Premium'ni ko'rish&raquo; bilan bir xil vaznda. App Store va Google Play orqali xarid keyingi bosqichda.</p>
+        <p class="plan-note r" style="--d:200ms">Do'kondan o'rnatilgan ilovada obuna Google Play yoki App Store orqali &mdash; bekor qilish ham o'sha yerda. Payme va Click to'g'ridan-to'g'ri o'rnatilgan ilovada va shifokor konsultatsiyalarida ishlaydi. Paywall'da &laquo;Hozir emas&raquo; tugmasi &laquo;Premium'ni ko'rish&raquo; bilan bir xil vaznda.</p>
       </div>
     </div>
   </div>
@@ -1346,7 +1693,7 @@ body {
       <article class="rule">
         <h3>Sabab-natija da'vo qilinmaydi.</h3>
         <p>Tahlillar bog'liqlikni ko'rsatadi, sababni emas. Farq bitta so'zda, ma'nosi butunlay boshqa.</p>
-        <div class="demo"><span class="claim good"><i></i>&laquo;Ko'pincha birga kuzatilgan&raquo;</span><span class="claim bad"><i></i>&laquo;Sabab bo'lgan&raquo;</span></div>
+        <div class="demo"><span class="claim good"><i></i>&laquo;Ko'pincha birga kuzatilgan&raquo;</span><span class="claim bad"><i></i><span class="strike">&laquo;Sabab bo'lgan&raquo;</span></span></div>
       </article>
       <article class="rule">
         <h3>Premium bloklovchi emas.</h3>
@@ -1374,23 +1721,23 @@ body {
       <div class="road-col">
         <h3><i></i>Tayyor</h3>
         <ul>
-          <li>Butun interfeys, ikkala platformada<span>Barcha ekranlar chizilgan, oqimlar bog'langan, yorug' va qorong'i mavzu.</span></li>
-          <li>Backend ulangan<span>Telefon OTP orqali kirish, profil, onboarding, roziliklar, entitlements va feature flags.</span></li>
-          <li>Sog'liq yozuvlari serverda<span>Sikl, ovqat, suv, kayfiyat va dorilar qurilma almashsa ham qoladi.</span></li>
-          <li>Tahlillar o'lchangan kunlardan<span>7 / 30 / 90 kunlik trendlar va bog'liqliklar &mdash; chizilgan emas, hisoblangan.</span></li>
-          <li>Premium: Payme va Click<span>Narxlar serverda, to'lovni server tasdiqlaydi, to'lovlar jurnali bor.</span></li>
-          <li>AI Gateway<span>Gemini javob yozadi; kalit bo'lmasa qoidalar javob beradi. Har so'rov narxi bilan yoziladi.</span></li>
-          <li>Maxfiy chat va admin panel<span>Taxallus, moderatsiya, bilim kutubxonasi admin panelda.</span></li>
+          <li>Ikkala platforma, uch til<span>Android va iOS; har bir ekran, server xatosi va AI javobi o'zbek, rus va ingliz tilida. Ekran o'quvchi, katta shrift va kamroq harakat rejimi.</span></li>
+          <li>SMS orqali kirish<span>Telefon raqami va bir martalik kod; raqam ro'yxatda bo'lmasa, ilova ro'yxatdan o'tishni taklif qiladi.</span></li>
+          <li>Sog'liq yozuvlari va qurilmalar<span>Sikl, ovqat, suv, kayfiyat, dorilar va uchrashuvlar serverda; Apple Health, Health Connect, Samsung Health, WHOOP va Oura ulanadi.</span></li>
+          <li>Shifokorlar<span>Tasdiqlash, katalog va reyting, 24 soatlik pullik konsultatsiya, QR orqali xulosa; Sadora Doctor ilovasi va veb panel.</span></li>
+          <li>Chat<span>Taxallus profillari, bio, nishonlar, shaxsiy xabarlar, bloklash va shikoyat; moderatsiya admin panelda.</span></li>
+          <li>Premium va to'lovlar<span>Google Play va App Store obunalari serverda tekshiriladi; Payme va Click &mdash; to'g'ridan-to'g'ri o'rnatishda va konsultatsiyalarda.</span></li>
+          <li>Seriya, Gul va do'kon<span>Kunlik harakatlar uchun Gul, do'st taklifi, seriyaga qarab o'zgaradigan ilova belgisi.</span></li>
         </ul>
       </div>
       <div class="road-col">
         <h3><i></i>Keyingi sprintlarda</h3>
         <ul>
-          <li>App Store va Google Play billing<span>Do'kon ichidagi xarid SDK'si hali ulanmagan; Payme va Click ishlaydi.</span></li>
-          <li>Apple va Google bilan kirish<span>Tugmalar bor, server tokenni tekshiradi; platforma SDK'si hali tokenni bermaydi.</span></li>
-          <li>Qurilma integratsiyasi<span>Apple Health va Oura ma'lumotlari hozircha namuna.</span></li>
-          <li>RU va EN tarjimalari<span>Til sozlamasi ishlaydi; tab yorliqlari, xush kelibsiz ekrani va Profil tarjima qilingan, qolgani jarayonda.</span></li>
-          <li>AI javoblari uch tilda<span>Hozircha model faqat o'zbekcha javob beradi.</span></li>
+          <li>Shifokor bilan jonli efir<span>Shifokor videoda, foydalanuvchilar savol yozadi; har bir efirni admin tasdiqlaydi.</span></li>
+          <li>Garmin va Fitbit<span>Ro'yxatda turibdi, ulanish hali yo'q.</span></li>
+          <li>Apple va Google bilan kirish<span>Server tokenni tekshira oladi; ilovadagi tugmalar platforma SDK'si ulangach qaytadi.</span></li>
+          <li>Huquqiy matnlar tarjimasi<span>Ilova ichidagi shartlar hozircha o'zbekcha &mdash; tarjimani yurist ko'rib chiqadi.</span></li>
+          <li>Do'kon xabarnomalari<span>Obuna yangilanishi va qaytarilishi hozircha ilova ochilganda yangilanadi.</span></li>
         </ul>
       </div>
     </div>
@@ -1407,7 +1754,7 @@ body {
         <h2 class="h1">Sadora'ni birinchilardan bo'lib sinab ko'ring.</h2>
         <p class="lede">Sinovga qo'shilsangiz, qaysi bosqichda ekanligingizni tanlaysiz &mdash; ilova qolganini o'zi moslashtiradi.</p>
         <div class="hero-cta">
-          <a class="btn btn-fill" href="mailto:salom@sadora.uz?subject=Sadora%20yopiq%20sinovi">Sinovga yozilish</a>
+          <a class="btn btn-fill" href="mailto:salom@sadora.app?subject=Sadora%20yopiq%20sinovi">Sinovga yozilish</a>
           <a class="btn btn-ghost" href="#ilova">Yana bir bor ko'rish</a>
         </div>
       </div>
@@ -1427,8 +1774,8 @@ body {
       <svg class="mark" viewBox="20 -10 160 250" aria-hidden="true"><use href="#markStatic"/></svg>
       <svg class="word" viewBox="-2 -3 338 47" aria-hidden="true"><use href="#wordmark"/></svg>
     </div>
-    <p>Sadora tibbiy ko'rsatma bermaydi va shifokor o'rnini bosmaydi. Bashoratlar taxminiy &mdash; tashxis va davolash uchun mutaxassisga murojaat qiling. Sahifadagi raqamlar ilovaning namuna hisobi.</p>
-    <div class="links"><a href="mailto:salom@sadora.uz">salom@sadora.uz</a><a href="#top">Yuqoriga ↑</a></div>
+    <p>Sadora AI tibbiy ko'rsatma bermaydi va shifokor o'rnini bosmaydi. Bashoratlar taxminiy &mdash; tashxis va davolash uchun mutaxassisga murojaat qiling. Sahifadagi raqamlar, ismlar va narxlar namuna.</p>
+    <div class="links"><a href="privacy.html">Maxfiylik siyosati</a><a href="terms.html">Foydalanish shartlari</a><a href="mailto:salom@sadora.app">salom@sadora.app</a><a href="#top">Yuqoriga ↑</a></div>
   </div>
 </footer>
 
@@ -1459,6 +1806,36 @@ body {
   try { var len = pen.getTotalLength(); pen.style.setProperty('--len', len); } catch (e) { pen.style.setProperty('--len', 900); }
   setTimeout(function () { logo.classList.add('play'); }, 60);
 
+  /* ---- Sarlavhalarni so'zlarga bo'lish: har so'z o'z niqobidan ko'tariladi ---- */
+  function splitWords(el) {
+    var wi = 0;
+    (function walk(node) {
+      var kids = Array.prototype.slice.call(node.childNodes);
+      kids.forEach(function (k) {
+        if (k.nodeType === 3) {
+          var parts = k.textContent.split(/(\s+)/), frag = document.createDocumentFragment();
+          parts.forEach(function (t) {
+            if (!t) return;
+            if (/^\s+$/.test(t)) { frag.appendChild(document.createTextNode(t)); return; }
+            var w = document.createElement('span'), inner = document.createElement('span');
+            w.className = 'w'; inner.textContent = t; inner.style.setProperty('--wi', wi++);
+            w.appendChild(inner); frag.appendChild(w);
+          });
+          node.replaceChild(frag, k);
+        } else if (k.nodeType === 1 && k.tagName !== 'BR' && k.tagName !== 'svg') walk(k);
+      });
+    })(el);
+    el.classList.add('ws');
+  }
+  if (!reduce) {
+    var heads = document.querySelectorAll('main .h1, main .h2');
+    for (var hh = 0; hh < heads.length; hh++) {
+      var hd = heads[hh], host = hd.closest('.r');
+      if (host && host.style.getPropertyValue('--d')) hd.style.setProperty('--d', host.style.getPropertyValue('--d'));
+      splitWords(hd);
+    }
+  }
+
   /* ---- Skroll bilan paydo bo'lish + raqamlar + halqalar ---- */
   function fmt(n, thousands) {
     var s = String(Math.round(n));
@@ -1484,6 +1861,14 @@ body {
   }
   function activate(el) {
     el.classList.add('in');
+    if (el.classList.contains('r')) {
+      // Ochilish tugagach `.r` ketadi — kartaning o'z hover o'tishi kechikishsiz ishlaydi.
+      var d = parseFloat(el.style.getPropertyValue('--d')) || 0;
+      setTimeout(function () { el.classList.remove('r'); }, reduce ? 0 : d + 1200);
+    }
+    if (el.classList.contains('chat')) converse(el, '.bub', 0);
+    var th = el.querySelector && el.querySelector('.thread');
+    if (th && !th.__run) { th.__run = true; converse(th, '.bub', 1); }
     var fig = el.querySelector && el.querySelector('.figure:not([data-replay])');
     if (fig && !fig.__drawn) { fig.__drawn = true; drawFigure(fig, 1600, 180); }
     var counters = el.querySelectorAll('[data-count]');
@@ -1512,6 +1897,110 @@ body {
       });
     }, { threshold: .35 });
     for (var w = 0; w < replays.length; w++) { replays[w].__away = true; rio.observe(replays[w]); }
+  }
+
+  /* ---- Suhbat: xabarlar birin-ketin, javobdan oldin «yozmoqda…» ----
+     `startMe` — boshidagi o'z xabarlari soni (ular kutmasdan chiqadi). */
+  function converse(box, sel, startMe) {
+    if (box.__talk) return; box.__talk = true;
+    var bubs = box.querySelectorAll(sel), dots = box.querySelector('.typing');
+    var ticks = box.querySelector('.ticks');
+    if (reduce || !dots) {
+      for (var i = 0; i < bubs.length; i++) bubs[i].classList.add('on');
+      if (ticks) ticks.classList.add('read');
+      return;
+    }
+    var t = 150;
+    function later(fn, at) { setTimeout(fn, at); }
+    for (var k = 0; k < bubs.length; k++) {
+      (function (b, k) {
+        var mine = b.classList.contains('me');
+        if (!mine) {
+          // Nuqtalar keyingi xabar turadigan joyga qo'yiladi — sahifa siljimaydi.
+          later(function () {
+            dots.hidden = false;
+            dots.style.top = b.offsetTop + 'px'; dots.style.left = b.offsetLeft + 'px';
+            void dots.offsetWidth; dots.classList.add('on');
+          }, t);
+          t += 1150;
+          later(function () { dots.classList.remove('on'); dots.hidden = true; b.classList.add('on'); }, t);
+          t += 650;
+        } else {
+          later(function () { b.classList.add('on'); }, t);
+          if (ticks && b.contains(ticks)) later(function () { ticks.classList.add('read'); }, t + 900);
+          t += 700;
+        }
+      })(bubs[k], k);
+    }
+  }
+
+  /* ---- Kursor yorug'i va magnit tugmalar (faqat sichqoncha bilan) ---- */
+  var fine = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+  if (fine && !reduce) {
+    document.addEventListener('pointermove', function (e) {
+      var c = e.target.closest && e.target.closest('.spot');
+      if (!c) return;
+      var r = c.getBoundingClientRect();
+      c.style.setProperty('--mx', (e.clientX - r.left) + 'px');
+      c.style.setProperty('--my', (e.clientY - r.top) + 'px');
+    }, { passive: true });
+    var mags = document.querySelectorAll('.hero-cta .btn, .close-card .btn');
+    Array.prototype.forEach.call(mags, function (b) {
+      b.addEventListener('pointermove', function (e) {
+        var r = b.getBoundingClientRect();
+        b.style.setProperty('--tx', ((e.clientX - r.left) / r.width - .5) * 10 + 'px');
+        b.style.setProperty('--ty', ((e.clientY - r.top) / r.height - .5) * 8 + 'px');
+      });
+      b.addEventListener('pointerleave', function () { b.style.setProperty('--tx', '0px'); b.style.setProperty('--ty', '0px'); });
+    });
+  }
+
+  /* ---- Telefondagi Gul: kunlik kirish uchun +10 ---- */
+  var gul = $('gulPill'), gulNum = $('gulNum');
+  if (!reduce) setTimeout(function () {
+    gul.classList.add('bump');
+    var from = 340, to = 350, t0 = performance.now();
+    (function tick(now) {
+      var p = Math.min(1, (now - t0) / 700);
+      gulNum.textContent = Math.round(from + (to - from) * ease(p));
+      if (p < 1) requestAnimationFrame(tick);
+    })(t0);
+    setTimeout(function () { gul.classList.remove('bump'); }, 1500);
+  }, 3600);
+
+  /* ---- Uch til: salom navbat bilan almashadi ---- */
+  var say = $('langSay'), tabs = $('langTabs');
+  if (say && !reduce) {
+    var words = say.children, marks = tabs.children, li = 0, langTimer = null;
+    function nextLang() {
+      var prev = li; li = (li + 1) % words.length;
+      words[prev].className = 'off'; marks[prev].className = '';
+      words[li].className = 'on'; marks[li].className = 'on';
+      setTimeout(function () { if (words[prev].className === 'off') words[prev].className = ''; }, 800);
+    }
+    var lio = new IntersectionObserver(function (es) {
+      es.forEach(function (e) {
+        clearInterval(langTimer);
+        if (e.isIntersecting) langTimer = setInterval(nextLang, 2400);
+      });
+    });
+    lio.observe(say);
+  }
+
+  /* ---- Hero qatlamlari skrollda sekinroq siljiydi ---- */
+  var aur = document.querySelector('.aurora'), petals = $('petals'), heroEl = document.querySelector('.hero');
+  if (!reduce) {
+    var ticking = false;
+    window.addEventListener('scroll', function () {
+      if (ticking) return; ticking = true;
+      requestAnimationFrame(function () {
+        ticking = false;
+        var y = window.scrollY;
+        if (y > heroEl.offsetHeight + 200) return;
+        aur.style.translate = '0 ' + (y * .22).toFixed(1) + 'px';
+        petals.style.translate = '0 ' + (y * .12).toFixed(1) + 'px';
+      });
+    }, { passive: true });
   }
 
   /* Telefon — sahifa ochilganda o'zi to'ladi */
@@ -1715,6 +2204,19 @@ body {
 
   function applyInk(s) { scope.style.setProperty('--st', isDark() ? s.inkD : s.inkL); }
 
+  var glide = document.createElement('span');
+  glide.className = 'stage-glide'; glide.setAttribute('aria-hidden', 'true');
+  list.insertBefore(glide, list.firstChild);
+  function moveGlide(instant) {
+    var b = list.querySelectorAll('.stage-btn')[current];
+    if (!b) return;
+    if (instant) glide.style.transition = 'none';
+    glide.style.transform = 'translateY(' + b.parentNode.offsetTop + 'px)';
+    glide.style.height = b.offsetHeight + 'px';
+    if (instant) { void glide.offsetWidth; glide.style.transition = ''; }
+  }
+  window.addEventListener('resize', function () { moveGlide(true); });
+
   function render(s) {
     var fig = $('stFig');
     fig.innerHTML = s.fig;
@@ -1752,11 +2254,13 @@ body {
 
   function select(i) {
     if (i === current) return;
+    var first = current < 0;
     var s = STAGES[i]; current = i;
     scope.style.setProperty('--sa', s.a); scope.style.setProperty('--sb', s.b); applyInk(s);
     $('stHero').classList.toggle('warm', s.warm);
     var btns = list.querySelectorAll('.stage-btn');
     for (var k = 0; k < btns.length; k++) btns[k].setAttribute('aria-pressed', k === i ? 'true' : 'false');
+    moveGlide(first);
 
     var swaps = document.querySelectorAll('.stage-card .swap');
     if (reduce) { render(s); return; }
@@ -1768,6 +2272,7 @@ body {
     }, 220);
   }
   select(0);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { moveGlide(true); });
   window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function () { applyInk(STAGES[current]); });
 
   /* ---- Navigatsiya: chegara va o'qilgan qism ---- */
@@ -1780,7 +2285,42 @@ body {
   }
   onScroll();
   window.addEventListener('scroll', onScroll, { passive: true });
+
+  /* Qaysi bo'limda ekanligingiz — navigatsiyada sirpanuvchi fon */
+  var navLinks = document.querySelectorAll('.nav-links a'), ind = $('navInd'), activeLink = null;
+  function placeInd() {
+    if (!activeLink) { ind.classList.remove('on'); return; }
+    ind.style.width = activeLink.offsetWidth + 'px';
+    ind.style.transform = 'translateX(' + activeLink.offsetLeft + 'px)';
+    ind.classList.add('on');
+  }
+  if ('IntersectionObserver' in window) {
+    var byId = {};
+    Array.prototype.forEach.call(navLinks, function (a) { byId[a.getAttribute('href').slice(1)] = a; });
+    var visible = {};
+    var sio = new IntersectionObserver(function (es) {
+      es.forEach(function (e) { visible[e.target.id] = e.isIntersecting; });
+      var hit = null;
+      Object.keys(byId).forEach(function (id) { if (visible[id]) hit = byId[id]; });
+      if (hit !== activeLink) {
+        if (activeLink) activeLink.removeAttribute('aria-current');
+        activeLink = hit;
+        if (hit) hit.setAttribute('aria-current', 'true');
+        placeInd();
+      }
+    }, { rootMargin: '-40% 0px -55% 0px' });
+    Object.keys(byId).forEach(function (id) { var sec = $(id); if (sec) sio.observe(sec); });
+    window.addEventListener('resize', placeInd);
+  }
 })();
+</script>
+<script>
+/* The staging server publishes download/latest.json beside this page after every deploy;
+   GitHub Pages never has it. So the APK link appears only where there is an APK. */
+fetch('download/latest.json', { cache: 'no-store' })
+  .then(function (r) { return r.ok ? r.json() : null; })
+  .then(function (m) { if (m && m.path) document.getElementById('apkLink').hidden = false; })
+  .catch(function () {});
 </script>
 </body>
 </html>
