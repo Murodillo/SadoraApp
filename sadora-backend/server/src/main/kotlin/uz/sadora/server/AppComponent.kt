@@ -39,6 +39,7 @@ import uz.sadora.server.audit.AuditRepository
 import uz.sadora.server.audit.AuditService
 import uz.sadora.server.auth.AuthService
 import uz.sadora.server.auth.JwtService
+import uz.sadora.server.auth.EskizOtpSender
 import uz.sadora.server.auth.LoggingOtpSender
 import uz.sadora.server.auth.OtpService
 import uz.sadora.server.auth.RefreshTokenService
@@ -145,7 +146,15 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
 
     val jwtService = JwtService(config.jwt)
     val refreshTokenService = RefreshTokenService(config.jwt, auditService)
-    val otpService = OtpService(config.otp, cache, LoggingOtpSender(showCode = config.environment == Environment.DEV))
+    val otpService = OtpService(
+        config.otp,
+        cache,
+        if (config.otp.eskiz.isConfigured) {
+            EskizOtpSender(outboundHttpClient, config.otp.eskiz, config.otp.smsText)
+        } else {
+            LoggingOtpSender(showCode = config.environment == Environment.DEV)
+        },
+    )
     val socialVerifier = SocialVerifier(config.social)
 
     val authService = AuthService(

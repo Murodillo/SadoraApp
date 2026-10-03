@@ -39,8 +39,9 @@ fi
 # Push the same way: the service account key sits in server/secrets/ (gitignored) and the
 # untracked .env names it, so a clone without the key still boots and only logs. The
 # WHOOP and Oura secrets and the token key live there too; without them a provider shows as not set up.
+# So does the Eskiz login; without it sign-in codes are only logged.
 for name in FCM_PROJECT_ID FCM_SERVICE_ACCOUNT_FILE GOOGLE_PLAY_SERVICE_ACCOUNT_FILE \
-    WHOOP_CLIENT_SECRET OURA_CLIENT_SECRET WEARABLE_TOKEN_KEY; do
+    WHOOP_CLIENT_SECRET OURA_CLIENT_SECRET WEARABLE_TOKEN_KEY ESKIZ_EMAIL ESKIZ_PASSWORD; do
   if [[ -z ${(P)name} && -f $SECRETS ]]; then
     export $name="$(grep "^$name=" $SECRETS | tail -1 | cut -d= -f2-)"
   fi

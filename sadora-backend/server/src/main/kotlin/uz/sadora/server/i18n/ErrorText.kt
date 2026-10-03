@@ -114,6 +114,7 @@ object ErrorText {
         Entry("{0} xonali raqam bo'lishi kerak", "Должно быть {0}-значное число", "Must be a {0}-digit number"),
         Entry("Harf va raqamdan iborat bo'lishi kerak", "Должно состоять из букв и цифр", "Must contain letters and digits"),
         Entry("Juda ko'p kod so'raldi. Birozdan keyin urinib ko'ring.", "Запрошено слишком много кодов. Попробуйте чуть позже.", "Too many codes requested. Try again a little later."),
+        Entry("SMS yuborib bo'lmadi. Birozdan keyin urinib ko'ring.", "Не удалось отправить SMS. Попробуйте чуть позже.", "The SMS could not be sent. Try again a little later."),
         Entry("Juda ko'p urinish. Yangi kod so'rang.", "Слишком много попыток. Запросите новый код.", "Too many attempts. Request a new code."),
         Entry("Kod noto'g'ri", "Неверный код", "Wrong code"),
         Entry("Kod muddati tugadi", "Срок действия кода истёк", "The code has expired"),

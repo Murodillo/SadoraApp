@@ -37,9 +37,10 @@ bo'lmaydi:
 ishlatadi — prod start Gradle demoniga ham, manba daraxtiga ham bog'liq bo'lmasligi
 kerak.
 
-**Prod o'zini himoya qiladi.** `SADORA_ENV=PROD` bo'lganda `AppConfig` uchta narsani
+**Prod o'zini himoya qiladi.** `SADORA_ENV=PROD` bo'lganda `AppConfig` to'rtta narsani
 rad etadi va server umuman ko'tarilmaydi: dev JWT kaliti (yoki 32 belgidan qisqasi),
-`OTP_EXPOSE_CODE=true`, va `OTP_FIXED_CODE` ning o'rnatilgani. Ya'ni dev sozlamalari
+`OTP_EXPOSE_CODE=true`, `OTP_FIXED_CODE` ning o'rnatilgani va Eskiz login'ining
+(`ESKIZ_EMAIL`, `ESKIZ_PASSWORD`) yo'qligi. Ya'ni dev sozlamalari
 bilan prod ishga tushmaydi — buni eslab qolish shart emas.
 
 Farqlar shu bilan tugamaydi: limitlar dev'da 20 barobar yumshoq (`configureRateLimit`),
@@ -121,6 +122,14 @@ raqam uchun u hisobni qaytaradi, yangisi uchun ochadi, shuning uchun «ro'yxatda
 va «kirish» bitta amal. Bu ataylab: parol bilan ochilgan hisobga qaytib kirib
 bo'lmasdi, hech bir mijoz ishlatmaydigan parol yo'li esa hech kim kuzatmaydigan yo'l
 bo'lardi. Admin panelning o'z paroli bor — alohida realm, 2FA ortida.
+
+**Kod SMS'da Eskiz orqali ketadi.** `EskizOtpSender` kabinet login'i bilan token oladi
+(u bir oy yashaydi), uni saqlab turadi va Eskiz rad etgandagina bir marta yangilaydi.
+Eskiz faqat moderatsiyadan o'tgan matnni harfma-harf yuboradi, shuning uchun matn kodda
+emas, `OTP_SMS_TEXT`da: avval Eskiz'da tasdiqlatiladi, keyin o'zgaruvchiga yoziladi.
+Yuborib bo'lmasa (Eskiz javob bermadi, matnni rad etdi, login noto'g'ri) challenge
+o'chiriladi va mijoz 503 `upstream_unavailable` oladi — kod kelmaganini u kutib o'tirmaydi,
+qayta so'raydi. Login sozlanmagan mashinada kod faqat log'ga yoziladi.
 
 **Parol — bcrypt (cost 12), refresh token va OTP — SHA-256.** Parol past entropiyali va
 taxmin qilinadi, shuning uchun ataylab sekin; tasodifiy 256-bitli token uchun sekin hash
@@ -337,12 +346,12 @@ Ikki holatni farqlash kerak:
 | | **doimiy test serveri** | **haqiqiy prod** |
 |---|---|---|
 | `SADORA_ENV` | `DEV` | `PROD` |
-| SMS kodi | `123456` (`OTP_FIXED_CODE`) | haqiqiy provayder |
-| Ishlaydimi? | bugun | **yo'q — SMS provayder ulanmagan** |
+| SMS kodi | `123456` (`OTP_FIXED_CODE`) | Eskiz orqali SMS |
+| Ishlaydimi? | bugun | Eskiz akkaunti va tasdiqlangan SMS matni kerak |
 
 `AppConfig.verifyProductionSafety()` ataylab yo'l bermaydi: dev JWT kaliti, javobda
 qaytariladigan OTP yoki doimiy OTP kodi bilan `SADORA_ENV=PROD` **ko'tarilmaydi**. Ya'ni
-haqiqiy prod SMS provayderni kutadi; doimiy test serveri esa hozir ham ishlayveradi va
+haqiqiy prod Eskiz akkauntini kutadi; doimiy test serveri esa hozir ham ishlayveradi va
 tunnel bilan bog'liq muammolarni butunlay yo'q qiladi.
 
 Deploy'dan keyin tekshiruv — `/health/ready` bazani ham tekshiradi, `/health/live` esa
@@ -354,8 +363,7 @@ curl https://api.sadora.app/health/ready
 
 ## Nima hali yo'q
 App Store / Google Play cheklarini haqiqiy tekshirish (`StoreVerifier` interfeysi va
-grant yo'li tayyor, kalitlar yo'q) va ilovadagi billing SDK · SMS provayderi (`OtpSender` interfeysi
-tayyor, hozircha log'ga yozadi) · Health Connect /
+grant yo'li tayyor, kalitlar yo'q) va ilovadagi billing SDK · Health Connect /
 HealthKit o'qish qatlami (server tomon `POST /v1/health-data/samples` tayyor, ilovada
 namuna yig'uvchi hali yo'q, shuning uchun uyqu va qadam ekranlari bo'sh holatini
 ko'rsatadi).

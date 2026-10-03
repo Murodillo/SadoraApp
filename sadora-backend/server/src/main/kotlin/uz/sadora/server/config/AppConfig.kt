@@ -89,6 +89,13 @@ data class AppConfig(
                     maxPerPhonePerHour = env("OTP_MAX_PER_HOUR", "5").toInt(),
                     exposeCode = env("OTP_EXPOSE_CODE", "true").toBoolean(),
                     fixedCode = envOrNull("OTP_FIXED_CODE"),
+                    eskiz = EskizConfig(
+                        email = envOrNull("ESKIZ_EMAIL"),
+                        password = envOrNull("ESKIZ_PASSWORD"),
+                        from = env("ESKIZ_FROM", "4546"),
+                        baseUrl = env("ESKIZ_BASE_URL", "https://notify.eskiz.uz"),
+                    ),
+                    smsText = env("OTP_SMS_TEXT", DEFAULT_SMS_TEXT),
                 ),
                 social = SocialConfig(
                     appleBundleIds = env("APPLE_BUNDLE_IDS", "uz.sadora.app")
@@ -175,11 +182,22 @@ data class AppConfig(
             if (!environment.isProduction) return
             require(!otp.exposeCode) { "OTP_EXPOSE_CODE must be false in production." }
             require(otp.fixedCode == null) { "OTP_FIXED_CODE must not be set in production." }
+            // Without a sender every code goes nowhere and nobody can sign in — better a
+            // server that refuses to start than one that looks up and locks everyone out.
+            require(otp.eskiz.isConfigured) { "ESKIZ_EMAIL and ESKIZ_PASSWORD must be set in production." }
+            require("{code}" in otp.smsText) { "OTP_SMS_TEXT must contain {code}." }
             require(publicBaseUrl.startsWith("https://")) { "PUBLIC_BASE_URL must be an https URL in production." }
             if (wearables.whoop.isConfigured || wearables.oura.isConfigured) {
                 require(wearables.tokenKey != null) { "WEARABLE_TOKEN_KEY must be set when a cloud wearable is configured." }
             }
         }
+
+        /**
+         * Eskiz sends only texts its moderators approved, character for character, so
+         * this is the wording to submit with the sender application — or OTP_SMS_TEXT
+         * is set to whatever they approved instead.
+         */
+        private const val DEFAULT_SMS_TEXT = "Sadora: kirish kodingiz {code}. Uni hech kimga aytmang."
 
         private const val DEV_JWT_SECRET = "dev-only-secret-change-me-0123456789abcdef"
 
@@ -226,7 +244,27 @@ data class OtpConfig(
      * [AppConfig]; [codeLength] is ignored while it is set.
      */
     val fixedCode: String? = null,
+    val eskiz: EskizConfig = EskizConfig(null, null, from = "4546", baseUrl = "https://notify.eskiz.uz"),
+    /** The SMS, with `{code}` where the digits go. */
+    val smsText: String = "{code}",
 )
+
+/**
+ * The SMS gateway's account: notify.eskiz.uz, the one Uzbek operators route through
+ * without a contract per operator. The cabinet's login is the API's login.
+ */
+data class EskizConfig(
+    val email: String?,
+    val password: String?,
+    /** The sender name: "4546" is Eskiz's shared one until a brand name is registered. */
+    val from: String,
+    val baseUrl: String,
+) {
+    val isConfigured: Boolean get() = email != null && password != null
+
+    override fun toString(): String =
+        "EskizConfig(email=$email, password=${if (password == null) "null" else "***"}, from=$from, baseUrl=$baseUrl)"
+}
 
 data class SocialConfig(
     val appleBundleIds: List<String>,

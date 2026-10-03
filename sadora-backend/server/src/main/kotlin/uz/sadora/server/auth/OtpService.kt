@@ -8,6 +8,7 @@ import org.jetbrains.exposed.v1.core.greater
 import org.jetbrains.exposed.v1.core.isNull
 import org.jetbrains.exposed.v1.core.less
 import org.jetbrains.exposed.v1.core.plus
+import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.update
@@ -17,6 +18,7 @@ import uz.sadora.contract.OtpChallenge
 import uz.sadora.server.cache.Cache
 import uz.sadora.server.config.OtpConfig
 import uz.sadora.server.core.RateLimitedException
+import uz.sadora.server.core.UpstreamUnavailableException
 import uz.sadora.server.core.ValidationException
 import uz.sadora.server.core.now
 import uz.sadora.server.core.randomNumericCode
@@ -72,7 +74,14 @@ class OtpService(
             }
         }
 
-        sender.send(phone, code)
+        try {
+            sender.send(phone, code)
+        } catch (failure: SmsDeliveryException) {
+            // A challenge whose code never left would show as live and hold the resend
+            // timer against her; without it she can simply ask again.
+            dbQuery { OtpChallenges.deleteWhere { OtpChallenges.id eq challengeId } }
+            throw UpstreamUnavailableException("SMS yuborib bo'lmadi. Birozdan keyin urinib ko'ring.")
+        }
 
         return OtpChallenge(
             challengeId = challengeId.toString(),
@@ -169,15 +178,16 @@ class ApiOtpException(code: String, message: String) :
     uz.sadora.server.core.ApiException(io.ktor.http.HttpStatusCode.BadRequest, code, message)
 
 /**
- * Sending is behind an interface because the SMS provider is still an open question in
- * the proposal. Swapping [LoggingOtpSender] for a real gateway is a one-line change.
+ * Where a code goes: [EskizOtpSender] when its account is configured, [LoggingOtpSender]
+ * on a machine without one.
  */
 interface OtpSender {
+    /** Throws [SmsDeliveryException] when the code could not be handed over. */
     suspend fun send(phone: String, code: String)
 }
 
 /**
- * The stand-in until an SMS gateway is wired: it sends nothing and writes a line.
+ * The stand-in where no SMS account is configured: it sends nothing and writes a line.
  *
  * Only a developer's own machine gets the code in that line. Anywhere else the log is
  * read by more people than the user — `docker logs`, a log shipper, whoever shares the

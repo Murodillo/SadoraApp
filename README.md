@@ -48,7 +48,7 @@ Ikkita muhit bor va ular alohida sozlamalar fayllaridan yashaydi:
 |---|---|---|
 | Sozlamalar | `sadora-backend/server/.env.dev` — git'da, ichida sir yo'q | `sadora-backend/server/.env.prod` — git'ga qo'shilmaydi, `.env.prod.example` dan nusxa |
 | Baza | `docker compose` ko'targan lokal Postgres | boshqariladigan alohida instansiya |
-| SMS kodi | har doim `123456` (`OTP_FIXED_CODE`) | haqiqiy SMS provayder (hali ulanmagan) |
+| SMS kodi | har doim `123456` (`OTP_FIXED_CODE`) | Eskiz orqali haqiqiy SMS (`ESKIZ_EMAIL`, `ESKIZ_PASSWORD`) |
 | JWT kaliti | ochiq, repozitoriyda | generatsiya qilingan, kamida 32 belgi |
 | Swagger `/docs` | ochiq | yopiq |
 | Limitlar | 20 barobar yumshoq — seed va demo bir IP'dan keladi | to'liq qattiq |
