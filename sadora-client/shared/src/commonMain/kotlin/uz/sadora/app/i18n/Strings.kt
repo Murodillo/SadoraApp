@@ -139,8 +139,18 @@ interface DateStrings {
     /** The same seven, short enough to head a calendar column. */
     val weekdaysShort: List<String>
 
+    /**
+     * Short month names for a chart's axis or a date badge. Three letters by default;
+     * a language whose months share their first three — Uzbek "Iyun" and "Iyul" — says
+     * its own.
+     */
+    val monthsShort: List<String> get() = months.map { it.take(3) }
+
     /** "4-sentabr" — the day inside its month. */
     fun dayMonth(date: LocalDate): String
+
+    /** "4-sentabr 2027" */
+    fun dayMonthYear(date: LocalDate): String = "${dayMonth(date)} ${date.year}"
 
     /** "4-sentabr, payshanba" */
     fun dayMonthWeekday(date: LocalDate): String =
@@ -819,6 +829,8 @@ interface SettingsStrings {
     // ---- life stage
     val lifeStageTitle: String
     val lifeStageNote: String
+    /** Under a date picker: the date chosen, which may be on a month the picker is not showing. */
+    fun chosenDate(date: String): String
 
     // ---- notifications
     val notificationsTitle: String
@@ -992,6 +1004,8 @@ interface JourneyStrings {
     val markPeriodDay: String
     val periodCardTitle: String
     val periodCardBody: String
+    /** The same, in a stage that keeps a record of periods but forecasts nothing from it. */
+    val periodCardBodyNoForecast: String
     fun periodRunningSince(date: String): String
     val periodStartedThisDay: String
     val periodEndedThisDay: String
@@ -1058,7 +1072,8 @@ interface JourneyStrings {
     val noAppointments: String
     val noAppointmentsBody: String
     val logToday: String
-    val aiAdvice: String
+    /** The stage's general advice, for the trimester [week] falls in. */
+    fun aiAdvice(week: Int): String
     val aiBadge: String
 
     // ---- appointments
@@ -1108,7 +1123,10 @@ interface JourneyStrings {
     val mood: String
     val sleep: String
     val brokenSleep: String
-    val feedingAndWater: String
+    val waterAndFood: String
+    /** Postpartum: the first period after a birth, and where to record it. */
+    val periodReturnTitle: String
+    val periodReturnBody: String
     val water: String
     val calories: String
     val moodWatch: String
@@ -1132,6 +1150,8 @@ interface JourneyStrings {
     // ---- menopause
     val menopauseTitle: String
     val scoreNote: String
+    /** Under the balance ring before anything behind it was recorded today. */
+    val balanceEmpty: String
     val activity: String
 
     // ---- stage detail: symptoms

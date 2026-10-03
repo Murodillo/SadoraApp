@@ -469,6 +469,26 @@ private fun MainShell(
         }
     }
 
+    // A saved stage change: the symptom catalogue, the prediction and the calendar are
+    // all scoped by the stage the server holds, and none of them was read again — a
+    // switch to menopause kept offering cramps and no hot flushes until a restart.
+    LaunchedEffect(state.stageRevision) {
+        if (state.stageRevision > 0) health.loadAll()
+    }
+
+    // The app brought forward on a later day than it last read. The load above runs once,
+    // so a phone left with the app open overnight kept yesterday: the cycle day, the
+    // water, the streak — the calendar ringed yesterday as today.
+    LifecycleResumeEffect(health) {
+        if (health.loaded && uz.sadora.app.model.deviceToday() != state.today) {
+            scope.launch {
+                health.loadAll()
+                rewards.checkIn()
+            }
+        }
+        onPauseOrDispose { }
+    }
+
     // Premium swaps the bar's last slot. Bought while standing on the Premium tab, that
     // tab is gone from under her; Today is the one place that is always there.
     val tabs = Tab.bar(state.isPremium)

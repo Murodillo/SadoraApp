@@ -70,8 +70,12 @@ fun CycleDayScreen(
     val common = strings.common
     val day = runCatching { LocalDate.parse(date) }.getOrNull() ?: state.today
     val isToday = day == state.today
-    val cycleDay = if (isToday) state.cycleDay else state.cycleDayFor(day)
-    val phase = if (isToday) state.currentPhase() else state.phaseForDate(day)
+    // Only where there is a forecast. In perimenopause or after a birth this page is
+    // reached to record a period, and the store's default — day 14 — put "ovulation"
+    // over it for a woman nothing had been predicted for.
+    val forecast = state.lifeStage.predictsCycle && state.hasCyclePrediction
+    val cycleDay = if (!forecast) null else if (isToday) state.cycleDay else state.cycleDayFor(day)
+    val phase = if (!forecast) null else if (isToday) state.currentPhase() else state.phaseForDate(day)
 
     var log by remember(day) { mutableStateOf<DailyLog?>(null) }
     // Read again when the sheet closes: the card under it kept showing the record from
@@ -180,16 +184,19 @@ fun CycleDayScreen(
 
             // The one thing the cycle is predicted from. After onboarding nothing in the
             // app could record it: "Hayzni belgilash" led here, and here there were only
-            // symptoms. Only for the stages that have a cycle to predict.
-            if (editable && state.lifeStage.predictsCycle) {
+            // symptoms. Also in perimenopause, whose regularity chart is drawn from these,
+            // and after a birth, for the first period coming back — neither predicts.
+            if (editable && state.lifeStage.recordsPeriods) {
                 item {
                     SadoraCard {
                         Text(t.periodCardTitle, style = Sadora.type.h3, color = c.text)
                         Text(
                             if (openPeriod != null) {
                                 t.periodRunningSince(strings.dates.dayMonth(openPeriod.startedOn))
-                            } else {
+                            } else if (state.lifeStage.predictsCycle) {
                                 t.periodCardBody
+                            } else {
+                                t.periodCardBodyNoForecast
                             },
                             style = Sadora.type.body,
                             color = c.muted,

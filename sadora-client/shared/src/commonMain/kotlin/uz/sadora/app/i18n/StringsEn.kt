@@ -392,6 +392,7 @@ object StringsEn : Strings {
         override fun goalsChosen(count: Int) = "$count chosen"
 
         override val lifeStageTitle = "Life stage"
+        override fun chosenDate(date: String) = "Chosen date: $date"
         override val lifeStageNote = "Changing the stage rebuilds the Journey tab and the " +
             "screens that belong to it. Everything you have recorded stays."
 
@@ -957,6 +958,7 @@ object StringsEn : Strings {
         override val predictedNote = "Outlined days are a calculation, not a medical guarantee."
         override val markPeriodDay = "Mark a period day"
         override val periodCardTitle = "Period"
+        override val periodCardBodyNoForecast = "Mark it if your period started on this day — it shows how long your cycles run."
         override val periodCardBody = "Mark it if your period started on this day — the next cycle's prediction is counted from it."
         override fun periodRunningSince(date: String) = "Your period started on $date and is still running."
         override val periodStartedThisDay = "My period started this day"
@@ -1039,9 +1041,17 @@ object StringsEn : Strings {
         override val noAppointmentsBody =
             "Write down the date of a check-up or a test — a reminder will follow."
         override val logToday = "Record how today feels"
-        override val aiAdvice =
-            "Iron-rich food and gentle stretching may help this week. This is general " +
-                "health information."
+        override fun aiAdvice(week: Int) = when {
+            week <= 13 ->
+                "In the first trimester, take folic acid as your doctor advised. If you feel sick, " +
+                    "eat small meals more often. This is general health information."
+            week <= 27 ->
+                "In the second trimester, food rich in iron and calcium and gentle movement — " +
+                    "walking, stretching — may help. This is general health information."
+            else ->
+                "In the third trimester, resting on your side may be more comfortable. Notice your " +
+                    "baby's movements every day and see a doctor if they slow down. This is general health information."
+        }
         override val aiBadge = "General advice"
 
         override val appointmentsTitle = "Appointments"
@@ -1100,7 +1110,10 @@ object StringsEn : Strings {
         override val mood = "Mood"
         override val sleep = "Sleep"
         override val brokenSleep = "Broken sleep"
-        override val feedingAndWater = "Feeding and water"
+        override val waterAndFood = "Water and food"
+        override val periodReturnTitle = "Has your period come back?"
+        override val periodReturnBody =
+            "Mark the first period after the birth — it can return even while breastfeeding."
         override val water = "Water"
         override val calories = "Calories"
         override val moodWatch = "Keeping an eye on mood"
@@ -1130,6 +1143,7 @@ object StringsEn : Strings {
         override val seeSymptoms = "See symptoms"
 
         override val menopauseTitle = "Wellbeing"
+        override val balanceEmpty = "Log water, food, sleep or steps and your score appears here."
         override val scoreNote =
             "Based on sleep, activity, food and mood. This score is not a medical " +
                 "measure."

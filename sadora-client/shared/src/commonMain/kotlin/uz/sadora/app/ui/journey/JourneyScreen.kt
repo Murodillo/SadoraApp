@@ -52,6 +52,7 @@ import uz.sadora.app.model.AppState
 import uz.sadora.app.model.CyclePhase
 import uz.sadora.app.model.Fmt
 import uz.sadora.app.model.LifeStage
+import uz.sadora.app.model.NoValue
 import uz.sadora.app.nav.Route
 import uz.sadora.app.ui.components.AnimatedNumber
 import uz.sadora.app.ui.components.BadgeTone
@@ -101,7 +102,7 @@ fun JourneyScreen(
         when (state.lifeStage) {
             LifeStage.Cycle, LifeStage.TryingToConceive -> CycleJourney(state, health, onOpen)
             LifeStage.Pregnancy -> PregnancyJourney(state, health, onOpen)
-            LifeStage.Postpartum -> PostpartumJourney(state, onOpen)
+            LifeStage.Postpartum -> PostpartumJourney(state, health, onOpen)
             LifeStage.Perimenopause -> PerimenopauseJourney(state, health, onOpen)
             LifeStage.Menopause -> MenopauseJourney(state, health, onOpen)
         }
@@ -685,7 +686,7 @@ private fun PregnancyJourney(state: AppState, health: HealthController, onOpen: 
                     ) {
                         Text("${appointment.scheduledOn.day}", style = Sadora.type.h2, color = c.text)
                         Text(
-                            strings.dates.months[appointment.scheduledOn.month.ordinal].take(3).uppercase(),
+                            strings.dates.monthsShort[appointment.scheduledOn.month.ordinal].uppercase(),
                             style = Sadora.type.caption,
                             color = c.muted,
                         )
@@ -714,7 +715,7 @@ private fun PregnancyJourney(state: AppState, health: HealthController, onOpen: 
 
         item {
             AiAdviceCard(
-                t.aiAdvice,
+                t.aiAdvice(state.pregnancyWeek),
             )
         }
     }
@@ -741,7 +742,7 @@ private fun AiAdviceCard(body: String) {
 // ---------------------------------------------------------------- postpartum
 
 @Composable
-private fun PostpartumJourney(state: AppState, onOpen: (Route) -> Unit) {
+private fun PostpartumJourney(state: AppState, health: HealthController, onOpen: (Route) -> Unit) {
     val t = strings.journey
     val c = Sadora.colors
     SadoraTopBar(t.postpartumTitle)
@@ -771,12 +772,18 @@ private fun PostpartumJourney(state: AppState, onOpen: (Route) -> Unit) {
             Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                 SadoraCard(modifier = Modifier.weight(1f), padding = Spacing.sm) {
                     CardLabel(t.mood)
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
-                    ) {
-                        Text(state.mood.emoji, style = Sadora.type.h1)
-                        Text(strings.common.mood(state.mood), style = Sadora.type.h3, color = c.text)
+                    // The store holds a mood before she has given one; shown, it read as
+                    // "Xotirjam" on a day nobody had asked her.
+                    if (state.moodLoggedToday) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+                        ) {
+                            Text(state.mood.emoji, style = Sadora.type.h1)
+                            Text(strings.common.mood(state.mood), style = Sadora.type.h3, color = c.text)
+                        }
+                    } else {
+                        Text(NoValue, style = Sadora.type.h2, color = c.text)
                     }
                 }
                 SadoraCard(modifier = Modifier.weight(1f), padding = Spacing.sm) {
@@ -793,7 +800,7 @@ private fun PostpartumJourney(state: AppState, onOpen: (Route) -> Unit) {
 
         item {
             SadoraCard {
-                CardLabel(t.feedingAndWater)
+                CardLabel(t.waterAndFood)
                 LabeledProgress(
                     t.water,
                     "${Fmt.litres(state.waterMl)} / ${Fmt.litres(state.waterGoalMl)} " +
@@ -806,6 +813,18 @@ private fun PostpartumJourney(state: AppState, onOpen: (Route) -> Unit) {
                     "${Fmt.int(state.caloriesEaten)} / ${Fmt.int(state.calorieGoal)}",
                     state.caloriesEaten / state.calorieGoal.coerceAtLeast(1).toFloat(),
                 )
+            }
+        }
+
+        // Every other stage could note a symptom here; this one, with back pain and broken
+        // nights in its own catalogue, had nowhere to.
+        item { StageSymptomChips(state, health, onOpen) }
+
+        // The first period after a birth is worth recording, and nothing here led to it.
+        item {
+            SadoraCard(onClick = { onOpen(Route.CycleDay(state.today.toString())) }) {
+                Text(t.periodReturnTitle, style = Sadora.type.h3, color = c.text)
+                Text(t.periodReturnBody, style = Sadora.type.body, color = c.muted)
             }
         }
 
@@ -880,7 +899,7 @@ private fun PerimenopauseJourney(state: AppState, health: HealthController, onOp
                     WeeklyBars(
                         values = cycles.map { it.cycleLength / longest.toFloat() },
                         labels = cycles.map {
-                            strings.dates.months[it.startedOn.month.ordinal].take(3)
+                            strings.dates.monthsShort[it.startedOn.month.ordinal]
                         },
                         color = c.primary,
                     )
@@ -898,20 +917,7 @@ private fun PerimenopauseJourney(state: AppState, health: HealthController, onOp
             }
         }
 
-        item {
-            SadoraCard {
-                CardLabel(t.symptoms)
-                ChipFlowRow {
-                    health.symptoms.forEach { definition ->
-                        SelectChip(
-                            label = definition.label,
-                            selected = definition.label in state.symptoms,
-                            onClick = { state.toggleSymptom(definition.label) },
-                        )
-                    }
-                }
-            }
-        }
+        item { StageSymptomChips(state, health, onOpen) }
 
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
@@ -934,11 +940,22 @@ private fun PerimenopauseJourney(state: AppState, health: HealthController, onOp
         }
 
         item {
-            SadoraButton(
-                t.seeSymptoms,
-                onClick = { onOpen(Route.StageSymptoms) },
-                tone = ButtonTone.Secondary,
-            )
+            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                // The regularity chart is drawn from recorded periods, and this stage
+                // had no way to record one — its empty state asked for something
+                // nothing on the screen could do.
+                SadoraButton(
+                    t.markPeriod,
+                    onClick = { onOpen(Route.CycleDay(state.today.toString())) },
+                    modifier = Modifier.weight(1f),
+                )
+                SadoraButton(
+                    t.seeSymptoms,
+                    onClick = { onOpen(Route.StageSymptoms) },
+                    tone = ButtonTone.Secondary,
+                    modifier = Modifier.weight(1f),
+                )
+            }
         }
     }
 }
@@ -961,20 +978,22 @@ private fun MenopauseJourney(state: AppState, health: HealthController, onOpen: 
                 ) {
                     // Balance score, not a cycle count, is the headline here — and it is
                     // the same score the Balance screen works out, not a fixed 72.
+                    // Nothing recorded yet is no score, not a score of 0.
+                    val measured = state.hasBalanceSignals
                     val score = state.balanceScore()
                     ProgressRing(
-                        progress = score / 100f,
+                        progress = if (measured) score / 100f else 0f,
                         size = 120.dp,
                         strokeWidth = 11.dp,
                         color = c.accent,
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("$score", style = Sadora.type.data, color = c.text)
+                            Text(if (measured) "$score" else NoValue, style = Sadora.type.data, color = c.text)
                             Text(t.balanceCaps, style = Sadora.type.caption, color = c.muted)
                         }
                     }
                     Text(
-                        t.scoreNote,
+                        if (measured) t.scoreNote else t.balanceEmpty,
                         style = Sadora.type.body,
                         color = c.muted,
                         modifier = Modifier.weight(1f),
@@ -992,26 +1011,12 @@ private fun MenopauseJourney(state: AppState, health: HealthController, onOpen: 
 
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                StatCard(t.mood, strings.common.mood(state.mood), Modifier.weight(1f))
+                StatCard(t.mood, if (state.moodLoggedToday) strings.common.mood(state.mood) else NoValue, Modifier.weight(1f))
                 StatCard(t.water, "${Fmt.litres(state.waterMl)} ${strings.common.litres}", Modifier.weight(1f))
             }
         }
 
-        item {
-            SadoraCard {
-                CardLabel(t.symptoms)
-                ChipFlowRow {
-                    health.symptoms.forEach { definition ->
-                        SelectChip(
-                            label = definition.label,
-                            selected = definition.label in state.symptoms,
-                            onClick = { state.toggleSymptom(definition.label) },
-                        )
-                    }
-                    SelectChip(t.addSymptom, selected = false, onClick = { onOpen(Route.StageSymptoms) })
-                }
-            }
-        }
+        item { StageSymptomChips(state, health, onOpen) }
 
         item {
             SadoraButton(
@@ -1025,6 +1030,25 @@ private fun MenopauseJourney(state: AppState, health: HealthController, onOpen: 
 }
 
 
+
+/** The stage's catalogue as chips, with the way to the full sheet. */
+@Composable
+private fun StageSymptomChips(state: AppState, health: HealthController, onOpen: (Route) -> Unit) {
+    val t = strings.journey
+    SadoraCard {
+        CardLabel(t.symptoms)
+        ChipFlowRow {
+            health.symptoms.forEach { definition ->
+                SelectChip(
+                    label = definition.label,
+                    selected = definition.label in state.symptoms,
+                    onClick = { state.toggleSymptom(definition.label) },
+                )
+            }
+            SelectChip(t.addSymptom, selected = false, onClick = { onOpen(Route.StageSymptoms) })
+        }
+    }
+}
 
 /** How many symptom tiles fit the cycle card's row. */
 private const val SymptomTiles = 4

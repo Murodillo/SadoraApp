@@ -253,7 +253,7 @@ private fun EventRow(
                 color = if (highlighted) c.textAccent else c.text,
             )
             Text(
-                strings.dates.months[appointment.scheduledOn.month.ordinal].take(3).uppercase(),
+                strings.dates.monthsShort[appointment.scheduledOn.month.ordinal].uppercase(),
                 style = Sadora.type.caption,
                 color = c.muted,
             )
@@ -500,7 +500,9 @@ fun PregnancyCheckInScreen(
                 }
             }
 
-            item {
+            // Movements are first felt around weeks 18–22; asked at week 8, "fewer than
+            // usual" and its "see a doctor without delay" had nothing to describe.
+            if (state.pregnancyWeek >= MovementFromWeek) item {
                 SadoraCard {
                     CardLabel(t.babyMovement)
                     ChipFlowRow {
@@ -551,7 +553,7 @@ fun PregnancyCheckInScreen(
                                 mood = mood?.toWire(),
                                 symptomKeys = chosen.map { SymptomEntry(it) },
                                 note = note.trim().takeIf { it.isNotEmpty() },
-                                fetalMovement = movement,
+                                fetalMovement = movement.takeIf { state.pregnancyWeek >= MovementFromWeek },
                             )
                             saving = false
                             // Offline, the form stays with everything she entered and the
@@ -597,3 +599,6 @@ internal fun MoodCell(
         )
     }
 }
+
+/** The week from which the check-in asks about the baby's movements. */
+private const val MovementFromWeek = 20

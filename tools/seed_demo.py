@@ -297,8 +297,12 @@ def seed_user(spec: dict, everyone: list) -> dict:
         "firstCheckIn": {"mood": spec["logs"][0].get("mood"), "symptomKeys": [s["key"] for s in spec["logs"][0].get("symptoms", [])]},
     }, token)
 
-    for ago, length in spec.get("periods", []):
-        call("POST", "/cycle/periods", {"startedOn": d(ago), "endedOn": d(ago - length + 1)}, token, ok=(200, 201, 409))
+    # Periods are dated from the day the script runs, so a re-run on a later day wrote a
+    # second series a few days after the first — Malika ended up with three, an average
+    # cycle of 17 days and an ovulation inside her period. Her history is seeded once.
+    if not call("GET", "/cycle/periods", token=token):
+        for ago, length in spec.get("periods", []):
+            call("POST", "/cycle/periods", {"startedOn": d(ago), "endedOn": d(ago - length + 1)}, token, ok=(200, 201, 409))
 
     for ago, log in spec["logs"].items():
         call("PUT", f"/days/{d(ago)}", {"symptoms": [], **log}, token)

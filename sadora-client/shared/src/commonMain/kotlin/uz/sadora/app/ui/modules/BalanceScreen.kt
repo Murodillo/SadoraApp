@@ -82,7 +82,8 @@ fun BalanceScreen(
                             segments = directions.map { (it.value ?: 0f) / 4f to it.color },
                         ) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text("$score", style = Sadora.type.data, color = c.text)
+                                // Nothing recorded is no score, not 0 — the same as the menopause header.
+                                Text(if (state.hasBalanceSignals) "$score" else uz.sadora.app.model.NoValue, style = Sadora.type.data, color = c.text)
                                 Text(t.balanceCapsWord, style = Sadora.type.caption, color = c.muted)
                             }
                         }

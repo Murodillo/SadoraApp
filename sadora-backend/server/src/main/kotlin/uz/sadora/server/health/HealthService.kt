@@ -23,6 +23,7 @@ import uz.sadora.contract.SymptomDefinition
 import uz.sadora.contract.SymptomEntry
 import uz.sadora.contract.UpdatePeriodRequest
 import uz.sadora.contract.Limits
+import uz.sadora.server.core.ConflictException
 import uz.sadora.server.core.NotFoundException
 import uz.sadora.server.core.ValidationException
 import uz.sadora.server.core.dayIn
@@ -187,6 +188,7 @@ class HealthService(
         val user = access.requireWritable(userId, FeatureKeys.CYCLE_PREDICTION)
         val today = now().dayIn(user.timezone)
         validatePeriod(request.startedOn, request.endedOn, today)
+        refuseOverlap(userId, request.startedOn, request.endedOn, today, except = null)
 
         val id = repository.addPeriod(userId, request.startedOn, request.endedOn)
         return repository.periodById(userId, id)?.toEntry()
@@ -202,6 +204,7 @@ class HealthService(
         val startedOn = request.startedOn ?: existing.startedOn
         val endedOn = if (request.clearEnd) null else request.endedOn ?: existing.endedOn
         validatePeriod(startedOn, endedOn, today)
+        refuseOverlap(userId, startedOn, endedOn, today, except = id)
 
         repository.updatePeriod(userId, id, request.startedOn, request.endedOn, request.clearEnd)
         return repository.periodById(userId, id)?.toEntry()
@@ -286,6 +289,34 @@ class HealthService(
                 throw ValidationException("endedOn", "Eng ko'pi $MAX_PERIOD_DAYS kun")
             }
         }
+    }
+
+    /**
+     * A period may not share a day with another one, or begin the day after one ends.
+     *
+     * Either is the same bleed written down twice, and the predictor measures cycles as
+     * the gaps between starts: two entries four days apart made one woman's average
+     * cycle 17 days, put her ovulation inside her period and told her she was luteal on
+     * day 9. Only an exact repeat of a start date was refused before, by the index.
+     */
+    private suspend fun refuseOverlap(
+        userId: Uuid,
+        startedOn: LocalDate,
+        endedOn: LocalDate?,
+        today: LocalDate,
+        except: Uuid?,
+    ) {
+        val end = endedOn ?: startedOn
+        val clash = repository.periodsOf(userId)
+            .filter { it.id != except }
+            .any { other ->
+                // An open period runs to today, as far as a period can.
+                val otherEnd = other.endedOn
+                    ?: minOf(today, other.startedOn.plus(MAX_PERIOD_DAYS - 1, DateTimeUnit.DAY))
+                startedOn <= otherEnd.plus(1, DateTimeUnit.DAY) &&
+                    other.startedOn <= end.plus(1, DateTimeUnit.DAY)
+            }
+        if (clash) throw ConflictException("Bu kunlar boshqa hayz yozuvi bilan ustma-ust tushadi")
     }
 
     private fun RecordedPeriod.toEntry() = PeriodEntry(

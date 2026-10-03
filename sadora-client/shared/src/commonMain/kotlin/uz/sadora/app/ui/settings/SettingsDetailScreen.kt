@@ -15,6 +15,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import uz.sadora.app.design.Sadora
 import uz.sadora.app.design.Spacing
@@ -216,8 +217,14 @@ private fun LifeStageSettings(state: AppState, controller: SadoraController, onC
     val today = remember { deviceToday() }
 
     var chosen by remember { mutableStateOf(state.lifeStage) }
-    var due by remember { mutableStateOf(state.dueDate) }
-    var born by remember { mutableStateOf(state.childBirthDate ?: state.babyBirthDate) }
+    val dueRange = today..today.plus(10, DateTimeUnit.MONTH)
+    val bornRange = today.minus(24, DateTimeUnit.MONTH)..today
+    // A date is offered back only while it still fits the question. A due date left over
+    // from an earlier pregnancy was taken silently — Save was already enabled, the
+    // calendar opened on this month and showed nothing chosen, and a new pregnancy began
+    // at whatever week the old date gave.
+    var due by remember { mutableStateOf(state.dueDate?.takeIf { it in dueRange }) }
+    var born by remember { mutableStateOf((state.childBirthDate ?: state.babyBirthDate)?.takeIf { it in bornRange }) }
     val ready = when (chosen) {
         LifeStage.Pregnancy -> due != null
         LifeStage.Postpartum -> born != null
@@ -247,8 +254,9 @@ private fun LifeStageSettings(state: AppState, controller: SadoraController, onC
                         today = today,
                         monthsBack = 0,
                         monthsForward = 9,
-                        range = today..today.plus(10, DateTimeUnit.MONTH),
+                        range = dueRange,
                     )
+                    due?.let { ChosenDate(strings.dates.dayMonthYear(it)) }
                 }
             }
         }
@@ -262,8 +270,9 @@ private fun LifeStageSettings(state: AppState, controller: SadoraController, onC
                         onSelect = { born = it },
                         today = today,
                         monthsBack = 12,
-                        range = today.minus(24, DateTimeUnit.MONTH)..today,
+                        range = bornRange,
                     )
+                    born?.let { ChosenDate(strings.dates.dayMonthYear(it)) }
                 }
             }
         }
@@ -285,6 +294,7 @@ private fun LifeStageSettings(state: AppState, controller: SadoraController, onC
                         scope.launch {
                             if (controller.saveProfile(withStageDate = true)) {
                                 state.recountStageWeeks()
+                                state.stageRevision++
                                 onClose()
                             } else {
                                 // Refused: the app goes back to the stage the server still has.
@@ -298,6 +308,12 @@ private fun LifeStageSettings(state: AppState, controller: SadoraController, onC
             }
         }
     }
+}
+
+/** "Tanlangan sana: 15-yanvar 2027" — the picker may be on another month than the choice. */
+@Composable
+private fun ChosenDate(date: String) {
+    Text(strings.settings.chosenDate(date), style = Sadora.type.body.copy(fontWeight = FontWeight.SemiBold), color = Sadora.colors.text)
 }
 
 @Composable

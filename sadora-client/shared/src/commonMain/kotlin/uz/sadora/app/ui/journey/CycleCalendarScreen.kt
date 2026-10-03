@@ -314,14 +314,16 @@ private fun SelectedDaySummary(state: AppState, onOpen: () -> Unit) {
                     Text(t.today, style = Sadora.type.h3, color = c.text)
                     SadoraBadge(strings.common.phase(state.currentPhase()), BadgeTone.Estimated)
                 }
+                // The mood only once she has given one: the store's default made this
+                // line say "kayfiyat xotirjam" about a day nobody had asked her about.
+                val mood = strings.common.mood(state.mood).lowercase().takeIf { state.moodLoggedToday }
+                val symptoms = state.symptoms.joinToString(", ")
                 Text(
-                    if (state.symptoms.isEmpty()) {
-                        t.noSymptomsAndMood(strings.common.mood(state.mood).lowercase())
-                    } else {
-                        t.symptomsAndMood(
-                            state.symptoms.joinToString(", "),
-                            strings.common.mood(state.mood).lowercase(),
-                        )
+                    when {
+                        mood == null && symptoms.isEmpty() -> t.noSymptomsLogged
+                        mood == null -> symptoms
+                        symptoms.isEmpty() -> t.noSymptomsAndMood(mood)
+                        else -> t.symptomsAndMood(symptoms, mood)
                     },
                     style = Sadora.type.body,
                     color = c.muted,

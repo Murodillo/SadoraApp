@@ -63,7 +63,9 @@ import uz.sadora.contract.DailyCheckInResult
 import uz.sadora.contract.HomeLayout
 import uz.sadora.contract.HomeWidget
 import uz.sadora.contract.HomeWidgets
+import uz.sadora.contract.LogPeriodRequest
 import uz.sadora.contract.NutritionGoals
+import uz.sadora.contract.PeriodEntry
 import uz.sadora.contract.RedeemRequest
 import uz.sadora.contract.RedeemResult
 import uz.sadora.contract.Redemption
@@ -72,6 +74,7 @@ import uz.sadora.contract.RewardsSummary
 import uz.sadora.contract.SaveHomeLayoutRequest
 import uz.sadora.contract.ShopCatalog
 import uz.sadora.contract.ShopKind
+import uz.sadora.contract.UpdatePeriodRequest
 import uz.sadora.contract.WaterState
 import uz.sadora.contract.AiChatQuota
 import uz.sadora.contract.AiChatReply
@@ -84,6 +87,7 @@ import uz.sadora.contract.ArticleKind
 import uz.sadora.contract.Appointment
 import uz.sadora.contract.CompleteAppointmentRequest
 import uz.sadora.contract.SaveAppointmentRequest
+import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalTime
 import kotlinx.datetime.minus
@@ -860,6 +864,37 @@ class ApiIntegrationTest {
         )
         assertEquals(0, job.runOnce())
         assertNotNull(component.userRepository.findById(userId))
+    }
+
+    // ---------------------------------------------------------------- periods
+
+    @Test
+    fun `a period that overlaps or runs on from another is refused, a separate one is not`() = api {
+        val her = signUp()
+        onboard(her, referredByDoctor = null, storeHealth = true)
+        val today = get<CycleStatus>("/v1/cycle/status", her.token).today
+        fun ago(days: Int) = today.minus(days, DateTimeUnit.DAY)
+
+        val first = post<PeriodEntry>("/v1/cycle/periods", her.token, LogPeriodRequest(ago(40), ago(36)))
+
+        // Sharing a day, and starting the day after it ended: the same bleed twice.
+        for (start in listOf(ago(36), ago(35))) {
+            val refused = client.post("/v1/cycle/periods") { auth(her.token); json(LogPeriodRequest(start)) }
+            assertEquals(HttpStatusCode.Conflict, refused.status, "start $start: ${refused.bodyAsTextSafe()}")
+        }
+
+        // A month on is a new cycle.
+        val second = post<PeriodEntry>("/v1/cycle/periods", her.token, LogPeriodRequest(ago(12), ago(8)))
+
+        // Moving one onto the other is refused too; editing a period within itself is not.
+        val moved = client.patch("/v1/cycle/periods/${second.id}") {
+            auth(her.token)
+            json(UpdatePeriodRequest(startedOn = ago(38), endedOn = ago(34)))
+        }
+        assertEquals(HttpStatusCode.Conflict, moved.status, moved.bodyAsTextSafe())
+        patch<PeriodEntry>("/v1/cycle/periods/${first.id}", her.token, UpdatePeriodRequest(endedOn = ago(35)))
+
+        assertEquals(2, get<List<PeriodEntry>>("/v1/cycle/periods", her.token).size)
     }
 
     // ---------------------------------------------------------------- appointments

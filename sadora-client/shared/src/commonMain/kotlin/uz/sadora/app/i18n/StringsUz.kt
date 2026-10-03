@@ -392,6 +392,7 @@ object StringsUz : Strings {
         override fun goalsChosen(count: Int) = "$count tanlandi"
 
         override val lifeStageTitle = "Hayot bosqichi"
+        override fun chosenDate(date: String) = "Tanlangan sana: $date"
         override val lifeStageNote = "Bosqichni o'zgartirsangiz \"Yo'l\" bo'limi va tegishli " +
             "ekranlar butunlay yangilanadi. Yozilgan ma'lumotlaringiz saqlanadi."
 
@@ -531,6 +532,10 @@ object StringsUz : Strings {
         override val months = listOf(
             "Yanvar", "Fevral", "Mart", "Aprel", "May", "Iyun",
             "Iyul", "Avgust", "Sentabr", "Oktabr", "Noyabr", "Dekabr",
+        )
+
+        override val monthsShort = listOf(
+            "Yan", "Fev", "Mar", "Apr", "May", "Iyn", "Iyl", "Avg", "Sen", "Okt", "Noy", "Dek",
         )
 
         override val weekdays = listOf(
@@ -956,6 +961,7 @@ object StringsUz : Strings {
         override val predictedNote = "Konturli kunlar — hisob-kitob natijasi, tibbiy kafolat emas."
         override val markPeriodDay = "Hayzni belgilash"
         override val periodCardTitle = "Hayz"
+        override val periodCardBodyNoForecast = "Hayz shu kuni boshlangan bo'lsa belgilang — sikllaringiz uzunligi shundan ko'rinadi."
         override val periodCardBody = "Hayz shu kuni boshlangan bo'lsa belgilang — keyingi sikl bashorati shundan hisoblanadi."
         override fun periodRunningSince(date: String) = "Hayz $date kuni boshlangan va hali davom etmoqda."
         override val periodStartedThisDay = "Hayz shu kuni boshlandi"
@@ -1037,9 +1043,17 @@ object StringsUz : Strings {
         override val noAppointmentsBody =
             "Ko'rik yoki tahlil sanasini yozib qo'ying — eslatma yuboriladi."
         override val logToday = "Bugungi holatni qayd etish"
-        override val aiAdvice =
-            "Bu haftada temirga boy ovqatlar va yengil cho'zilish mashqlari foydali " +
-                "bo'lishi mumkin. Umumiy salomatlik ma'lumoti."
+        override fun aiAdvice(week: Int) = when {
+            week <= 13 ->
+                "Birinchi trimestrda foliy kislotasini shifokor aytganidek ichib boring. Ko'ngil " +
+                    "aynisa, kam-kamdan tez-tez ovqatlaning. Umumiy salomatlik ma'lumoti."
+            week <= 27 ->
+                "Ikkinchi trimestrda temir va kalsiyga boy ovqatlar hamda yengil harakat — piyoda " +
+                    "yurish, cho'zilish — foydali bo'lishi mumkin. Umumiy salomatlik ma'lumoti."
+            else ->
+                "Uchinchi trimestrda yonboshlab dam olish qulayroq bo'lishi mumkin. Bola harakatini " +
+                    "har kuni kuzating, kamaysa shifokorga murojaat qiling. Umumiy salomatlik ma'lumoti."
+        }
         override val aiBadge = "Umumiy maslahat"
 
         override val appointmentsTitle = "Tadbirlar"
@@ -1098,7 +1112,10 @@ object StringsUz : Strings {
         override val mood = "Kayfiyat"
         override val sleep = "Uyqu"
         override val brokenSleep = "Bo'lingan uyqu"
-        override val feedingAndWater = "Emizish va suv"
+        override val waterAndFood = "Suv va ovqatlanish"
+        override val periodReturnTitle = "Hayz qaytdimi?"
+        override val periodReturnBody =
+            "Tug'ruqdan keyingi birinchi hayzni belgilab qo'ying — emizish paytida ham qaytishi mumkin."
         override val water = "Suv"
         override val calories = "Kaloriya"
         override val moodWatch = "Kayfiyat kuzatuvi"
@@ -1128,6 +1145,7 @@ object StringsUz : Strings {
         override val seeSymptoms = "Simptomlarni ko'rish"
 
         override val menopauseTitle = "Salomatlik"
+        override val balanceEmpty = "Suv, ovqat, uyqu yoki qadam belgilansa, ball shu yerda chiqadi."
         override val scoreNote =
             "Uyqu, faollik, ovqatlanish va kayfiyat asosida. Bu ball tibbiy " +
                 "ko'rsatkich emas."

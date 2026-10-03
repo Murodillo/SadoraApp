@@ -109,6 +109,13 @@ class AppState {
     var heightCm by mutableStateOf("")
     var weightKg by mutableStateOf("")
     var lifeStage by mutableStateOf(LifeStage.Cycle)
+
+    /**
+     * Bumped each time a stage change is saved. The symptom catalogue, the prediction and
+     * the calendar all depend on the stage the server holds, so the shell reloads them on
+     * this — not on [lifeStage], which moves before the save has landed.
+     */
+    var stageRevision by mutableStateOf(0)
     // Empty until the onboarding grid is answered, for the same reason [name] is blank.
     val goals = mutableStateListOf<Goal>()
 
@@ -695,11 +702,17 @@ class AppState {
     // ---- cycle, derived ----
 
     /** Which phase a given cycle day falls in, from the averages alone. */
-    fun phaseForCycleDay(day: Int): CyclePhase = when {
-        day <= averagePeriodLength -> CyclePhase.Period
-        day in AssumedFertileCycleDays -> CyclePhase.Fertile
-        day < AssumedFertileCycleDays.first -> CyclePhase.Follicular
-        else -> CyclePhase.Luteal
+    fun phaseForCycleDay(day: Int): CyclePhase {
+        // The server's window when it has sent one — the dial already drew that one, and
+        // the calendar and the week strip coloured a fixed 12–16 beside it, so the same
+        // day was fertile on one screen and luteal on the next.
+        val fertile = fertileWindowDays()
+        return when {
+            day <= averagePeriodLength -> CyclePhase.Period
+            day in fertile -> CyclePhase.Fertile
+            day < fertile.first -> CyclePhase.Follicular
+            else -> CyclePhase.Luteal
+        }
     }
 
     /** Today's phase: the server's answer, or the local estimate until it arrives. */
@@ -784,16 +797,23 @@ class AppState {
      * fixed 72 next to real numbers, which made the real ones look invented too.
      */
     fun balanceScore(): Int {
-        val parts = listOfNotNull(
-            goalRatio(caloriesEaten, calorieGoal),
-            goalRatio(waterMl, waterGoalMl),
-            activityRatio(),
-            sleepMinutes?.let { goalRatio(it, DailySleepGoalMinutes) },
-        )
+        val parts = balanceParts()
         // Only what was measured counts: a day without a watch is a day with fewer
         // signals, not a day at half the score.
         return if (parts.isEmpty()) 0 else (parts.average() * 100).toInt()
     }
+
+    /** Whether anything behind [balanceScore] was recorded today; without it there is no score. */
+    val hasBalanceSignals: Boolean get() = balanceParts().isNotEmpty()
+
+    // Nothing eaten and nothing drunk yet is nothing recorded, not a zero: counted as
+    // zeros, they gave an untouched morning a balance of 0 in the menopause header.
+    private fun balanceParts(): List<Float> = listOfNotNull(
+        caloriesEaten.takeIf { it > 0 }?.let { goalRatio(it, calorieGoal) },
+        waterMl.takeIf { it > 0 }?.let { goalRatio(it, waterGoalMl) },
+        activityRatio(),
+        sleepMinutes?.let { goalRatio(it, DailySleepGoalMinutes) },
+    )
 
     /**
      * Activity against its goal: steps against 8 000, or — on a strap that counts none —

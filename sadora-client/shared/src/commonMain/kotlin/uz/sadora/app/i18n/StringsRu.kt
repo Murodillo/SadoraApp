@@ -395,6 +395,7 @@ object StringsRu : Strings {
         override fun goalsChosen(count: Int) = "Выбрано: $count"
 
         override val lifeStageTitle = "Этап жизни"
+        override fun chosenDate(date: String) = "Выбрана дата: $date"
         override val lifeStageNote = "Если сменить этап, раздел «Путь» и связанные экраны " +
             "обновятся полностью. Записанные данные сохранятся."
 
@@ -963,6 +964,7 @@ object StringsRu : Strings {
         override val predictedNote = "Дни в контуре — это расчёт, а не медицинская гарантия."
         override val markPeriodDay = "Отметить менструацию"
         override val periodCardTitle = "Месячные"
+        override val periodCardBodyNoForecast = "Отметьте, если месячные начались в этот день, — так видна длина ваших циклов."
         override val periodCardBody = "Отметьте, если месячные начались в этот день — от этого считается прогноз следующего цикла."
         override fun periodRunningSince(date: String) = "Месячные начались $date и ещё продолжаются."
         override val periodStartedThisDay = "Начались в этот день"
@@ -1045,9 +1047,17 @@ object StringsRu : Strings {
         override val noAppointmentsBody =
             "Запишите дату осмотра или анализа — придёт напоминание."
         override val logToday = "Отметить самочувствие"
-        override val aiAdvice =
-            "На этой неделе полезны продукты, богатые железом, и лёгкая растяжка. " +
-                "Это общая информация о здоровье."
+        override fun aiAdvice(week: Int) = when {
+            week <= 13 ->
+                "В первом триместре принимайте фолиевую кислоту, как назначил врач. При тошноте " +
+                    "ешьте понемногу и чаще. Это общая информация о здоровье."
+            week <= 27 ->
+                "Во втором триместре полезны продукты, богатые железом и кальцием, и лёгкое " +
+                    "движение — прогулки, растяжка. Это общая информация о здоровье."
+            else ->
+                "В третьем триместре отдыхать удобнее на боку. Следите за шевелениями малыша " +
+                    "каждый день; если их стало меньше, обратитесь к врачу. Это общая информация о здоровье."
+        }
         override val aiBadge = "Общий совет"
 
         override val appointmentsTitle = "События"
@@ -1106,7 +1116,10 @@ object StringsRu : Strings {
         override val mood = "Настроение"
         override val sleep = "Сон"
         override val brokenSleep = "Прерывистый сон"
-        override val feedingAndWater = "Кормление и вода"
+        override val waterAndFood = "Вода и питание"
+        override val periodReturnTitle = "Месячные вернулись?"
+        override val periodReturnBody =
+            "Отметьте первые месячные после родов — они могут вернуться и во время кормления грудью."
         override val water = "Вода"
         override val calories = "Калории"
         override val moodWatch = "Наблюдение за настроением"
@@ -1136,6 +1149,7 @@ object StringsRu : Strings {
         override val seeSymptoms = "Посмотреть симптомы"
 
         override val menopauseTitle = "Здоровье"
+        override val balanceEmpty = "Отметьте воду, еду, сон или шаги — и здесь появится балл."
         override val scoreNote =
             "По сну, активности, питанию и настроению. Этот балл не является " +
                 "медицинским показателем."

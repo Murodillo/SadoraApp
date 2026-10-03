@@ -121,6 +121,24 @@ class AppStateTest {
         assertFalse(s.isFertile(today))
     }
 
+    /**
+     * The calendar and the week strip colour days through [AppState.phaseForDate]. They
+     * used the fixed 12–16 while the dial drew the server's window, so one screen called
+     * a day fertile and the next one luteal.
+     */
+    @Test
+    fun `a day's phase follows the server's fertile window, not the assumed one`() {
+        val s = state(cycleLength = 28).apply {
+            cycleStartDate = LocalDate.parse("2026-08-30")
+            fertileFrom = LocalDate.parse("2026-09-07")
+            fertileUntil = LocalDate.parse("2026-09-13")
+        }
+        assertEquals(CyclePhase.Fertile, s.phaseForCycleDay(9))
+        assertEquals(CyclePhase.Fertile, s.phaseForDate(LocalDate.parse("2026-09-07")))
+        assertEquals(CyclePhase.Follicular, s.phaseForCycleDay(8))
+        assertEquals(CyclePhase.Luteal, s.phaseForCycleDay(16))
+    }
+
     // ---------------------------------------------------------------- writes
 
     /**
@@ -200,6 +218,26 @@ class AppStateTest {
 
         assertEquals(90, s.practiceSecondsToday)
         assertEquals(listOf("practice:Meditation:90"), sync.events)
+    }
+
+    @Test
+    fun `an untouched day has no balance score rather than a score of zero`() {
+        val s = state().apply { waterGoalMl = 2000; calorieGoal = 1850 }
+        assertFalse(s.hasBalanceSignals)
+
+        s.waterMl = 1000
+        assertTrue(s.hasBalanceSignals)
+        // Half the water, and nothing else counted against her.
+        assertEquals(50, s.balanceScore())
+    }
+
+    @Test
+    fun `periods are recorded in perimenopause and after a birth, but forecast only in a cycle`() {
+        assertTrue(LifeStage.Perimenopause.recordsPeriods)
+        assertTrue(LifeStage.Postpartum.recordsPeriods)
+        assertFalse(LifeStage.Pregnancy.recordsPeriods)
+        assertFalse(LifeStage.Menopause.recordsPeriods)
+        assertFalse(LifeStage.Perimenopause.predictsCycle)
     }
 
     @Test
