@@ -44,7 +44,7 @@ class StageToolsTest {
     )
 
     @Test
-    fun `a period is late from the day after it was due, as the forecast cannot say`() {
+    fun `a period is late from the day after it was due as the forecast cannot say`() {
         // 1 September + 28 days = 29 September: five days late on 4 October.
         assertEquals(5, periodLateDays(status()))
         assertNull(periodLateDays(status(lastPeriod = LocalDate(2026, 9, 10))), "not due yet")
@@ -53,7 +53,7 @@ class StageToolsTest {
     }
 
     @Test
-    fun `a doctor flag needs two measured cycles, and then names what is out of range`() {
+    fun `a doctor flag needs two measured cycles and then names what is out of range`() {
         assertTrue(doctorFlags(LifeStage.Cycle, status(cycle = 19, cycles = 1), StageToolsEn).isEmpty())
         assertEquals(1, doctorFlags(LifeStage.Cycle, status(cycle = 19), StageToolsEn).size)
         assertEquals(1, doctorFlags(LifeStage.TryingToConceive, status(cycle = 40), StageToolsEn).size)
@@ -78,7 +78,7 @@ class StageToolsTest {
     )
 
     @Test
-    fun `five-one-one means close, long and an hour of them`() {
+    fun `five-one-one means close and long and an hour of them`() {
         val anHour = (0..60 step 4).map { contraction(it, 70) }
         assertTrue(contractionSummary(anHour)!!.timeToGo)
 
