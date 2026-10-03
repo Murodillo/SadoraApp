@@ -127,7 +127,7 @@ class AppStateTest {
      * a day fertile and the next one luteal.
      */
     @Test
-    fun `a day's phase follows the server's fertile window, not the assumed one`() {
+    fun `a day's phase follows the server's fertile window — not the assumed one`() {
         val s = state(cycleLength = 28).apply {
             cycleStartDate = LocalDate.parse("2026-08-30")
             fertileFrom = LocalDate.parse("2026-09-07")
@@ -232,7 +232,7 @@ class AppStateTest {
     }
 
     @Test
-    fun `periods are recorded in perimenopause and after a birth, but forecast only in a cycle`() {
+    fun `periods are recorded in perimenopause and after a birth — but forecast only in a cycle`() {
         assertTrue(LifeStage.Perimenopause.recordsPeriods)
         assertTrue(LifeStage.Postpartum.recordsPeriods)
         assertFalse(LifeStage.Pregnancy.recordsPeriods)
