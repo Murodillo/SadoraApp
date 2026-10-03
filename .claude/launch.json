@@ -12,6 +12,12 @@
       "runtimeExecutable": "sh",
       "runtimeArgs": ["-c", "cd sadora-doctor-admin && exec npx vite --port 5174 --strictPort"],
       "port": 5174
+    },
+    {
+      "name": "landing",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "http.server", "4321", "--directory", "landing"],
+      "port": 4321
     }
   ]
 }
