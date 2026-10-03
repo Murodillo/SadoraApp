@@ -60,7 +60,7 @@ class ListPagingControllerTest {
     }
 
     @Test
-    fun `the directory reads on by offset, a refresh keeps the pages, and a sort reads the rest`() = runTest {
+    fun `the directory reads on by offset — a refresh keeps the pages and a sort reads the rest`() = runTest {
         val page = DoctorApi.DIRECTORY_PAGE
         val all = (0 until page * 2 + 5).map { doctor(it) }
         val asked = mutableListOf<String>()
@@ -174,7 +174,7 @@ class ListPagingControllerTest {
     }
 
     @Test
-    fun `the notification history reads below the last row read, shown or not`() = runTest {
+    fun `the notification history reads below the last row read — shown or not`() = runTest {
         val page = NotificationApi.HISTORY_PAGE
         // The newest page ends on a suppressed row: the cursor is that row, not the last one shown.
         val all = (0 until page + 2).map {

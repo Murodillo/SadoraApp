@@ -93,7 +93,7 @@ class WorkPagingTest {
     private fun question(n: Int): CommunityPost = testQuestion("q$n").copy(createdAt = TestNow - n.minutes)
 
     @Test
-    fun `the questions read on by what the server gave, less what she answered`() = runTest {
+    fun `the questions read on by what the server gave — less what she answered`() = runTest {
         var waiting = (0 until 120).map(::question)
         val offsets = mutableListOf<String?>()
         val recording = RecordingEngine { request ->
