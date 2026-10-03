@@ -435,12 +435,55 @@ class StringsTest {
                 ),
             )
         }
+        with(t.tools) {
+            addAll(
+                listOf(
+                    fertileTodayTitle, fertileTodayBody("x"), fertileInDays(1), fertileInDays(5),
+                    fertileWindow("a", "b", "c"), fertilePassedTitle, fertilePassedBody("x"), periodLate(3),
+                    periodLateBody, periodLateCycleBody, pregnantButton, periodStartedButton, dueFromPeriod("x"),
+                    birthPromptTitle, birthPromptBody, birthPromptButton, cycleBackTitle, cycleBackBody,
+                    cycleBackButton, flagsTitle, shortCycles(19), longCycles(40), irregularCycles(9),
+                    longPeriods(9), bleedingAfterMenopause, flagsNote, menopauseBleedingTitle,
+                    menopauseBleedingBody, menopauseBleedingButton, feedingTitle, feedingIntro,
+                    lastFeed("1h", "x"), feedsToday(3), noFeedsToday, startFeed, stopFeed, feedRunning("x"),
+                    bottleTitle, millilitres, saveBottle, nothingToday, screenTitle,
+                    screenCardTitle, screenCardBody, lastScreen("x", 9), screenIntro, screenSubmit,
+                    screenScore(9), screenLow, screenPossible, screenLikely, screenSelfHarm, askDoctor,
+                    screenSource, answeredOf(3, 10), kicksTitle, kicksCardBody, kicksIntro, kickTap,
+                    kicksCount(3, 10), kicksFinish, kicksResult(10, "40 min"), kicksSlow, previousCounts,
+                    contractionsTitle, contractionsCardBody, contractionsIntro, contractionStart,
+                    contractionStop, contractionLasted("x"), contractionApart("x"),
+                    contractionsSummary(5, "a", "b"), contractionsGo, contractionsUrgent,
+                    minutesSeconds(0, 40), minutesSeconds(2, 5), hotFlushTitle, hotFlushLog, triggerQuestion,
+                    hotFlushCounts(1, 5), commonTrigger("x"), hotFlushSaved, ago(0, 5), ago(2, 5),
+                ),
+            )
+            addAll(questions)
+            options.forEach { addAll(it) }
+            (1..3).forEach { add(intensity(it)) }
+            uz.sadora.contract.FeedingSide.entries.forEach { add(side(it)) }
+            uz.sadora.contract.HotFlushTrigger.entries.forEach { add(trigger(it)) }
+            uz.sadora.contract.GoalsBasis.entries.forEach { add(goalsBasis(it)) }
+        }
     }
 
     @Test
     fun `no language leaves a string blank`() {
         languages.forEach { language ->
             assertTrue(everything(language).none { it.isBlank() })
+        }
+    }
+
+    /** Every language asks all ten questions, each with its four options in the scale's order. */
+    @Test
+    fun `the mood questionnaire is whole in every language`() {
+        languages.forEach { t ->
+            assertEquals(uz.sadora.contract.Epds.ITEMS, t.tools.questions.size)
+            assertEquals(uz.sadora.contract.Epds.ITEMS, t.tools.options.size)
+            t.tools.options.forEach { assertEquals(uz.sadora.contract.Epds.OPTIONS, it.size, it.toString()) }
+        }
+        listOf(StringsRu, StringsEn).forEach { t ->
+            assertNotEquals(StringsUz.tools.questions, t.tools.questions)
         }
     }
 

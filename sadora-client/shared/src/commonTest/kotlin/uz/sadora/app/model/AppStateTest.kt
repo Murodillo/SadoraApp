@@ -236,7 +236,7 @@ class AppStateTest {
         assertTrue(LifeStage.Perimenopause.recordsPeriods)
         assertTrue(LifeStage.Postpartum.recordsPeriods)
         assertFalse(LifeStage.Pregnancy.recordsPeriods)
-        assertFalse(LifeStage.Menopause.recordsPeriods)
+        assertTrue(LifeStage.Menopause.recordsPeriods)
         assertFalse(LifeStage.Perimenopause.predictsCycle)
     }
 

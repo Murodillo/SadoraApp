@@ -11,6 +11,7 @@ import uz.sadora.app.data.api.InsightsApi
 import uz.sadora.app.data.api.LearnApi
 import uz.sadora.app.data.api.MedicationApi
 import uz.sadora.app.data.api.AppointmentApi
+import uz.sadora.app.data.api.StageEventApi
 import uz.sadora.app.data.api.MindApi
 import uz.sadora.app.data.api.NotificationApi
 import uz.sadora.app.data.api.NutritionApi
@@ -77,6 +78,7 @@ class SadoraGraph(
     val notificationApi: NotificationApi = NotificationApi(caller)
     val wearableApi: WearableApi = WearableApi(caller)
     val appointmentApi: AppointmentApi = AppointmentApi(caller)
+    val stageEventApi: StageEventApi = StageEventApi(caller)
     val communityApi: CommunityApi = CommunityApi(caller)
     val doctorApi: DoctorApi = DoctorApi(caller)
     val aiApi: AiApi = AiApi(caller)
@@ -132,6 +134,8 @@ class SadoraGraph(
     )
 
     fun notificationsController(): NotificationsController = NotificationsController(notificationApi)
+
+    fun stageEventsController(): StageEventsController = StageEventsController(stageEventApi)
 
     fun close() = client.close()
 }

@@ -60,6 +60,7 @@ interface Strings {
     val healthGate: HealthGateStrings
     val rewards: RewardStrings
     val pregnancyWeeks: PregnancyWeekStrings
+    val tools: StageToolsStrings
     val shop: ShopStrings
     val homeLayout: HomeLayoutStrings
     val share: ShareStrings

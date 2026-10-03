@@ -35,6 +35,7 @@ import uz.sadora.app.model.deviceToday
 import uz.sadora.app.data.recountStageWeeks
 import uz.sadora.app.ui.onboarding.CalendarPicker
 import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.LocalDate
 import kotlinx.datetime.minus
 import kotlinx.datetime.plus
 import uz.sadora.app.nav.Route
@@ -79,12 +80,14 @@ fun SettingsDetailScreen(
     onSignedOut: () -> Unit,
     onToast: (String) -> Unit,
     modifier: Modifier = Modifier,
+    /** The last period recorded, for a due date counted from it. */
+    lastPeriod: LocalDate? = null,
 ) {
     Column(modifier) {
         when (route) {
             Route.PersonalDetails -> PersonalDetails(state, controller, onClose)
             Route.GoalsSettings -> GoalsSettings(state, controller, onClose)
-            Route.LifeStageSettings -> LifeStageSettings(state, controller, onClose)
+            Route.LifeStageSettings -> LifeStageSettings(state, controller, lastPeriod, onClose)
             Route.Notifications -> NotificationSettings(state, notifications, onClose)
             Route.PrivacySecurity -> PrivacySettings(state, controller, share, onClose, onOpen, onSignedOut, onToast)
             Route.LanguageSettings -> LanguageSettings(state, controller, onClose)
@@ -208,7 +211,7 @@ private fun GoalsSettings(state: AppState, controller: SadoraController, onClose
  * to everyone, and there was no way to give the due date afterwards.
  */
 @Composable
-private fun LifeStageSettings(state: AppState, controller: SadoraController, onClose: () -> Unit) {
+private fun LifeStageSettings(state: AppState, controller: SadoraController, lastPeriod: LocalDate?, onClose: () -> Unit) {
     val t = strings.settings
     val stages = strings.stages
     val o = strings.onboarding
@@ -216,15 +219,28 @@ private fun LifeStageSettings(state: AppState, controller: SadoraController, onC
     val scope = rememberCoroutineScope()
     val today = remember { deviceToday() }
 
-    var chosen by remember { mutableStateOf(state.lifeStage) }
+    // A prompt elsewhere may have chosen already — "Homilador bo'ldim" opens on pregnancy.
+    var chosen by remember { mutableStateOf(state.pendingStage ?: state.lifeStage) }
+    LaunchedEffect(Unit) { state.pendingStage = null }
     val dueRange = today..today.plus(10, DateTimeUnit.MONTH)
     val bornRange = today.minus(24, DateTimeUnit.MONTH)..today
     // A date is offered back only while it still fits the question. A due date left over
     // from an earlier pregnancy was taken silently — Save was already enabled, the
     // calendar opened on this month and showed nothing chosen, and a new pregnancy began
     // at whatever week the old date gave.
-    var due by remember { mutableStateOf(state.dueDate?.takeIf { it in dueRange }) }
-    var born by remember { mutableStateOf((state.childBirthDate ?: state.babyBirthDate)?.takeIf { it in bornRange }) }
+    // Her own date is offered back only while she is in that stage and editing it; a new
+    // pregnancy starts from the date her last period gives, if there is one.
+    val fromPeriod = lastPeriod?.plus(PregnancyDays, DateTimeUnit.DAY)?.takeIf { it in dueRange }
+    var due by remember {
+        mutableStateOf(
+            if (state.lifeStage == LifeStage.Pregnancy) state.dueDate?.takeIf { it in dueRange } else fromPeriod,
+        )
+    }
+    var born by remember {
+        mutableStateOf(
+            (state.childBirthDate ?: state.babyBirthDate)?.takeIf { state.lifeStage == LifeStage.Postpartum && it in bornRange },
+        )
+    }
     val ready = when (chosen) {
         LifeStage.Pregnancy -> due != null
         LifeStage.Postpartum -> born != null
@@ -256,6 +272,15 @@ private fun LifeStageSettings(state: AppState, controller: SadoraController, onC
                         monthsForward = 9,
                         range = dueRange,
                     )
+                    // Coming from a recorded cycle, the date her last period gives — 280 days on
+                    // — is one tap away; a doctor's date replaces it whenever she has one.
+                    fromPeriod?.let { fromPeriod ->
+                        SelectChip(
+                            strings.tools.dueFromPeriod(strings.dates.dayMonthYear(fromPeriod)),
+                            selected = due == fromPeriod,
+                            onClick = { due = fromPeriod },
+                        )
+                    }
                     due?.let { ChosenDate(strings.dates.dayMonthYear(it)) }
                 }
             }
@@ -315,6 +340,9 @@ private fun LifeStageSettings(state: AppState, controller: SadoraController, onC
 private fun ChosenDate(date: String) {
     Text(strings.settings.chosenDate(date), style = Sadora.type.body.copy(fontWeight = FontWeight.SemiBold), color = Sadora.colors.text)
 }
+
+/** Naegele's rule: a due date is 280 days from the first day of the last period. */
+private const val PregnancyDays = 280
 
 @Composable
 private fun NotificationSettings(state: AppState, notifications: NotificationsController, onClose: () -> Unit) {
@@ -512,7 +540,12 @@ private fun LanguageSettings(state: AppState, controller: SadoraController, onCl
                         selected = state.language == language,
                         onClick = {
                             state.language = language
-                            scope.launch { failed = !controller.saveProfile() }
+                            scope.launch {
+                                failed = !controller.saveProfile()
+                                // The symptom catalogue is worded in the language the server
+                                // holds for her, so it is read again once that has changed.
+                                if (!failed) state.stageRevision++
+                            }
                         },
                     )
                 }

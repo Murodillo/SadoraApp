@@ -247,6 +247,9 @@ private fun TodayRingCard(state: AppState) {
             MacroRing(t.fat, state.fatG, state.fatGoalG, c.fat, Modifier.weight(1f), unit = "g", delayMillis = 180)
             MacroRing(t.carbs, state.carbsG, state.carbsGoalG, c.carbs, Modifier.weight(1f), unit = "g", delayMillis = 270)
         }
+        // Higher than the plain defaults because of her stage — said, so a third-trimester
+        // 2300 kcal does not read as a number the app made up.
+        state.goalsBasis?.let { Text(strings.tools.goalsBasis(it), style = Sadora.type.caption, color = c.muted) }
     }
 }
 

@@ -96,8 +96,13 @@ import uz.sadora.app.ui.core.ProfileScreen
 import uz.sadora.app.ui.core.SecretChatScreen
 import uz.sadora.app.ui.core.TodayScreen
 import uz.sadora.app.ui.journey.CycleCalendarScreen
+import uz.sadora.app.ui.journey.ContractionTimerScreen
 import uz.sadora.app.ui.journey.CycleDayScreen
+import uz.sadora.app.ui.journey.FeedingScreen
+import uz.sadora.app.ui.journey.HotFlushScreen
 import uz.sadora.app.ui.journey.JourneyScreen
+import uz.sadora.app.ui.journey.KickCounterScreen
+import uz.sadora.app.ui.journey.MoodScreenScreen
 import uz.sadora.app.ui.journey.PregnancyAppointmentsScreen
 import uz.sadora.app.ui.journey.PregnancyCheckInScreen
 import uz.sadora.app.ui.journey.StageSleepMoodScreen
@@ -851,7 +856,7 @@ private fun RootTab(
             onOpenRules = { overlays.showCommunityRules = true },
         )
 
-        Tab.Journey -> JourneyScreen(state = state, health = controllers.health, onOpen = navigator::push)
+        Tab.Journey -> JourneyScreen(state = state, health = controllers.health, tools = controllers.stageEvents, onOpen = navigator::push)
 
         Tab.Nutrition -> NutritionScreen(
             state = state,
@@ -910,6 +915,11 @@ private fun PushedScreen(
         // Pregnancy
         Route.PregnancyAppointments -> PregnancyAppointmentsScreen(health, close)
         Route.PregnancyCheckIn -> PregnancyCheckInScreen(state, health, close)
+        Route.KickCounter -> KickCounterScreen(controllers.stageEvents, close)
+        Route.Contractions -> ContractionTimerScreen(controllers.stageEvents, close)
+        Route.Feeding -> FeedingScreen(controllers.stageEvents, close)
+        Route.MoodScreen -> MoodScreenScreen(controllers.stageEvents, close, onAskDoctor = { navigator.push(Route.Doctors) })
+        Route.HotFlushes -> HotFlushScreen(controllers.stageEvents, close, onToast = toast)
 
         // Stage detail
         Route.StageSymptoms -> StageSymptomsScreen(state, health, close)
@@ -1086,6 +1096,7 @@ private fun PushedScreen(
             onOpen = navigator::push,
             onSignedOut = { navigator.goTo(AppPhase.SignIn) },
             onToast = toast,
+            lastPeriod = controllers.health.cycle?.lastPeriodStart,
         )
     }
 }

@@ -138,6 +138,7 @@ object ErrorText {
 
         // ---------------------------------------------------------------- health records
         Entry("Bu sana uchun hayz allaqachon qayd etilgan", "Месячные на эту дату уже отмечены", "A period is already logged for this date"),
+        Entry("Hamma savollarga javob bering", "Ответьте на все вопросы", "Answer every question"),
         Entry("Hayz yozuvi topilmadi", "Запись о месячных не найдена", "Period record not found"),
         Entry("Bu kunlar boshqa hayz yozuvi bilan ustma-ust tushadi", "Эти дни пересекаются с другой записью о месячных", "These days overlap another period you recorded"),
         Entry("Yozuv topilmadi", "Запись не найдена", "Entry not found"),

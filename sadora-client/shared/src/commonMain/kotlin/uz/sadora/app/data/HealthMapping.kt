@@ -81,6 +81,7 @@ fun AppState.applyNutrition(day: NutritionDay) {
     waterGoalMl = day.goals.waterGoalMl
     caloriesEaten = day.totals.kcal
     calorieGoal = day.goals.calorieGoal
+    goalsBasis = day.goals.basis
     proteinG = day.totals.proteinG
     proteinGoalG = day.goals.proteinGoalG
     fatG = day.totals.fatG

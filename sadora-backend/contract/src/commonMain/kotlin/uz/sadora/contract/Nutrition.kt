@@ -59,7 +59,9 @@ data class LogMealRequest(
 /**
  * The daily targets. Defaults are deliberately generic — the app does not compute a
  * calorie target from body measurements, which would be dietary advice it is not
- * qualified to give.
+ * qualified to give. What it does follow is her stage: the extra a pregnancy's later
+ * trimesters and breastfeeding call for are published reference figures, not a
+ * calculation about her, and [basis] says which were applied.
  */
 @Serializable
 data class NutritionGoals(
@@ -68,7 +70,18 @@ data class NutritionGoals(
     val fatGoalG: Int = 62,
     val carbsGoalG: Int = 210,
     val waterGoalMl: Int = 2000,
+    /** Null for her own figures, or for the plain defaults. */
+    val basis: GoalsBasis? = null,
 )
+
+/** Which stage's reference figures the defaults were raised by. */
+@Serializable
+enum class GoalsBasis {
+    @SerialName("pregnancy_first_trimester") PREGNANCY_FIRST_TRIMESTER,
+    @SerialName("pregnancy_second_trimester") PREGNANCY_SECOND_TRIMESTER,
+    @SerialName("pregnancy_third_trimester") PREGNANCY_THIRD_TRIMESTER,
+    @SerialName("breastfeeding") BREASTFEEDING,
+}
 
 @Serializable
 data class UpdateNutritionGoalsRequest(

@@ -1543,6 +1543,7 @@ object StringsRu : Strings {
     }
 
     override val pregnancyWeeks: PregnancyWeekStrings = PregnancyWeeksRu
+    override val tools: StageToolsStrings = StageToolsRu
 
     override val rewards = object : RewardStrings {
         override val coinName = "Гул"

@@ -39,6 +39,7 @@ import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.minus
 import kotlinx.datetime.plus
 import uz.sadora.app.data.HealthController
+import uz.sadora.app.data.StageEventsController
 import uz.sadora.app.design.IconSize
 import uz.sadora.app.design.PhaseColors
 import uz.sadora.app.design.Radius
@@ -94,6 +95,7 @@ import uz.sadora.contract.SymptomDefinition
 fun JourneyScreen(
     state: AppState,
     health: HealthController,
+    tools: StageEventsController,
     onOpen: (Route) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -101,10 +103,10 @@ fun JourneyScreen(
     Column(modifier) {
         when (state.lifeStage) {
             LifeStage.Cycle, LifeStage.TryingToConceive -> CycleJourney(state, health, onOpen)
-            LifeStage.Pregnancy -> PregnancyJourney(state, health, onOpen)
-            LifeStage.Postpartum -> PostpartumJourney(state, health, onOpen)
-            LifeStage.Perimenopause -> PerimenopauseJourney(state, health, onOpen)
-            LifeStage.Menopause -> MenopauseJourney(state, health, onOpen)
+            LifeStage.Pregnancy -> PregnancyJourney(state, health, tools, onOpen)
+            LifeStage.Postpartum -> PostpartumJourney(state, health, tools, onOpen)
+            LifeStage.Perimenopause -> PerimenopauseJourney(state, health, tools, onOpen)
+            LifeStage.Menopause -> MenopauseJourney(state, health, tools, onOpen)
         }
     }
 }
@@ -131,7 +133,8 @@ private fun CycleJourney(state: AppState, health: HealthController, onOpen: (Rou
     val phase = state.currentPhase()
 
     SadoraTopBar(
-        t.cycleTitle,
+        // Trying to conceive is its own stage with its own question; the title says so.
+        if (state.lifeStage == LifeStage.TryingToConceive) strings.stages.title(state.lifeStage) else t.cycleTitle,
         centered = true,
         trailing = {
             Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
@@ -140,6 +143,8 @@ private fun CycleJourney(state: AppState, health: HealthController, onOpen: (Rou
             }
         },
     )
+
+    val flags = doctorFlags(state.lifeStage, health.cycle, strings.tools)
 
     ScreenContent {
         item {
@@ -158,6 +163,16 @@ private fun CycleJourney(state: AppState, health: HealthController, onOpen: (Rou
         }
 
         item { CycleWeekStrip(state, onOpen) }
+
+        // Late first: the dial below has already rolled on to the next cycle and cannot
+        // say it. Otherwise, trying to conceive leads with the fertile window.
+        val status = health.cycle
+        val late = periodLateDays(status)
+        if (late != null) {
+            item { PeriodLateCard(state, late, onOpen) }
+        } else if (state.lifeStage == LifeStage.TryingToConceive && status != null && state.hasCyclePrediction) {
+            item { FertileWindowCard(status) }
+        }
 
         item {
             if (state.hasCyclePrediction) {
@@ -267,6 +282,8 @@ private fun CycleJourney(state: AppState, health: HealthController, onOpen: (Rou
         if (state.hasDeviceData) {
             item { BodySignalsCard(state, health) }
         }
+
+        if (flags.isNotEmpty()) item { DoctorFlagsCard(flags, onOpen) }
 
         item { DisclaimerNote(t.predictionDisclaimer) }
     }
@@ -560,7 +577,7 @@ private fun StatCard(label: String, value: String, modifier: Modifier = Modifier
 // ---------------------------------------------------------------- pregnancy
 
 @Composable
-private fun PregnancyJourney(state: AppState, health: HealthController, onOpen: (Route) -> Unit) {
+private fun PregnancyJourney(state: AppState, health: HealthController, tools: StageEventsController, onOpen: (Route) -> Unit) {
     val t = strings.journey
     LaunchedEffect(Unit) { health.loadAppointments() }
     val c = Sadora.colors
@@ -625,9 +642,20 @@ private fun PregnancyJourney(state: AppState, health: HealthController, onOpen: 
             }
         }
 
+        // Term, or past the date: the way on to the next stage.
+        val dueReached = state.dueDate?.let { it <= state.today } ?: false
+        if (state.pregnancyWeek >= TermWeek || dueReached) {
+            item { BirthPromptCard(state, onOpen) }
+        }
+
         item {
             BabyWeekCard(state.pregnancyWeek, listOf(palette.start, palette.end))
         }
+
+        // Each tool from the week it is any use: movements are counted from 28, and
+        // contractions timed as term approaches.
+        if (state.pregnancyWeek >= ContractionsFromWeek) item { ContractionsCard(onOpen) }
+        if (state.pregnancyWeek >= KicksFromWeek) item { KickCounterCard(tools, onOpen) }
 
         item {
             SadoraCard {
@@ -742,7 +770,7 @@ private fun AiAdviceCard(body: String) {
 // ---------------------------------------------------------------- postpartum
 
 @Composable
-private fun PostpartumJourney(state: AppState, health: HealthController, onOpen: (Route) -> Unit) {
+private fun PostpartumJourney(state: AppState, health: HealthController, tools: StageEventsController, onOpen: (Route) -> Unit) {
     val t = strings.journey
     val c = Sadora.colors
     SadoraTopBar(t.postpartumTitle)
@@ -798,6 +826,8 @@ private fun PostpartumJourney(state: AppState, health: HealthController, onOpen:
             }
         }
 
+        item { FeedingCard(tools, onOpen) }
+
         item {
             SadoraCard {
                 CardLabel(t.waterAndFood)
@@ -821,12 +851,19 @@ private fun PostpartumJourney(state: AppState, health: HealthController, onOpen:
         item { StageSymptomChips(state, health, onOpen) }
 
         // The first period after a birth is worth recording, and nothing here led to it.
+        // Once one is recorded — or a year has gone by — the cycle stage is offered.
         item {
-            SadoraCard(onClick = { onOpen(Route.CycleDay(state.today.toString())) }) {
-                Text(t.periodReturnTitle, style = Sadora.type.h3, color = c.text)
-                Text(t.periodReturnBody, style = Sadora.type.body, color = c.muted)
+            if (cycleIsBack(state, health.cycle)) {
+                CycleBackCard(state, onOpen)
+            } else {
+                SadoraCard(onClick = { onOpen(Route.CycleDay(state.today.toString())) }) {
+                    Text(t.periodReturnTitle, style = Sadora.type.h3, color = c.text)
+                    Text(t.periodReturnBody, style = Sadora.type.body, color = c.muted)
+                }
             }
         }
+
+        item { MoodScreenCard(tools, onOpen) }
 
         item {
             SadoraCard {
@@ -862,7 +899,7 @@ private fun PostpartumJourney(state: AppState, health: HealthController, onOpen:
 // ---------------------------------------------------------------- perimenopause
 
 @Composable
-private fun PerimenopauseJourney(state: AppState, health: HealthController, onOpen: (Route) -> Unit) {
+private fun PerimenopauseJourney(state: AppState, health: HealthController, tools: StageEventsController, onOpen: (Route) -> Unit) {
     val t = strings.journey
     LaunchedEffect(Unit) { health.loadHistory() }
     val c = Sadora.colors
@@ -917,6 +954,8 @@ private fun PerimenopauseJourney(state: AppState, health: HealthController, onOp
             }
         }
 
+        item { HotFlushCard(tools, onOpen) }
+
         item { StageSymptomChips(state, health, onOpen) }
 
         item {
@@ -963,10 +1002,12 @@ private fun PerimenopauseJourney(state: AppState, health: HealthController, onOp
 // ---------------------------------------------------------------- menopause
 
 @Composable
-private fun MenopauseJourney(state: AppState, health: HealthController, onOpen: (Route) -> Unit) {
+private fun MenopauseJourney(state: AppState, health: HealthController, tools: StageEventsController, onOpen: (Route) -> Unit) {
     val t = strings.journey
     val c = Sadora.colors
     SadoraTopBar(t.menopauseTitle)
+
+    val flags = doctorFlags(state.lifeStage, health.cycle, strings.tools)
 
     ScreenContent {
         item {
@@ -1016,6 +1057,10 @@ private fun MenopauseJourney(state: AppState, health: HealthController, onOpen: 
             }
         }
 
+        if (flags.isNotEmpty()) item { DoctorFlagsCard(flags, onOpen) }
+
+        item { HotFlushCard(tools, onOpen) }
+
         item { StageSymptomChips(state, health, onOpen) }
 
         item {
@@ -1026,6 +1071,7 @@ private fun MenopauseJourney(state: AppState, health: HealthController, onOpen: 
             )
         }
 
+        item { MenopauseBleedingCard(state, onOpen) }
     }
 }
 
@@ -1049,6 +1095,11 @@ private fun StageSymptomChips(state: AppState, health: HealthController, onOpen:
         }
     }
 }
+
+/** Pregnancy weeks from which a prompt or tool is offered. */
+private const val TermWeek = 37
+private const val ContractionsFromWeek = 36
+private const val KicksFromWeek = 28
 
 /** How many symptom tiles fit the cycle card's row. */
 private const val SymptomTiles = 4
@@ -1077,5 +1128,13 @@ private fun SymptomDefinition.glyph(): String = when (key) {
     "hot_flush" -> "🔥"
     "fatigue" -> "🔋"
     "cravings" -> "🍫"
+    "heartburn" -> "🌶"
+    "constipation" -> "🪨"
+    "leg_cramps" -> "🦵"
+    "lochia" -> "🩸"
+    "wound_pain" -> "🩹"
+    "vaginal_dryness" -> "🏜"
+    "brain_fog" -> "🌫"
+    "palpitations" -> "💓"
     else -> "•"
 }

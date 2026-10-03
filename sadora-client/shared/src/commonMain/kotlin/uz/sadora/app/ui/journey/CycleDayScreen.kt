@@ -29,6 +29,7 @@ import uz.sadora.app.design.Sadora
 import uz.sadora.app.design.Spacing
 import uz.sadora.app.i18n.strings
 import uz.sadora.app.model.AppState
+import uz.sadora.app.model.LifeStage
 import uz.sadora.app.model.Fmt
 import uz.sadora.app.data.toAppMood
 import uz.sadora.app.ui.components.BadgeTone
@@ -188,11 +189,16 @@ fun CycleDayScreen(
             // and after a birth, for the first period coming back — neither predicts.
             if (editable && state.lifeStage.recordsPeriods) {
                 item {
+                    // After menopause it is not a period but bleeding, and the card says
+                    // what to do about it.
+                    val menopause = state.lifeStage == LifeStage.Menopause
                     SadoraCard {
-                        Text(t.periodCardTitle, style = Sadora.type.h3, color = c.text)
+                        Text(if (menopause) strings.tools.menopauseBleedingTitle else t.periodCardTitle, style = Sadora.type.h3, color = c.text)
                         Text(
                             if (openPeriod != null) {
                                 t.periodRunningSince(strings.dates.dayMonth(openPeriod.startedOn))
+                            } else if (menopause) {
+                                strings.tools.menopauseBleedingBody
                             } else if (state.lifeStage.predictsCycle) {
                                 t.periodCardBody
                             } else {
@@ -206,6 +212,7 @@ fun CycleDayScreen(
                             when {
                                 savingPeriod -> strings.common.saving
                                 openPeriod != null -> t.periodEndedThisDay
+                                menopause -> strings.tools.menopauseBleedingButton
                                 else -> t.periodStartedThisDay
                             },
                             onClick = {

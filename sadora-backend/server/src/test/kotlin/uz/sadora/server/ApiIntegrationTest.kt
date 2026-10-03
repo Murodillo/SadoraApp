@@ -29,8 +29,10 @@ import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.days
+import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 import kotlin.uuid.Uuid
@@ -64,6 +66,7 @@ import uz.sadora.contract.HomeLayout
 import uz.sadora.contract.HomeWidget
 import uz.sadora.contract.HomeWidgets
 import uz.sadora.contract.LogPeriodRequest
+import uz.sadora.contract.LogStageEventRequest
 import uz.sadora.contract.NutritionGoals
 import uz.sadora.contract.PeriodEntry
 import uz.sadora.contract.RedeemRequest
@@ -74,6 +77,9 @@ import uz.sadora.contract.RewardsSummary
 import uz.sadora.contract.SaveHomeLayoutRequest
 import uz.sadora.contract.ShopCatalog
 import uz.sadora.contract.ShopKind
+import uz.sadora.contract.StageEvent
+import uz.sadora.contract.StageEventKind
+import uz.sadora.contract.SymptomDefinition
 import uz.sadora.contract.UpdatePeriodRequest
 import uz.sadora.contract.WaterState
 import uz.sadora.contract.AiChatQuota
@@ -895,6 +901,64 @@ class ApiIntegrationTest {
         patch<PeriodEntry>("/v1/cycle/periods/${first.id}", her.token, UpdatePeriodRequest(endedOn = ago(35)))
 
         assertEquals(2, get<List<PeriodEntry>>("/v1/cycle/periods", her.token).size)
+    }
+
+    // ---------------------------------------------------------------- stage events
+
+    @Test
+    fun `stage events keep to their kind, score the questionnaire here and stay private`() = api {
+        val her = signUp()
+        onboard(her, referredByDoctor = null, storeHealth = true)
+        val at = Clock.System.now() - 10.minutes
+
+        val feed = post<StageEvent>(
+            "/v1/stage-events",
+            her.token,
+            LogStageEventRequest(StageEventKind.FEEDING, at, durationSeconds = 600, detail = "left"),
+        )
+        assertEquals("left", feed.detail)
+
+        // A breast feed without its length, a bottle without its millilitres, a hot flush
+        // of intensity 7: each refused for what it means.
+        for (bad in listOf(
+            LogStageEventRequest(StageEventKind.FEEDING, at, detail = "right"),
+            LogStageEventRequest(StageEventKind.FEEDING, at, detail = "bottle"),
+            LogStageEventRequest(StageEventKind.HOT_FLUSH, at, value = 7),
+            LogStageEventRequest(StageEventKind.KICK_COUNT, Clock.System.now() + 2.hours, value = 10, durationSeconds = 900),
+        )) {
+            val refused = client.post("/v1/stage-events") { auth(her.token); json(bad) }
+            assertEquals(HttpStatusCode.BadRequest, refused.status, "$bad: ${refused.bodyAsTextSafe()}")
+        }
+
+        // The score is worked out from the answers; a value sent with them is ignored.
+        val screen = post<StageEvent>(
+            "/v1/stage-events",
+            her.token,
+            LogStageEventRequest(StageEventKind.MOOD_SCREEN, at, value = 0, answers = List(10) { 0 }),
+        )
+        assertEquals(21, screen.value)
+
+        assertEquals(listOf(feed.id), get<List<StageEvent>>("/v1/stage-events?kind=feeding", her.token).map { it.id })
+        assertEquals(2, get<List<StageEvent>>("/v1/stage-events", her.token).size)
+
+        val other = signUp()
+        onboard(other, referredByDoctor = null, storeHealth = true)
+        assertTrue(get<List<StageEvent>>("/v1/stage-events", other.token).isEmpty())
+        assertEquals(HttpStatusCode.NotFound, client.delete("/v1/stage-events/${feed.id}") { auth(other.token) }.status)
+        assertEquals(HttpStatusCode.OK, client.delete("/v1/stage-events/${feed.id}") { auth(her.token) }.status)
+    }
+
+    @Test
+    fun `the symptom catalogue speaks her language and offers each stage its own`() = api {
+        val her = signUp()
+        onboard(her, referredByDoctor = null, storeHealth = true)
+        patch<UserProfile>("/v1/me", her.token, UpdateProfileRequest(language = Language.RU))
+
+        val pregnancy = get<List<SymptomDefinition>>("/v1/symptoms?lifeStage=pregnancy", her.token).associateBy { it.key }
+        assertEquals("Изжога", pregnancy["heartburn"]?.label)
+        assertTrue("lochia" !in pregnancy)
+        val postpartum = get<List<SymptomDefinition>>("/v1/symptoms?lifeStage=postpartum", her.token).map { it.key }
+        assertTrue("lochia" in postpartum && "breast_tender" in postpartum, postpartum.toString())
     }
 
     // ---------------------------------------------------------------- appointments

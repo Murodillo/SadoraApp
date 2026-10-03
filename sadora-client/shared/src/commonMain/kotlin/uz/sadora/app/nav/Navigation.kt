@@ -56,10 +56,17 @@ sealed interface Route {
     // Pregnancy
     data object PregnancyAppointments : Route
     data object PregnancyCheckIn : Route
+    data object KickCounter : Route
+    data object Contractions : Route
+
+    // Postpartum
+    data object Feeding : Route
+    data object MoodScreen : Route
 
     // Menopause / perimenopause
     data object StageSymptoms : Route
     data object StageSleepMood : Route
+    data object HotFlushes : Route
 
     // AI — the chat itself is Premium; free accounts land on the preview.
     data object AiChat : Route

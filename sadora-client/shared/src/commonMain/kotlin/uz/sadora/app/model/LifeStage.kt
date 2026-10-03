@@ -24,10 +24,11 @@ enum class LifeStage(val glyph: String, val palette: StagePalette) {
     /**
      * Stages in which a period can be recorded. Perimenopause has periods — an irregular
      * run of them is the whole point of its regularity chart — and after a birth the first
-     * one coming back is worth writing down. Neither gets a forecast from them.
+     * one coming back is worth writing down. After menopause any bleeding is a reason to
+     * see a doctor, and recording it is how the app can say so. None gets a forecast.
      */
     val recordsPeriods: Boolean
-        get() = predictsCycle || this == Perimenopause || this == Postpartum
+        get() = predictsCycle || this == Perimenopause || this == Postpartum || this == Menopause
 }
 
 /** The four phases of a menstrual cycle, used to colour the calendar. */

@@ -178,8 +178,8 @@ class HealthService(
     }
 
     suspend fun symptomCatalogue(userId: Uuid, lifeStage: LifeStage?): List<SymptomDefinition> {
-        val stage = lifeStage ?: access.requireUser(userId).lifeStage
-        return repository.symptomCatalogue(stage)
+        val user = access.requireUser(userId)
+        return repository.symptomCatalogue(lifeStage ?: user.lifeStage, user.language)
     }
 
     // ---------------------------------------------------------------- writes

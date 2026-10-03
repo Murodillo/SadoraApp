@@ -111,11 +111,17 @@ class AppState {
     var lifeStage by mutableStateOf(LifeStage.Cycle)
 
     /**
-     * Bumped each time a stage change is saved. The symptom catalogue, the prediction and
-     * the calendar all depend on the stage the server holds, so the shell reloads them on
-     * this — not on [lifeStage], which moves before the save has landed.
+     * Bumped each time a stage or language change is saved. The symptom catalogue, the
+     * prediction and the calendar all depend on what the server holds, so the shell
+     * reloads them on this — not on [lifeStage], which moves before the save has landed.
      */
     var stageRevision by mutableStateOf(0)
+
+    /**
+     * The stage a prompt suggested — "Homilador bo'ldim", "Farzandingiz tug'ildimi?" —
+     * which the stage settings open on instead of the current one. Read once.
+     */
+    var pendingStage by mutableStateOf<LifeStage?>(null)
     // Empty until the onboarding grid is answered, for the same reason [name] is blank.
     val goals = mutableStateListOf<Goal>()
 
@@ -302,6 +308,9 @@ class AppState {
 
     var caloriesEaten by mutableStateOf(0)
     var calorieGoal by mutableStateOf(1850)
+
+    /** Which stage the server raised the default goals for; null for her own figures. */
+    var goalsBasis by mutableStateOf<uz.sadora.contract.GoalsBasis?>(null)
     var proteinG by mutableStateOf(0)
     var proteinGoalG by mutableStateOf(85)
     var fatG by mutableStateOf(0)

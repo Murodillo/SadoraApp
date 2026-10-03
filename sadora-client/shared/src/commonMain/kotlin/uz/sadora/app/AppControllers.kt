@@ -10,6 +10,7 @@ import uz.sadora.app.data.HealthController
 import uz.sadora.app.data.InsightsController
 import uz.sadora.app.data.LearnController
 import uz.sadora.app.data.NotificationsController
+import uz.sadora.app.data.StageEventsController
 import uz.sadora.app.data.PhotoController
 import uz.sadora.app.data.RewardsController
 import uz.sadora.app.data.SadoraController
@@ -43,6 +44,7 @@ class AppControllers(
     val photos: PhotoController,
     val wearables: WearableController,
     val notifications: NotificationsController,
+    val stageEvents: StageEventsController,
     val analytics: Analytics,
 ) {
     companion object {
@@ -61,6 +63,7 @@ class AppControllers(
             photos = graph?.photoController(state) ?: PhotoController(null, state),
             wearables = graph?.wearableController() ?: WearableController(null),
             notifications = graph?.notificationsController() ?: NotificationsController(null),
+            stageEvents = graph?.stageEventsController() ?: StageEventsController(null),
             analytics = graph?.analytics ?: Analytics.None,
         )
     }

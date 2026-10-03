@@ -61,6 +61,8 @@ import uz.sadora.server.health.MedicationRepository
 import uz.sadora.server.health.MedicationService
 import uz.sadora.server.health.AppointmentRepository
 import uz.sadora.server.health.AppointmentService
+import uz.sadora.server.health.StageEventRepository
+import uz.sadora.server.health.StageEventService
 import uz.sadora.server.health.MindRepository
 import uz.sadora.server.health.MindService
 import uz.sadora.server.health.NutritionRepository
@@ -205,6 +207,7 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
     val healthService = HealthService(healthRepository, healthAccess)
     val mindService = MindService(mindRepository, healthRepository, healthAccess, rewardsService)
     val appointmentService = AppointmentService(appointmentRepository, healthAccess)
+    val stageEventService = StageEventService(StageEventRepository(), healthAccess)
     val nutritionService = NutritionService(
         nutrition = nutritionRepository,
         access = healthAccess,

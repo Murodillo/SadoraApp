@@ -18,10 +18,12 @@ import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.upsert
 import uz.sadora.contract.FoodItem
+import uz.sadora.contract.LifeStage
 import uz.sadora.contract.LogMealRequest
 import uz.sadora.contract.Meal
 import uz.sadora.contract.MealSlot
 import uz.sadora.contract.NutritionGoals
+import uz.sadora.server.core.dayIn
 import uz.sadora.server.core.now
 import uz.sadora.server.core.toKotlinInstant
 import uz.sadora.server.core.toOffsetDateTime
@@ -29,6 +31,8 @@ import uz.sadora.server.db.DailyLogs
 import uz.sadora.server.db.FoodItems
 import uz.sadora.server.db.Meals
 import uz.sadora.server.db.NutritionGoalsTable
+import uz.sadora.server.db.StageBaselines
+import uz.sadora.server.db.Users
 import uz.sadora.server.db.dbQuery
 import uz.sadora.server.db.escapeLike
 import uz.sadora.server.db.dbValue
@@ -170,7 +174,22 @@ class NutritionRepository {
                     waterGoalMl = it[NutritionGoalsTable.waterGoalMl],
                 )
             }
-            ?: NutritionGoals()
+            ?: stageDefaults(userId)
+    }
+
+    /** No figures of her own: her stage's, read in the same transaction. */
+    private fun stageDefaults(userId: Uuid): NutritionGoals {
+        val user = Users.select(Users.lifeStage, Users.timezone)
+            .where { Users.id eq userId }
+            .singleOrNull() ?: return NutritionGoals()
+        val stage = enumFromDb<LifeStage>(user[Users.lifeStage]) ?: return NutritionGoals()
+        val baseline = StageBaselines.selectAll().where { StageBaselines.userId eq userId }.singleOrNull()
+        return StageNutrition.defaults(
+            stage = stage,
+            dueDate = baseline?.get(StageBaselines.dueDate),
+            birthDate = baseline?.get(StageBaselines.childBirthDate),
+            today = now().dayIn(user[Users.timezone]),
+        )
     }
 
     suspend fun saveGoals(userId: Uuid, goals: NutritionGoals): Unit = dbQuery {

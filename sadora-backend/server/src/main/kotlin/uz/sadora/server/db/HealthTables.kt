@@ -43,6 +43,8 @@ object DailyLogs : Table("daily_logs") {
 object SymptomDefinitions : Table("symptom_definitions") {
     val key = text("key")
     val label = text("label")
+    val labelRu = text("label_ru").nullable()
+    val labelEn = text("label_en").nullable()
     val category = text("category")
     val sortOrder = integer("sort_order")
     val active = bool("active")
@@ -227,6 +229,19 @@ object Appointments : Table("appointments") {
     val completedAt = timestampWithTimeZone("completed_at").nullable()
     val createdAt = timestampWithTimeZone("created_at")
     val updatedAt = timestampWithTimeZone("updated_at")
+
+    override val primaryKey = PrimaryKey(id)
+}
+
+object StageEventsTable : Table("stage_events") {
+    val id = uuid("id")
+    val userId = uuid("user_id").references(Users.id)
+    val kind = text("kind")
+    val startedAt = timestampWithTimeZone("started_at")
+    val durationSeconds = integer("duration_seconds").nullable()
+    val value = integer("value").nullable()
+    val detail = text("detail").nullable()
+    val createdAt = timestampWithTimeZone("created_at")
 
     override val primaryKey = PrimaryKey(id)
 }

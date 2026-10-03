@@ -17,6 +17,7 @@ import org.jetbrains.exposed.v1.jdbc.upsert
 import uz.sadora.contract.DailyLog
 import uz.sadora.contract.FetalMovement
 import uz.sadora.contract.FlowLevel
+import uz.sadora.contract.Language
 import uz.sadora.contract.LifeStage
 import uz.sadora.contract.MoodLevel
 import uz.sadora.contract.SaveDailyLogRequest
@@ -287,7 +288,7 @@ class HealthRepository {
     // ---------------------------------------------------------------- catalogue
 
     /** A symptom with no stage rows is offered everywhere; the rest are scoped. */
-    suspend fun symptomCatalogue(lifeStage: LifeStage?): List<SymptomDefinition> = dbQuery {
+    suspend fun symptomCatalogue(lifeStage: LifeStage?, language: Language = Language.UZ): List<SymptomDefinition> = dbQuery {
         val scopes = SymptomLifeStages.selectAll()
             .groupBy({ it[SymptomLifeStages.symptomKey] }) { it[SymptomLifeStages.lifeStage] }
 
@@ -299,7 +300,12 @@ class HealthRepository {
                 val stages = scopes[key].orEmpty()
                 SymptomDefinition(
                     key = key,
-                    label = row[SymptomDefinitions.label],
+                    // In her language where the catalogue has it, Uzbek otherwise.
+                    label = when (language) {
+                        Language.RU -> row[SymptomDefinitions.labelRu]
+                        Language.EN -> row[SymptomDefinitions.labelEn]
+                        Language.UZ -> null
+                    } ?: row[SymptomDefinitions.label],
                     category = enumFromDb(row[SymptomDefinitions.category], SymptomCategory.OTHER),
                     lifeStages = stages.mapNotNull { enumFromDb<LifeStage>(it) },
                     sortOrder = row[SymptomDefinitions.sortOrder],
