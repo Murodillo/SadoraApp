@@ -391,6 +391,22 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
         entitlements = entitlementService,
     )
 
+    /** Yaqinim: built from her records at read time, through the same services as the app. */
+    val partnerRepository = uz.sadora.server.partner.PartnerRepository()
+    val partnerService = uz.sadora.server.partner.PartnerService(
+        links = partnerRepository,
+        users = userRepository,
+        health = healthService,
+        healthRecords = healthRepository,
+        appointments = appointmentRepository,
+        stageEvents = stageEventRepository,
+        notifications = notificationRepository,
+        audit = auditService,
+        publicBaseUrl = config.publicBaseUrl,
+        rewards = rewardsService,
+    ).also { service -> healthService.onPeriodStarted = service::periodStarted }
+    val partnerAlertJob = uz.sadora.server.partner.PartnerAlertJob(partnerService)
+
     val billingRepository = BillingRepository()
     val billingService = BillingService(
         repository = billingRepository,
@@ -470,6 +486,7 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
         wearableSyncJob.stop()
         accountErasureJob.stop()
         consultationJob.stop()
+        partnerAlertJob.stop()
         outboundHttpClient.close()
         cache.close()
         databaseFactory.close()

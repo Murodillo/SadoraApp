@@ -124,7 +124,6 @@ object ErrorText {
         Entry("Sessiya topilmadi", "Сессия не найдена", "Session not found"),
         Entry("Sessiya bekor qilindi. Qaytadan kiring.", "Сессия отменена. Войдите снова.", "The session was revoked. Please sign in again."),
         Entry("Hisob bloklangan", "Аккаунт заблокирован", "The account is blocked"),
-        Entry("Hisob faol emas", "Аккаунт не активен", "The account is not active"),
         Entry("Hisobni o'chirish so'rovi yuborilgan", "Запрошено удаление аккаунта", "Account deletion has been requested"),
         Entry("Foydalanuvchi topilmadi", "Пользователь не найден", "User not found"),
         Entry("Token o'qib bo'lmadi", "Не удалось прочитать токен", "The token could not be read"),
@@ -168,6 +167,20 @@ object ErrorText {
             "The scanner is not working right now. You can add the meal by hand.",
         ),
         Entry("Havola topilmadi", "Ссылка не найдена", "Link not found"),
+
+        // ---------------------------------------------------------------- Yaqinim
+        Entry("Bu hisobda ulashiladigan ma'lumot yo'q", "В этом аккаунте нечем делиться", "This account has nothing to share"),
+        Entry(
+            "Sizda yaqin allaqachon ulangan — avval uni uzing",
+            "У вас уже подключён близкий — сначала отключите его",
+            "Someone is already connected — disconnect them first",
+        ),
+        Entry("So'rov topilmadi", "Запрос не найден", "Request not found"),
+        Entry("Yaqin topilmadi", "Близкий не найден", "No one is connected"),
+        Entry("Kod topilmadi yoki muddati o'tgan", "Код не найден или устарел", "The code was not found or has expired"),
+        Entry("O'zingizning kodingizni kirita olmaysiz", "Нельзя ввести собственный код", "You cannot enter your own code"),
+        Entry("Ko'pi bilan {0} kishini kuzatish mumkin", "Можно следить не больше чем за {0} людьми", "You can follow at most {0} people"),
+        Entry("Hisob faol emas", "Аккаунт не активен", "The account is not active"),
 
         // ---------------------------------------------------------------- wearables
         Entry("Noma'lum provayder: {0}", "Неизвестный провайдер: {0}", "Unknown provider: {0}"),

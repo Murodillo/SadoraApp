@@ -116,6 +116,10 @@ sealed interface Route {
     // Her account: the screen that was the fifth tab, and the QR code for a doctor.
     data object Profile : Route
     data object ShareProfile : Route
+    /** Yaqinim: who sees her and what, and the people she follows. */
+    data object Yaqinim : Route
+    /** One person this account follows, as they show themselves. */
+    data class PartnerView(val linkId: String) : Route
 
     // Settings
     data object PersonalDetails : Route
@@ -171,6 +175,12 @@ sealed interface AppLink {
     /** `sadora://conversation/{id}` — the link a message or consultation push carries. */
     data class Conversation(val id: String) : AppLink
 
+    /**
+     * Yaqinim: `sadora://yaqinim` from a push, `sadora://yaqinim/K7M2QP4X` or
+     * `https://…/y/K7M2QP4X` from a shared code. [code] is null for the push.
+     */
+    data class Partner(val code: String?) : AppLink
+
     companion object {
         /**
          * `https://sadora.app/r/K7M2QP`, `sadora://invite/K7M2QP`,
@@ -202,6 +212,10 @@ sealed interface AppLink {
                     segments[1].takeIf { id -> id.length in 8..64 && id.all { it.isLetterOrDigit() || it == '-' } }
                         ?.let(AppLink::Conversation)
                 }
+                segments[0].equals("yaqinim", ignoreCase = true) && url.startsWith("sadora://", ignoreCase = true) ->
+                    AppLink.Partner(segments.getOrNull(1)?.let(::partnerCode))
+                segments.size >= 3 && segments[segments.size - 2].equals("y", ignoreCase = true) ->
+                    partnerCode(segments.last())?.let { AppLink.Partner(it) }
                 segments[0].equals("invite", ignoreCase = true) || segments.getOrNull(1) == "r" ||
                     (segments.size >= 2 && segments[segments.size - 2].equals("r", ignoreCase = true)) -> {
                     val raw = segments.last().uppercase().filter(Char::isLetterOrDigit)
@@ -236,12 +250,20 @@ object AppLinks {
     fun consume(): AppLink? = pending.also { pending = null }
 }
 
+/** A Yaqinim code as the server reads it: its alphabet only, and exactly eight long. */
+private fun partnerCode(raw: String): String? =
+    raw.uppercase().filter { it in "ABCDEFGHJKMNPQRSTUVWXYZ23456789" }.takeIf { it.length == 8 }
+
 /** Where the app is before the main tabs take over. */
 sealed interface AppPhase {
     data object Splash : AppPhase
     data object Onboarding : AppPhase
     data object SignIn : AppPhase
     data object Main : AppPhase
+    /** Signing up with a Yaqinim code: the code, the phone, nothing about her own health. */
+    data object PartnerJoin : AppPhase
+    /** A follower-only account: the people it follows, and settings. */
+    data object Partner : AppPhase
 }
 
 /**

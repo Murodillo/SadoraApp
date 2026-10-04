@@ -42,6 +42,9 @@ class HealthService(
     private val repository: HealthRepository,
     private val access: HealthAccess,
 ) {
+    /** Set once at wiring: Yaqinim tells her person. Null in the tests that do not care. */
+    var onPeriodStarted: (suspend (userId: Uuid, day: LocalDate) -> Unit)? = null
+
     // ---------------------------------------------------------------- reads
 
     suspend fun status(userId: Uuid): CycleStatus {
@@ -191,8 +194,12 @@ class HealthService(
         refuseOverlap(userId, request.startedOn, request.endedOn, today, except = null)
 
         val id = repository.addPeriod(userId, request.startedOn, request.endedOn)
-        return repository.periodById(userId, id)?.toEntry()
+        val entry = repository.periodById(userId, id)?.toEntry()
             ?: throw NotFoundException("Hayz yozuvi topilmadi")
+        // A period that starts today is news for the one person she lets see it. The
+        // hook never fails the write: the record is the product, the push a courtesy.
+        if (request.startedOn == today) runCatching { onPeriodStarted?.invoke(userId, today) }
+        return entry
     }
 
     suspend fun updatePeriod(userId: Uuid, id: Uuid, request: UpdatePeriodRequest): PeriodEntry {

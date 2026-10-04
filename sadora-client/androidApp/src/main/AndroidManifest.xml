@@ -133,6 +133,13 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="sadora" android:host="invite" />
             </intent-filter>
+            <!-- Yaqinim: a shared code (sadora://yaqinim/K7M2QP4X) and the push tap. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="sadora" android:host="yaqinim" />
+            </intent-filter>
 
             <!-- The return from a wearable provider's consent page in the browser:
                  sadora://wearables/whoop?status=ok. singleTop below is what makes it

@@ -3,6 +3,7 @@ package uz.sadora.server.user
 import kotlin.time.Instant
 import kotlin.uuid.Uuid
 import kotlinx.datetime.LocalDate
+import uz.sadora.contract.AccountKind
 import uz.sadora.contract.AccountStatus
 import uz.sadora.contract.Consents
 import uz.sadora.contract.Goal
@@ -33,6 +34,7 @@ data class UserRecord(
     val deletionRequestedAt: Instant?,
     val referredByDoctor: Boolean? = null,
     val hasWearable: Boolean? = null,
+    val accountKind: AccountKind = AccountKind.SELF,
 ) {
     /**
      * Goals live in their own table, so the caller supplies them. Note what is absent:
@@ -56,6 +58,7 @@ data class UserRecord(
         createdAt = createdAt,
         hasWearable = hasWearable,
         stage = stage,
+        accountKind = accountKind,
     )
 }
 

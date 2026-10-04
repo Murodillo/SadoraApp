@@ -67,6 +67,7 @@ fun AppState.applyServerProfile(profile: UserProfile, entitlements: Entitlements
     }
 
     isPremium = entitlements.tier == SubscriptionTier.PREMIUM
+    isPartnerAccount = profile.accountKind == uz.sadora.contract.AccountKind.PARTNER
 }
 
 /**

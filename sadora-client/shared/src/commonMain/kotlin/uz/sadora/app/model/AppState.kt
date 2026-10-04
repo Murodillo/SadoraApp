@@ -201,6 +201,12 @@ class AppState {
      * not paid, so the tier now only ever comes from [Entitlements].
      */
     var isPremium by mutableStateOf(false)
+
+    /** Signed up with a Yaqinim code: the app opens on the people it follows, not on her own tracking. */
+    var isPartnerAccount by mutableStateOf(false)
+
+    /** A Yaqinim code from a shared link, waiting for the join screen or the Yaqinim screen. */
+    var pendingPartnerCode by mutableStateOf<String?>(null)
     /** When the plan ends, and whether it renews itself — the Profile card words it. */
     var premiumExpiresAt by mutableStateOf<LocalDate?>(null)
     var premiumAutoRenewing by mutableStateOf(false)

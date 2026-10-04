@@ -99,6 +99,7 @@ import kotlinx.datetime.LocalTime
 import kotlinx.datetime.minus
 import kotlinx.datetime.plus
 import kotlinx.datetime.todayIn
+import kotlinx.datetime.toInstant
 import uz.sadora.contract.StageBaseline
 import uz.sadora.contract.AuthSession
 import uz.sadora.contract.BillingCatalogue
@@ -167,6 +168,18 @@ import uz.sadora.contract.SaveArticleRequest
 import uz.sadora.contract.TrendMetric
 import uz.sadora.contract.UpdateProfileRequest
 import uz.sadora.contract.UserProfile
+import uz.sadora.contract.AcceptPartnerInviteRequest
+import uz.sadora.contract.Ack
+import uz.sadora.contract.AccountKind
+import uz.sadora.contract.CreatePartnerInviteRequest
+import uz.sadora.contract.FollowedPerson
+import uz.sadora.contract.PartnerInvite
+import uz.sadora.contract.PartnerLinkStatus
+import uz.sadora.contract.PartnerPermissions
+import uz.sadora.contract.PartnerRelation
+import uz.sadora.contract.PartnerState
+import uz.sadora.contract.PartnerView
+import uz.sadora.contract.PausePartnerRequest
 import uz.sadora.contract.UzbekPhone
 import uz.sadora.server.admin.AdminSession
 import uz.sadora.server.admin.AdminMe
@@ -353,6 +366,167 @@ class ApiIntegrationTest {
         val export = client.get("/v1/me/export") { auth(user.token) }
         assertEquals(HttpStatusCode.OK, export.status)
         assertTrue(export.headers["Content-Disposition"].orEmpty().contains("sadora-export.json"))
+    }
+
+    // ---------------------------------------------------------------- Yaqinim
+
+    /**
+     * The whole of Yaqinim: she makes a code, a new account signs up with it and becomes a
+     * follower-only account, sees nothing until she says yes, then sees only what she
+     * ticked — her mood and her fertile window stay out of the answer until she turns them
+     * on — and nothing at all once she pauses or ends it.
+     */
+    @Test
+    fun `a Yaqinim link shows only what she ticked, and only while she lets it`() = api {
+        val her = signUp()
+        onboard(her, mood = MoodLevel.LOW, symptoms = listOf("headache"))
+        val today = get<CycleStatus>("/v1/cycle/status", her.token).today
+        // Day 13 of a 28-day cycle: inside the fertile window by any count.
+        post<PeriodEntry>("/v1/cycle/periods", her.token, LogPeriodRequest(today.minus(12, DateTimeUnit.DAY), today.minus(8, DateTimeUnit.DAY)))
+        assertEquals(uz.sadora.contract.CyclePhase.FERTILE, get<CycleStatus>("/v1/cycle/status", her.token).phase, "the test needs a fertile day")
+
+        val invite = post<PartnerInvite>("/v1/partner/invite", her.token, CreatePartnerInviteRequest(PartnerRelation.HUSBAND))
+        val code = assertNotNull(invite.code, "the creating response carries the code")
+        assertTrue(Regex("[A-Z2-9]{4}-[A-Z2-9]{4}").matches(code), code)
+        assertTrue(invite.url.orEmpty().endsWith("/y/" + code.replace("-", "")), invite.url.orEmpty())
+        assertNull(get<PartnerState>("/v1/partner", her.token).invite?.code, "a later read does not show the code")
+
+        // He signs up with it: no onboarding, a follower-only account.
+        val him = signUp()
+        val followed = post<FollowedPerson>(
+            "/v1/partner/accept",
+            him.token,
+            AcceptPartnerInviteRequest(code.lowercase().replace("-", " "), name = "Aziz", asPartnerAccount = true),
+        )
+        assertEquals(PartnerLinkStatus.PENDING, followed.status)
+        assertEquals("Test", followed.name)
+        val profile = get<UserProfile>("/v1/me", him.token)
+        assertEquals(AccountKind.PARTNER, profile.accountKind)
+        assertTrue(profile.onboardingCompleted)
+        assertEquals("Aziz", profile.name)
+
+        // Waiting for her: the status and nothing else.
+        val waiting = get<PartnerView>("/v1/partner/following/${followed.linkId}", him.token)
+        assertEquals(PartnerLinkStatus.PENDING, waiting.status)
+        assertTrue(waiting.isEmpty)
+        val herState = get<PartnerState>("/v1/partner", her.token)
+        assertEquals("Aziz", herState.link?.partnerName)
+        assertNull(herState.invite, "the code is used up")
+
+        post<PartnerState>("/v1/partner/approve", her.token, Ack())
+        val view = get<PartnerView>("/v1/partner/following/${followed.linkId}", him.token)
+        assertEquals(PartnerLinkStatus.ACTIVE, view.status)
+        assertEquals(LifeStage.CYCLE, view.stage)
+        val cycle = assertNotNull(view.cycle)
+        assertEquals(13, cycle.cycleDay)
+        assertEquals(uz.sadora.contract.CyclePhase.FOLLICULAR, cycle.phase, "a fertile day reads as follicular without the permission")
+        assertNull(cycle.fertileFrom)
+        assertNull(cycle.ovulationOn)
+        assertNull(view.day, "mood and symptoms are off by default")
+        // Not in the JSON at all, not just null in the DTO.
+        val raw = rawGet("/v1/partner/following/${followed.linkId}", him.token)
+        assertFalse(raw.contains("headache") || raw.contains("fertileFrom"), raw)
+        assertEquals(1, countCoins(her, CoinReasons.PARTNER_LINKED))
+
+        put<PartnerState>(
+            "/v1/partner/permissions",
+            her.token,
+            PartnerPermissions(cycle = true, fertile = true, mood = true, symptoms = true),
+        )
+        val wider = get<PartnerView>("/v1/partner/following/${followed.linkId}", him.token)
+        assertEquals(uz.sadora.contract.CyclePhase.FERTILE, wider.cycle?.phase)
+        assertNotNull(wider.cycle?.fertileFrom)
+        assertEquals(MoodLevel.LOW, wider.day?.mood)
+        assertEquals(1, wider.day?.symptoms?.size)
+        assertNotNull(get<PartnerState>("/v1/partner", her.token).link?.lastViewedAt, "she can see that he looked")
+
+        post<PartnerState>("/v1/partner/pause", her.token, PausePartnerRequest(paused = true))
+        val paused = get<PartnerView>("/v1/partner/following/${followed.linkId}", him.token)
+        assertEquals(PartnerLinkStatus.PAUSED, paused.status)
+        assertTrue(paused.isEmpty)
+        post<PartnerState>("/v1/partner/pause", her.token, PausePartnerRequest(paused = false))
+
+        // Ending it closes the door at once, and a second link pays nothing more.
+        val ended = client.delete("/v1/partner") { auth(her.token) }
+        assertEquals(HttpStatusCode.OK, ended.status)
+        assertEquals(HttpStatusCode.NotFound, client.get("/v1/partner/following/${followed.linkId}") { auth(him.token) }.status)
+        assertTrue(get<PartnerState>("/v1/partner", him.token).following.isEmpty())
+        val again = post<PartnerInvite>("/v1/partner/invite", her.token, CreatePartnerInviteRequest())
+        val second = post<FollowedPerson>("/v1/partner/accept", him.token, AcceptPartnerInviteRequest(again.code!!))
+        post<PartnerState>("/v1/partner/approve", her.token, Ack())
+        assertEquals(PartnerLinkStatus.ACTIVE, get<PartnerView>("/v1/partner/following/${second.linkId}", him.token).status)
+        assertEquals(1, countCoins(her, CoinReasons.PARTNER_LINKED))
+    }
+
+    @Test
+    fun `a Yaqinim code opens once, never for its maker, and a new one retires the old`() = api {
+        val her = signUp().also { onboard(it) }
+        val first = post<PartnerInvite>("/v1/partner/invite", her.token, CreatePartnerInviteRequest(PartnerRelation.MOTHER))
+        val second = post<PartnerInvite>("/v1/partner/invite", her.token, CreatePartnerInviteRequest(PartnerRelation.MOTHER))
+
+        val mother = signUp().also { onboard(it) }
+        val stale = client.post("/v1/partner/accept") { auth(mother.token); json(AcceptPartnerInviteRequest(first.code!!)) }
+        assertEquals(HttpStatusCode.NotFound, stale.status, "the older code stopped")
+        val own = client.post("/v1/partner/accept") { auth(her.token); json(AcceptPartnerInviteRequest(second.code!!)) }
+        assertEquals(HttpStatusCode.Conflict, own.status)
+        val malformed = client.post("/v1/partner/accept") { auth(mother.token); json(AcceptPartnerInviteRequest("ABC")) }
+        assertEquals(HttpStatusCode.BadRequest, malformed.status)
+
+        // A woman who tracks herself can follow her daughter and stays who she is.
+        val followed = post<FollowedPerson>("/v1/partner/accept", mother.token, AcceptPartnerInviteRequest(second.code!!, asPartnerAccount = true))
+        assertEquals(PartnerRelation.MOTHER, followed.relation)
+        assertEquals(AccountKind.SELF, get<UserProfile>("/v1/me", mother.token).accountKind)
+
+        val sister = signUp().also { onboard(it) }
+        val used = client.post("/v1/partner/accept") { auth(sister.token); json(AcceptPartnerInviteRequest(second.code!!)) }
+        assertEquals(HttpStatusCode.NotFound, used.status, "a used code opens nothing")
+
+        // One person at a time: a new code while one is linked is refused, not swapped.
+        val busy = client.post("/v1/partner/invite") { auth(her.token); json(CreatePartnerInviteRequest()) }
+        assertEquals(HttpStatusCode.Conflict, busy.status)
+
+        // He may leave on his own; her settings then show nobody.
+        val left = client.delete("/v1/partner/following/${followed.linkId}") { auth(mother.token) }
+        assertEquals(HttpStatusCode.OK, left.status)
+        assertNull(get<PartnerState>("/v1/partner", her.token).link)
+
+        // The page behind the link echoes the code and looks nothing up.
+        val page = client.get("/y/${second.code!!.replace("-", "")}?lang=ru")
+        assertEquals(HttpStatusCode.OK, page.status)
+        assertTrue(page.bodyAsText().contains(second.code!!))
+        assertFalse(client.get("/y/%3Cscript%3E").bodyAsText().contains("<script>"))
+    }
+
+    @Test
+    fun `her person hears that the period started, of a visit tomorrow, and when labour starts`() = api {
+        val her = signUp().also { onboard(it) }
+        val him = signUp()
+        val code = post<PartnerInvite>("/v1/partner/invite", her.token, CreatePartnerInviteRequest()).code!!
+        post<FollowedPerson>("/v1/partner/accept", him.token, AcceptPartnerInviteRequest(code, name = "Aziz", asPartnerAccount = true))
+        post<PartnerState>("/v1/partner/approve", her.token, Ack())
+        assertEquals(1, outboxCount(him, "partner_approved:"), "he is told she said yes")
+
+        val today = get<CycleStatus>("/v1/cycle/status", her.token).today
+        post<PeriodEntry>("/v1/cycle/periods", her.token, LogPeriodRequest(today))
+        assertEquals(1, outboxCount(him, "partner_period:"))
+
+        val tomorrow = today.plus(1, DateTimeUnit.DAY)
+        post<Appointment>("/v1/appointments", her.token, SaveAppointmentRequest("UZI", tomorrow, LocalTime(10, 30)))
+        // Ten in the morning in Tashkent, so the pass is inside his daytime whenever this runs.
+        val morning = kotlinx.datetime.LocalDateTime(today, LocalTime(10, 0)).toInstant(kotlinx.datetime.TimeZone.of("Asia/Tashkent"))
+        component.partnerService.dailyAlerts(morning)
+        component.partnerService.dailyAlerts(morning)
+        assertEquals(1, outboxCount(him, "partner_appointment:"), "the repeat pass sends nothing new")
+
+        val labour = client.post("/v1/partner/alert/labour") { auth(her.token) }
+        assertEquals(HttpStatusCode.OK, labour.status)
+        assertEquals(1, outboxCount(him, "partner_labour:"))
+
+        // With the appointments part off, the next visit is not his news.
+        put<PartnerState>("/v1/partner/permissions", her.token, PartnerPermissions(appointments = false))
+        post<Appointment>("/v1/appointments", her.token, SaveAppointmentRequest("Qon tahlili", tomorrow))
+        component.partnerService.dailyAlerts(morning)
+        assertEquals(1, outboxCount(him, "partner_appointment:"))
     }
 
     // ---------------------------------------------------------------- wearable connections
@@ -2760,6 +2934,20 @@ class ApiIntegrationTest {
     }
 
     /** Rows a table holds for one account, by its user_id column. */
+    private suspend fun outboxCount(user: TestUser, keyPrefix: String): Int = dbQuery {
+        exec("SELECT count(*) FROM notification_outbox WHERE user_id = '${user.userId}' AND dedupe_key LIKE '$keyPrefix%'") { rows ->
+            rows.next()
+            rows.getInt(1)
+        } ?: 0
+    }
+
+    private suspend fun countCoins(user: TestUser, reason: String): Int = dbQuery {
+        exec("SELECT count(*) FROM coin_ledger WHERE user_id = '${user.userId}' AND reason = '$reason'") { rows ->
+            rows.next()
+            rows.getInt(1)
+        } ?: 0
+    }
+
     private suspend fun countRowsFor(userId: Uuid, table: String): Int = dbQuery {
         exec("SELECT count(*) FROM $table WHERE user_id = '$userId'") { rows ->
             rows.next()

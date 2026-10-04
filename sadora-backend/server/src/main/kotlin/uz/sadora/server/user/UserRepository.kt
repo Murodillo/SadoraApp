@@ -20,6 +20,7 @@ import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.update
 import org.jetbrains.exposed.v1.jdbc.upsert
+import uz.sadora.contract.AccountKind
 import uz.sadora.contract.AccountStatus
 import uz.sadora.contract.AuthProvider
 import uz.sadora.contract.ConsentGrants
@@ -160,6 +161,26 @@ class UserRepository {
     }
 
     suspend fun markOnboarded(userId: Uuid): Unit = dbQuery { applyOnboarded(userId) }
+
+    /**
+     * Turns a fresh account into a follower-only one: it took a Yaqinim code at sign-up
+     * and has no health of its own to set up, so there is no onboarding to come back to.
+     */
+    suspend fun becomePartnerAccount(userId: Uuid, name: String?): Unit = dbQuery {
+        Users.update({ Users.id eq userId }) {
+            it[accountKind] = AccountKind.PARTNER.dbValue()
+            it[onboardingCompleted] = true
+            name?.let { value -> it[Users.name] = value }
+            it[updatedAt] = now().toOffsetDateTime()
+        }
+    }
+
+    suspend fun setName(userId: Uuid, name: String): Unit = dbQuery {
+        Users.update({ Users.id eq userId }) {
+            it[Users.name] = name
+            it[updatedAt] = now().toOffsetDateTime()
+        }
+    }
 
     // ------------------------------------------------- in-transaction primitives
     //
@@ -511,4 +532,5 @@ private fun ResultRow.toUserRecord(): UserRecord = UserRecord(
     deletionRequestedAt = this[Users.deletionRequestedAt]?.toKotlinInstant(),
     referredByDoctor = this[Users.referredByDoctor],
     hasWearable = this[Users.hasWearable],
+    accountKind = enumFromDb(this[Users.accountKind], AccountKind.SELF),
 )

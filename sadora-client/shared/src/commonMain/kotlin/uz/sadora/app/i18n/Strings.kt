@@ -64,6 +64,7 @@ interface Strings {
     val shop: ShopStrings
     val homeLayout: HomeLayoutStrings
     val share: ShareStrings
+    val partner: PartnerStrings
     val premium: PremiumStrings
     val devices: DeviceStrings
     val errors: ErrorStrings

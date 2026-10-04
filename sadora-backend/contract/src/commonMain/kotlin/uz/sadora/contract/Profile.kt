@@ -40,6 +40,8 @@ data class UserProfile(
      * number it made up. Null for the stages that have no anchor.
      */
     val stage: StageBaseline? = null,
+    /** A follower-only account opens on the Yaqinim view, not on her own tracking. */
+    val accountKind: AccountKind = AccountKind.SELF,
 )
 
 /**

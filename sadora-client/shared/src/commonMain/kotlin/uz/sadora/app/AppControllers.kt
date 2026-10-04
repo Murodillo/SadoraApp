@@ -15,6 +15,7 @@ import uz.sadora.app.data.PhotoController
 import uz.sadora.app.data.RewardsController
 import uz.sadora.app.data.SadoraController
 import uz.sadora.app.data.SadoraGraph
+import uz.sadora.app.data.PartnerController
 import uz.sadora.app.data.ShareController
 import uz.sadora.app.data.WearableController
 import uz.sadora.app.model.AppState
@@ -41,6 +42,7 @@ class AppControllers(
     val billing: BillingController,
     val rewards: RewardsController,
     val share: ShareController,
+    val partner: PartnerController,
     val photos: PhotoController,
     val wearables: WearableController,
     val notifications: NotificationsController,
@@ -60,6 +62,7 @@ class AppControllers(
             billing = graph?.billingController() ?: BillingController(null),
             rewards = graph?.rewardsController(state) ?: RewardsController(null, state),
             share = graph?.shareController() ?: ShareController(null),
+            partner = graph?.partnerController() ?: PartnerController(null),
             photos = graph?.photoController(state) ?: PhotoController(null, state),
             wearables = graph?.wearableController() ?: WearableController(null),
             notifications = graph?.notificationsController() ?: NotificationsController(null),

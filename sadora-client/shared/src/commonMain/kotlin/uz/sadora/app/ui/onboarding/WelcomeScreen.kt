@@ -366,6 +366,8 @@ fun IntroScreen(
     state: AppState,
     onStart: () -> Unit,
     onSignIn: () -> Unit,
+    /** "Yaqinim taklif qildi": someone shared a code, and this phone is theirs to follow her. */
+    onPartnerInvite: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val c = Sadora.colors
@@ -477,6 +479,20 @@ fun IntroScreen(
                             style = Sadora.type.body.copy(fontWeight = FontWeight.SemiBold),
                             color = c.textAccent,
                             modifier = Modifier.noRippleClickable(onClick = onSignIn),
+                        )
+                    }
+                    // The door for the person she invites: a husband or a mother needs no
+                    // questions about her cycle, only the code she sent.
+                    Row(
+                        Modifier.noRippleClickable(onClick = onPartnerInvite),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        Icon(SadoraIcons.Heart, contentDescription = null, Modifier.size(IconSize.sm), tint = c.textAccent)
+                        Text(
+                            strings.partner.joinEntry,
+                            style = Sadora.type.body.copy(fontWeight = FontWeight.SemiBold),
+                            color = c.textAccent,
                         )
                     }
                 }

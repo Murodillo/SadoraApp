@@ -17,6 +17,7 @@ import uz.sadora.app.data.api.NotificationApi
 import uz.sadora.app.data.api.NutritionApi
 import uz.sadora.app.data.api.PhotoApi
 import uz.sadora.app.data.api.RewardsApi
+import uz.sadora.app.data.api.PartnerApi
 import uz.sadora.app.data.api.ShareApi
 import uz.sadora.app.data.api.WearableApi
 import uz.sadora.app.data.health.ApiDeviceHealthBackend
@@ -87,6 +88,7 @@ class SadoraGraph(
     val billingApi: BillingApi = BillingApi(caller)
     val rewardsApi: RewardsApi = RewardsApi(caller)
     val shareApi: ShareApi = ShareApi(caller)
+    val partnerApi: PartnerApi = PartnerApi(caller)
     val photoApi: PhotoApi = PhotoApi(caller)
     val repository: SadoraRepository = SadoraRepository(api, session, device, appVersion)
 
@@ -125,6 +127,8 @@ class SadoraGraph(
     fun photoController(state: uz.sadora.app.model.AppState): PhotoController = PhotoController(photoApi, state)
 
     fun shareController(): ShareController = ShareController(shareApi, analytics)
+
+    fun partnerController(): PartnerController = PartnerController(partnerApi, analytics)
 
     fun wearableController(): WearableController = WearableController(
         api = wearableApi,

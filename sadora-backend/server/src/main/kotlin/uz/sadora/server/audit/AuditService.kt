@@ -81,6 +81,18 @@ object AuditActions {
     const val SHARE_VIEWED = "share.viewed"
     const val SHARE_REVOKED = "share.revoked"
 
+    // Yaqinim is a standing window onto her health for one other person: every step that
+    // opens, narrows, pauses or closes it is hers to look back on.
+    const val PARTNER_INVITED = "partner.invited"
+    const val PARTNER_ACCEPTED = "partner.accepted"
+    const val PARTNER_APPROVED = "partner.approved"
+    const val PARTNER_PERMISSIONS = "partner.permissions"
+    const val PARTNER_PAUSED = "partner.paused"
+    const val PARTNER_RESUMED = "partner.resumed"
+    const val PARTNER_ENDED = "partner.ended"
+    const val PARTNER_LEFT = "partner.left"
+    const val PARTNER_LABOUR_ALERT = "partner.labour_alert"
+
     // A cloud wearable is a standing grant to pull data from a third party.
     const val WEARABLE_CONNECTED = "wearable.connected"
     const val WEARABLE_DISCONNECTED = "wearable.disconnected"

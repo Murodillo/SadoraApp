@@ -318,7 +318,7 @@ fun SignInScreen(
             notRegistered = true
             return
         }
-        onSignedIn(AppPhase.Main)
+        onSignedIn(if (destination == AuthDestination.Partner) AppPhase.Partner else AppPhase.Main)
     }
 
     fun sendCode() {

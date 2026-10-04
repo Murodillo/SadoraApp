@@ -21,3 +21,31 @@ object ProfileShares : Table("profile_shares") {
 
     override val primaryKey = PrimaryKey(id)
 }
+
+/** Yaqinim links, as V36 created them. Like a share, no health data lives here. */
+object PartnerLinks : Table("partner_links") {
+    val id = uuid("id")
+    val ownerId = uuid("owner_id").references(Users.id)
+    val partnerId = uuid("partner_id").references(Users.id).nullable()
+    val status = text("status")
+    val relation = text("relation")
+    val codeHash = text("code_hash").nullable()
+    val codeExpiresAt = timestampWithTimeZone("code_expires_at").nullable()
+    val permCycle = bool("perm_cycle")
+    val permFertile = bool("perm_fertile")
+    val permMood = bool("perm_mood")
+    val permSymptoms = bool("perm_symptoms")
+    val permPregnancy = bool("perm_pregnancy")
+    val permAppointments = bool("perm_appointments")
+    val permCare = bool("perm_care")
+    val createdAt = timestampWithTimeZone("created_at")
+    val acceptedAt = timestampWithTimeZone("accepted_at").nullable()
+    val approvedAt = timestampWithTimeZone("approved_at").nullable()
+    val pausedAt = timestampWithTimeZone("paused_at").nullable()
+    val endedAt = timestampWithTimeZone("ended_at").nullable()
+    val endedBy = text("ended_by").nullable()
+    val lastViewedAt = timestampWithTimeZone("last_viewed_at").nullable()
+    val viewCount = integer("view_count")
+
+    override val primaryKey = PrimaryKey(id)
+}

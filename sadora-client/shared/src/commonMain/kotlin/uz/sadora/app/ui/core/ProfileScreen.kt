@@ -140,6 +140,25 @@ fun ProfileScreen(
                     }
                 }
 
+                // Yaqinim beside the doctor's code: both are her record leaving the app, to
+                // one person, on her terms.
+                item {
+                    SadoraCard(onClick = { onOpen(Route.Yaqinim) }) {
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                        ) {
+                            IconTile(SadoraIcons.Heart, tint = c.secondary, size = 44.dp)
+                            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                Text(strings.partner.title, style = Sadora.type.h3, color = c.text)
+                                Text(strings.partner.profileRowNote, style = Sadora.type.body, color = c.muted)
+                            }
+                            Icon(SadoraIcons.ChevronRight, contentDescription = null, Modifier.size(IconSize.md), tint = c.muted2)
+                        }
+                    }
+                }
+
                 item {
                     SadoraCard(padding = Spacing.xs) {
                         // Gul sits above the modules rather than among the settings: it is

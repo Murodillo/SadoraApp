@@ -134,6 +134,10 @@ fun OnboardingFlow(
     controller: SadoraController,
     onFinished: () -> Unit,
     onSignInInstead: () -> Unit,
+    /** The welcome page's "Yaqinim taklif qildi". */
+    onPartnerInvite: () -> Unit = {},
+    /** The number verified belongs to a follower-only account. */
+    onPartnerAccount: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     // Signed in already means she has seen the welcome page on the way to the code; the
@@ -276,6 +280,7 @@ fun OnboardingFlow(
                         state = state,
                         onStart = ::advance,
                         onSignIn = onSignInInstead,
+                        onPartnerInvite = onPartnerInvite,
                     )
 
                     OnboardingStep.Language -> LanguageQuestion(
@@ -499,6 +504,7 @@ fun OnboardingFlow(
                                 when (destination) {
                                     null -> Unit
                                     AuthDestination.Main -> onFinished()
+                                    AuthDestination.Partner -> onPartnerAccount()
                                     else -> advance()
                                 }
                             }

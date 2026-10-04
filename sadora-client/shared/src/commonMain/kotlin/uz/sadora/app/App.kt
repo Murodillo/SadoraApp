@@ -125,6 +125,10 @@ import uz.sadora.app.ui.modules.PaywallScreen
 import uz.sadora.app.ui.modules.ReferralScreen
 import uz.sadora.app.ui.modules.RewardsScreen
 import uz.sadora.app.ui.modules.ShareProfileScreen
+import uz.sadora.app.ui.partner.PartnerJoinFlow
+import uz.sadora.app.ui.partner.PartnerShell
+import uz.sadora.app.ui.partner.PartnerViewScreen
+import uz.sadora.app.ui.partner.YaqinimScreen
 import uz.sadora.app.ui.modules.ShopScreen
 import uz.sadora.app.ui.modules.SleepScreen
 import uz.sadora.app.ui.onboarding.LegalDocument
@@ -159,7 +163,7 @@ fun App(graph: SadoraGraph? = null) {
 
     var wasInside by remember { mutableStateOf(false) }
     LaunchedEffect(navigator.phase) {
-        val inside = navigator.phase == AppPhase.Main
+        val inside = navigator.phase == AppPhase.Main || navigator.phase == AppPhase.Partner
         if (wasInside && !inside) {
             navigator.select(Tab.Today)
             // What belongs to the phone rather than to her account is carried over.
@@ -180,7 +184,7 @@ fun App(graph: SadoraGraph? = null) {
     // shell the moment the session is gone; the phase change above resets the store.
     val sessionState = graph?.session?.state?.collectAsState()?.value
     LaunchedEffect(sessionState) {
-        if (sessionState is SessionState.SignedOut && navigator.phase == AppPhase.Main) {
+        if (sessionState is SessionState.SignedOut && (navigator.phase == AppPhase.Main || navigator.phase == AppPhase.Partner)) {
             navigator.goTo(AppPhase.SignIn)
         }
     }
@@ -193,10 +197,21 @@ fun App(graph: SadoraGraph? = null) {
     // account is created, and an existing account ignores it entirely. A wearable
     // return is handled by the shell, where the devices screen can be reached.
     val link = AppLinks.pending
-    LaunchedEffect(link) {
+    LaunchedEffect(link, navigator.phase) {
         if (link is AppLink.Invite && state.pendingInviteCode.isNullOrBlank()) {
             state.pendingInviteCode = link.code
             AppLinks.consume()
+        }
+        // A Yaqinim code before anyone is signed in: the join screen, with the code in it.
+        // Inside the app the shell takes it; on the splash it waits for the session.
+        val outside = navigator.phase == AppPhase.Onboarding || navigator.phase == AppPhase.SignIn ||
+            navigator.phase == AppPhase.PartnerJoin
+        if (link is AppLink.Partner && outside) {
+            AppLinks.consume()
+            link.code?.let { code ->
+                state.pendingPartnerCode = code
+                navigator.goTo(AppPhase.PartnerJoin)
+            }
         }
     }
 
@@ -231,6 +246,25 @@ fun App(graph: SadoraGraph? = null) {
                                 navigator.goTo(AppPhase.Main)
                             },
                             onSignInInstead = { navigator.goTo(AppPhase.SignIn) },
+                            onPartnerInvite = { navigator.goTo(AppPhase.PartnerJoin) },
+                            onPartnerAccount = { navigator.goTo(AppPhase.Partner) },
+                        )
+
+                        AppPhase.PartnerJoin -> PartnerJoinFlow(
+                            state = state,
+                            controllers = controllers,
+                            onJoined = navigator::goTo,
+                            onExit = { navigator.goTo(AppPhase.Onboarding) },
+                            onSignInInstead = { navigator.goTo(AppPhase.SignIn) },
+                        )
+
+                        AppPhase.Partner -> PartnerShell(
+                            state = state,
+                            controllers = controllers,
+                            onSignedOut = {
+                                state.clearDeviceData()
+                                navigator.goTo(AppPhase.SignIn)
+                            },
                         )
 
                         AppPhase.SignIn -> Box(Modifier.fillMaxSize().statusBarsPadding()) {
@@ -287,7 +321,13 @@ private fun SplashGate(
             state.applyServerProfile(resolved.user, resolved.entitlements)
             // Onboarding is a gate, not a screen: a half-registered account goes back
             // into the flow rather than into an app with no profile behind it.
-            onResolved(if (resolved.needsOnboarding) AppPhase.Onboarding else AppPhase.Main)
+            onResolved(
+                when {
+                    resolved.needsOnboarding -> AppPhase.Onboarding
+                    resolved.user.accountKind == uz.sadora.contract.AccountKind.PARTNER -> AppPhase.Partner
+                    else -> AppPhase.Main
+                },
+            )
         } else {
             onResolved(AppPhase.Onboarding)
         }
@@ -383,6 +423,8 @@ private fun MainShell(
         rewards.loadHomeLayout()
         // Whether she writes in the chat as a doctor; the composer names her either way.
         controllers.doctors.loadAccount()
+        // Whether someone sees her — the labour button needs to know — and whom she follows.
+        controllers.partner.refresh()
 
         // A yes to "do you wear a watch?" ends the flow on the connect screen rather
         // than on Today. Consumed here so it happens exactly once, after sign-up — not
@@ -462,6 +504,15 @@ private fun MainShell(
         }
         // A tapped push about a consultation: the doctor wrote, the window ended, money is
         // coming back. The thread says which; it is opened over whatever tab she was on.
+        // Yaqinim: a shared code opens her screen with the code typed in; a push about
+        // her person (a request, a yes) opens the same screen, read again.
+        if (link is AppLink.Partner) {
+            AppLinks.consume()
+            overlays.closeTop()
+            link.code?.let { state.pendingPartnerCode = it }
+            if (navigator.current != Route.Yaqinim) navigator.push(Route.Yaqinim)
+            scope.launch { controllers.partner.refresh() }
+        }
         if (link is AppLink.Conversation) {
             AppLinks.consume()
             overlays.closeTop()
@@ -916,7 +967,7 @@ private fun PushedScreen(
         Route.PregnancyAppointments -> PregnancyAppointmentsScreen(health, close)
         Route.PregnancyCheckIn -> PregnancyCheckInScreen(state, health, close)
         Route.KickCounter -> KickCounterScreen(controllers.stageEvents, close)
-        Route.Contractions -> ContractionTimerScreen(controllers.stageEvents, close)
+        Route.Contractions -> ContractionTimerScreen(controllers.stageEvents, close, partner = controllers.partner, onToast = toast)
         Route.Feeding -> FeedingScreen(controllers.stageEvents, close)
         Route.MoodScreen -> MoodScreenScreen(controllers.stageEvents, close, onAskDoctor = { navigator.push(Route.Doctors) })
         Route.HotFlushes -> HotFlushScreen(controllers.stageEvents, close, onToast = toast)
@@ -1071,6 +1122,14 @@ private fun PushedScreen(
             onClose = close,
         )
         Route.ShareProfile -> ShareProfileScreen(controllers.share, close, onToast = toast)
+        Route.Yaqinim -> YaqinimScreen(
+            state = state,
+            partner = controllers.partner,
+            onOpenPerson = { navigator.push(Route.PartnerView(it)) },
+            onClose = close,
+            onToast = toast,
+        )
+        is Route.PartnerView -> PartnerViewScreen(route.linkId, controllers.partner, close, onToast = toast)
         Route.NotificationInbox -> NotificationInboxScreen(state, controllers.notifications, close, navigator::push)
 
         // The same documents onboarding shows, reachable again from settings.

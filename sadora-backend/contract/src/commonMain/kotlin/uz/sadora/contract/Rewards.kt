@@ -49,6 +49,9 @@ object CoinReasons {
     /** The welcome the invited account gets for arriving with a code. */
     const val REFERRAL_WELCOME = "referral_welcome"
 
+    /** Her Yaqinim said yes and sees her for the first time. Paid once, to her. */
+    const val PARTNER_LINKED = "partner_linked"
+
     /** Spending, written as a negative amount. */
     const val REDEMPTION = "redemption"
 
@@ -68,6 +71,7 @@ object CoinReasons {
         ARTICLE_READ,
         REFERRAL_JOINED,
         REFERRAL_WELCOME,
+        PARTNER_LINKED,
     )
 }
 

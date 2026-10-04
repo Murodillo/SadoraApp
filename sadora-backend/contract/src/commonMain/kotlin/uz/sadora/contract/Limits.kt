@@ -59,6 +59,13 @@ object Limits {
     const val SHARE_MAX_HOURS = 24 * 7
     val SHARE_TTL_HOURS = 1..SHARE_MAX_HOURS
 
+    // ---- Yaqinim (the person who sees her)
+    /** A code lives two days: long enough to reach a husband abroad, short enough to forget. */
+    const val PARTNER_INVITE_HOURS = 48
+    const val PARTNER_CODE_LENGTH = 8
+    const val PARTNER_MAX_FOLLOWING = 5
+    const val PARTNER_NAME_MAX = 60
+
     // ---- secret chat
     const val POST_MIN = 2
     const val POST_MAX = 2000

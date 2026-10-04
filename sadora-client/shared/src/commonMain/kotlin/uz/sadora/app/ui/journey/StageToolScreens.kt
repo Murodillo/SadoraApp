@@ -336,7 +336,16 @@ private val SlowKicks = 2.hours
  * for an hour.
  */
 @Composable
-fun ContractionTimerScreen(tools: StageEventsController, onClose: () -> Unit, modifier: Modifier = Modifier) {
+fun ContractionTimerScreen(
+    tools: StageEventsController,
+    onClose: () -> Unit,
+    modifier: Modifier = Modifier,
+    /** Yaqinim: when someone sees her, one tap tells them labour has started. */
+    partner: uz.sadora.app.data.PartnerController? = null,
+    onToast: (String) -> Unit = {},
+) {
+    var confirmLabour by remember { mutableStateOf(false) }
+    val yaqinim = strings.partner
     val t = strings.tools
     val c = Sadora.colors
     val scope = rememberCoroutineScope()
@@ -383,6 +392,14 @@ fun ContractionTimerScreen(tools: StageEventsController, onClose: () -> Unit, mo
             }
 
             item { Warning(t.contractionsUrgent) }
+            if (partner?.hasActiveLink == true) item {
+                SadoraButton(
+                    yaqinim.labourButton,
+                    { confirmLabour = true },
+                    tone = ButtonTone.Outline,
+                    icon = uz.sadora.app.design.SadoraIcons.Heart,
+                )
+            }
             tools.error?.let { item { ErrorStrip(it.readable()) } }
 
             if (all.isNotEmpty()) item {
@@ -400,6 +417,20 @@ fun ContractionTimerScreen(tools: StageEventsController, onClose: () -> Unit, mo
             }
         }
     }
+
+    // Not destructive: the confirm is the action she came for, drawn as the primary.
+    uz.sadora.app.ui.components.SadoraDialog(
+        visible = confirmLabour,
+        title = yaqinim.labourConfirmTitle,
+        body = yaqinim.labourConfirmBody,
+        confirmText = yaqinim.labourSend,
+        destructive = false,
+        onConfirm = {
+            confirmLabour = false
+            scope.launch { if (partner?.labourAlert() == true) onToast(yaqinim.labourSent) }
+        },
+        onDismiss = { confirmLabour = false },
+    )
 }
 
 internal data class ContractionSummary(val averageDuration: Duration, val averageGap: Duration, val timeToGo: Boolean)

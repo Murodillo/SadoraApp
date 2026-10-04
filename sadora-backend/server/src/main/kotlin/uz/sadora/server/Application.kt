@@ -19,6 +19,8 @@ import uz.sadora.server.billing.paymeWebhook
 import uz.sadora.server.ai.aiRoutes
 import uz.sadora.server.rewards.adminRewardsRoutes
 import uz.sadora.server.rewards.rewardsRoutes
+import uz.sadora.server.partner.partnerRoutes
+import uz.sadora.server.partner.publicPartnerRoutes
 import uz.sadora.server.share.publicShareRoutes
 import uz.sadora.server.share.shareRoutes
 import uz.sadora.server.community.adminCommunityRoutes
@@ -83,6 +85,9 @@ fun main() {
     // A consultation window nobody closed still has to end, and be refunded if unanswered.
     component.consultationJob.start()
 
+    // Yaqinim's daily pass: a period two days off, a doctor visit tomorrow.
+    component.partnerAlertJob.start()
+
     Runtime.getRuntime().addShutdownHook(Thread { component.close() })
 
     logger.info(
@@ -122,10 +127,12 @@ fun Application.apiModule(component: AppComponent) {
         // The one page a person opens in a browser: the doctor's view behind a QR code.
         // Outside the version prefix because it is a link on a screen, not an API call.
         publicShareRoutes(component.shareService)
+        publicPartnerRoutes()
 
         route("/$API_VERSION") {
             authRoutes(component.authService, component.otpService)
             shareRoutes(component.shareService)
+            partnerRoutes(component.partnerService)
             userRoutes(
                 userService = component.userService,
                 entitlementService = component.entitlementService,

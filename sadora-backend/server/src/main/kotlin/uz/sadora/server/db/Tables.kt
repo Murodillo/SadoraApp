@@ -49,6 +49,8 @@ object Users : Table("users") {
     val referredByDoctor = bool("referred_by_doctor").nullable()
     /** "Do you wear a smart watch or band?", null when skipped or never asked. */
     val hasWearable = bool("has_wearable").nullable()
+    /** `self` or `partner` (V36): a follower-only account has no tracking of its own. */
+    val accountKind = text("account_kind")
 
     override val primaryKey = PrimaryKey(id)
 }

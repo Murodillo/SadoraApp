@@ -11,7 +11,12 @@ import uz.sadora.contract.OtpChallenge
 import uz.sadora.contract.UzbekPhone
 
 /** Where the user belongs after an auth call succeeds. */
-enum class AuthDestination { Onboarding, Main }
+enum class AuthDestination {
+    Onboarding,
+    Main,
+    /** A follower-only Yaqinim account: the app opens on the people it follows. */
+    Partner,
+}
 
 /**
  * What the screens call.
@@ -169,8 +174,11 @@ class SadoraController(
 
     private fun timezoneOrDefault(): String = repository?.deviceTimezone ?: "Asia/Tashkent"
 
-    private fun uz.sadora.contract.UserProfile.destination(): AuthDestination =
-        if (onboardingCompleted) AuthDestination.Main else AuthDestination.Onboarding
+    private fun uz.sadora.contract.UserProfile.destination(): AuthDestination = when {
+        !onboardingCompleted -> AuthDestination.Onboarding
+        accountKind == uz.sadora.contract.AccountKind.PARTNER -> AuthDestination.Partner
+        else -> AuthDestination.Main
+    }
 
     private fun SessionState.entitlementsOrNull(): uz.sadora.contract.Entitlements? =
         (this as? SessionState.SignedIn)?.entitlements

@@ -388,6 +388,40 @@ class StringsTest {
             addAll(includes)
             addAll(excludes)
         }
+        with(t.partner) {
+            addAll(
+                listOf(
+                    title, profileRowNote, joinEntry, introTitle, introBody, whoLabel, createInvite, creating,
+                    codeTitle, codeSteps, codeExpires("x"), shareCode, shareMessage("K7M2-QP4X", null), inviteOut,
+                    inviteOutBody("x"), newCode, cancelInvite, requestTitle("Aziz"), requestBody, approve, decline,
+                    linkedTitle("Aziz"), pausedTitle("Aziz"), lastViewed("x"), neverViewed, showsTitle,
+                    permCycle, permCycleNote, permFertile, permFertileNote, permMood, permMoodNote, permSymptoms,
+                    permSymptomsNote, permPregnancy, permPregnancyNote, permAppointments, permAppointmentsNote,
+                    permCare, permCareNote, neverTitle, pause, pauseNote, disconnect, disconnectConfirmTitle,
+                    disconnectConfirmBody("Aziz"), disconnected, approved, followingTitle, haveCode, enterCodeTitle,
+                    codeLabel, follow, statusPending, statusPaused, statusActive, requestSent("Malika"),
+                    pendingTitle("Malika"), pendingBody, pausedViewTitle("Malika"), pausedViewBody,
+                    nothingShared("Malika"), todayHeading, cycleDay(12), periodDay(2), periodIn(0), periodIn(1),
+                    periodIn(5), periodAround("x"), fertileWindow("a", "b"), fertileToday, estimatedNote, moodLabel,
+                    energyLabel, symptomsLabel, pregnancyWeek(20), daysToGo(0), daysToGo(30), babySize("x"),
+                    babyAge(5), babyAge(40), appointmentsTitle, feedsToday(3), lastFeed("x"), hotFlushesToday(2),
+                    helpTitle, leave, leaveConfirmBody("Malika"), emptyFollowingTitle, emptyFollowingBody,
+                    settingsTitle, followAnother, joinTitle, joinSubtitle, yourNameLabel, yourNameHint, yourNameNote,
+                    joinTermsLead, termsLink, privacyLink, labourButton, labourConfirmTitle, labourConfirmBody,
+                    labourSend, labourSent,
+                ),
+            )
+            uz.sadora.contract.PartnerRelation.entries.forEach { add(relation(it)) }
+            CyclePhase.entries.forEach { phase ->
+                add(phaseTitle(phase))
+                add(phaseFeel(phase))
+                addAll(phaseTips(phase))
+            }
+            listOf(8, 20, 34).forEach { addAll(pregnancyTips(it)) }
+            addAll(neverList)
+            addAll(postpartumTips)
+            addAll(menopauseTips)
+        }
         with(t.premium) {
             addAll(
                 listOf(
@@ -558,6 +592,10 @@ class StringsTest {
             assertNotEquals(StringsUz.modules.noCorrelationBody, t.modules.noCorrelationBody)
             assertNotEquals(StringsUz.modules.balanced, t.modules.balanced)
             assertNotEquals(StringsUz.today.hello("X"), t.today.hello("X"))
+            assertNotEquals(StringsUz.partner.introBody, t.partner.introBody)
+            assertNotEquals(StringsUz.partner.phaseFeel(CyclePhase.Luteal), t.partner.phaseFeel(CyclePhase.Luteal))
+            assertNotEquals(StringsUz.partner.neverList, t.partner.neverList)
+            assertNotEquals(StringsUz.partner.labourConfirmBody, t.partner.labourConfirmBody)
             assertNotEquals(StringsUz.stages.subtitle(LifeStage.Cycle), t.stages.subtitle(LifeStage.Cycle))
             assertNotEquals(StringsUz.common.hoursMinutes(6, 40), t.common.hoursMinutes(6, 40))
             assertNotEquals(StringsUz.errors.phoneInvalid, t.errors.phoneInvalid)
