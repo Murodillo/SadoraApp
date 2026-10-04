@@ -67,6 +67,7 @@ import uz.sadora.app.ui.components.requiredTextError
 import uz.sadora.app.ui.components.typedDateError
 import uz.sadora.app.ui.components.typedTimeError
 import uz.sadora.contract.Limits
+import uz.sadora.app.resources.*
 
 /**
  * "Homiladorlik · Tadbirlar".
@@ -133,7 +134,7 @@ fun PregnancyAppointmentsScreen(
                         body = t.appointmentsEmptyBody,
                         actionText = t.addAppointment,
                         onAction = { composing = true },
-                        glyph = "🗓",
+                        art = Res.drawable.ic3d_calendar,
                     )
                 }
             }

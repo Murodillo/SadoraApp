@@ -46,6 +46,7 @@ import uz.sadora.app.ui.components.SadoraTopBar
 import uz.sadora.app.ui.components.ScreenContent
 import uz.sadora.app.ui.components.SegmentedControl
 import uz.sadora.app.ui.components.noRippleClickable
+import uz.sadora.app.resources.*
 
 /**
  * "Dorilar" — schedule, adherence and stock.
@@ -114,7 +115,7 @@ fun MedicationsScreen(
                             body = t.medsEmptyBody,
                             actionText = t.addMedication,
                             onAction = { onOpen(Route.AddMedication) },
-                            glyph = "💊",
+                            art = Res.drawable.ic3d_meds,
                         )
                     }
                 } else {
@@ -181,7 +182,7 @@ fun MedicationsScreen(
                         body = t.medsEmptyBody,
                         actionText = t.addMedication,
                         onAction = { onOpen(Route.AddMedication) },
-                        glyph = "💊",
+                        art = Res.drawable.ic3d_meds,
                     )
                 }
             } else {

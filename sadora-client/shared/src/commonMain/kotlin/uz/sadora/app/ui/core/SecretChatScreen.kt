@@ -86,6 +86,7 @@ import uz.sadora.app.i18n.strings
 import uz.sadora.app.data.readable
 import uz.sadora.app.ui.components.acceptText
 import uz.sadora.contract.Limits
+import uz.sadora.app.resources.*
 
 /** The tints an alias avatar can take, so the feed is not five identical circles. */
 @Composable
@@ -258,7 +259,7 @@ fun SecretChatScreen(
                     body = "",
                     actionText = strings.common.retry,
                     onAction = { retryScope.launch { community.load() } },
-                    glyph = "📡",
+                    art = Res.drawable.ic3d_globe,
                 )
             } else if (posts.isEmpty()) {
                 EmptyFeed(filter = state.communityFilter, doctorsOnly = state.communityDoctorsOnly, onCompose = onCompose)
@@ -349,7 +350,7 @@ private fun EmptyFeed(filter: CommunityFilter, doctorsOnly: Boolean, onCompose: 
     val c = Sadora.colors
     val t = strings.community
     if (doctorsOnly && filter == CommunityFilter.Feed) {
-        EmptyState(title = strings.doctors.nothingYet, body = strings.doctors.nothingYetBody, actionText = null, onAction = {}, glyph = "🩺")
+        EmptyState(title = strings.doctors.nothingYet, body = strings.doctors.nothingYetBody, actionText = null, onAction = {}, art = Res.drawable.ic3d_doctor)
         return
     }
     Column(

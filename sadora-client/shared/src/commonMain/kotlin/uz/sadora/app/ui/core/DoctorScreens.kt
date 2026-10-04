@@ -65,6 +65,8 @@ import uz.sadora.app.ui.components.SelectChip
 import uz.sadora.contract.DoctorProfile
 import uz.sadora.contract.DoctorReview
 import uz.sadora.contract.PaymentProvider
+import uz.sadora.app.resources.*
+import uz.sadora.app.ui.components.ArtIcon
 
 // A verified doctor's public page, as a reader opens it from the chat. Applying, the
 // panel and answering live in the doctor's own app, sadora-doctor.
@@ -327,7 +329,7 @@ fun ConsultationConsentSheetContent(
             Text(d.specialty(profile.specialty), style = Sadora.type.body, color = c.textAccent)
         }
     }
-    val icons = listOf(SadoraIcons.Clock, SadoraIcons.Profile, SadoraIcons.Info, SadoraIcons.Shield)
+    val icons = listOf(Res.drawable.ic3d_clock, Res.drawable.ic3d_profile, Res.drawable.ic3d_bulb, Res.drawable.ic3d_shield)
     val paid = profile.priceMinor > 0
     // The first point is the price: "free" for most, hers and the refund rule for a doctor who charges.
     val points = if (paid) listOf(d.consentPaidPoint(d.price(Fmt.sum(profile.priceMinor)))) + d.consentPoints.drop(1) else d.consentPoints
@@ -338,7 +340,7 @@ fun ConsultationConsentSheetContent(
                     Modifier.size(32.dp).clip(Radius.chip).background(c.primary.copy(alpha = if (c.isDark) 0.24f else 0.12f)),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Icon(icons[index % icons.size], contentDescription = null, Modifier.size(IconSize.sm), tint = c.primary)
+                    ArtIcon(icons[index % icons.size], 24.dp)
                 }
                 Text(point, style = Sadora.type.body, color = c.text, modifier = Modifier.weight(1f).padding(top = 4.dp))
             }

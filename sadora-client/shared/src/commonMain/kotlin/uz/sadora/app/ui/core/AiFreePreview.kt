@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -20,7 +19,6 @@ import androidx.compose.ui.unit.dp
 import uz.sadora.app.design.Radius
 import uz.sadora.app.design.Sadora
 import uz.sadora.app.design.IconSize
-import uz.sadora.app.design.SadoraIcons
 import uz.sadora.app.design.Spacing
 import uz.sadora.app.ui.components.AiOrb
 import uz.sadora.app.ui.components.BadgeTone
@@ -33,6 +31,8 @@ import uz.sadora.app.ui.components.SadoraCard
 import uz.sadora.app.ui.components.SadoraTopBar
 import uz.sadora.app.ui.components.ScreenContent
 import uz.sadora.app.i18n.strings
+import uz.sadora.app.resources.*
+import uz.sadora.app.ui.components.ArtIcon
 
 /**
  * The free-plan AI screen.
@@ -108,7 +108,7 @@ fun AiFreePreviewScreen(
                             horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
                         ) {
                             // A lock-free sparkle, not a green tick: a tick says "you have this".
-                            Icon(SadoraIcons.Sparkle, contentDescription = null, Modifier.size(IconSize.md), tint = c.textAccent)
+                            ArtIcon(Res.drawable.ic3d_ai, IconSize.lg)
                             Text(feature, style = Sadora.type.body, color = c.text)
                         }
                     }

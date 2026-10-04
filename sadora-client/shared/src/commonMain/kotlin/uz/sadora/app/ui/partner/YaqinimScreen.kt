@@ -45,7 +45,6 @@ import uz.sadora.app.ui.components.CardLabel
 import uz.sadora.app.ui.components.ChipFlowRow
 import uz.sadora.app.ui.components.DisclaimerNote
 import uz.sadora.app.ui.components.ErrorStrip
-import uz.sadora.app.ui.components.IconTile
 import uz.sadora.app.ui.components.QrCode
 import uz.sadora.app.ui.components.SadoraBadge
 import uz.sadora.app.ui.components.SadoraBottomSheet
@@ -66,6 +65,8 @@ import uz.sadora.contract.PartnerLink
 import uz.sadora.contract.PartnerLinkStatus
 import uz.sadora.contract.PartnerPermissions
 import uz.sadora.contract.PartnerRelation
+import uz.sadora.app.resources.*
+import uz.sadora.app.ui.components.ArtTile
 
 /**
  * "Yaqinim" — her side: make a code, say yes to the person who typed it, choose what
@@ -214,7 +215,7 @@ private fun IntroCard(
     val c = Sadora.colors
     SadoraCard {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-            IconTile(SadoraIcons.Heart, tint = c.primary, size = 46.dp)
+            ArtTile(Res.drawable.ic3d_partner, tint = c.primary, size = 46.dp)
             Text(t.introTitle, style = Sadora.type.h3, color = c.text, modifier = Modifier.weight(1f))
         }
         Text(t.introBody, style = Sadora.type.body, color = c.muted)
@@ -266,7 +267,7 @@ private fun InviteOutCard(invite: PartnerInvite, busy: Boolean, onNew: () -> Uni
     val c = Sadora.colors
     SadoraCard {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-            IconTile(SadoraIcons.Send, tint = c.primary, size = 46.dp)
+            ArtTile(Res.drawable.ic3d_message, tint = c.primary, size = 46.dp)
             Text(t.inviteOut, style = Sadora.type.h3, color = c.text, modifier = Modifier.weight(1f))
         }
         Text(t.inviteOutBody(whenText(invite)), style = Sadora.type.body, color = c.muted)
@@ -283,7 +284,7 @@ private fun RequestCard(link: PartnerLink, busy: Boolean, onApprove: () -> Unit,
     val c = Sadora.colors
     SadoraCard {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-            IconTile(SadoraIcons.Heart, tint = c.primary, size = 46.dp)
+            ArtTile(Res.drawable.ic3d_partner, tint = c.primary, size = 46.dp)
             Column(Modifier.weight(1f)) {
                 Text(t.requestTitle(link.partnerName), style = Sadora.type.h3, color = c.text)
                 Text(t.relation(link.relation), style = Sadora.type.body, color = c.muted)
@@ -304,7 +305,7 @@ private fun LinkedCard(link: PartnerLink, onPause: (Boolean) -> Unit) {
     val paused = link.status == PartnerLinkStatus.PAUSED
     SadoraCard {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-            IconTile(SadoraIcons.Heart, tint = if (paused) c.muted2 else c.primary, size = 46.dp)
+            ArtTile(Res.drawable.ic3d_partner, tint = if (paused) c.muted2 else c.primary, size = 46.dp)
             Column(Modifier.weight(1f)) {
                 Text(
                     if (paused) t.pausedTitle(link.partnerName) else t.linkedTitle(link.partnerName),
@@ -396,7 +397,7 @@ private fun FollowingCard(following: List<FollowedPerson>, onOpen: (String) -> U
         if (following.isNotEmpty()) {
             CardLabel(t.followingTitle, modifier = Modifier.padding(horizontal = Spacing.xs, vertical = Spacing.xxs))
             following.forEach { person ->
-                SettingsRow(SadoraIcons.Heart, person.name, value = statusLabel(person.status)) { onOpen(person.linkId) }
+                SettingsRow(Res.drawable.ic3d_heart, person.name, value = statusLabel(person.status)) { onOpen(person.linkId) }
             }
         }
         SettingsRow(SadoraIcons.Plus, t.haveCode, onClick = onHaveCode)

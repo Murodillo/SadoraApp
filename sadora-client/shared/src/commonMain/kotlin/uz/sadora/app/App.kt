@@ -134,6 +134,7 @@ import uz.sadora.app.ui.modules.SleepScreen
 import uz.sadora.app.ui.onboarding.LegalDocument
 import uz.sadora.app.ui.onboarding.LegalScreen
 import uz.sadora.app.ui.onboarding.OnboardingFlow
+import uz.sadora.app.ui.onboarding.art
 import uz.sadora.app.ui.onboarding.SignInScreen
 import uz.sadora.app.ui.onboarding.SplashScreen
 import uz.sadora.app.ui.settings.NotificationInboxScreen
@@ -642,6 +643,7 @@ private fun MainShell(
                     selected = navigator.tab,
                     onSelect = navigator::select,
                     journeyLabel = strings.tabs.journey(state.lifeStage),
+                    journeyArt = state.lifeStage.art(),
                     mindLabel = if (state.isPremium) strings.tabs.mind else strings.tabs.mindAndNutrition,
                     chatUnread = state.communityUnread,
                 )

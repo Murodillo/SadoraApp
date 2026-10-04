@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
@@ -34,7 +33,6 @@ import uz.sadora.app.data.BillingController
 import uz.sadora.app.data.SadoraController
 import uz.sadora.app.design.Radius
 import uz.sadora.app.design.Sadora
-import uz.sadora.app.design.SadoraIcons
 import uz.sadora.app.design.Spacing
 import uz.sadora.app.i18n.ModuleStrings
 import uz.sadora.app.i18n.strings
@@ -49,6 +47,8 @@ import uz.sadora.contract.BillingPlan
 import uz.sadora.contract.PaymentProvider
 import uz.sadora.app.ui.components.noRippleClickable
 import uz.sadora.app.data.readable
+import uz.sadora.app.resources.*
+import uz.sadora.app.ui.components.ArtIcon
 
 /**
  * t.premiumTitle.
@@ -132,12 +132,7 @@ fun PaywallScreen(
                             .background(c.heroGradient),
                         contentAlignment = Alignment.Center,
                     ) {
-                        Icon(
-                            SadoraIcons.Sparkle,
-                            contentDescription = null,
-                            Modifier.size(28.dp),
-                            tint = c.onPrimary,
-                        )
+                        ArtIcon(Res.drawable.ic3d_crown, 46.dp)
                     }
                     Text(t.premiumTitle, style = Sadora.type.h1, color = c.text)
                     Text(

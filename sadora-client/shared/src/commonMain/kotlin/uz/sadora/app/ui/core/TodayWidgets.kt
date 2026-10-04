@@ -16,7 +16,6 @@ import uz.sadora.app.data.HealthController
 import uz.sadora.app.data.InsightsController
 import uz.sadora.app.data.LearnController
 import uz.sadora.app.design.Sadora
-import uz.sadora.app.design.SadoraIcons
 import uz.sadora.app.design.Spacing
 import uz.sadora.app.i18n.strings
 import uz.sadora.app.model.AppState
@@ -25,13 +24,14 @@ import uz.sadora.app.nav.Route
 import uz.sadora.app.ui.components.BadgeTone
 import uz.sadora.app.ui.components.CardLabel
 import uz.sadora.app.ui.components.EmojiTile
-import uz.sadora.app.ui.components.IconTile
 import uz.sadora.app.ui.components.SadoraBadge
 import uz.sadora.app.ui.components.SadoraCard
 import uz.sadora.app.ui.components.SadoraProgressBar
 import uz.sadora.app.ui.modules.sentence
 import uz.sadora.contract.HealthMetric
 import uz.sadora.contract.TrendMetric
+import uz.sadora.app.resources.*
+import uz.sadora.app.ui.components.ArtTile
 
 /**
  * The four widgets that were previously only whole screens: sleep, medications,
@@ -70,7 +70,7 @@ fun SleepWidget(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
         ) {
-            IconTile(SadoraIcons.Moon, tint = c.primary, size = 44.dp)
+            ArtTile(Res.drawable.ic3d_sleep, tint = c.primary, size = 44.dp)
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(strings.today.sleep, style = Sadora.type.body, color = c.muted)
                 Text(
@@ -120,7 +120,7 @@ fun MedicationsWidget(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
         ) {
-            IconTile(SadoraIcons.Pill, tint = c.secondary, size = 44.dp)
+            ArtTile(Res.drawable.ic3d_meds, tint = c.secondary, size = 44.dp)
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(strings.profile.medications, style = Sadora.type.body, color = c.muted)
                 Text(
@@ -197,7 +197,7 @@ fun InsightsWidget(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
         ) {
-            IconTile(SadoraIcons.Chart, tint = c.accent, size = 44.dp)
+            ArtTile(Res.drawable.ic3d_insights, tint = c.accent, size = 44.dp)
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(strings.profile.insights, style = Sadora.type.body, color = c.muted)
                 Text(
@@ -242,7 +242,7 @@ fun KnowledgeWidget(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
         ) {
-            IconTile(SadoraIcons.Book, tint = c.primary, size = 44.dp)
+            ArtTile(Res.drawable.ic3d_book, tint = c.primary, size = 44.dp)
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(strings.profile.knowledge, style = Sadora.type.body, color = c.muted)
                 Text(

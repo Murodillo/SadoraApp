@@ -43,6 +43,7 @@ import uz.sadora.app.ui.modules.sentence
 import uz.sadora.contract.HealthMetric
 import uz.sadora.contract.TrendMetric
 import uz.sadora.app.model.DailySleepGoalMinutes
+import uz.sadora.app.resources.*
 
 /** How far back the frequency view looks. Four whole weeks, so the bars are comparable. */
 private const val WindowDays = 28
@@ -96,7 +97,7 @@ fun StageSymptomsScreen(
                         body = t.noRecordsYetBody,
                         actionText = null,
                         onAction = {},
-                        glyph = "📋",
+                        art = Res.drawable.ic3d_record,
                     )
                 }
             }
@@ -129,9 +130,10 @@ fun StageSymptomsScreen(
                 SadoraCard {
                     CardLabel(t.logToday2)
                     ChipFlowRow {
-                        labels.values.take(QuickLogChips).forEach { label ->
+                        labels.entries.take(QuickLogChips).forEach { (key, label) ->
                             SelectChip(
                                 label = label,
+                                art = symptomArt(key),
                                 selected = label in state.symptoms,
                                 onClick = { state.toggleSymptom(label) },
                             )
@@ -242,7 +244,7 @@ fun StageSleepMoodScreen(
                         body = t.notEnoughDataBody,
                         actionText = null,
                         onAction = {},
-                        glyph = "🌙",
+                        art = Res.drawable.ic3d_sleep,
                     )
                 }
             }

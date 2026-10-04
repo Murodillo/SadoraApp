@@ -45,6 +45,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
 import uz.sadora.app.ui.components.appearFromBelow
 import uz.sadora.app.ui.components.rememberShareAction
+import uz.sadora.app.resources.*
+import uz.sadora.app.ui.components.ArtTile
 
 /**
  * "Invite your friends."
@@ -163,7 +165,7 @@ fun ReferralScreen(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                         ) {
-                            IconTile(SadoraIcons.Profile, tint = c.primary, size = 38.dp)
+                            ArtTile(Res.drawable.ic3d_profile, tint = c.primary, size = 38.dp)
                             Text(
                                 t.invitedCount(referral.invited),
                                 style = Sadora.type.h3,
@@ -176,7 +178,7 @@ fun ReferralScreen(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                         ) {
-                            IconTile(SadoraIcons.Bloom, tint = c.secondary, size = 38.dp)
+                            ArtTile(Res.drawable.ic3d_flower_coin, tint = c.secondary, size = 38.dp)
                             Text(
                                 t.referralEarned(Fmt.int(referral.coinsEarned)),
                                 style = Sadora.type.h3,

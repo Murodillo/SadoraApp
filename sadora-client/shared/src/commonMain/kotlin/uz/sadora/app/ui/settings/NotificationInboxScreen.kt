@@ -22,6 +22,7 @@ import uz.sadora.app.ui.components.SadoraCard
 import uz.sadora.app.ui.components.SadoraTopBar
 import uz.sadora.app.ui.components.ScreenContent
 import uz.sadora.app.ui.components.SettingsRow
+import uz.sadora.app.resources.*
 
 /**
  * What the bell on Today opens.
@@ -61,7 +62,7 @@ fun NotificationInboxScreen(
                     SadoraCard {
                         due.forEach { dose ->
                             SettingsRow(
-                                SadoraIcons.Pill,
+                                Res.drawable.ic3d_meds,
                                 t.inboxDoseDue("${dose.emoji} ${dose.name}", dose.time),
                                 onClick = { onOpen(Route.Medications) },
                             )
@@ -102,7 +103,7 @@ fun NotificationInboxScreen(
                         body = t.inboxEmptyBody,
                         actionText = t.inboxSettings,
                         onAction = { onOpen(Route.Notifications) },
-                        glyph = "🔔",
+                        art = Res.drawable.ic3d_bell,
                     )
                 }
             }

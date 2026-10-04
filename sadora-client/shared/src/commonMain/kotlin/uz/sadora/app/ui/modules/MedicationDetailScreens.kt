@@ -65,6 +65,7 @@ import uz.sadora.app.ui.components.parseTypedTime
 import uz.sadora.app.ui.components.requiredTextError
 import uz.sadora.app.ui.components.typedTimeError
 import uz.sadora.contract.Limits
+import uz.sadora.app.resources.*
 
 /**
  * "Dori qo'shish" — the add-medication form, and with [editingId] the same form filled
@@ -408,7 +409,7 @@ fun MedicationHistoryScreen(
                         body = t.noDoseHistoryBody,
                         actionText = null,
                         onAction = {},
-                        glyph = "💊",
+                        art = Res.drawable.ic3d_meds,
                     )
                 }
                 return@ScreenContent

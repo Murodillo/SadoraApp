@@ -41,6 +41,10 @@ import uz.sadora.app.ui.components.SadoraCard
 import uz.sadora.app.ui.components.SadoraTopBar
 import uz.sadora.app.ui.components.ScreenContent
 import uz.sadora.contract.DailyLog
+import uz.sadora.app.resources.*
+import org.jetbrains.compose.resources.DrawableResource
+import uz.sadora.app.ui.components.ArtIcon
+import uz.sadora.app.ui.components.art
 
 /**
  * "Sikl · kun tafsiloti" — everything recorded for one day.
@@ -145,14 +149,14 @@ fun CycleDayScreen(
                         )
                     } else {
                         entry.symptoms.forEach { symptom ->
-                            LoggedLine("•", health.symptoms.labelFor(symptom.key))
+                            LoggedLine("•", health.symptoms.labelFor(symptom.key), symptomArt(symptom.key))
                         }
                         entry.mood?.let { level ->
                             val mood = level.toAppMood()
-                            LoggedLine(mood.emoji, t.moodLine(common.mood(mood).lowercase()))
+                            LoggedLine(mood.emoji, t.moodLine(common.mood(mood).lowercase()), mood.art())
                         }
-                        entry.energy?.let { LoggedLine("⚡", t.energyLine(it)) }
-                        entry.note?.takeIf { it.isNotBlank() }?.let { LoggedLine("📝", it) }
+                        entry.energy?.let { LoggedLine("⚡", t.energyLine(it), Res.drawable.ic3d_energy) }
+                        entry.note?.takeIf { it.isNotBlank() }?.let { LoggedLine("📝", it, Res.drawable.ic3d_notebook) }
                     }
                 }
             }
@@ -252,7 +256,7 @@ fun CycleDayScreen(
 }
 
 @Composable
-private fun LoggedLine(emoji: String, text: String) {
+private fun LoggedLine(emoji: String, text: String, art: DrawableResource? = null) {
     val c = Sadora.colors
     Row(
         Modifier.fillMaxWidth(),
@@ -260,9 +264,9 @@ private fun LoggedLine(emoji: String, text: String) {
         horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
     ) {
         Box(
-            Modifier.clip(Radius.chip).background(c.surface2).padding(6.dp),
+            Modifier.clip(Radius.chip).background(c.surface2).padding(if (art != null) 4.dp else 6.dp),
         ) {
-            Text(emoji, style = Sadora.type.body)
+            if (art != null) ArtIcon(art, 24.dp) else Text(emoji, style = Sadora.type.body)
         }
         Text(text, style = Sadora.type.body, color = c.text)
     }

@@ -107,6 +107,10 @@ import uz.sadora.app.ui.components.rememberPhotoCapture
 import uz.sadora.contract.ConsultationPayment
 import uz.sadora.contract.DoctorSummary
 import uz.sadora.contract.Limits
+import uz.sadora.app.resources.*
+import org.jetbrains.compose.resources.DrawableResource
+import uz.sadora.app.ui.components.ArtTile
+import uz.sadora.app.ui.components.ArtIcon
 
 /**
  * Her private threads, most recently written first, with what is unread in each.
@@ -165,7 +169,7 @@ fun ConversationsScreen(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(Spacing.xxs),
                     ) {
-                        Icon(SadoraIcons.Message, contentDescription = null, Modifier.defaultMinSize(28.dp, 28.dp), tint = c.secondary)
+                        ArtIcon(Res.drawable.ic3d_message, 56.dp)
                         Text(t.noMessages, style = Sadora.type.h3, color = c.text, textAlign = TextAlign.Center)
                         Text(t.noMessagesBody, style = Sadora.type.body, color = c.muted, textAlign = TextAlign.Center)
                     }
@@ -534,13 +538,13 @@ fun ConversationScreen(
 
         SadoraBottomSheet(visible = showAttach, title = t.attach, onDismiss = { showAttach = false }) {
             if (picker.available) {
-                AttachOption(SadoraIcons.Camera, t.photo, t.photoNote) {
+                AttachOption(Res.drawable.ic3d_gallery, t.photo, t.photoNote) {
                     showAttach = false
                     picker.pickFromGallery()
                 }
             }
             if (canAttachRecord) {
-                AttachOption(SadoraIcons.Document, t.attachRecord, t.attachRecordNote) {
+                AttachOption(Res.drawable.ic3d_record, t.attachRecord, t.attachRecordNote) {
                     showAttach = false
                     confirmRecord = true
                 }
@@ -925,7 +929,7 @@ private fun MessageComposer(
 }
 
 @Composable
-private fun AttachOption(icon: androidx.compose.ui.graphics.vector.ImageVector, title: String, note: String, onClick: () -> Unit) {
+private fun AttachOption(art: DrawableResource, title: String, note: String, onClick: () -> Unit) {
     val c = Sadora.colors
     Row(
         Modifier
@@ -937,12 +941,7 @@ private fun AttachOption(icon: androidx.compose.ui.graphics.vector.ImageVector, 
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
     ) {
-        Box(
-            Modifier.size(40.dp).clip(Radius.chip).background(c.primary.copy(alpha = if (c.isDark) 0.24f else 0.12f)),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(icon, contentDescription = null, Modifier.size(IconSize.md), tint = c.primary)
-        }
+        ArtTile(art, tint = c.primary, size = 40.dp)
         Column(Modifier.weight(1f)) {
             Text(title, style = Sadora.type.h3, color = c.text)
             Text(note, style = Sadora.type.caption.copy(letterSpacing = TextUnit.Unspecified), color = c.muted)
@@ -1092,7 +1091,7 @@ private fun RecordInBubble(mine: Boolean, onOpen: (() -> Unit)?) {
             Modifier.size(36.dp).clip(Radius.chip).background(content.copy(alpha = 0.16f)),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(SadoraIcons.Document, contentDescription = null, Modifier.size(IconSize.md), tint = content)
+            ArtIcon(Res.drawable.ic3d_record, 26.dp)
         }
         Column(Modifier.widthIn(max = 220.dp)) {
             Text(t.recordAttached, style = Sadora.type.body.copy(fontWeight = FontWeight.SemiBold), color = content)

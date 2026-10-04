@@ -24,7 +24,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import uz.sadora.app.data.SadoraController
@@ -39,7 +38,6 @@ import uz.sadora.app.ui.components.ButtonTone
 import uz.sadora.app.ui.components.CardLabel
 import uz.sadora.app.ui.components.ChipFlowRow
 import uz.sadora.app.ui.components.GulMark
-import uz.sadora.app.ui.components.IconTile
 import uz.sadora.app.ui.components.PremiumCtaButton
 import uz.sadora.app.ui.components.SadoraButton
 import uz.sadora.app.ui.components.SadoraCard
@@ -49,6 +47,9 @@ import uz.sadora.app.ui.components.ScreenContent
 import uz.sadora.app.ui.components.appearFromBelow
 import uz.sadora.app.ui.components.noRippleClickable
 import uz.sadora.app.ui.modules.PremiumComparison
+import uz.sadora.app.resources.*
+import uz.sadora.app.ui.components.ArtTile
+import org.jetbrains.compose.resources.DrawableResource
 
 /**
  * The Premium tab: what Premium is, what it opens, and the two ways in.
@@ -134,11 +135,11 @@ fun PremiumScreen(
                 Box(Modifier.appearFromBelow(1)) {
                     SadoraCard {
                         Text(t.benefitsTitle, style = Sadora.type.h3, color = c.text)
-                        Benefit(SadoraIcons.Sparkle, t.benefitAiTitle, t.benefitAiBody)
-                        Benefit(SadoraIcons.Camera, t.benefitScannerTitle, t.benefitScannerBody)
-                        Benefit(SadoraIcons.Chart, t.benefitInsightsTitle, t.benefitInsightsBody)
-                        Benefit(SadoraIcons.Book, t.benefitLibraryTitle, t.benefitLibraryBody)
-                        Benefit(SadoraIcons.Watch, t.benefitDevicesTitle, t.benefitDevicesBody)
+                        Benefit(Res.drawable.ic3d_ai, t.benefitAiTitle, t.benefitAiBody)
+                        Benefit(Res.drawable.ic3d_camera, t.benefitScannerTitle, t.benefitScannerBody)
+                        Benefit(Res.drawable.ic3d_insights, t.benefitInsightsTitle, t.benefitInsightsBody)
+                        Benefit(Res.drawable.ic3d_book, t.benefitLibraryTitle, t.benefitLibraryBody)
+                        Benefit(Res.drawable.ic3d_watch, t.benefitDevicesTitle, t.benefitDevicesBody)
                     }
                 }
             }
@@ -231,14 +232,14 @@ private fun StatusHero(state: AppState, onOpen: (Route) -> Unit) {
 }
 
 @Composable
-private fun Benefit(icon: ImageVector, title: String, body: String) {
+private fun Benefit(art: DrawableResource, title: String, body: String) {
     val c = Sadora.colors
     Row(
         Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.Top,
         horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
     ) {
-        IconTile(icon, tint = c.primary, size = 40.dp, iconSize = 18.dp)
+        ArtTile(art, tint = c.primary, size = 40.dp)
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(title, style = Sadora.type.h3, color = c.text)
             Text(body, style = Sadora.type.body, color = c.muted)

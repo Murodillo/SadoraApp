@@ -5,33 +5,33 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import uz.sadora.app.design.Radius
 import uz.sadora.app.design.Sadora
-import uz.sadora.app.design.SadoraIcons
 import uz.sadora.app.design.Spacing
 import uz.sadora.app.i18n.strings
 import uz.sadora.app.model.CommunityBadge
+import uz.sadora.app.resources.*
+import org.jetbrains.compose.resources.DrawableResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 
-/** The glyph and tint each badge wears, the same on a card and on a profile. */
-@Composable
-fun CommunityBadge.icon(): ImageVector = when (this) {
-    CommunityBadge.Newcomer -> SadoraIcons.Bloom
-    CommunityBadge.Early -> SadoraIcons.Sparkle
-    CommunityBadge.Writer -> SadoraIcons.Pencil
-    CommunityBadge.Helper -> SadoraIcons.Message
-    CommunityBadge.Loved -> SadoraIcons.Heart
-    CommunityBadge.Veteran -> SadoraIcons.Shield
+/** The colour icon and tint each badge wears, the same on a card and on a profile. */
+fun CommunityBadge.art(): DrawableResource = when (this) {
+    CommunityBadge.Newcomer -> Res.drawable.ic3d_sprout
+    CommunityBadge.Early -> Res.drawable.ic3d_star
+    CommunityBadge.Writer -> Res.drawable.ic3d_notebook
+    CommunityBadge.Helper -> Res.drawable.ic3d_message
+    CommunityBadge.Loved -> Res.drawable.ic3d_heart
+    CommunityBadge.Veteran -> Res.drawable.ic3d_trophy
 }
 
 @Composable
@@ -62,7 +62,12 @@ fun BadgeChip(badge: CommunityBadge, compact: Boolean = false, modifier: Modifie
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        Icon(badge.icon(), contentDescription = strings.community.badge(badge), Modifier.size(12.dp), tint = tint)
+        val label = strings.community.badge(badge)
+        ArtIcon(
+            badge.art(),
+            if (compact) 14.dp else 16.dp,
+            Modifier.semantics { contentDescription = label },
+        )
         if (!compact) {
             Text(
                 strings.community.badge(badge),

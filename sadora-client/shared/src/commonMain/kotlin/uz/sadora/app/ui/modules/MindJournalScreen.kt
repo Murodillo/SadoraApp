@@ -36,6 +36,7 @@ import uz.sadora.app.ui.components.ScreenContent
 import uz.sadora.app.ui.components.noRippleClickable
 import uz.sadora.app.ui.components.acceptText
 import uz.sadora.contract.Limits
+import uz.sadora.app.resources.*
 
 /**
  * "Ong · kundalik va nafas".
@@ -102,7 +103,7 @@ fun MindJournalScreen(
                         body = t.journalEmptyBody,
                         actionText = null,
                         onAction = {},
-                        glyph = "📝",
+                        art = Res.drawable.ic3d_notebook,
                     )
                 }
             }

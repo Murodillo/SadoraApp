@@ -137,6 +137,7 @@ fun SymptomSheet(
                 group.forEach { definition ->
                     SelectChip(
                         label = definition.label,
+                        art = definition.art(),
                         selected = definition.key in selected,
                         onClick = {
                             if (!selected.remove(definition.key)) selected.add(definition.key)

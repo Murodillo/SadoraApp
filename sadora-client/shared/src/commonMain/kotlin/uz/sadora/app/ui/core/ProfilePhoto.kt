@@ -28,7 +28,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -68,6 +67,10 @@ import uz.sadora.app.ui.components.noRippleClickable
 import uz.sadora.app.ui.components.pressable
 import uz.sadora.app.ui.components.rememberOpenAppSettings
 import uz.sadora.app.ui.components.rememberPhotoCapture
+import uz.sadora.app.resources.*
+import org.jetbrains.compose.resources.DrawableResource
+import uz.sadora.app.ui.components.ArtTile
+import uz.sadora.app.ui.components.ArtIcon
 
 // Her own photo: the avatar that changes it, and the sheets it opens. Private by rule —
 // it is drawn on her profile and her home header, and a doctor she consults sees it;
@@ -139,20 +142,20 @@ internal fun ProfilePhotoSheets(
     SadoraBottomSheet(visible = visible, title = t.photoTitle, onDismiss = onDismiss) {
         PrivacyNote()
         if (picker.available) {
-            PhotoOption(SadoraIcons.Document, t.photoGallery, t.photoGalleryNote) {
+            PhotoOption(Res.drawable.ic3d_gallery, t.photoGallery, t.photoGalleryNote) {
                 onDismiss()
                 photos.clearError()
                 picker.pickFromGallery()
             }
         }
-        PhotoOption(SadoraIcons.Camera, t.photoCamera, t.photoCameraNote) {
+        PhotoOption(Res.drawable.ic3d_camera, t.photoCamera, t.photoCameraNote) {
             onDismiss()
             photos.clearError()
             camera = true
         }
         if (state.avatarUrl != null) {
             PhotoOption(
-                SadoraIcons.Profile,
+                Res.drawable.ic3d_profile,
                 t.photoRemove,
                 if (photos.saving) t.photoRemoving else t.photoRemoveNote,
                 enabled = !photos.saving,
@@ -210,7 +213,7 @@ private fun PrivacyNote() {
         horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
         verticalAlignment = Alignment.Top,
     ) {
-        Icon(SadoraIcons.Lock, contentDescription = null, Modifier.size(IconSize.md), tint = c.primary)
+        ArtIcon(Res.drawable.ic3d_lock, IconSize.lg)
         Text(
             strings.profile.photoPrivacy,
             style = Sadora.type.caption.copy(letterSpacing = TextUnit.Unspecified),
@@ -222,7 +225,7 @@ private fun PrivacyNote() {
 
 @Composable
 private fun PhotoOption(
-    icon: ImageVector,
+    art: DrawableResource,
     title: String,
     note: String,
     enabled: Boolean = true,
@@ -240,12 +243,7 @@ private fun PhotoOption(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
     ) {
-        Box(
-            Modifier.size(40.dp).clip(Radius.chip).background(c.primary.copy(alpha = if (c.isDark) 0.24f else 0.12f)),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(icon, contentDescription = null, Modifier.size(IconSize.md), tint = c.primary)
-        }
+        ArtTile(art, tint = c.primary, size = 40.dp)
         Column(Modifier.weight(1f)) {
             Text(title, style = Sadora.type.h3, color = c.text)
             Text(note, style = Sadora.type.caption.copy(letterSpacing = TextUnit.Unspecified), color = c.muted)

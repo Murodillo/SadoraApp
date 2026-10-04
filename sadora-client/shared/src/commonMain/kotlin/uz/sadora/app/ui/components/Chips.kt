@@ -29,6 +29,7 @@ import uz.sadora.app.design.MinTouchTarget
 import uz.sadora.app.design.Radius
 import uz.sadora.app.design.Sadora
 import uz.sadora.app.design.Spacing
+import org.jetbrains.compose.resources.DrawableResource
 
 /** Selectable chip — symptoms, goals, filters. Selected state uses a tinted fill. */
 @Composable
@@ -38,6 +39,8 @@ fun SelectChip(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     leading: String? = null,
+    /** A colour icon before the label, preferred over [leading]; it hops when picked. */
+    art: DrawableResource? = null,
 ) {
     val c = Sadora.colors
     val bg by animateColorAsState(
@@ -60,7 +63,8 @@ fun SelectChip(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            if (leading != null) Text(leading, style = Sadora.type.body, color = fg)
+            if (art != null) SelectableArt(art, 22.dp, selected)
+            else if (leading != null) Text(leading, style = Sadora.type.body, color = fg)
             Text(label, style = Sadora.type.body.copy(fontWeight = FontWeight.Medium), color = fg)
             if (selected) Text("✓", style = Sadora.type.body, color = fg, modifier = Modifier.clearAndSetSemantics {})
         }

@@ -48,9 +48,9 @@ import uz.sadora.app.ui.components.SadoraTopBar
 import uz.sadora.app.ui.components.ScreenContent
 import uz.sadora.app.ui.components.SectionHeader
 import uz.sadora.app.ui.components.Skeleton
-import uz.sadora.app.ui.components.icon
 import uz.sadora.app.ui.components.rememberShareAction
 import uz.sadora.app.ui.components.tint
+import uz.sadora.app.ui.components.art
 
 /**
  * An alias's page: the avatar, the bio, the badges with what each one means, three
@@ -252,7 +252,7 @@ private fun BadgeLine(badge: CommunityBadge) {
             Modifier.size(36.dp).clip(Radius.chip).background(tint.copy(alpha = if (c.isDark) 0.22f else 0.12f)),
             contentAlignment = Alignment.Center,
         ) {
-            androidx.compose.material3.Icon(badge.icon(), contentDescription = null, Modifier.size(18.dp), tint = tint)
+            uz.sadora.app.ui.components.ArtIcon(badge.art(), 28.dp)
         }
         Column(Modifier.weight(1f)) {
             Text(t.badge(badge), style = Sadora.type.h3, color = c.text)

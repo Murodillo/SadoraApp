@@ -40,6 +40,7 @@ import uz.sadora.app.design.Radius
 import uz.sadora.app.design.Sadora
 import uz.sadora.app.design.SadoraIcons
 import uz.sadora.app.design.Spacing
+import uz.sadora.app.resources.*
 
 /**
  * The soft lavender lift under every card in the deck.
@@ -243,6 +244,8 @@ fun StatTile(
     emoji: String? = null,
     tint: Color? = null,
     onClick: (() -> Unit)? = null,
+    /** A colour icon, preferred over [icon] and [emoji]. */
+    art: DrawableResource? = null,
     footer: @Composable (ColumnScope.() -> Unit)? = null,
 ) {
     val c = Sadora.colors
@@ -258,6 +261,7 @@ fun StatTile(
                 if (caption != null) Text(caption, style = Sadora.type.body, color = c.muted2)
             }
             when {
+                art != null -> ArtTile(art, tint = tint, size = 40.dp)
                 icon != null -> IconTile(icon, tint = tint, size = 40.dp)
                 emoji != null -> EmojiTile(emoji, tint = tint, size = 40.dp)
             }
@@ -278,6 +282,32 @@ fun SettingsRow(
     iconTint: Color? = null,
     showChevron: Boolean = true,
     onClick: (() -> Unit)? = null,
+) = SettingsRowFrame(title, modifier, value, showChevron, onClick) {
+    IconTile(icon, tint = iconTint, size = 36.dp, iconSize = IconSize.md, shape = RoundedCornerShape(Radius.sm))
+}
+
+/** [SettingsRow] led by a colour icon; [iconTint] washes the tile behind it. */
+@Composable
+fun SettingsRow(
+    art: DrawableResource,
+    title: String,
+    modifier: Modifier = Modifier,
+    value: String? = null,
+    iconTint: Color? = null,
+    showChevron: Boolean = true,
+    onClick: (() -> Unit)? = null,
+) = SettingsRowFrame(title, modifier, value, showChevron, onClick) {
+    ArtTile(art, tint = iconTint, size = 36.dp, artSize = 28.dp, shape = RoundedCornerShape(Radius.sm))
+}
+
+@Composable
+private fun SettingsRowFrame(
+    title: String,
+    modifier: Modifier,
+    value: String?,
+    showChevron: Boolean,
+    onClick: (() -> Unit)?,
+    leading: @Composable () -> Unit,
 ) {
     val c = Sadora.colors
     Row(
@@ -289,7 +319,7 @@ fun SettingsRow(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
     ) {
-        IconTile(icon, tint = iconTint, size = 36.dp, iconSize = IconSize.md, shape = RoundedCornerShape(Radius.sm))
+        leading()
         Text(title, style = Sadora.type.h3, color = c.text, modifier = Modifier.weight(1f))
         if (value != null) Text(value, style = Sadora.type.body, color = c.muted)
         if (showChevron) {
@@ -493,7 +523,7 @@ fun LockedBlock(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(Spacing.xs),
     ) {
-        Icon(SadoraIcons.Lock, contentDescription = null, Modifier.size(IconSize.lg), tint = c.primary)
+        ArtIcon(Res.drawable.ic3d_lock, 32.dp)
         Text(title, style = Sadora.type.h3, color = c.text)
         Spacer(Modifier.height(Spacing.xxs))
         SadoraButton(action, onUnlock, fillWidth = false)

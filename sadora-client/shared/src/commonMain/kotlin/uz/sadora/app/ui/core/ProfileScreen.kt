@@ -39,7 +39,6 @@ import uz.sadora.app.nav.Route
 import uz.sadora.app.ui.components.BadgeTone
 import uz.sadora.app.ui.components.ButtonTone
 import uz.sadora.app.ui.components.ChipFlowRow
-import uz.sadora.app.ui.components.IconTile
 import uz.sadora.app.ui.components.SadoraBadge
 import uz.sadora.app.ui.components.SadoraButton
 import uz.sadora.app.ui.components.SadoraCard
@@ -47,6 +46,10 @@ import uz.sadora.app.ui.components.SadoraTopBar
 import uz.sadora.app.ui.components.ScreenContent
 import uz.sadora.app.ui.components.SettingsRow
 import uz.sadora.app.ui.components.noRippleClickable
+import uz.sadora.app.resources.*
+import uz.sadora.app.ui.components.ArtTile
+import uz.sadora.app.ui.components.ArtIcon
+import uz.sadora.app.ui.onboarding.art
 
 /**
  * "Profil" — account, subscription status, and the settings that change how the
@@ -132,7 +135,7 @@ fun ProfileScreen(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                         ) {
-                            IconTile(SadoraIcons.Shield, tint = c.primary, size = 44.dp)
+                            ArtTile(Res.drawable.ic3d_record, tint = c.primary, size = 44.dp)
                             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                                 Text(t.shareProfile, style = Sadora.type.h3, color = c.text)
                                 Text(t.shareProfileNote, style = Sadora.type.body, color = c.muted)
@@ -151,7 +154,7 @@ fun ProfileScreen(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                         ) {
-                            IconTile(SadoraIcons.Heart, tint = c.secondary, size = 44.dp)
+                            ArtTile(Res.drawable.ic3d_partner, tint = c.secondary, size = 44.dp)
                             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                                 Text(strings.partner.title, style = Sadora.type.h3, color = c.text)
                                 // Unread first: a heart waiting is the reason to open this row.
@@ -172,34 +175,34 @@ fun ProfileScreen(
                         // Gul sits above the modules rather than among the settings: it is
                         // something she uses, not something she configures.
                         SettingsRow(
-                            SadoraIcons.Bloom,
+                            Res.drawable.ic3d_flower_coin,
                             t.rewards,
                             value = if (state.coins > 0) Fmt.int(state.coins) else null,
                             iconTint = c.secondary,
                         ) { onOpen(Route.Rewards) }
-                        SettingsRow(SadoraIcons.Bookmark, t.shop) { onOpen(Route.Shop) }
-                        SettingsRow(SadoraIcons.Share, t.referral) { onOpen(Route.Referral) }
+                        SettingsRow(Res.drawable.ic3d_shop, t.shop) { onOpen(Route.Shop) }
+                        SettingsRow(Res.drawable.ic3d_gift, t.referral) { onOpen(Route.Referral) }
                     }
                 }
 
                 item {
                     SadoraCard(padding = Spacing.xs) {
-                        SettingsRow(SadoraIcons.Moon, t.sleep) { onOpen(Route.Sleep) }
-                        SettingsRow(SadoraIcons.Pill, t.medications) { onOpen(Route.Medications) }
+                        SettingsRow(Res.drawable.ic3d_sleep, t.sleep) { onOpen(Route.Sleep) }
+                        SettingsRow(Res.drawable.ic3d_meds, t.medications) { onOpen(Route.Medications) }
                         if (state.communityEnabled) {
-                            SettingsRow(SadoraIcons.Chats, t.secretChat, iconTint = c.secondary) { onOpen(Route.SecretChat) }
+                            SettingsRow(Res.drawable.ic3d_chats, t.secretChat, iconTint = c.secondary) { onOpen(Route.SecretChat) }
                         }
-                        SettingsRow(SadoraIcons.Chart, t.insights) { onOpen(Route.Insights) }
-                        SettingsRow(SadoraIcons.Book, t.knowledge) { onOpen(Route.Knowledge) }
+                        SettingsRow(Res.drawable.ic3d_insights, t.insights) { onOpen(Route.Insights) }
+                        SettingsRow(Res.drawable.ic3d_book, t.knowledge) { onOpen(Route.Knowledge) }
                     }
                 }
 
                 item {
                     SadoraCard(padding = Spacing.xs) {
-                        SettingsRow(SadoraIcons.Profile, t.personalDetails) { onOpen(Route.PersonalDetails) }
-                        SettingsRow(SadoraIcons.Target, t.goals) { onOpen(Route.GoalsSettings) }
+                        SettingsRow(Res.drawable.ic3d_profile, t.personalDetails) { onOpen(Route.PersonalDetails) }
+                        SettingsRow(Res.drawable.ic3d_target, t.goals) { onOpen(Route.GoalsSettings) }
                         SettingsRow(
-                            SadoraIcons.Journey,
+                            state.lifeStage.art(),
                             t.lifeStage,
                             value = strings.stages.title(state.lifeStage),
                         ) { onOpen(Route.LifeStageSettings) }
@@ -207,31 +210,31 @@ fun ProfileScreen(
                         // is worse than nothing next to a row you are about to open.
                         val connected = health.sources.count { it.connected }
                         SettingsRow(
-                            SadoraIcons.Watch,
+                            Res.drawable.ic3d_watch,
                             t.devices,
                             value = if (health.sources.isEmpty()) null else "$connected",
                         ) {
                             onOpen(Route.DataSources)
                         }
-                        SettingsRow(SadoraIcons.Home, t.homeLayout) { onOpen(Route.HomeLayout) }
-                        SettingsRow(SadoraIcons.Bell, t.notifications) { onOpen(Route.Notifications) }
-                        SettingsRow(SadoraIcons.Lock, t.privacyAndSecurity) { onOpen(Route.PrivacySecurity) }
+                        SettingsRow(Res.drawable.ic3d_home, t.homeLayout) { onOpen(Route.HomeLayout) }
+                        SettingsRow(Res.drawable.ic3d_bell, t.notifications) { onOpen(Route.Notifications) }
+                        SettingsRow(Res.drawable.ic3d_lock, t.privacyAndSecurity) { onOpen(Route.PrivacySecurity) }
                     }
                 }
 
                 item {
                     SadoraCard(padding = Spacing.xs) {
                         SettingsRow(
-                            SadoraIcons.Globe,
+                            Res.drawable.ic3d_globe,
                             t.language,
                             value = state.language.native,
                         ) { onOpen(Route.LanguageSettings) }
                         SettingsRow(
-                            if (state.darkTheme) SadoraIcons.Moon else SadoraIcons.Today,
+                            if (state.darkTheme) Res.drawable.ic3d_sleep else Res.drawable.ic3d_sun,
                             t.theme,
                             value = if (state.darkTheme) t.themeDark else t.themeLight,
                         ) { state.darkTheme = !state.darkTheme }
-                        SettingsRow(SadoraIcons.Info, t.about) { onOpen(Route.About) }
+                        SettingsRow(Res.drawable.ic3d_bulb, t.about) { onOpen(Route.About) }
                     }
                 }
 
@@ -323,12 +326,7 @@ private fun UpgradeCard(onUpgrade: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
         ) {
-            Icon(
-                SadoraIcons.Sparkle,
-                contentDescription = null,
-                Modifier.size(28.dp),
-                tint = c.secondary,
-            )
+            ArtIcon(Res.drawable.ic3d_crown, 34.dp)
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(t.upgradeTitle, style = Sadora.type.h3, color = c.text)
                 Text(

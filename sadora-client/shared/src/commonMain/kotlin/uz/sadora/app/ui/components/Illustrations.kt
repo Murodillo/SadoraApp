@@ -143,6 +143,8 @@ fun MealThumb(
     modifier: Modifier = Modifier,
     size: Dp = 64.dp,
     shape: Shape = Radius.cardSmall,
+    /** The slot's colour dish, preferred over [emoji]. */
+    art: org.jetbrains.compose.resources.DrawableResource? = null,
 ) {
     Box(
         modifier
@@ -155,7 +157,8 @@ fun MealThumb(
             ),
         contentAlignment = Alignment.Center,
     ) {
-        Text(emoji, style = TextStyle(fontSize = (size.value * 0.5f).sp))
+        if (art != null) ArtIcon(art, size * 0.74f)
+        else Text(emoji, style = TextStyle(fontSize = (size.value * 0.5f).sp))
     }
 }
 

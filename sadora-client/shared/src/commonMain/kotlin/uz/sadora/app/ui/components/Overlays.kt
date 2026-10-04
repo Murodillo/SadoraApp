@@ -19,7 +19,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -35,9 +34,9 @@ import androidx.compose.ui.semantics.Role
 import uz.sadora.app.design.MinTouchTarget
 import uz.sadora.app.design.Radius
 import uz.sadora.app.design.Sadora
-import uz.sadora.app.design.SadoraIcons
 import uz.sadora.app.design.Spacing
 import uz.sadora.app.i18n.strings
+import uz.sadora.app.resources.*
 
 /**
  * Centre modal — destructive confirmations such as "Hisobni o'chirish?".
@@ -222,8 +221,10 @@ fun EmptyState(
     actionText: String?,
     onAction: () -> Unit,
     modifier: Modifier = Modifier,
-    /** Set only when a specific emoji says more than the default outline — "💊". */
+    /** Set only when a specific emoji says more than the default picture — "💊". */
     glyph: String? = null,
+    /** The colour icon that says what is missing; preferred over [glyph]. */
+    art: org.jetbrains.compose.resources.DrawableResource? = null,
 ) {
     val c = Sadora.colors
     Column(
@@ -231,15 +232,12 @@ fun EmptyState(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(Spacing.xs),
     ) {
-        if (glyph != null) {
+        if (art != null) {
+            ArtIcon(art, 64.dp)
+        } else if (glyph != null) {
             Text(glyph, style = Sadora.type.display, color = c.muted2)
         } else {
-            Icon(
-                SadoraIcons.Empty,
-                contentDescription = null,
-                Modifier.size(40.dp),
-                tint = c.muted2,
-            )
+            ArtIcon(Res.drawable.ic3d_empty, 64.dp)
         }
         Text(title, style = Sadora.type.h3, color = c.text)
         Text(

@@ -63,6 +63,9 @@ import uz.sadora.contract.TrendMetric
 import uz.sadora.app.ui.components.TrendBars
 import uz.sadora.app.ui.components.noRippleClickable
 import uz.sadora.app.ui.components.pressable
+import uz.sadora.app.ui.components.ArtIcon
+import uz.sadora.app.ui.components.SelectableArt
+import uz.sadora.app.ui.components.art
 
 /** One practice the Mind tab can start. */
 internal data class Practice(
@@ -245,7 +248,7 @@ private fun MoodCard(state: AppState) {
             // The store always holds a mood; until she picks one it is the default, and
             // the card asked nothing — it told her she was "Xotirjam".
             if (state.moodLoggedToday) {
-                Text(state.mood.emoji, style = TextStyle(fontSize = 64.sp))
+                ArtIcon(state.mood.art(), 76.dp)
                 Text(strings.common.mood(state.mood), style = Sadora.type.h2, color = c.text)
                 Text(strings.common.moodCaption(state.mood), style = Sadora.type.body, color = c.muted)
             } else {
@@ -279,7 +282,8 @@ private fun MoodFace(mood: Mood, selected: Boolean, onClick: () -> Unit) {
     // row feel like a dial being turned instead of five separate buttons.
     val diameter by animateDpAsState(if (selected) 48.dp else 42.dp, Motion.SpringyDp, label = "mood-size")
     val fill by animateColorAsState(
-        tint.copy(alpha = if (selected) 1f else 0.55f),
+        // A wash behind the colour face; the face itself carries the mood's colour.
+        tint.copy(alpha = if (selected) 0.3f else 0.12f),
         tween(Motion.Standard),
         label = "mood-fill",
     )
@@ -302,11 +306,10 @@ private fun MoodFace(mood: Mood, selected: Boolean, onClick: () -> Unit) {
         Box(
             Modifier
                 .size(diameter)
-                .clip(Radius.chip)
-                .background(fill),
+                .background(fill, Radius.chip),
             contentAlignment = Alignment.Center,
         ) {
-            Text(mood.emoji, style = TextStyle(fontSize = if (selected) 24.sp else 20.sp))
+            SelectableArt(mood.art(), 36.dp, selected)
         }
         Box(Modifier.size(6.dp).clip(Radius.chip).background(dot))
     }

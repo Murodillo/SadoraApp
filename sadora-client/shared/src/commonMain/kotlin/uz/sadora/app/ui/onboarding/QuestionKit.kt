@@ -6,9 +6,6 @@ import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearOutSlowInEasing
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.keyframes
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -62,10 +59,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import org.jetbrains.compose.resources.DrawableResource
-import uz.sadora.app.ui.components.ArtIcon
-import uz.sadora.app.ui.components.LocalReduceMotion
-import androidx.compose.ui.unit.Dp
-import kotlinx.coroutines.launch
+import uz.sadora.app.ui.components.SelectableArt
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
@@ -602,71 +596,6 @@ fun AnswerTile(
             maxLines = 2,
         )
     }
-}
-
-/** How much larger a picked colour icon rests than an unpicked one. */
-private const val PickedArtScale = 1.1f
-
-/**
- * A colour icon that jumps when its answer is picked: it hops, pops past full size
- * and wiggles, then settles a little larger than the unpicked ones, so a picked tile
- * still reads as picked once the motion is over. Unpicking only dips and settles back.
- *
- * Nothing moves on the first frame — a screen opened with answers already chosen
- * shows them at rest — and under Reduce Motion the size simply changes.
- */
-@Composable
-private fun SelectableArt(art: DrawableResource, size: Dp, selected: Boolean) {
-    val reduceMotion = LocalReduceMotion.current
-    val scale = remember { Animatable(if (selected) PickedArtScale else 1f) }
-    val tilt = remember { Animatable(0f) }
-    val hop = remember { Animatable(0f) }
-    var shown by remember { mutableStateOf(selected) }
-
-    LaunchedEffect(selected) {
-        if (selected == shown) return@LaunchedEffect
-        shown = selected
-        if (reduceMotion) {
-            scale.snapTo(if (selected) PickedArtScale else 1f)
-            return@LaunchedEffect
-        }
-        if (selected) {
-            launch {
-                scale.animateTo(1.32f, tween(130, easing = FastOutSlowInEasing))
-                scale.animateTo(PickedArtScale, spring(dampingRatio = 0.35f, stiffness = Spring.StiffnessMediumLow))
-            }
-            launch {
-                hop.animateTo(1f, tween(140, easing = FastOutSlowInEasing))
-                hop.animateTo(0f, spring(dampingRatio = 0.45f, stiffness = Spring.StiffnessMedium))
-            }
-            tilt.animateTo(
-                0f,
-                keyframes {
-                    durationMillis = 520
-                    -14f at 90
-                    11f at 200
-                    -7f at 310
-                    3f at 410
-                },
-            )
-        } else {
-            launch { tilt.animateTo(0f, tween(120)) }
-            scale.animateTo(0.88f, tween(110, easing = FastOutSlowInEasing))
-            scale.animateTo(1f, spring(dampingRatio = 0.5f, stiffness = Spring.StiffnessMedium))
-        }
-    }
-
-    val lift = with(LocalDensity.current) { 9.dp.toPx() }
-    ArtIcon(
-        art,
-        size,
-        Modifier.graphicsLayer {
-            scaleX = scale.value
-            scaleY = scale.value
-            rotationZ = tilt.value
-            translationY = -lift * hop.value
-        },
-    )
 }
 
 // ---------------------------------------------------------------- wheel

@@ -35,7 +35,6 @@ import uz.sadora.app.ui.components.ButtonTone
 import uz.sadora.app.ui.components.CardLabel
 import uz.sadora.app.ui.components.DisclaimerNote
 import uz.sadora.app.ui.components.ErrorStrip
-import uz.sadora.app.ui.components.IconTile
 import uz.sadora.app.ui.components.QrCode
 import uz.sadora.app.ui.components.SadoraBadge
 import uz.sadora.app.ui.components.SadoraButton
@@ -48,6 +47,8 @@ import uz.sadora.app.ui.components.appearFromBelow
 import uz.sadora.app.ui.components.rememberShareAction
 import uz.sadora.contract.Limits
 import uz.sadora.contract.ProfileShare
+import uz.sadora.app.resources.*
+import uz.sadora.app.ui.components.ArtTile
 
 /** How long a link may live, as the chips offer it. Hours; the last two are days. */
 private val TtlOptions = listOf(1, 6, 24, 24 * 3, 24 * 7)
@@ -124,7 +125,7 @@ fun ShareProfileScreen(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                             ) {
-                                IconTile(SadoraIcons.Shield, tint = c.primary, size = 46.dp)
+                                ArtTile(Res.drawable.ic3d_shield, tint = c.primary, size = 46.dp)
                                 Text(t.subtitle, style = Sadora.type.h3, color = c.text, modifier = Modifier.weight(1f))
                             }
                             Text(t.intro, style = Sadora.type.body, color = c.muted)

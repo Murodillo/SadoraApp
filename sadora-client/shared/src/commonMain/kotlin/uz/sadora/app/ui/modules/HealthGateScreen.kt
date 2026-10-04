@@ -43,12 +43,14 @@ import uz.sadora.app.design.SadoraIcons
 import uz.sadora.app.design.Spacing
 import uz.sadora.app.i18n.strings
 import uz.sadora.app.ui.components.ButtonTone
-import uz.sadora.app.ui.components.IconTile
 import uz.sadora.app.ui.components.SadoraButton
 import uz.sadora.app.ui.components.SadoraCard
 import uz.sadora.app.ui.components.SadoraProgressBar
 import uz.sadora.app.ui.components.rememberHealthAccessRequest
 import uz.sadora.contract.HealthProvider
+import uz.sadora.app.resources.*
+import uz.sadora.app.ui.components.ArtTile
+import uz.sadora.app.ui.components.ArtIcon
 
 /** Where the gate before the app stands. */
 private enum class GateStep {
@@ -151,7 +153,7 @@ fun HealthGate(wearables: WearableController, content: @Composable () -> Unit) {
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Spacer(Modifier.height(Spacing.md))
-                IconTile(SadoraIcons.Heart, size = 72.dp, iconSize = 34.dp)
+                ArtTile(Res.drawable.ic3d_health, size = 72.dp, artSize = 54.dp)
                 when (current) {
                     GateStep.Install -> {
                         Heading(t.install(store), t.installBody(store))
@@ -179,7 +181,7 @@ fun HealthGate(wearables: WearableController, content: @Composable () -> Unit) {
                             }
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs), verticalAlignment = Alignment.Top) {
-                            Icon(SadoraIcons.Lock, contentDescription = null, Modifier.size(IconSize.sm), tint = c.muted2)
+                            ArtIcon(Res.drawable.ic3d_lock, IconSize.md)
                             Text(t.privacy, style = Sadora.type.body, color = c.muted2, modifier = Modifier.weight(1f))
                         }
                         if (current == GateStep.Partial) {

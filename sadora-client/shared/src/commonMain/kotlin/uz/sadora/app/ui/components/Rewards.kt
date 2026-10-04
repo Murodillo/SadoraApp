@@ -39,12 +39,12 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import uz.sadora.app.design.Radius
 import uz.sadora.app.design.Sadora
-import uz.sadora.app.design.SadoraIcons
 import uz.sadora.app.design.Spacing
 import uz.sadora.app.i18n.strings
 import uz.sadora.app.model.Fmt
 import uz.sadora.contract.CoinAward
 import uz.sadora.contract.DailyCheckInResult
+import uz.sadora.app.resources.*
 
 /**
  * The Gul balance, as the home header and the shop draw it.
@@ -124,12 +124,7 @@ fun StreakBadge(
         horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         Box(Modifier.graphicsLayer { scaleX = pulse; scaleY = pulse }) {
-            IconTile(
-                SadoraIcons.Bloom,
-                tint = if (days > 0) c.secondary else c.muted2,
-                size = 18.dp,
-                iconSize = 12.dp,
-            )
+            ArtIcon(Res.drawable.ic3d_flower_coin, 18.dp)
         }
         Text(
             days.toString(),

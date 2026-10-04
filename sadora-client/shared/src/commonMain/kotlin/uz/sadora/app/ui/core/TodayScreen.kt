@@ -21,7 +21,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -71,6 +70,12 @@ import uz.sadora.app.ui.modules.StreakWidget
 import uz.sadora.contract.HomeWidgets
 import uz.sadora.app.model.goalRatio
 import uz.sadora.app.model.DailySleepGoalMinutes
+import uz.sadora.app.resources.*
+import uz.sadora.app.ui.components.ArtTile
+import org.jetbrains.compose.resources.DrawableResource
+import uz.sadora.app.ui.onboarding.art
+import uz.sadora.app.ui.components.ArtIcon
+import uz.sadora.app.ui.components.art
 
 /**
  * "Bugun" — the deck's daily companion: the assistant's read on today, the health
@@ -330,11 +335,11 @@ private fun StageCard(state: AppState, onOpen: () -> Unit) {
                 strokeWidth = 7.dp,
                 color = if (cycle) phase.color() else stage.palette.tint,
             ) {
-                IconTile(
-                    if (cycle) SadoraIcons.Journey else SadoraIcons.Heart,
+                ArtTile(
+                    if (cycle) Res.drawable.ic3d_period else stage.art(),
                     tint = if (cycle) phase.color() else stage.palette.tint,
-                    size = 30.dp,
-                    iconSize = 14.dp,
+                    size = 38.dp,
+                    artSize = 28.dp,
                 )
             }
         }
@@ -361,17 +366,17 @@ private fun QuickActions(onOpen: (Route) -> Unit, onSelectTab: (Tab) -> Unit) {
             Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
         ) {
-            QuickAction(SadoraIcons.Document, t.journal, Modifier.weight(1f)) { onOpen(Route.MindJournal) }
-            QuickAction(SadoraIcons.Meditation, t.meditation, Modifier.weight(1f)) { onSelectTab(Tab.Mind) }
-            QuickAction(SadoraIcons.Wind, t.breathing, Modifier.weight(1f)) { onSelectTab(Tab.Mind) }
-            QuickAction(SadoraIcons.Bell, t.reminders, Modifier.weight(1f)) { onOpen(Route.Medications) }
+            QuickAction(Res.drawable.ic3d_notebook, t.journal, Modifier.weight(1f)) { onOpen(Route.MindJournal) }
+            QuickAction(Res.drawable.ic3d_meditation, t.meditation, Modifier.weight(1f)) { onSelectTab(Tab.Mind) }
+            QuickAction(Res.drawable.ic3d_breath, t.breathing, Modifier.weight(1f)) { onSelectTab(Tab.Mind) }
+            QuickAction(Res.drawable.ic3d_bell, t.reminders, Modifier.weight(1f)) { onOpen(Route.Medications) }
         }
     }
 }
 
 @Composable
 private fun QuickAction(
-    icon: ImageVector,
+    art: DrawableResource,
     label: String,
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
@@ -383,7 +388,7 @@ private fun QuickAction(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        IconTile(icon, tint = c.primary, size = 52.dp, iconSize = 22.dp, shape = uz.sadora.app.design.Radius.tile)
+        ArtTile(art, tint = c.primary, size = 52.dp, artSize = 38.dp, shape = uz.sadora.app.design.Radius.tile)
         Text(
             label,
             style = Sadora.type.caption.copy(letterSpacing = androidx.compose.ui.unit.TextUnit.Unspecified),
@@ -485,6 +490,7 @@ private fun TodayPlanCard(
             if (waterLeft > 0) {
                 PlanRow(
                     emoji = "\uD83D\uDCA7",
+                    art = Res.drawable.ic3d_water,
                     title = t.water,
                     caption = t.waterLeft(waterLeft),
                     time = null,
@@ -506,6 +512,8 @@ private const val QuickWaterMl = 250
 @Composable
 private fun PlanRow(
     emoji: String,
+    /** The row's colour icon when the app chose it; a dose keeps the emoji she picked. */
+    art: DrawableResource? = null,
     title: String,
     caption: String,
     time: String?,
@@ -521,7 +529,7 @@ private fun PlanRow(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
     ) {
-        EmojiTile(emoji, tint = tint, size = 38.dp)
+        if (art != null) ArtTile(art, tint = tint, size = 38.dp) else EmojiTile(emoji, tint = tint, size = 38.dp)
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(title, style = Sadora.type.h3, color = c.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text(
@@ -594,7 +602,7 @@ private fun HealthScoreCard(
                         t.mood,
                         if (state.moodLoggedToday) strings.common.mood(state.mood) else "—",
                         Modifier.weight(1f),
-                        emoji = state.mood.emoji.takeIf { state.moodLoggedToday },
+                        art = state.mood.art().takeIf { state.moodLoggedToday },
                         onClick = onOpenMind,
                     )
                 }
@@ -619,7 +627,7 @@ private fun SignalTile(
     label: String,
     value: String,
     modifier: Modifier = Modifier,
-    emoji: String? = null,
+    art: DrawableResource? = null,
     onClick: () -> Unit,
 ) {
     val t = strings.today
@@ -640,13 +648,16 @@ private fun SignalTile(
         )
         // These four sit two-up beside the ring, so the value is the smaller step and
         // still elides rather than clipping mid-word at a large display size.
-        Text(
-            if (emoji != null) "$emoji $value" else value,
-            style = Sadora.type.body.copy(fontWeight = FontWeight.SemiBold),
-            color = c.text,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            if (art != null) ArtIcon(art, 18.dp)
+            Text(
+                value,
+                style = Sadora.type.body.copy(fontWeight = FontWeight.SemiBold),
+                color = c.text,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
     }
 }
 

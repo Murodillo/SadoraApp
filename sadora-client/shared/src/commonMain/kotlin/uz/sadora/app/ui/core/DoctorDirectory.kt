@@ -68,6 +68,7 @@ import uz.sadora.app.ui.components.cardSurface
 import uz.sadora.app.ui.components.noRippleClickable
 import uz.sadora.app.ui.components.pressable
 import uz.sadora.contract.DoctorListItem
+import uz.sadora.app.resources.*
 
 // "Shifokorlar": every verified doctor in one list, and the two small doors into it —
 // the strip at the top of the chat's feed and the card on Bugun. Before this a doctor
@@ -112,14 +113,14 @@ fun DoctorDirectoryScreen(
                 body = "",
                 actionText = strings.common.retry,
                 onAction = reload,
-                glyph = "📡",
+                art = Res.drawable.ic3d_globe,
             )
             all.isEmpty() -> EmptyState(
                 title = d.directoryEmpty,
                 body = d.directoryEmptyBody,
                 actionText = null,
                 onAction = {},
-                glyph = "🩺",
+                art = Res.drawable.ic3d_doctor,
             )
             // Nobody matches yet, but the rest of the list is still on its way.
             shown.isEmpty() && doctors.directoryHasMore -> ScreenContent {
@@ -130,7 +131,7 @@ fun DoctorDirectoryScreen(
                 body = d.filteredEmptyBody,
                 actionText = d.resetFilters,
                 onAction = doctors::resetDirectoryFilter,
-                glyph = "🔍",
+                art = Res.drawable.ic3d_empty,
             )
             else -> ScreenContent {
                 error?.let { failure -> item { ErrorStrip(failure.readable(), onRetry = reload) } }

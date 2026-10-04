@@ -33,7 +33,6 @@ import uz.sadora.app.data.toAppMood
 import uz.sadora.app.design.PhaseColors
 import uz.sadora.app.design.Radius
 import uz.sadora.app.design.Sadora
-import uz.sadora.app.design.SadoraIcons
 import uz.sadora.app.design.Spacing
 import uz.sadora.app.i18n.forWeek
 import uz.sadora.app.i18n.strings
@@ -46,7 +45,6 @@ import uz.sadora.app.ui.components.CardLabel
 import uz.sadora.app.ui.components.ChipFlowRow
 import uz.sadora.app.ui.components.DisclaimerNote
 import uz.sadora.app.ui.components.ErrorStrip
-import uz.sadora.app.ui.components.IconTile
 import uz.sadora.app.ui.components.SadoraBadge
 import uz.sadora.app.ui.components.SadoraButton
 import uz.sadora.app.ui.components.SadoraCard
@@ -58,6 +56,9 @@ import uz.sadora.contract.LifeStage
 import uz.sadora.contract.PartnerLinkStatus
 import uz.sadora.contract.PartnerView
 import uz.sadora.contract.CyclePhase as WirePhase
+import uz.sadora.app.resources.*
+import uz.sadora.app.ui.components.ArtTile
+import org.jetbrains.compose.resources.DrawableResource
 
 /**
  * One person this account follows, as a pushed screen — for an account that also tracks
@@ -117,13 +118,13 @@ fun PartnerViewBody(
             when {
                 view == null -> item { Skeleton(Modifier.fillMaxWidth().size(width = 0.dp, height = 180.dp)) }
                 view.status == PartnerLinkStatus.PENDING -> item {
-                    StatusCard(SadoraIcons.Clock, t.pendingTitle(view.name), t.pendingBody)
+                    StatusCard(Res.drawable.ic3d_clock, t.pendingTitle(view.name), t.pendingBody)
                 }
                 view.status == PartnerLinkStatus.PAUSED -> item {
-                    StatusCard(SadoraIcons.Moon, t.pausedViewTitle(view.name), t.pausedViewBody)
+                    StatusCard(Res.drawable.ic3d_sleep, t.pausedViewTitle(view.name), t.pausedViewBody)
                 }
                 view.isEmpty && view.stage == null -> item {
-                    StatusCard(SadoraIcons.Heart, t.nothingShared(view.name), t.pausedViewBody)
+                    StatusCard(Res.drawable.ic3d_heart, t.nothingShared(view.name), t.pausedViewBody)
                 }
                 else -> activeView(view) {
                     PartnerMessagesCard(
@@ -201,7 +202,7 @@ private fun LazyListScope.activeView(view: PartnerView, messages: @Composable ()
             CardLabel(t.appointmentsTitle)
             view.appointments.forEach { visit ->
                 Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm), verticalAlignment = Alignment.CenterVertically) {
-                    IconTile(SadoraIcons.Stethoscope, tint = c.primary, size = 40.dp)
+                    ArtTile(Res.drawable.ic3d_doctor, tint = c.primary, size = 40.dp)
                     Column(Modifier.weight(1f)) {
                         Text(visit.title, style = Sadora.type.h3, color = c.text)
                         val time = visit.scheduledAt?.let { " · " + Fmt.clock(it) }.orEmpty()
@@ -314,11 +315,11 @@ private fun tipsFor(view: PartnerView): List<String> {
 }
 
 @Composable
-private fun StatusCard(icon: androidx.compose.ui.graphics.vector.ImageVector, title: String, body: String) {
+private fun StatusCard(art: DrawableResource, title: String, body: String) {
     val c = Sadora.colors
     SadoraCard {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-            IconTile(icon, tint = c.primary, size = 46.dp)
+            ArtTile(art, tint = c.primary, size = 46.dp)
             Text(title, style = Sadora.type.h3, color = c.text, modifier = Modifier.weight(1f))
         }
         Text(body, style = Sadora.type.body, color = c.muted)

@@ -30,6 +30,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -77,60 +78,24 @@ fun ProgressRing(
     Box(modifier.size(scaled), contentAlignment = Alignment.Center) {
         Canvas(Modifier.fillMaxWidth().fillMaxHeight()) {
             val stroke = strokeWidth.toPx()
-            val inset = stroke / 2f
-            val arcSize = Size(this.size.width - stroke, this.size.height - stroke)
-            val topLeft = Offset(inset, inset)
+            val centre = Offset(this.size.width / 2f, this.size.height / 2f)
+            // Room for the bead, which stands a little proud of the stroke.
+            val radius = (this.size.minDimension - stroke * 1.3f) / 2f
 
-            drawArc(
-                color = track,
-                startAngle = -90f,
-                sweepAngle = 360f,
-                useCenter = false,
-                topLeft = topLeft,
-                size = arcSize,
-                style = Stroke(width = stroke, cap = StrokeCap.Round),
-            )
+            clayRingTrack(centre, radius, stroke, c, track)
 
             if (segments != null) {
                 var start = -90f
                 segments.forEach { (fraction, segColor) ->
                     val sweep = fraction.coerceIn(0f, 1f) * 360f * grow
-                    drawArc(
-                        color = segColor,
-                        startAngle = start + 1.5f,
-                        sweepAngle = (sweep - 3f).coerceAtLeast(0f),
-                        useCenter = false,
-                        topLeft = topLeft,
-                        size = arcSize,
-                        style = Stroke(width = stroke, cap = StrokeCap.Round),
-                    )
+                    clayArc(centre, radius, stroke, start + 1.5f, (sweep - 3f).coerceAtLeast(0f), segColor, bead = false)
                     start += sweep
                 }
             } else {
                 val sweep = progress.coerceIn(0f, 1f) * 360f * grow
-                // The glow is a wider, fainter copy of the arc itself rather than a
-                // disc behind the ring — a disc tints everything the ring encloses,
-                // including the number in the middle.
-                if (glow) {
-                    drawArc(
-                        color = ringColor.copy(alpha = 0.18f),
-                        startAngle = -90f,
-                        sweepAngle = sweep,
-                        useCenter = false,
-                        topLeft = topLeft,
-                        size = arcSize,
-                        style = Stroke(width = stroke * 2.2f, cap = StrokeCap.Round),
-                    )
-                }
-                drawArc(
-                    color = ringColor,
-                    startAngle = -90f,
-                    sweepAngle = sweep,
-                    useCenter = false,
-                    topLeft = topLeft,
-                    size = arcSize,
-                    style = Stroke(width = stroke, cap = StrokeCap.Round),
-                )
+                // [glow] used to lay a wider, fainter arc under this one; the clay arc's own
+                // shadow now gives it that depth, and the two together smudged a short arc.
+                clayArc(centre, radius, stroke, -90f, sweep, ringColor, bead = true)
             }
         }
         content()
@@ -205,7 +170,7 @@ fun SadoraProgressBar(
             .fillMaxWidth()
             .height(height)
             .clip(Radius.chip)
-            .background(c.surface2),
+            .clayTrack(c),
     ) {
         Box(
             Modifier
@@ -214,9 +179,9 @@ fun SadoraProgressBar(
                 .clip(Radius.chip)
                 .then(
                     if (gradient) {
-                        Modifier.background(Brush.horizontalGradient(c.heroColors))
+                        Modifier.background(Brush.horizontalGradient(c.heroColors)).clayGloss()
                     } else {
-                        Modifier.background(color ?: c.primary)
+                        Modifier.clayFill(color ?: c.primary)
                     },
                 ),
         )
@@ -278,7 +243,7 @@ fun WeeklyBars(
                             ),
                         )
                         .clip(RoundedCornerShape(6.dp))
-                        .background(if (index == highlightIndex) c.primary else fill.copy(alpha = 0.75f)),
+                        .clayFill(if (index == highlightIndex) c.primary else lerp(fill, c.surface, 0.25f), horizontal = false),
                 )
             }
         }
@@ -331,7 +296,7 @@ fun TrendBars(
                             .weight(1f)
                             .fillMaxHeight(0.06f)
                             .clip(RoundedCornerShape(6.dp))
-                            .background(c.surface2),
+                            .clayTrack(c, horizontal = false),
                     )
                 } else {
                     Box(
@@ -344,7 +309,7 @@ fun TrendBars(
                                 ),
                             )
                             .clip(RoundedCornerShape(6.dp))
-                            .background(if (last) c.primary else fill.copy(alpha = 0.75f)),
+                            .clayFill(if (last) c.primary else lerp(fill, c.surface, 0.25f), horizontal = false),
                     )
                 }
             }
@@ -383,7 +348,7 @@ fun StackedBar(
                     .weight(fraction.coerceAtLeast(0.01f))
                     .fillMaxHeight()
                     .clip(Radius.chip)
-                    .background(color),
+                    .clayFill(color),
             )
         }
     }

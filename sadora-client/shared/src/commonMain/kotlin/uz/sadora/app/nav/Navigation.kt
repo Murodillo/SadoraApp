@@ -4,8 +4,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.graphics.vector.ImageVector
-import uz.sadora.app.design.SadoraIcons
+import org.jetbrains.compose.resources.DrawableResource
+import uz.sadora.app.resources.*
 
 /**
  * The root destinations. The bar shows five of them, and which five depends on the
@@ -16,15 +16,16 @@ import uz.sadora.app.design.SadoraIcons
  * chat took a slot of its own because it is the one place she comes back to daily
  * without being asked.
  */
-enum class Tab(val icon: ImageVector) {
-    Today(SadoraIcons.Home),
+enum class Tab(val art: DrawableResource) {
+    Today(Res.drawable.ic3d_home),
     /** Mind, and for a free account the food diary too, behind a switch at the top. */
-    Mind(SadoraIcons.Heart),
-    SecretChat(SadoraIcons.Chats),
-    Journey(SadoraIcons.Journey),
+    Mind(Res.drawable.ic3d_calm),
+    SecretChat(Res.drawable.ic3d_chats),
+    /** The bar draws her life stage's own icon here; this is only the fallback. */
+    Journey(Res.drawable.ic3d_cycle_ring),
     /** The food diary on its own — only once Premium has freed the fifth slot. */
-    Nutrition(SadoraIcons.Apple),
-    Premium(SadoraIcons.Sparkle),
+    Nutrition(Res.drawable.ic3d_apple),
+    Premium(Res.drawable.ic3d_crown),
     ;
 
     companion object {

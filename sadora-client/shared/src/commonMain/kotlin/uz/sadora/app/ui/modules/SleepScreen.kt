@@ -20,7 +20,6 @@ import uz.sadora.app.data.HealthController
 import uz.sadora.app.data.InsightsController
 import uz.sadora.app.design.Radius
 import uz.sadora.app.design.Sadora
-import uz.sadora.app.design.SadoraIcons
 import uz.sadora.app.design.Spacing
 import uz.sadora.app.i18n.ModuleStrings
 import uz.sadora.app.i18n.strings
@@ -51,6 +50,7 @@ import uz.sadora.app.ui.components.TrendBars
 import uz.sadora.contract.DailyHealth
 import uz.sadora.contract.HealthMetric
 import uz.sadora.contract.TrendMetric
+import uz.sadora.app.resources.*
 
 /** Eight hours: what the ring is drawn against, and stated as a goal rather than a score. */
 private const val SleepGoalMinutes = 480
@@ -98,7 +98,7 @@ fun SleepScreen(
                         body = t.sleepEmptyBody,
                         actionText = null,
                         onAction = {},
-                        glyph = "🌙",
+                        art = Res.drawable.ic3d_sleep,
                     )
                 }
             }
@@ -136,7 +136,7 @@ fun SleepScreen(
 
             item {
                 SadoraCard(padding = Spacing.xs) {
-                    SettingsRow(SadoraIcons.Pencil, t.sleepManual, showChevron = true) { showManual = true }
+                    SettingsRow(Res.drawable.ic3d_notebook, t.sleepManual, showChevron = true) { showManual = true }
                 }
             }
         }

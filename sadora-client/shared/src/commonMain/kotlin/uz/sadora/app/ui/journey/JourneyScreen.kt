@@ -83,6 +83,12 @@ import kotlin.math.cos
 import kotlin.math.roundToInt
 import kotlin.math.sin
 import uz.sadora.contract.SymptomDefinition
+import org.jetbrains.compose.resources.DrawableResource
+import uz.sadora.app.ui.components.SelectableArt
+import uz.sadora.app.ui.components.clayBead
+import uz.sadora.app.ui.components.clayFill
+import uz.sadora.app.ui.components.ArtIcon
+import uz.sadora.app.ui.components.art
 
 /**
  * "Yo'l" — the tab that changes completely with the life stage.
@@ -258,6 +264,7 @@ private fun CycleJourney(state: AppState, health: HealthController, onOpen: (Rou
                     health.symptoms.take(SymptomTiles).forEach { definition ->
                         val selected = definition.label in state.symptoms
                         SymptomTileView(
+                            art = definition.art(),
                             emoji = definition.glyph(),
                             label = definition.label,
                             severity = health.severityOf(definition.key),
@@ -410,12 +417,16 @@ private fun CycleDial(state: AppState, modifier: Modifier = Modifier) {
                 val future = day > today
                 val colour = phaseOf(day).dialColor().copy(alpha = (if (future) 0.4f else 1f) * t)
 
+                // Recorded days are glossy clay beads, like the icons; the forecast stays
+                // flat and faint, so it never passes for something she logged.
                 if (isToday) {
                     drawCircle(colour.copy(alpha = 0.25f * t), radius = dotR * 2.6f * pulse, center = at)
                     drawCircle(c.surface, radius = dotR * 1.7f, center = at)
-                    drawCircle(colour, radius = dotR * 1.15f * t, center = at)
-                } else {
+                    clayBead(at, dotR * 1.15f * t, colour)
+                } else if (future) {
                     drawCircle(colour, radius = dotR * t, center = at)
+                } else {
+                    clayBead(at, dotR * t, colour)
                 }
             }
         }
@@ -523,6 +534,7 @@ private fun PhaseLegend() {
 /** One symptom tile: a round icon disc, the label, and three severity dots. */
 @Composable
 private fun SymptomTileView(
+    art: DrawableResource?,
     emoji: String,
     label: String,
     severity: Int,
@@ -539,11 +551,11 @@ private fun SymptomTileView(
         Box(
             Modifier
                 .size(52.dp)
-                .clip(Radius.chip)
-                .background(if (selected) c.primary.copy(alpha = 0.16f) else c.surface2),
+                // Painted, not clipped, so the icon can hop out of its disc.
+                .background(if (selected) c.primary.copy(alpha = 0.16f) else c.surface2, Radius.chip),
             contentAlignment = Alignment.Center,
         ) {
-            Text(emoji, style = Sadora.type.h2)
+            if (art != null) SelectableArt(art, 38.dp, selected) else Text(emoji, style = Sadora.type.h2)
         }
         Text(
             label,
@@ -558,7 +570,7 @@ private fun SymptomTileView(
                     Modifier
                         .size(5.dp)
                         .clip(Radius.chip)
-                        .background(if (i < severity) c.primary else c.line),
+                        .then(if (i < severity) Modifier.clayFill(c.primary) else Modifier.background(c.line)),
                 )
             }
         }
@@ -666,6 +678,7 @@ private fun PregnancyJourney(state: AppState, health: HealthController, tools: S
                             label = definition.label,
                             selected = definition.label in state.symptoms,
                             onClick = { state.toggleSymptom(definition.label) },
+                            art = definition.art(),
                         )
                     }
                     SelectChip(t.addSymptom, selected = false, onClick = { onOpen(Route.StageSymptoms) })
@@ -807,7 +820,7 @@ private fun PostpartumJourney(state: AppState, health: HealthController, tools: 
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
                         ) {
-                            Text(state.mood.emoji, style = Sadora.type.h1)
+                            ArtIcon(state.mood.art(), 34.dp)
                             Text(strings.common.mood(state.mood), style = Sadora.type.h3, color = c.text)
                         }
                     } else {
@@ -1089,6 +1102,7 @@ private fun StageSymptomChips(state: AppState, health: HealthController, onOpen:
                     label = definition.label,
                     selected = definition.label in state.symptoms,
                     onClick = { state.toggleSymptom(definition.label) },
+                    art = definition.art(),
                 )
             }
             SelectChip(t.addSymptom, selected = false, onClick = { onOpen(Route.StageSymptoms) })

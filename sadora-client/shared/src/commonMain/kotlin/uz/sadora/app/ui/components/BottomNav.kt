@@ -3,7 +3,6 @@ package uz.sadora.app.ui.components
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -21,7 +20,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.selection.selectableGroup
-import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -29,8 +27,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.vector.ImageVector
+import org.jetbrains.compose.resources.DrawableResource
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
@@ -38,7 +35,6 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
-import uz.sadora.app.design.IconSize
 import uz.sadora.app.design.Radius
 import uz.sadora.app.design.Sadora
 import uz.sadora.app.design.Spacing
@@ -51,8 +47,7 @@ private val PillHeight = 50.dp
 private val LabelLine = 14.dp
 private val PillInset = 6.dp
 
-/** One spring for everything that moves on the bar, so nothing arrives out of step. */
-private val BarSpring = spring<Float>(dampingRatio = 0.72f, stiffness = Spring.StiffnessMediumLow)
+/** The pill's spring; the icons hop on [SelectableArt]'s own. */
 private val BarSpringDp = spring<Dp>(dampingRatio = 0.72f, stiffness = Spring.StiffnessMediumLow)
 
 /**
@@ -73,6 +68,8 @@ fun SadoraBottomNav(
     modifier: Modifier = Modifier,
     /** The stage tab's label — it is named after the life stage, so the caller says it. */
     journeyLabel: String,
+    /** The stage tab's icon, for the same reason; [Tab.Journey]'s own when not given. */
+    journeyArt: DrawableResource = Tab.Journey.art,
     /** "Ong" alone, or "Ong · Ovqat" while the food diary lives inside the Mind tab. */
     mindLabel: String,
     /** Unread private messages; above zero, the Chat tab wears a dot. */
@@ -127,7 +124,7 @@ fun SadoraBottomNav(
             Row(Modifier.fillMaxSize().selectableGroup()) {
                 tabs.forEach { tab ->
                     NavItem(
-                        icon = tab.icon,
+                        art = if (tab == Tab.Journey) journeyArt else tab.art,
                         label = when (tab) {
                             Tab.Today -> t.tabs.today
                             Tab.Mind -> mindLabel
@@ -151,8 +148,8 @@ fun SadoraBottomNav(
  * One of the five icons on the bar.
  *
  * The icon and its label are laid out at a fixed height whether or not the tab is
- * selected — only colour, scale and the label's opacity change — so selecting a tab
- * never nudges its neighbours.
+ * selected — only colour, the icon's hop and scale (drawn, not laid out) and the
+ * label's colour change — so selecting a tab never nudges its neighbours.
  *
  * [unread], when set, draws a dot on the icon's shoulder and is what a screen reader
  * says after the label: "Chat, 2 ta o'qilmagan". A dot, not a number — the count is one
@@ -160,7 +157,7 @@ fun SadoraBottomNav(
  */
 @Composable
 private fun NavItem(
-    icon: ImageVector,
+    art: DrawableResource,
     label: String,
     selected: Boolean,
     onClick: () -> Unit,
@@ -168,19 +165,7 @@ private fun NavItem(
     unread: String? = null,
 ) {
     val c = Sadora.colors
-    val tint by animateColorAsState(if (selected) c.primary else c.muted2, label = "tab-tint")
     val labelColor by animateColorAsState(if (selected) c.textAccent else c.muted2, label = "tab-label")
-    val scale by animateFloatAsState(
-        targetValue = if (selected) 1.1f else 1f,
-        animationSpec = BarSpring,
-        label = "tab-scale",
-    )
-    val lift by animateFloatAsState(
-        targetValue = if (selected) -1f else 0f,
-        animationSpec = BarSpring,
-        label = "tab-lift",
-    )
-    val liftPx = with(LocalDensity.current) { lift.dp.toPx() }
 
     Box(
         modifier
@@ -193,19 +178,15 @@ private fun NavItem(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(3.dp),
         ) {
-            Box(
-                Modifier.graphicsLayer {
-                    scaleX = scale
-                    scaleY = scale
-                    translationY = liftPx
-                },
-            ) {
-                Icon(icon, contentDescription = null, Modifier.size(IconSize.lg), tint = tint)
+            // The colour icon carries the selection itself: full colour and a hop on
+            // the open tab, most of the colour drained from the other four.
+            Box {
+                SelectableArt(art, 28.dp, selected, dimWhenIdle = true)
                 if (unread != null) {
                     Box(
                         Modifier
                             .align(Alignment.TopEnd)
-                            .offset(x = 3.dp, y = (-1).dp)
+                            .offset(x = 1.dp, y = 1.dp)
                             .size(9.dp)
                             .clip(Radius.chip)
                             .background(c.surface)

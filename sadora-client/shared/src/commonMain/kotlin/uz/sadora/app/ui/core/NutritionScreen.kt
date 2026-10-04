@@ -39,7 +39,6 @@ import uz.sadora.app.nav.Route
 import uz.sadora.app.ui.components.AiSummaryCard
 import uz.sadora.app.ui.components.BadgeTone
 import uz.sadora.app.ui.components.CircleIconButton
-import uz.sadora.app.ui.components.IconTile
 import uz.sadora.app.ui.components.MealThumb
 import uz.sadora.app.ui.components.MiniRing
 import uz.sadora.app.ui.components.PillButton
@@ -49,6 +48,9 @@ import uz.sadora.app.ui.components.SadoraCard
 import uz.sadora.app.ui.components.SadoraTopBar
 import uz.sadora.app.ui.components.ScreenContent
 import uz.sadora.app.ui.components.SectionHeader
+import uz.sadora.app.resources.*
+import uz.sadora.app.ui.components.ArtTile
+import uz.sadora.app.ui.components.art
 
 /**
  * "Ovqatlanish" — the deck's food diary: today's four rings, the meals, hydration,
@@ -117,7 +119,7 @@ fun NutritionScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                     ) {
-                        IconTile(SadoraIcons.Drop, tint = c.accent, size = 40.dp)
+                        ArtTile(Res.drawable.ic3d_water, tint = c.accent, size = 40.dp)
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                             Text(t.water, style = Sadora.type.body, color = c.muted)
                             Text(
@@ -147,7 +149,7 @@ fun NutritionScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                     ) {
-                        IconTile(SadoraIcons.Camera, tint = c.primary, shape = Radius.cardSmall)
+                        ArtTile(Res.drawable.ic3d_camera, tint = c.primary, shape = Radius.cardSmall)
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                             Text(t.scanner, style = Sadora.type.h3, color = c.text)
                             Text(
@@ -168,7 +170,7 @@ fun NutritionScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                     ) {
-                        IconTile(SadoraIcons.Target, tint = c.success, shape = Radius.cardSmall)
+                        ArtTile(Res.drawable.ic3d_target, tint = c.success, shape = Radius.cardSmall)
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                             Text(t.balance, style = Sadora.type.h3, color = c.text)
                             Text(
@@ -320,7 +322,7 @@ private fun MealRow(meal: Meal, onClick: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
         ) {
-            MealThumb(meal.emoji, size = 64.dp)
+            MealThumb(meal.emoji, size = 64.dp, art = meal.slot.art())
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
                     meal.description.ifBlank { t.mealSlot(meal.slot) },

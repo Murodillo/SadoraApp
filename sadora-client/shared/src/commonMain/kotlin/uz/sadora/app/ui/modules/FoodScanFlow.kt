@@ -53,6 +53,7 @@ import uz.sadora.app.ui.components.pressable
 import uz.sadora.app.ui.components.rememberOpenAppSettings
 import uz.sadora.app.ui.components.rememberPhotoCapture
 import uz.sadora.contract.FoodScanResult
+import uz.sadora.app.resources.*
 
 /**
  * "Ovqat skaneri" — a live viewfinder, the wait, and the result, in one screen.
@@ -354,7 +355,7 @@ private fun ScanProblem(
                 body = body,
                 actionText = strings.common.retry,
                 onAction = onRetry,
-                glyph = "📷",
+                art = Res.drawable.ic3d_camera,
             )
             SadoraButton(t.scannerManual, onManualEntry, tone = ButtonTone.Secondary)
         }
