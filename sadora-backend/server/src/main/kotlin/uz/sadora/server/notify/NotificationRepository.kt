@@ -140,6 +140,32 @@ class NotificationRepository {
         targetApp: String = TARGET_CLIENT,
         /** Where a tap lands, e.g. `sadora://conversation/<id>`. */
         link: String? = null,
+    ): Boolean {
+        val inserted = insert(userId, category, title, body, scheduledFor, dedupeKey, status, suppressedReason, targetApp, link)
+        // After the transaction, so the pass that reads it can see the row: anything due
+        // now — a message, a reply, "labour has started" — goes out at once rather than
+        // on the scheduler's next tick. Reminders written ahead of their time still wait.
+        if (inserted && status == NotificationStatus.QUEUED && scheduledFor <= now()) onQueuedNow?.invoke(userId)
+        return inserted
+    }
+
+    /**
+     * Set once at wiring to the scheduler's immediate pass. Null in tests that build the
+     * repository alone, where the tick (or nothing) delivers.
+     */
+    var onQueuedNow: ((Uuid) -> Unit)? = null
+
+    private suspend fun insert(
+        userId: Uuid,
+        category: NotificationCategory,
+        title: String,
+        body: String,
+        scheduledFor: Instant,
+        dedupeKey: String,
+        status: NotificationStatus,
+        suppressedReason: String?,
+        targetApp: String,
+        link: String?,
     ): Boolean = dbQuery {
         NotificationOutbox.insertIgnore {
             it[NotificationOutbox.targetApp] = targetApp

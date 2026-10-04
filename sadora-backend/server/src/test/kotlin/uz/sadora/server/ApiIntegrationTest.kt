@@ -618,6 +618,20 @@ class ApiIntegrationTest {
         assertEquals(HttpStatusCode.NotFound, client.get("/yv/not-a-token").status)
     }
 
+    /** A chat line rings the other phone at once; nothing waits for the minute's tick. */
+    @Test
+    fun `a direct message is delivered the moment it is written`() = api {
+        val a = signUp().also { onboard(it) }
+        val b = signUp().also { onboard(it) }
+        val alias = get<CommunityIdentity>("/v1/community/me", b.token).alias
+        val thread = post<ConversationThread>("/v1/community/conversations", a.token, StartConversationRequest(alias, "Salom"))
+        assertNotNull(thread.conversation.id)
+        assertEquals(1, outboxCount(b, "dm:"))
+        val deadline = now() + 5.seconds
+        while (queuedCount(b, "dm:") > 0 && now() < deadline) kotlinx.coroutines.delay(100)
+        assertEquals(0, queuedCount(b, "dm:"), "the message waited for the scheduler")
+    }
+
     // ---------------------------------------------------------------- wearable connections
 
     /**

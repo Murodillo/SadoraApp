@@ -270,7 +270,11 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
         medications = medicationRepository,
         users = userRepository,
         sender = pushSender,
-    )
+    ).also { scheduler ->
+        // Anything due now — a chat message, a consultation reply, a Yaqinim heart — is
+        // delivered the moment it is written, not on the next minute's tick.
+        notificationRepository.onQueuedNow = scheduler::deliverSoon
+    }
 
     val accountErasureJob = AccountErasureJob(
         users = userRepository,
@@ -406,8 +410,6 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
         rewards = rewardsService,
     ).also { service ->
         healthService.onPeriodStarted = service::periodStarted
-        // Messages between two people go out at once rather than on the minute's tick.
-        service.onQueued = notificationScheduler::deliverSoon
     }
     val partnerAlertJob = uz.sadora.server.partner.PartnerAlertJob(partnerService)
 
