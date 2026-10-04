@@ -1,5 +1,6 @@
 package uz.sadora.server.share
 
+import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.hours
 import kotlin.time.Instant
 import kotlin.uuid.Uuid
@@ -27,6 +28,7 @@ import uz.sadora.contract.SharedMind
 import uz.sadora.contract.SharedNutrition
 import uz.sadora.contract.SharedPerson
 import uz.sadora.contract.SharedPregnancy
+import uz.sadora.contract.SharedStageRecords
 import uz.sadora.contract.SharedSymptom
 import uz.sadora.contract.SharedSymptomCount
 import uz.sadora.contract.SharedWearable
@@ -73,6 +75,7 @@ class ShareService(
     private val appointments: AppointmentRepository,
     private val nutrition: NutritionRepository,
     private val wearables: WearableService,
+    private val stageEvents: uz.sadora.server.health.StageEventRepository,
     private val audit: AuditService,
     private val publicBaseUrl: String,
     /** Meters the export; optional only for the tests that build the service by hand. */
@@ -306,6 +309,11 @@ class ShareService(
             appointments = appointments.list(userId).filter { it.scheduledOn >= from },
             nutrition = nutritionSummary,
             wearable = wearable,
+            stageRecords = StageRecordSummary.of(
+                stageEvents.list(userId, kind = null, since = now() - SharedStageRecords.MOOD_SCREEN_DAYS.days, limit = 1000),
+                now(),
+                user.timezone,
+            ),
         )
     }
 

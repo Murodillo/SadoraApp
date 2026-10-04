@@ -22,8 +22,10 @@ import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import uz.sadora.contract.DoctorSummary
+import uz.sadora.contract.Epds
 import uz.sadora.contract.HealthMetric
 import uz.sadora.contract.Language
+import uz.sadora.contract.SharedStageRecords
 import uz.sadora.doctor.data.ApiFailure
 import uz.sadora.doctor.data.DoctorController
 import uz.sadora.doctor.data.attachedKey
@@ -150,6 +152,8 @@ private fun androidx.compose.foundation.lazy.LazyListScope.recordSections(record
             }
         }
     }
+
+    record.stageRecords?.let { stageSections(it) }
 
     if (record.symptomCounts.isNotEmpty()) {
         item(key = "symptoms") {
@@ -281,6 +285,95 @@ private fun androidx.compose.foundation.lazy.LazyListScope.recordSections(record
         )
     }
 }
+
+/**
+ * What her stage tools recorded: feeds, kick counts, contractions, hot flushes and the
+ * mood questionnaire. A slow kick count, a high EPDS score and a self-harm answer are in
+ * the danger colour — they are what a doctor must not scroll past.
+ */
+private fun androidx.compose.foundation.lazy.LazyListScope.stageSections(r: SharedStageRecords) {
+    r.feeding?.let { f ->
+        item(key = "feeding") {
+            val t = strings.tabs
+            RecordSection(t.feedingTitle, SadoraIcons.Heart, subtitle = t.lastDays(f.windowDays)) {
+                Facts(
+                    listOfNotNull(
+                        t.feedsPerDay to oneDecimal(f.feeds.toDouble() / f.windowDays),
+                        t.breastFeeds to (f.breastFeeds.toString() + (f.averageBreastMinutes?.let { " · " + t.averageMinutes(it) } ?: "")),
+                        if (f.bottleFeeds > 0) t.bottleFeeds to "${f.bottleFeeds} · ${t.ml(f.bottleMl)}" else null,
+                        t.lastOne to moment(f.lastAt),
+                    ),
+                )
+            }
+        }
+    }
+    if (r.kickCounts.isNotEmpty()) {
+        item(key = "kicks") {
+            val t = strings.tabs
+            RecordSection(t.kicksTitle, SadoraIcons.Heart, subtitle = t.lastDays(SharedStageRecords.KICK_DAYS)) {
+                Facts(r.kickCounts.map { moment(it.at) to t.kicksResult(it.kicks, minutesSeconds(it.durationSeconds)) })
+                if (r.kickCounts.any { it.isSlow }) Text(t.kicksSlow, style = Sadora.type.body, color = Sadora.colors.danger)
+            }
+        }
+    }
+    r.contractions?.let { c ->
+        item(key = "contractions") {
+            val t = strings.tabs
+            RecordSection(t.contractionsTitle, SadoraIcons.Watch, subtitle = t.lastHours(c.windowHours)) {
+                Facts(
+                    listOfNotNull(
+                        t.count to c.count.toString(),
+                        c.averageDurationSeconds?.let { t.averageLength to minutesSeconds(it) },
+                        c.averageIntervalSeconds?.let { t.averageInterval to minutesSeconds(it) },
+                        t.lastOne to moment(c.lastAt),
+                    ),
+                )
+            }
+        }
+    }
+    r.hotFlushes?.let { h ->
+        item(key = "hot-flushes") {
+            val t = strings.tabs
+            RecordSection(t.hotFlushTitle, SadoraIcons.Drop, subtitle = t.lastDays(h.windowDays)) {
+                Facts(
+                    listOf(
+                        t.count to h.count.toString(),
+                        t.perDay to oneDecimal(h.count.toDouble() / h.windowDays),
+                        t.strong to h.strong.toString(),
+                    ) + h.triggers.map { t.trigger(it.trigger) to it.count.toString() },
+                )
+            }
+        }
+    }
+    if (r.moodScreens.isNotEmpty()) {
+        item(key = "epds") {
+            val t = strings.tabs
+            val c = Sadora.colors
+            RecordSection(t.epdsTitle, SadoraIcons.Heart) {
+                if (r.moodScreens.any { it.selfHarm }) Text(t.epdsSelfHarm, style = Sadora.type.body, color = c.danger)
+                r.moodScreens.forEach { screen ->
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text(fullDate(screen.takenOn), style = Sadora.type.body, color = c.muted)
+                        Text(
+                            t.epdsResult(screen.score),
+                            style = Sadora.type.body,
+                            color = if (screen.score >= Epds.LIKELY || screen.selfHarm) c.danger else c.text,
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** "4-oktabr 03:14" on her phone's clock. */
+@Composable
+private fun moment(at: kotlin.time.Instant): String {
+    val local = at.toLocalDateTime(TimeZone.currentSystemDefault())
+    return strings.dates.dayMonth(local.date) + " " + local.hour.toString().padStart(2, '0') + ":" + local.minute.toString().padStart(2, '0')
+}
+
+private fun minutesSeconds(seconds: Int): String = "${seconds / 60}:${(seconds % 60).toString().padStart(2, '0')}"
 
 /** Her name and age, her stage of life, height and weight, and when the page was made. */
 @Composable

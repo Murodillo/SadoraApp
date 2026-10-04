@@ -56,11 +56,94 @@ data class DoctorSummary(
     val appointments: List<Appointment> = emptyList(),
     val nutrition: SharedNutrition? = null,
     val wearable: SharedWearable? = null,
+    /** What the stage tools recorded; null when she recorded nothing with them. */
+    val stageRecords: SharedStageRecords? = null,
 ) {
     companion object {
         const val SHARE_WINDOW_DAYS = 90
     }
 }
+
+/**
+ * The stage tools, summarised the way a clinician asks: how often she feeds, how long
+ * ten kicks take, how far apart the contractions are, how many hot flushes a day, and
+ * what the mood questionnaire scored. Each part covers the window that question needs,
+ * and is absent when nothing was recorded in it.
+ */
+@Serializable
+data class SharedStageRecords(
+    val feeding: SharedFeeding? = null,
+    /** Newest first. */
+    val kickCounts: List<SharedKickCount> = emptyList(),
+    val contractions: SharedContractions? = null,
+    val hotFlushes: SharedHotFlushes? = null,
+    /** Newest first. */
+    val moodScreens: List<SharedMoodScreen> = emptyList(),
+) {
+    val isEmpty: Boolean
+        get() = feeding == null && kickCounts.isEmpty() && contractions == null && hotFlushes == null && moodScreens.isEmpty()
+
+    companion object {
+        const val FEEDING_DAYS = 7
+        const val KICK_DAYS = 14
+        const val CONTRACTION_HOURS = 24
+        const val HOT_FLUSH_DAYS = 30
+        const val MOOD_SCREEN_DAYS = 120
+        /** Ten kicks in two hours is the line; slower is one to ask about. */
+        const val KICKS_GOAL = 10
+        const val KICKS_SLOW_SECONDS = 7_200
+    }
+}
+
+@Serializable
+data class SharedFeeding(
+    val windowDays: Int,
+    val feeds: Int,
+    val breastFeeds: Int,
+    val averageBreastMinutes: Int? = null,
+    val bottleFeeds: Int,
+    val bottleMl: Int,
+    val lastAt: Instant,
+)
+
+@Serializable
+data class SharedKickCount(
+    val at: Instant,
+    val kicks: Int,
+    val durationSeconds: Int,
+) {
+    val isSlow: Boolean
+        get() = kicks < SharedStageRecords.KICKS_GOAL || durationSeconds > SharedStageRecords.KICKS_SLOW_SECONDS
+}
+
+@Serializable
+data class SharedContractions(
+    val windowHours: Int,
+    val count: Int,
+    val averageDurationSeconds: Int? = null,
+    val averageIntervalSeconds: Int? = null,
+    val lastAt: Instant,
+)
+
+@Serializable
+data class SharedHotFlushes(
+    val windowDays: Int,
+    val count: Int,
+    val strong: Int,
+    /** Most often named first. */
+    val triggers: List<SharedTriggerCount> = emptyList(),
+)
+
+@Serializable
+data class SharedTriggerCount(val trigger: HotFlushTrigger, val count: Int)
+
+@Serializable
+data class SharedMoodScreen(
+    val takenOn: LocalDate,
+    val score: Int,
+    /** Any answer but "never" to the self-harm question. */
+    val selfHarm: Boolean,
+)
 
 @Serializable
 data class SharedPerson(

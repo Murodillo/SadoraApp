@@ -115,6 +115,30 @@ interface TabStrings {
     val birthDate: String
     fun lessMovement(days: Int): String
 
+    // ---- the stage tools
+    val feedingTitle: String
+    fun lastDays(days: Int): String
+    fun lastHours(hours: Int): String
+    val feedsPerDay: String
+    val breastFeeds: String
+    fun averageMinutes(minutes: Int): String
+    val bottleFeeds: String
+    val lastOne: String
+    val kicksTitle: String
+    fun kicksResult(kicks: Int, duration: String): String
+    val kicksSlow: String
+    val contractionsTitle: String
+    val count: String
+    val averageLength: String
+    val averageInterval: String
+    val hotFlushTitle: String
+    val perDay: String
+    val strong: String
+    fun trigger(trigger: uz.sadora.contract.HotFlushTrigger): String
+    val epdsTitle: String
+    fun epdsResult(score: Int): String
+    val epdsSelfHarm: String
+
     val symptomsTitle: String
     fun symptomsWindow(days: Int): String
 
@@ -265,6 +289,40 @@ object TabStringsUz : TabStrings {
     override val dueDate = "Taxminiy tug'ruq sanasi"
     override val birthDate = "Tug'ruq sanasi"
     override fun lessMovement(days: Int) = "Bola harakati kam sezilgan kunlar: $days"
+    override val feedingTitle = "Emizish"
+    override fun lastDays(days: Int) = "Oxirgi $days kun"
+    override fun lastHours(hours: Int) = "Oxirgi $hours soat"
+    override val feedsPerDay = "Kuniga o'rtacha"
+    override val breastFeeds = "Ko'krak bilan"
+    override fun averageMinutes(minutes: Int) = "o'rtacha $minutes daq"
+    override val bottleFeeds = "Shisha / sog'ilgan"
+    override val lastOne = "Oxirgisi"
+    override val kicksTitle = "Tepishlarni sanash"
+    override fun kicksResult(kicks: Int, duration: String) = "$kicks ta harakat · $duration"
+    override val kicksSlow = "10 ta harakat 2 soatdan uzoq vaqtda sezilgan sanashlar bor."
+    override val contractionsTitle = "To'lg'oqlar"
+    override val count = "Soni"
+    override val averageLength = "O'rtacha davomiyligi"
+    override val averageInterval = "O'rtacha oralig'i"
+    override val hotFlushTitle = "Issiqlik to'lqinlari"
+    override val perDay = "Kuniga o'rtacha"
+    override val strong = "Kuchli"
+    override fun trigger(trigger: uz.sadora.contract.HotFlushTrigger) = when (trigger) {
+        uz.sadora.contract.HotFlushTrigger.HEAT -> "Issiq xona"
+        uz.sadora.contract.HotFlushTrigger.HOT_DRINK -> "Issiq ichimlik"
+        uz.sadora.contract.HotFlushTrigger.SPICY_FOOD -> "Achchiq taom"
+        uz.sadora.contract.HotFlushTrigger.CAFFEINE -> "Kofein"
+        uz.sadora.contract.HotFlushTrigger.ALCOHOL -> "Spirtli ichimlik"
+        uz.sadora.contract.HotFlushTrigger.STRESS -> "Stress"
+        uz.sadora.contract.HotFlushTrigger.NIGHT -> "Tunda"
+    }
+    override val epdsTitle = "Kayfiyat so'rovnomasi (EPDS)"
+    override fun epdsResult(score: Int) = "$score / 30 · " + when {
+        score >= 13 -> "depressiya ehtimoli yuqori"
+        score >= 10 -> "depressiya ehtimoli bor"
+        else -> "belgilar kam"
+    }
+    override val epdsSelfHarm = "O'ziga zarar yetkazish fikrlari haqida javob bergan (10-savol) — shoshilinch baholang."
 
     override val symptomsTitle = "Simptomlar"
     override fun symptomsWindow(days: Int) = "Oxirgi $days kun, eng ko'p uchraganlari"
@@ -446,6 +504,40 @@ object TabStringsRu : TabStrings {
     override val dueDate = "Предполагаемая дата родов"
     override val birthDate = "Дата родов"
     override fun lessMovement(days: Int) = "Дни с ослабленным шевелением: $days"
+    override val feedingTitle = "Кормление"
+    override fun lastDays(days: Int) = "Последние $days дн."
+    override fun lastHours(hours: Int) = "Последние $hours ч"
+    override val feedsPerDay = "В среднем за день"
+    override val breastFeeds = "Грудью"
+    override fun averageMinutes(minutes: Int) = "в среднем $minutes мин"
+    override val bottleFeeds = "Бутылочка / сцеженное"
+    override val lastOne = "Последнее"
+    override val kicksTitle = "Подсчёт шевелений"
+    override fun kicksResult(kicks: Int, duration: String) = "Шевелений: $kicks · $duration"
+    override val kicksSlow = "Есть подсчёты, где 10 шевелений заняли больше 2 часов."
+    override val contractionsTitle = "Схватки"
+    override val count = "Количество"
+    override val averageLength = "Средняя длительность"
+    override val averageInterval = "Средний интервал"
+    override val hotFlushTitle = "Приливы"
+    override val perDay = "В среднем за день"
+    override val strong = "Сильные"
+    override fun trigger(trigger: uz.sadora.contract.HotFlushTrigger) = when (trigger) {
+        uz.sadora.contract.HotFlushTrigger.HEAT -> "Жаркое помещение"
+        uz.sadora.contract.HotFlushTrigger.HOT_DRINK -> "Горячий напиток"
+        uz.sadora.contract.HotFlushTrigger.SPICY_FOOD -> "Острая еда"
+        uz.sadora.contract.HotFlushTrigger.CAFFEINE -> "Кофеин"
+        uz.sadora.contract.HotFlushTrigger.ALCOHOL -> "Алкоголь"
+        uz.sadora.contract.HotFlushTrigger.STRESS -> "Стресс"
+        uz.sadora.contract.HotFlushTrigger.NIGHT -> "Ночью"
+    }
+    override val epdsTitle = "Опросник настроения (EPDS)"
+    override fun epdsResult(score: Int) = "$score / 30 · " + when {
+        score >= 13 -> "вероятна депрессия"
+        score >= 10 -> "возможна депрессия"
+        else -> "признаков мало"
+    }
+    override val epdsSelfHarm = "Сообщила о мыслях причинить себе вред (вопрос 10) — нужна срочная оценка."
 
     override val symptomsTitle = "Симптомы"
     override fun symptomsWindow(days: Int) = "За последние $days дн., самые частые"
@@ -619,6 +711,40 @@ object TabStringsEn : TabStrings {
     override val dueDate = "Due date"
     override val birthDate = "Birth date"
     override fun lessMovement(days: Int) = "Days with less foetal movement: $days"
+    override val feedingTitle = "Feeding"
+    override fun lastDays(days: Int) = "Last $days days"
+    override fun lastHours(hours: Int) = "Last $hours hours"
+    override val feedsPerDay = "Per day on average"
+    override val breastFeeds = "At the breast"
+    override fun averageMinutes(minutes: Int) = "$minutes min on average"
+    override val bottleFeeds = "Bottle / expressed"
+    override val lastOne = "Last"
+    override val kicksTitle = "Kick counts"
+    override fun kicksResult(kicks: Int, duration: String) = "$kicks movements · $duration"
+    override val kicksSlow = "Some counts took longer than 2 hours to reach 10 movements."
+    override val contractionsTitle = "Contractions"
+    override val count = "Count"
+    override val averageLength = "Average length"
+    override val averageInterval = "Average interval"
+    override val hotFlushTitle = "Hot flushes"
+    override val perDay = "Per day on average"
+    override val strong = "Strong"
+    override fun trigger(trigger: uz.sadora.contract.HotFlushTrigger) = when (trigger) {
+        uz.sadora.contract.HotFlushTrigger.HEAT -> "Warm room"
+        uz.sadora.contract.HotFlushTrigger.HOT_DRINK -> "Hot drink"
+        uz.sadora.contract.HotFlushTrigger.SPICY_FOOD -> "Spicy food"
+        uz.sadora.contract.HotFlushTrigger.CAFFEINE -> "Caffeine"
+        uz.sadora.contract.HotFlushTrigger.ALCOHOL -> "Alcohol"
+        uz.sadora.contract.HotFlushTrigger.STRESS -> "Stress"
+        uz.sadora.contract.HotFlushTrigger.NIGHT -> "At night"
+    }
+    override val epdsTitle = "Mood questionnaire (EPDS)"
+    override fun epdsResult(score: Int) = "$score / 30 · " + when {
+        score >= 13 -> "probable depression"
+        score >= 10 -> "possible depression"
+        else -> "few signs"
+    }
+    override val epdsSelfHarm = "Reported thoughts of self-harm (item 10) — assess urgently."
 
     override val symptomsTitle = "Symptoms"
     override fun symptomsWindow(days: Int) = "Last $days days, most frequent first"

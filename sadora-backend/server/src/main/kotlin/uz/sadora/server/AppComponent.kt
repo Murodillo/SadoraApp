@@ -207,7 +207,8 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
     val healthService = HealthService(healthRepository, healthAccess)
     val mindService = MindService(mindRepository, healthRepository, healthAccess, rewardsService)
     val appointmentService = AppointmentService(appointmentRepository, healthAccess)
-    val stageEventService = StageEventService(StageEventRepository(), healthAccess)
+    val stageEventRepository = StageEventRepository()
+    val stageEventService = StageEventService(stageEventRepository, healthAccess)
     val nutritionService = NutritionService(
         nutrition = nutritionRepository,
         access = healthAccess,
@@ -384,6 +385,7 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
         appointments = appointmentRepository,
         nutrition = nutritionRepository,
         wearables = wearableService,
+        stageEvents = stageEventRepository,
         audit = auditService,
         publicBaseUrl = config.publicBaseUrl,
         entitlements = entitlementService,

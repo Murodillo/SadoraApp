@@ -5,13 +5,16 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import uz.sadora.contract.CyclePhase
 import uz.sadora.contract.DoctorSummary
+import uz.sadora.contract.Epds
 import uz.sadora.contract.FetalMovement
 import uz.sadora.contract.FlowLevel
 import uz.sadora.contract.FoodRelation
+import uz.sadora.contract.HotFlushTrigger
 import uz.sadora.contract.HealthMetric
 import uz.sadora.contract.Language
 import uz.sadora.contract.LifeStage
 import uz.sadora.contract.MoodLevel
+import uz.sadora.contract.SharedStageRecords
 import uz.sadora.contract.SymptomSeverity
 
 /**
@@ -95,6 +98,9 @@ object DoctorPage {
                     }
                 }
             }
+
+            // ---- the stage tools
+            summary.stageRecords?.let { r -> stageRecords(r, t) }
 
             // ---- symptoms summary
             if (summary.symptomCounts.isNotEmpty()) {
@@ -213,6 +219,79 @@ object DoctorPage {
             "<main><section class=\"hero\"><h1>${escape(t.goneTitle)}</h1><p class=\"sub\">${escape(t.goneBody)}</p></section></main></body></html>"
     }
 
+    // ---------------------------------------------------------------- stage tools
+
+    /**
+     * Feeds, kick counts, contractions, hot flushes and the mood questionnaire — each in
+     * its own window, each only when something was recorded in it. The two results that
+     * call for action — a slow kick count, and a self-harm answer or a high EPDS score —
+     * are in the warning colour.
+     */
+    private fun StringBuilder.stageRecords(r: SharedStageRecords, t: PageText) {
+        val esc = ::escape
+        r.feeding?.let { f ->
+            section(t.feedingTitle) {
+                append("<p class=\"muted\">${esc(t.windowNote(f.windowDays))}</p><div class=\"facts\">")
+                fact(t.feedsPerDay, one(f.feeds.toDouble() / f.windowDays))
+                fact(t.breastFeeds, f.breastFeeds.toString() + (f.averageBreastMinutes?.let { " · ${t.averageMinutes(it)}" } ?: ""))
+                if (f.bottleFeeds > 0) fact(t.bottleFeeds, "${f.bottleFeeds} · ${f.bottleMl} ml")
+                fact(t.lastFeed, at(f.lastAt))
+                append("</div>")
+            }
+        }
+        if (r.kickCounts.isNotEmpty()) {
+            section(t.kicksTitle) {
+                append("<p class=\"muted\">${esc(t.kicksNote)}</p>")
+                append("<table><thead><tr><th>${t.date}</th><th>${t.kicks}</th><th>${t.duration}</th></tr></thead><tbody>")
+                r.kickCounts.forEach { k ->
+                    val cls = if (k.isSlow) " class=\"warn\"" else ""
+                    append("<tr$cls><td>${at(k.at)}</td><td>${k.kicks}</td><td>${minutesSeconds(k.durationSeconds)}</td></tr>")
+                }
+                append("</tbody></table>")
+            }
+        }
+        r.contractions?.let { c ->
+            section(t.contractionsTitle) {
+                append("<p class=\"muted\">${esc(t.lastHours(c.windowHours))}</p><div class=\"facts\">")
+                fact(t.count, c.count.toString())
+                fact(t.averageDuration, c.averageDurationSeconds?.let(::minutesSeconds))
+                fact(t.averageInterval, c.averageIntervalSeconds?.let(::minutesSeconds))
+                fact(t.lastOne, at(c.lastAt))
+                append("</div>")
+            }
+        }
+        r.hotFlushes?.let { h ->
+            section(t.hotFlushTitle) {
+                append("<p class=\"muted\">${esc(t.windowNote(h.windowDays))}</p><div class=\"facts\">")
+                fact(t.count, h.count.toString())
+                fact(t.perDay, one(h.count.toDouble() / h.windowDays))
+                fact(t.strong, h.strong.toString())
+                append("</div>")
+                if (h.triggers.isNotEmpty()) {
+                    append("<div class=\"chips\">")
+                    h.triggers.forEach { append("<span class=\"chip\">${esc(t.trigger(it.trigger))} <b>${it.count}</b></span>") }
+                    append("</div>")
+                }
+            }
+        }
+        if (r.moodScreens.isNotEmpty()) {
+            section(t.epdsTitle) {
+                if (r.moodScreens.any { it.selfHarm }) append("<p class=\"warn\">${esc(t.epdsSelfHarm)}</p>")
+                append("<table><thead><tr><th>${t.date}</th><th>${t.score}</th><th></th></tr></thead><tbody>")
+                r.moodScreens.forEach { s ->
+                    val band = when {
+                        s.score >= Epds.LIKELY -> t.epdsLikely
+                        s.score >= Epds.POSSIBLE -> t.epdsPossible
+                        else -> t.epdsLow
+                    }
+                    val cls = if (s.score >= Epds.LIKELY || s.selfHarm) " class=\"warn\"" else ""
+                    append("<tr$cls><td>${date(s.takenOn)}</td><td>${s.score} / 30</td><td>${esc(band)}${if (s.selfHarm) " · " + esc(t.epdsSelfHarmShort) else ""}</td></tr>")
+                }
+                append("</tbody></table><p class=\"muted\">${esc(t.epdsSource)}</p>")
+            }
+        }
+    }
+
     // ---------------------------------------------------------------- helpers
 
     private inline fun StringBuilder.section(title: String, body: StringBuilder.() -> Unit) {
@@ -234,6 +313,14 @@ object DoctorPage {
     }
 
     private fun one(value: Double): String = "%.1f".format(value)
+
+    /** An instant on the clock of Tashkent, where her doctor reads it. */
+    private fun at(instant: kotlin.time.Instant): String {
+        val local = instant.toLocalDateTime(TimeZone.of("Asia/Tashkent"))
+        return date(local.date) + " %02d:%02d".format(local.hour, local.minute)
+    }
+
+    private fun minutesSeconds(seconds: Int): String = "%d:%02d".format(seconds / 60, seconds % 60)
 
     private fun format(metric: HealthMetric, value: Double): String = when (metric) {
         HealthMetric.STEPS, HealthMetric.ACTIVE_ENERGY, HealthMetric.DISTANCE, HealthMetric.SLEEP_DURATION,
@@ -362,6 +449,56 @@ internal class PageText private constructor(private val language: Language) {
         "The link has expired or the patient revoked it. Ask for a fresh QR code.",
     )
     fun days(n: Int) = "$n $daysWord"
+
+    // ---- stage tools
+    val feedingTitle get() = pick("Emizish", "Кормление", "Feeding")
+    val feedsPerDay get() = pick("Kuniga o'rtacha", "В среднем за день", "Per day on average")
+    val breastFeeds get() = pick("Ko'krak bilan", "Грудью", "At the breast")
+    fun averageMinutes(m: Int) = pick("o'rtacha $m daq", "в среднем $m мин", "$m min on average")
+    val bottleFeeds get() = pick("Shisha / sog'ilgan", "Бутылочка / сцеженное", "Bottle / expressed")
+    val lastFeed get() = pick("Oxirgisi", "Последнее", "Last")
+    val kicksTitle get() = pick("Tepishlarni sanash", "Подсчёт шевелений", "Kick counts")
+    val kicksNote get() = pick(
+        "10 ta harakat 2 soatdan uzoq vaqtda sezilgan sanashlar ajratib ko'rsatilgan.",
+        "Выделены подсчёты, где 10 шевелений заняли больше 2 часов.",
+        "Counts where 10 movements took longer than 2 hours are highlighted.",
+    )
+    val kicks get() = pick("Harakatlar", "Шевеления", "Movements")
+    val duration get() = pick("Vaqt", "Время", "Time taken")
+    val contractionsTitle get() = pick("To'lg'oqlar", "Схватки", "Contractions")
+    fun lastHours(h: Int) = pick("Oxirgi $h soat", "Последние $h ч", "Last $h hours")
+    val count get() = pick("Soni", "Количество", "Count")
+    val averageDuration get() = pick("O'rtacha davomiyligi", "Средняя длительность", "Average length")
+    val averageInterval get() = pick("O'rtacha oralig'i", "Средний интервал", "Average interval")
+    val lastOne get() = pick("Oxirgisi", "Последняя", "Last")
+    val hotFlushTitle get() = pick("Issiqlik to'lqinlari", "Приливы", "Hot flushes")
+    val perDay get() = pick("Kuniga o'rtacha", "В среднем за день", "Per day on average")
+    val strong get() = pick("Kuchli", "Сильные", "Strong")
+    fun trigger(trigger: HotFlushTrigger) = when (trigger) {
+        HotFlushTrigger.HEAT -> pick("Issiq xona", "Жаркое помещение", "Warm room")
+        HotFlushTrigger.HOT_DRINK -> pick("Issiq ichimlik", "Горячий напиток", "Hot drink")
+        HotFlushTrigger.SPICY_FOOD -> pick("Achchiq taom", "Острая еда", "Spicy food")
+        HotFlushTrigger.CAFFEINE -> pick("Kofein", "Кофеин", "Caffeine")
+        HotFlushTrigger.ALCOHOL -> pick("Spirtli ichimlik", "Алкоголь", "Alcohol")
+        HotFlushTrigger.STRESS -> pick("Stress", "Стресс", "Stress")
+        HotFlushTrigger.NIGHT -> pick("Tunda", "Ночью", "At night")
+    }
+    val epdsTitle get() = pick("Kayfiyat so'rovnomasi (EPDS)", "Опросник настроения (EPDS)", "Mood questionnaire (EPDS)")
+    val score get() = pick("Ball", "Балл", "Score")
+    val epdsLow get() = pick("Belgilar kam (<10)", "Признаков мало (<10)", "Few signs (<10)")
+    val epdsPossible get() = pick("Depressiya ehtimoli bor (10–12)", "Возможна депрессия (10–12)", "Possible depression (10–12)")
+    val epdsLikely get() = pick("Depressiya ehtimoli yuqori (≥13)", "Вероятна депрессия (≥13)", "Probable depression (≥13)")
+    val epdsSelfHarm get() = pick(
+        "Bemor o'ziga zarar yetkazish fikrlari haqida xabar bergan (10-savol). Shoshilinch baholash talab etiladi.",
+        "Пациентка сообщила о мыслях причинить себе вред (вопрос 10). Требуется срочная оценка.",
+        "The patient reported thoughts of self-harm (item 10). Urgent assessment is needed.",
+    )
+    val epdsSelfHarmShort get() = pick("10-savol: zarar fikrlari", "Вопрос 10: мысли о вреде", "Item 10: self-harm thoughts")
+    val epdsSource get() = pick(
+        "Edinburg tug'ruqdan keyingi depressiya shkalasi (Cox, Holden, Sagovsky, 1987). Skrining vositasi, tashxis emas.",
+        "Эдинбургская шкала послеродовой депрессии (Cox, Holden, Sagovsky, 1987). Инструмент скрининга, не диагноз.",
+        "Edinburgh Postnatal Depression Scale (Cox, Holden, Sagovsky, 1987). A screening tool, not a diagnosis.",
+    )
 
     fun stage(stage: LifeStage) = when (stage) {
         LifeStage.CYCLE -> pick("Sikl kuzatuvi", "Наблюдение цикла", "Cycle tracking")
