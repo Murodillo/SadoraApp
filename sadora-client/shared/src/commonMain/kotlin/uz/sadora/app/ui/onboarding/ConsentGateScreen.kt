@@ -10,6 +10,7 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -34,10 +35,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
@@ -58,6 +56,9 @@ import uz.sadora.app.ui.components.SadoraButton
 import uz.sadora.app.ui.components.SadoraCheckbox
 import uz.sadora.app.ui.components.noRippleClickable
 import uz.sadora.app.i18n.strings
+import uz.sadora.app.resources.Res
+import uz.sadora.app.resources.art_shield
+import org.jetbrains.compose.resources.painterResource
 
 // ---------------------------------------------------------------- illustration
 
@@ -103,7 +104,6 @@ private const val CogCycleMillis = 26_000
 @Composable
 private fun ShieldIllustration(entry: Float, modifier: Modifier = Modifier) {
     val c = Sadora.colors
-    val t = strings.onboarding
     val cogTones = remember(c) {
         listOf(
             c.primary.copy(alpha = 0.35f),
@@ -123,40 +123,44 @@ private fun ShieldIllustration(entry: Float, modifier: Modifier = Modifier) {
         label = "cog-phase",
     )
 
-    Canvas(modifier) {
-        val w = size.width
+    Box(modifier, contentAlignment = Alignment.Center) {
+        Canvas(Modifier.fillMaxSize()) {
+            val w = size.width
 
-        cogs.forEachIndexed { index, cog ->
-            // Cogs arrive before the shield and stagger among themselves, so the
-            // machinery is already turning by the time the shield lands on it.
-            val start = index * 0.05f
-            val local = ((entry - start) / (0.75f - start).coerceAtLeast(0.05f)).coerceIn(0f, 1f)
-            if (local <= 0f) return@forEachIndexed
+            cogs.forEachIndexed { index, cog ->
+                // Cogs arrive before the shield and stagger among themselves, so the
+                // machinery is already turning by the time the shield lands on it.
+                val start = index * 0.05f
+                val local = ((entry - start) / (0.75f - start).coerceAtLeast(0.05f)).coerceIn(0f, 1f)
+                if (local <= 0f) return@forEachIndexed
 
-            drawCog(
-                center = Offset(w * cog.x, size.height * cog.y),
-                radius = w * cog.radius * (0.75f + 0.25f * local),
-                teeth = cog.teeth,
-                rotation = phase * cog.speed,
-                color = cogTones[cog.tone].copy(alpha = cogTones[cog.tone].alpha * local),
-                holeColor = c.bg,
-            )
+                drawCog(
+                    center = Offset(w * cog.x, size.height * cog.y),
+                    radius = w * cog.radius * (0.75f + 0.25f * local),
+                    teeth = cog.teeth,
+                    rotation = phase * cog.speed,
+                    color = cogTones[cog.tone].copy(alpha = cogTones[cog.tone].alpha * local),
+                    holeColor = c.bg,
+                )
+            }
         }
 
         // The shield comes in last and slightly overshoots, which is what makes the
         // whole illustration feel like it lands rather than fades.
         val shieldIn = ((entry - 0.25f) / 0.75f).coerceIn(0f, 1f)
-        if (shieldIn <= 0f) return@Canvas
         val overshoot = 1f + 0.06f * (1f - shieldIn) * shieldIn * 4f
-
-        drawShield(
-            center = Offset(w * 0.5f, size.height * 0.5f),
-            width = w * 0.44f * (0.86f + 0.14f * shieldIn) * overshoot,
-            fill = c.primary,
-            highlight = c.onPrimary.copy(alpha = 0.16f),
-            outline = c.text.copy(alpha = if (c.isDark) 0.35f else 0.9f),
-            emblem = c.onPrimary,
-            alpha = shieldIn,
+        Image(
+            painterResource(Res.drawable.art_shield),
+            contentDescription = null,
+            modifier = Modifier
+                .fillMaxWidth(0.52f)
+                .aspectRatio(1f)
+                .graphicsLayer {
+                    val scale = (0.86f + 0.14f * shieldIn) * overshoot
+                    scaleX = scale
+                    scaleY = scale
+                    alpha = shieldIn
+                },
         )
     }
 }
@@ -189,80 +193,6 @@ private fun DrawScope.drawCog(
     }
     drawCircle(color, radius = radius, center = center)
     drawCircle(holeColor, radius = radius * 0.36f, center = center)
-}
-
-/** The shield, with the welcome screen's bloom standing in it. */
-private fun DrawScope.drawShield(
-    center: Offset,
-    width: Float,
-    fill: Color,
-    highlight: Color,
-    outline: Color,
-    emblem: Color,
-    alpha: Float,
-) {
-    val hw = width / 2f
-    val h = width * 1.24f
-    val top = center.y - h / 2f
-    val bottom = center.y + h / 2f
-    val corner = width * 0.18f
-
-    val shield = Path().apply {
-        moveTo(center.x - hw, top + corner)
-        quadraticTo(center.x - hw, top, center.x - hw + corner, top)
-        lineTo(center.x + hw - corner, top)
-        quadraticTo(center.x + hw, top, center.x + hw, top + corner)
-        lineTo(center.x + hw, top + h * 0.44f)
-        cubicTo(
-            center.x + hw, top + h * 0.80f,
-            center.x + hw * 0.52f, bottom - h * 0.06f,
-            center.x, bottom,
-        )
-        cubicTo(
-            center.x - hw * 0.52f, bottom - h * 0.06f,
-            center.x - hw, top + h * 0.80f,
-            center.x - hw, top + h * 0.44f,
-        )
-        close()
-    }
-
-    drawPath(shield, fill.copy(alpha = fill.alpha * alpha))
-    // A soft crescent along the left edge keeps the flat fill from looking like a sticker.
-    drawPath(
-        Path().apply {
-            moveTo(center.x - hw * 0.72f, top + h * 0.12f)
-            quadraticTo(
-                center.x - hw * 0.95f, center.y,
-                center.x - hw * 0.18f, bottom - h * 0.10f,
-            )
-            quadraticTo(
-                center.x - hw * 0.62f, center.y,
-                center.x - hw * 0.42f, top + h * 0.12f,
-            )
-            close()
-        },
-        highlight.copy(alpha = highlight.alpha * alpha),
-    )
-    drawPath(
-        shield,
-        outline.copy(alpha = outline.alpha * alpha),
-        style = Stroke(width = width * 0.035f),
-    )
-
-    // The emblem: the same bloom that drifts across the welcome screen, so the two
-    // screens read as one piece of art rather than two unrelated illustrations.
-    drawBloom(
-        center = Offset(center.x, center.y - h * 0.04f),
-        radius = width * 0.30f,
-        petals = 6,
-        rotation = 0f,
-        color = emblem,
-        coreColor = fill,
-        stem = 0f,
-        stemColor = emblem,
-        alpha = alpha,
-        scale = 1f,
-    )
 }
 
 // ---------------------------------------------------------------- screen

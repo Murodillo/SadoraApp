@@ -1106,6 +1106,7 @@ private fun PushedScreen(
             controller = controllers.account,
             health = health,
             photos = controllers.photos,
+            partner = controllers.partner,
             onEditPhoto = { overlays.showPhotoSheet = true },
             onOpen = {
                 when (it) {

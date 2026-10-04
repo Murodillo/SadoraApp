@@ -17,6 +17,8 @@ import io.ktor.server.routing.route
 import uz.sadora.contract.Ack
 import uz.sadora.contract.AcceptPartnerInviteRequest
 import uz.sadora.contract.CreatePartnerInviteRequest
+import uz.sadora.contract.CreatePartnerWebLinkRequest
+import uz.sadora.contract.SendPartnerMessageRequest
 import uz.sadora.contract.Language
 import uz.sadora.contract.PartnerPermissions
 import uz.sadora.contract.PausePartnerRequest
@@ -61,6 +63,30 @@ fun Route.partnerRoutes(partners: PartnerService) {
                 call.respond(partners.end(call.requireUserId(), call.requestContext().ip))
             }
 
+            route("/links/{id}/messages") {
+                get {
+                    call.response.header("Cache-Control", "no-store")
+                    call.respond(partners.messages(call.requireUserId(), call.parameters["id"].orEmpty()))
+                }
+                post {
+                    val request = call.receive<SendPartnerMessageRequest>()
+                    call.respond(HttpStatusCode.Created, partners.send(call.requireUserId(), call.parameters["id"].orEmpty(), request))
+                }
+                post("/read") {
+                    call.respond(partners.markRead(call.requireUserId(), call.parameters["id"].orEmpty()))
+                }
+            }
+
+            route("/web") {
+                post {
+                    val request = runCatching { call.receive<CreatePartnerWebLinkRequest>() }.getOrDefault(CreatePartnerWebLinkRequest())
+                    call.respond(HttpStatusCode.Created, partners.createWebLink(call.requireUserId(), request, call.requestContext().ip))
+                }
+                delete {
+                    call.respond(partners.revokeWebLink(call.requireUserId(), call.requestContext().ip))
+                }
+            }
+
             post("/alert/labour") {
                 partners.labourAlert(call.requireUserId(), call.requestContext().ip)
                 call.respond(Ack())
@@ -83,6 +109,27 @@ fun Route.partnerRoutes(partners: PartnerService) {
                     partners.leave(call.requireUserId(), call.parameters["id"].orEmpty(), call.requestContext().ip)
                     call.respond(Ack())
                 }
+            }
+        }
+    }
+}
+
+/**
+ * The browser view for someone without the app: her web link. Rate limited like the
+ * doctor's page; an unknown token gets the same answer as an expired one.
+ */
+fun Route.publicPartnerWebRoutes(partners: PartnerService) {
+    rateLimit(RateLimits.SHARE) {
+        get("/yv/{token}") {
+            val language = call.request.queryParameters["lang"]
+                ?.let { raw -> Language.entries.firstOrNull { it.name.equals(raw, ignoreCase = true) } }
+            val context = call.requestContext()
+            val page = partners.openWebLink(call.parameters["token"].orEmpty(), language, context.ip, context.userAgent)
+            call.response.header("Cache-Control", "no-store")
+            if (page == null) {
+                call.respondText(PartnerWebPage.gone(language ?: Language.UZ), ContentType.Text.Html, HttpStatusCode.NotFound)
+            } else {
+                call.respondText(PartnerWebPage.render(page.view, page.language), ContentType.Text.Html)
             }
         }
     }

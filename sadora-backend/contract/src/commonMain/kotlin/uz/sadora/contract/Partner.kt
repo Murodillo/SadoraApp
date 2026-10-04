@@ -102,6 +102,8 @@ data class PartnerLink(
     val pausedAt: Instant? = null,
     /** When they last opened her view; she is told, so nothing about it is hidden. */
     val lastViewedAt: Instant? = null,
+    /** What they sent that she has not opened yet. */
+    val unread: Int = 0,
 )
 
 /** Someone this account follows. */
@@ -111,6 +113,8 @@ data class FollowedPerson(
     val name: String,
     val relation: PartnerRelation,
     val status: PartnerLinkStatus,
+    /** What she sent that this account has not opened yet. */
+    val unread: Int = 0,
 )
 
 /** Her side and the follower side in one read, for the Yaqinim screen. */
@@ -122,6 +126,8 @@ data class PartnerState(
     val link: PartnerLink? = null,
     /** The people this account sees. */
     val following: List<FollowedPerson> = emptyList(),
+    /** Her live browser link, if one is out. */
+    val webLink: PartnerWebLink? = null,
 )
 
 @Serializable
@@ -223,4 +229,87 @@ data class PartnerCare(
     val feedsToday: Int? = null,
     val lastFeedAt: Instant? = null,
     val hotFlushesToday: Int? = null,
+)
+
+// ---------------------------------------------------------------- messages
+
+/**
+ * The small things the two of them send each other. Most are one tap — a heart from him,
+ * "a hot tea, please" from her — and [CUSTOM] carries a short line of their own. Not a
+ * chat: no thread history beyond the last few, no media, nothing anyone else can read.
+ */
+@Serializable
+enum class PartnerMessageKind {
+    // From the person who follows her.
+    @SerialName("heart") HEART,
+    @SerialName("hug") HUG,
+    @SerialName("thinking") THINKING,
+    /** The answer to a request: "on my way". */
+    @SerialName("on_it") ON_IT,
+    /** The answer to a request: "done". */
+    @SerialName("done") DONE,
+
+    // From her.
+    @SerialName("tea") TEA,
+    @SerialName("sweets") SWEETS,
+    @SerialName("rest") REST,
+    @SerialName("call") CALL,
+    @SerialName("quiet") QUIET,
+
+    @SerialName("custom") CUSTOM;
+
+    /** Something she asked for, which the follower's screen offers to answer. */
+    val isRequest: Boolean
+        get() = this == TEA || this == SWEETS || this == REST || this == CALL || this == QUIET
+}
+
+@Serializable
+data class PartnerMessage(
+    val id: String,
+    val linkId: String,
+    /** True when the account reading the list sent it. */
+    val fromMe: Boolean,
+    val kind: PartnerMessageKind,
+    /** Only for [PartnerMessageKind.CUSTOM]. */
+    val text: String? = null,
+    val createdAt: Instant,
+    val readAt: Instant? = null,
+)
+
+@Serializable
+data class SendPartnerMessageRequest(
+    val kind: PartnerMessageKind,
+    val text: String? = null,
+)
+
+/** Newest first. [unread] counts what the other one sent that this account has not opened. */
+@Serializable
+data class PartnerMessages(
+    val items: List<PartnerMessage> = emptyList(),
+    val unread: Int = 0,
+)
+
+// ---------------------------------------------------------------- the web link
+
+/**
+ * For someone who will not install an app — a grandmother, a husband abroad on a work
+ * phone: a link that opens the same view in a browser. It is a bearer link, so it lives
+ * days, not forever, she can take it back at once, and she sees how often it was opened.
+ * [url] exists only on the response that made it.
+ */
+@Serializable
+data class PartnerWebLink(
+    val id: String,
+    val url: String? = null,
+    val permissions: PartnerPermissions,
+    val createdAt: Instant,
+    val expiresAt: Instant,
+    val viewCount: Int = 0,
+    val lastViewedAt: Instant? = null,
+)
+
+@Serializable
+data class CreatePartnerWebLinkRequest(
+    val ttlHours: Int = 72,
+    val permissions: PartnerPermissions = PartnerPermissions(),
 )

@@ -1,6 +1,7 @@
 package uz.sadora.app.i18n
 
 import uz.sadora.app.model.CyclePhase
+import uz.sadora.contract.PartnerMessageKind
 import uz.sadora.contract.PartnerRelation
 
 /**
@@ -135,4 +136,35 @@ interface PartnerStrings {
     val labourConfirmBody: String
     val labourSend: String
     val labourSent: String
+
+    // ---------------------------------------------------------------- messages
+    val messagesTitle: String
+    fun sendTo(name: String): String
+    fun askFrom(name: String): String
+    /** The chip and the line in the list: an emoji and a few words. */
+    fun kind(kind: PartnerMessageKind): String
+    val youPrefix: String
+    fun asked(name: String): String
+    val noMessages: String
+    val customTitle: String
+    val customHint: String
+    val send: String
+    val sent: String
+    fun unreadCount(count: Int): String
+
+    // ---------------------------------------------------------------- the web link
+    val webTitle: String
+    val webBody: String
+    val webShows: String
+    val webCreate: String
+    fun webExpires(date: String): String
+    fun webViews(count: Int): String
+    val webNever: String
+    val webShare: String
+    val webRevoke: String
+    val webNew: String
+    fun webShareMessage(url: String): String
+    val webRevoked: String
+    fun webDays(days: Int): String
+    val webOutBody: String
 }

@@ -24,7 +24,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.ui.platform.LocalFocusManager
@@ -66,6 +65,9 @@ import uz.sadora.app.ui.components.requiredTextError
 import uz.sadora.contract.Limits
 import uz.sadora.app.ui.components.PhoneMask
 import uz.sadora.contract.UzbekPhone
+import org.jetbrains.compose.resources.DrawableResource
+import uz.sadora.app.resources.*
+import uz.sadora.app.ui.components.ArtIcon
 
 // ---------------------------------------------------------------- language
 
@@ -193,12 +195,7 @@ private fun PrivacyNote(text: String) {
         verticalAlignment = Alignment.Top,
         horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
     ) {
-        androidx.compose.material3.Icon(
-            SadoraIcons.Shield,
-            contentDescription = null,
-            Modifier.size(uz.sadora.app.design.IconSize.md),
-            tint = c.textAccent,
-        )
+        ArtIcon(Res.drawable.ic3d_shield, uz.sadora.app.design.IconSize.lg)
         Text(text, style = Sadora.type.body, color = c.muted)
     }
 }
@@ -274,16 +271,16 @@ private fun AppState.setBirthYear(year: Int) {
 
 // ---------------------------------------------------------------- focus
 
-/** The icon that stands for each goal in the grid. */
-private fun Goal.icon(): ImageVector = when (this) {
-    Goal.UnderstandCycle -> SadoraIcons.Journey
-    Goal.SleepBetter -> SadoraIcons.Moon
-    Goal.MoreEnergy -> SadoraIcons.Sparkle
-    Goal.LessStress -> SadoraIcons.Heart
-    Goal.EatBalanced -> SadoraIcons.Nutrition
-    Goal.DrinkWater -> SadoraIcons.Drop
-    Goal.BeActive -> SadoraIcons.Target
-    Goal.RememberMeds -> SadoraIcons.Pill
+/** The colour icon that stands for each goal in the grid. */
+private fun Goal.art(): DrawableResource = when (this) {
+    Goal.UnderstandCycle -> Res.drawable.ic3d_cycle_ring
+    Goal.SleepBetter -> Res.drawable.ic3d_sleep
+    Goal.MoreEnergy -> Res.drawable.ic3d_energy
+    Goal.LessStress -> Res.drawable.ic3d_calm
+    Goal.EatBalanced -> Res.drawable.ic3d_apple
+    Goal.DrinkWater -> Res.drawable.ic3d_water
+    Goal.BeActive -> Res.drawable.ic3d_active
+    Goal.RememberMeds -> Res.drawable.ic3d_med_bottle
 }
 
 /**
@@ -327,7 +324,7 @@ fun FocusQuestion(
                     pair.forEach { goal ->
                         AnswerTile(
                             label = strings.common.goal(goal),
-                            icon = goal.icon(),
+                            art = goal.art(),
                             selected = goal in state.goals,
                             onClick = { state.toggleGoal(goal) },
                             modifier = Modifier.weight(1f),
@@ -343,14 +340,14 @@ fun FocusQuestion(
 
 // ---------------------------------------------------------------- life stage
 
-/** The icon and tint the deck gives each stage in the list. */
-private fun LifeStage.icon(): ImageVector = when (this) {
-    LifeStage.Cycle -> SadoraIcons.Journey
-    LifeStage.TryingToConceive -> SadoraIcons.Sparkle
-    LifeStage.Pregnancy -> SadoraIcons.Heart
-    LifeStage.Postpartum -> SadoraIcons.Bloom
-    LifeStage.Perimenopause -> SadoraIcons.Moon
-    LifeStage.Menopause -> SadoraIcons.Target
+/** The colour icon and disc tint the deck gives each stage in the list. */
+internal fun LifeStage.art(): DrawableResource = when (this) {
+    LifeStage.Cycle -> Res.drawable.ic3d_period
+    LifeStage.TryingToConceive -> Res.drawable.ic3d_ttc
+    LifeStage.Pregnancy -> Res.drawable.ic3d_pregnancy
+    LifeStage.Postpartum -> Res.drawable.ic3d_postpartum
+    LifeStage.Perimenopause -> Res.drawable.ic3d_perimenopause
+    LifeStage.Menopause -> Res.drawable.ic3d_menopause
 }
 
 private fun LifeStage.tint(): Color = when (this) {
@@ -390,7 +387,7 @@ fun LifeStageQuestion(
             Reveal(entry.value, from = optionStart(index, base = 0.26f, step = 0.07f)) {
                 AnswerRow(
                     label = strings.stages.title(stage),
-                    icon = stage.icon(),
+                    art = stage.art(),
                     tint = stage.tint(),
                     note = t.stagePromise(stage),
                     selected = picked && state.lifeStage == stage,
@@ -712,7 +709,8 @@ fun PermissionsQuestion(
         Reveal(entry.value, from = 0.28f) {
             AnswerRow(
                 label = t.permissionReminders,
-                icon = SadoraIcons.Bell,
+                art = Res.drawable.ic3d_bell,
+                tint = Color(0xFFFFB020),
                 note = t.permissionRemindersNote,
                 selected = state.notificationsAllowed,
                 noteAlwaysVisible = true,
@@ -722,7 +720,7 @@ fun PermissionsQuestion(
         Reveal(entry.value, from = 0.36f) {
             AnswerRow(
                 label = t.permissionHealth,
-                icon = SadoraIcons.Heart,
+                art = Res.drawable.ic3d_health,
                 tint = Color(0xFFFF6FB8),
                 note = t.permissionHealthNote,
                 selected = state.healthDataAllowed,
@@ -733,8 +731,8 @@ fun PermissionsQuestion(
         Reveal(entry.value, from = 0.44f) {
             AnswerRow(
                 label = t.permissionCamera,
-                icon = SadoraIcons.Camera,
-                tint = Color(0xFF4FC3FF),
+                art = Res.drawable.ic3d_camera,
+                tint = Color(0xFF9B87F5),
                 note = t.permissionCameraNote,
                 selected = state.cameraAllowed,
                 noteAlwaysVisible = true,
@@ -816,7 +814,7 @@ fun PhoneQuestion(
         Reveal(entry.value, from = 0.42f) {
             DisclaimerNote(
                 t.phoneNote,
-                icon = "🔒",
+                art = Res.drawable.ic3d_lock,
             )
         }
     }
@@ -882,7 +880,7 @@ fun OtpQuestion(
         Reveal(entry.value, from = 0.36f) {
             DisclaimerNote(
                 t.codeSecrecy,
-                icon = "🔒",
+                art = Res.drawable.ic3d_lock,
             )
         }
         Reveal(entry.value, from = 0.44f) {
@@ -1107,12 +1105,7 @@ fun SensitiveNoticeScreen(
                 Modifier.size(72.dp).clip(Radius.chip).background(c.primary.copy(alpha = 0.14f)),
                 contentAlignment = Alignment.Center,
             ) {
-                androidx.compose.material3.Icon(
-                    SadoraIcons.Lock,
-                    contentDescription = null,
-                    Modifier.size(32.dp),
-                    tint = c.textAccent,
-                )
+                ArtIcon(Res.drawable.ic3d_lock, 46.dp)
             }
         }
         Spacer(Modifier.height(Spacing.md))
@@ -1315,12 +1308,12 @@ fun BirthDateQuestion(
  * to stay the same length — which is what the test in `StringsTest` checks.
  */
 private val onboardingSymptomIcons = listOf(
-    SadoraIcons.Heart,
-    SadoraIcons.Moon,
-    SadoraIcons.Drop,
-    SadoraIcons.Bloom,
-    SadoraIcons.Journey,
-    SadoraIcons.Sparkle,
+    Res.drawable.ic3d_cramps,
+    Res.drawable.ic3d_fatigue,
+    Res.drawable.ic3d_bloating,
+    Res.drawable.ic3d_breast,
+    Res.drawable.ic3d_back_pain,
+    Res.drawable.ic3d_headache,
 )
 
 /**
@@ -1366,7 +1359,7 @@ fun SymptomsQuestion(
                     pair.forEach { (symptom, icon) ->
                         AnswerTile(
                             label = symptom.label,
-                            icon = icon,
+                            art = icon,
                             selected = symptom.label in state.symptoms,
                             onClick = { state.toggleStarterSymptom(symptom.key, symptom.label) },
                             modifier = Modifier.weight(1f),
@@ -1419,7 +1412,7 @@ fun DeviceQuestion(
         Reveal(entry.value, from = 0.30f) {
             AnswerRow(
                 label = t.deviceYes,
-                icon = SadoraIcons.Watch,
+                art = Res.drawable.ic3d_watch,
                 note = t.deviceYesNote,
                 selected = answer == true,
                 noteAlwaysVisible = true,
@@ -1433,8 +1426,8 @@ fun DeviceQuestion(
         Reveal(entry.value, from = 0.38f) {
             AnswerRow(
                 label = t.deviceNo,
-                icon = SadoraIcons.Pencil,
-                tint = Color(0xFF4FC3FF),
+                art = Res.drawable.ic3d_notebook,
+                tint = Color(0xFF2BA57A),
                 note = t.deviceNoNote,
                 selected = answer == false,
                 noteAlwaysVisible = true,

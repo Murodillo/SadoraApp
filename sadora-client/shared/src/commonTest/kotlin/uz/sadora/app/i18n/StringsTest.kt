@@ -411,6 +411,15 @@ class StringsTest {
                     labourSend, labourSent,
                 ),
             )
+            addAll(
+                listOf(
+                    messagesTitle, sendTo("Malika"), askFrom("Aziz"), youPrefix, asked("Malika"), noMessages,
+                    customTitle, customHint, send, sent, unreadCount(2), webTitle, webBody, webShows, webCreate,
+                    webExpires("x"), webViews(3), webNever, webShare, webRevoke, webNew, webShareMessage("u"),
+                    webRevoked, webDays(3), webOutBody,
+                ),
+            )
+            uz.sadora.contract.PartnerMessageKind.entries.forEach { add(kind(it)) }
             uz.sadora.contract.PartnerRelation.entries.forEach { add(relation(it)) }
             CyclePhase.entries.forEach { phase ->
                 add(phaseTitle(phase))
@@ -596,6 +605,11 @@ class StringsTest {
             assertNotEquals(StringsUz.partner.phaseFeel(CyclePhase.Luteal), t.partner.phaseFeel(CyclePhase.Luteal))
             assertNotEquals(StringsUz.partner.neverList, t.partner.neverList)
             assertNotEquals(StringsUz.partner.labourConfirmBody, t.partner.labourConfirmBody)
+            assertNotEquals(StringsUz.partner.webBody, t.partner.webBody)
+            assertNotEquals(
+                StringsUz.partner.kind(uz.sadora.contract.PartnerMessageKind.TEA),
+                t.partner.kind(uz.sadora.contract.PartnerMessageKind.TEA),
+            )
             assertNotEquals(StringsUz.stages.subtitle(LifeStage.Cycle), t.stages.subtitle(LifeStage.Cycle))
             assertNotEquals(StringsUz.common.hoursMinutes(6, 40), t.common.hoursMinutes(6, 40))
             assertNotEquals(StringsUz.errors.phoneInvalid, t.errors.phoneInvalid)

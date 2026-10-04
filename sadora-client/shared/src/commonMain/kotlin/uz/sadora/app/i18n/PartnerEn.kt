@@ -1,6 +1,7 @@
 package uz.sadora.app.i18n
 
 import uz.sadora.app.model.CyclePhase
+import uz.sadora.contract.PartnerMessageKind
 import uz.sadora.contract.PartnerRelation
 
 object PartnerEn : PartnerStrings {
@@ -203,4 +204,45 @@ object PartnerEn : PartnerStrings {
     override val labourConfirmBody = "They get a “Labour has started!” notification right away."
     override val labourSend = "Send"
     override val labourSent = "Message sent"
+
+    override val messagesTitle = "Messages"
+    override fun sendTo(name: String) = "For $name"
+    override fun askFrom(name: String) = "Ask $name"
+    override fun kind(kind: PartnerMessageKind) = when (kind) {
+        PartnerMessageKind.HEART -> "❤️ A heart"
+        PartnerMessageKind.HUG -> "🤗 A hug"
+        PartnerMessageKind.THINKING -> "💭 Thinking of you"
+        PartnerMessageKind.ON_IT -> "🏃 On my way!"
+        PartnerMessageKind.DONE -> "✓ Done"
+        PartnerMessageKind.TEA -> "☕ A hot tea"
+        PartnerMessageKind.SWEETS -> "🍫 Something sweet"
+        PartnerMessageKind.REST -> "😴 I need rest"
+        PartnerMessageKind.CALL -> "📞 Call me"
+        PartnerMessageKind.QUIET -> "🤫 A little quiet"
+        PartnerMessageKind.CUSTOM -> "✍️ My own words"
+    }
+    override val youPrefix = "You"
+    override fun asked(name: String) = "$name asked"
+    override val noMessages = "No messages yet — send the first one"
+    override val customTitle = "Write a message"
+    override val customHint = "For example, a walk together tonight?"
+    override val send = "Send"
+    override val sent = "Sent"
+    override fun unreadCount(count: Int) = "$count new messages"
+
+    override val webTitle = "A link for someone without the app"
+    override val webBody =
+        "Someone close who won't install the app sees how you are in a browser. The link works for a few days and you can take it back at any time."
+    override val webShows = "The link shows:"
+    override val webCreate = "Create a link"
+    override fun webExpires(date: String) = "Works until $date"
+    override fun webViews(count: Int) = "Opened $count times"
+    override val webNever = "Not opened yet"
+    override val webShare = "Send the link"
+    override val webRevoke = "Take it back"
+    override val webNew = "New link"
+    override fun webShareMessage(url: String) = "You can see how I am at this link (Sadora):\n$url"
+    override val webRevoked = "Link taken back"
+    override fun webDays(days: Int) = "$days days"
+    override val webOutBody = "To show the link again, create a new one — the old one stops working."
 }

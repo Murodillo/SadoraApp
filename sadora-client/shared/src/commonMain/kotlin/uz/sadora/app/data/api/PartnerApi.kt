@@ -7,6 +7,12 @@ import uz.sadora.app.data.HttpMethodKind
 import uz.sadora.contract.Ack
 import uz.sadora.contract.AcceptPartnerInviteRequest
 import uz.sadora.contract.CreatePartnerInviteRequest
+import uz.sadora.contract.CreatePartnerWebLinkRequest
+import uz.sadora.contract.PartnerMessage
+import uz.sadora.contract.PartnerMessageKind
+import uz.sadora.contract.PartnerMessages
+import uz.sadora.contract.PartnerWebLink
+import uz.sadora.contract.SendPartnerMessageRequest
 import uz.sadora.contract.FollowedPerson
 import uz.sadora.contract.PartnerInvite
 import uz.sadora.contract.PartnerPermissions
@@ -35,6 +41,23 @@ class PartnerApi(private val caller: ApiCaller) {
 
     suspend fun end(): ApiResult<PartnerState> =
         caller.authenticated("v1/partner", HttpMethodKind.DELETE)
+
+    suspend fun messages(linkId: String): ApiResult<PartnerMessages> =
+        caller.authenticated("v1/partner/links/$linkId/messages", HttpMethodKind.GET)
+
+    suspend fun send(linkId: String, kind: PartnerMessageKind, text: String?): ApiResult<PartnerMessage> =
+        caller.authenticated("v1/partner/links/$linkId/messages", HttpMethodKind.POST) {
+            setBody(SendPartnerMessageRequest(kind, text))
+        }
+
+    suspend fun markRead(linkId: String): ApiResult<PartnerMessages> =
+        caller.authenticated("v1/partner/links/$linkId/messages/read", HttpMethodKind.POST)
+
+    suspend fun createWebLink(ttlHours: Int, permissions: PartnerPermissions): ApiResult<PartnerWebLink> =
+        caller.authenticated("v1/partner/web", HttpMethodKind.POST) { setBody(CreatePartnerWebLinkRequest(ttlHours, permissions)) }
+
+    suspend fun revokeWebLink(): ApiResult<PartnerState> =
+        caller.authenticated("v1/partner/web", HttpMethodKind.DELETE)
 
     suspend fun labourAlert(): ApiResult<Ack> =
         caller.authenticated("v1/partner/alert/labour", HttpMethodKind.POST)

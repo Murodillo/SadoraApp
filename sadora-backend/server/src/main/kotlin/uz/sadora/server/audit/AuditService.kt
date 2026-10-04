@@ -92,6 +92,9 @@ object AuditActions {
     const val PARTNER_ENDED = "partner.ended"
     const val PARTNER_LEFT = "partner.left"
     const val PARTNER_LABOUR_ALERT = "partner.labour_alert"
+    const val PARTNER_WEB_CREATED = "partner.web_created"
+    const val PARTNER_WEB_VIEWED = "partner.web_viewed"
+    const val PARTNER_WEB_REVOKED = "partner.web_revoked"
 
     // A cloud wearable is a standing grant to pull data from a third party.
     const val WEARABLE_CONNECTED = "wearable.connected"

@@ -66,6 +66,8 @@ fun ProfileScreen(
     /** Opens the photo sheet, which the shell hosts so that it covers the tab bar. */
     onEditPhoto: () -> Unit,
     onOpen: (Route) -> Unit,
+    /** Yaqinim, for the unread count on its row. */
+    partner: uz.sadora.app.data.PartnerController? = null,
     onSignedOut: () -> Unit,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
@@ -152,7 +154,13 @@ fun ProfileScreen(
                             IconTile(SadoraIcons.Heart, tint = c.secondary, size = 44.dp)
                             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                                 Text(strings.partner.title, style = Sadora.type.h3, color = c.text)
-                                Text(strings.partner.profileRowNote, style = Sadora.type.body, color = c.muted)
+                                // Unread first: a heart waiting is the reason to open this row.
+                                val unread = partner?.state?.link?.unread ?: 0
+                                Text(
+                                    if (unread > 0) strings.partner.unreadCount(unread) else strings.partner.profileRowNote,
+                                    style = Sadora.type.body,
+                                    color = if (unread > 0) c.textAccent else c.muted,
+                                )
                             }
                             Icon(SadoraIcons.ChevronRight, contentDescription = null, Modifier.size(IconSize.md), tint = c.muted2)
                         }

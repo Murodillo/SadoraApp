@@ -1,6 +1,18 @@
 package uz.sadora.server.partner
 
 import uz.sadora.contract.Language
+import uz.sadora.contract.PartnerMessageKind
+import uz.sadora.contract.PartnerMessageKind.CALL
+import uz.sadora.contract.PartnerMessageKind.CUSTOM
+import uz.sadora.contract.PartnerMessageKind.DONE
+import uz.sadora.contract.PartnerMessageKind.HEART
+import uz.sadora.contract.PartnerMessageKind.HUG
+import uz.sadora.contract.PartnerMessageKind.ON_IT
+import uz.sadora.contract.PartnerMessageKind.QUIET
+import uz.sadora.contract.PartnerMessageKind.REST
+import uz.sadora.contract.PartnerMessageKind.SWEETS
+import uz.sadora.contract.PartnerMessageKind.TEA
+import uz.sadora.contract.PartnerMessageKind.THINKING
 
 /**
  * The pushes Yaqinim sends, in the language of the person they reach.
@@ -54,4 +66,60 @@ internal object PartnerPhrases {
         Language.RU -> Text("$name: начались роды!", "Свяжитесь с ней прямо сейчас")
         Language.EN -> Text("$name: labour has started!", "Get in touch with her right now")
     }
+
+    /**
+     * One of the small messages between them. The title is the whole message for a preset;
+     * a line of their own goes in the body, as the other phone would show a text.
+     */
+    fun message(name: String, kind: PartnerMessageKind, text: String?, language: Language): Text {
+        val title = when (language) {
+            Language.UZ -> when (kind) {
+                HEART -> "$name sizga ❤️ yubordi"
+                HUG -> "$name sizni quchoqladi 🤗"
+                THINKING -> "$name sizni o'ylayapti 💭"
+                ON_IT -> "$name: Hozir! 🏃"
+                DONE -> "$name: Bajarildi ✓"
+                TEA -> "$name: issiq choy iltimos ☕"
+                SWEETS -> "$name: shirinlik iltimos 🍫"
+                REST -> "$name: bugun dam olishim kerak 😴"
+                CALL -> "$name: qo'ng'iroq qiling 📞"
+                QUIET -> "$name: biroz tinchlik kerak 🤫"
+                CUSTOM -> "$name yozdi"
+            }
+            Language.RU -> when (kind) {
+                HEART -> "$name отправил(а) вам ❤️"
+                HUG -> "$name обнимает вас 🤗"
+                THINKING -> "$name думает о вас 💭"
+                ON_IT -> "$name: Уже иду! 🏃"
+                DONE -> "$name: Готово ✓"
+                TEA -> "$name: горячий чай, пожалуйста ☕"
+                SWEETS -> "$name: что-нибудь сладкое, пожалуйста 🍫"
+                REST -> "$name: мне сегодня нужен отдых 😴"
+                CALL -> "$name: позвони мне 📞"
+                QUIET -> "$name: мне нужно немного тишины 🤫"
+                CUSTOM -> "$name пишет"
+            }
+            Language.EN -> when (kind) {
+                HEART -> "$name sent you ❤️"
+                HUG -> "$name sends you a hug 🤗"
+                THINKING -> "$name is thinking of you 💭"
+                ON_IT -> "$name: On my way! 🏃"
+                DONE -> "$name: Done ✓"
+                TEA -> "$name: a hot tea, please ☕"
+                SWEETS -> "$name: something sweet, please 🍫"
+                REST -> "$name: I need to rest today 😴"
+                CALL -> "$name: please call me 📞"
+                QUIET -> "$name: I need a little quiet 🤫"
+                CUSTOM -> "$name wrote"
+            }
+        }
+        val body = text ?: when (language) {
+            Language.UZ -> "Javob berish uchun oching"
+            Language.RU -> "Откройте, чтобы ответить"
+            Language.EN -> "Open to reply"
+        }
+        return Text(title, body.take(PREVIEW))
+    }
+
+    private const val PREVIEW = 140
 }

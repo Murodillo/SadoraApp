@@ -87,6 +87,12 @@ kotlin {
     }
 }
 
+// Pinned rather than derived from the project name, so a renamed folder does not move
+// every `Res.drawable` import with it.
+compose.resources {
+    packageOfResClass = "uz.sadora.app.resources"
+}
+
 dependencies {
     androidRuntimeClasspath(libs.compose.uiTooling)
 }

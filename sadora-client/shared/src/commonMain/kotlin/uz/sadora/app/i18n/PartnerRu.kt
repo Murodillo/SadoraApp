@@ -1,6 +1,7 @@
 package uz.sadora.app.i18n
 
 import uz.sadora.app.model.CyclePhase
+import uz.sadora.contract.PartnerMessageKind
 import uz.sadora.contract.PartnerRelation
 
 object PartnerRu : PartnerStrings {
@@ -203,4 +204,45 @@ object PartnerRu : PartnerStrings {
     override val labourConfirmBody = "Он(а) сразу получит уведомление «Начались роды!»."
     override val labourSend = "Отправить"
     override val labourSent = "Сообщение отправлено"
+
+    override val messagesTitle = "Сообщения"
+    override fun sendTo(name: String) = "Для: $name"
+    override fun askFrom(name: String) = "Попросить: $name"
+    override fun kind(kind: PartnerMessageKind) = when (kind) {
+        PartnerMessageKind.HEART -> "❤️ Сердечко"
+        PartnerMessageKind.HUG -> "🤗 Обнимаю"
+        PartnerMessageKind.THINKING -> "💭 Думаю о тебе"
+        PartnerMessageKind.ON_IT -> "🏃 Уже иду!"
+        PartnerMessageKind.DONE -> "✓ Готово"
+        PartnerMessageKind.TEA -> "☕ Горячий чай"
+        PartnerMessageKind.SWEETS -> "🍫 Сладкое"
+        PartnerMessageKind.REST -> "😴 Мне нужен отдых"
+        PartnerMessageKind.CALL -> "📞 Позвони"
+        PartnerMessageKind.QUIET -> "🤫 Немного тишины"
+        PartnerMessageKind.CUSTOM -> "✍️ Своими словами"
+    }
+    override val youPrefix = "Вы"
+    override fun asked(name: String) = "$name просит"
+    override val noMessages = "Сообщений пока нет — отправьте первое"
+    override val customTitle = "Напишите сообщение"
+    override val customHint = "Например, погуляем вечером?"
+    override val send = "Отправить"
+    override val sent = "Отправлено"
+    override fun unreadCount(count: Int) = "Новых сообщений: $count"
+
+    override val webTitle = "Ссылка для тех, у кого нет приложения"
+    override val webBody =
+        "Близкий человек без приложения увидит ваше состояние в браузере. Ссылка работает несколько дней, её можно отозвать в любой момент."
+    override val webShows = "Ссылка показывает:"
+    override val webCreate = "Создать ссылку"
+    override fun webExpires(date: String) = "Работает до $date"
+    override fun webViews(count: Int) = "Открыта раз: $count"
+    override val webNever = "Ещё не открывали"
+    override val webShare = "Отправить ссылку"
+    override val webRevoke = "Отозвать"
+    override val webNew = "Новая ссылка"
+    override fun webShareMessage(url: String) = "Моё состояние можно посмотреть по этой ссылке (Sadora):\n$url"
+    override val webRevoked = "Ссылка отозвана"
+    override fun webDays(days: Int) = "$days дн."
+    override val webOutBody = "Чтобы показать ссылку снова, создайте новую — старая перестанет работать."
 }

@@ -50,6 +50,8 @@ object AnalyticsEvents {
     const val PARTNER_INVITED = "partner_invited"
     const val PARTNER_ACCEPTED = "partner_accepted"
     const val PARTNER_LINKED = "partner_linked"
+    const val PARTNER_MESSAGE = "partner_message"
+    const val PARTNER_WEB_LINK = "partner_web_link"
     const val DEVICE_CONNECT_STARTED = "device_connect_started"
     const val DEVICE_CONNECTED = "device_connected"
     const val DEVICE_DISCONNECTED = "device_disconnected"

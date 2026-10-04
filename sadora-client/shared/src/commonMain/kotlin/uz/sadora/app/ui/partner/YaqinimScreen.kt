@@ -103,6 +103,8 @@ fun YaqinimScreen(
 
     val current = partner.state
     val link = current?.link
+    // Her person's messages: on open, and whenever the count says something new arrived.
+    LaunchedEffect(link?.id, link?.unread) { link?.id?.let { partner.loadMessages(it) } }
     val invite = current?.invite
     val fresh = partner.freshInvite
 
@@ -122,6 +124,17 @@ fun YaqinimScreen(
                     }
                     link != null -> {
                         item { LinkedCard(link, onPause = { paused -> scope.launch { partner.pause(paused) } }) }
+                        if (link.status == PartnerLinkStatus.ACTIVE) item {
+                            PartnerMessagesCard(
+                                linkId = link.id,
+                                partner = partner,
+                                title = t.askFrom(firstName(link.partnerName)),
+                                otherName = link.partnerName,
+                                kinds = HerKinds,
+                                answersRequests = false,
+                                onSent = onToast,
+                            )
+                        }
                         item {
                             PermissionsCard(state.lifeStage, link.permissions) { next ->
                                 scope.launch { partner.savePermissions(next) }
@@ -148,6 +161,10 @@ fun YaqinimScreen(
 
                 if (link == null) {
                     item { NeverCard() }
+                }
+
+                item {
+                    PartnerWebLinkCard(partner, permissions = link?.permissions ?: PartnerPermissions(), stage = state.lifeStage, onToast = onToast)
                 }
 
                 item {

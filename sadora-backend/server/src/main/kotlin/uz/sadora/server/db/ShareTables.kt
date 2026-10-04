@@ -2,6 +2,7 @@ package uz.sadora.server.db
 
 import org.jetbrains.exposed.v1.core.Table
 import org.jetbrains.exposed.v1.datetime.timestampWithTimeZone
+import org.jetbrains.exposed.v1.json.jsonb
 
 /**
  * Profile shares, as V21 created them.
@@ -46,6 +47,34 @@ object PartnerLinks : Table("partner_links") {
     val endedBy = text("ended_by").nullable()
     val lastViewedAt = timestampWithTimeZone("last_viewed_at").nullable()
     val viewCount = integer("view_count")
+
+    override val primaryKey = PrimaryKey(id)
+}
+
+object PartnerMessagesTable : Table("partner_messages") {
+    val id = uuid("id")
+    val linkId = uuid("link_id").references(PartnerLinks.id)
+    val senderId = uuid("sender_id").references(Users.id)
+    val kind = text("kind")
+    val body = text("body").nullable()
+    val createdAt = timestampWithTimeZone("created_at")
+    val readAt = timestampWithTimeZone("read_at").nullable()
+
+    override val primaryKey = PrimaryKey(id)
+}
+
+private val permissionsJson = kotlinx.serialization.json.Json { encodeDefaults = true; ignoreUnknownKeys = true }
+
+object PartnerWebLinks : Table("partner_web_links") {
+    val id = uuid("id")
+    val ownerId = uuid("owner_id").references(Users.id)
+    val tokenHash = text("token_hash")
+    val permissions = jsonb<uz.sadora.contract.PartnerPermissions>("permissions", permissionsJson)
+    val createdAt = timestampWithTimeZone("created_at")
+    val expiresAt = timestampWithTimeZone("expires_at")
+    val revokedAt = timestampWithTimeZone("revoked_at").nullable()
+    val viewCount = integer("view_count")
+    val lastViewedAt = timestampWithTimeZone("last_viewed_at").nullable()
 
     override val primaryKey = PrimaryKey(id)
 }

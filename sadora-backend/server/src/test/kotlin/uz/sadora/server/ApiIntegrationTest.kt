@@ -180,6 +180,12 @@ import uz.sadora.contract.PartnerRelation
 import uz.sadora.contract.PartnerState
 import uz.sadora.contract.PartnerView
 import uz.sadora.contract.PausePartnerRequest
+import uz.sadora.contract.CreatePartnerWebLinkRequest
+import uz.sadora.contract.PartnerMessage
+import uz.sadora.contract.PartnerMessageKind
+import uz.sadora.contract.PartnerMessages
+import uz.sadora.contract.PartnerWebLink
+import uz.sadora.contract.SendPartnerMessageRequest
 import uz.sadora.contract.UzbekPhone
 import uz.sadora.server.admin.AdminSession
 import uz.sadora.server.admin.AdminMe
@@ -527,6 +533,84 @@ class ApiIntegrationTest {
         post<Appointment>("/v1/appointments", her.token, SaveAppointmentRequest("Qon tahlili", tomorrow))
         component.partnerService.dailyAlerts(morning)
         assertEquals(1, outboxCount(him, "partner_appointment:"))
+    }
+
+    /**
+     * Stage three: a heart from him, a request from her and his answer, read marks and
+     * the unread counts both lists carry; nothing on a paused link, nothing for a stranger.
+     */
+    @Test
+    fun `her person and she send each other small messages only while the link is active`() = api {
+        val her = signUp().also { onboard(it) }
+        val him = signUp()
+        val stranger = signUp().also { onboard(it) }
+        val code = post<PartnerInvite>("/v1/partner/invite", her.token, CreatePartnerInviteRequest()).code!!
+        val link = post<FollowedPerson>("/v1/partner/accept", him.token, AcceptPartnerInviteRequest(code, name = "Aziz", asPartnerAccount = true)).linkId
+        val path = "/v1/partner/links/$link/messages"
+
+        // Waiting for her yes: nothing can be sent yet.
+        val early = client.post(path) { auth(him.token); json(SendPartnerMessageRequest(PartnerMessageKind.HEART)) }
+        assertEquals(HttpStatusCode.Conflict, early.status)
+        post<PartnerState>("/v1/partner/approve", her.token, Ack())
+
+        post<PartnerMessage>(path, him.token, SendPartnerMessageRequest(PartnerMessageKind.HEART))
+        assertEquals(1, get<PartnerState>("/v1/partner", her.token).link?.unread)
+        assertEquals(1, outboxCount(her, "partner_msg:"))
+
+        val request = post<PartnerMessage>(path, her.token, SendPartnerMessageRequest(PartnerMessageKind.TEA, text = "ignored"))
+        assertNull(request.text, "a preset carries no text")
+        assertTrue(request.fromMe)
+        assertEquals(1, get<PartnerState>("/v1/partner", him.token).following.single().unread)
+
+        val read = post<PartnerMessages>("$path/read", him.token, Ack())
+        assertEquals(0, read.unread)
+        assertEquals(listOf(PartnerMessageKind.TEA, PartnerMessageKind.HEART), read.items.map { it.kind }, "newest first")
+        assertFalse(read.items.first().fromMe)
+        post<PartnerMessage>(path, him.token, SendPartnerMessageRequest(PartnerMessageKind.CUSTOM, text = "  Hozir  olib   kelaman "))
+        assertEquals("Hozir olib kelaman", get<PartnerMessages>(path, her.token).items.first().text)
+
+        val blank = client.post(path) { auth(him.token); json(SendPartnerMessageRequest(PartnerMessageKind.CUSTOM, text = "  ")) }
+        assertEquals(HttpStatusCode.BadRequest, blank.status)
+        val tooLong = client.post(path) { auth(him.token); json(SendPartnerMessageRequest(PartnerMessageKind.CUSTOM, text = "x".repeat(201))) }
+        assertEquals(HttpStatusCode.BadRequest, tooLong.status)
+        assertEquals(HttpStatusCode.NotFound, client.get(path) { auth(stranger.token) }.status)
+
+        post<PartnerState>("/v1/partner/pause", her.token, PausePartnerRequest(paused = true))
+        val paused = client.post(path) { auth(him.token); json(SendPartnerMessageRequest(PartnerMessageKind.HUG)) }
+        assertEquals(HttpStatusCode.Conflict, paused.status)
+        client.delete("/v1/partner") { auth(her.token) }
+        assertEquals(HttpStatusCode.NotFound, client.get(path) { auth(him.token) }.status, "an ended link's messages are gone")
+    }
+
+    @Test
+    fun `a web link shows her chosen parts in a browser until it expires or she takes it back`() = api {
+        val her = signUp()
+        onboard(her, mood = MoodLevel.LOW, symptoms = listOf("headache"))
+        val today = get<CycleStatus>("/v1/cycle/status", her.token).today
+        post<PeriodEntry>("/v1/cycle/periods", her.token, LogPeriodRequest(today.minus(3, DateTimeUnit.DAY)))
+
+        val tooLong = client.post("/v1/partner/web") { auth(her.token); json(CreatePartnerWebLinkRequest(ttlHours = 24 * 30)) }
+        assertEquals(HttpStatusCode.BadRequest, tooLong.status)
+        val first = post<PartnerWebLink>("/v1/partner/web", her.token, CreatePartnerWebLinkRequest(ttlHours = 24, permissions = PartnerPermissions(mood = false)))
+        val url = assertNotNull(first.url)
+        assertTrue(url.contains("/yv/"), url)
+        assertNull(get<PartnerState>("/v1/partner", her.token).webLink?.url, "a later read does not show the link")
+
+        val page = client.get("/yv/${url.substringAfterLast('/')}?lang=en")
+        assertEquals(HttpStatusCode.OK, page.status)
+        val html = page.bodyAsText()
+        assertTrue(html.contains("Period day 4"), html)
+        assertFalse(html.contains("headache") || html.contains("Mood"), "mood was not ticked")
+        assertEquals("no-store", page.headers["Cache-Control"])
+        assertEquals(1, get<PartnerState>("/v1/partner", her.token).webLink?.viewCount)
+
+        // A new link retires the old one; taking it back closes the new one too.
+        val second = post<PartnerWebLink>("/v1/partner/web", her.token, CreatePartnerWebLinkRequest(ttlHours = 72))
+        assertEquals(HttpStatusCode.NotFound, client.get("/yv/${url.substringAfterLast('/')}").status)
+        client.delete("/v1/partner/web") { auth(her.token) }
+        assertEquals(HttpStatusCode.NotFound, client.get("/yv/${second.url!!.substringAfterLast('/')}").status)
+        assertNull(get<PartnerState>("/v1/partner", her.token).webLink)
+        assertEquals(HttpStatusCode.NotFound, client.get("/yv/not-a-token").status)
     }
 
     // ---------------------------------------------------------------- wearable connections

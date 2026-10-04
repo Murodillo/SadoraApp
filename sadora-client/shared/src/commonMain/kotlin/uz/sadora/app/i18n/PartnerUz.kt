@@ -1,6 +1,7 @@
 package uz.sadora.app.i18n
 
 import uz.sadora.app.model.CyclePhase
+import uz.sadora.contract.PartnerMessageKind
 import uz.sadora.contract.PartnerRelation
 
 object PartnerUz : PartnerStrings {
@@ -203,4 +204,45 @@ object PartnerUz : PartnerStrings {
     override val labourConfirmBody = "U darhol «Tug'ruq boshlandi!» degan xabar oladi."
     override val labourSend = "Yuborish"
     override val labourSent = "Xabar yuborildi"
+
+    override val messagesTitle = "Xabarlar"
+    override fun sendTo(name: String) = "$name uchun"
+    override fun askFrom(name: String) = "${name}dan so'rash"
+    override fun kind(kind: PartnerMessageKind) = when (kind) {
+        PartnerMessageKind.HEART -> "❤️ Yurak"
+        PartnerMessageKind.HUG -> "🤗 Quchoq"
+        PartnerMessageKind.THINKING -> "💭 Sizni o'ylayapman"
+        PartnerMessageKind.ON_IT -> "🏃 Hozir!"
+        PartnerMessageKind.DONE -> "✓ Bajardim"
+        PartnerMessageKind.TEA -> "☕ Issiq choy"
+        PartnerMessageKind.SWEETS -> "🍫 Shirinlik"
+        PartnerMessageKind.REST -> "😴 Dam olishim kerak"
+        PartnerMessageKind.CALL -> "📞 Qo'ng'iroq qiling"
+        PartnerMessageKind.QUIET -> "🤫 Biroz tinchlik"
+        PartnerMessageKind.CUSTOM -> "✍️ O'z so'zim"
+    }
+    override val youPrefix = "Siz"
+    override fun asked(name: String) = "$name so'radi"
+    override val noMessages = "Hali xabar yo'q — birinchisini yuboring"
+    override val customTitle = "Xabar yozing"
+    override val customHint = "Masalan, kechqurun birga sayr qilamizmi?"
+    override val send = "Yuborish"
+    override val sent = "Yuborildi"
+    override fun unreadCount(count: Int) = "$count ta yangi xabar"
+
+    override val webTitle = "Ilovasi yo'qlar uchun havola"
+    override val webBody =
+        "Ilova o'rnatmaydigan yaqiningiz holatingizni brauzerda ko'radi. Havola bir necha kun ishlaydi va istalgan payt bekor qilinadi."
+    override val webShows = "Havola ko'rsatadi:"
+    override val webCreate = "Havola yaratish"
+    override fun webExpires(date: String) = "$date gacha ishlaydi"
+    override fun webViews(count: Int) = "$count marta ochildi"
+    override val webNever = "Hali ochilmagan"
+    override val webShare = "Havolani yuborish"
+    override val webRevoke = "Bekor qilish"
+    override val webNew = "Yangi havola"
+    override fun webShareMessage(url: String) = "Holatimni shu havolada ko'rishingiz mumkin (Sadora):\n$url"
+    override val webRevoked = "Havola bekor qilindi"
+    override fun webDays(days: Int) = "$days kun"
+    override val webOutBody = "Havolani qayta ko'rsatish uchun yangisini yarating — eskisi ishlamay qoladi."
 }

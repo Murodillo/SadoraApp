@@ -17,6 +17,12 @@ import uz.sadora.contract.AccountKind
 import uz.sadora.contract.AccountStatus
 import uz.sadora.contract.CoinReasons
 import uz.sadora.contract.CreatePartnerInviteRequest
+import uz.sadora.contract.CreatePartnerWebLinkRequest
+import uz.sadora.contract.PartnerMessage
+import uz.sadora.contract.PartnerMessageKind
+import uz.sadora.contract.PartnerMessages
+import uz.sadora.contract.PartnerWebLink
+import uz.sadora.contract.SendPartnerMessageRequest
 import uz.sadora.contract.CyclePhase
 import uz.sadora.contract.FollowedPerson
 import uz.sadora.contract.Language
@@ -85,6 +91,7 @@ class PartnerService(
     private val publicBaseUrl: String,
     /** Optional only for the tests that build the service by hand. */
     private val rewards: RewardsService? = null,
+    private val messages: PartnerMessageRepository = PartnerMessageRepository(),
 ) {
     private val random = SecureRandom()
 
@@ -97,20 +104,165 @@ class PartnerService(
         val link = live?.takeIf { it.partnerId != null && it.status != PartnerLinkStatus.INVITED }
         return PartnerState(
             invite = invite?.toInvite(code = null),
-            link = link?.toLink(),
+            link = link?.toLink()?.copy(unread = messages.unreadFor(link.id, userId)),
             following = following(userId),
+            webLink = messages.liveWebLinkOf(userId, at),
         )
     }
 
-    private suspend fun following(userId: Uuid): List<FollowedPerson> =
-        links.followingOf(userId).map { row ->
+    private suspend fun following(userId: Uuid): List<FollowedPerson> {
+        val rows = links.followingOf(userId)
+        val unread = messages.unreadFor(rows.map { it.link.id }, userId)
+        return rows.map { row ->
             FollowedPerson(
                 linkId = row.link.id.toString(),
                 name = row.ownerName,
                 relation = row.link.relation,
                 status = row.link.status,
+                unread = unread[row.link.id] ?: 0,
             )
         }
+    }
+
+    // ---------------------------------------------------------------- messages
+
+    /** The last few things the two of them sent, from whichever side asks. */
+    suspend fun messages(userId: Uuid, linkId: String): PartnerMessages {
+        val link = sharedLink(userId, linkId)
+        return PartnerMessages(
+            items = messages.recent(link.id, Limits.PARTNER_MESSAGES_SHOWN).map { it.toDto(userId) },
+            unread = messages.unreadFor(link.id, userId),
+        )
+    }
+
+    suspend fun markRead(userId: Uuid, linkId: String): PartnerMessages {
+        val link = sharedLink(userId, linkId)
+        messages.markRead(link.id, userId, now())
+        return messages(userId, linkId)
+    }
+
+    /**
+     * A heart, a request, a short line. Only on an active link — a paused one is her
+     * saying "not now", and that covers this too — and at most a day's worth.
+     */
+    suspend fun send(userId: Uuid, linkId: String, request: SendPartnerMessageRequest): PartnerMessage {
+        val link = sharedLink(userId, linkId)
+        if (link.status != PartnerLinkStatus.ACTIVE) throw ConflictException("Ulanish hozir faol emas")
+        val text = if (request.kind == PartnerMessageKind.CUSTOM) {
+            val trimmed = request.text?.trim()?.replace(Regex("\\s+"), " ").orEmpty()
+            if (trimmed.isEmpty()) throw ValidationException("text", "Bo'sh bo'lishi mumkin emas")
+            if (trimmed.length > Limits.PARTNER_MESSAGE_MAX) {
+                throw ValidationException("text", "Eng ko'pi ${Limits.PARTNER_MESSAGE_MAX} belgi")
+            }
+            trimmed
+        } else {
+            null
+        }
+        val at = now()
+        if (messages.sentSince(link.id, userId, at - 1.days) >= Limits.PARTNER_MESSAGES_PER_DAY) {
+            throw uz.sadora.server.core.RateLimitedException("Bugun juda ko'p xabar yuborildi")
+        }
+        val sender = requireActive(userId)
+        val saved = messages.add(link.id, userId, request.kind, text, at)
+
+        val recipientId = if (userId == link.ownerId) link.partnerId else link.ownerId
+        recipientId?.let { users.findById(it) }?.let { recipient ->
+            notify(
+                recipient.id,
+                "partner_msg:${saved.id}",
+                PartnerPhrases.message(sender.firstName(), request.kind, text, recipient.language),
+                NotificationCategory.SYSTEM,
+            )
+        }
+        return saved.toDto(userId)
+    }
+
+    /** A live link this account is on, from either end. Codes nobody typed are not one. */
+    private suspend fun sharedLink(userId: Uuid, linkId: String): PartnerLinkRecord =
+        links.byId(parseUuid(linkId))
+            ?.takeIf { it.status != PartnerLinkStatus.INVITED && (it.ownerId == userId || it.partnerId == userId) }
+            ?: throw NotFoundException("Topilmadi")
+
+    private fun PartnerMessageRecord.toDto(readerId: Uuid) = PartnerMessage(
+        id = id.toString(),
+        linkId = linkId.toString(),
+        fromMe = senderId == readerId,
+        kind = kind,
+        text = body,
+        createdAt = createdAt,
+        readAt = readAt,
+    )
+
+    // ---------------------------------------------------------------- the web link
+
+    /** A browser link for someone without the app. A new one retires the one before. */
+    suspend fun createWebLink(ownerId: Uuid, request: CreatePartnerWebLinkRequest, ip: String?): PartnerWebLink {
+        val owner = requireActive(ownerId)
+        if (owner.accountKind == AccountKind.PARTNER) {
+            throw ForbiddenException(message = "Bu hisobda ulashiladigan ma'lumot yo'q")
+        }
+        val range = Limits.PARTNER_WEB_TTL_HOURS
+        if (request.ttlHours !in range) {
+            throw ValidationException("ttlHours", "${range.first}–${range.last} soat oralig'ida")
+        }
+        val at = now()
+        messages.revokeWebLinks(ownerId, at)
+        val token = uz.sadora.server.core.randomToken(WEB_TOKEN_BYTES)
+        val created = messages.createWebLink(ownerId, sha256(token), request.permissions, at + request.ttlHours.hours, at)
+        record(
+            ownerId,
+            AuditActions.PARTNER_WEB_CREATED,
+            Uuid.parse(created.id),
+            ip,
+            mapOf("ttlHours" to request.ttlHours.toString(), "shown" to request.permissions.shownKeys().joinToString(",")),
+        )
+        return created.copy(url = "$publicBaseUrl/yv/$token")
+    }
+
+    suspend fun revokeWebLink(ownerId: Uuid, ip: String?): PartnerState {
+        val live = messages.liveWebLinkOf(ownerId, now())
+        if (messages.revokeWebLinks(ownerId, now()) > 0 && live != null) {
+            record(ownerId, AuditActions.PARTNER_WEB_REVOKED, Uuid.parse(live.id), ip)
+        }
+        return state(ownerId)
+    }
+
+    /**
+     * The page behind a web link, or null for every way it can be unusable — unknown,
+     * expired, revoked, an account that is gone — so the page tells nobody which it was.
+     */
+    suspend fun openWebLink(token: String, language: Language?, ip: String?, userAgent: String?): PartnerWebView? {
+        if (token.length !in WEB_TOKEN_LENGTH) return null
+        val record = messages.webLinkByTokenHash(sha256(token)) ?: return null
+        val at = now()
+        if (!record.isLive(at)) return null
+        val owner = users.findById(record.ownerId)?.takeIf { it.status == AccountStatus.ACTIVE } ?: return null
+        val id = Uuid.parse(record.link.id)
+        messages.recordWebView(id, at)
+        audit.record(
+            AuditEntry(
+                actorType = ActorType.SYSTEM,
+                actorId = owner.id,
+                action = AuditActions.PARTNER_WEB_VIEWED,
+                entityType = "partner_web_link",
+                entityId = record.link.id,
+                ip = ip,
+                userAgent = userAgent,
+            ),
+        )
+        val today = at.dayIn(owner.timezone)
+        val base = PartnerView(
+            linkId = record.link.id,
+            status = PartnerLinkStatus.ACTIVE,
+            name = owner.firstName(),
+            relation = uz.sadora.contract.PartnerRelation.OTHER,
+            permissions = record.link.permissions,
+            generatedAt = at,
+            today = today,
+        )
+        val shown = language ?: owner.language
+        return PartnerWebView(build(base, owner, record.link.permissions, today, shown), shown)
+    }
 
     // ---------------------------------------------------------------- hers
 
@@ -329,7 +481,9 @@ class PartnerService(
         val status = health.status(ownerId)
         val prediction = status.prediction
         val period = status.currentPeriod
-        val fertile = shown.fertile
+        // The window is told only while it is ahead or under way: last month's dates read
+        // as if they were news, and the next one is not predicted until the period comes.
+        val fertile = shown.fertile && prediction.fertileUntil?.let { it >= today } == true
         // Without the window, a fertile day is just the first half of the cycle.
         val phase = status.phase?.let { if (it == CyclePhase.FERTILE && !fertile) CyclePhase.FOLLICULAR else it }
         return PartnerCycle(
@@ -578,6 +732,9 @@ class PartnerService(
         private const val APPOINTMENT_DAYS = 60
         private const val APPOINTMENT_COUNT = 5
         private const val CARE_EVENTS = 200
+        private const val WEB_TOKEN_BYTES = 32
+        /** 32 random bytes are 43 base64url characters. */
+        private val WEB_TOKEN_LENGTH = 40..48
         private const val PERIOD_NOTICE_DAYS = 2
         /** The person's local hours in which a routine alert may go out. */
         private val ALERT_HOURS = 9..20
@@ -589,6 +746,9 @@ class PartnerService(
         fun display(code: String): String = code.chunked(4).joinToString("-")
     }
 }
+
+/** The browser page's content and the language it is drawn in: asked for, else hers. */
+data class PartnerWebView(val view: PartnerView, val language: Language)
 
 /** The parts a permission set shows, for the audit row. */
 internal fun PartnerPermissions.shownKeys(): List<String> = buildList {

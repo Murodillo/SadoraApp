@@ -74,7 +74,7 @@ fun PartnerViewScreen(
     val view = partner.views[linkId]
     Column(modifier.fillMaxSize()) {
         SadoraTopBar(view?.name.orEmpty(), onBack = onClose)
-        PartnerViewBody(linkId, partner, onLeft = { onToast(it); onClose() })
+        PartnerViewBody(linkId, partner, onLeft = { onToast(it); onClose() }, onToast = onToast)
     }
 }
 
@@ -89,6 +89,7 @@ fun PartnerViewBody(
     linkId: String,
     partner: PartnerController,
     onLeft: (String) -> Unit,
+    onToast: (String) -> Unit = {},
     modifier: Modifier = Modifier,
     /** Drawn above the body — the follower-only app puts its person picker here. */
     header: (LazyListScope.() -> Unit)? = null,
@@ -99,7 +100,10 @@ fun PartnerViewBody(
 
     // Read again when the list says her status moved — a yes, a pause — not only on open.
     val listed = partner.following.firstOrNull { it.linkId == linkId }?.status
+    val unread = partner.following.firstOrNull { it.linkId == linkId }?.unread ?: 0
     LaunchedEffect(linkId, listed) { partner.loadView(linkId, silent = partner.views[linkId] != null) }
+    // The messages too, and again whenever the list says she sent something new.
+    LaunchedEffect(linkId, unread) { partner.loadMessages(linkId) }
 
     val view = partner.views[linkId]
 
@@ -121,7 +125,17 @@ fun PartnerViewBody(
                 view.isEmpty && view.stage == null -> item {
                     StatusCard(SadoraIcons.Heart, t.nothingShared(view.name), t.pausedViewBody)
                 }
-                else -> activeView(view)
+                else -> activeView(view) {
+                    PartnerMessagesCard(
+                        linkId = linkId,
+                        partner = partner,
+                        title = t.sendTo(firstName(view.name)),
+                        otherName = view.name,
+                        kinds = FollowerKinds,
+                        answersRequests = true,
+                        onSent = onToast,
+                    )
+                }
             }
 
             if (view != null) {
@@ -145,11 +159,12 @@ fun PartnerViewBody(
     )
 }
 
-private fun LazyListScope.activeView(view: PartnerView) {
+private fun LazyListScope.activeView(view: PartnerView, messages: @Composable () -> Unit) {
     val cycle = view.cycle
     val pregnancy = view.pregnancy
 
     item { TodayCard(view) }
+    item { messages() }
 
     view.day?.let { day ->
         item {

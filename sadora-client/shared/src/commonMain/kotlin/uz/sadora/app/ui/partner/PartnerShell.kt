@@ -80,7 +80,10 @@ fun PartnerShell(
         val job = scope.launch {
             if (!controllers.account.isSignedIn) return@launch
             partner.refresh()
-            shown?.let { partner.loadView(it, silent = true) }
+            shown?.let {
+                partner.loadView(it, silent = true)
+                partner.loadMessages(it)
+            }
         }
         onPauseOrDispose { job.cancel() }
     }
@@ -95,7 +98,10 @@ fun PartnerShell(
                 codeSheet = true
             } else {
                 partner.refresh()
-                shown?.let { partner.loadView(it, silent = true) }
+                shown?.let {
+                    partner.loadView(it, silent = true)
+                    partner.loadMessages(it)
+                }
             }
         }
     }
@@ -139,6 +145,7 @@ fun PartnerShell(
                         linkId = current,
                         partner = partner,
                         onLeft = { toast = it },
+                        onToast = { toast = it },
                         header = if (following.size < 2) null else {
                             {
                                 item {

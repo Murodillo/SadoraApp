@@ -6,6 +6,9 @@ import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.keyframes
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -58,6 +61,11 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import org.jetbrains.compose.resources.DrawableResource
+import uz.sadora.app.ui.components.ArtIcon
+import uz.sadora.app.ui.components.LocalReduceMotion
+import androidx.compose.ui.unit.Dp
+import kotlinx.coroutines.launch
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
@@ -420,9 +428,11 @@ fun AnswerRow(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     note: String? = null,
-    /** An emoji shown in the leading disc. [icon] is preferred where one exists. */
+    /** An emoji shown in the leading disc. [art], then [icon], are preferred where one exists. */
     leading: String? = null,
     icon: ImageVector? = null,
+    /** A colour icon for the leading disc; it keeps its own colours. */
+    art: DrawableResource? = null,
     /** Colours the leading disc; the primary colour when not set. */
     tint: Color? = null,
     /**
@@ -463,6 +473,16 @@ fun AnswerRow(
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
         ) {
             when {
+                // The disc is painted rather than clipped, so the icon can jump out of it.
+                art != null -> Box(
+                    Modifier
+                        .size(42.dp)
+                        .background(discColour.copy(alpha = if (c.isDark) 0.24f else 0.13f), Radius.chip),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    SelectableArt(art, 32.dp, selected)
+                }
+
                 icon != null -> Box(
                     Modifier
                         .size(38.dp)
@@ -521,10 +541,12 @@ fun AnswerRow(
 @Composable
 fun AnswerTile(
     label: String,
-    icon: ImageVector,
     selected: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    icon: ImageVector? = null,
+    /** A colour icon in place of [icon]; it keeps its colours whether picked or not. */
+    art: DrawableResource? = null,
 ) {
     val c = Sadora.colors
     val ring by animateColorAsState(
@@ -555,7 +577,7 @@ fun AnswerTile(
         verticalArrangement = Arrangement.spacedBy(Spacing.xs),
     ) {
         Box(
-            Modifier.size(56.dp).clip(Radius.chip).background(disc),
+            Modifier.size(56.dp).background(disc, Radius.chip),
             contentAlignment = Alignment.Center,
         ) {
             val tint by animateColorAsState(
@@ -563,7 +585,10 @@ fun AnswerTile(
                 tween(240),
                 label = "tile-icon",
             )
-            Icon(icon, contentDescription = null, Modifier.size(26.dp), tint = tint)
+            when {
+                art != null -> SelectableArt(art, 40.dp, selected)
+                icon != null -> Icon(icon, contentDescription = null, Modifier.size(26.dp), tint = tint)
+            }
         }
         // Two lines always, so a one-word label and a wrapping one produce tiles of the
         // same height. Reserving the line is what keeps the grid even; sizing the row
@@ -577,6 +602,71 @@ fun AnswerTile(
             maxLines = 2,
         )
     }
+}
+
+/** How much larger a picked colour icon rests than an unpicked one. */
+private const val PickedArtScale = 1.1f
+
+/**
+ * A colour icon that jumps when its answer is picked: it hops, pops past full size
+ * and wiggles, then settles a little larger than the unpicked ones, so a picked tile
+ * still reads as picked once the motion is over. Unpicking only dips and settles back.
+ *
+ * Nothing moves on the first frame — a screen opened with answers already chosen
+ * shows them at rest — and under Reduce Motion the size simply changes.
+ */
+@Composable
+private fun SelectableArt(art: DrawableResource, size: Dp, selected: Boolean) {
+    val reduceMotion = LocalReduceMotion.current
+    val scale = remember { Animatable(if (selected) PickedArtScale else 1f) }
+    val tilt = remember { Animatable(0f) }
+    val hop = remember { Animatable(0f) }
+    var shown by remember { mutableStateOf(selected) }
+
+    LaunchedEffect(selected) {
+        if (selected == shown) return@LaunchedEffect
+        shown = selected
+        if (reduceMotion) {
+            scale.snapTo(if (selected) PickedArtScale else 1f)
+            return@LaunchedEffect
+        }
+        if (selected) {
+            launch {
+                scale.animateTo(1.32f, tween(130, easing = FastOutSlowInEasing))
+                scale.animateTo(PickedArtScale, spring(dampingRatio = 0.35f, stiffness = Spring.StiffnessMediumLow))
+            }
+            launch {
+                hop.animateTo(1f, tween(140, easing = FastOutSlowInEasing))
+                hop.animateTo(0f, spring(dampingRatio = 0.45f, stiffness = Spring.StiffnessMedium))
+            }
+            tilt.animateTo(
+                0f,
+                keyframes {
+                    durationMillis = 520
+                    -14f at 90
+                    11f at 200
+                    -7f at 310
+                    3f at 410
+                },
+            )
+        } else {
+            launch { tilt.animateTo(0f, tween(120)) }
+            scale.animateTo(0.88f, tween(110, easing = FastOutSlowInEasing))
+            scale.animateTo(1f, spring(dampingRatio = 0.5f, stiffness = Spring.StiffnessMedium))
+        }
+    }
+
+    val lift = with(LocalDensity.current) { 9.dp.toPx() }
+    ArtIcon(
+        art,
+        size,
+        Modifier.graphicsLayer {
+            scaleX = scale.value
+            scaleY = scale.value
+            rotationZ = tilt.value
+            translationY = -lift * hop.value
+        },
+    )
 }
 
 // ---------------------------------------------------------------- wheel

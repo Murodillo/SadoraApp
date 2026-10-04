@@ -65,6 +65,11 @@ object Limits {
     const val PARTNER_CODE_LENGTH = 8
     const val PARTNER_MAX_FOLLOWING = 5
     const val PARTNER_NAME_MAX = 60
+    const val PARTNER_MESSAGE_MAX = 200
+    /** Per sender, per link, per day: plenty for love, too few for a flood. */
+    const val PARTNER_MESSAGES_PER_DAY = 60
+    const val PARTNER_MESSAGES_SHOWN = 30
+    val PARTNER_WEB_TTL_HOURS = 1..24 * 7
 
     // ---- secret chat
     const val POST_MIN = 2

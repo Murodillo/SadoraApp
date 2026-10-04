@@ -21,6 +21,7 @@ import uz.sadora.server.rewards.adminRewardsRoutes
 import uz.sadora.server.rewards.rewardsRoutes
 import uz.sadora.server.partner.partnerRoutes
 import uz.sadora.server.partner.publicPartnerRoutes
+import uz.sadora.server.partner.publicPartnerWebRoutes
 import uz.sadora.server.share.publicShareRoutes
 import uz.sadora.server.share.shareRoutes
 import uz.sadora.server.community.adminCommunityRoutes
@@ -128,6 +129,7 @@ fun Application.apiModule(component: AppComponent) {
         // Outside the version prefix because it is a link on a screen, not an API call.
         publicShareRoutes(component.shareService)
         publicPartnerRoutes()
+        publicPartnerWebRoutes(component.partnerService)
 
         route("/$API_VERSION") {
             authRoutes(component.authService, component.otpService)

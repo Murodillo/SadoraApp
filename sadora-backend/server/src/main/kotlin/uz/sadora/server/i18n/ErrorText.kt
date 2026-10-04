@@ -179,6 +179,8 @@ object ErrorText {
         Entry("Yaqin topilmadi", "Близкий не найден", "No one is connected"),
         Entry("Kod topilmadi yoki muddati o'tgan", "Код не найден или устарел", "The code was not found or has expired"),
         Entry("O'zingizning kodingizni kirita olmaysiz", "Нельзя ввести собственный код", "You cannot enter your own code"),
+        Entry("Ulanish hozir faol emas", "Связь сейчас не активна", "The connection is not active right now"),
+        Entry("Bugun juda ko'p xabar yuborildi", "Сегодня отправлено слишком много сообщений", "Too many messages sent today"),
         Entry("Ko'pi bilan {0} kishini kuzatish mumkin", "Можно следить не больше чем за {0} людьми", "You can follow at most {0} people"),
         Entry("Hisob faol emas", "Аккаунт не активен", "The account is not active"),
 

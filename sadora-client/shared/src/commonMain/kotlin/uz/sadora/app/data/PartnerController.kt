@@ -7,6 +7,9 @@ import androidx.compose.runtime.setValue
 import uz.sadora.app.data.api.PartnerApi
 import uz.sadora.contract.FollowedPerson
 import uz.sadora.contract.PartnerInvite
+import uz.sadora.contract.PartnerMessage
+import uz.sadora.contract.PartnerMessageKind
+import uz.sadora.contract.PartnerWebLink
 import uz.sadora.contract.PartnerLinkStatus
 import uz.sadora.contract.PartnerPermissions
 import uz.sadora.contract.PartnerRelation
@@ -100,6 +103,63 @@ class PartnerController(
         return calls.run { api.end() }?.also(::apply) != null
     }
 
+    // ---------------------------------------------------------------- messages
+
+    /** The last few messages per link, newest first. */
+    val messages = mutableStateMapOf<String, List<PartnerMessage>>()
+
+    /**
+     * Reads a link's messages, and marks the other one's as read when there were any:
+     * opening the screen is reading them.
+     */
+    suspend fun loadMessages(linkId: String) {
+        val api = api ?: return
+        val read = calls.run(silent = true) { api.messages(linkId) } ?: return
+        messages[linkId] = read.items
+        if (read.unread > 0) {
+            calls.run(silent = true) { api.markRead(linkId) }?.let { messages[linkId] = it.items }
+            clearUnread(linkId)
+        }
+    }
+
+    suspend fun send(linkId: String, kind: PartnerMessageKind, text: String? = null): Boolean {
+        val api = api ?: return false
+        val sent = calls.run { api.send(linkId, kind, text) } ?: return false
+        messages[linkId] = listOf(sent) + messages[linkId].orEmpty()
+        analytics.event(AnalyticsEvents.PARTNER_MESSAGE, mapOf("kind" to kind.name.lowercase()))
+        return true
+    }
+
+    private fun clearUnread(linkId: String) {
+        val s = state ?: return
+        state = s.copy(
+            link = s.link?.let { if (it.id == linkId) it.copy(unread = 0) else it },
+            following = s.following.map { if (it.linkId == linkId) it.copy(unread = 0) else it },
+        )
+    }
+
+    // ---------------------------------------------------------------- the web link
+
+    /** The web link this app just made, with its URL. Null once replaced or taken back. */
+    var freshWebLink by mutableStateOf<PartnerWebLink?>(null)
+        private set
+
+    suspend fun createWebLink(ttlHours: Int, permissions: PartnerPermissions): PartnerWebLink? {
+        val api = api ?: return null
+        val created = calls.run { api.createWebLink(ttlHours, permissions) } ?: return null
+        freshWebLink = created
+        state = (state ?: PartnerState()).copy(webLink = created.copy(url = null))
+        analytics.event(AnalyticsEvents.PARTNER_WEB_LINK, mapOf("ttl_hours" to ttlHours.toString()))
+        return created
+    }
+
+    suspend fun revokeWebLink(): Boolean {
+        val api = api ?: return false
+        val next = calls.run { api.revokeWebLink() } ?: return false
+        apply(next)
+        return true
+    }
+
     suspend fun labourAlert(): Boolean {
         val api = api ?: return false
         return calls.run { api.labourAlert() } != null
@@ -139,5 +199,6 @@ class PartnerController(
         state = next
         // The code on screen is good only while the server still holds that invite.
         if (next.invite == null || next.invite?.createdAt != freshInvite?.createdAt) freshInvite = null
+        if (next.webLink?.id != freshWebLink?.id) freshWebLink = null
     }
 }

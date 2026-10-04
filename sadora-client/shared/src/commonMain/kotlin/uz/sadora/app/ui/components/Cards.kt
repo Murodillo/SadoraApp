@@ -1,5 +1,6 @@
 package uz.sadora.app.ui.components
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -31,6 +32,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
+import org.jetbrains.compose.resources.DrawableResource
+import org.jetbrains.compose.resources.painterResource
 import uz.sadora.app.design.IconSize
 import uz.sadora.app.design.MinTouchTarget
 import uz.sadora.app.design.Radius
@@ -165,6 +168,42 @@ fun IconTile(
         contentAlignment = Alignment.Center,
     ) {
         Icon(icon, contentDescription = null, Modifier.size(iconSize), tint = colour)
+    }
+}
+
+/**
+ * One of the colour 3D icons (`composeResources/drawable/ic3d_*`) at [size].
+ *
+ * They carry their own colour, so unlike [Icon] nothing tints them.
+ */
+@Composable
+fun ArtIcon(art: DrawableResource, size: Dp, modifier: Modifier = Modifier) {
+    Image(painterResource(art), contentDescription = null, modifier.size(size))
+}
+
+/**
+ * [IconTile] for a colour icon: the same washed-out disc, with [art] in it untinted.
+ * [tint] only colours the disc.
+ */
+@Composable
+fun ArtTile(
+    art: DrawableResource,
+    modifier: Modifier = Modifier,
+    tint: Color? = null,
+    size: Dp = 44.dp,
+    artSize: Dp = size * 0.74f,
+    shape: Shape = Radius.chip,
+) {
+    val c = Sadora.colors
+    val colour = tint ?: c.primary
+    Box(
+        modifier
+            .size(size)
+            .clip(shape)
+            .background(colour.copy(alpha = if (c.isDark) 0.22f else 0.13f)),
+        contentAlignment = Alignment.Center,
+    ) {
+        ArtIcon(art, artSize)
     }
 }
 
@@ -417,6 +456,8 @@ fun DisclaimerNote(
     text: String,
     modifier: Modifier = Modifier,
     icon: String? = null,
+    /** A colour icon in place of the emoji [icon]. */
+    art: DrawableResource? = null,
 ) {
     val c = Sadora.colors
     Row(
@@ -427,7 +468,8 @@ fun DisclaimerNote(
             .padding(Spacing.sm),
         horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
     ) {
-        if (icon != null) Text(icon, style = Sadora.type.body, color = c.muted)
+        if (art != null) ArtIcon(art, IconSize.lg)
+        else if (icon != null) Text(icon, style = Sadora.type.body, color = c.muted)
         Text(text, style = Sadora.type.body, color = c.muted)
     }
 }

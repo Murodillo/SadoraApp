@@ -29,7 +29,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -49,7 +48,6 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -59,12 +57,10 @@ import uz.sadora.app.design.IconSize
 import uz.sadora.app.design.PhaseColors
 import uz.sadora.app.design.Radius
 import uz.sadora.app.design.Sadora
-import uz.sadora.app.design.SadoraIcons
 import uz.sadora.app.design.Spacing
 import uz.sadora.app.i18n.strings
 import uz.sadora.app.model.AppState
 import uz.sadora.app.ui.components.AiOrb
-import uz.sadora.app.ui.components.IconTile
 import uz.sadora.app.ui.components.LogoRevealMillis
 import uz.sadora.app.ui.components.SadoraButton
 import uz.sadora.app.ui.components.SadoraLoader
@@ -73,6 +69,10 @@ import uz.sadora.app.ui.components.cardSurface
 import uz.sadora.app.ui.components.noRippleClickable
 import kotlin.math.PI
 import kotlin.math.sin
+import org.jetbrains.compose.resources.DrawableResource
+import uz.sadora.app.resources.*
+import uz.sadora.app.ui.components.ArtIcon
+import uz.sadora.app.ui.components.ArtTile
 
 // ---------------------------------------------------------------- bloom field
 
@@ -330,7 +330,7 @@ fun WelcomeScreen(onReady: () -> Unit, modifier: Modifier = Modifier) = SplashSc
 // ---------------------------------------------------------------- welcome
 
 /** One of the six things the welcome screen says the app does. */
-private data class Feature(val icon: ImageVector, val label: String, val tint: Color)
+private data class Feature(val art: DrawableResource, val label: String, val tint: Color)
 
 /**
  * The six, ordered so no two neighbours in the two-column grid carry adjacent hues —
@@ -342,12 +342,12 @@ private fun features(): List<Feature> {
     val c = Sadora.colors
     val t = strings.welcome
     return listOf(
-        Feature(SadoraIcons.Bloom, t.featureCycle, PhaseColors.period),
-        Feature(SadoraIcons.Smile, t.featureMood, c.warningSoft),
-        Feature(SadoraIcons.Nutrition, t.featureNutrition, c.success),
-        Feature(SadoraIcons.Pill, t.featureMeds, c.accent),
-        Feature(SadoraIcons.Sparkle, t.featureAi, c.primary),
-        Feature(SadoraIcons.Chart, t.featureInsights, PhaseColors.fertile),
+        Feature(Res.drawable.ic3d_cycle, t.featureCycle, PhaseColors.period),
+        Feature(Res.drawable.ic3d_mood, t.featureMood, c.warningSoft),
+        Feature(Res.drawable.ic3d_nutrition, t.featureNutrition, c.success),
+        Feature(Res.drawable.ic3d_meds, t.featureMeds, c.accent),
+        Feature(Res.drawable.ic3d_ai, t.featureAi, c.primary),
+        Feature(Res.drawable.ic3d_insights, t.featureInsights, PhaseColors.fertile),
     )
 }
 
@@ -447,12 +447,7 @@ fun IntroScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                     ) {
-                        Icon(
-                            SadoraIcons.Lock,
-                            contentDescription = null,
-                            Modifier.size(IconSize.sm),
-                            tint = c.muted2,
-                        )
+                        ArtIcon(Res.drawable.ic3d_lock, IconSize.md)
                         Text(
                             t.privacyPromise,
                             style = Sadora.type.body,
@@ -488,7 +483,7 @@ fun IntroScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                     ) {
-                        Icon(SadoraIcons.Heart, contentDescription = null, Modifier.size(IconSize.sm), tint = c.textAccent)
+                        ArtIcon(Res.drawable.ic3d_ttc, IconSize.lg)
                         Text(
                             strings.partner.joinEntry,
                             style = Sadora.type.body.copy(fontWeight = FontWeight.SemiBold),
@@ -514,7 +509,7 @@ private fun FeatureTile(feature: Feature, modifier: Modifier = Modifier) {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
     ) {
-        IconTile(feature.icon, tint = feature.tint, size = 38.dp, iconSize = 20.dp)
+        ArtTile(feature.art, tint = feature.tint, size = 44.dp, artSize = 34.dp)
         Text(
             feature.label,
             style = Sadora.type.body.copy(fontWeight = FontWeight.SemiBold),

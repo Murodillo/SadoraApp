@@ -12,6 +12,7 @@ import kotlinx.coroutines.test.runTest
 import uz.sadora.app.nav.AppLink
 import uz.sadora.contract.ErrorCodes
 import uz.sadora.contract.PartnerLinkStatus
+import uz.sadora.contract.PartnerMessageKind
 import uz.sadora.contract.PartnerPermissions
 import uz.sadora.contract.PartnerRelation
 
@@ -109,5 +110,31 @@ class PartnerControllerTest {
 
         assertFalse(saved)
         assertEquals(false, partner.state?.link?.permissions?.fertile)
+    }
+
+    @Test
+    fun `opening the messages marks hers read and a sent heart goes on top`() = runTest {
+        val listed = """{"items":[{"id":"m1","linkId":"l-1","fromMe":false,"kind":"tea","createdAt":"2026-10-05T08:00:00Z"}],"unread":1}"""
+        val read = """{"items":[{"id":"m1","linkId":"l-1","fromMe":false,"kind":"tea","createdAt":"2026-10-05T08:00:00Z","readAt":"2026-10-05T08:01:00Z"}],"unread":0}"""
+        val recording = RecordingEngine { request ->
+            when (request.url.encodedPath) {
+                "/v1/partner/links/l-1/messages" -> if (request.method.value == "POST") {
+                    json("""{"id":"m2","linkId":"l-1","fromMe":true,"kind":"on_it","createdAt":"2026-10-05T08:02:00Z"}""", HttpStatusCode.Created)
+                } else {
+                    json(listed)
+                }
+                "/v1/partner/links/l-1/messages/read" -> json(read)
+                else -> json("{}")
+            }
+        }
+        val partner = graph(recording).partnerController()
+
+        partner.loadMessages("l-1")
+        assertEquals(1, recording.countOf("/v1/partner/links/l-1/messages/read"))
+        assertNotNull(partner.messages["l-1"]?.single()?.readAt)
+
+        assertTrue(partner.send("l-1", PartnerMessageKind.ON_IT))
+        assertEquals(listOf("m2", "m1"), partner.messages["l-1"]?.map { it.id })
+        assertTrue(recording.bodies.any { it.contains("\"kind\":\"on_it\"") })
     }
 }

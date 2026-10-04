@@ -43,7 +43,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -66,7 +65,6 @@ import uz.sadora.app.nav.AppPhase
 import uz.sadora.app.ui.components.ChipFlowRow
 import uz.sadora.app.ui.components.ConsentRow
 import uz.sadora.app.ui.components.DisclaimerNote
-import uz.sadora.app.ui.components.IconTile
 import uz.sadora.app.ui.components.ImagePlaceholder
 import uz.sadora.app.ui.components.SadoraCard
 import uz.sadora.app.ui.components.SadoraLogoReveal
@@ -88,6 +86,9 @@ import uz.sadora.app.ui.components.phoneError
 import uz.sadora.app.ui.components.phoneIsComplete
 import uz.sadora.app.ui.components.PhoneMask
 import uz.sadora.app.ui.components.SadoraDialog
+import org.jetbrains.compose.resources.DrawableResource
+import uz.sadora.app.resources.*
+import uz.sadora.app.ui.components.ArtTile
 
 /** Shared layout for a numbered onboarding step: header, body, pinned footer. */
 @Composable
@@ -178,20 +179,20 @@ internal fun NumberPad(onDigit: (String) -> Unit, onDelete: () -> Unit) {
 
 /** What the profile now carries, as the "ready" screen lists it back. */
 @Composable
-private fun readyLines(state: AppState): List<Pair<ImageVector, String>> = buildList {
+private fun readyLines(state: AppState): List<Pair<DrawableResource, String>> = buildList {
     val t = strings.onboarding
-    add(SadoraIcons.Journey to strings.stages.title(state.lifeStage))
+    add(state.lifeStage.art() to strings.stages.title(state.lifeStage))
     if (state.lifeStage.predictsCycle) {
         add(
-            SadoraIcons.Calendar to
+            Res.drawable.ic3d_calendar to
                 t.cycleSummary(state.averageCycleLength, state.averagePeriodLength),
         )
     }
     if (state.goals.isNotEmpty()) {
-        add(SadoraIcons.Target to t.goalsChosen(state.goals.size))
+        add(Res.drawable.ic3d_target to t.goalsChosen(state.goals.size))
     }
-    if (state.notificationsAllowed) add(SadoraIcons.Bell to t.remindersOn)
-    if (state.healthDataAllowed) add(SadoraIcons.Watch to t.healthDataOn)
+    if (state.notificationsAllowed) add(Res.drawable.ic3d_bell to t.remindersOn)
+    if (state.healthDataAllowed) add(Res.drawable.ic3d_watch to t.healthDataOn)
 }
 
 /**
@@ -247,7 +248,7 @@ fun ReadyStep(state: AppState, controller: SadoraController, onEnter: () -> Unit
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                         ) {
-                            IconTile(icon, size = 34.dp, iconSize = 16.dp)
+                            ArtTile(icon, size = 38.dp, artSize = 28.dp)
                             Text(line, style = Sadora.type.body, color = c.text, modifier = Modifier.weight(1f))
                             Icon(
                                 SadoraIcons.Check,
