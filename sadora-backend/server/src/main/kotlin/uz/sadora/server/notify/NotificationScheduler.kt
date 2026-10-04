@@ -12,6 +12,8 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toInstant
@@ -54,6 +56,13 @@ class NotificationScheduler(
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var job: Job? = null
 
+    /**
+     * One delivery pass at a time. The tick and [deliverSoon] both read the queued rows
+     * before marking them; without the lock two passes could read the same row and ring
+     * the phone twice.
+     */
+    private val deliveryLock = Mutex()
+
     fun start() {
         job = scope.launch {
             logger.info("Notification scheduler started, ticking every {}", tickInterval)
@@ -73,7 +82,21 @@ class NotificationScheduler(
     /** Exposed for tests and for an operator-triggered run. */
     suspend fun tick() {
         queueMedicationReminders()
-        deliverDue()
+        deliveryLock.withLock { deliverDue() }
+    }
+
+    /**
+     * Sends what is due now instead of at the next tick, off the caller's thread — for a
+     * message someone on the other phone is waiting to see. Safe to call often: a pass with
+     * nothing queued is one query, and passes never overlap. Reads [userId]'s rows only.
+     */
+    fun deliverSoon(userId: Uuid) {
+        scope.launch {
+            // Only hers: behind a backlog of other people's rows, a whole-queue pass could
+            // fill its batch before reaching the one just written.
+            runCatching { deliveryLock.withLock { deliver(notifications.dueFor(userId, DELIVERY_BATCH)) } }
+                .onFailure { logger.warn("Immediate delivery failed", it) }
+        }
     }
 
     private suspend fun queueMedicationReminders() {
@@ -145,8 +168,10 @@ class NotificationScheduler(
         }
     }
 
-    private suspend fun deliverDue() {
-        notifications.due(DELIVERY_BATCH).forEach { record ->
+    private suspend fun deliverDue() = deliver(notifications.due(DELIVERY_BATCH))
+
+    private suspend fun deliver(records: List<OutboxRecord>) {
+        records.forEach { record ->
             val tokens = pushTokens(record.userId, record.targetApp)
             if (tokens.isEmpty()) {
                 notifications.markFailed(record.id, uz.sadora.contract.SuppressionReasons.NO_DEVICE)

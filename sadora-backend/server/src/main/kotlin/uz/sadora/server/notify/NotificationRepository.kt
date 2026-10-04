@@ -168,6 +168,19 @@ class NotificationRepository {
             .map { it.toOutbox() }
     }
 
+    /** [due], for one account: what the immediate pass after a message reads. */
+    suspend fun dueFor(userId: Uuid, limit: Int): List<OutboxRecord> = dbQuery {
+        NotificationOutbox.selectAll()
+            .where {
+                (NotificationOutbox.userId eq userId) and
+                    (NotificationOutbox.status eq NotificationStatus.QUEUED.dbValue()) and
+                    (NotificationOutbox.scheduledFor lessEq now().toOffsetDateTime())
+            }
+            .orderBy(NotificationOutbox.scheduledFor to SortOrder.ASC)
+            .limit(limit)
+            .map { it.toOutbox() }
+    }
+
     suspend fun markSent(id: Uuid): Unit = dbQuery {
         NotificationOutbox.update({ NotificationOutbox.id eq id }) {
             it[status] = NotificationStatus.SENT.dbValue()

@@ -556,6 +556,11 @@ class ApiIntegrationTest {
         post<PartnerMessage>(path, him.token, SendPartnerMessageRequest(PartnerMessageKind.HEART))
         assertEquals(1, get<PartnerState>("/v1/partner", her.token).link?.unread)
         assertEquals(1, outboxCount(her, "partner_msg:"))
+        // Delivered at once, not on the minute's tick: the row leaves the queue within
+        // moments (a test account has no push token, so it ends as no_device).
+        val deadline = now() + 5.seconds
+        while (queuedCount(her, "partner_msg:") > 0 && now() < deadline) kotlinx.coroutines.delay(100)
+        assertEquals(0, queuedCount(her, "partner_msg:"), "the message waited for the scheduler")
 
         val request = post<PartnerMessage>(path, her.token, SendPartnerMessageRequest(PartnerMessageKind.TEA, text = "ignored"))
         assertNull(request.text, "a preset carries no text")
@@ -3020,6 +3025,13 @@ class ApiIntegrationTest {
     /** Rows a table holds for one account, by its user_id column. */
     private suspend fun outboxCount(user: TestUser, keyPrefix: String): Int = dbQuery {
         exec("SELECT count(*) FROM notification_outbox WHERE user_id = '${user.userId}' AND dedupe_key LIKE '$keyPrefix%'") { rows ->
+            rows.next()
+            rows.getInt(1)
+        } ?: 0
+    }
+
+    private suspend fun queuedCount(user: TestUser, keyPrefix: String): Int = dbQuery {
+        exec("SELECT count(*) FROM notification_outbox WHERE user_id = '${user.userId}' AND status = 'queued' AND dedupe_key LIKE '$keyPrefix%'") { rows ->
             rows.next()
             rows.getInt(1)
         } ?: 0

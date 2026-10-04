@@ -404,7 +404,11 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
         audit = auditService,
         publicBaseUrl = config.publicBaseUrl,
         rewards = rewardsService,
-    ).also { service -> healthService.onPeriodStarted = service::periodStarted }
+    ).also { service ->
+        healthService.onPeriodStarted = service::periodStarted
+        // Messages between two people go out at once rather than on the minute's tick.
+        service.onQueued = notificationScheduler::deliverSoon
+    }
     val partnerAlertJob = uz.sadora.server.partner.PartnerAlertJob(partnerService)
 
     val billingRepository = BillingRepository()

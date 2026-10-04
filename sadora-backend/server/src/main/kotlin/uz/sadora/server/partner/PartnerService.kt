@@ -95,6 +95,12 @@ class PartnerService(
 ) {
     private val random = SecureRandom()
 
+    /**
+     * Set once at wiring: asks the scheduler to send now. A heart or "labour has started"
+     * should not wait for the next minute's tick; null in the tests that build this by hand.
+     */
+    var onQueued: ((Uuid) -> Unit)? = null
+
     // ---------------------------------------------------------------- both sides
 
     suspend fun state(userId: Uuid): PartnerState {
@@ -651,6 +657,7 @@ class PartnerService(
                 link = LINK,
             )
         }
+        if (decision is DeliveryDecision.Send) onQueued?.invoke(to.id)
     }
 
     // ---------------------------------------------------------------- plumbing
@@ -675,6 +682,7 @@ class PartnerService(
                 link = LINK,
             )
         }
+        onQueued?.invoke(to)
     }
 
     private suspend fun record(actor: Uuid, action: String, linkId: Uuid, ip: String?, metadata: Map<String, String> = emptyMap()) {
