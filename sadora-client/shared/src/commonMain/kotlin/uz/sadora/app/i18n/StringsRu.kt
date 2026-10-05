@@ -1545,6 +1545,7 @@ object StringsRu : Strings {
     override val pregnancyWeeks: PregnancyWeekStrings = PregnancyWeeksRu
     override val tools: StageToolsStrings = StageToolsRu
     override val partner: PartnerStrings = PartnerRu
+    override val badges: BadgeStrings = BadgesRu
 
     override val rewards = object : RewardStrings {
         override val coinName = "Гул"
@@ -1584,6 +1585,8 @@ object StringsRu : Strings {
             CoinReasons.REFERRAL_WELCOME -> "Приход по коду приглашения"
             CoinReasons.REDEMPTION -> "Покупка в магазине"
             CoinReasons.ADMIN_ADJUSTMENT -> "Ручная корректировка"
+            CoinReasons.PARTNER_LINKED -> "Близкий подключён"
+            CoinReasons.BADGE_EARNED -> "Новый значок"
             else -> reason
         }
         override val openShop = "Магазин Гул"

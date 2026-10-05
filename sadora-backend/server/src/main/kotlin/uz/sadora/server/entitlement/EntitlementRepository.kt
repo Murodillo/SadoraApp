@@ -8,6 +8,7 @@ import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.greater
 import org.jetbrains.exposed.v1.core.greaterEq
+import org.jetbrains.exposed.v1.core.inList
 import org.jetbrains.exposed.v1.core.isNull
 import org.jetbrains.exposed.v1.core.lessEq
 import org.jetbrains.exposed.v1.core.minus
@@ -138,6 +139,44 @@ class EntitlementRepository {
                     expiresAt = row[UserEntitlementOverrides.expiresAt]?.toKotlinInstant(),
                 )
             }
+    }
+
+    /** The tier each of [userIds] holds right now, by the same rule as [activeSubscription]. */
+    suspend fun activeTiers(userIds: Collection<Uuid>): Map<Uuid, SubscriptionTier> = dbQuery {
+        if (userIds.isEmpty()) return@dbQuery emptyMap()
+        val currentTime = now().toOffsetDateTime()
+        Subscriptions.selectAll()
+            .where {
+                (Subscriptions.userId inList userIds) and
+                    (Subscriptions.status eq "active") and
+                    (
+                        Subscriptions.expiresAt.isNull() or
+                            (Subscriptions.expiresAt greater currentTime) or
+                            (Subscriptions.inGracePeriod eq true)
+                        )
+            }
+            .groupBy { it[Subscriptions.userId] }
+            .mapValues { (_, rows) ->
+                val latest = rows.maxBy { it[Subscriptions.startedAt] }
+                enumFromDb(latest[Subscriptions.tier], SubscriptionTier.PREMIUM)
+            }
+    }
+
+    /** Live per-user switches for one feature: true or false where an operator set one. */
+    suspend fun overrideSwitches(userIds: Collection<Uuid>, featureKey: String): Map<Uuid, Boolean> = dbQuery {
+        if (userIds.isEmpty()) return@dbQuery emptyMap()
+        val currentTime = now().toOffsetDateTime()
+        UserEntitlementOverrides.selectAll()
+            .where {
+                (UserEntitlementOverrides.userId inList userIds) and
+                    (UserEntitlementOverrides.featureKey eq featureKey) and
+                    (
+                        UserEntitlementOverrides.expiresAt.isNull() or
+                            (UserEntitlementOverrides.expiresAt greater currentTime)
+                        )
+            }
+            .mapNotNull { row -> row[UserEntitlementOverrides.enabled]?.let { row[UserEntitlementOverrides.userId] to it } }
+            .toMap()
     }
 
     suspend fun setOverride(

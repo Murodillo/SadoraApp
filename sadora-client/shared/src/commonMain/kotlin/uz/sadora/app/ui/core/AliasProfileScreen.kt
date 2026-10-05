@@ -36,6 +36,7 @@ import uz.sadora.app.model.CommunityBadge
 import uz.sadora.app.model.CommunityPost
 import uz.sadora.app.model.Fmt
 import uz.sadora.app.ui.components.BadgeChip
+import uz.sadora.app.ui.components.WornBadgeMark
 import uz.sadora.app.ui.components.ButtonTone
 import uz.sadora.app.ui.components.ChipFlowRow
 import uz.sadora.app.ui.components.ErrorStrip
@@ -198,7 +199,11 @@ private fun ProfileHeader(profile: AliasProfile) {
         verticalArrangement = Arrangement.spacedBy(Spacing.xs),
     ) {
         AliasAvatar(profile.alias, profile.tint, size = 84.dp)
-        Text(profile.alias, style = Sadora.type.h2, color = c.text, textAlign = TextAlign.Center)
+        // Her alias, and right after it the badge she chose to wear.
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.xxs)) {
+            Text(profile.alias, style = Sadora.type.h2, color = c.text, textAlign = TextAlign.Center)
+            WornBadgeMark(profile.worn, size = 30.dp)
+        }
         Text(
             t.memberSince(strings.dates.monthYear(since.year, since.month.ordinal + 1)),
             style = Sadora.type.caption,

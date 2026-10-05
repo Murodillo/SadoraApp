@@ -4,9 +4,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.TimeSource
 import uz.sadora.app.data.api.RewardsApi
 import uz.sadora.app.model.AppState
 import uz.sadora.contract.AppIconMood
+import uz.sadora.contract.BadgeBoard
+import uz.sadora.contract.BadgeUnlock
+import uz.sadora.contract.WornBadge
 import uz.sadora.contract.DailyCheckInResult
 import uz.sadora.contract.HomeLayout
 import uz.sadora.contract.HomeWidget
@@ -98,6 +103,75 @@ class RewardsController(
         // The home screen follows the streak. Idempotent, so calling it on every launch
         // costs nothing on the days the mood has not changed.
         icons.apply(iconMood)
+    }
+
+    // ---------------------------------------------------------------- badges
+
+    var badges by mutableStateOf<BadgeBoard?>(null)
+        private set
+
+    /**
+     * Tiers reached and not yet celebrated, oldest first. The shell plays the head of
+     * the queue, one at a time, once the streak overlay has gone.
+     */
+    val unlocks = mutableStateListOf<BadgeUnlock>()
+
+    /**
+     * Reads the board, which is also what awards it: the server counts now and writes any
+     * tier newly crossed. Called on launch, on coming back to the app, and on returning to
+     * Today — so a badge earned by logging a meal plays as she lands back on the home tab.
+     */
+    suspend fun loadBadges(force: Boolean = false) {
+        val api = api ?: return
+        val now = TimeSource.Monotonic.markNow()
+        if (!force && lastBadgeRead?.let { now - it < BADGE_READ_GAP } == true) return
+        lastBadgeRead = now
+        val loaded = calls.run(silent = true) { api.badges() } ?: return
+        applyBoard(loaded)
+        val queued = unlocks.map { it.key to it.tier }.toSet()
+        unlocks.addAll(loaded.unseen.filter { (it.key to it.tier) !in queued })
+        // A new tier pays Gul; the board read is where that happens, so the pill follows.
+        if (loaded.unseen.any { it.coins > 0 }) loadBalanceQuietly()
+    }
+
+    private fun applyBoard(board: BadgeBoard) {
+        badges = board
+        state.applyWornBadge(board.wornBadge())
+    }
+
+    /**
+     * Wears a badge, or takes hers off with null. Applied on screen at once — her name and
+     * her posts change as she taps — and put back if the server refuses.
+     */
+    suspend fun wear(key: String?) {
+        val api = api ?: return
+        val before = badges
+        badges = before?.copy(worn = key)
+        state.applyWornBadge(badges?.wornBadge())
+        val saved = calls.run { api.wearBadge(key) }
+        if (saved != null) applyBoard(saved) else before?.let(::applyBoard)
+    }
+
+    private suspend fun loadBalanceQuietly() {
+        val api = api ?: return
+        calls.run(silent = true) { api.summary() }?.let { state.coins = it.coins.balance }
+    }
+
+    private var lastBadgeRead: TimeSource.Monotonic.ValueTimeMark? = null
+
+    /** The head of [unlocks] has been played; tell the server so it is not played again. */
+    suspend fun unlockShown(unlock: BadgeUnlock) {
+        unlocks.removeAll { it.key == unlock.key && it.tier <= unlock.tier }
+        val api = api ?: return
+        calls.run(silent = true) { api.badgesSeen(listOf(unlock.key)) }
+    }
+
+    /** Dismissed all at once ("skip"): everything still queued counts as seen. */
+    suspend fun unlocksSkipped() {
+        val keys = unlocks.map { it.key }.distinct()
+        unlocks.clear()
+        val api = api ?: return
+        if (keys.isNotEmpty()) calls.run(silent = true) { api.badgesSeen(keys) }
     }
 
     // ---------------------------------------------------------------- wallet
@@ -207,4 +281,14 @@ class RewardsController(
             .map { if (it.key == key) it.copy(visible = visible) else it }
         saveHomeLayout(widgets)
     }
+}
+
+/** The shortest gap between two badge reads the tabs ask for; a forced read ignores it. */
+private val BADGE_READ_GAP = 15.seconds
+
+/** The worn key as a medal: its current tier, from the board's own state. */
+fun BadgeBoard.wornBadge(): WornBadge? {
+    val key = worn ?: return null
+    val state = badges.firstOrNull { it.key == key }?.takeIf { it.tier > 0 } ?: return null
+    return WornBadge(key, state.tier, state.maxTier)
 }

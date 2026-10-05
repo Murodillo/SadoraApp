@@ -25,6 +25,7 @@ import uz.sadora.app.model.AppState
 import uz.sadora.app.model.Fmt
 import uz.sadora.app.nav.Route
 import uz.sadora.app.ui.components.AnimatedNumber
+import uz.sadora.app.ui.components.BadgeStrip
 import uz.sadora.app.ui.components.ButtonTone
 import uz.sadora.app.ui.components.CardLabel
 import uz.sadora.app.ui.components.GulMark
@@ -60,7 +61,10 @@ fun RewardsScreen(
     val t = strings.rewards
     val c = Sadora.colors
 
-    LaunchedEffect(Unit) { rewards.loadSummary() }
+    LaunchedEffect(Unit) {
+        rewards.loadSummary()
+        rewards.loadBadges(force = true)
+    }
 
     val summary = rewards.summary
 
@@ -84,6 +88,11 @@ fun RewardsScreen(
 
             item {
                 StreakCard(summary?.streak ?: StreakStatus(current = state.streakDays))
+            }
+
+            item {
+                // Badges have their own page; the wallet keeps only the door to it.
+                BadgeStrip(rewards.badges, onOpen = { onOpen(Route.Badges) }, alwaysShow = true)
             }
 
             item {

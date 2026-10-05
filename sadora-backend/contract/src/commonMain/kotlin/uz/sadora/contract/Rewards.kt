@@ -52,6 +52,9 @@ object CoinReasons {
     /** Her Yaqinim said yes and sees her for the first time. Paid once, to her. */
     const val PARTNER_LINKED = "partner_linked"
 
+    /** A badge reached a new tier. Paid once per badge and tier; the higher the tier, the more. */
+    const val BADGE_EARNED = "badge_earned"
+
     /** Spending, written as a negative amount. */
     const val REDEMPTION = "redemption"
 
@@ -72,6 +75,7 @@ object CoinReasons {
         REFERRAL_JOINED,
         REFERRAL_WELCOME,
         PARTNER_LINKED,
+        BADGE_EARNED,
     )
 }
 
@@ -175,6 +179,169 @@ data class EarnRate(
     val amount: Int,
     val dailyCap: Int? = null,
 )
+
+// ---------------------------------------------------------------- badges
+
+/**
+ * The badges, and the thresholds behind each tier.
+ *
+ * Like Gul, a badge is earned for *doing* — logging, reading, showing up — and never for
+ * a number her body produced: there is no "perfect cycle" or "ideal weight" badge, and
+ * there will not be one. The catalogue lives here so the server that counts and the app
+ * that draws agree on the same thresholds; the words are the app's, in her language.
+ *
+ * Most badges have three tiers (bronze, silver, gold). A badge with one threshold is a
+ * single moment — the first day, her person joining — and is drawn as gold.
+ */
+object Badges {
+    const val FIRST_STEP = "first_step"
+    const val STREAK = "streak"
+    const val LOYAL = "loyal"
+    const val CYCLE = "cycle"
+    const val DAILY_LOG = "daily_log"
+    const val WATER = "water"
+    const val MEDS = "meds"
+    const val MEALS = "meals"
+    const val JOURNAL = "journal"
+    const val MIND = "mind"
+    const val READER = "reader"
+    const val FRIENDS = "friends"
+    const val PARTNER = "partner"
+    const val DOCTOR = "doctor"
+    const val COMMUNITY = "community"
+    const val SYMPTOMS = "symptoms"
+    const val MOOD = "mood"
+    const val CALM_MINUTES = "calm_minutes"
+    const val SCANNER = "scanner"
+    const val DEVICES = "devices"
+    const val HYDRO = "hydro"
+    const val CURIOUS = "curious"
+    const val SHARE = "share"
+    const val HELPER = "helper"
+    const val LOVED = "loved"
+    const val SHOPPER = "shopper"
+    const val GARDENER = "gardener"
+
+    /** Every badge with its tier thresholds, in the order the board shows them. */
+    val catalogue: List<Pair<String, List<Int>>> = listOf(
+        FIRST_STEP to listOf(1),
+        STREAK to listOf(7, 30, 100),
+        LOYAL to listOf(30, 100, 365),
+        CYCLE to listOf(1, 3, 12),
+        DAILY_LOG to listOf(7, 30, 100),
+        WATER to listOf(7, 30, 100),
+        MEDS to listOf(10, 50, 200),
+        MEALS to listOf(10, 50, 200),
+        JOURNAL to listOf(3, 15, 50),
+        MIND to listOf(3, 15, 50),
+        READER to listOf(5, 25, 75),
+        FRIENDS to listOf(1, 3, 10),
+        PARTNER to listOf(1),
+        DOCTOR to listOf(1, 3, 10),
+        COMMUNITY to listOf(1, 10, 50),
+        SYMPTOMS to listOf(5, 30, 100),
+        MOOD to listOf(7, 30, 100),
+        CALM_MINUTES to listOf(30, 300, 1000),
+        SCANNER to listOf(1, 10, 50),
+        DEVICES to listOf(1),
+        HYDRO to listOf(10, 50, 200),
+        CURIOUS to listOf(5, 25, 100),
+        SHARE to listOf(1, 3, 10),
+        HELPER to listOf(5, 25, 100),
+        LOVED to listOf(10, 50, 200),
+        SHOPPER to listOf(1, 3, 10),
+        GARDENER to listOf(500, 2500, 10000),
+    )
+
+    fun tiersOf(key: String): List<Int> = catalogue.firstOrNull { it.first == key }?.second.orEmpty()
+
+    /** The tier a count has reached: 0 below the first threshold. */
+    fun tierFor(key: String, count: Int): Int = tiersOf(key).count { count >= it }
+
+    /** How many Gul a tier pays, as a multiple of the rule's amount: 1, 2, 4. */
+    fun coinMultiplier(tier: Int, tierCount: Int): Int =
+        if (tierCount == 1) 2 else when (tier) { 1 -> 1; 2 -> 2; else -> 4 }
+}
+
+/**
+ * One badge on her board.
+ *
+ * [tier] is 0 while it is still locked. [progress] is the raw count behind it, so the app
+ * can say "12 / 30" without knowing how the server counted.
+ */
+@Serializable
+data class BadgeState(
+    val key: String,
+    val tier: Int = 0,
+    val thresholds: List<Int> = emptyList(),
+    val progress: Int = 0,
+    /** When the current tier was reached. */
+    val earnedAt: Instant? = null,
+) {
+    val maxTier: Int get() = thresholds.size
+    val complete: Boolean get() = tier >= maxTier && maxTier > 0
+
+    /** The count the next tier needs, or null once the last one is reached. */
+    val nextThreshold: Int? get() = thresholds.getOrNull(tier)
+
+    /** 0..1 toward [nextThreshold], from the tier below it. */
+    val nextProgress: Float
+        get() {
+            val next = nextThreshold ?: return 1f
+            val previous = thresholds.getOrNull(tier - 1) ?: 0
+            return ((progress - previous).toFloat() / (next - previous).coerceAtLeast(1)).coerceIn(0f, 1f)
+        }
+}
+
+/** A tier she reached and has not been shown yet — what the unlock animation plays. */
+@Serializable
+data class BadgeUnlock(
+    val key: String,
+    val tier: Int,
+    val maxTier: Int,
+    val coins: Int = 0,
+    val earnedAt: Instant,
+)
+
+/**
+ * The whole board, in one read.
+ *
+ * Reading it is also what awards: counts are taken now, any tier newly crossed is
+ * written (and paid) in the same call, and it comes back in [unseen] until the app
+ * says it has played the animation for it.
+ */
+@Serializable
+data class BadgeBoard(
+    val badges: List<BadgeState> = emptyList(),
+    val unseen: List<BadgeUnlock> = emptyList(),
+    /** The badge she wears beside her name, or null when she wears none (or cannot now). */
+    val worn: String? = null,
+    /** Whether she may wear one: Premium. False keeps the button behind the paywall. */
+    val canWear: Boolean = false,
+) {
+    val earnedCount: Int get() = badges.sumOf { it.tier }
+    val totalCount: Int get() = badges.sumOf { it.maxTier }
+}
+
+/**
+ * The one badge she chose to wear: beside her name on her profile, and after her alias
+ * on every post and comment she writes. [tier] is the highest she has reached of it, so
+ * the medal others see grows with her without her choosing it again.
+ */
+@Serializable
+data class WornBadge(
+    val key: String,
+    val tier: Int,
+    val maxTier: Int,
+)
+
+/** Wear a badge she has earned; a null [key] takes it off. */
+@Serializable
+data class WearBadgeRequest(val key: String? = null)
+
+/** "These have been celebrated." Empty means every unseen unlock. */
+@Serializable
+data class MarkBadgesSeenRequest(val keys: List<String> = emptyList())
 
 // ---------------------------------------------------------------- referral
 

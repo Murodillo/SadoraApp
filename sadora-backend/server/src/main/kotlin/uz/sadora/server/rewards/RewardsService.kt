@@ -4,6 +4,11 @@ import kotlin.random.Random
 import kotlin.uuid.Uuid
 import kotlinx.datetime.LocalDate
 import uz.sadora.contract.AdminRewardsCard
+import uz.sadora.contract.BadgeBoard
+import uz.sadora.contract.BadgeState
+import uz.sadora.contract.BadgeUnlock
+import uz.sadora.contract.Badges
+import uz.sadora.contract.FeatureKeys
 import uz.sadora.contract.ClaimReferralResult
 import uz.sadora.contract.CoinAward
 import uz.sadora.contract.CoinBalance
@@ -44,6 +49,9 @@ class RewardsService(
     private val repository: RewardsRepository,
     private val users: UserRepository,
     private val referralLinkBase: String,
+    private val badgeRepository: BadgeRepository = BadgeRepository(),
+    /** Wearing a badge is Premium; null (tests that never wear one) lets it through. */
+    private val entitlements: uz.sadora.server.entitlement.EntitlementService? = null,
 ) : RewardHooks {
 
     // ---------------------------------------------------------------- daily open
@@ -193,6 +201,109 @@ class RewardsService(
                 ?.takeIf { row.reason == CoinReasons.STREAK_MILESTONE }
             row.toEntry(RewardPhrases.title(row.reason, language, milestone))
         }
+
+    // ---------------------------------------------------------------- badges
+
+    /**
+     * Her badge board, awarding on the way.
+     *
+     * Counting happens here, on read, rather than in every service that logs something:
+     * twelve hooks spread over the health code would each be a place to forget one, and
+     * a count read now is always right. A tier crossed since the last read is written,
+     * paid in Gul and returned in [BadgeBoard.unseen] until the app marks it seen.
+     */
+    suspend fun badges(userId: Uuid): BadgeBoard {
+        val user = users.findById(userId) ?: throw NotFoundException("Foydalanuvchi topilmadi")
+        val counts = badgeRepository.counts(userId)
+        val reached = badgeRepository.earned(userId).groupBy { it.badge }
+        val today = now().dayIn(user.timezone)
+
+        for ((key, thresholds) in Badges.catalogue) {
+            val tier = Badges.tierFor(key, counts[key] ?: 0)
+            val have = reached[key].orEmpty().maxOfOrNull { it.tier } ?: 0
+            for (t in (have + 1)..tier) {
+                if (!badgeRepository.reach(userId, key, t, seen = false)) continue
+                grant(
+                    userId = userId,
+                    reason = CoinReasons.BADGE_EARNED,
+                    day = today,
+                    language = user.language,
+                    reference = "$key:$t",
+                    multiplier = Badges.coinMultiplier(t, thresholds.size),
+                )
+            }
+        }
+
+        val earned = badgeRepository.earned(userId)
+        val unit = repository.rule(CoinReasons.BADGE_EARNED)?.takeIf { it.enabled }?.amount ?: 0
+        val canWear = entitlements?.enabledAmong(listOf(userId), FeatureKeys.BADGE_WEAR)?.contains(userId) ?: true
+        return BadgeBoard(
+            // A lapsed Premium hides the medal; the choice is kept for the day she renews.
+            worn = badgeRepository.worn(userId)?.takeIf { key -> canWear && earned.any { it.badge == key } },
+            canWear = canWear,
+            badges = Badges.catalogue.map { (key, thresholds) ->
+                val mine = earned.filter { it.badge == key }
+                val top = mine.maxByOrNull { it.tier }
+                BadgeState(
+                    key = key,
+                    tier = top?.tier ?: 0,
+                    thresholds = thresholds,
+                    progress = counts[key] ?: 0,
+                    earnedAt = top?.earnedAt,
+                )
+            },
+            unseen = earned.filter { !it.seen }
+                .sortedWith(compareBy({ it.earnedAt }, { it.tier }))
+                .map {
+                    val max = Badges.tiersOf(it.badge).size
+                    BadgeUnlock(
+                        key = it.badge,
+                        tier = it.tier,
+                        maxTier = max,
+                        coins = unit * Badges.coinMultiplier(it.tier, max),
+                        earnedAt = it.earnedAt,
+                    )
+                },
+        )
+    }
+
+    /**
+     * Wears a badge she has earned, or takes hers off. A badge still locked is refused:
+     * the medal after her alias says she did the thing, so it has to be true.
+     */
+    suspend fun wearBadge(userId: Uuid, key: String?): BadgeBoard {
+        if (key != null) {
+            // Taking one off is always allowed; putting one on is a Premium thing.
+            val user = users.findById(userId) ?: throw NotFoundException("Foydalanuvchi topilmadi")
+            entitlements?.requireAvailable(userId, FeatureKeys.BADGE_WEAR, user.timezone)
+            if (Badges.tiersOf(key).isEmpty()) throw ValidationException("key", "Bunday nishon yo'q")
+            if (badgeRepository.earned(userId).none { it.badge == key }) {
+                throw ValidationException("key", "Bu nishon hali olinmagan")
+            }
+        }
+        badgeRepository.wear(userId, key)
+        return badges(userId)
+    }
+
+    /**
+     * The badge each author wears, for the chat's posts, comments and profiles — only for
+     * those whose Premium is live now. A lapsed subscription hides the medal everywhere
+     * at once, and her choice is kept, so it comes back the day she renews.
+     */
+    suspend fun wornBy(userIds: Collection<Uuid>): Map<Uuid, uz.sadora.contract.WornBadge> {
+        val worn = badgeRepository.wornFor(userIds)
+        if (worn.isEmpty()) return worn
+        val gate = entitlements ?: return worn
+        val allowed = gate.enabledAmong(worn.keys, FeatureKeys.BADGE_WEAR)
+        return worn.filterKeys { it in allowed }
+    }
+
+    suspend fun markBadgesSeen(userId: Uuid, keys: List<String>) {
+        val known = keys.filter { key -> Badges.catalogue.any { it.first == key } }
+        // A list of only unknown keys must not widen to "all of them".
+        if (keys.isNotEmpty() && known.isEmpty()) return
+        badgeRepository.markSeen(userId, known)
+    }
 
     // ---------------------------------------------------------------- referral
 

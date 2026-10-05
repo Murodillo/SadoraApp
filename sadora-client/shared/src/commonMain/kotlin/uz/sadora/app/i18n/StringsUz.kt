@@ -1541,6 +1541,7 @@ object StringsUz : Strings {
     override val pregnancyWeeks: PregnancyWeekStrings = PregnancyWeeksUz
     override val tools: StageToolsStrings = StageToolsUz
     override val partner: PartnerStrings = PartnerUz
+    override val badges: BadgeStrings = BadgesUz
 
     override val rewards = object : RewardStrings {
         override val coinName = "Gul"
@@ -1580,6 +1581,8 @@ object StringsUz : Strings {
             CoinReasons.REFERRAL_WELCOME -> "Taklif kodi bilan kelish"
             CoinReasons.REDEMPTION -> "Do'kondan xarid"
             CoinReasons.ADMIN_ADJUSTMENT -> "Qo'lda o'zgartirish"
+            CoinReasons.PARTNER_LINKED -> "Yaqinim ulandi"
+            CoinReasons.BADGE_EARNED -> "Yangi nishon"
             else -> reason
         }
         override val openShop = "Gul do'koni"

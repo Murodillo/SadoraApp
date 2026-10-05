@@ -30,6 +30,8 @@ data class CommunityPost(
     val commentCount: Int = comments.size,
     /** What the author has earned in the room; the card shows the first two. */
     val badges: List<CommunityBadge> = emptyList(),
+    /** The achievement badge the author chose to wear after her alias. */
+    val worn: uz.sadora.contract.WornBadge? = null,
     /** Her own post. The only thing that ever ties a post to her, and only on her phone. */
     val isMine: Boolean = false,
     /**
@@ -48,6 +50,8 @@ data class CommunityComment(
     val body: String,
     val isMine: Boolean = false,
     val badges: List<CommunityBadge> = emptyList(),
+    /** The achievement badge the author wears after her alias. */
+    val worn: uz.sadora.contract.WornBadge? = null,
     /** A verified doctor's answer; the thread draws it apart and lists it first. */
     val doctor: DoctorAuthor? = null,
     /** The server's id; empty on her optimistic copy and on samples. Pages are joined by it. */
@@ -67,6 +71,8 @@ data class AliasProfile(
     val bio: String?,
     val badges: List<CommunityBadge>,
     val postCount: Int,
+    /** The achievement badge she wears after her alias. */
+    val worn: uz.sadora.contract.WornBadge? = null,
     val commentCount: Int,
     val likesReceived: Int,
     val memberSince: Instant,

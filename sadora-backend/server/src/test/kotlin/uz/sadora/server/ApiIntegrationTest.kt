@@ -808,6 +808,111 @@ class ApiIntegrationTest {
     }
 
     /**
+     * A badge is awarded by reading the board: the first day is a tier at once, a tier is
+     * paid in Gul exactly once however often the board is read, and it stays "unseen"
+     * until the app says the animation played.
+     */
+    @Test
+    fun `the badge board awards a crossed tier once and holds it until it is seen`() = api {
+        val user = signUp()
+        onboard(user)
+        post<DailyCheckInResult>("/v1/rewards/check-in", user.token, Unit)
+
+        val first = get<uz.sadora.contract.BadgeBoard>("/v1/rewards/badges", user.token)
+        assertEquals(uz.sadora.contract.Badges.catalogue.size, first.badges.size)
+        val step = first.badges.first { it.key == uz.sadora.contract.Badges.FIRST_STEP }
+        assertEquals(1, step.tier, "the first day is the first step")
+        assertTrue(first.unseen.any { it.key == uz.sadora.contract.Badges.FIRST_STEP && it.coins > 0 })
+        assertTrue(first.badges.first { it.key == uz.sadora.contract.Badges.MEALS }.tier == 0)
+
+        // Read again: nothing new is written or paid.
+        val again = get<uz.sadora.contract.BadgeBoard>("/v1/rewards/badges", user.token)
+        assertEquals(first.unseen.size, again.unseen.size)
+        assertEquals(1, countCoins(user, CoinReasons.BADGE_EARNED))
+
+        // A list of unknown keys must not mark everything seen.
+        post<uz.sadora.contract.Ack>("/v1/rewards/badges/seen", user.token, uz.sadora.contract.MarkBadgesSeenRequest(listOf("nope")))
+        assertTrue(get<uz.sadora.contract.BadgeBoard>("/v1/rewards/badges", user.token).unseen.isNotEmpty())
+
+        post<uz.sadora.contract.Ack>("/v1/rewards/badges/seen", user.token, uz.sadora.contract.MarkBadgesSeenRequest())
+        val seen = get<uz.sadora.contract.BadgeBoard>("/v1/rewards/badges", user.token)
+        assertTrue(seen.unseen.isEmpty(), "every unlock was played")
+        assertEquals(1, seen.badges.first { it.key == uz.sadora.contract.Badges.FIRST_STEP }.tier)
+    }
+
+    /**
+     * The badge she wears follows her alias: on her identity, her posts and comments as
+     * others read them, and her profile — and only a badge she has actually earned.
+     */
+    @Test
+    fun `a worn badge rides after her alias, and a locked one cannot be worn`() = api {
+        val author = signUp().also { onboard(it) }
+        val reader = signUp().also { onboard(it) }
+        post<DailyCheckInResult>("/v1/rewards/check-in", author.token, Unit)
+        val free = get<uz.sadora.contract.BadgeBoard>("/v1/rewards/badges", author.token)
+        assertFalse(free.canWear, "wearing is Premium")
+        val refused = raw {
+            client.put("/v1/rewards/badges/worn") {
+                auth(author.token); json(uz.sadora.contract.WearBadgeRequest(uz.sadora.contract.Badges.FIRST_STEP))
+            }
+        }
+        assertEquals(HttpStatusCode.PaymentRequired, refused.status, "a free account cannot wear one")
+
+        postAck(
+            "/v1/admin/users/${author.userId}/premium",
+            adminToken(),
+            uz.sadora.server.admin.GrantPremiumRequest(reason = "worn badge test"),
+        )
+        assertTrue(get<uz.sadora.contract.BadgeBoard>("/v1/rewards/badges", author.token).canWear)
+
+        val locked = raw {
+            client.put("/v1/rewards/badges/worn") {
+                auth(author.token); json(uz.sadora.contract.WearBadgeRequest(uz.sadora.contract.Badges.MEALS))
+            }
+        }
+        assertEquals(HttpStatusCode.BadRequest, locked.status, "a locked badge is refused")
+
+        val board = put<uz.sadora.contract.BadgeBoard>(
+            "/v1/rewards/badges/worn", author.token, uz.sadora.contract.WearBadgeRequest(uz.sadora.contract.Badges.FIRST_STEP),
+        )
+        assertEquals(uz.sadora.contract.Badges.FIRST_STEP, board.worn)
+        val expected = uz.sadora.contract.WornBadge(uz.sadora.contract.Badges.FIRST_STEP, 1, 1)
+        assertEquals(expected, get<CommunityIdentity>("/v1/community/me", author.token).worn)
+
+        val created = post<CommunityPost>("/v1/community/posts", author.token, CreatePostRequest(CommunityTopic.CYCLE, "Nishon test ${Uuid.random()}"))
+        assertEquals(expected, created.worn)
+        val seen = get<CommunityPost>("/v1/community/posts/${created.id}", reader.token)
+        assertEquals(expected, seen.worn, "others see it on her post")
+        val comment = post<CommunityComment>("/v1/community/posts/${created.id}/comments", author.token, CreateCommentRequest("izoh"))
+        assertEquals(expected, comment.worn)
+        assertEquals(expected, get<uz.sadora.contract.CommunityProfile>("/v1/community/profiles/${created.alias.encodeURLPathPart()}", reader.token).worn)
+
+        put<uz.sadora.contract.BadgeBoard>("/v1/rewards/badges/worn", author.token, uz.sadora.contract.WearBadgeRequest(null))
+        assertNull(get<CommunityPost>("/v1/community/posts/${created.id}", reader.token).worn, "taken off, gone everywhere")
+    }
+
+    /** Ten meals is the bronze of "mindful eater", and the progress counts up to it. */
+    @Test
+    fun `logging meals moves the meals badge to its first tier`() = api {
+        val user = signUp()
+        onboard(user)
+        val today = LocalDate.parse(java.time.LocalDate.now(java.time.ZoneId.of("Asia/Tashkent")).toString())
+        val first = uz.sadora.contract.Badges.tiersOf(uz.sadora.contract.Badges.MEALS).first()
+        repeat(first) { index ->
+            post<uz.sadora.contract.Meal>(
+                "/v1/nutrition/meals",
+                user.token,
+                uz.sadora.contract.LogMealRequest(date = today, slot = uz.sadora.contract.MealSlot.SNACK, description = "Meal $index", kcal = 50),
+            )
+        }
+        val board = get<uz.sadora.contract.BadgeBoard>("/v1/rewards/badges", user.token)
+        val meals = board.badges.first { it.key == uz.sadora.contract.Badges.MEALS }
+        assertEquals(first, meals.progress)
+        assertEquals(1, meals.tier)
+        assertTrue(board.unseen.any { it.key == uz.sadora.contract.Badges.MEALS && it.tier == 1 })
+    }
+
+    /**
      * Blocking revokes the refresh tokens, but the access token already on the phone
      * lives for fifteen minutes. The account is refused on its very next request, with
      * the same code sign-in gives, and let back in the moment the block is lifted.

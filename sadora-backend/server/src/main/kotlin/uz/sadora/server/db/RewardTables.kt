@@ -110,3 +110,21 @@ object HomeWidgetLayout : Table("home_widgets") {
 
     override val primaryKey = PrimaryKey(userId, widgetKey)
 }
+
+object UserBadges : Table("user_badges") {
+    val userId = uuid("user_id").references(Users.id)
+    val badge = text("badge")
+    val tier = integer("tier")
+    val earnedAt = timestampWithTimeZone("earned_at")
+    val seenAt = timestampWithTimeZone("seen_at").nullable()
+
+    override val primaryKey = PrimaryKey(userId, badge, tier)
+}
+
+object UserWornBadge : Table("user_worn_badge") {
+    val userId = uuid("user_id").references(Users.id)
+    val badge = text("badge")
+    val updatedAt = timestampWithTimeZone("updated_at")
+
+    override val primaryKey = PrimaryKey(userId)
+}

@@ -4,7 +4,11 @@ import io.ktor.client.request.setBody
 import uz.sadora.app.data.ApiCaller
 import uz.sadora.app.data.ApiResult
 import uz.sadora.app.data.HttpMethodKind
+import uz.sadora.contract.Ack
+import uz.sadora.contract.BadgeBoard
 import uz.sadora.contract.DailyCheckInResult
+import uz.sadora.contract.MarkBadgesSeenRequest
+import uz.sadora.contract.WearBadgeRequest
 import uz.sadora.contract.HomeLayout
 import uz.sadora.contract.HomeWidget
 import uz.sadora.contract.RedeemRequest
@@ -32,6 +36,19 @@ class RewardsApi(private val caller: ApiCaller) {
 
     suspend fun referral(): ApiResult<ReferralStatus> =
         caller.authenticated("v1/rewards/referral", HttpMethodKind.GET)
+
+    suspend fun badges(): ApiResult<BadgeBoard> =
+        caller.authenticated("v1/rewards/badges", HttpMethodKind.GET)
+
+    suspend fun wearBadge(key: String?): ApiResult<BadgeBoard> =
+        caller.authenticated("v1/rewards/badges/worn", HttpMethodKind.PUT) {
+            setBody(WearBadgeRequest(key))
+        }
+
+    suspend fun badgesSeen(keys: List<String>): ApiResult<Ack> =
+        caller.authenticated("v1/rewards/badges/seen", HttpMethodKind.POST) {
+            setBody(MarkBadgesSeenRequest(keys))
+        }
 
     suspend fun catalogue(): ApiResult<ShopCatalog> =
         caller.authenticated("v1/shop", HttpMethodKind.GET)

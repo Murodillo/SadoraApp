@@ -65,6 +65,7 @@ interface Strings {
     val homeLayout: HomeLayoutStrings
     val share: ShareStrings
     val partner: PartnerStrings
+    val badges: BadgeStrings
     val premium: PremiumStrings
     val devices: DeviceStrings
     val errors: ErrorStrings

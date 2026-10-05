@@ -180,6 +180,7 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
         repository = rewardsRepository,
         users = userRepository,
         referralLinkBase = config.referralLinkBase,
+        entitlements = entitlementService,
     )
 
     val shopService = ShopService(
@@ -294,6 +295,7 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
         messaging = messagingRepository,
         notifications = notificationRepository,
         doctors = doctorRepository,
+        wornBadges = rewardsService::wornBy,
     )
     val doctorService = DoctorService(
         doctors = doctorRepository,

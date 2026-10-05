@@ -262,6 +262,8 @@ object ErrorText {
         Entry("Bunday mahsulot yo'q", "Такого товара нет", "No such product"),
         Entry("Bunday tarif yo'q", "Такого тарифа нет", "No such plan"),
         Entry("Bunday qoida yo'q: {0}", "Такого правила нет: {0}", "No such rule: {0}"),
+        Entry("Bunday nishon yo'q", "Такого значка нет", "No such badge"),
+        Entry("Bu nishon hali olinmagan", "Этот значок ещё не получен", "This badge has not been earned yet"),
         Entry("Bunday slug allaqachon bor", "Такой slug уже есть", "This slug already exists"),
         Entry("Bo'sh tartib saqlanmaydi", "Пустой порядок не сохраняется", "An empty layout cannot be saved"),
         Entry("Balansdan ko'p ayirib bo'lmaydi", "Нельзя списать больше баланса", "Cannot deduct more than the balance"),

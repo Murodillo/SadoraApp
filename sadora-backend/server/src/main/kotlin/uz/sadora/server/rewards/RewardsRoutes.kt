@@ -14,6 +14,8 @@ import kotlin.uuid.Uuid
 import uz.sadora.contract.Ack
 import uz.sadora.contract.AdjustCoinsRequest
 import uz.sadora.contract.ClaimReferralRequest
+import uz.sadora.contract.MarkBadgesSeenRequest
+import uz.sadora.contract.WearBadgeRequest
 import uz.sadora.contract.CreateShopProductRequest
 import uz.sadora.contract.RedeemRequest
 import uz.sadora.contract.SaveCoinRuleRequest
@@ -57,6 +59,21 @@ fun Route.rewardsRoutes(
 
             get("/referral") {
                 call.respond(rewards.referral(call.requireUserId()))
+            }
+
+            get("/badges") {
+                call.respond(rewards.badges(call.requireUserId()))
+            }
+
+            put("/badges/worn") {
+                val request = call.receive<WearBadgeRequest>()
+                call.respond(rewards.wearBadge(call.requireUserId(), request.key))
+            }
+
+            post("/badges/seen") {
+                val request = call.receive<MarkBadgesSeenRequest>()
+                rewards.markBadgesSeen(call.requireUserId(), request.keys)
+                call.respond(Ack())
             }
 
             post("/referral/claim") {

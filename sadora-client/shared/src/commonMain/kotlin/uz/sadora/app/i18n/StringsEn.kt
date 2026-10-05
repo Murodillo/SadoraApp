@@ -1537,6 +1537,7 @@ object StringsEn : Strings {
     override val pregnancyWeeks: PregnancyWeekStrings = PregnancyWeeksEn
     override val tools: StageToolsStrings = StageToolsEn
     override val partner: PartnerStrings = PartnerEn
+    override val badges: BadgeStrings = BadgesEn
 
     override val rewards = object : RewardStrings {
         override val coinName = "Gul"
@@ -1576,6 +1577,8 @@ object StringsEn : Strings {
             CoinReasons.REFERRAL_WELCOME -> "Arriving with an invite code"
             CoinReasons.REDEMPTION -> "Shop purchase"
             CoinReasons.ADMIN_ADJUSTMENT -> "Manual adjustment"
+            CoinReasons.PARTNER_LINKED -> "Your person connected"
+            CoinReasons.BADGE_EARNED -> "New badge"
             else -> reason
         }
         override val openShop = "Gul shop"

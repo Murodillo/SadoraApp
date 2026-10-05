@@ -68,6 +68,8 @@ data class CommunityIdentity(
     val dmOpen: Boolean = true,
     val badges: List<CommunityBadge> = emptyList(),
     val unreadMessages: Int = 0,
+    /** The achievement badge she wears after her alias. */
+    val worn: WornBadge? = null,
 )
 
 /** Edits to her own alias profile. A null field is left as it is; an empty bio clears it. */
@@ -90,6 +92,8 @@ data class CommunityProfile(
     val tint: Int,
     val bio: String? = null,
     val badges: List<CommunityBadge> = emptyList(),
+    /** The achievement badge she wears after her alias. */
+    val worn: WornBadge? = null,
     val postCount: Int = 0,
     val commentCount: Int = 0,
     val likesReceived: Int = 0,
@@ -282,6 +286,8 @@ data class CommunityPost(
     val isMine: Boolean = false,
     /** The author's badges, so the card can show one or two next to the alias. */
     val badges: List<CommunityBadge> = emptyList(),
+    /** The achievement badge the author wears after her alias; never set on a doctor's post. */
+    val worn: WornBadge? = null,
     /**
      * Set when a verified doctor wrote it. [alias] then holds her name, and the app
      * opens her doctor page rather than an alias profile.
@@ -301,6 +307,8 @@ data class CommunityComment(
     val createdAt: Instant,
     val isMine: Boolean = false,
     val badges: List<CommunityBadge> = emptyList(),
+    /** The achievement badge the author wears after her alias. */
+    val worn: WornBadge? = null,
     /** A verified doctor's answer; the thread lists these first. */
     val doctor: DoctorAuthor? = null,
 )

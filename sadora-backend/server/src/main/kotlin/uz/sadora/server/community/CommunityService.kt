@@ -62,6 +62,8 @@ class CommunityService(
     private val notifications: NotificationRepository? = null,
     /** The doctor directory and public pages; null in tests that have no doctors. */
     private val doctors: uz.sadora.server.doctor.DoctorRepository? = null,
+    /** The achievement badge each author wears; null in tests, which then show none. */
+    private val wornBadges: (suspend (Collection<Uuid>) -> Map<Uuid, uz.sadora.contract.WornBadge>)? = null,
 ) {
 
     // ---------------------------------------------------------------- identity
@@ -78,6 +80,7 @@ class CommunityService(
         val identity = ensureIdentity(userId)
         val stats = repository.activityFor(listOf(userId))[userId]
         return identity.toDto(
+            worn = wornOf(listOf(userId))[userId],
             badges = stats?.let { CommunityBadges.of(it, now()) }.orEmpty(),
             // Her own threads only: the consultations she holds as a doctor are counted
             // in the doctor app, not on the chat header of her own.
@@ -120,6 +123,7 @@ class CommunityService(
             tint = identity.tint,
             bio = identity.bio,
             badges = CommunityBadges.of(stats, now()),
+            worn = wornOf(listOf(identity.userId))[identity.userId],
             postCount = stats.posts,
             commentCount = stats.comments,
             likesReceived = stats.likesReceived,
@@ -189,6 +193,7 @@ class CommunityService(
         val bylines = repository.doctorBylines(posts.mapNotNull { it.doctorId })
         val reactions = repository.reactionsFor(viewer, posts.map { it.id })
         val badges = badgesFor(posts.filter { it.doctorId == null }.map { it.userId })
+        val worn = wornOf(posts.filter { it.doctorId == null }.map { it.userId })
         return posts.map { post ->
             // A doctor post carries her name and nothing of her alias — not the tint,
             // not the badges — so the two can never be matched up on a screen.
@@ -207,6 +212,7 @@ class CommunityService(
                 saved = post.id in reactions.saved,
                 isMine = post.userId == viewer,
                 badges = if (post.doctorId == null) badges[post.userId].orEmpty() else emptyList(),
+                worn = if (post.doctorId == null) worn[post.userId] else null,
                 doctor = byline?.toAuthor(),
                 doctorAnswers = reactions.doctorAnswers[post.id] ?: 0,
             )
@@ -215,6 +221,9 @@ class CommunityService(
 
     private fun DoctorByline.toAuthor() =
         DoctorAuthor(id.toString(), fullName, specialty, photoAt?.let { Photos.doctorUrl(id, it) })
+
+    private suspend fun wornOf(userIds: Collection<Uuid>): Map<Uuid, uz.sadora.contract.WornBadge> =
+        if (userIds.isEmpty()) emptyMap() else runCatching { wornBadges?.invoke(userIds) }.getOrNull().orEmpty()
 
     private suspend fun badgesFor(userIds: List<Uuid>): Map<Uuid, List<uz.sadora.contract.CommunityBadge>> {
         val at = now()
@@ -253,6 +262,7 @@ class CommunityService(
         val identities = repository.identitiesFor(comments.filter { it.doctorId == null }.map { it.userId })
         val bylines = repository.doctorBylines(comments.mapNotNull { it.doctorId })
         val badges = badgesFor(comments.filter { it.doctorId == null }.map { it.userId })
+        val worn = wornOf(comments.filter { it.doctorId == null }.map { it.userId })
         // A doctor's answer is the one the asker came for, so answers lead the thread —
         // the repository orders them so, across pages.
         return comments
@@ -262,6 +272,7 @@ class CommunityService(
                     comment.toDto(null, viewer = userId).copy(alias = byline.fullName, doctor = byline.toAuthor())
                 } else {
                     comment.toDto(identities[comment.userId], viewer = userId, badges = badges[comment.userId].orEmpty())
+                        .copy(worn = worn[comment.userId])
                 }
             }
     }
@@ -285,6 +296,7 @@ class CommunityService(
         }
         val identity = ensureIdentity(userId)
         return repository.insertComment(postId, userId, body).toDto(identity, viewer = userId)
+            .copy(worn = wornOf(listOf(userId))[userId])
     }
 
     suspend fun deleteComment(userId: Uuid, commentId: Uuid) {
@@ -464,7 +476,12 @@ class CommunityService(
         if (body.length > max) throw ValidationException("body", "Eng ko'pi $max belgi")
     }
 
-    private fun IdentityRecord.toDto(badges: List<uz.sadora.contract.CommunityBadge>, unread: Int) = CommunityIdentity(
+    private fun IdentityRecord.toDto(
+        badges: List<uz.sadora.contract.CommunityBadge>,
+        unread: Int,
+        worn: uz.sadora.contract.WornBadge? = null,
+    ) = CommunityIdentity(
+        worn = worn,
         alias = alias,
         tint = tint,
         bio = bio,

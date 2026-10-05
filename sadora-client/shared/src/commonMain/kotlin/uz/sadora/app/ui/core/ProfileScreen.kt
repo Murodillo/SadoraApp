@@ -71,6 +71,8 @@ fun ProfileScreen(
     onOpen: (Route) -> Unit,
     /** Yaqinim, for the unread count on its row. */
     partner: uz.sadora.app.data.PartnerController? = null,
+    /** Her badges, for the strip under the premium card; nothing is drawn until one is earned. */
+    badges: uz.sadora.contract.BadgeBoard? = null,
     onSignedOut: () -> Unit,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
@@ -105,11 +107,20 @@ fun ProfileScreen(
                                 Modifier.weight(1f),
                                 verticalArrangement = Arrangement.spacedBy(2.dp),
                             ) {
-                                Text(
-                                    state.name.ifBlank { t.unnamed },
-                                    style = Sadora.type.h3,
-                                    color = c.text,
-                                )
+                                // Her name, and right after it the badge she chose to wear.
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(Spacing.xxs),
+                                ) {
+                                    Text(
+                                        state.name.ifBlank { t.unnamed },
+                                        style = Sadora.type.h3,
+                                        color = c.text,
+                                        maxLines = 1,
+                                        modifier = Modifier.weight(1f, fill = false),
+                                    )
+                                    uz.sadora.app.ui.components.WornBadgeMark(state.wornBadge, size = 26.dp)
+                                }
                                 // A phone-only account has no email; the number is what she signed in with.
                                 Text(
                                     state.email.ifBlank { "+${uz.sadora.contract.UzbekPhone.COUNTRY_CODE} ${uz.sadora.contract.UzbekPhone.format(state.phone)}" },
@@ -124,6 +135,10 @@ fun ProfileScreen(
 
                 item {
                     if (state.isPremium) PremiumStatusCard(state) else UpgradeCard { onOpen(Route.Paywall) }
+                }
+
+                if (badges?.badges?.any { it.tier > 0 } == true) {
+                    item { uz.sadora.app.ui.components.BadgeStrip(badges, onOpen = { onOpen(Route.Badges) }) }
                 }
 
                 // The QR code for a doctor, first among the actions: it is the one thing on

@@ -1,6 +1,8 @@
 package uz.sadora.app
 
 import uz.sadora.app.ui.components.systemReducesMotion
+import uz.sadora.app.ui.components.BadgeUnlockOverlay
+import uz.sadora.app.ui.components.BadgeDetailSheet
 import uz.sadora.app.ui.components.LocalReduceMotion
 import uz.sadora.app.ui.components.LocalPhotoSource
 import uz.sadora.app.ui.components.PhotoSource
@@ -355,6 +357,8 @@ private class ShellOverlays {
     /** The doctor, by id, whose consultation she is paying for: the pay sheet is up. */
     var payFor by mutableStateOf<String?>(null)
     var showSymptomSheet by mutableStateOf(false)
+    /** The badge opened on the board: its sheet covers the tab bar like the others. */
+    var openBadge by mutableStateOf<uz.sadora.contract.BadgeState?>(null)
     /** Her profile photo sheet: at shell level so it covers the tab bar, like every sheet here. */
     var showPhotoSheet by mutableStateOf(false)
 
@@ -422,6 +426,8 @@ private fun MainShell(
         // default, on the first frame after the load.
         rewards.checkIn()
         rewards.loadHomeLayout()
+        // Badges after the check-in, which may itself have crossed a streak tier.
+        rewards.loadBadges(force = true)
         // Whether she writes in the chat as a doctor; the composer names her either way.
         controllers.doctors.loadAccount()
         // Whether someone sees her — the labour button needs to know — and whom she follows.
@@ -681,6 +687,27 @@ private fun MainShell(
             onDismiss = rewards::celebrationShown,
         )
 
+        BadgeDetailSheet(
+            overlays.openBadge,
+            onDismiss = { overlays.openBadge = null },
+            worn = rewards.badges?.worn,
+            onWear = { key -> scope.launch { rewards.wear(key) } },
+            canWear = rewards.badges?.canWear ?: state.isPremium,
+            onUpgrade = {
+                overlays.openBadge = null
+                controllers.analytics.event(AnalyticsEvents.PAYWALL_OPENED, mapOf("from" to "badge_wear"))
+                navigator.push(Route.Paywall)
+            },
+        )
+
+        // A badge tier just reached — after the streak card, never on top of it.
+        BadgeUnlockOverlay(
+            unlock = if (rewards.celebration == null) rewards.unlocks.firstOrNull() else null,
+            remaining = (rewards.unlocks.size - 1).coerceAtLeast(0),
+            onNext = { shown -> scope.launch { rewards.unlockShown(shown) } },
+            onSkipAll = { scope.launch { rewards.unlocksSkipped() } },
+        )
+
         SymptomSheet(
             visible = overlays.showSymptomSheet,
             state = state,
@@ -846,6 +873,11 @@ private fun RootTab(
     onAddWater: () -> Unit,
     onQuickWater: (Int) -> Unit,
 ) {
+    // Badges are counted on read, so each return to a tab — from logging a meal, from a
+    // breathing session — is when a tier she just crossed gets its moment. Throttled in
+    // the controller, so flicking between tabs does not hammer the server.
+    LaunchedEffect(tab) { controllers.rewards.loadBadges() }
+
     when (tab) {
         Tab.Today -> {
             // A new line on every entry to the tab — that is the feature, so it is asked
@@ -1015,6 +1047,12 @@ private fun PushedScreen(
 
         // Gul.
         Route.Rewards -> RewardsScreen(state, controllers.rewards, close, navigator::push)
+        Route.Badges -> uz.sadora.app.ui.modules.BadgesScreen(
+            controllers.rewards,
+            close,
+            onOpenBadge = { overlays.openBadge = it },
+            onUpgrade = upgrade,
+        )
         Route.Shop -> ShopScreen(
             state = state,
             rewards = controllers.rewards,
@@ -1109,6 +1147,7 @@ private fun PushedScreen(
             health = health,
             photos = controllers.photos,
             partner = controllers.partner,
+            badges = controllers.rewards.badges,
             onEditPhoto = { overlays.showPhotoSheet = true },
             onOpen = {
                 when (it) {

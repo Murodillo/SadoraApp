@@ -33,6 +33,7 @@ object RewardPhrases {
         CoinReasons.REFERRAL_JOINED -> "Do'st taklif bo'yicha qo'shildi"
         CoinReasons.REFERRAL_WELCOME -> "Taklif sovg'asi"
         CoinReasons.PARTNER_LINKED -> "Yaqinim ulandi"
+        CoinReasons.BADGE_EARNED -> "Yangi nishon"
         CoinReasons.REDEMPTION -> "Do'kondan xarid"
         CoinReasons.ADMIN_ADJUSTMENT -> "Qo'lda o'zgartirish"
         else -> reason
@@ -51,6 +52,7 @@ object RewardPhrases {
         CoinReasons.REFERRAL_JOINED -> "Подруга присоединилась"
         CoinReasons.REFERRAL_WELCOME -> "Подарок за приглашение"
         CoinReasons.PARTNER_LINKED -> "Близкий подключён"
+        CoinReasons.BADGE_EARNED -> "Новый значок"
         CoinReasons.REDEMPTION -> "Покупка в магазине"
         CoinReasons.ADMIN_ADJUSTMENT -> "Ручная корректировка"
         else -> reason
@@ -69,6 +71,7 @@ object RewardPhrases {
         CoinReasons.REFERRAL_JOINED -> "A friend joined"
         CoinReasons.REFERRAL_WELCOME -> "Invite welcome"
         CoinReasons.PARTNER_LINKED -> "Your person is connected"
+        CoinReasons.BADGE_EARNED -> "New badge"
         CoinReasons.REDEMPTION -> "Shop purchase"
         CoinReasons.ADMIN_ADJUSTMENT -> "Manual adjustment"
         else -> reason

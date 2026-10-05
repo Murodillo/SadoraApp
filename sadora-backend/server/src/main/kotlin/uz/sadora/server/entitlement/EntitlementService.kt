@@ -69,6 +69,22 @@ class EntitlementService(
         )
     }
 
+    /**
+     * Which of [userIds] have an unmetered feature switched on right now — for a read that
+     * shows many people at once (a feed's authors), where resolving each in full would be
+     * a round of queries per row. Limits are ignored: only on/off features belong here.
+     */
+    suspend fun enabledAmong(userIds: Collection<Uuid>, featureKey: String): Set<Uuid> {
+        val ids = userIds.toSet()
+        if (ids.isEmpty()) return emptySet()
+        val definition = definitions().firstOrNull { it.key == featureKey } ?: return emptySet()
+        val tiers = repository.activeTiers(ids)
+        val overrides = repository.overrideSwitches(ids, featureKey)
+        return ids.filterTo(HashSet()) { id ->
+            overrides[id] ?: definition.enabledFor(tiers[id] ?: SubscriptionTier.FREE)
+        }
+    }
+
     suspend fun subscriptionStatus(userId: Uuid): SubscriptionStatus {
         val subscription = repository.activeSubscription(userId)
             ?: return SubscriptionStatus(tier = SubscriptionTier.FREE)

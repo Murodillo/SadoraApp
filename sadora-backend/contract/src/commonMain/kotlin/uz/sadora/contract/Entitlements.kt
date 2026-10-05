@@ -23,6 +23,9 @@ object FeatureKeys {
 
     /** Reading a photograph of a meal. Premium, metered, and billed like an AI call. */
     const val FOOD_SCAN = "food_scan"
+
+    /** Wearing an earned badge after her name. Premium; earning badges stays free. */
+    const val BADGE_WEAR = "badge_wear"
 }
 
 /**

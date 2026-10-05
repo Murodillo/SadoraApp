@@ -108,6 +108,8 @@ sealed interface Route {
 
     // Gul — the wallet, the shop and the invite screen.
     data object Rewards : Route
+    /** The badges: what she earned, what is ahead, and the one she wears. */
+    data object Badges : Route
     data object Shop : Route
     data object Referral : Route
 

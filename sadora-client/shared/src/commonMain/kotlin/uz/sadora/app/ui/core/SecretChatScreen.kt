@@ -69,6 +69,7 @@ import uz.sadora.app.model.CommunityPost
 import uz.sadora.app.model.CommunitySort
 import uz.sadora.app.model.CommunityTopic
 import uz.sadora.app.ui.components.BadgeRow
+import uz.sadora.app.ui.components.WornBadgeMark
 import uz.sadora.app.ui.components.RoundIconButton
 import uz.sadora.app.ui.components.SadoraButton
 import uz.sadora.app.ui.components.SadoraCard
@@ -183,6 +184,7 @@ fun SecretChatScreen(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
                 ) {
+                    WornBadgeMark(state.wornBadge, size = 24.dp)
                     BadgeRow(state.communityBadges, max = 3)
                     Text(t.viewProfile, style = Sadora.type.caption.copy(letterSpacing = TextUnit.Unspecified), color = c.textAccent)
                 }
@@ -448,6 +450,8 @@ internal fun PostCard(
                         maxLines = 1,
                         modifier = Modifier.weight(1f, fill = false),
                     )
+                    // The badge she chose to wear stands right after her alias.
+                    if (doctor == null) WornBadgeMark(post.worn, size = 26.dp)
                     if (doctor != null) VerifiedMark() else BadgeRow(post.badges, max = 2, compact = true)
                 }
                 Text(
@@ -622,6 +626,7 @@ internal fun CommentRow(comment: CommunityComment, onOpenAuthor: () -> Unit) {
                     style = Sadora.type.caption.copy(letterSpacing = TextUnit.Unspecified),
                     color = c.muted2,
                 )
+                WornBadgeMark(comment.worn, size = 20.dp)
                 BadgeRow(comment.badges, max = 1, compact = true)
             }
             Text(comment.body, style = Sadora.type.body, color = c.text)

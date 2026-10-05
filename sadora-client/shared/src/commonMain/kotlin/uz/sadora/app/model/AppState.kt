@@ -450,6 +450,23 @@ class AppState {
     var communityBio by mutableStateOf<String?>(null)
     var communityDmOpen by mutableStateOf(true)
     var communityBadges by mutableStateOf<List<CommunityBadge>>(emptyList())
+    /**
+     * The achievement badge she wears after her name and alias. Set from the board and
+     * from her chat identity; changing it re-stamps her posts already on screen.
+     */
+    var wornBadge by mutableStateOf<uz.sadora.contract.WornBadge?>(null)
+        private set
+
+    fun applyWornBadge(worn: uz.sadora.contract.WornBadge?) {
+        wornBadge = worn
+        for (i in communityPosts.indices) {
+            val post = communityPosts[i]
+            if (post.isMine && post.doctor == null && post.worn != worn) communityPosts[i] = post.copy(worn = worn)
+        }
+        if (doctorName == null) ownComments.values.forEach { list ->
+            for (i in list.indices) if (list[i].worn != worn) list[i] = list[i].copy(worn = worn)
+        }
+    }
     /** Unread private messages, for the badge on the chat header. */
     var communityUnread by mutableStateOf(0)
 
@@ -492,6 +509,7 @@ class AppState {
                     createdAt = Clock.System.now(),
                     body = text,
                     isMine = true,
+                    worn = if (doctorName == null) wornBadge else null,
                 ),
             )
         communitySync?.commentAdded(postId, text)
