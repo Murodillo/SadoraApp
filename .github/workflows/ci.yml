@@ -426,12 +426,12 @@ jobs:
             -f sadora-backend/docker-compose.prod.yml -f sadora-backend/docker-compose.stage.yml \
             --env-file "$RUNNER_TEMP/ci.env" config --quiet
 
-      - name: Validate the Caddyfiles
+      - name: Validate the nginx configs
         run: |
-          docker run --rm -v "$PWD/sadora-backend/deploy/stage/Caddyfile:/etc/caddy/Caddyfile:ro" \
-            caddy:2-alpine caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
-          docker run --rm -e SADORA_DOMAIN=api.example.com -v "$PWD/sadora-backend/deploy/Caddyfile:/etc/caddy/Caddyfile:ro" \
-            caddy:2-alpine caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+          for conf in spa landing; do
+            docker run --rm -v "$PWD/sadora-backend/deploy/nginx/$conf.conf:/etc/nginx/conf.d/default.conf:ro" \
+              nginx:1.29-alpine nginx -t
+          done
 
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()

@@ -8,8 +8,7 @@ name: Stage
 # Called by ci.yml once the checks pass. Also runnable by hand — Actions → Stage → Run
 # workflow — to redeploy a branch or to roll staging back to an earlier release.
 #
-# The repository is public, and so are these logs: the server's addresses and the tunnel
-# URLs are masked, and the APK (which carries the staging URL) is not uploaded as an artifact.
+# The repository is public, and so are these logs: the server's addresses are masked, and the APK (which carries the staging URL) is not uploaded as an artifact.
 on:
   workflow_call:
     outputs:
@@ -146,12 +145,18 @@ jobs:
             sadora-backend/admin/package-lock.json
             sadora-doctor-admin/package-lock.json
 
+      # Each panel is a hostname of its own beside the API's, so it is built to call that
+      # one (the gate's `url` reports the same hostnames).
       - name: Build the admin panel
         working-directory: sadora-backend/admin
+        env:
+          VITE_API_BASE: https://dev-api.sadora.app
         run: npm ci && npm run build
 
       - name: Build the doctors' panel
         working-directory: sadora-doctor-admin
+        env:
+          VITE_API_BASE: https://dev-api.sadora.app
         run: npm ci && npm run build
 
       # Exactly what the gate accepts: admin/dist, doctor-admin/dist, landing, infra, RELEASE. The infra
@@ -165,7 +170,8 @@ jobs:
           cp -r sadora-doctor-admin/dist "$b/doctor-admin/dist"
           cp -r landing "$b/landing"
           cp sadora-backend/docker-compose.prod.yml sadora-backend/docker-compose.stage.yml \
-            sadora-backend/deploy/stage/Caddyfile sadora-backend/deploy/stage/sadora-ci "$b/infra/"
+            sadora-backend/deploy/nginx/spa.conf sadora-backend/deploy/nginx/landing.conf \
+            sadora-backend/deploy/stage/sadora-ci "$b/infra/"
           echo "$GITHUB_SHA" > "$b/RELEASE"
           tar -czf bundle.tgz -C "$b" .
           ls -l bundle.tgz
@@ -262,13 +268,12 @@ jobs:
           jump: ${{ secrets.STAGE_JUMP }}
           host: ${{ secrets.STAGE_HOST }}
 
-      # Asked of the server, not configured: a quick tunnel's hostname is whatever
-      # cloudflared was given when it last started, and the APK has to carry that one.
+      # Asked of the server, so the APK carries exactly the API hostname the gate reports.
       - name: Find the API this APK will talk to
         id: api
         run: |
-          url=$(stage url | jq -r .app)
-          [[ $url =~ ^https://[a-z0-9-]+\.trycloudflare\.com$ ]] || { echo "::error::the app tunnel reports no URL"; exit 1; }
+          url=$(stage url | jq -r .api)
+          [[ $url =~ ^https://[a-z0-9.-]+$ ]] || { echo "::error::the server reports no API URL"; exit 1; }
           echo "::add-mask::$url"
           echo "url=$url" >> "$GITHUB_OUTPUT"
 
@@ -375,9 +380,9 @@ jobs:
           APK_SHA256: ${{ needs.apk.outputs.sha256 }}
         run: |
           urls=$(stage url)
-          app=$(jq -r .app <<<"$urls"); landing=$(jq -r .landing <<<"$urls")
-          echo "::add-mask::$app"; echo "::add-mask::$landing"
-          bash tools/ci/smoke.sh "$app" "$landing" "$GITHUB_SHA" "$BUILD" "$APK_SHA256"
+          api=$(jq -r .api <<<"$urls"); admin=$(jq -r .admin <<<"$urls")
+          doctor=$(jq -r .doctor <<<"$urls"); landing=$(jq -r .landing <<<"$urls")
+          bash tools/ci/smoke.sh "$api" "$admin" "$doctor" "$landing" "$GITHUB_SHA" "$BUILD" "$APK_SHA256"
 
   # The iOS twin of the APK: a build against the same staging API, uploaded to TestFlight,
   # where the internal group takes every processed build on its own. Only dev itself gets
@@ -443,8 +448,8 @@ jobs:
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
           ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
         run: |
-          url=$(stage url | jq -r .app)
-          [[ $url =~ ^https://[a-z0-9-]+\.trycloudflare\.com$ ]] || { echo "::error::the app tunnel reports no URL"; exit 1; }
+          url=$(stage url | jq -r .api)
+          [[ $url =~ ^https://[a-z0-9.-]+$ ]] || { echo "::error::the server reports no API URL"; exit 1; }
           echo "::add-mask::$url"
           # xcodebuild finds the key by its id in this folder; it never reaches the logs.
           install -d -m 700 ~/.appstoreconnect/private_keys
@@ -566,8 +571,8 @@ jobs:
           GOOGLE_SERVICES: ${{ secrets[format('GOOGLE_SERVICES_{0}_JSON', matrix.app.key)] }}
           ACCOUNT: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
         run: |
-          url=$(stage url | jq -r .app)
-          [[ $url =~ ^https://[a-z0-9-]+\.trycloudflare\.com$ ]] || { echo "::error::the app tunnel reports no URL"; exit 1; }
+          url=$(stage url | jq -r .api)
+          [[ $url =~ ^https://[a-z0-9.-]+$ ]] || { echo "::error::the server reports no API URL"; exit 1; }
           echo "::add-mask::$url"
           umask 077
           printf '%s' "$KEYSTORE" | base64 -d > "$APP_DIR/androidApp/upload.jks"

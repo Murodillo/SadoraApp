@@ -4,9 +4,11 @@
 #
 #   ./tools/deploy_stage.sh
 #
+#   SADORA_DIRECT=1 ./tools/deploy_stage.sh   # from the server's own LAN, without the jump host
+#
 # Ships the source, builds the API image on the server, and brings up Postgres, Redis,
-# the API, the web front (admin panel, doctors' panel, landing page) and three Cloudflare
-# tunnels. Prints
+# the API and the three static sites (admin panel, doctors' panel, landing page), each on
+# the port the gateway forwards its dev- hostname to (docker-compose.stage.yml). Prints
 # the public URLs at the end and writes them to build/stage/urls.txt.
 #
 # Access is by key only. The script never asks for a password and never passes one:
@@ -18,7 +20,7 @@
 #
 # This is also how infrastructure changes reach staging. CI (stage.yml) deploys the API
 # image and the static files through /usr/local/bin/sadora-ci, and that script refuses to
-# touch compose files, the Caddyfile or itself — a person applies those, here. It installs
+# touch compose files, the nginx configs or itself — a person applies those, here. It installs
 # the gate, and when ~/.config/sadora/ci/stage_ci_ed25519.pub exists, binds that CI key to
 # it: on the server the key can run sadora-ci and nothing else, and on the jump host it can
 # open a connection to the server and nothing else.
@@ -44,8 +46,10 @@ SSH_OPTS=(
   -o ConnectTimeout=20
   -o ServerAliveInterval=30
   -i "$KEY"
-  -o "ProxyCommand=ssh -o BatchMode=yes -o IdentitiesOnly=yes -i $KEY -W %h:%p $JUMP"
 )
+# From inside the server's LAN (the office network or its VPN) the jump host's public
+# address does not answer, and is not needed: SADORA_DIRECT=1 connects straight to it.
+[[ -z $SADORA_DIRECT ]] && SSH_OPTS+=(-o "ProxyCommand=ssh -o BatchMode=yes -o IdentitiesOnly=yes -i $KEY -W %h:%p $JUMP")
 remote() { ssh "${SSH_OPTS[@]}" "$HOST" "$@"; }
 
 CI_PUB=${SADORA_CI_PUB:-$HOME/.config/sadora/ci/stage_ci_ed25519.pub}
@@ -63,9 +67,16 @@ if ! remote 'command -v docker >/dev/null 2>&1 && docker compose version >/dev/n
 fi
 remote 'docker --version'
 
+# The public hostnames — fixed, the same ones sadora-ci reports to CI.
+API_URL=https://dev-api.sadora.app
+ADMIN_URL=https://dev-admin.sadora.app
+DOCTOR_URL=https://dev-doctor.sadora.app
+LANDING_URL=https://dev.sadora.app
+
 echo "==> admin panels"
-npm --prefix sadora-backend/admin run build >/dev/null
-npm --prefix sadora-doctor-admin run build >/dev/null
+# Each panel is a hostname of its own beside the API's, so it is built to call that one.
+VITE_API_BASE=$API_URL npm --prefix sadora-backend/admin run build >/dev/null
+VITE_API_BASE=$API_URL npm --prefix sadora-doctor-admin run build >/dev/null
 
 echo "==> source"
 remote "mkdir -p $DIR"
@@ -120,7 +131,11 @@ if [[ -f $CI_PUB ]]; then
       && mv ~/.ssh/authorized_keys.new ~/.ssh/authorized_keys"
   }
   jump() { ssh "${SSH_OPTS[@]:0:10}" "$JUMP" "$@"; }
-  bind_key jump "restrict,port-forwarding,permitopen=\"${HOST#*@}:22\",command=\"/bin/false\""
+  if [[ -z $SADORA_DIRECT ]]; then
+    bind_key jump "restrict,port-forwarding,permitopen=\"${HOST#*@}:22\",command=\"/bin/false\""
+  else
+    echo "    direct connection: the jump host's binding is left as it is"
+  fi
   bind_key remote 'restrict,command="/usr/local/bin/sadora-ci"'
   echo "    bound: jump host → ${HOST#*@}:22 only; server → sadora-ci only"
 fi
@@ -136,45 +151,30 @@ else
 fi
 
 echo "==> waiting for the API"
+health() { remote 'curl -sf http://127.0.0.1:8083/health/ready 2>/dev/null || wget -qO- http://127.0.0.1:8083/health/ready 2>/dev/null'; }
 for i in {1..120}; do
-  remote 'curl -sf http://127.0.0.1:8081/health/ready >/dev/null 2>&1 || wget -qO- http://127.0.0.1:8081/health/ready >/dev/null 2>&1' && break
+  health >/dev/null && break
   sleep 5
 done
-remote 'curl -sf http://127.0.0.1:8081/health/ready 2>/dev/null || wget -qO- http://127.0.0.1:8081/health/ready' \
-  || { echo "API did not become ready:"; remote "cd $DIR && $COMPOSE logs --tail=40 api"; exit 1; }
+health || { echo "API did not become ready:"; remote "cd $DIR && $COMPOSE logs --tail=40 api"; exit 1; }
 echo
 
-echo "==> tunnels"
-url_of() {
-  remote "docker logs sadora-$1-1 2>&1" | grep -o 'https://[a-z0-9-]*\.trycloudflare\.com' | tail -1
-}
-for i in {1..40}; do
-  APP=$(url_of tunnel-app || true)
-  LANDING=$(url_of tunnel-landing || true)
-  DOCTOR=$(url_of tunnel-doctor || true)
-  [[ -n $APP && -n $LANDING && -n $DOCTOR ]] && break
-  sleep 3
-done
-[[ -n $APP && -n $LANDING && -n $DOCTOR ]] || { echo "Tunnels did not report a URL; see: docker logs sadora-tunnel-app-1"; exit 1; }
-
-echo "==> CORS for the panel's origin"
-# The panel and the API share an origin behind Caddy, but a browser still sends an Origin
-# header on every POST, and the API accepts only the origins it has been told about —
-# without this, login answers 403 in a browser while curl gets 200. The tunnel hostname
-# is random, so it is written into the allowlist each time it is read, and only the API
-# container is recreated: the tunnels, and therefore the URL, stay exactly as they are.
-# Fixed hostnames (https://doctor.sadora.app once the domain is live) live in
-# CORS_EXTRA_ORIGINS, which the API ignores and this line — and the CI gate — append.
-EXTRA=$(remote "sed -n 's/^CORS_EXTRA_ORIGINS=//p' $DIR/server/.env.stage | tail -1")
-remote "cd $DIR && sed -i 's#^CORS_ALLOWED_ORIGINS=.*#CORS_ALLOWED_ORIGINS=http://localhost:5173,http://localhost:4173,$APP,$DOCTOR${EXTRA:+,$EXTRA}#' server/.env.stage"
-remote "cd $DIR && $COMPOSE up -d api"
-for i in {1..60}; do
-  remote 'curl -sf http://127.0.0.1:8081/health/ready >/dev/null 2>&1 || wget -qO- http://127.0.0.1:8081/health/ready >/dev/null 2>&1' && break
-  sleep 5
-done
+# The panels are other origins than the API, and a browser sends an Origin header on
+# every POST: the API accepts only the origins it has been told about — without them,
+# sign-in answers 403 in a browser while curl gets 200. The hostnames are fixed, so this
+# is written once and only changes here.
+echo "==> CORS for the panels' origins"
+ORIGINS="CORS_ALLOWED_ORIGINS=http://localhost:5173,http://localhost:5174,$ADMIN_URL,$DOCTOR_URL,$LANDING_URL"
+if ! remote "grep -qxF '$ORIGINS' $DIR/server/.env.stage"; then
+  remote "cd $DIR && sed -i '/^CORS_EXTRA_ORIGINS=/d; /^CORS_ALLOWED_ORIGINS=/d' server/.env.stage && echo '$ORIGINS' >> server/.env.stage"
+  remote "cd $DIR && $COMPOSE up -d api"
+  for i in {1..60}; do health >/dev/null && break; sleep 5; done
+fi
+echo "    $ORIGINS"
 
 {
-  echo "App API + admin: $APP"
-  echo "Doctors' panel:  $DOCTOR"
-  echo "Landing:         $LANDING"
+  echo "API:             $API_URL"
+  echo "Admin panel:     $ADMIN_URL"
+  echo "Doctors' panel:  $DOCTOR_URL"
+  echo "Landing:         $LANDING_URL"
 } | tee "$OUT/urls.txt"

@@ -1,6 +1,13 @@
 import { deviceId } from './device'
 import type { ApiError, AuthSession, TokenPair } from './types'
 
+/**
+ * The API's origin, put in front of every `/v1/…` path. Blank (the default) calls this
+ * page's own origin, which is what Vite's dev proxy answers; a deployed panel is built
+ * with VITE_API_BASE because it and the API are separate hostnames there.
+ */
+export const API_BASE = (import.meta.env.VITE_API_BASE ?? '').replace(/\/+$/, '')
+
 const ACCESS_KEY = 'sadora.doctor.access'
 const REFRESH_KEY = 'sadora.doctor.refresh'
 const SESSION_KEY = 'sadora.doctor.session'
@@ -197,7 +204,7 @@ export async function logout(): Promise<void> {
 async function send(path: string, options: RequestOptions, token: string | null): Promise<Response> {
   const { method = 'GET', body, signal, headers = {} } = options
   try {
-    return await fetch(path, {
+    return await fetch(API_BASE + path, {
       method,
       signal,
       headers: {

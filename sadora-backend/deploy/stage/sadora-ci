@@ -11,8 +11,8 @@
 #   rollback [sha]            stdin (optional): GHCR token line, if the image must be pulled
 #   status                    releases, containers, health
 #
-# What it deliberately cannot do is change the infrastructure: compose files, the Caddyfile
-# and this script are installed by a person with tools/deploy_stage.sh. A stolen CI key can
+# What it deliberately cannot do is change the infrastructure: compose files, the nginx
+# configs and this script are installed by a person with tools/deploy_stage.sh. A stolen CI key can
 # therefore run a different API image in its unprivileged container, but not mount the
 # host into one. The bundle still carries those files, so a PR that changes them is
 # reported as drift instead of silently ignored.
@@ -25,14 +25,23 @@ umask 022
 ROOT=${SADORA_ROOT:-/opt/sadora}
 LOCK=${SADORA_LOCK:-/run/lock/sadora-ci.lock}
 KEEP=${SADORA_KEEP:-5}
-HEALTH_URL=${SADORA_HEALTH_URL:-http://127.0.0.1:8081/health/ready}
+HEALTH_URL=${SADORA_HEALTH_URL:-http://127.0.0.1:8083/health/ready}
 HEALTH_TIMEOUT=${SADORA_HEALTH_TIMEOUT:-240}
 MAX_BUNDLE=$((64 * 1024 * 1024))
 MAX_APK=$((256 * 1024 * 1024))
 SHA_RE='^[0-9a-f]{40}$'
 IMAGE_RE='^ghcr\.io/[a-z0-9_.-]+/[a-z0-9_./-]+@sha256:[0-9a-f]{64}$'
 GATE_PATH=${SADORA_GATE_PATH:-/usr/local/bin/sadora-ci}
-INFRA_FILES=(docker-compose.prod.yml docker-compose.stage.yml deploy/stage/Caddyfile deploy/stage/sadora-ci)
+INFRA_FILES=(docker-compose.prod.yml docker-compose.stage.yml deploy/nginx/spa.conf deploy/nginx/landing.conf deploy/stage/sadora-ci)
+# The public hostnames. The gateway in front of this server terminates TLS for them and
+# forwards each to a port of its own (docker-compose.stage.yml); they never change, so the
+# APK and the panels carry them as they are.
+API_URL=${SADORA_API_URL:-https://dev-api.sadora.app}
+ADMIN_URL=${SADORA_ADMIN_URL:-https://dev-admin.sadora.app}
+DOCTOR_URL=${SADORA_DOCTOR_URL:-https://dev-doctor.sadora.app}
+LANDING_URL=${SADORA_LANDING_URL:-https://dev.sadora.app}
+# nginx containers serving the directories a deploy swaps in.
+STATIC_SERVICES=(landing admin doctor-admin)
 
 log() { printf '%s\n' "$*" >&2; }
 # ::error:: and ::warning:: become annotations on the GitHub run; in a terminal they read fine.
@@ -43,10 +52,6 @@ compose() {
   (cd "$ROOT" && SADORA_ENV_FILE=server/.env.stage docker compose -p sadora \
     -f docker-compose.prod.yml -f docker-compose.stage.yml \
     --env-file server/.env.stage --env-file .release.env "$@")
-}
-
-tunnel_url() {
-  docker logs "sadora-$1-1" 2>&1 | grep -o 'https://[a-z0-9-]*\.trycloudflare\.com' | tail -1 || true
 }
 
 newest_first() { # <dir> <find tests…> → matching paths, most recently modified first
@@ -67,8 +72,8 @@ read_token() { # first stdin line, when stdin is not a terminal; empty is allowe
 }
 
 cmd_url() {
-  printf '{"app":"%s","landing":"%s","doctor":"%s"}\n' \
-    "$(tunnel_url tunnel-app)" "$(tunnel_url tunnel-landing)" "$(tunnel_url tunnel-doctor)"
+  printf '{"api":"%s","admin":"%s","doctor":"%s","landing":"%s"}\n' \
+    "$API_URL" "$ADMIN_URL" "$DOCTOR_URL" "$LANDING_URL"
 }
 
 # A bundle may hold regular files and directories under a few known prefixes. No absolute
@@ -126,7 +131,7 @@ backup_db() {
   newest_first "$dir" -name '*.sql.gz' | tail -n +11 | xargs -r rm -f
 }
 
-swap_dir() { # atomically enough: the web container is restarted right after
+swap_dir() { # atomically enough: the static containers are restarted right after
   local src=$1 dst=$2
   rm -rf "$dst.new" "$dst.old"
   mkdir -p "$(dirname "$dst")"
@@ -134,26 +139,6 @@ swap_dir() { # atomically enough: the web container is restarted right after
   [[ -e $dst ]] && mv "$dst" "$dst.old"
   mv "$dst.new" "$dst"
   rm -rf "$dst.old"
-}
-
-sync_cors() { # the panels' origins are the tunnels' random hostnames; see tools/deploy_stage.sh
-  local app doctor extra line env=$ROOT/server/.env.stage
-  app=$(tunnel_url tunnel-app)
-  [[ -n $app ]] || { warn "the app tunnel has no URL yet — CORS left as it is"; return 1; }
-  # The doctors' panel is optional here: a server set up before it had no tunnel for it.
-  doctor=$(tunnel_url tunnel-doctor)
-  # Fixed hostnames (https://doctor.sadora.app once the domain is live) are written once
-  # into CORS_EXTRA_ORIGINS in .env.stage, which the API ignores; they are kept here
-  # every time the tunnel hostnames are rewritten.
-  extra=$(sed -n 's/^CORS_EXTRA_ORIGINS=//p' "$env" | tail -1)
-  line="CORS_ALLOWED_ORIGINS=http://localhost:5173,http://localhost:4173,$app${doctor:+,$doctor}${extra:+,$extra}"
-  grep -qxF "$line" "$env" && return 1
-  if grep -q '^CORS_ALLOWED_ORIGINS=' "$env"; then
-    sed -i "s#^CORS_ALLOWED_ORIGINS=.*#$line#" "$env"
-  else
-    printf '%s\n' "$line" >> "$env"
-  fi
-  return 0
 }
 
 wait_healthy() {
@@ -169,7 +154,7 @@ wait_healthy() {
 }
 
 activate() { # <release dir> <sha> <image>
-  local rel=$1 sha=$2 image=$3 recreate=()
+  local rel=$1 sha=$2 image=$3 service containers=()
   swap_dir "$rel/admin/dist" "$ROOT/admin/dist"
   # Releases from before the doctors' panel was bundled carry none; a rollback to one
   # leaves the panel that is there.
@@ -179,10 +164,11 @@ activate() { # <release dir> <sha> <image>
   swap_dir "$rel/landing" "$ROOT/landing"
   printf 'SADORA_API_IMAGE=%s\nSADORA_RELEASE=%s\n' "$image" "$sha" > "$ROOT/.release.env.new"
   mv "$ROOT/.release.env.new" "$ROOT/.release.env"
-  if sync_cors; then recreate=(--force-recreate); fi
-  # Only api and web: the tunnels keep their hostnames only as long as nobody recreates them.
-  compose up -d --no-build "${recreate[@]}" api web >&2
-  docker restart sadora-web-1 >/dev/null   # picks up the swapped static directories
+  # The API is recreated when its image changed. A bind mount keeps the directory it was
+  # given, so the static sites are restarted to see the ones just swapped in.
+  compose up -d --no-build api "${STATIC_SERVICES[@]}" >&2
+  for service in "${STATIC_SERVICES[@]}"; do containers+=("sadora-$service-1"); done
+  docker restart "${containers[@]}" >/dev/null
   wait_healthy "$sha"
 }
 
@@ -282,7 +268,7 @@ cmd_publish_apk() {
   chmod 644 "$tmp"; mv "$tmp" "$dir/$name"
   ln -f "$dir/$name" "$dir/.alias.apk" && mv -f "$dir/.alias.apk" "$dir/sadora-stage.apk"
   sum=$(sha256sum "$dir/$name" | cut -d' ' -f1)
-  app=$(tunnel_url tunnel-app)
+  app=$API_URL
   printf '{"build":%s,"release":"%s","file":"%s","path":"/download/%s","size":%s,"sha256":"%s","api":"%s","publishedAt":"%s"}\n' \
     "$build" "$sha" "$name" "$name" "$size" "$sum" "$app" "$(date -u +%FT%TZ)" > "$dir/.latest.json"
   chmod 644 "$dir/.latest.json"; mv -f "$dir/.latest.json" "$dir/latest.json"

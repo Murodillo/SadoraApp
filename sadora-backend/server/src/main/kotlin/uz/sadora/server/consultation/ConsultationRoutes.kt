@@ -232,7 +232,7 @@ private fun ApplicationCall.earningsPage(): Pair<Int, Long> =
         intParameter("offset", default = 0, max = Int.MAX_VALUE).toLong()
 
 /**
- * The host the app reached us on, as the tunnel and Caddy pass it along: the development
+ * The host the app reached us on, as the proxy in front passes it along: the development
  * payment page must be opened on the same address the phone already talks to.
  */
 private fun ApplicationCall.origin(): String {

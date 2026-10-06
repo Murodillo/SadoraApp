@@ -34,13 +34,12 @@ fun Application.configureHttp(config: AppConfig) {
     }
 
     // The client's address, for the rate limiter, the OTP record and the audit log.
-    // Every deployment puts a proxy in front and binds the API to loopback or the compose
-    // network, so X-Forwarded-For is always the proxy's word, never the caller's: Caddy
-    // replaces whatever a client sent with the address it actually saw (deploy/Caddyfile),
-    // and on stage with Cloudflare's CF-Connecting-IP (deploy/stage/Caddyfile). Without
-    // this every request carried Caddy's address, and each per-IP limit was one bucket
-    // shared by everybody. In development nothing sets the header and the socket's
-    // address is used as before.
+    // Every deployment puts a proxy in front — the gateway that terminates TLS for the
+    // sadora.app hostnames and forwards each one to its own port on the server — and the
+    // last X-Forwarded-For entry is the address that proxy saw. Without this every request
+    // carried the proxy's address, and each per-IP limit was one bucket shared by
+    // everybody. In development nothing sets the header and the socket's address is used
+    // as before.
     install(XForwardedHeaders) {
         useLastProxy()
     }
@@ -56,7 +55,8 @@ fun Application.configureHttp(config: AppConfig) {
 
     install(Compression) { gzip() }
 
-    // Only the admin panel is browser-based; the mobile apps are not subject to CORS.
+    // The two web panels are browser-based, each on a hostname of its own beside the
+    // API's; the mobile apps are not subject to CORS.
     install(CORS) {
         config.http.allowedOrigins.forEach { origin ->
             val withoutScheme = origin.substringAfter("://")
@@ -71,6 +71,8 @@ fun Application.configureHttp(config: AppConfig) {
         allowHeader(HttpHeaders.Authorization)
         allowHeader(HttpHeaders.ContentType)
         allowHeader(REQUEST_ID_HEADER)
+        // The doctors' panel names its device when it renews or revokes a session.
+        allowHeader("X-Device-Id")
         exposeHeader(REQUEST_ID_HEADER)
         allowCredentials = true
     }

@@ -1,17 +1,19 @@
 #!/usr/bin/env bash
 #
-# Checks staging from the outside — through the tunnels, the way a browser and a phone do.
+# Checks staging from the outside — through the gateway, the way a browser and a phone do.
 #
-#   tools/ci/smoke.sh <app url> <landing url> <release sha> [apk build] [apk sha256]
+#   tools/ci/smoke.sh <api url> <admin url> <doctor url> <landing url> <release sha> [apk build] [apk sha256]
 #
 # Run by stage.yml after every deploy, and by hand against whatever staging is serving:
-#   tools/ci/smoke.sh https://….trycloudflare.com https://….trycloudflare.com <sha>
+#   tools/ci/smoke.sh https://dev-api.sadora.app https://dev-admin.sadora.app \
+#     https://dev-doctor.sadora.app https://dev.sadora.app <sha>
 #
 # Every check runs even after one fails, so a broken deploy is described completely in one
-# go. The URLs are never printed — CI logs of a public repository are public.
+# go.
 set -uo pipefail
 
-APP=${1:?app URL} LANDING=${2:?landing URL} RELEASE=${3:?release sha} BUILD=${4:-} APK_SHA256=${5:-}
+API=${1:?API URL} ADMIN=${2:?admin URL} DOCTOR=${3:?doctor panel URL} LANDING=${4:?landing URL}
+RELEASE=${5:?release sha} BUILD=${6:-} APK_SHA256=${7:-}
 FAILED=0
 CODE='' BODY=''
 TMP=$(mktemp -d)
@@ -48,36 +50,46 @@ summary ""
 summary "| | Check | Detail |"
 summary "|---|---|---|"
 
-# 1. The API answers, through Caddy and the tunnel, and it is the release just deployed.
-#    A fresh tunnel route can take a moment to settle, so this one check waits.
+# 1. The API answers, through the gateway, and it is the release just deployed. A freshly
+#    recreated container can take a moment to answer, so this one check waits.
 for _ in $(seq 1 24); do
-  fetch GET "$APP/health/ready"
+  fetch GET "$API/health/ready"
   [[ $CODE == 200 && $BODY == *'"status":"ready"'* && $BODY == *"\"release\":\"$RELEASE\""* ]] && break
   sleep 5
 done
 if [[ $CODE == 200 && $BODY == *"\"release\":\"$RELEASE\""* ]]; then pass "API is ready and runs ${RELEASE:0:7}"
 else fail "API is ready and runs ${RELEASE:0:7}" "HTTP $CODE, release $(grep -o '"release":"[^"]*"' <<<"$BODY" | cut -d'"' -f4 | cut -c1-7)"; fi
 
-# 2. The admin panel, and a deep link into it (a route in the browser, not a file).
-fetch GET "$APP/"
+# 2. Both panels, and a deep link into each (a route in the browser, not a file).
+fetch GET "$ADMIN/"
 check "admin panel loads" "HTTP $CODE" has 200 'id="root"'
-fetch GET "$APP/rewards"
+fetch GET "$ADMIN/rewards"
 check "admin deep link falls back to the app" "HTTP $CODE" has 200 'id="root"'
+fetch GET "$DOCTOR/"
+check "doctors' panel loads" "HTTP $CODE" has 200 'id="root"'
+fetch GET "$DOCTOR/messages"
+check "doctors' panel deep link falls back to the app" "HTTP $CODE" has 200 'id="root"'
 
 # 3. The browser's sign-in request — Origin and all. A 403 here is the API refusing the
-#    panel's own origin (CORS), which is exactly how the panel broke once: curl without an
+#    panel's origin (CORS), which is exactly how the panel broke once: curl without an
 #    Origin header got 200 while every browser got 403. Wrong credentials must say 401.
-fetch POST "$APP/v1/admin/auth/login" -H "Origin: $APP" -H 'Content-Type: application/json' \
+fetch POST "$API/v1/admin/auth/login" -H "Origin: $ADMIN" -H 'Content-Type: application/json' \
   --data '{"email":"ci-smoke@sadora.uz","password":"smoke-test-not-a-password"}'
 case $CODE in
-  401) pass "panel sign-in is allowed from its own origin" ;;
-  429) pass "panel sign-in is allowed from its own origin (rate limited, not refused)" ;;
-  403) fail "panel sign-in is allowed from its own origin" "403 — the API's CORS list lacks the tunnel URL" ;;
-  *) fail "panel sign-in is allowed from its own origin" "HTTP $CODE, expected 401" ;;
+  401) pass "admin sign-in is allowed from the panel's origin" ;;
+  429) pass "admin sign-in is allowed from the panel's origin (rate limited, not refused)" ;;
+  403) fail "admin sign-in is allowed from the panel's origin" "403 — the API's CORS list lacks the admin hostname" ;;
+  *) fail "admin sign-in is allowed from the panel's origin" "HTTP $CODE, expected 401" ;;
 esac
+# The doctors' panel renews its session with an X-Device-Id header, which the browser
+# asks the API about first.
+cors=$(curl -sS -m 30 -o /dev/null -D - -X OPTIONS "$API/v1/auth/refresh" -H "Origin: $DOCTOR" \
+  -H 'Access-Control-Request-Method: POST' -H 'Access-Control-Request-Headers: content-type,x-device-id' 2>/dev/null \
+  | tr -d '\r' | sed -n 's/^[Aa]ccess-[Cc]ontrol-[Aa]llow-[Oo]rigin: //p')
+check "doctors' panel may call the API" "CORS answered '${cors:-nothing}'" test "$cors" == "$DOCTOR"
 
 # 4. The API still refuses what needs a token.
-fetch GET "$APP/v1/shop"
+fetch GET "$API/v1/shop"
 check "API requires a token" "HTTP $CODE, expected 401" has 401 ""
 
 # 5. The landing page, its invite route, and the download page.

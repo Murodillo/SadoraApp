@@ -320,8 +320,8 @@ JVM jarayonini ko'tarmaydi va MySQL beradi. Kerak bo'ladigan narsa — Docker o'
 VPS yoki shunga o'xshash xizmat. Statik narsalar (landing sahifasi, admin panelning
 yig'ilgan `dist`i) esa istalgan xostingda yashayveradi.
 
-`docker-compose.prod.yml` butun backendni bitta serverga ko'taradi — Postgres, Redis va
-API. Serverda Docker'dan boshqa hech narsa kerak emas: JDK ham, Gradle ham, manba
+`docker-compose.prod.yml` butun backendni bitta serverga ko'taradi — Postgres, Redis,
+API va uchta statik sayt (landing, admin panel, shifokorlar paneli; har biri nginx). Serverda Docker'dan boshqa hech narsa kerak emas: JDK ham, Gradle ham, manba
 daraxti ham API konteynerning ichida yig'iladi.
 
 ```bash
@@ -333,13 +333,10 @@ docker compose -f docker-compose.prod.yml --env-file server/.env.prod up -d --bu
 bilan jimgina ko'tarilgan prod bazasi — parolini kimdir baribir topadigan baza.
 
 Postgres va Redis hech qanday portni tashqariga chiqarmaydi; ular faqat compose tarmog'i
-ichidan ko'rinadi. API esa `127.0.0.1:8080` da turadi, ya'ni unga faqat shu mashinadagi
-proxy yetadi. Domen tayyor bo'lgach, TLS'ni Caddy oladi (sertifikatni o'zi yangilaydi):
-
-```bash
-SADORA_DOMAIN=api.sadora.app docker compose -f docker-compose.prod.yml \
-  --env-file server/.env.prod --profile tls up -d
-```
+ichidan ko'rinadi. Reverse proxy stack ichida yo'q: TLS'ni serverning oldidagi gateway
+oladi va har domenni o'z portiga yo'naltiradi — `doctor.sadora.app` → 8090,
+`sadora.app` → 8091, `admin.sadora.app` → 8092, `api.sadora.app` → 8093 (staging'da
+dev- domenlar 8080–8083; jadval bosh README'da).
 
 Ikki holatni farqlash kerak:
 

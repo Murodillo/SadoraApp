@@ -1,5 +1,12 @@
 import type { ApiError } from './types'
 
+/**
+ * The API's origin, put in front of every `/v1/…` path. Blank (the default) calls this
+ * page's own origin, which is what Vite's dev proxy answers; a deployed panel is built
+ * with VITE_API_BASE because it and the API are separate hostnames there.
+ */
+export const API_BASE = (import.meta.env.VITE_API_BASE ?? '').replace(/\/+$/, '')
+
 const TOKEN_KEY = 'sadora.admin.token'
 const SESSION_KEY = 'sadora.admin.session'
 
@@ -64,7 +71,7 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
 
   let response: Response
   try {
-    response = await fetch(path, {
+    response = await fetch(API_BASE + path, {
       method,
       signal,
       headers: {
@@ -98,7 +105,7 @@ export async function requestBlob(path: string, options: { signal?: AbortSignal 
   const token = tokenStore.read()
   let response: Response
   try {
-    response = await fetch(path, {
+    response = await fetch(API_BASE + path, {
       signal: options.signal,
       headers: { ...UZBEK, ...(token ? { Authorization: `Bearer ${token}` } : {}) },
     })

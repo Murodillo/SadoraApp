@@ -21,7 +21,7 @@ sadora-backend/        API va xodimlar paneli
 ├── contract/          API modellari (KMP) — alohida Gradle build, uchala loyiha ulaydi
 ├── server/            Ktor backend — server/README.md
 ├── admin/             sadora-admin: React + TS, Sadora xodimlari uchun
-├── deploy/            Caddy, staging gate (sadora-ci)
+├── deploy/            nginx (statik saytlar), staging gate (sadora-ci)
 └── docker-compose*.yml
 sadora-client/         ayollar ilovasi (KMP): shared/ androidApp/ iosApp/
 sadora-doctor/         shifokorlar ilovasi (KMP, kmp.jetbrains.com wizard'idan)
@@ -214,7 +214,7 @@ PR → dev                                                     (.github/workflow
  ├─ iOS shared       ikkala ilovaning Kotlin/Native testlari — yetkazishni kutdirmaydi
  ├─ Admin panel      typecheck, vitest + coverage chegaralari, build, npm audit
  ├─ Doctor web panel sadora-doctor-admin: xuddi shunday
- ├─ Deploy tooling   shellcheck, actionlint, gate testlari, compose va Caddyfile tekshiruvi,
+ ├─ Deploy tooling   shellcheck, actionlint, gate testlari, compose va nginx tekshiruvi,
  │                   uch Gradle loyihada Kotlin/AGP versiyalari bir xilligi
  └─ Staging (hammasi o'tsa)                                  (.github/workflows/stage.yml)
      ├─ API image     bir marta yig'iladi → GHCR, digest bo'yicha; SBOM va provenance bilan
@@ -223,7 +223,7 @@ PR → dev                                                     (.github/workflow
      │                aytmasa o'zi oldingi relizga qaytadi
      ├─ APK           staging URL bilan yig'iladi, imzosi tekshiriladi, landing'dagi
      │                /download.html ga chiqadi (serverda saqlangani bayt-baayt solishtiriladi)
-     └─ Smoke test    tashqaridan: health va reliz, admin, CORS, landing, taklif sahifasi, APK
+     └─ Smoke test    tashqaridan: health va reliz, ikki panel, CORS, landing, taklif sahifasi, APK
 ```
 
 PR'da bitta izoh turadi va har run'da yangilanadi: joblar, testlar soni, coverage va
@@ -234,20 +234,42 @@ staging natijasi.
 - **CI kaliti shell olmaydi.** Serverda u faqat `/usr/local/bin/sadora-ci` ni ishga
   tushiradi (`authorized_keys` da `command=`), jump host'da esa faqat serverning 22-portiga
   ulana oladi. Gate buyruqlari: `url`, `deploy`, `publish-apk`, `rollback`, `status`.
-- **Infratuzilma CI'dan o'zgarmaydi.** Gate compose fayllari, Caddyfile va o'zini
+- **Infratuzilma CI'dan o'zgarmaydi.** Gate compose fayllari, nginx konfiglari va o'zini
   o'zgartirmaydi — ular `tools/deploy_stage.sh` bilan qo'lda qo'llanadi. PR ularni
   o'zgartirsa, run'da ogohlantirish chiqadi.
 - Host kalitlari secret'da qotirilgan (`StrictHostKeyChecking yes`); GHCR tokeni serverda
   faqat bir martalik docker config'da yashaydi.
-- Repo public, loglari ham: server manzillari va tunnel URL'lari yashiriladi, staging
+- Repo public, loglari ham: server manzillari yashiriladi, staging
   APK artifact sifatida yuklanmaydi. Fork PR'lari secret olmaydi va yetkazilmaydi.
   Action'lar commit SHA bilan qotirilgan.
+
+### Domenlar va portlar
+
+Reverse proxy stack ichida yo'q: gateway har bir sadora.app domenining TLS'ini o'zi
+oladi va uni serverdagi alohida portga yo'naltiradi. Har port — o'z konteyneri.
+
+| Domen | Port | Konteyner |
+|---|---|---|
+| dev-doctor.sadora.app | 8080 | `doctor-admin` (nginx, statik) |
+| dev.sadora.app | 8081 | `landing` (nginx, statik + `/download/`) |
+| dev-admin.sadora.app | 8082 | `admin` (nginx, statik) |
+| dev-api.sadora.app | 8083 | `api` |
+| doctor.sadora.app | 8090 | `doctor-admin` |
+| sadora.app | 8091 | `landing` |
+| admin.sadora.app | 8092 | `admin` |
+| api.sadora.app | 8093 | `api` |
+
+Prod portlari `docker-compose.prod.yml` da, staging ularni `docker-compose.stage.yml` da
+almashtiradi. Panellar API'ni o'z domenida chaqiradi, shuning uchun `VITE_API_BASE` bilan
+yig'iladi (staging'da `https://dev-api.sadora.app`) va API'ning `CORS_ALLOWED_ORIGINS`
+ro'yxatida panellarning domenlari turadi.
 
 ### Bir martalik sozlash
 
 ```bash
 cp sadora-backend/deploy/stage/hosts.env.example sadora-backend/deploy/stage/hosts.env   # manzillarni yozing
 ./tools/deploy_stage.sh                                     # gate + CI kalitini bog'laydi
+                                                            # (ofis tarmog'idan: SADORA_DIRECT=1)
 ./tools/ci_secrets.sh                                       # `staging` environment secret'lari
 ```
 
@@ -259,7 +281,7 @@ imzolanadi — telefondagi eski yig'ma ustidan yangilanadi.
 
 - **Qayta deploy yoki rollback:** Actions → Stage → Run workflow. `rollback_to` bo'sh
   bo'lsa — oldingi sog'lom relizga.
-- **Smoke test:** `tools/ci/smoke.sh <app url> <landing url> <commit sha>`
+- **Smoke test:** `tools/ci/smoke.sh https://dev-api.sadora.app https://dev-admin.sadora.app https://dev-doctor.sadora.app https://dev.sadora.app <commit sha>`
 - **Testlar lokal:**
   - gate — `docker run --rm -v "$PWD":/src -w /src ubuntu:24.04 bash sadora-backend/deploy/stage/test/sadora-ci.test.sh`
   - admin — `npm --prefix sadora-backend/admin run test:coverage`
@@ -270,9 +292,6 @@ imzolanadi — telefondagi eski yig'ma ustidan yangilanadi.
 
 - Staging bitta. `dev` ga ochiq ikki PR bir-birining ustiga deploy qiladi — oxirgisi
   turadi; merge'dan keyin `dev` yana deploy bo'ladi.
-- Quick tunnel manzili cloudflared qayta ishga tushganda (masalan, server reboot)
-  o'zgaradi. Keyingi deploy CORS'ni va APK'ni yangi manzilga moslaydi, lekin eski APK'lar
-  ishlamay qoladi. Domen bu muammoni yo'qotadi.
 - Migratsiya orqaga qaytmaydi: rollback image'ni qaytaradi, schema'ni emas. Har
   deploydan oldingi dump serverda `/opt/sadora/backups` da (oxirgi 10 ta).
 
