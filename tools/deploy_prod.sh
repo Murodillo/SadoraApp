@@ -15,10 +15,13 @@
 # reaches production is a person running this script once staging looks right.
 #
 # The environment file is generated once on the server and kept — its database password
-# is what the volume was initialised with. The values only a person can supply (the
-# Eskiz account that sends sign-in codes) are left blank in it, and until they are filled
-# in the API is not started: in production it refuses to boot without a way to send codes.
-# The static sites come up regardless.
+# is what the volume was initialised with.
+#
+# Until the release it runs as SADORA_ENV=STAGE with the fixed sign-in code 123456: no
+# SMS is sent, and payments stay in test mode. At the release a person sets
+# SADORA_ENV=PROD, removes OTP_FIXED_CODE and fills in the Eskiz account on the server —
+# production refuses to boot without a way to send codes, so this script then waits for
+# that account before it starts the API.
 
 set -e
 cd "$(dirname "$0")/.."
@@ -90,9 +93,13 @@ else
   # The example, minus what compose supplies (the database and Redis addresses) and
   # what is generated here. Secrets are made on the server and never leave it.
   remote "cd $DIR && umask 077 && {
-    grep -vE '^(DB_URL|DB_USER|DB_PASSWORD|REDIS_URL|JWT_SECRET|CORS_ALLOWED_ORIGINS|PUBLIC_BASE_URL|ADMIN_BOOTSTRAP_EMAIL|ADMIN_BOOTSTRAP_PASSWORD|GEMINI_API_KEY)=' server/.env.prod.example
+    grep -vE '^(SADORA_ENV|DB_URL|DB_USER|DB_PASSWORD|REDIS_URL|JWT_SECRET|CORS_ALLOWED_ORIGINS|PUBLIC_BASE_URL|ADMIN_BOOTSTRAP_EMAIL|ADMIN_BOOTSTRAP_PASSWORD|GEMINI_API_KEY)=' server/.env.prod.example
     echo
     echo '# ---- production, generated once on this server ----'
+    echo '# Until the release: no SMS, every sign-in code is 123456. At the release set'
+    echo '# SADORA_ENV=PROD, delete OTP_FIXED_CODE and fill in ESKIZ_EMAIL / ESKIZ_PASSWORD.'
+    echo SADORA_ENV=STAGE
+    echo OTP_FIXED_CODE=123456
     echo CORS_ALLOWED_ORIGINS=$ADMIN_URL,$DOCTOR_URL,$LANDING_URL
     echo PUBLIC_BASE_URL=$API_URL
     echo JWT_SECRET=\$(head -c 32 /dev/urandom | od -An -tx1 | tr -d ' \n')
@@ -118,7 +125,8 @@ else
 fi
 
 echo "==> stack"
-if remote "grep -qE '^ESKIZ_EMAIL=.+' $DIR/server/.env.prod && grep -qE '^ESKIZ_PASSWORD=.+' $DIR/server/.env.prod"; then
+if ! remote "grep -qx 'SADORA_ENV=PROD' $DIR/server/.env.prod" \
+  || remote "grep -qE '^ESKIZ_EMAIL=.+' $DIR/server/.env.prod && grep -qE '^ESKIZ_PASSWORD=.+' $DIR/server/.env.prod"; then
   remote "cd $DIR && $COMPOSE up -d --no-build --remove-orphans"
   echo "==> waiting for the API"
   health() { remote 'curl -sf http://127.0.0.1:8093/health/ready'; }
@@ -128,7 +136,7 @@ if remote "grep -qE '^ESKIZ_EMAIL=.+' $DIR/server/.env.prod && grep -qE '^ESKIZ_
 else
   remote "cd $DIR && $COMPOSE up -d --no-build --remove-orphans postgres redis landing admin doctor-admin"
   echo
-  echo "    The API is not started: ESKIZ_EMAIL and ESKIZ_PASSWORD are blank in"
+  echo "    The API is not started: SADORA_ENV=PROD, but ESKIZ_EMAIL and ESKIZ_PASSWORD are blank in"
   echo "    $DIR/server/.env.prod, and production refuses to boot without a way to send"
   echo "    sign-in codes. Fill them in on the server (and OTP_SMS_TEXT, if Eskiz approved"
   echo "    a different wording), then run this script again."

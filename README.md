@@ -273,9 +273,10 @@ SADORA_DIRECT=1 ./tools/deploy_prod.sh
 ```
 
 `server/.env.prod` serverda bir marta yaratiladi (JWT, Postgres paroli, birinchi owner
-`owner@sadora.app` paroli — hammasi serverda yaratiladi va chiqarilmaydi). `ESKIZ_EMAIL`
-va `ESKIZ_PASSWORD` ni serverda o'zingiz yozasiz; ularsiz API ishga tushirilmaydi —
-prod SMS yubora olmasa, o'zi ham ko'tarilmaydi.
+`owner@sadora.app` paroli — hammasi serverda yaratiladi va chiqarilmaydi). Relizgacha u
+`SADORA_ENV=STAGE` va `OTP_FIXED_CODE=123456` bilan ishlaydi: SMS ketmaydi, to'lovlar test
+rejimida. Relizda serverda `SADORA_ENV=PROD` qo'yiladi, `OTP_FIXED_CODE` o'chiriladi va
+`ESKIZ_EMAIL` / `ESKIZ_PASSWORD` yoziladi — ularsiz prod API ko'tarilmaydi.
 
 ### Bir martalik sozlash
 
