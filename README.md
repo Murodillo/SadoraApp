@@ -264,6 +264,19 @@ almashtiradi. Panellar API'ni o'z domenida chaqiradi, shuning uchun `VITE_API_BA
 yig'iladi (staging'da `https://dev-api.sadora.app`) va API'ning `CORS_ALLOWED_ORIGINS`
 ro'yxatida panellarning domenlari turadi.
 
+**Prod** shu serverda, staging yonida — alohida compose loyihasi (`sadora-prod`,
+`/opt/sadora-prod`), o'z bazasi va sirlari bilan. U staging ishlatayotgan API image'ini
+oladi; CI prod'ga hech narsa yetkazmaydi, buni odam qiladi:
+
+```bash
+SADORA_DIRECT=1 ./tools/deploy_prod.sh
+```
+
+`server/.env.prod` serverda bir marta yaratiladi (JWT, Postgres paroli, birinchi owner
+`owner@sadora.app` paroli — hammasi serverda yaratiladi va chiqarilmaydi). `ESKIZ_EMAIL`
+va `ESKIZ_PASSWORD` ni serverda o'zingiz yozasiz; ularsiz API ishga tushirilmaydi —
+prod SMS yubora olmasa, o'zi ham ko'tarilmaydi.
+
 ### Bir martalik sozlash
 
 ```bash
