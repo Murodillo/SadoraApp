@@ -56,7 +56,7 @@ class PetControllerTest {
     }
 
     @Test
-    fun `a Premium account shows the server's line, one bubble at a time`() = runTest {
+    fun `a Premium account shows the server's line — one bubble at a time`() = runTest {
         val nudge = PetNudge(PetKind.LAYLO, PetPose.THINK, "Suv iching", PetAction.WATER)
         val recording = RecordingEngine { request ->
             if (request.url.encodedPath.endsWith("/nudge")) json(encode(PetNudgeAnswer(nudge)))

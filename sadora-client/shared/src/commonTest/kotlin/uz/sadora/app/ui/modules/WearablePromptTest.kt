@@ -33,7 +33,7 @@ class WearablePromptTest {
     }
 
     @Test
-    fun `a later holds it back for a week, for that account only`() = runTest {
+    fun `a later holds it back for a week — for that account only`() = runTest {
         val prompts = PromptPrefs.InMemory()
         val asked = LocalDate(2026, 10, 5)
         prompts.setWearableAskAfter("u1", wearableSnoozedUntil(asked))
