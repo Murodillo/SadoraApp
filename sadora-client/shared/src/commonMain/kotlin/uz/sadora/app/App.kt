@@ -2,6 +2,7 @@ package uz.sadora.app
 
 import uz.sadora.app.ui.components.systemReducesMotion
 import uz.sadora.app.ui.components.BadgeUnlockOverlay
+import uz.sadora.app.ui.components.PetBubbleOverlay
 import uz.sadora.app.ui.components.BadgeDetailSheet
 import uz.sadora.app.ui.components.LocalReduceMotion
 import uz.sadora.app.ui.components.LocalPhotoSource
@@ -45,6 +46,7 @@ import uz.sadora.contract.DoctorProfile
 import uz.sadora.app.data.AnalyticsEvents
 import uz.sadora.app.data.CommunitySyncBridge
 import uz.sadora.app.data.HealthSync
+import uz.sadora.app.data.PetSyncTap
 import uz.sadora.app.data.SadoraGraph
 import uz.sadora.app.data.SessionState
 import uz.sadora.app.ui.modules.HealthGate
@@ -415,7 +417,9 @@ private fun MainShell(
     LaunchedEffect(health) {
         // Every screen already edits the store; the sink is what carries those edits on
         // to the server, so none of them had to learn about it.
-        state.sync = HealthSync(health, scope)
+        // The pet hears the same edits on their way up, after they are passed on.
+        state.sync = PetSyncTap(HealthSync(health, scope), controllers.pet, state, scope)
+        health.afterCycleLog = { controllers.pet.fire(scope, uz.sadora.contract.PetTrigger.CYCLE_LOGGED) }
         state.communitySync = CommunitySyncBridge(community, scope)
         // The sections the server can close, before any of them is opened.
         controllers.account.refreshFlags()
@@ -431,6 +435,8 @@ private fun MainShell(
         rewards.loadHomeLayout()
         // Badges after the check-in, which may itself have crossed a streak tier.
         rewards.loadBadges(force = true)
+        // Which pet she has, and whether her plan lets it speak.
+        controllers.pet.load()
         // Whether she writes in the chat as a doctor; the composer names her either way.
         controllers.doctors.loadAccount()
         // Whether someone sees her — the labour button needs to know — and whom she follows.
@@ -455,6 +461,19 @@ private fun MainShell(
             deviceConnected = wearables.deviceEnabled || wearables.connected.isNotEmpty(),
             today = state.today,
         )
+    }
+
+    // The pet's first word of the day — a feature she has not tried — a few seconds in,
+    // after the opening's own moments. A free account instead sees it asleep now and then.
+    LaunchedEffect(health.loaded) {
+        if (!health.loaded) return@LaunchedEffect
+        delay(PetOpenDelayMillis)
+        val pet = controllers.pet
+        if (pet.active) {
+            pet.after(uz.sadora.contract.PetTrigger.APP_OPEN)
+        } else {
+            controllers.account.currentUserId?.let { pet.maybeTease(it, state.today) }
+        }
     }
 
     // The phone's health store, read each time the app comes to the front. The sync rests
@@ -699,7 +718,10 @@ private fun MainShell(
         // first thing that happens on the first open of a day, and it takes itself away.
         StreakCelebration(
             result = rewards.celebration,
-            onDismiss = rewards::celebrationShown,
+            onDismiss = {
+                rewards.celebrationShown()
+                controllers.pet.fire(scope, uz.sadora.contract.PetTrigger.STREAK_KEPT)
+            },
         )
 
         BadgeDetailSheet(
@@ -740,8 +762,50 @@ private fun MainShell(
         BadgeUnlockOverlay(
             unlock = if (rewards.celebration == null) rewards.unlocks.firstOrNull() else null,
             remaining = (rewards.unlocks.size - 1).coerceAtLeast(0),
-            onNext = { shown -> scope.launch { rewards.unlockShown(shown) } },
-            onSkipAll = { scope.launch { rewards.unlocksSkipped() } },
+            onNext = { shown ->
+                scope.launch {
+                    rewards.unlockShown(shown)
+                    if (rewards.unlocks.isEmpty()) controllers.pet.after(uz.sadora.contract.PetTrigger.BADGE_EARNED)
+                }
+            },
+            onSkipAll = {
+                scope.launch {
+                    rewards.unlocksSkipped()
+                    controllers.pet.after(uz.sadora.contract.PetTrigger.BADGE_EARNED)
+                }
+            },
+        )
+
+        // The pet, in the corner above the tab bar — only once nothing else of the
+        // opening's is on screen, and never over a full-screen page or an open sheet.
+        val petFree = rewards.celebration == null && rewards.unlocks.isEmpty() && !askWearable &&
+            !overlays.anyOpen && !fullScreen
+        PetBubbleOverlay(
+            bubble = controllers.pet.bubble.takeIf { petFree },
+            onAction = { action ->
+                controllers.pet.dismiss()
+                when (action) {
+                    uz.sadora.contract.PetAction.FOOD_SCANNER -> navigator.push(Route.FoodScanCamera)
+                    uz.sadora.contract.PetAction.MIND_JOURNAL -> navigator.push(Route.MindJournal)
+                    uz.sadora.contract.PetAction.WATER -> overlays.showWaterSheet = true
+                    uz.sadora.contract.PetAction.PARTNER -> navigator.push(Route.Yaqinim)
+                    uz.sadora.contract.PetAction.BADGES -> navigator.push(Route.Badges)
+                    uz.sadora.contract.PetAction.DOCTOR_SHARE -> navigator.push(Route.ShareProfile)
+                    uz.sadora.contract.PetAction.AI_CHAT -> navigator.push(state.aiRoute())
+                    uz.sadora.contract.PetAction.LEARN -> navigator.push(Route.Knowledge)
+                    uz.sadora.contract.PetAction.MEDICATIONS -> navigator.push(Route.Medications)
+                }
+            },
+            onWake = {
+                controllers.pet.dismiss()
+                controllers.analytics.event(AnalyticsEvents.PAYWALL_OPENED, mapOf("from" to "pet"))
+                navigator.push(Route.Paywall)
+            },
+            onDismiss = controllers.pet::dismiss,
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .navigationBarsPadding()
+                .padding(end = Spacing.sm, bottom = if (fullScreen) Spacing.lg else 84.dp),
         )
 
         SymptomSheet(
@@ -1089,6 +1153,7 @@ private fun PushedScreen(
             onOpenBadge = { overlays.openBadge = it },
             onUpgrade = upgrade,
         )
+        Route.PetPicker -> uz.sadora.app.ui.modules.PetPickerScreen(controllers.pet, close, onUpgrade = upgrade)
         Route.Shop -> ShopScreen(
             state = state,
             rewards = controllers.rewards,
@@ -1184,6 +1249,7 @@ private fun PushedScreen(
             photos = controllers.photos,
             partner = controllers.partner,
             badges = controllers.rewards.badges,
+            pet = controllers.pet.pet,
             onEditPhoto = { overlays.showPhotoSheet = true },
             onOpen = {
                 when (it) {
@@ -1243,6 +1309,9 @@ private const val UnreadRefreshMillis = 30_000L
 
 /** How long after opening the app the smart-device question waits before it appears. */
 private const val WearableAskDelayMillis = 4_000L
+
+/** Later than the wearable question, so the two never arrive together. */
+private const val PetOpenDelayMillis = 6_000L
 
 /**
  * After a consultation is paid: her page is read again for the thread's id — the server

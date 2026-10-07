@@ -18,7 +18,16 @@ class AndroidPromptPrefs(context: Context) : PromptPrefs {
         preferences.edit().putString(KeyWearable + userId, date.toString()).apply()
     }
 
+    override suspend fun petTeaseAfter(userId: String): LocalDate? = withContext(Dispatchers.IO) {
+        preferences.getString(KeyPetTease + userId, null)?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
+    }
+
+    override suspend fun setPetTeaseAfter(userId: String, date: LocalDate) = withContext(Dispatchers.IO) {
+        preferences.edit().putString(KeyPetTease + userId, date.toString()).apply()
+    }
+
     private companion object {
         const val KeyWearable = "wearable_ask_after."
+        const val KeyPetTease = "pet_tease_after."
     }
 }

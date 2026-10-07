@@ -20,6 +20,8 @@ import uz.sadora.server.ai.AiUsageRepository
 import uz.sadora.server.ai.GeminiAnswerer
 import uz.sadora.server.ai.GeminiFoodVision
 import uz.sadora.server.ai.GreetingService
+import uz.sadora.server.pet.PetRepository
+import uz.sadora.server.pet.PetService
 import uz.sadora.server.rewards.HomeLayoutRepository
 import uz.sadora.server.rewards.RewardsRepository
 import uz.sadora.server.rewards.RewardsService
@@ -376,6 +378,23 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
         wearables = wearableService,
         gateway = aiGateway,
         usage = aiUsageRepository,
+    )
+
+    /**
+     * The companion that speaks up after her actions. Like the greeting it shares only
+     * the model object and the cost log with the chat; unlike it, it is Premium.
+     */
+    val petService = PetService(
+        users = userRepository,
+        pets = PetRepository(),
+        entitlements = entitlementService,
+        flags = flagService,
+        environment = config.environment,
+        cache = cache,
+        config = config.ai,
+        health = healthService,
+        usage = aiUsageRepository,
+        model = config.ai.apiKey?.let { GeminiAnswerer(outboundHttpClient, config.ai) },
     )
 
     /**

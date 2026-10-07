@@ -110,6 +110,8 @@ sealed interface Route {
     data object Rewards : Route
     /** The badges: what she earned, what is ahead, and the one she wears. */
     data object Badges : Route
+    /** The AI companion: which of the five pets speaks up after her actions. */
+    data object PetPicker : Route
     data object Shop : Route
     data object Referral : Route
 

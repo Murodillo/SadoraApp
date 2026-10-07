@@ -431,6 +431,11 @@ class StringsTest {
             addAll(postpartumTips)
             addAll(menopauseTips)
         }
+        with(t.pet) {
+            addAll(listOf(title, subtitle, choose, chosen, premiumBanner, premiumButton, teaser, wake, close))
+            uz.sadora.contract.PetKind.entries.forEach { add(name(it)); add(personality(it)) }
+            uz.sadora.contract.PetAction.entries.forEach { add(action(it)) }
+        }
         with(t.premium) {
             addAll(
                 listOf(
@@ -560,6 +565,8 @@ class StringsTest {
     fun `the prose is actually translated and not the Uzbek pasted across`() {
         listOf(StringsRu, StringsEn).forEach { t ->
             assertNotEquals(StringsUz.welcome.title, t.welcome.title)
+            assertNotEquals(StringsUz.pet.subtitle, t.pet.subtitle)
+            assertNotEquals(StringsUz.pet.teaser, t.pet.teaser)
             assertNotEquals(StringsUz.welcome.subtitle, t.welcome.subtitle)
             assertNotEquals(StringsUz.welcome.privacyPromise, t.welcome.privacyPromise)
             assertNotEquals(StringsUz.profile.signOut, t.profile.signOut)

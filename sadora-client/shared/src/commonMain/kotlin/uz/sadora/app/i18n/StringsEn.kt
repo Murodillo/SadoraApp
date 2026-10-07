@@ -1524,6 +1524,8 @@ object StringsEn : Strings {
     override val tools: StageToolsStrings = StageToolsEn
     override val partner: PartnerStrings = PartnerEn
     override val badges: BadgeStrings = BadgesEn
+    override val pet: PetStrings = PetEn
+
     override val rewards = object : RewardStrings {
         override val coinName = "Gul"
         override fun coins(amount: String) = "$amount gul"

@@ -67,6 +67,13 @@ class HealthController(
      */
     private val state: AppState? = null,
 ) {
+    /**
+     * Told after a cycle entry reaches the server — a period start, or a day saved with
+     * its flow. The shell points it at the pet. A pregnancy day, which can carry a
+     * foetal-movement worry, never calls it: a cartoon does not answer that.
+     */
+    var afterCycleLog: (() -> Unit)? = null
+
     val calls = ApiCallState()
 
     val busy: Boolean get() = calls.busy
@@ -461,6 +468,7 @@ class HealthController(
         calls.run { api.logPeriod(LogPeriodRequest(startedOn = date)) } ?: return false
         refreshCycle()
         loadCalendarAroundToday()
+        afterCycleLog?.invoke()
         return true
     }
 
@@ -513,6 +521,7 @@ class HealthController(
         }
         refreshCycle()
         loadCalendarAroundToday()
+        if (flow != null && fetalMovement == null) afterCycleLog?.invoke()
         return true
     }
 

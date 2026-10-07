@@ -1,5 +1,6 @@
 package uz.sadora.app.ui.core
 
+import uz.sadora.app.ui.components.art
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -73,6 +74,8 @@ fun ProfileScreen(
     partner: uz.sadora.app.data.PartnerController? = null,
     /** Her badges, for the strip under the premium card; nothing is drawn until one is earned. */
     badges: uz.sadora.contract.BadgeBoard? = null,
+    /** Her AI companion, for its row; null hides the row (no backend, no pet). */
+    pet: uz.sadora.contract.PetKind? = null,
     onSignedOut: () -> Unit,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
@@ -230,6 +233,13 @@ fun ProfileScreen(
                             value = if (health.sources.isEmpty()) null else "$connected",
                         ) {
                             onOpen(Route.DataSources)
+                        }
+                        if (pet != null) {
+                            SettingsRow(
+                                pet.art(uz.sadora.contract.PetPose.IDLE),
+                                strings.pet.title,
+                                value = strings.pet.name(pet),
+                            ) { onOpen(Route.PetPicker) }
                         }
                         SettingsRow(Res.drawable.ic3d_home, t.homeLayout) { onOpen(Route.HomeLayout) }
                         SettingsRow(Res.drawable.ic3d_bell, t.notifications) { onOpen(Route.Notifications) }

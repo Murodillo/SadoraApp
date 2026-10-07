@@ -13,12 +13,21 @@ interface PromptPrefs {
     suspend fun wearableAskAfter(userId: String): LocalDate?
     suspend fun setWearableAskAfter(userId: String, date: LocalDate)
 
+    /** When a free account may next see the pet asleep; null before the first glimpse is booked. */
+    suspend fun petTeaseAfter(userId: String): LocalDate?
+    suspend fun setPetTeaseAfter(userId: String, date: LocalDate)
+
     /** In memory: tests, previews, and a build with no platform store. */
     class InMemory : PromptPrefs {
         private val dates = mutableMapOf<String, LocalDate>()
+        private val teases = mutableMapOf<String, LocalDate>()
         override suspend fun wearableAskAfter(userId: String): LocalDate? = dates[userId]
         override suspend fun setWearableAskAfter(userId: String, date: LocalDate) {
             dates[userId] = date
+        }
+        override suspend fun petTeaseAfter(userId: String): LocalDate? = teases[userId]
+        override suspend fun setPetTeaseAfter(userId: String, date: LocalDate) {
+            teases[userId] = date
         }
     }
 }

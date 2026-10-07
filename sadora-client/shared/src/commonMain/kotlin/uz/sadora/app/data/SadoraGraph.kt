@@ -3,6 +3,7 @@ package uz.sadora.app.data
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.HttpClientEngine
 import uz.sadora.app.data.api.AiApi
+import uz.sadora.app.data.api.PetApi
 import uz.sadora.app.data.api.CommunityApi
 import uz.sadora.app.data.api.DoctorApi
 import uz.sadora.app.data.api.CycleApi
@@ -92,6 +93,7 @@ class SadoraGraph(
     val shareApi: ShareApi = ShareApi(caller)
     val partnerApi: PartnerApi = PartnerApi(caller)
     val photoApi: PhotoApi = PhotoApi(caller)
+    val petApi: PetApi = PetApi(caller)
     val repository: SadoraRepository = SadoraRepository(api, session, device, appVersion)
 
     /** One per process: its lock is what keeps a resume and a tap from reading twice at once. */
@@ -127,6 +129,8 @@ class SadoraGraph(
         RewardsController(rewardsApi, state, icons)
 
     fun photoController(state: uz.sadora.app.model.AppState): PhotoController = PhotoController(photoApi, state)
+
+    fun petController(state: uz.sadora.app.model.AppState): PetController = PetController(petApi, state, prompts)
 
     fun shareController(): ShareController = ShareController(shareApi, analytics)
 

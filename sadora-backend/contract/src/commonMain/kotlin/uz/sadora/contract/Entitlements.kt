@@ -26,6 +26,9 @@ object FeatureKeys {
 
     /** Wearing an earned badge after her name. Premium; earning badges stays free. */
     const val BADGE_WEAR = "badge_wear"
+
+    /** The companion's tips after her actions. Premium; free accounts only see it asleep. */
+    const val AI_PET = "ai_pet"
 }
 
 /**

@@ -10,6 +10,7 @@ import uz.sadora.app.data.HealthController
 import uz.sadora.app.data.InsightsController
 import uz.sadora.app.data.LearnController
 import uz.sadora.app.data.NotificationsController
+import uz.sadora.app.data.PetController
 import uz.sadora.app.data.StageEventsController
 import uz.sadora.app.data.PhotoController
 import uz.sadora.app.data.RewardsController
@@ -48,6 +49,7 @@ class AppControllers(
     val wearables: WearableController,
     val notifications: NotificationsController,
     val stageEvents: StageEventsController,
+    val pet: PetController,
     val analytics: Analytics,
     val prompts: PromptPrefs = PromptPrefs.InMemory(),
 ) {
@@ -69,6 +71,7 @@ class AppControllers(
             wearables = graph?.wearableController() ?: WearableController(null),
             notifications = graph?.notificationsController() ?: NotificationsController(null),
             stageEvents = graph?.stageEventsController() ?: StageEventsController(null),
+            pet = graph?.petController(state) ?: PetController(null, state),
             analytics = graph?.analytics ?: Analytics.None,
             prompts = graph?.prompts ?: PromptPrefs.InMemory(),
         )

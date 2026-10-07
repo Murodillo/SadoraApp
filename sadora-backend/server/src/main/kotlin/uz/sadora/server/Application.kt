@@ -17,6 +17,7 @@ import uz.sadora.server.billing.billingRoutes
 import uz.sadora.server.billing.clickWebhook
 import uz.sadora.server.billing.paymeWebhook
 import uz.sadora.server.ai.aiRoutes
+import uz.sadora.server.pet.petRoutes
 import uz.sadora.server.rewards.adminRewardsRoutes
 import uz.sadora.server.rewards.rewardsRoutes
 import uz.sadora.server.partner.partnerRoutes
@@ -164,6 +165,7 @@ fun Application.apiModule(component: AppComponent) {
             adminPhotoRoutes(component.photoService)
             adminDoctorRoutes(component.doctorService)
             aiRoutes(component.aiService, component.greetingService)
+            petRoutes(component.petService)
             rewardsRoutes(component.rewardsService, component.shopService, component.homeLayoutRepository)
             adminRewardsRoutes(component.rewardsService, component.shopService, component.auditService)
             adminAiRoutes(component.aiService, component.adminService)

@@ -891,6 +891,41 @@ class ApiIntegrationTest {
         assertNull(get<CommunityPost>("/v1/community/posts/${created.id}", reader.token).worn, "taken off, gone everywhere")
     }
 
+    /**
+     * The pet: anyone may pick one, only Premium hears it, and it keeps quiet inside its
+     * cooldowns — except for a low mood, which is answered at once with the journal.
+     */
+    @Test
+    fun `the pet speaks only for Premium and keeps quiet inside its cooldown`() = api {
+        val user = signUp().also { onboard(it) }
+        val initial = get<uz.sadora.contract.PetState>("/v1/pet", user.token)
+        assertEquals(uz.sadora.contract.PetKind.NILUFAR, initial.pet, "the lotus is the default")
+        assertFalse(initial.active)
+        val chosen = put<uz.sadora.contract.PetState>(
+            "/v1/pet", user.token, uz.sadora.contract.ChoosePetRequest(uz.sadora.contract.PetKind.LAYLO),
+        )
+        assertEquals(uz.sadora.contract.PetKind.LAYLO, chosen.pet, "picking is free")
+
+        val water = uz.sadora.contract.PetNudgeRequest(uz.sadora.contract.PetTrigger.WATER_GOAL)
+        val refused = raw { client.post("/v1/pet/nudge") { auth(user.token); json(water) } }
+        assertEquals(HttpStatusCode.PaymentRequired, refused.status, "a free account gets no tips")
+
+        postAck("/v1/admin/users/${user.userId}/premium", adminToken(), uz.sadora.server.admin.GrantPremiumRequest(reason = "pet test"))
+        assertTrue(get<uz.sadora.contract.PetState>("/v1/pet", user.token).active)
+
+        val first = assertNotNull(post<uz.sadora.contract.PetNudgeAnswer>("/v1/pet/nudge", user.token, water).nudge)
+        assertEquals(uz.sadora.contract.PetKind.LAYLO, first.pet)
+        assertEquals(uz.sadora.contract.PetPose.HAPPY, first.pose)
+        assertTrue(first.text.isNotBlank())
+        assertNull(post<uz.sadora.contract.PetNudgeAnswer>("/v1/pet/nudge", user.token, water).nudge, "once a day")
+        val streak = uz.sadora.contract.PetNudgeRequest(uz.sadora.contract.PetTrigger.STREAK_KEPT)
+        assertNull(post<uz.sadora.contract.PetNudgeAnswer>("/v1/pet/nudge", user.token, streak).nudge, "inside the gap")
+
+        val low = uz.sadora.contract.PetNudgeRequest(uz.sadora.contract.PetTrigger.MOOD_LOW)
+        val gentle = assertNotNull(post<uz.sadora.contract.PetNudgeAnswer>("/v1/pet/nudge", user.token, low).nudge, "a low mood never waits")
+        assertEquals(uz.sadora.contract.PetAction.MIND_JOURNAL, gentle.action)
+    }
+
     /** Ten meals is the bronze of "mindful eater", and the progress counts up to it. */
     @Test
     fun `logging meals moves the meals badge to its first tier`() = api {
