@@ -295,6 +295,9 @@ class Navigator {
     val current: Route? get() = stack.lastOrNull()
     val canGoBack: Boolean get() = stack.isNotEmpty()
 
+    /** Profile, or anything opened from it: her account pages, which hide the tab bar. */
+    val inProfile: Boolean get() = Route.Profile in stack
+
     fun goTo(phase: AppPhase) {
         this.phase = phase
         stack.clear()

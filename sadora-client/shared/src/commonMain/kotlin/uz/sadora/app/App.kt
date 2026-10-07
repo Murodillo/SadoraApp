@@ -623,10 +623,14 @@ private fun MainShell(
         overlays.toast = it
     }
     val fullScreen = route?.isFullScreen == true
+    // Her account and everything opened from it read as one place of their own, away
+    // from the tabs: no bar there either, and the content keeps clear of the system bar.
+    val profileStack = !fullScreen && navigator.inProfile
+    val barHidden = fullScreen || profileStack
 
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {
-            Box(Modifier.weight(1f)) {
+            Box(Modifier.weight(1f).then(if (profileStack) Modifier.navigationBarsPadding() else Modifier)) {
                 // A pushed screen slides in over the tab it was opened from and slides
                 // back out when it is popped, so the stack reads as having a direction.
                 // Switching tabs is a cross-fade instead: tabs are siblings, and sliding
@@ -676,8 +680,8 @@ private fun MainShell(
             }
 
             // The tab bar stays put while a module screen is open on top of a tab, and
-            // steps aside only for the screens that take the whole display.
-            if (!fullScreen) {
+            // steps aside for the screens that take the whole display and for Profile.
+            if (!barHidden) {
                 SadoraBottomNav(
                     tabs = tabs,
                     selected = navigator.tab,
@@ -805,7 +809,7 @@ private fun MainShell(
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .navigationBarsPadding()
-                .padding(end = Spacing.sm, bottom = if (fullScreen) Spacing.lg else 84.dp),
+                .padding(end = Spacing.sm, bottom = if (barHidden) Spacing.lg else 84.dp),
         )
 
         SymptomSheet(
