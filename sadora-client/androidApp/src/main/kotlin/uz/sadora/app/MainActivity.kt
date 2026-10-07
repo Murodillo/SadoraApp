@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import uz.sadora.app.data.AndroidAppIcons
 import uz.sadora.app.data.AndroidDeviceIdentity
+import uz.sadora.app.data.AndroidPromptPrefs
 import uz.sadora.app.data.AndroidStoreBilling
 import uz.sadora.app.data.AndroidTokenStorage
 import uz.sadora.app.data.SadoraEnvironment
@@ -60,6 +61,7 @@ class MainActivity : ComponentActivity() {
             // manifest's aliases — so it is built here alongside the token storage.
             icons = AndroidAppIcons(applicationContext),
             analytics = FirebaseAnalyticsTracker(applicationContext),
+            prompts = AndroidPromptPrefs(applicationContext),
             healthPlatform = HealthConnectPlatform(applicationContext),
             healthPrefs = AndroidHealthSyncPrefs(applicationContext),
             storeBilling = storeBilling,

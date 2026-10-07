@@ -75,8 +75,6 @@ enum class OnboardingStep {
     Symptoms,
     Feeling,
     Body,
-    /** Owning a watch or a band, which decides where the flow ends. */
-    Device,
     /** The invite code she arrived with. Optional, and skippable to nowhere. */
     Invite,
     Permissions,
@@ -105,7 +103,6 @@ private val questionSteps = listOf(
     OnboardingStep.Symptoms,
     OnboardingStep.Feeling,
     OnboardingStep.Body,
-    OnboardingStep.Device,
     OnboardingStep.Invite,
     OnboardingStep.Permissions,
     OnboardingStep.Phone,
@@ -426,13 +423,6 @@ fun OnboardingFlow(
                         progress = progressAt(current),
                         onBack = ::back,
                         onSkip = ::advance,
-                        onNext = ::advance,
-                    )
-
-                    OnboardingStep.Device -> DeviceQuestion(
-                        state = state,
-                        progress = progressAt(current),
-                        onBack = ::back,
                         onNext = ::advance,
                     )
 

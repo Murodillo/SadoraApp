@@ -175,6 +175,14 @@ class UserRepository {
         }
     }
 
+    /** The smart-device answer, asked in the app after sign-up. */
+    suspend fun setHasWearable(userId: Uuid, hasWearable: Boolean): Unit = dbQuery {
+        Users.update({ Users.id eq userId }) {
+            it[Users.hasWearable] = hasWearable
+            it[updatedAt] = now().toOffsetDateTime()
+        }
+    }
+
     suspend fun setName(userId: Uuid, name: String): Unit = dbQuery {
         Users.update({ Users.id eq userId }) {
             it[Users.name] = name

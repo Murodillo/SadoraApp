@@ -64,6 +64,11 @@ data class UpdateProfileRequest(
      * left as they were.
      */
     val stage: StageBaseline? = null,
+    /**
+     * "Do you wear a smart watch or band?", answered in the app some days after sign-up
+     * rather than during it. Only ever sets the answer; null leaves it as it is.
+     */
+    val hasWearable: Boolean? = null,
 )
 
 /** How long she has been trying to conceive, asked once during onboarding. */
@@ -138,11 +143,10 @@ data class OnboardingRequest(
     /** "Did a doctor recommend SADORA?" — null when the question was skipped. */
     val referredByDoctor: Boolean? = null,
     /**
-     * "Do you wear a smart watch or band?" — null when the question was skipped.
+     * "Do you wear a smart watch or band?" — null when not asked.
      *
-     * Asked at sign-up because the answer changes where the flow ends: a yes lands on
-     * the connect screen instead of on Today, and connecting a device on day one is the
-     * difference between a sleep tab with data in it and one that asks her to type.
+     * The flow no longer asks it: the app does, a few days in, and saves the answer with
+     * [UpdateProfileRequest]. Kept so an older build's sign-up still records it.
      */
     val hasWearable: Boolean? = null,
     /**

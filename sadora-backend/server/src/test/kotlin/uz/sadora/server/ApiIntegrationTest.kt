@@ -1343,6 +1343,17 @@ class ApiIntegrationTest {
         assertTrue("lochia" in postpartum && "breast_tender" in postpartum, postpartum.toString())
     }
 
+    @Test
+    fun `the smart-device answer is saved after sign-up and a later save leaves it alone`() = api {
+        val her = signUp()
+        onboard(her, referredByDoctor = null, storeHealth = true)
+        assertEquals(null, get<UserProfile>("/v1/me", her.token).hasWearable)
+
+        assertEquals(true, patch<UserProfile>("/v1/me", her.token, UpdateProfileRequest(hasWearable = true)).hasWearable)
+        assertEquals(true, patch<UserProfile>("/v1/me", her.token, UpdateProfileRequest(language = Language.RU)).hasWearable)
+        assertEquals(false, patch<UserProfile>("/v1/me", her.token, UpdateProfileRequest(hasWearable = false)).hasWearable)
+    }
+
     // ---------------------------------------------------------------- appointments
 
     @Test

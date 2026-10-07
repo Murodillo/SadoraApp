@@ -16,6 +16,7 @@ import uz.sadora.app.data.RewardsController
 import uz.sadora.app.data.SadoraController
 import uz.sadora.app.data.SadoraGraph
 import uz.sadora.app.data.PartnerController
+import uz.sadora.app.data.PromptPrefs
 import uz.sadora.app.data.ShareController
 import uz.sadora.app.data.WearableController
 import uz.sadora.app.model.AppState
@@ -48,6 +49,7 @@ class AppControllers(
     val notifications: NotificationsController,
     val stageEvents: StageEventsController,
     val analytics: Analytics,
+    val prompts: PromptPrefs = PromptPrefs.InMemory(),
 ) {
     companion object {
         fun from(graph: SadoraGraph?, state: AppState): AppControllers = AppControllers(
@@ -68,6 +70,7 @@ class AppControllers(
             notifications = graph?.notificationsController() ?: NotificationsController(null),
             stageEvents = graph?.stageEventsController() ?: StageEventsController(null),
             analytics = graph?.analytics ?: Analytics.None,
+            prompts = graph?.prompts ?: PromptPrefs.InMemory(),
         )
     }
 }

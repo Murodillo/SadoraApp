@@ -235,17 +235,12 @@ class AppState {
      */
     var pendingInviteCode by mutableStateOf<String?>(null)
 
-    /** "Do you wear a smart watch or band?" — null until answered, null when skipped. */
-    var hasWearable by mutableStateOf<Boolean?>(null)
-
     /**
-     * Set only by the onboarding question, and cleared the moment the shell acts on it.
+     * "Do you wear a smart watch or band?" — null until answered.
      *
-     * Separate from [hasWearable] on purpose: that answer is permanent and lives on the
-     * profile, so routing off it would reopen the connect screen on every launch for
-     * everyone who owns a watch.
+     * Asked in the app a few days after sign-up, not during it (see `WearablePrompt`).
      */
-    var pendingDeviceConnect by mutableStateOf(false)
+    var hasWearable by mutableStateOf<Boolean?>(null)
 
     /**
      * How Today is arranged, as the server has it.

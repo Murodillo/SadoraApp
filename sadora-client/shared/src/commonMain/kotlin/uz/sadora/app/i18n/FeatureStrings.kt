@@ -123,4 +123,15 @@ interface DeviceStrings {
     fun periodsImported(count: Int): String
     /** HealthKit gives an app no way to change its own permissions, so she is told where. */
     val appleHealthManage: String
+
+    // ---- the question, asked in the app a few days after sign-up
+    val askTitle: String
+    val askBody: String
+    /** Under the picture: the readings a device brings in on its own. */
+    val askReadings: List<String>
+    /** The watches and bands that reach the app, named so she recognises her own. */
+    val askBrands: String
+    val askYes: String
+    val askNo: String
+    val askLater: String
 }

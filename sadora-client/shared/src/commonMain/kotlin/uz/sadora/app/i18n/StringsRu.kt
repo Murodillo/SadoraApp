@@ -145,20 +145,6 @@ object StringsRu : Strings {
         override val height = "Рост"
         override val weight = "Вес"
 
-        override val deviceTitle = "Есть умные часы или браслет?"
-        override val deviceSubtitle =
-            "Если есть, сон и шаги будут приходить сами — вручную вводить не придётся."
-        override val deviceYes = "Да, есть"
-        override val deviceYesNote = "Подключим на следующем шаге"
-        override val deviceNo = "Нет"
-        override val deviceNoNote = "Всё можно вводить и вручную"
-        override val deviceConnectTitle = "Подключим ваше устройство?"
-        override val deviceConnectBody =
-            "Подключите один раз — сон, пульс и шаги будут обновляться каждый день. " +
-                "Отключить можно в любой момент."
-        override val deviceConnectNow = "Подключить сейчас"
-        override val deviceConnectLater = "Позже"
-
         override val inviteTitle = "Есть код приглашения?"
         override val inviteSubtitle = "Если нет — просто пропустите этот шаг."
         override val inviteLabel = "Код приглашения"
@@ -1546,7 +1532,6 @@ object StringsRu : Strings {
     override val tools: StageToolsStrings = StageToolsRu
     override val partner: PartnerStrings = PartnerRu
     override val badges: BadgeStrings = BadgesRu
-
     override val rewards = object : RewardStrings {
         override val coinName = "Гул"
         override fun coins(amount: String) = "$amount гул"
@@ -1857,6 +1842,15 @@ object StringsRu : Strings {
         override val accessDenied = "Доступ не дан — ничего не прочитано"
         override fun periodsImported(count: Int) = "Добавлено периодов: $count"
         override val appleHealthManage = "Что читается, меняется в приложении «Здоровье»: Профиль → Приложения → SADORA."
+
+        override val askTitle = "Носите умные часы или браслет?"
+        override val askBody =
+            "Если да, подключите один раз — сон, пульс и шаги будут приходить сами каждый день, вводить вручную не придётся."
+        override val askReadings = listOf("Сон", "Пульс", "Шаги")
+        override val askBrands = "Apple Watch, Galaxy Watch, Mi Band, Garmin, Fitbit, WHOOP, Oura и другие"
+        override val askYes = "Да, есть — подключить"
+        override val askNo = "Нет, у меня нет"
+        override val askLater = "Спросите позже"
     }
 }
 

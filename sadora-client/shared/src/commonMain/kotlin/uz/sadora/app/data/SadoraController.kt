@@ -8,6 +8,7 @@ import uz.sadora.app.i18n.ErrorStrings
 import uz.sadora.app.model.AppState
 import uz.sadora.contract.AuthProvider
 import uz.sadora.contract.OtpChallenge
+import uz.sadora.contract.UpdateProfileRequest
 import uz.sadora.contract.UzbekPhone
 
 /** Where the user belongs after an auth call succeeds. */
@@ -104,6 +105,17 @@ class SadoraController(
         return call {
             repo.updateProfile(state.toUpdateProfileRequest(timezoneOrDefault(), withStageDate))
         } != null
+    }
+
+    /**
+     * The smart-device answer, from the question asked a few days in. Set locally first,
+     * so the question does not come back on a failed save; the server catches up on the
+     * next profile read or the next answer.
+     */
+    suspend fun answerWearable(hasWearable: Boolean) {
+        state.hasWearable = hasWearable
+        val repo = repository ?: return
+        call(silent = true) { repo.updateProfile(UpdateProfileRequest(hasWearable = hasWearable)) }
     }
 
     suspend fun loadConsents() {

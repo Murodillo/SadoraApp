@@ -142,20 +142,6 @@ object StringsUz : Strings {
         override val height = "Bo'y"
         override val weight = "Vazn"
 
-        override val deviceTitle = "Aqlli soat yoki bilaguzuk bormi?"
-        override val deviceSubtitle =
-            "Bo'lsa, uyqu va qadamlar o'zi tushadi — qo'lda kiritishning hojati qolmaydi."
-        override val deviceYes = "Ha, bor"
-        override val deviceYesNote = "Keyingi qadamda ulaymiz"
-        override val deviceNo = "Yo'q"
-        override val deviceNoNote = "Hammasini qo'lda ham kiritish mumkin"
-        override val deviceConnectTitle = "Qurilmangizni ulaymizmi?"
-        override val deviceConnectBody =
-            "Bir marta ulasangiz, uyqu, puls va qadamlar har kuni o'zi yangilanadi. " +
-                "Istalgan vaqtda uzib qo'yishingiz mumkin."
-        override val deviceConnectNow = "Hozir ulash"
-        override val deviceConnectLater = "Keyinroq"
-
         override val inviteTitle = "Taklif kodingiz bormi?"
         override val inviteSubtitle = "Bo'lmasa, bu qadamni o'tkazib yuboring."
         override val inviteLabel = "Taklif kodi"
@@ -1542,7 +1528,6 @@ object StringsUz : Strings {
     override val tools: StageToolsStrings = StageToolsUz
     override val partner: PartnerStrings = PartnerUz
     override val badges: BadgeStrings = BadgesUz
-
     override val rewards = object : RewardStrings {
         override val coinName = "Gul"
         override fun coins(amount: String) = "$amount gul"
@@ -1854,5 +1839,14 @@ object StringsUz : Strings {
         override val accessDenied = "Ruxsat berilmadi — hech narsa o'qilmadi"
         override fun periodsImported(count: Int) = "$count ta hayz davri qo'shildi"
         override val appleHealthManage = "Qaysi ko'rsatkichlar o'qilishini Salomatlik ilovasida o'zgartirasiz: Profil → Ilovalar → SADORA."
+
+        override val askTitle = "Aqlli soat yoki bilaguzuk taqasizmi?"
+        override val askBody =
+            "Bo'lsa, bir marta ulaysiz — keyin uyqu, puls va qadamlar har kuni o'zi tushadi, qo'lda kiritish shart emas."
+        override val askReadings = listOf("Uyqu", "Puls", "Qadamlar")
+        override val askBrands = "Apple Watch, Galaxy Watch, Mi Band, Garmin, Fitbit, WHOOP, Oura va boshqalar"
+        override val askYes = "Ha, bor — ulaymiz"
+        override val askNo = "Yo'q, menda yo'q"
+        override val askLater = "Keyinroq so'rang"
     }
 }

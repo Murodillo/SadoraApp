@@ -573,23 +573,6 @@ interface OnboardingStrings {
     val height: String
     val weight: String
 
-    // ---- smart device
-    /**
-     * Asked because the answer changes where the flow ends: a yes lands on the connect
-     * screen instead of on Today.
-     */
-    val deviceTitle: String
-    val deviceSubtitle: String
-    val deviceYes: String
-    val deviceYesNote: String
-    val deviceNo: String
-    val deviceNoNote: String
-    /** The interstitial after a yes, before the connect screen opens. */
-    val deviceConnectTitle: String
-    val deviceConnectBody: String
-    val deviceConnectNow: String
-    val deviceConnectLater: String
-
     // ---- invite code
     val inviteTitle: String
     val inviteSubtitle: String

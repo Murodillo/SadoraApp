@@ -142,20 +142,6 @@ object StringsEn : Strings {
         override val height = "Height"
         override val weight = "Weight"
 
-        override val deviceTitle = "Do you wear a smart watch or band?"
-        override val deviceSubtitle =
-            "If you do, sleep and steps arrive on their own — nothing to type in."
-        override val deviceYes = "Yes, I do"
-        override val deviceYesNote = "We'll connect it in the next step"
-        override val deviceNo = "No"
-        override val deviceNoNote = "Everything can be entered by hand too"
-        override val deviceConnectTitle = "Shall we connect your device?"
-        override val deviceConnectBody =
-            "Connect it once and sleep, pulse and steps refresh every day. " +
-                "You can disconnect it at any time."
-        override val deviceConnectNow = "Connect now"
-        override val deviceConnectLater = "Later"
-
         override val inviteTitle = "Do you have an invite code?"
         override val inviteSubtitle = "If not, just skip this step."
         override val inviteLabel = "Invite code"
@@ -1538,7 +1524,6 @@ object StringsEn : Strings {
     override val tools: StageToolsStrings = StageToolsEn
     override val partner: PartnerStrings = PartnerEn
     override val badges: BadgeStrings = BadgesEn
-
     override val rewards = object : RewardStrings {
         override val coinName = "Gul"
         override fun coins(amount: String) = "$amount gul"
@@ -1850,5 +1835,14 @@ object StringsEn : Strings {
         override val accessDenied = "Access was not given — nothing was read"
         override fun periodsImported(count: Int) = if (count == 1) "1 period added" else "$count periods added"
         override val appleHealthManage = "Change what is read in the Health app: Profile → Apps → SADORA."
+
+        override val askTitle = "Do you wear a smart watch or band?"
+        override val askBody =
+            "If you do, connect it once — sleep, heart rate and steps then arrive on their own every day, with nothing to type."
+        override val askReadings = listOf("Sleep", "Heart rate", "Steps")
+        override val askBrands = "Apple Watch, Galaxy Watch, Mi Band, Garmin, Fitbit, WHOOP, Oura and more"
+        override val askYes = "Yes — let's connect it"
+        override val askNo = "No, I don't"
+        override val askLater = "Ask me later"
     }
 }

@@ -121,6 +121,7 @@ class UserService(
         )
         request.goals?.let { users.replaceGoals(userId, it) }
         request.stage?.let { users.mergeStageDates(userId, dueDate = it.dueDate, childBirthDate = it.birthDate) }
+        request.hasWearable?.let { users.setHasWearable(userId, it) }
 
         audit.record(
             AuditEntry(
@@ -370,4 +371,5 @@ private fun UpdateProfileRequest.changedFields(): List<String> = buildList {
     if (weightKg != null) add("weightKg")
     if (goals != null) add("goals")
     if (stage != null) add("stage")
+    if (hasWearable != null) add("hasWearable")
 }

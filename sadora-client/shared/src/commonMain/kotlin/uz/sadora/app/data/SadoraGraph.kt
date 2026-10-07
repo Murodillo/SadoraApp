@@ -50,6 +50,8 @@ class SadoraGraph(
      * SDK is; the shared code only decides what is worth recording.
      */
     val analytics: Analytics = Analytics.None,
+    /** When the app may next ask its occasional questions; plain preferences on a phone. */
+    val prompts: PromptPrefs = PromptPrefs.InMemory(),
     /**
      * HealthKit or Health Connect, built by the platform because Health Connect needs a
      * `Context`. The no-op by default, so a test or a preview reads nothing.

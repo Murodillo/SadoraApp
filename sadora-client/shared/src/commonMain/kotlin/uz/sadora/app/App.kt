@@ -48,6 +48,9 @@ import uz.sadora.app.data.HealthSync
 import uz.sadora.app.data.SadoraGraph
 import uz.sadora.app.data.SessionState
 import uz.sadora.app.ui.modules.HealthGate
+import uz.sadora.app.ui.modules.WearablePromptSheet
+import uz.sadora.app.ui.modules.wearableQuestionDue
+import uz.sadora.app.ui.modules.wearableSnoozedUntil
 import uz.sadora.app.data.applyServerProfile
 import uz.sadora.app.design.SadoraDarkSurface
 import uz.sadora.app.design.SadoraTheme
@@ -432,14 +435,26 @@ private fun MainShell(
         controllers.doctors.loadAccount()
         // Whether someone sees her — the labour button needs to know — and whom she follows.
         controllers.partner.refresh()
+    }
 
-        // A yes to "do you wear a watch?" ends the flow on the connect screen rather
-        // than on Today. Consumed here so it happens exactly once, after sign-up — not
-        // on every launch of every account that owns one.
-        if (state.pendingDeviceConnect) {
-            state.pendingDeviceConnect = false
-            navigator.push(Route.DataSources)
-        }
+    // "Do you wear a smart watch or band?" — no longer part of sign-up. Asked a few days
+    // in, once she has seen what the sleep tab is, and a few seconds after the app opens
+    // so it never lands on the first frame. A device already connected answers it.
+    var askWearable by remember { mutableStateOf(false) }
+    LaunchedEffect(health.loaded) {
+        if (!health.loaded) return@LaunchedEffect
+        delay(WearableAskDelayMillis)
+        val userId = controllers.account.currentUserId ?: return@LaunchedEffect
+        val wearables = controllers.wearables
+        if (state.hasWearable == null) wearables.load()
+        askWearable = wearableQuestionDue(
+            prompts = controllers.prompts,
+            userId = userId,
+            hasWearable = state.hasWearable,
+            memberSince = state.memberSince,
+            deviceConnected = wearables.deviceEnabled || wearables.connected.isNotEmpty(),
+            today = state.today,
+        )
     }
 
     // The phone's health store, read each time the app comes to the front. The sync rests
@@ -697,6 +712,27 @@ private fun MainShell(
                 overlays.openBadge = null
                 controllers.analytics.event(AnalyticsEvents.PAYWALL_OPENED, mapOf("from" to "badge_wear"))
                 navigator.push(Route.Paywall)
+            },
+        )
+
+        // After the streak card and the badges: one thing at a time on opening.
+        WearablePromptSheet(
+            visible = askWearable && rewards.celebration == null && rewards.unlocks.isEmpty(),
+            onYes = {
+                askWearable = false
+                scope.launch { controllers.account.answerWearable(true) }
+                navigator.push(Route.DataSources)
+            },
+            onNo = {
+                askWearable = false
+                scope.launch { controllers.account.answerWearable(false) }
+            },
+            onLater = {
+                askWearable = false
+                val userId = controllers.account.currentUserId
+                if (userId != null) {
+                    scope.launch { controllers.prompts.setWearableAskAfter(userId, wearableSnoozedUntil(state.today)) }
+                }
             },
         )
 
@@ -1204,6 +1240,9 @@ private fun PushedScreen(
 
 /** How often the unread count is re-read while she is on the Chat tab. */
 private const val UnreadRefreshMillis = 30_000L
+
+/** How long after opening the app the smart-device question waits before it appears. */
+private const val WearableAskDelayMillis = 4_000L
 
 /**
  * After a consultation is paid: her page is read again for the thread's id — the server

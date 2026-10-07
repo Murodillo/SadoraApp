@@ -2,6 +2,7 @@ package uz.sadora.app
 
 import androidx.compose.ui.window.ComposeUIViewController
 import uz.sadora.app.data.IosDeviceIdentity
+import uz.sadora.app.data.IosPromptPrefs
 import uz.sadora.app.data.IosStore
 import uz.sadora.app.data.IosStoreBilling
 import uz.sadora.app.data.KeychainTokenStorage
@@ -32,6 +33,7 @@ private val iosGraph: SadoraGraph by lazy {
         appVersion = NSBundle.mainBundle.objectForInfoDictionaryKey("CFBundleShortVersionString") as? String,
         healthPlatform = HealthKitPlatform(),
         healthPrefs = IosHealthSyncPrefs(),
+        prompts = IosPromptPrefs(),
         // Every iOS build is an App Store or TestFlight build, so it always buys through
         // StoreKit — the bridge Swift registered at launch. Payme and Click are never offered.
         storeBilling = IosStore.bridge?.let(::IosStoreBilling),
