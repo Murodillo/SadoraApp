@@ -1,6 +1,6 @@
 #!/bin/zsh
 #
-# Deploys the production stack to the server, beside staging.
+# Deploys the production stack to its own server (SADORA_PROD_HOST); staging is another one.
 #
 #   ./tools/deploy_prod.sh
 #   SADORA_DIRECT=1 ./tools/deploy_prod.sh   # from the server's own LAN, without the jump host
@@ -30,7 +30,8 @@ HOSTS=sadora-backend/deploy/stage/hosts.env
 [[ -f $HOSTS ]] && source $HOSTS
 KEY=${SADORA_DEPLOY_KEY:-$HOME/.ssh/id_ed25519_sadora_deploy}
 JUMP=${SADORA_JUMP:?set SADORA_JUMP in $HOSTS — see hosts.env.example}
-HOST=${SADORA_HOST:?set SADORA_HOST in $HOSTS — see hosts.env.example}
+HOST=${SADORA_PROD_HOST:?set SADORA_PROD_HOST in $HOSTS — see hosts.env.example}
+STAGE_HOST=${SADORA_HOST:?set SADORA_HOST in $HOSTS — see hosts.env.example}
 DIR=${SADORA_PROD_DIR:-/opt/sadora-prod}
 STAGE_DIR=${SADORA_DIR:-/opt/sadora}
 OUT=build/prod
@@ -45,6 +46,7 @@ SSH_OPTS=(
 )
 [[ -z $SADORA_DIRECT ]] && SSH_OPTS+=(-o "ProxyCommand=ssh -o BatchMode=yes -o IdentitiesOnly=yes -i $KEY -W %h:%p $JUMP")
 remote() { ssh "${SSH_OPTS[@]}" "$HOST" "$@"; }
+stage() { ssh "${SSH_OPTS[@]}" "$STAGE_HOST" "$@"; }
 
 COMPOSE="SADORA_ENV_FILE=server/.env.prod docker compose -p sadora-prod -f docker-compose.prod.yml --env-file server/.env.prod --env-file .release.env"
 
@@ -57,11 +59,13 @@ echo "==> access"
 remote true || { echo "No key access to $HOST (key: $KEY)."; exit 1; }
 
 echo "==> API image (the one staging runs)"
-RELEASE=$(remote "cat $STAGE_DIR/.release.env")
+RELEASE=$(stage "cat $STAGE_DIR/.release.env")
 IMAGE=$(sed -n 's/^SADORA_API_IMAGE=//p' <<<"$RELEASE")
 SHA=$(sed -n 's/^SADORA_RELEASE=//p' <<<"$RELEASE")
 [[ -n $IMAGE && -n $SHA ]] || { echo "Staging has no CI release to promote."; exit 1; }
-remote "docker image inspect '$IMAGE' >/dev/null" || { echo "$IMAGE is not on the server."; exit 1; }
+# Staging is another machine, so production pulls the same digest from GHCR.
+remote "docker image inspect '$IMAGE' >/dev/null 2>&1 || docker pull -q '$IMAGE'" >/dev/null \
+  || { echo "Could not pull $IMAGE on $HOST."; exit 1; }
 echo "    ${SHA:0:7} $IMAGE"
 
 echo "==> panels"

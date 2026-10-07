@@ -13,6 +13,9 @@
 #   dev-admin.sadora.app   → 8082  admin
 #   dev-api.sadora.app     → 8083  api
 #
+# The staging- hostnames (staging-doctor, staging, staging-admin, staging-api) reach the
+# same four ports.
+#
 # `!override` replaces production's list instead of adding to it, so staging never also
 # listens on 8090–8093, which belong to production.
 

@@ -162,9 +162,11 @@ echo
 # The panels are other origins than the API, and a browser sends an Origin header on
 # every POST: the API accepts only the origins it has been told about — without them,
 # sign-in answers 403 in a browser while curl gets 200. The hostnames are fixed, so this
-# is written once and only changes here.
+# is written once and only changes here. The gateway also forwards the staging-
+# hostnames to the same ports, so their panels are origins of their own.
 echo "==> CORS for the panels' origins"
-ORIGINS="CORS_ALLOWED_ORIGINS=http://localhost:5173,http://localhost:5174,$ADMIN_URL,$DOCTOR_URL,$LANDING_URL"
+ALIASES=https://staging-admin.sadora.app,https://staging-doctor.sadora.app,https://staging.sadora.app
+ORIGINS="CORS_ALLOWED_ORIGINS=http://localhost:5173,http://localhost:5174,$ADMIN_URL,$DOCTOR_URL,$LANDING_URL,$ALIASES"
 if ! remote "grep -qxF '$ORIGINS' $DIR/server/.env.stage"; then
   remote "cd $DIR && sed -i '/^CORS_EXTRA_ORIGINS=/d; /^CORS_ALLOWED_ORIGINS=/d' server/.env.stage && echo '$ORIGINS' >> server/.env.stage"
   remote "cd $DIR && $COMPOSE up -d api"

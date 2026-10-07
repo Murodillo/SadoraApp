@@ -248,16 +248,19 @@ staging natijasi.
 Reverse proxy stack ichida yo'q: gateway har bir sadora.app domenining TLS'ini o'zi
 oladi va uni serverdagi alohida portga yo'naltiradi. Har port — o'z konteyneri.
 
-| Domen | Port | Konteyner |
-|---|---|---|
-| dev-doctor.sadora.app | 8080 | `doctor-admin` (nginx, statik) |
-| dev.sadora.app | 8081 | `landing` (nginx, statik + `/download/`) |
-| dev-admin.sadora.app | 8082 | `admin` (nginx, statik) |
-| dev-api.sadora.app | 8083 | `api` |
-| doctor.sadora.app | 8090 | `doctor-admin` |
-| sadora.app | 8091 | `landing` |
-| admin.sadora.app | 8092 | `admin` |
-| api.sadora.app | 8093 | `api` |
+| Domen | Server | Port | Konteyner |
+|---|---|---|---|
+| dev-doctor / staging-doctor.sadora.app | staging | 8080 | `doctor-admin` (nginx, statik) |
+| dev / staging.sadora.app | staging | 8081 | `landing` (nginx, statik + `/download/`) |
+| dev-admin / staging-admin.sadora.app | staging | 8082 | `admin` (nginx, statik) |
+| dev-api / staging-api.sadora.app | staging | 8083 | `api` |
+| doctor.sadora.app | prod | 8090 | `doctor-admin` |
+| sadora.app | prod | 8091 | `landing` |
+| admin.sadora.app | prod | 8092 | `admin` |
+| api.sadora.app | prod | 8093 | `api` |
+
+Staging va prod — alohida serverlar; manzillari gitignore'dagi
+`sadora-backend/deploy/stage/hosts.env` da.
 
 Prod portlari `docker-compose.prod.yml` da, staging ularni `docker-compose.stage.yml` da
 almashtiradi. Panellar API'ni o'z domenida chaqiradi, shuning uchun `VITE_API_BASE` bilan
