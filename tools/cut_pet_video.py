@@ -16,7 +16,7 @@ import cv2
 import numpy as np
 from PIL import Image
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from pet_matting import clear_holes, close_specks, drop_crumbs, key_green
+from pet_matting import clear_holes, close_specks, drop_crumbs, key_green, model_mask, model_pockets, green_floor
 
 KEY = "white"
 BG = 12   # whiteness distance still counted as background (--bg lowers it for a white pet)
@@ -41,7 +41,9 @@ def cut(img):
     a = np.asarray(img.convert("RGB")).astype(np.float32)
     if KEY == "green":
         rgb, alpha, shadow = key_green(a)
-        close_specks(a, rgb, alpha, shadow)
+        green_floor(a, rgb, alpha, model_mask(a))
+        # No speck closing here: a green key leaves no pinholes, and closing would fill the
+        # narrow green gap between a wing tip and the beak with the source's green.
         drop_crumbs(alpha)
         return np.dstack([rgb, alpha * 255]).astype(np.uint8)
     d = (255 - a).max(2); sat = a.max(2) - a.min(2)
@@ -72,7 +74,9 @@ def cut(img):
     m = np.maximum(alpha[edge], 1e-3)[:, None]
     rgb[edge] = np.clip((a[edge] - 255 * (1 - m)) / m, 0, 255)
     close_specks(a, rgb, alpha, shadow)
-    clear_holes(a, rgb, alpha)
+    clear_holes(a, rgb, alpha, white_pet=BG < 12)
+    # The pockets the colour rules cannot tell from teeth: the model knows the shape.
+    model_pockets(a, rgb, alpha, model_mask(a))
     drop_crumbs(alpha)
     return np.dstack([rgb, alpha * 255]).astype(np.uint8)
 

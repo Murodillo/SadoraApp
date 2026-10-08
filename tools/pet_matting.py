@@ -24,7 +24,7 @@ def _dilate(m, n=1):
     return cv2.dilate(m.astype(np.uint8), k, iterations=n).astype(bool)
 
 
-def clear_holes(a, rgb, alpha):
+def clear_holes(a, rgb, alpha, white_pet=False):
     """[a] the source RGB (float), [rgb]/[alpha] the cut so far; both are edited in place."""
     border = np.concatenate([a[0], a[-1], a[:, 0], a[:, -1]])
     ground = np.median(border, axis=0)
@@ -53,6 +53,15 @@ def clear_holes(a, rgb, alpha):
         area = pst[i, cv2.CC_STAT_AREA]
         if HOLE_MIN_AREA <= area <= HOLE_MAX_SHARE * box_area:
             hole |= plab == i
+    # A strip of the ground itself trapped under a tail, between a paw and the floor
+    # shadow: exactly the ground's white, so it cannot be a cream paw — but it touches the
+    # paws, which made the pale pocket above too big to count. Not for a white pet.
+    if not white_pet:
+        exact = (dist < 10) & (sat < 7) & solid & feet
+        en, elab, est, _ = cv2.connectedComponentsWithStats(exact.astype(np.uint8), connectivity=4)
+        for i in range(1, en):
+            if HOLE_MIN_AREA // 3 <= est[i, cv2.CC_STAT_AREA] <= HOLE_MAX_SHARE * box_area:
+                hole |= elab == i
     for i in range(1, n):
         area = stats[i, cv2.CC_STAT_AREA]
         if area < HOLE_MIN_AREA or area > HOLE_MAX_SHARE * box_area:
@@ -136,3 +145,149 @@ def key_green(a, lo=25.0, hi=75.0):
     alpha[dark] = np.clip((ground_lum - lum[dark]) / ground_lum * 1.6, 0, 0.45)
     rgb[dark] = 0
     return rgb, alpha, dark
+
+
+# ---------------------------------------------------------------- model-guided pockets
+
+_SESSIONS = {}
+
+
+def model_mask(a, model=None):
+    """
+    Foreground probability (0..1, frame-sized) from a salient-object model in ~/.u2net
+    (rembg's u2netp ONNX file, 4.7 MB). The model knows
+    the pet's shape, so a pocket of ground between an arm and a cheek reads background
+    while the same white in the teeth or an eye highlight reads pet.
+    """
+    import os
+    import onnxruntime as ort
+    from PIL import Image
+    home = os.path.expanduser("~/.u2net")
+    if model is None:
+        # Pinned: one model for every frame, or a loop changes its edges halfway through.
+        model = "u2netp"
+    sess = _SESSIONS.get(model)
+    if sess is None:
+        sess = _SESSIONS[model] = ort.InferenceSession(f"{home}/{model}.onnx", providers=["CPUExecutionProvider"])
+    size = 1024 if model.startswith("isnet") else 320
+    img = Image.fromarray(a.astype(np.uint8)).resize((size, size), Image.LANCZOS)
+    x = np.asarray(img).astype(np.float32) / 255.0
+    if model.startswith("isnet"):
+        x = (x - 0.5) / 1.0
+    else:
+        x = x / max(x.max(), 1e-6)
+        x = (x - np.array([0.485, 0.456, 0.406])) / np.array([0.229, 0.224, 0.225])
+    x = x.transpose(2, 0, 1)[None].astype(np.float32)
+    out = sess.run(None, {sess.get_inputs()[0].name: x})[0][0, 0]
+    out = (out - out.min()) / max(out.max() - out.min(), 1e-6)
+    h, w = a.shape[:2]
+    return np.asarray(Image.fromarray((out * 255).astype(np.uint8)).resize((w, h), Image.BILINEAR)).astype(np.float32) / 255.0
+
+
+def model_pockets(a, rgb, alpha, mask, ground=None):
+    """
+    Clears pale, colourless pixels the model calls background but the border flood could
+    not reach — the pockets between limbs. Only near-ground colours are touched, so a
+    thin coloured part the coarse model misses (a beak tip, a hoof) keeps its own alpha.
+    Their alpha comes from how far they are from the ground's white, unmixed like an edge.
+    """
+    if ground is None:
+        border = np.concatenate([a[0], a[-1], a[:, 0], a[:, -1]])
+        ground = np.median(border, axis=0)
+    dist = np.abs(a - ground).max(2)
+    sat = a.max(2) - a.min(2)
+    pale = (dist < 70) & (sat < 18)
+    bg = cv2.GaussianBlur(mask, (0, 0), 1.5) < 0.5
+    target = pale & bg & (alpha > 0.02)
+    if not target.any():
+        _feet_edges(a, rgb, alpha, mask, ground)
+        return
+    # Grow a step into the soft rim so no white ring is left around a cleared pocket.
+    target |= _dilate(target, 2) & pale & (alpha > 0.02)
+    # What is left of a pocket is ground greyed by the pet's own shade: draw it the way
+    # the floor shadow is drawn — translucent black — never as a pale veil.
+    alpha[target] = np.minimum(alpha[target], np.clip(dist[target] / 255 * 1.6, 0, 0.45))
+    rgb[target] = 0
+
+    # Darker and still colourless where the model sees ground, down at the feet: that is
+    # floor shadow caught between them — translucent black like the rest of the shadow.
+    h = a.shape[0]
+    low = np.zeros(bg.shape, bool); low[int(h * 0.5):] = True
+    dusk = bg & low & (sat < 18) & ~pale & (alpha > 0.02)
+    # Right at the floor the shadow picks up the pet's own warm colour (a cream cat's
+    # shadow reads brownish). Where the model is sure it is ground, that is shadow too.
+    solid = alpha > 0.5
+    ys = np.where(solid.any(1))[0]
+    if len(ys):
+        top, bottom = ys.min(), ys.max()
+        floor = np.zeros(bg.shape, bool); floor[top + int(0.88 * (bottom - top)):] = True
+        sure = cv2.GaussianBlur(mask, (0, 0), 1.5) < 0.1
+        lum = a.mean(2)
+        dusk |= floor & sure & (sat < 40) & (lum < ground.mean() - 15) & (alpha > 0.02)
+    alpha[dusk] = np.minimum(alpha[dusk], np.clip(dist[dusk] / 255 * 1.6, 0, 0.45))
+    rgb[dusk] = 0
+
+    # The ring a cleared pocket leaves, and the pale line along the feet: unmix them.
+    ring = _dilate(target | dusk, 3) & ~(target | dusk) & (alpha > 0.02) & (rgb.max(2) >= 1)
+    decontaminate(a, rgb, alpha, ring, ground, solid_hint=~bg)
+    _feet_edges(a, rgb, alpha, mask, ground)
+
+
+def _feet_edges(a, rgb, alpha, mask, ground):
+    h = a.shape[0]
+    solid = alpha > 0.5
+    ys = np.where(solid.any(1))[0]
+    if len(ys) == 0:
+        return
+    top, bottom = ys.min(), ys.max()
+    feet = np.zeros(alpha.shape, bool); feet[top + int(0.8 * (bottom - top)):] = True
+    shade = rgb.max(2) < 1          # floor shadow, already translucent black
+    edge = feet & (_dilate(alpha < 0.5, 2)) & (alpha > 0.02) & ~shade
+    decontaminate(a, rgb, alpha, edge, ground, solid_hint=cv2.GaussianBlur(mask, (0, 0), 1.5) > 0.5)
+
+
+def decontaminate(a, rgb, alpha, region, ground, solid_hint=None, sigma=3.0):
+    """
+    Re-solves alpha on [region] by unmixing each pixel between the ground's white and
+    the pet's own colour nearby: a = alpha*F + (1-alpha)*G. F is a blur of the pet's
+    fully opaque, non-pale pixels around it. This takes the last 1–2 px white ring off a
+    cleared pocket and the pale line under the feet, where the colour rules saw "pet".
+    """
+    if not region.any():
+        return
+    sat = a.max(2) - a.min(2)
+    dist = np.abs(a - ground).max(2)
+    fg = (alpha > 0.98) & ((sat > 18) | (dist > 70))
+    if solid_hint is not None:
+        fg &= solid_hint
+    w = cv2.GaussianBlur(fg.astype(np.float32), (0, 0), sigma)
+    F = np.dstack([cv2.GaussianBlur(a[..., c] * fg, (0, 0), sigma) for c in range(3)]) / np.maximum(w, 1e-4)[..., None]
+    ok = region & (w > 0.05)
+    d = F[ok] - ground
+    num = ((a[ok] - ground) * d).sum(1)
+    den = np.maximum((d * d).sum(1), 1.0)
+    est = np.clip(num / den, 0, 1)
+    alpha[ok] = np.minimum(alpha[ok], est)
+    m = np.maximum(alpha[ok], 1e-3)[:, None]
+    rgb[ok] = np.clip((a[ok] - ground * (1 - m)) / m, 0, 255)
+
+
+def green_floor(a, rgb, alpha, mask):
+    """
+    On a green key the floor under the feet can carry pale, colourless leftovers (baked in
+    from the start frame, or the contact shadow despilled to grey). Where the model is sure
+    it is ground, at the bottom of the pet, they become translucent-black shadow.
+    """
+    solid = alpha > 0.5
+    ys = np.where(solid.any(1))[0]
+    if len(ys) == 0:
+        return
+    top, bottom = ys.min(), ys.max()
+    floor = np.zeros(alpha.shape, bool); floor[top + int(0.88 * (bottom - top)):] = True
+    sure = cv2.GaussianBlur(mask, (0, 0), 1.5) < 0.1
+    c = rgb.astype(np.float32)
+    sat = c.max(2) - c.min(2)
+    lum = c.mean(2)
+    shade = floor & sure & (sat < 40) & (alpha > 0.02)
+    alpha[shade] = np.minimum(alpha[shade], np.clip((255 - lum[shade]) / 255 * 1.6, 0, 0.45))
+    rgb[shade] = 0

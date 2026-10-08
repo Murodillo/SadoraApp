@@ -7,7 +7,7 @@ usage: python3 tools/cut_pet_sheet.py design/pets/laylo_poses.png design/pets/cu
 import os, sys, numpy as np
 from PIL import Image
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from pet_matting import clear_holes, close_specks, drop_crumbs
+from pet_matting import clear_holes, close_specks, drop_crumbs, model_mask, model_pockets
 # BG=4 for a white pet (Laylo), whose own white otherwise melts into the ground.
 SIZE=512; INSET=10; BG=int(os.environ.get('BG', 12)); SH=70
 def dil(m):
@@ -43,7 +43,8 @@ def cut(cell):
     am=np.clip((d[edge]-3)/(30-3),0,1); alpha[edge]=np.maximum(am, alpha[edge]*0)
     m=np.maximum(alpha[edge],1e-3)[:,None]; rgb[edge]=np.clip((a[edge]-255*(1-m))/m,0,255)
     close_specks(a, rgb, alpha, shadow)
-    clear_holes(a, rgb, alpha)
+    clear_holes(a, rgb, alpha, white_pet=BG < 12)
+    model_pockets(a, rgb, alpha, model_mask(a))
     drop_crumbs(alpha)
     return np.dstack([rgb,alpha*255]).astype(np.uint8)
 sheet=Image.open(sys.argv[1]); outdir=sys.argv[2]; names=sys.argv[3:]

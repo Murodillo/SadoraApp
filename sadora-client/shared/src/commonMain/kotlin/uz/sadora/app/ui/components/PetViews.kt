@@ -115,9 +115,14 @@ private fun loopFor(pet: PetKind, pose: PetPose): PetLoop? = when (pose) {
     PetPose.THINK -> when (pet) {
         PetKind.NILUFAR -> PetLoop("nilufar_think", 109)
         PetKind.MOMIQ -> PetLoop("momiq_think", 94)
+        PetKind.LAYLO -> PetLoop("laylo_think", 112)
+        PetKind.ANORXON -> PetLoop("anorxon_think", 102)
+        PetKind.OHU -> PetLoop("ohu_think", 94)
+    }
+    PetPose.SLEEP -> when (pet) {
+        PetKind.NILUFAR -> PetLoop("nilufar_sleep", 41)
         else -> null
     }
-    else -> null
 }
 
 /**
