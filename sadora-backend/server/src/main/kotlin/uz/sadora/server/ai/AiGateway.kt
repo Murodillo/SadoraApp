@@ -44,6 +44,8 @@ class AiGateway(
         context: AiContext?,
         modelAllowed: Boolean,
         language: Language,
+        /** Her companion's voice for the model; the rule engine has none. */
+        persona: String? = null,
     ): GatewayAnswer {
         val model = model
         if (model == null || !modelAllowed || config.apiKey == null) {
@@ -62,7 +64,7 @@ class AiGateway(
 
         val started = TimeSource.Monotonic.markNow()
         return try {
-            val answer = withTimeout(config.timeout) { model.answer(question, context, language) }
+            val answer = withTimeout(config.timeout) { model.answer(question, context, language, persona) }
             usage.record(
                 AiUsageEntry(
                     userId = userId,

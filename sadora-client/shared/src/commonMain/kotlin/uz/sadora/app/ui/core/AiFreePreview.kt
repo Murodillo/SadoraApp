@@ -20,7 +20,6 @@ import uz.sadora.app.design.Radius
 import uz.sadora.app.design.Sadora
 import uz.sadora.app.design.IconSize
 import uz.sadora.app.design.Spacing
-import uz.sadora.app.ui.components.AiOrb
 import uz.sadora.app.ui.components.BadgeTone
 import uz.sadora.app.ui.components.ButtonTone
 import uz.sadora.app.ui.components.CardLabel
@@ -43,6 +42,8 @@ import uz.sadora.app.ui.components.ArtIcon
  */
 @Composable
 fun AiFreePreviewScreen(
+    /** Her companion, asleep here: the chat is where it wakes up with Premium. */
+    pet: uz.sadora.contract.PetKind = uz.sadora.contract.PetKind.DEFAULT,
     onUpgrade: () -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
@@ -63,7 +64,13 @@ fun AiFreePreviewScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(Spacing.xs),
                 ) {
-                    AiOrb(size = 132.dp)
+                    uz.sadora.app.ui.components.PetImage(pet, uz.sadora.contract.PetPose.SLEEP, size = 150.dp)
+                    Text(
+                        strings.pet.chatAsleep(strings.pet.name(pet)),
+                        style = Sadora.type.body,
+                        color = c.textAccent,
+                        textAlign = TextAlign.Center,
+                    )
                     Text(
                         t.howCanIHelp,
                         style = Sadora.type.h2,

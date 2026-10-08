@@ -56,7 +56,10 @@ import uz.sadora.app.i18n.strings
 import uz.sadora.app.model.AppState
 import uz.sadora.app.model.Fmt
 import uz.sadora.app.model.nowTimeLabel
-import uz.sadora.app.ui.components.AiMarkHeader
+import uz.sadora.app.data.PetController
+import uz.sadora.app.ui.components.PetImage
+import uz.sadora.contract.PetPose
+import kotlinx.coroutines.delay
 import uz.sadora.app.ui.components.SadoraBottomSheet
 import uz.sadora.app.ui.components.SadoraButton
 import uz.sadora.app.ui.components.ButtonTone
@@ -74,7 +77,13 @@ private data class ChatMessage(
 )
 
 /**
- * "SADORA AI" — the conversation view, drawn on the deck's navy ground.
+ * "SADORA AI" — the conversation view, drawn on the deck's navy ground, and spoken by
+ * her companion: the pet she picked is the assistant here, by name, in the header and
+ * on the stage above the conversation, and the server writes its answers in its voice.
+ *
+ * The pet acts out the conversation: it waves while it waits, thinks while an answer is
+ * on its way, jumps when one arrives, dozes off when she has gone quiet, and wakes the
+ * moment she types or taps it.
  *
  * The caller wraps it in `SadoraDarkSurface`, so everything here reads the dark
  * palette through the ordinary tokens. Two safety rails stay on screen: the note that
@@ -84,11 +93,14 @@ private data class ChatMessage(
 fun AiChatScreen(
     state: AppState,
     ai: AiController,
+    pet: PetController,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val c = Sadora.colors
     val t = strings.ai
+    val tp = strings.pet
+    val name = tp.name(pet.pet)
     val errors = strings.errors
     val scope = rememberCoroutineScope()
     ResizeForKeyboard()
@@ -96,6 +108,33 @@ fun AiChatScreen(
     var showMenu by remember { mutableStateOf(false) }
     val messages = remember { mutableStateListOf<ChatMessage>() }
     val listState = rememberLazyListState()
+
+    // What the pet is doing. Busy wins (it is thinking about her question); a fresh
+    // answer or a tap makes it jump for a moment; a long silence puts it to sleep.
+    var cheering by remember { mutableStateOf(false) }
+    var asleep by remember { mutableStateOf(false) }
+    var activity by remember { mutableStateOf(0) }
+    LaunchedEffect(activity) {
+        asleep = false
+        delay(PetDozeMillis)
+        asleep = true
+    }
+    LaunchedEffect(cheering) {
+        if (cheering) {
+            delay(PetCheerMillis)
+            cheering = false
+        }
+    }
+    val pose = when {
+        ai.busy -> PetPose.THINK
+        cheering -> PetPose.HAPPY
+        asleep -> PetPose.SLEEP
+        else -> PetPose.IDLE
+    }
+    val poke = {
+        activity++
+        cheering = true
+    }
 
     // The allowance is the server's; the header shows it as soon as it is known.
     LaunchedEffect(ai) { ai.loadQuota() }
@@ -105,8 +144,11 @@ fun AiChatScreen(
         if (text.isEmpty() || ai.busy || !ai.canAsk) return
         messages += ChatMessage(true, text, nowTimeLabel())
         draft = ""
+        activity++
         scope.launch {
             val answer = ai.ask(text)
+            activity++
+            if (answer != null) cheering = true
             messages += if (answer != null) {
                 ChatMessage(false, answer.text, nowTimeLabel())
             } else {
@@ -129,13 +171,16 @@ fun AiChatScreen(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             CircleIconButton(SadoraIcons.ChevronLeft, contentDescription = t.back, onClick = onClose)
-            Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    t.title,
-                    style = Sadora.type.h3.copy(letterSpacing = 0.22.em, fontWeight = FontWeight.SemiBold),
-                    color = c.text,
-                )
-                Text(t.subtitle, style = Sadora.type.body, color = c.muted)
+            Row(
+                Modifier.weight(1f).padding(horizontal = Spacing.xs),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(Spacing.xs, Alignment.CenterHorizontally),
+            ) {
+                PetImage(pet.pet, pose, size = 44.dp, modifier = Modifier.noRippleClickable(onClick = poke))
+                Column {
+                    Text(name, style = Sadora.type.h3.copy(fontWeight = FontWeight.SemiBold), color = c.text)
+                    Text(tp.chatSubtitle, style = Sadora.type.caption.copy(letterSpacing = 0.02.em), color = c.muted)
+                }
             }
             CircleIconButton(SadoraIcons.More, contentDescription = t.menu, onClick = { showMenu = true })
         }
@@ -146,7 +191,12 @@ fun AiChatScreen(
             contentPadding = PaddingValues(horizontal = Spacing.screen, vertical = Spacing.xs),
             verticalArrangement = Arrangement.spacedBy(Spacing.sm),
         ) {
-            item { AiMarkHeader(Modifier.fillMaxWidth().height(150.dp)) }
+            // The stage: the pet, large, acting out the conversation. A tap makes it jump.
+            item {
+                Box(Modifier.fillMaxWidth().height(170.dp), contentAlignment = Alignment.Center) {
+                    PetImage(pet.pet, pose, size = 160.dp, modifier = Modifier.noRippleClickable(onClick = poke))
+                }
+            }
 
             item {
                 Text(
@@ -162,16 +212,9 @@ fun AiChatScreen(
                 )
             }
 
+            // The pet introduces itself; its line says what the old empty prompt did.
             if (messages.isEmpty()) {
-                item {
-                    Text(
-                        t.emptyPrompt,
-                        style = Sadora.type.body,
-                        color = c.muted,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.md),
-                    )
-                }
+                item { ChatBubble(ChatMessage(false, tp.chatIntro(name), ""), arrives = true) }
             }
 
             // Only the newest line arrives; history scrolled back into view is simply there.
@@ -235,7 +278,11 @@ fun AiChatScreen(
                 }
                 BasicTextField(
                     value = draft,
-                    onValueChange = { draft = it },
+                    onValueChange = {
+                        draft = it
+                        // Typing wakes it; it does not need a tap to notice her.
+                        if (asleep) activity++
+                    },
                     singleLine = true,
                     textStyle = Sadora.type.body.copy(color = c.text),
                     cursorBrush = SolidColor(c.primary),
@@ -348,7 +395,7 @@ private fun ChatBubble(message: ChatMessage, arrives: Boolean) {
                 style = Sadora.type.body,
                 color = if (message.fromUser) c.onPrimary else c.text,
             )
-            Text(
+            if (message.time.isNotEmpty()) Text(
                 message.time,
                 style = Sadora.type.caption.copy(letterSpacing = 0.02.em),
                 color = if (message.fromUser) c.onPrimary else c.muted2,
@@ -357,3 +404,9 @@ private fun ChatBubble(message: ChatMessage, arrives: Boolean) {
         }
     }
 }
+
+/** A minute of silence and the pet dozes off; anything she does wakes it. */
+private const val PetDozeMillis = 60_000L
+
+/** How long it celebrates an answer, or a tap. */
+private const val PetCheerMillis = 3_500L

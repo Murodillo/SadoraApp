@@ -24,6 +24,14 @@ interface PetStrings {
     val wake: String
     val close: String
     fun action(action: PetAction): String
+
+    // ---- in the AI chat, where the companion is the assistant
+    /** Under the pet's name in the chat header. */
+    val chatSubtitle: String
+    /** The first thing it says before she asks anything. */
+    fun chatIntro(name: String): String
+    /** On the free plan's chat preview, under the sleeping pet. */
+    fun chatAsleep(name: String): String
 }
 
 object PetUz : PetStrings {
@@ -61,6 +69,10 @@ object PetUz : PetStrings {
         PetAction.LEARN -> "O'qish"
         PetAction.MEDICATIONS -> "Eslatma qo'yish"
     }
+    override val chatSubtitle = "SADORA AI · shaxsiy yordamchingiz"
+    override fun chatIntro(name: String) = "Salom! Men $name — sizning shaxsiy yordamchingiz. " +
+        "Sikl, ovqatlanish, uyqu yoki kayfiyat haqida so'rang, ma'lumotlaringizga qarab javob beraman."
+    override fun chatAsleep(name: String) = "$name hozir uxlayapti. Premium bilan uyg'onib, savollaringizga javob beradi."
 }
 
 object PetRu : PetStrings {
@@ -98,6 +110,10 @@ object PetRu : PetStrings {
         PetAction.LEARN -> "Читать"
         PetAction.MEDICATIONS -> "Напоминание"
     }
+    override val chatSubtitle = "SADORA AI · ваш личный помощник"
+    override fun chatIntro(name: String) = "Привет! Я $name — ваш личный помощник. " +
+        "Спрашивайте о цикле, питании, сне или настроении — отвечу с учётом ваших данных."
+    override fun chatAsleep(name: String) = "$name сейчас спит. С Premium проснётся и ответит на ваши вопросы."
 }
 
 object PetEn : PetStrings {
@@ -135,4 +151,8 @@ object PetEn : PetStrings {
         PetAction.LEARN -> "Read"
         PetAction.MEDICATIONS -> "Set a reminder"
     }
+    override val chatSubtitle = "SADORA AI · your personal assistant"
+    override fun chatIntro(name: String) = "Hi! I'm $name, your personal assistant. " +
+        "Ask me about your cycle, food, sleep or mood and I'll answer with your own data in mind."
+    override fun chatAsleep(name: String) = "$name is asleep right now. With Premium it wakes up and answers your questions."
 }

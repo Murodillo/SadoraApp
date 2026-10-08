@@ -11,6 +11,9 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.Image
+import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -107,7 +110,12 @@ private fun loopFor(pet: PetKind, pose: PetPose): PetLoop? = when (pose) {
         PetKind.MOMIQ -> PetLoop("momiq_happy", 49)
         PetKind.LAYLO -> PetLoop("laylo_happy", 56)
         PetKind.ANORXON -> PetLoop("anorxon_happy", 44)
-        PetKind.OHU -> null
+        PetKind.OHU -> PetLoop("ohu_happy", 109)
+    }
+    PetPose.THINK -> when (pet) {
+        PetKind.NILUFAR -> PetLoop("nilufar_think", 109)
+        PetKind.MOMIQ -> PetLoop("momiq_think", 94)
+        else -> null
     }
     else -> null
 }
@@ -197,6 +205,10 @@ private fun PetStill(
 /**
  * The pet in the corner with its bubble. One at a time, above the tab bar, and gone on
  * its own after a few seconds — it is a word in passing, not a dialog.
+ *
+ * While it speaks the page behind dims, so the bubble reads as the one thing on screen;
+ * a tap on the dimmed page, or Back, sends the pet away. [modifier] places the pet and
+ * its bubble inside the full-screen layer this draws.
  */
 @Composable
 fun PetBubbleOverlay(
@@ -205,6 +217,32 @@ fun PetBubbleOverlay(
     onWake: () -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
+) {
+    SystemBackHandler(enabled = bubble != null) { onDismiss() }
+    Box(Modifier.fillMaxSize()) {
+        AnimatedVisibility(
+            visible = bubble != null,
+            enter = fadeIn(tween(Motion.Standard)),
+            exit = fadeOut(tween(Motion.Standard)),
+        ) {
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = ScrimAlpha))
+                    .noRippleClickable(onClick = onDismiss),
+            )
+        }
+        PetSpeech(bubble, onAction, onWake, onDismiss, Modifier.align(Alignment.BottomEnd).then(modifier))
+    }
+}
+
+@Composable
+private fun PetSpeech(
+    bubble: PetBubble?,
+    onAction: (PetAction) -> Unit,
+    onWake: () -> Unit,
+    onDismiss: () -> Unit,
+    modifier: Modifier,
 ) {
     val last = remember { mutableStateOf<PetBubble?>(null) }
     bubble?.let { last.value = it }
@@ -278,5 +316,8 @@ fun PetBubbleOverlay(
 }
 
 private val PetSize = 104.dp
+
+/** How dark the page behind the pet goes: enough to step back, not enough to hide it. */
+private const val ScrimAlpha = 0.4f
 private const val BubbleMillis = 9_000L
 private const val TeaserMillis = 7_000L

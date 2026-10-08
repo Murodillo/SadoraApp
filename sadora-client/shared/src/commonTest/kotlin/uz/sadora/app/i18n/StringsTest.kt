@@ -433,6 +433,7 @@ class StringsTest {
         }
         with(t.pet) {
             addAll(listOf(title, subtitle, choose, chosen, premiumBanner, premiumButton, teaser, wake, close))
+            addAll(listOf(chatSubtitle, chatIntro("Nilufar"), chatAsleep("Nilufar")))
             uz.sadora.contract.PetKind.entries.forEach { add(name(it)); add(personality(it)) }
             uz.sadora.contract.PetAction.entries.forEach { add(action(it)) }
         }
@@ -567,6 +568,7 @@ class StringsTest {
             assertNotEquals(StringsUz.welcome.title, t.welcome.title)
             assertNotEquals(StringsUz.pet.subtitle, t.pet.subtitle)
             assertNotEquals(StringsUz.pet.teaser, t.pet.teaser)
+            assertNotEquals(StringsUz.pet.chatIntro("X"), t.pet.chatIntro("X"))
             assertNotEquals(StringsUz.welcome.subtitle, t.welcome.subtitle)
             assertNotEquals(StringsUz.welcome.privacyPromise, t.welcome.privacyPromise)
             assertNotEquals(StringsUz.profile.signOut, t.profile.signOut)

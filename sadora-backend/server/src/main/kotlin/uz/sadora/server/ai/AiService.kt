@@ -37,6 +37,8 @@ class AiService(
     private val wearables: WearableService,
     private val gateway: AiGateway,
     private val usage: AiUsageRepository,
+    /** Which companion she picked, so the answer is in its voice. */
+    private val pets: uz.sadora.server.pet.PetRepository? = null,
 ) {
 
     suspend fun quota(userId: Uuid): AiChatQuota {
@@ -74,7 +76,9 @@ class AiService(
             MODEL_FLAG,
             FlagContext(userId = userId, environment = environment, language = user.language, lifeStage = user.lifeStage),
         )
-        val answer = gateway.answer(userId, question, context, modelAllowed, user.language).text
+        val pet = runCatching { pets?.chosen(userId) }.getOrNull() ?: uz.sadora.contract.PetKind.DEFAULT
+        val persona = pets?.let { uz.sadora.server.pet.PetPhrases.chatPersona(pet) }
+        val answer = gateway.answer(userId, question, context, modelAllowed, user.language, persona).text
 
         val feature = entitlements.resolve(userId, user.timezone).feature(FeatureKeys.AI_CHAT)
         return AiChatReply(

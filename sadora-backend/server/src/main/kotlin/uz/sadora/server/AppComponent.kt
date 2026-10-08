@@ -378,6 +378,7 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
         wearables = wearableService,
         gateway = aiGateway,
         usage = aiUsageRepository,
+        pets = PetRepository(),
     )
 
     /**

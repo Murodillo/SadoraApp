@@ -33,6 +33,14 @@ interface AiModel {
     suspend fun answer(question: String, context: AiContext?, language: Language): ModelAnswer
 
     /**
+     * The same answer in her companion's voice. [persona] only adds who is speaking;
+     * the clinical boundary in the instruction and the disclaimer stay exactly as they
+     * are. A model that has no use for it answers as itself.
+     */
+    suspend fun answer(question: String, context: AiContext?, language: Language, persona: String?): ModelAnswer =
+        answer(question, context, language)
+
+    /**
      * A free-form completion, for the one caller that is not a health question: the
      * home screen's greeting.
      *
@@ -65,10 +73,14 @@ class GeminiAnswerer(
 
     override val name: String get() = config.model
 
-    override suspend fun answer(question: String, context: AiContext?, language: Language): ModelAnswer {
+    override suspend fun answer(question: String, context: AiContext?, language: Language): ModelAnswer =
+        answer(question, context, language, persona = null)
+
+    override suspend fun answer(question: String, context: AiContext?, language: Language, persona: String?): ModelAnswer {
         val phrases = AiPhrases.of(language)
         val answer = generate(
-            instruction = phrases.instruction(),
+            // The persona goes after the rules, so it reads as a voice inside them.
+            instruction = phrases.instruction() + persona?.let { "\n\n$it" }.orEmpty(),
             prompt = phrases.userTurn(question, context?.takeUnless { it.isEmpty }?.summary(phrases)),
             temperature = 0.4,
             maxOutputTokens = config.maxOutputTokens,

@@ -4,9 +4,12 @@ Unlike cut_icon_sheet.py: grey floor shadows become translucent black (clean on 
 and all four poses share one scale and one baseline so swapping poses does not jump.
 usage: python3 tools/cut_pet_sheet.py design/pets/laylo_poses.png design/pets/cut laylo_idle laylo_happy laylo_think laylo_sleep
 """
-import sys, numpy as np
+import os, sys, numpy as np
 from PIL import Image
-SIZE=512; INSET=10; BG=12; SH=70
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from pet_matting import clear_holes, close_specks, drop_crumbs
+# BG=4 for a white pet (Laylo), whose own white otherwise melts into the ground.
+SIZE=512; INSET=10; BG=int(os.environ.get('BG', 12)); SH=70
 def dil(m):
     o=m.copy(); o[1:]|=m[:-1]; o[:-1]|=m[1:]; o[:,1:]|=m[:,:-1]; o[:,:-1]|=m[:,1:]; return o
 def flood(seed, allow):
@@ -22,14 +25,26 @@ def cut(cell):
     seed=np.zeros_like(light); seed[0]=seed[-1]=True; seed[:,0]=seed[:,-1]=True
     reach=flood(seed&light, light)
     h=a.shape[0]; low=np.zeros_like(light); low[int(h*.45):]=True
-    shadow=flood(reach, (reach|((sat<=10)&(d<SH)&low)))&~reach
-    edge=dil(dil(reach|shadow))&~(reach|shadow)
+    # coloured pet: a tinted floor, and white pocketed between the feet reached through the
+    # floor shadow; a white pet (BG=4) keeps the old rule or its grey shading goes black
+    coloured=BG>=12
+    floor=(sat<=(16 if coloured else 10))&(d<SH)&low
+    shadow=flood(reach, reach|floor)&~reach
+    if coloured:
+        reach|=flood(reach|shadow, reach|shadow|light)&light
+        shadow=flood(reach, reach|floor)&~reach
+    edge=reach|shadow
+    for _ in range(2+max(0,(12-BG)//3)): edge=dil(edge)
+    edge&=~(reach|shadow)
     alpha=np.ones(d.shape,np.float32); rgb=a.copy()
     alpha[reach]=0
     # shadow: grey on white -> translucent black
     alpha[shadow]=np.clip(d[shadow]/255*1.6,0,.45); rgb[shadow]=0
     am=np.clip((d[edge]-3)/(30-3),0,1); alpha[edge]=np.maximum(am, alpha[edge]*0)
     m=np.maximum(alpha[edge],1e-3)[:,None]; rgb[edge]=np.clip((a[edge]-255*(1-m))/m,0,255)
+    close_specks(a, rgb, alpha, shadow)
+    clear_holes(a, rgb, alpha)
+    drop_crumbs(alpha)
     return np.dstack([rgb,alpha*255]).astype(np.uint8)
 sheet=Image.open(sys.argv[1]); outdir=sys.argv[2]; names=sys.argv[3:]
 W,H=sheet.size; cw,ch=W//2,H//2; arrs=[]

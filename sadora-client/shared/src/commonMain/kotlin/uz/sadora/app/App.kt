@@ -806,8 +806,8 @@ private fun MainShell(
                 navigator.push(Route.Paywall)
             },
             onDismiss = controllers.pet::dismiss,
+            // The layer covers the whole shell, tab bar included; this places the pet in it.
             modifier = Modifier
-                .align(Alignment.BottomEnd)
                 .navigationBarsPadding()
                 .padding(end = Spacing.sm, bottom = if (barHidden) Spacing.lg else 84.dp),
         )
@@ -1115,8 +1115,8 @@ private fun PushedScreen(
         Route.StageSleepMood -> StageSleepMoodScreen(state, health, insights, onOpen = { navigator.push(it) }, onClose = close)
 
         // AI — the chat is drawn on the deck's navy whatever the app theme is.
-        Route.AiChat -> SadoraDarkSurface { AiChatScreen(state, controllers.ai, close) }
-        Route.AiPreview -> AiFreePreviewScreen(onUpgrade = upgrade, onDismiss = close)
+        Route.AiChat -> SadoraDarkSurface { AiChatScreen(state, controllers.ai, controllers.pet, close) }
+        Route.AiPreview -> AiFreePreviewScreen(pet = controllers.pet.pet, onUpgrade = upgrade, onDismiss = close)
 
         // Nutrition: camera -> analysing -> result is one linear flow, so each step
         // replaces the last rather than stacking on it.

@@ -89,6 +89,19 @@ object PetPhrases {
         Language.EN -> "English"
     }
 
+    /**
+     * Who answers in the AI chat. Added after the chat's own rules, which it never
+     * loosens: the answer is still general wellness with the disclaimer appended by
+     * code. The character is a voice, not a licence to be cute about symptoms.
+     */
+    fun chatPersona(pet: PetKind): String = """
+        You are ${persona(pet)}, her personal companion in Sadora (the app calls you SADORA AI).
+        Speak in first person, warmly, in your own character, but keep the character to a light
+        touch: at most one short in-character phrase per answer, and none at all when she
+        describes pain, bleeding, low mood or anything worrying — then be plainly calm and kind.
+        Every rule above still applies in full.
+    """.trimIndent()
+
     fun instruction(language: Language, pet: PetKind): String = """
         You are ${persona(pet)} — the companion mascot in Sadora, a women's health app.
         Write ONE short speech-bubble line in ${languageName(language)}, at most 140 characters,

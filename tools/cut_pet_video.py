@@ -11,11 +11,14 @@ not jitter. [--from, --to] is the loop, inclusive, in output-fps frames; pick it
 frame closest to the first (the script prints the candidates when --to is omitted).
 Writes OUT_DIR/000.webp, 001.webp, ... ready for composeResources/files/.
 """
-import argparse, glob, os, subprocess, tempfile
+import argparse, glob, os, subprocess, sys, tempfile
 import cv2
 import numpy as np
 from PIL import Image
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from pet_matting import clear_holes, close_specks, drop_crumbs, key_green
 
+KEY = "white"
 BG = 12   # whiteness distance still counted as background (--bg lowers it for a white pet)
 SH = 70   # how dark a neutral pixel may be and still count as floor shadow
 
@@ -36,19 +39,41 @@ def flood(seed, allow):
 
 def cut(img):
     a = np.asarray(img.convert("RGB")).astype(np.float32)
+    if KEY == "green":
+        rgb, alpha, shadow = key_green(a)
+        close_specks(a, rgb, alpha, shadow)
+        drop_crumbs(alpha)
+        return np.dstack([rgb, alpha * 255]).astype(np.uint8)
     d = (255 - a).max(2); sat = a.max(2) - a.min(2)
     light = d < BG
     seed = np.zeros_like(light); seed[0] = seed[-1] = True; seed[:, 0] = seed[:, -1] = True
     reach = flood(seed, light)
     low = np.zeros_like(light); low[int(a.shape[0] * .5):] = True
-    shadow = flood(reach, reach | ((sat <= 10) & (d < SH) & low)) & ~reach
-    edge = dil(dil(reach | shadow)) & ~(reach | shadow)
+    # A coloured pet (strict --bg off): a floor warmed by its colour reads a little
+    # tinted, and ground white pocketed between the hooves touches only the floor shadow,
+    # so the ground floods on through that shadow. A white pet keeps the old rule — its
+    # own grey shading would pass for floor and go black.
+    coloured = BG >= 12
+    floor = (sat <= (16 if coloured else 10)) & (d < SH) & low
+    shadow = flood(reach, reach | floor) & ~reach
+    if coloured:
+        reach |= flood(reach | shadow, reach | shadow | light) & light
+        shadow = flood(reach, reach | floor) & ~reach
+    # A strict ground (a white pet, --bg 4) leaves its near-white rim unreached, so the
+    # soft band reaches further in: otherwise that rim shows as a halo on a dark page.
+    edge = reach | shadow
+    for _ in range(2 + max(0, (12 - BG) // 3)):
+        edge = dil(edge)
+    edge &= ~(reach | shadow)
     alpha = np.ones(d.shape, np.float32); rgb = a.copy()
     alpha[reach] = 0
     alpha[shadow] = np.clip(d[shadow] / 255 * 1.6, 0, .45); rgb[shadow] = 0
     alpha[edge] = np.clip((d[edge] - 3) / 27, 0, 1)
     m = np.maximum(alpha[edge], 1e-3)[:, None]
     rgb[edge] = np.clip((a[edge] - 255 * (1 - m)) / m, 0, 255)
+    close_specks(a, rgb, alpha, shadow)
+    clear_holes(a, rgb, alpha)
+    drop_crumbs(alpha)
     return np.dstack([rgb, alpha * 255]).astype(np.uint8)
 
 
@@ -61,11 +86,14 @@ def main():
     p.add_argument("--size", type=int, default=240)
     p.add_argument("--quality", type=int, default=88)
     p.add_argument("--bg", type=int, default=12)
+    # A pet filmed on solid chroma green instead of white (Laylo).
+    p.add_argument("--key", choices=["white", "green"], default="white")
     # Forward then back: for a clip with no frame close enough to its first to loop on.
     p.add_argument("--pingpong", action="store_true")
     args = p.parse_args()
-    global BG
+    global BG, KEY
     BG = args.bg
+    KEY = args.key
 
     tmp = tempfile.mkdtemp()
     subprocess.run(["ffmpeg", "-v", "error", "-i", args.video, "-vf", f"fps={args.fps}", f"{tmp}/f%03d.png"], check=True)

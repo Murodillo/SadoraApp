@@ -74,6 +74,31 @@ class AiGatewayTest {
     }
 
     @Test
+    fun `her companion's voice reaches the model — and the rule engine answers without it`() = runTest {
+        var heard: String? = "unset"
+        val voiced = object : AiModel {
+            override val name = "test-model"
+            override suspend fun answer(question: String, context: AiContext?, language: Language): ModelAnswer =
+                error("the persona overload is the one the gateway calls")
+            override suspend fun answer(question: String, context: AiContext?, language: Language, persona: String?): ModelAnswer {
+                heard = persona
+                return ModelAnswer("Javob", "test-model", null, null)
+            }
+        }
+        val gateway = AiGateway(config = config(), usage = Recorder(), model = voiced)
+        val persona = uz.sadora.server.pet.PetPhrases.chatPersona(uz.sadora.contract.PetKind.MOMIQ)
+
+        gateway.answer(userId, "Salom", null, modelAllowed = true, language = Language.UZ, persona = persona)
+        assertEquals(persona, heard)
+        assertTrue("Momiq" in persona && "Every rule above still applies" in persona)
+
+        heard = "unset"
+        val rules = gateway.answer(userId, "Salom", null, modelAllowed = false, language = Language.UZ, persona = persona)
+        assertEquals(AiSource.RULES, rules.source)
+        assertEquals("unset", heard, "with the model off nothing is asked of it")
+    }
+
+    @Test
     fun `a failing model still answers her, and the failure is what gets logged`() = runTest {
         val recorder = Recorder()
         val gateway = AiGateway(
