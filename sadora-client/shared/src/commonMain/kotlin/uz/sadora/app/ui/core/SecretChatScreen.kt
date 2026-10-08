@@ -16,6 +16,9 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -277,8 +280,8 @@ fun SecretChatScreen(
                             start = Spacing.screen,
                             end = Spacing.screen,
                             top = Spacing.xs,
-                            // Room for the raised centre button on the tab bar.
-                            bottom = 96.dp,
+                            // Room for the tab bar floating over the list.
+                            bottom = 96.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding(),
                         ),
                         verticalArrangement = Arrangement.spacedBy(Spacing.sm),
                     ) {

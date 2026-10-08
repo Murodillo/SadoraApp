@@ -21,7 +21,6 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -632,8 +631,10 @@ private fun MainShell(
     val barHidden = fullScreen || profileStack
 
     Box(Modifier.fillMaxSize()) {
-        Column(Modifier.fillMaxSize()) {
-            Box(Modifier.weight(1f).then(if (profileStack) Modifier.navigationBarsPadding() else Modifier)) {
+        // The bar floats over the page rather than below it, so what scrolls under it
+        // shows past the pill's rounded ends; the screens' bottom padding clears it.
+        Box(Modifier.fillMaxSize()) {
+            Box(Modifier.fillMaxSize().then(if (profileStack) Modifier.navigationBarsPadding() else Modifier)) {
                 // A pushed screen slides in over the tab it was opened from and slides
                 // back out when it is popped, so the stack reads as having a direction.
                 // Switching tabs is a cross-fade instead: tabs are siblings, and sliding
@@ -686,6 +687,7 @@ private fun MainShell(
             // steps aside for the screens that take the whole display and for Profile.
             if (!barHidden) {
                 SadoraBottomNav(
+                    modifier = Modifier.align(Alignment.BottomCenter),
                     tabs = tabs,
                     selected = navigator.tab,
                     onSelect = navigator::select,

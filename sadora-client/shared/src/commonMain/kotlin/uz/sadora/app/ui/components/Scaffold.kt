@@ -7,6 +7,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -127,7 +130,8 @@ fun ScreenContent(
         start = Spacing.screen,
         end = Spacing.screen,
         top = Spacing.xs,
-        bottom = 120.dp,
+        // The bar floats over the list, above the system navigation bar.
+        bottom = 96.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding(),
     ),
     verticalGap: androidx.compose.ui.unit.Dp = Spacing.sm,
     stagger: Boolean = true,

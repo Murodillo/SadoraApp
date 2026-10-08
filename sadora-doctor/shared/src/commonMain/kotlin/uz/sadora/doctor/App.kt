@@ -295,6 +295,7 @@ private fun MainContent(
         photoNudge = true
     }
 
+    val showBar = tabbed && !navigator.canGoBack
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {
             Box(Modifier.weight(1f).fillMaxWidth()) {
@@ -418,21 +419,26 @@ private fun MainContent(
             // The bar belongs to the roots; a pushed screen takes the whole display, its own
             // composer included. Without the bar the system navigation bar gets the page
             // colour behind it instead of the content scrolling through it.
-            if (tabbed && !navigator.canGoBack) {
-                SadoraBottomNav(
-                    items = listOf(
-                        NavItemSpec(Tab.Home, words.tabs.home, Res.drawable.ic3d_home, badge = doctors.questionsLoaded && doctors.questions.isNotEmpty()),
-                        NavItemSpec(Tab.Messages, words.tabs.messages, Res.drawable.ic3d_message, badge = doctors.unreadMessages > 0),
-                        NavItemSpec(Tab.Scan, words.tabs.scan, Res.drawable.ic3d_qr),
-                        NavItemSpec(Tab.Community, words.tabs.community, Res.drawable.ic3d_chats),
-                        NavItemSpec(Tab.Profile, words.tabs.profile, Res.drawable.ic3d_profile),
-                    ),
-                    selected = navigator.tab,
-                    onSelect = navigator::select,
-                )
-            } else {
+            if (!showBar) {
                 Box(Modifier.fillMaxWidth().windowInsetsBottomHeight(WindowInsets.navigationBars).background(c.bg))
             }
+        }
+
+        // The bar floats over the page rather than below it, so what scrolls under it
+        // shows past the pill's rounded ends; ScreenContent's bottom padding clears it.
+        if (showBar) {
+            SadoraBottomNav(
+                modifier = Modifier.align(Alignment.BottomCenter),
+                items = listOf(
+                    NavItemSpec(Tab.Home, words.tabs.home, Res.drawable.ic3d_home, badge = doctors.questionsLoaded && doctors.questions.isNotEmpty()),
+                    NavItemSpec(Tab.Messages, words.tabs.messages, Res.drawable.ic3d_message, badge = doctors.unreadMessages > 0),
+                    NavItemSpec(Tab.Scan, words.tabs.scan, Res.drawable.ic3d_qr),
+                    NavItemSpec(Tab.Community, words.tabs.community, Res.drawable.ic3d_chats),
+                    NavItemSpec(Tab.Profile, words.tabs.profile, Res.drawable.ic3d_profile),
+                ),
+                selected = navigator.tab,
+                onSelect = navigator::select,
+            )
         }
 
         PhotoNudgeSheet(
