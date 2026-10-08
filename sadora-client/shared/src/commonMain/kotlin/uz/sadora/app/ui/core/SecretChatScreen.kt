@@ -260,6 +260,7 @@ fun SecretChatScreen(
                     title = community.error?.readable().orEmpty(),
                     body = "",
                     actionText = strings.common.retry,
+                    failed = true,
                     onAction = { retryScope.launch { community.load() } },
                     art = Res.drawable.ic3d_globe,
                 )

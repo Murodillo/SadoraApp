@@ -112,6 +112,7 @@ fun DoctorDirectoryScreen(
                 title = error?.readable().orEmpty(),
                 body = "",
                 actionText = strings.common.retry,
+                failed = true,
                 onAction = reload,
                 art = Res.drawable.ic3d_globe,
             )

@@ -32,6 +32,8 @@ import uz.sadora.contract.HealthMetric
 import uz.sadora.contract.TrendMetric
 import uz.sadora.app.resources.*
 import uz.sadora.app.ui.components.ArtTile
+import uz.sadora.contract.PetPose
+import uz.sadora.app.ui.components.CompanionOr
 
 /**
  * The four widgets that were previously only whole screens: sleep, medications,
@@ -70,7 +72,8 @@ fun SleepWidget(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
         ) {
-            ArtTile(Res.drawable.ic3d_sleep, tint = c.primary, size = 44.dp)
+            // Her companion asleep in place of the moon, when she has one.
+            CompanionOr(PetPose.SLEEP, 52.dp, fallback = { ArtTile(Res.drawable.ic3d_sleep, tint = c.primary, size = 44.dp) })
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(strings.today.sleep, style = Sadora.type.body, color = c.muted)
                 Text(

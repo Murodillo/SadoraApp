@@ -143,8 +143,8 @@ sealed interface Route {
 }
 
 /**
- * Screens that take the whole display and hide the tab bar: the AI assistant is drawn
- * on its own dark ground in the deck, and a camera viewfinder has nowhere to put a bar.
+ * Screens that take the whole display and hide the tab bar: the AI assistant has its own
+ * header and input, and a camera viewfinder has nowhere to put a bar.
  */
 val Route.isFullScreen: Boolean
     get() = this == Route.AiChat || this == Route.FoodScanCamera || this == Route.Paywall ||

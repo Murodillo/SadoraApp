@@ -3,6 +3,8 @@ package uz.sadora.app
 import uz.sadora.app.ui.components.systemReducesMotion
 import uz.sadora.app.ui.components.BadgeUnlockOverlay
 import uz.sadora.app.ui.components.PetBubbleOverlay
+import uz.sadora.app.ui.components.Companion
+import uz.sadora.app.ui.components.LocalCompanion
 import uz.sadora.app.ui.components.BadgeDetailSheet
 import uz.sadora.app.ui.components.LocalReduceMotion
 import uz.sadora.app.ui.components.LocalPhotoSource
@@ -54,7 +56,6 @@ import uz.sadora.app.ui.modules.WearablePromptSheet
 import uz.sadora.app.ui.modules.wearableQuestionDue
 import uz.sadora.app.ui.modules.wearableSnoozedUntil
 import uz.sadora.app.data.applyServerProfile
-import uz.sadora.app.design.SadoraDarkSurface
 import uz.sadora.app.design.SadoraTheme
 import uz.sadora.app.design.Spacing
 import uz.sadora.app.i18n.ProvideStrings
@@ -233,6 +234,8 @@ fun App(graph: SadoraGraph? = null) {
             CompositionLocalProvider(
                 LocalReduceMotion provides systemReducesMotion(),
                 LocalPhotoSource provides photoSource,
+                // Her companion, for the places outside the AI chat that show it. None without the pet.
+                LocalCompanion provides controllers.pet.let { if (it.active) Companion(it.pet, it.cheers, it.lastWin, it::cheerShown) else null },
             ) {
                 AnimatedContent(
                     targetState = navigator.phase,
@@ -1114,8 +1117,8 @@ private fun PushedScreen(
         Route.StageSymptoms -> StageSymptomsScreen(state, health, close)
         Route.StageSleepMood -> StageSleepMoodScreen(state, health, insights, onOpen = { navigator.push(it) }, onClose = close)
 
-        // AI — the chat is drawn on the deck's navy whatever the app theme is.
-        Route.AiChat -> SadoraDarkSurface { AiChatScreen(state, controllers.ai, controllers.pet, close) }
+        // AI — the chat follows the app theme like every other screen.
+        Route.AiChat -> AiChatScreen(state, controllers.ai, controllers.pet, close)
         Route.AiPreview -> AiFreePreviewScreen(pet = controllers.pet.pet, onUpgrade = upgrade, onDismiss = close)
 
         // Nutrition: camera -> analysing -> result is one linear flow, so each step

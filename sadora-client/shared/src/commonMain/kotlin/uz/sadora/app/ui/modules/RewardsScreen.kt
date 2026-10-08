@@ -41,6 +41,8 @@ import uz.sadora.app.ui.components.TileRow
 import uz.sadora.contract.CoinEntry
 import uz.sadora.contract.EarnRate
 import uz.sadora.contract.StreakStatus
+import uz.sadora.contract.PetPose
+import uz.sadora.app.ui.components.CompanionCheer
 
 /**
  * The Gul wallet: what she has, how the streak is going, and every coin that moved.
@@ -340,8 +342,12 @@ fun StreakWidget(
                     color = c.text,
                     maxLines = 1,
                 )
-                Text(t.streakSubtitle, style = Sadora.type.body, color = c.muted, maxLines = 1)
+                // Two lines: with her companion beside it, one line cut "Bugun ham keldingiz" short.
+                Text(t.streakSubtitle, style = Sadora.type.body, color = c.muted, maxLines = 2)
             }
+            // Her companion keeps the streak with her: glad once today counts, waiting
+            // before it does. It hops here too when a small win lands.
+            CompanionCheer(size = 48.dp, resting = if (state.streakDays > 0) PetPose.HAPPY else PetPose.IDLE)
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(5.dp),

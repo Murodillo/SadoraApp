@@ -63,6 +63,12 @@ class NotificationScheduler(
      */
     private val deliveryLock = Mutex()
 
+    /**
+     * Her companion, when her plan has one: its reminders then speak in its voice. Set
+     * once the pet service exists, which is built after this scheduler.
+     */
+    var companionOf: (suspend (Uuid) -> uz.sadora.contract.PetKind?)? = null
+
     fun start() {
         job = scope.launch {
             logger.info("Notification scheduler started, ticking every {}", tickInterval)
@@ -145,8 +151,17 @@ class NotificationScheduler(
                 )
 
                 val template = notifications.template("med_reminder", user.language.name.lowercase())
-                val title = template?.title.orEmpty().render(medication.name, dueAt.toString())
-                val body = template?.body.orEmpty().render(medication.name, dueAt.toString())
+                val pet = runCatching { companionOf?.invoke(userId) }.getOrNull()
+                val title = if (pet != null) {
+                    uz.sadora.server.pet.PetPhrases.name(user.language, pet)
+                } else {
+                    template?.title.orEmpty().render(medication.name, dueAt.toString())
+                }
+                val body = if (pet != null) {
+                    uz.sadora.server.pet.PetPhrases.medReminder(user.language, pet, medication.name, dueAt.toString())
+                } else {
+                    template?.body.orEmpty().render(medication.name, dueAt.toString())
+                }
 
                 val queued = notifications.enqueue(
                     userId = userId,

@@ -44,6 +44,10 @@ import uz.sadora.app.ui.components.CameraAccess
 import uz.sadora.app.ui.components.CameraShutter
 import uz.sadora.app.ui.components.CapturedPhoto
 import uz.sadora.app.ui.components.EmptyState
+import uz.sadora.app.ui.components.ClayHopDots
+import uz.sadora.app.ui.components.CompanionOr
+import uz.sadora.app.ui.components.LocalCompanion
+import uz.sadora.contract.PetPose
 import uz.sadora.app.ui.components.LiveCamera
 import uz.sadora.app.ui.components.SadoraButton
 import uz.sadora.app.ui.components.SadoraLoader
@@ -321,7 +325,9 @@ private fun ReadingPhoto(onCancel: () -> Unit, modifier: Modifier = Modifier) {
             verticalArrangement = Arrangement.spacedBy(Spacing.md, Alignment.CenterVertically),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            SadoraLoader(size = 44.dp)
+            // Her companion looks at the photo with her; without one, the plain loader.
+            CompanionOr(PetPose.THINK, size = 132.dp, fallback = { SadoraLoader(size = 44.dp) })
+            if (LocalCompanion.current != null) ClayHopDots()
             Text(t.analysing, style = Sadora.type.h3, color = c.text)
             Text(t.analysingWait, style = Sadora.type.body, color = c.muted)
         }
@@ -354,6 +360,7 @@ private fun ScanProblem(
                 title = title,
                 body = body,
                 actionText = strings.common.retry,
+                failed = true,
                 onAction = onRetry,
                 art = Res.drawable.ic3d_camera,
             )

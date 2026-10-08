@@ -1,13 +1,7 @@
 package uz.sadora.app.ui.core
 
 import uz.sadora.app.ui.components.ResizeForKeyboard
-import uz.sadora.app.ui.components.animateFloatUnlessReduced
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
-import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -38,8 +32,9 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -57,6 +52,7 @@ import uz.sadora.app.model.Fmt
 import uz.sadora.app.model.nowTimeLabel
 import uz.sadora.app.data.PetController
 import uz.sadora.app.ui.components.PetImage
+import uz.sadora.contract.PetKind
 import uz.sadora.contract.PetPose
 import kotlinx.coroutines.delay
 import uz.sadora.app.ui.components.SadoraBottomSheet
@@ -65,6 +61,11 @@ import uz.sadora.app.ui.components.ButtonTone
 import uz.sadora.app.ui.components.CircleIconButton
 import uz.sadora.app.ui.components.appearFromBelow
 import uz.sadora.app.ui.components.noRippleClickable
+import uz.sadora.app.ui.components.chatMarkdown
+import uz.sadora.app.ui.components.ClayHopDots
+import uz.sadora.app.ui.components.claySurface
+import uz.sadora.app.ui.components.clayBeadSurface
+import uz.sadora.app.ui.components.pressable
 import uz.sadora.app.data.readable
 
 private data class ChatMessage(
@@ -76,7 +77,7 @@ private data class ChatMessage(
 )
 
 /**
- * "SADORA AI" — the conversation view, drawn on the deck's navy ground, and spoken by
+ * "SADORA AI" — the conversation view, spoken by
  * her companion: the pet she picked is the assistant here, by name, in the header above
  * the conversation, and the server writes its answers in its voice.
  *
@@ -84,8 +85,8 @@ private data class ChatMessage(
  * on its way, jumps when one arrives, dozes off when she has gone quiet, and wakes the
  * moment she types or taps it.
  *
- * The caller wraps it in `SadoraDarkSurface`, so everything here reads the dark
- * palette through the ordinary tokens. Two safety rails stay on screen: the note that
+ * It reads the app palette through the ordinary tokens, so it is light or dark with
+ * the rest of the app. Two safety rails stay on screen: the note that
  * SADORA is not a diagnostic tool, and the daily question allowance.
  */
 @Composable
@@ -213,7 +214,7 @@ fun AiChatScreen(
             items(messages.size) { index -> ChatBubble(messages[index], arrives = index == messages.lastIndex) }
 
             if (ai.busy) {
-                item { TypingBubble() }
+                item { TypingBubble(pet.pet) }
             }
 
             item {
@@ -227,7 +228,9 @@ fun AiChatScreen(
             }
         }
 
-        // Topic chips — one tap asks a ready question in that area.
+        // Ready questions — one tap asks one. Tinted clay pills with a spark, so they read
+        // as something to press rather than as more of the conversation.
+        val topicFill = lerp(c.surface, c.primary, if (c.isDark) 0.22f else 0.12f)
         Row(
             Modifier
                 .fillMaxWidth()
@@ -236,14 +239,24 @@ fun AiChatScreen(
             horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
         ) {
             t.topics.forEach { (label, question) ->
-                Box(
+                Row(
                     Modifier
-                        .clip(Radius.chip)
-                        .background(c.surface2)
-                        .noRippleClickable { ask(question) }
-                        .padding(horizontal = 14.dp, vertical = Spacing.xs),
+                        // Room for the shadow, which the scrolling row would otherwise cut.
+                        .padding(vertical = 6.dp)
+                        .pressable(enabled = ai.canAsk && !ai.busy) { ask(question) }
+                        .claySurface(c, Radius.chip, topicFill, elevation = 5.dp, shadowTint = c.primary, streak = true)
+                        .border(1.dp, c.primary.copy(alpha = if (c.isDark) 0.45f else 0.30f), Radius.chip)
+                        .padding(horizontal = 14.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
-                    Text(label, style = Sadora.type.body.copy(fontWeight = FontWeight.Medium), color = c.text)
+                    Icon(SadoraIcons.Sparkle, contentDescription = null, Modifier.size(16.dp), tint = c.textAccent)
+                    Text(
+                        label,
+                        style = Sadora.type.body.copy(fontWeight = FontWeight.SemiBold),
+                        color = c.textAccent,
+                        maxLines = 1,
+                    )
                 }
             }
         }
@@ -260,8 +273,7 @@ fun AiChatScreen(
             Box(
                 Modifier
                     .weight(1f)
-                    .clip(Radius.chip)
-                    .background(c.surface2)
+                    .claySurface(c, Radius.chip, if (c.isDark) c.surface2 else c.surface, elevation = 4.dp)
                     .padding(horizontal = Spacing.md, vertical = 14.dp),
                 contentAlignment = Alignment.CenterStart,
             ) {
@@ -285,9 +297,8 @@ fun AiChatScreen(
             Box(
                 Modifier
                     .size(48.dp)
-                    .clip(Radius.chip)
-                    .background(if (canSend) c.heroGradient else androidx.compose.ui.graphics.Brush.linearGradient(listOf(c.surface2, c.surface2)))
-                    .noRippleClickable(enabled = canSend) { ask(draft) },
+                    .pressable(enabled = canSend, pressedScale = 0.9f) { ask(draft) }
+                    .clayBeadSurface(c, if (canSend) c.primary else c.surface2, elevation = if (canSend) 6.dp else 2.dp),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
@@ -327,31 +338,25 @@ private fun quotaLabel(ai: AiController, t: uz.sadora.app.i18n.AiStrings): Strin
     return t.questionsLeft(left, limit)
 }
 
-/** Three dots that breathe while the answer is on its way. */
+/**
+ * The answer on its way: her companion, thinking, beside a clay bubble whose three
+ * beads hop one after another.
+ */
 @Composable
-private fun TypingBubble() {
+private fun TypingBubble(pet: PetKind) {
     val c = Sadora.colors
-    val transition = rememberInfiniteTransition()
-    val phase by transition.animateFloatUnlessReduced(
-        initialValue = 0f,
-        targetValue = 3f,
-        animationSpec = infiniteRepeatable(tween(900, easing = LinearEasing)),
-    )
     Row(
-        Modifier
-            .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp, bottomStart = 6.dp, bottomEnd = 20.dp))
-            .background(c.surface2)
-            .padding(horizontal = Spacing.md, vertical = 14.dp),
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        Modifier.fillMaxWidth().appearFromBelow(distance = 10.dp, animate = true),
+        verticalAlignment = Alignment.Bottom,
+        horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
     ) {
-        repeat(3) { index ->
-            val on = phase.toInt() % 3 == index
-            Box(
-                Modifier
-                    .size(8.dp)
-                    .clip(Radius.chip)
-                    .background(if (on) c.primary else c.muted2.copy(alpha = 0.5f)),
-            )
+        PetImage(pet, PetPose.THINK, size = 52.dp)
+        Box(
+            Modifier
+                .claySurface(c, AnswerShape, if (c.isDark) c.surface2 else c.surface, elevation = 3.dp)
+                .padding(start = Spacing.md, end = Spacing.md, top = 18.dp, bottom = 12.dp),
+        ) {
+            ClayHopDots()
         }
     }
 }
@@ -359,10 +364,10 @@ private fun TypingBubble() {
 @Composable
 private fun ChatBubble(message: ChatMessage, arrives: Boolean) {
     val c = Sadora.colors
-    val shape = if (message.fromUser) {
-        RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp, bottomStart = 20.dp, bottomEnd = 6.dp)
-    } else {
-        RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp, bottomStart = 6.dp, bottomEnd = 20.dp)
+    val shape = if (message.fromUser) QuestionShape else AnswerShape
+    // Her own words are hers as written; only the assistant's markdown is drawn.
+    val text = remember(message.text, message.fromUser) {
+        if (message.fromUser) AnnotatedString(message.text) else chatMarkdown(message.text)
     }
     Row(
         Modifier.fillMaxWidth().appearFromBelow(distance = 10.dp, animate = arrives),
@@ -371,19 +376,23 @@ private fun ChatBubble(message: ChatMessage, arrives: Boolean) {
         Column(
             Modifier
                 .fillMaxWidth(0.82f)
-                .clip(shape)
-                .background(
+                .then(
                     when {
-                        message.fromUser -> c.heroColors.first() // white text holds 5.3:1 here; on primary it was 4.2
-                        message.isNotice -> c.warningSoft.copy(alpha = if (c.isDark) 0.18f else 0.14f)
-                        else -> c.surface2
+                        // White text holds 5.3:1 on the first hero colour; on primary it was 4.2.
+                        message.fromUser -> Modifier.claySurface(
+                            c, shape, c.heroColors.first(), elevation = 6.dp, shadowTint = c.primary, gloss = 0.7f,
+                        )
+                        message.isNotice -> Modifier.claySurface(
+                            c, shape, lerp(c.surface, c.warningSoft, if (c.isDark) 0.18f else 0.22f), elevation = 2.dp,
+                        )
+                        else -> Modifier.claySurface(c, shape, if (c.isDark) c.surface2 else c.surface, elevation = 3.dp)
                     },
                 )
                 .padding(horizontal = Spacing.md, vertical = Spacing.sm),
             verticalArrangement = Arrangement.spacedBy(Spacing.xxs),
         ) {
             Text(
-                message.text,
+                text,
                 style = Sadora.type.body,
                 color = if (message.fromUser) c.onPrimary else c.text,
             )
@@ -396,6 +405,10 @@ private fun ChatBubble(message: ChatMessage, arrives: Boolean) {
         }
     }
 }
+
+/** Bubble tails: hers points to her side, the assistant's to its. */
+private val QuestionShape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp, bottomStart = 20.dp, bottomEnd = 6.dp)
+private val AnswerShape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp, bottomStart = 6.dp, bottomEnd = 20.dp)
 
 /** A minute of silence and the pet dozes off; anything she does wakes it. */
 private const val PetDozeMillis = 60_000L

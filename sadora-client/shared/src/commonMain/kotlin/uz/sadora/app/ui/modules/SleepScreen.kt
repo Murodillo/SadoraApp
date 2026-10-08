@@ -51,6 +51,8 @@ import uz.sadora.contract.DailyHealth
 import uz.sadora.contract.HealthMetric
 import uz.sadora.contract.TrendMetric
 import uz.sadora.app.resources.*
+import uz.sadora.contract.PetPose
+import uz.sadora.app.ui.components.CompanionOr
 
 /** Eight hours: what the ring is drawn against, and stated as a goal rather than a score. */
 private const val SleepGoalMinutes = 480
@@ -99,6 +101,7 @@ fun SleepScreen(
                         actionText = null,
                         onAction = {},
                         art = Res.drawable.ic3d_sleep,
+                        companionPose = PetPose.SLEEP,
                     )
                 }
             }
@@ -233,6 +236,8 @@ private fun LastNightCard(minutes: Int, today: DailyHealth?) {
                 }
             }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                // Her companion, curled up after the night.
+                CompanionOr(PetPose.SLEEP, 64.dp)
                 Text(t.lastNight, style = Sadora.type.body, color = c.muted)
                 if (resting != null) {
                     Text(t.restingPulse(resting), style = Sadora.type.h3, color = c.text)

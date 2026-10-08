@@ -396,7 +396,10 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
         health = healthService,
         usage = aiUsageRepository,
         model = config.ai.apiKey?.let { GeminiAnswerer(outboundHttpClient, config.ai) },
-    )
+    ).also { pets ->
+        // Her medication reminders come from her companion when she has one.
+        notificationScheduler.companionOf = pets::companionOf
+    }
 
     /**
      * The QR code she shows a doctor. Reads through the health services rather than the

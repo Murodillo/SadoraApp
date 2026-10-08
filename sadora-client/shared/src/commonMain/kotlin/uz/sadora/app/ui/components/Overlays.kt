@@ -37,6 +37,11 @@ import uz.sadora.app.design.Sadora
 import uz.sadora.app.design.Spacing
 import uz.sadora.app.i18n.strings
 import uz.sadora.app.resources.*
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import uz.sadora.contract.PetPose
 
 /**
  * Centre modal — destructive confirmations such as "Hisobni o'chirish?".
@@ -225,14 +230,44 @@ fun EmptyState(
     glyph: String? = null,
     /** The colour icon that says what is missing; preferred over [glyph]. */
     art: org.jetbrains.compose.resources.DrawableResource? = null,
+    /**
+     * Something went wrong rather than nothing being there yet: her companion, when she
+     * has one, is asleep instead of waiting, and the action wakes it.
+     */
+    failed: Boolean = false,
+    /** Off where the screen is not hers — the partner's view has no pet of its own. */
+    withCompanion: Boolean = true,
+    /** How her companion waits here when the screen calls for more than standing — asleep on Uyqu. */
+    companionPose: PetPose = PetPose.IDLE,
 ) {
     val c = Sadora.colors
+    val companion = LocalCompanion.current?.takeIf { withCompanion }
+    var woken by remember { mutableStateOf(false) }
+    // Awake for the retry; if it fails again the screen is still here and it dozes off.
+    LaunchedEffect(woken) {
+        if (woken) {
+            kotlinx.coroutines.delay(2_500)
+            woken = false
+        }
+    }
     Column(
         modifier = modifier.fillMaxWidth().padding(Spacing.lg),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(Spacing.xs),
     ) {
-        if (art != null) {
+        if (companion != null) {
+            // The companion stands where the picture was; a specific picture stays, small,
+            // at its feet, because it says what is missing.
+            Box(contentAlignment = Alignment.BottomEnd) {
+                val pose = when {
+                    !failed -> companionPose
+                    woken -> PetPose.HAPPY
+                    else -> PetPose.SLEEP
+                }
+                PetImage(companion.pet, pose, 112.dp)
+                if (art != null) ArtIcon(art, 36.dp)
+            }
+        } else if (art != null) {
             ArtIcon(art, 64.dp)
         } else if (glyph != null) {
             Text(glyph, style = Sadora.type.display, color = c.muted2)
@@ -248,7 +283,14 @@ fun EmptyState(
         )
         if (actionText != null) {
             Box(Modifier.padding(top = Spacing.xs)) {
-                SadoraButton(actionText, onAction, fillWidth = false)
+                SadoraButton(
+                    actionText,
+                    onClick = {
+                        woken = true
+                        onAction()
+                    },
+                    fillWidth = false,
+                )
             }
         }
     }
@@ -267,7 +309,13 @@ fun ErrorStrip(text: String, onRetry: (() -> Unit)? = null, modifier: Modifier =
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
     ) {
-        Text("⚠", style = Sadora.type.h3, color = c.danger)
+        // A failure she can retry is usually the network: her companion naps through it.
+        val companion = LocalCompanion.current
+        if (onRetry != null && companion != null) {
+            PetImage(companion.pet, PetPose.SLEEP, 36.dp)
+        } else {
+            Text("⚠", style = Sadora.type.h3, color = c.danger)
+        }
         Text(text, style = Sadora.type.body, color = c.danger, modifier = Modifier.weight(1f))
         if (onRetry != null) {
             Text(

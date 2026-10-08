@@ -76,6 +76,10 @@ import org.jetbrains.compose.resources.DrawableResource
 import uz.sadora.app.ui.onboarding.art
 import uz.sadora.app.ui.components.ArtIcon
 import uz.sadora.app.ui.components.art
+import uz.sadora.app.ui.components.CompanionCheer
+import uz.sadora.app.data.Win
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.offset
 
 /**
  * "Bugun" — the deck's daily companion: the assistant's read on today, the health
@@ -149,19 +153,33 @@ fun TodayScreen(
                         )
                         HomeWidgets.STREAK -> StreakWidget(state, onOpen)
                         HomeWidgets.STAGE -> StageCard(state, onOpen = { onSelectTab(Tab.Journey) })
-                        HomeWidgets.PLAN -> TodayPlanCard(
-                            state = state,
-                            onOpenMedications = { onOpen(Route.Medications) },
-                            onAddWater = onAddWater,
-                            onQuickWater = onQuickWater,
-                        )
+                        // Water and doses are ticked off here, so her companion cheers them here.
+                        HomeWidgets.PLAN -> Box {
+                            TodayPlanCard(
+                                state = state,
+                                onOpenMedications = { onOpen(Route.Medications) },
+                                onAddWater = onAddWater,
+                                onQuickWater = onQuickWater,
+                            )
+                            CompanionCheer(
+                                Modifier.align(Alignment.TopEnd).offset(x = (-12).dp, y = (-30).dp),
+                                wins = setOf(Win.Water, Win.Dose),
+                            )
+                        }
                         // The four optional widgets need their controllers. Without one
                         // — a preview, a test — the card is skipped rather than drawn
                         // with numbers nobody supplied.
                         HomeWidgets.SLEEP -> if (health != null && insights != null) {
                             SleepWidget(state, health, insights, onOpen)
                         }
-                        HomeWidgets.MEDICATIONS -> MedicationsWidget(state, onOpen)
+                        HomeWidgets.MEDICATIONS -> Box {
+                            MedicationsWidget(state, onOpen)
+                            CompanionCheer(
+                                Modifier.align(Alignment.TopEnd).offset(x = (-12).dp, y = (-30).dp),
+                                // With the plan on screen too, one cheer is enough: the plan's.
+                                wins = if (HomeWidgets.PLAN in widgets) emptySet() else setOf(Win.Dose),
+                            )
+                        }
                         HomeWidgets.INSIGHTS -> if (insights != null) InsightsWidget(insights, onOpen)
                         HomeWidgets.KNOWLEDGE -> if (learn != null) KnowledgeWidget(learn, onOpen)
                         HomeWidgets.QUICK_ACTIONS -> QuickActions(onOpen = onOpen, onSelectTab = onSelectTab)

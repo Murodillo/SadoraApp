@@ -30,6 +30,9 @@ data class PetBubble(
     val teaser: Boolean = false,
 )
 
+/** The kinds of small win a card can cheer; each card answers only its own. */
+enum class Win { Water, Dose }
+
 /**
  * The companion on this phone.
  *
@@ -54,6 +57,30 @@ class PetController(
 
     var bubble by mutableStateOf<PetBubble?>(null)
         private set
+
+    /**
+     * Small wins cheered this session — a water goal, a dose, a badge. The cards that
+     * carry the win watch it and let the pet hop there; nothing goes to the server.
+     */
+    var cheers by mutableStateOf(0)
+        private set
+
+    var lastWin by mutableStateOf<Win?>(null)
+        private set
+
+    fun cheer(win: Win) {
+        if (!active) return
+        lastWin = win
+        cheers++
+    }
+
+    /** The last cheer a card on screen actually showed. */
+    private var cheerShown = 0
+
+    /** Called by the card that cheered [count]; its bubble would only say it twice. */
+    fun cheerShown(count: Int) {
+        cheerShown = count
+    }
 
     suspend fun load() {
         val api = api ?: return
@@ -83,6 +110,8 @@ class PetController(
         val api = api ?: return
         if (!active || bubble != null) return
         val nudge = calls.run(silent = true) { api.nudge(trigger, detail) }?.nudge ?: return
+        // A win a card already cheered gets no bubble on top: the pet is there already.
+        if (trigger in CardWins && cheerShown == cheers) return
         if (bubble == null) {
             pet = nudge.pet
             bubble = PetBubble(nudge.pet, nudge.pose, nudge.text, nudge.action)
@@ -117,6 +146,7 @@ class PetController(
 
     private companion object {
         const val TeaseEveryDays = 3
+        val CardWins = setOf(PetTrigger.WATER_GOAL, PetTrigger.MED_TAKEN)
     }
 }
 
@@ -136,12 +166,14 @@ class PetSyncTap(
         inner.waterAdded(ml)
         val goal = state.waterGoalMl
         if (ml > 0 && goal > 0 && state.waterMl >= goal && state.waterMl - ml < goal) {
+            pet.cheer(Win.Water)
             pet.fire(scope, PetTrigger.WATER_GOAL)
         }
     }
 
     override fun doseTaken(doseId: String) {
         inner.doseTaken(doseId)
+        pet.cheer(Win.Dose)
         pet.fire(scope, PetTrigger.MED_TAKEN)
     }
 

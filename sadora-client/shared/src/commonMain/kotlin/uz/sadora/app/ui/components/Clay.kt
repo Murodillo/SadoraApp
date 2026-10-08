@@ -1,16 +1,25 @@
 package uz.sadora.app.ui.components
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import uz.sadora.app.design.SadoraColors
 
 /*
@@ -200,4 +209,177 @@ internal fun DrawScope.clayBead(at: Offset, r: Float, color: Color, lift: Float 
         at,
     )
     drawCircle(Color.White.copy(alpha = 0.75f * color.alpha), r * 0.26f, at + Offset(-r * 0.32f, -r * 0.34f))
+}
+
+// ---------------------------------------------------------------- surfaces
+
+/**
+ * A clay surface — a card, a button, a header disc — in the icons' light: [fill] with a
+ * lit face along the top and a breath of shade at the bottom, a rim that is bright where
+ * the light catches the top edge and settles into the line colour underneath, and, on
+ * the light theme, a soft shadow tinted [shadowTint] below. Clips to [shape].
+ *
+ * [streak] adds the white highlight pill the icons carry — for buttons, which should
+ * read as pressable objects rather than painted rectangles.
+ */
+fun Modifier.claySurface(
+    colors: SadoraColors,
+    shape: Shape,
+    fill: Brush,
+    elevation: Dp = 10.dp,
+    shadowTint: Color = colors.shadow,
+    gloss: Float = 1f,
+    streak: Boolean = false,
+): Modifier = this
+    .then(
+        if (colors.isDark || elevation <= 0.dp) {
+            Modifier
+        } else {
+            Modifier.shadow(
+                elevation = elevation,
+                shape = shape,
+                ambientColor = shadowTint.copy(alpha = 0.10f),
+                spotColor = shadowTint.copy(alpha = 0.18f),
+            )
+        },
+    )
+    .clip(shape)
+    .background(fill)
+    .drawBehind {
+        // The light and the shade stay near the edges, measured in dp rather than as a
+        // share of the height: a tall card would otherwise go grey all down its lower half.
+        val lit = minOf(size.height * 0.5f, 30.dp.toPx())
+        val under = minOf(size.height * 0.45f, 22.dp.toPx())
+        drawRect(
+            Brush.verticalGradient(
+                0f to Color.White.copy(alpha = (if (colors.isDark) 0.07f else 0.42f) * gloss),
+                1f to Color.Transparent,
+                startY = 0f,
+                endY = lit,
+            ),
+            size = Size(size.width, lit),
+        )
+        drawRect(
+            Brush.verticalGradient(
+                0f to Color.Transparent,
+                1f to Color.Black.copy(alpha = (if (colors.isDark) 0.20f else 0.05f) * gloss),
+                startY = size.height - under,
+                endY = size.height,
+            ),
+            topLeft = Offset(0f, size.height - under),
+            size = Size(size.width, under),
+        )
+        if (streak) {
+            val h = size.height
+            if (size.width > h * 1.4f) {
+                drawRoundRect(
+                    Color.White.copy(alpha = 0.32f * gloss),
+                    topLeft = Offset(h * 0.45f, h * 0.11f),
+                    size = Size(size.width - h * 0.9f, h * 0.15f),
+                    cornerRadius = CornerRadius(h * 0.075f),
+                )
+            }
+        }
+    }
+    .border(
+        1.dp,
+        Brush.verticalGradient(
+            listOf(
+                Color.White.copy(alpha = if (colors.isDark) 0.16f else 0.95f),
+                colors.line.copy(alpha = if (colors.isDark) 0.9f else 0.6f),
+            ),
+        ),
+        shape,
+    )
+
+/** [claySurface] in one flat colour. */
+fun Modifier.claySurface(
+    colors: SadoraColors,
+    shape: Shape,
+    fill: Color,
+    elevation: Dp = 10.dp,
+    shadowTint: Color = colors.shadow,
+    gloss: Float = 1f,
+    streak: Boolean = false,
+): Modifier = claySurface(colors, shape, SolidColor(fill), elevation, shadowTint, gloss, streak)
+
+/**
+ * A round clay bead in [color] — the icons' own shape for a round button: a body lit
+ * from the top left, a darker underside, a specular dot and a soft shadow.
+ */
+fun Modifier.clayBeadSurface(colors: SadoraColors, color: Color, elevation: Dp = 6.dp): Modifier = this
+    .then(
+        if (colors.isDark || elevation <= 0.dp) {
+            Modifier
+        } else {
+            Modifier.shadow(
+                elevation,
+                CircleShape,
+                ambientColor = clayDark(color).copy(alpha = 0.18f),
+                spotColor = clayDark(color).copy(alpha = 0.28f),
+            )
+        },
+    )
+    .clip(CircleShape)
+    .drawBehind {
+        val r = size.minDimension / 2f
+        val lit = if (colors.isDark) lerp(color, Color.White, 0.12f) else clayLight(color)
+        val shade = if (colors.isDark) lerp(color, Color.Black, 0.25f) else clayDark(color)
+        drawCircle(
+            Brush.radialGradient(
+                0f to lit,
+                0.7f to color,
+                1f to shade,
+                center = center + Offset(-r * 0.3f, -r * 0.35f),
+                radius = r * 1.4f,
+            ),
+            r,
+        )
+        drawCircle(
+            Color.White.copy(alpha = if (colors.isDark) 0.18f else 0.55f),
+            r * 0.13f,
+            center + Offset(-r * 0.42f, -r * 0.46f),
+        )
+    }
+    .border(
+        1.dp,
+        Brush.verticalGradient(
+            listOf(
+                Color.White.copy(alpha = if (colors.isDark) 0.14f else 0.85f),
+                colors.line.copy(alpha = if (colors.isDark) 0.8f else 0.4f),
+            ),
+        ),
+        CircleShape,
+    )
+
+/**
+ * The ground every screen stands on: the page colour lit like the icons' studio — a
+ * lighter wash from the top and three large, very soft pools of the brand colours, so
+ * clay cards and buttons sit in a room rather than on a flat sheet. Drawn, not shipped,
+ * and fixed in place: it does not scroll or move.
+ */
+fun Modifier.clayBackdrop(colors: SadoraColors): Modifier = drawBehind {
+    drawRect(colors.bg)
+    val strength = if (colors.isDark) 0.55f else 1f
+    drawRect(
+        Brush.verticalGradient(
+            0f to Color.White.copy(alpha = if (colors.isDark) 0.03f else 0.55f),
+            0.35f to Color.Transparent,
+        ),
+    )
+    val w = size.width
+    val h = size.height
+    fun pool(at: Offset, radius: Float, tint: Color, alpha: Float) = drawCircle(
+        Brush.radialGradient(
+            0f to tint.copy(alpha = alpha * strength),
+            1f to Color.Transparent,
+            center = at,
+            radius = radius,
+        ),
+        radius,
+        at,
+    )
+    pool(Offset(w * 0.05f, h * 0.06f), w * 0.85f, colors.primary, 0.10f)
+    pool(Offset(w * 1.0f, h * 0.42f), w * 0.8f, colors.secondary, 0.08f)
+    pool(Offset(w * 0.1f, h * 0.92f), w * 0.9f, colors.accent, 0.07f)
 }

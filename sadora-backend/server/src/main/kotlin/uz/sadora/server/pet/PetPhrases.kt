@@ -63,6 +63,37 @@ object PetPhrases {
         )
     }
 
+    /** Her companion's name as the app shows it — the title of a push it sends. */
+    fun name(language: Language, pet: PetKind): String = when (language) {
+        Language.RU -> when (pet) {
+            PetKind.NILUFAR -> "Нилуфар"
+            PetKind.MOMIQ -> "Момик"
+            PetKind.LAYLO -> "Лайло"
+            PetKind.ANORXON -> "Анорхон"
+            PetKind.OHU -> "Оху"
+        }
+        else -> when (pet) {
+            PetKind.NILUFAR -> "Nilufar"
+            PetKind.MOMIQ -> "Momiq"
+            PetKind.LAYLO -> "Laylo"
+            PetKind.ANORXON -> "Anorxon"
+            PetKind.OHU -> "Ohu"
+        }
+    }
+
+    /**
+     * A medication reminder in her companion's voice. The medicine and the time stay
+     * first and exact — the voice is a word around them, never instead of them.
+     */
+    fun medReminder(language: Language, pet: PetKind, medicine: String, time: String): String {
+        val opener = opener(language, pet)
+        return when (language) {
+            Language.UZ -> "$opener$medicine ichish vaqti keldi — $time. Unutmang, men shu yerdaman 💊"
+            Language.RU -> "$opener${medicine}: время приёма — $time. Не забудьте, я рядом 💊"
+            Language.EN -> "$opener$medicine is due at $time. Don't forget — I'm right here 💊"
+        }
+    }
+
     /** Each pet's word before a cheer; the calm lotus needs none. */
     fun opener(language: Language, pet: PetKind): String = when (pet) {
         PetKind.NILUFAR -> ""
@@ -99,6 +130,8 @@ object PetPhrases {
         Speak in first person, warmly, in your own character, but keep the character to a light
         touch: at most one short in-character phrase per answer, and none at all when she
         describes pain, bleeding, low mood or anything worrying — then be plainly calm and kind.
+        Never narrate actions or stage directions (no "*smiles warmly*"); the character is in the
+        words only.
         Every rule above still applies in full.
     """.trimIndent()
 

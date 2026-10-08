@@ -65,6 +65,7 @@ import uz.sadora.contract.BadgeState
 import uz.sadora.contract.BadgeUnlock
 import uz.sadora.contract.WornBadge
 import uz.sadora.app.data.wornBadge
+import uz.sadora.contract.PetPose
 
 // ------------------------------------------------------------------ the unlock moment
 
@@ -215,6 +216,9 @@ private fun UnlockCard(
             }
 
             PetalBurst(landing.value.coerceIn(0f, 1f), Modifier.size(260.dp), count = 16)
+
+            // Her companion, delighted, at the medal's feet.
+            CompanionOr(PetPose.HAPPY, 84.dp, Modifier.align(Alignment.BottomEnd))
 
             // Sparkles thrown outward from the medal as it lands.
             Canvas(Modifier.fillMaxSize()) {

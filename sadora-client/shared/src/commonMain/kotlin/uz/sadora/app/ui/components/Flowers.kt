@@ -21,6 +21,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.DrawScope
@@ -81,7 +82,12 @@ fun GulMark(
     )
 }
 
-/** One flower: five petals lit pink-to-purple, a warm core. Shared by the mark and the animations. */
+/**
+ * One flower in the clay look of the icons: five puffy petals lit from the top left —
+ * a lighter face, the petal colour, a deeper rim toward the core — with a gloss on each,
+ * a soft shadow under the whole flower and a glossy bead for the core. Shared by the mark
+ * and the animations.
+ */
 internal fun DrawScope.drawGul(
     center: Offset,
     radius: Float,
@@ -94,26 +100,50 @@ internal fun DrawScope.drawGul(
 ) {
     val r = radius * scale
     if (r <= 0f) return
-    val width = r * 0.58f
+    // A touch smaller than the box, so the shadow and the puff stay inside it.
+    val body = r * 0.92f
+    val width = body * 0.6f
     val shape = Path().apply {
         moveTo(0f, 0f)
-        cubicTo(width, -r * 0.25f, width * 0.85f, -r * 0.88f, 0f, -r)
-        cubicTo(-width * 0.85f, -r * 0.88f, -width, -r * 0.25f, 0f, 0f)
+        cubicTo(width, -body * 0.25f, width * 0.9f, -body * 0.9f, 0f, -body)
+        cubicTo(-width * 0.9f, -body * 0.9f, -width, -body * 0.25f, 0f, 0f)
         close()
     }
-    repeat(PETALS) { index ->
+    fun petals(draw: DrawScope.(angle: Float) -> Unit) = repeat(PETALS) { index ->
+        val angle = rotation + index * (360f / PETALS)
         withTransform({
             translate(center.x, center.y)
-            rotate(rotation + index * (360f / PETALS), Offset.Zero)
-        }) {
-            drawPath(shape, petalEdge.copy(alpha = alpha * 0.9f))
-            withTransform({ scale(0.78f, 0.78f, Offset.Zero) }) {
-                drawPath(shape, petal.copy(alpha = alpha))
-            }
-        }
+            rotate(angle, Offset.Zero)
+        }) { draw(angle) }
     }
-    drawCircle(core.copy(alpha = alpha), radius = r * 0.24f, center = center)
-    drawCircle(Color.White.copy(alpha = alpha * 0.55f), radius = r * 0.09f, center = center.copy(x = center.x - r * 0.06f, y = center.y - r * 0.07f))
+
+    // The shadow the flower casts, a little below it.
+    withTransform({ translate(0f, r * 0.07f) }) {
+        petals { drawPath(shape, clayDark(petalEdge).copy(alpha = alpha * 0.22f)) }
+    }
+    petals { angle ->
+        // The light is fixed at the top left of the screen whichever way a petal points,
+        // so it is turned back into the petal's own frame.
+        val back = (-(angle) - 135f) * (PI.toFloat() / 180f)
+        val toLight = Offset(cos(back), sin(back))
+        drawPath(
+            shape,
+            Brush.radialGradient(
+                0f to clayLight(petal).copy(alpha = alpha),
+                0.55f to petal.copy(alpha = alpha),
+                1f to clayDark(petalEdge).copy(alpha = alpha),
+                center = Offset(0f, -body * 0.55f) + toLight * (body * 0.22f),
+                radius = body * 0.75f,
+            ),
+        )
+        // Gloss near the tip, on the lit side.
+        drawCircle(
+            Color.White.copy(alpha = alpha * 0.45f),
+            radius = body * 0.09f,
+            center = Offset(0f, -body * 0.68f) + toLight * (body * 0.14f),
+        )
+    }
+    clayBead(center, r * 0.25f, core.copy(alpha = alpha), lift = r * 0.05f)
 }
 
 private const val PETALS = 5

@@ -140,6 +140,7 @@ fun PartnerShell(
                             codeSheet = true
                         },
                         modifier = Modifier.padding(top = 80.dp),
+                        withCompanion = false,
                     )
                     else -> PartnerViewBody(
                         linkId = current,

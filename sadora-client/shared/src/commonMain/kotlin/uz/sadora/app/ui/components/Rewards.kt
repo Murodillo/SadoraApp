@@ -45,6 +45,8 @@ import uz.sadora.app.model.Fmt
 import uz.sadora.contract.CoinAward
 import uz.sadora.contract.DailyCheckInResult
 import uz.sadora.app.resources.*
+import uz.sadora.contract.PetPose
+import androidx.compose.foundation.layout.offset
 
 /**
  * The Gul balance, as the home header and the shop draw it.
@@ -219,6 +221,12 @@ private fun StreakCard(result: DailyCheckInResult) {
             // Petals bursting out behind the ring. An ordinary day gets a small burst,
             // a milestone a bigger one — so the milestone still feels like more.
             PetalBurst(entry.value, Modifier.size(if (milestone != null) 200.dp else 150.dp), count = if (milestone != null) 18 else 10)
+            // Her companion, cheering the day from the ring's side.
+            CompanionOr(
+                PetPose.HAPPY,
+                64.dp,
+                Modifier.align(Alignment.BottomEnd).offset(x = 34.dp, y = 6.dp),
+            )
 
             ProgressRing(
                 progress = if (milestone != null) 1f else result.streak.milestoneProgress,

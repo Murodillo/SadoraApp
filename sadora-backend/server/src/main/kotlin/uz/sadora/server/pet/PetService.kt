@@ -66,6 +66,9 @@ class PetService(
         return PetState(pet = pet, active = active)
     }
 
+    /** Her chosen pet when her plan includes it, for the reminders it sends in its voice. */
+    suspend fun companionOf(userId: Uuid): PetKind? = state(userId).takeIf { it.active }?.pet
+
     /** Picking is free for everyone, so the picker can show all five before she subscribes. */
     suspend fun choose(userId: Uuid, pet: PetKind): PetState {
         pets.choose(userId, pet)
