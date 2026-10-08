@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -78,8 +77,8 @@ private data class ChatMessage(
 
 /**
  * "SADORA AI" — the conversation view, drawn on the deck's navy ground, and spoken by
- * her companion: the pet she picked is the assistant here, by name, in the header and
- * on the stage above the conversation, and the server writes its answers in its voice.
+ * her companion: the pet she picked is the assistant here, by name, in the header above
+ * the conversation, and the server writes its answers in its voice.
  *
  * The pet acts out the conversation: it waves while it waits, thinks while an answer is
  * on its way, jumps when one arrives, dozes off when she has gone quiet, and wakes the
@@ -191,13 +190,6 @@ fun AiChatScreen(
             contentPadding = PaddingValues(horizontal = Spacing.screen, vertical = Spacing.xs),
             verticalArrangement = Arrangement.spacedBy(Spacing.sm),
         ) {
-            // The stage: the pet, large, acting out the conversation. A tap makes it jump.
-            item {
-                Box(Modifier.fillMaxWidth().height(170.dp), contentAlignment = Alignment.Center) {
-                    PetImage(pet.pet, pose, size = 160.dp, modifier = Modifier.noRippleClickable(onClick = poke))
-                }
-            }
-
             item {
                 Text(
                     t.basis(
