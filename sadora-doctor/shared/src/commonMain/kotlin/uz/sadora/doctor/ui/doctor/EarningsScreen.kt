@@ -1,5 +1,7 @@
 package uz.sadora.doctor.ui.doctor
 
+import uz.sadora.doctor.resources.Res
+import uz.sadora.doctor.resources.ic3d_gem
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -84,7 +86,7 @@ fun EarningsScreen(
             item(key = "lines-title") { SectionHeader(w.linesTitle) }
             val lines = earnings.lines
             if (lines.isEmpty()) {
-                item(key = "lines-empty") { EmptyState(title = w.linesEmpty, body = w.linesEmptyBody, actionText = null, onAction = {}) }
+                item(key = "lines-empty") { EmptyState(title = w.linesEmpty, body = w.linesEmptyBody, actionText = null, onAction = {}, art = Res.drawable.ic3d_gem) }
             } else {
                 items(lines.size, key = { "line-" + lines[it].sessionId }) { EarningRow(lines[it]) }
             }

@@ -1,5 +1,6 @@
 package uz.sadora.doctor.ui.doctor
 
+import uz.sadora.doctor.ui.components.clayBackdrop
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
@@ -86,7 +87,7 @@ fun QuestionScreen(
     val post = doctors.thread?.takeIf { it.id == postId }
     val comments = if (post != null) doctors.threadComments else emptyList()
 
-    Column(modifier.fillMaxSize().background(c.bg)) {
+    Column(modifier.fillMaxSize().clayBackdrop(c)) {
         SadoraTopBar(if (post?.doctor != null) t.postTitle else t.questionTitle, onBack = onClose)
 
         LazyColumn(

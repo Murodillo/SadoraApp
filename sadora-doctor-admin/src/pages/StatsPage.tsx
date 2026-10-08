@@ -34,25 +34,27 @@ export function StatsPage() {
   return (
     <div className="grid" style={{ gap: 16 }}>
       <div className="grid stat-row">
-        <Stat label="Shu hafta" value={data.consultationsWeek} hint="konsultatsiya" />
-        <Stat label="Shu oy" value={data.consultationsMonth} hint="konsultatsiya" />
-        <Stat label="Jami" value={data.consultationsTotal} hint="konsultatsiya" />
-        <Stat label="Hozir ochiq" value={data.openNow} hint="javobingizni kutmoqda" />
+        <Stat art="ic3d_calendar" label="Shu hafta" value={data.consultationsWeek} hint="konsultatsiya" />
+        <Stat art="ic3d_calendar" label="Shu oy" value={data.consultationsMonth} hint="konsultatsiya" />
+        <Stat art="badge_doctor" label="Jami" value={data.consultationsTotal} hint="konsultatsiya" />
+        <Stat art="ic3d_message" label="Hozir ochiq" value={data.openNow} hint="javobingizni kutmoqda" />
       </div>
 
       <div className="grid stat-row">
-        <Stat label="Birinchi javob" value={durationLabel(data.avgFirstReplyMinutes)} hint="o'rtacha" />
+        <Stat art="ic3d_clock" label="Birinchi javob" value={durationLabel(data.avgFirstReplyMinutes)} hint="o'rtacha" />
         <Stat
           label="Javobsiz qolgan"
+          art="ic3d_bell"
           value={data.unansweredTotal}
           hint={data.unansweredTotal ? 'muddati javobsiz tugagan' : 'hammasiga javob bergansiz'}
         />
         <Stat
           label="Reyting"
+          art="ic3d_star"
           value={data.rating != null ? `★ ${ratingLabel(data.rating)}` : '—'}
           hint={data.ratingCount ? `${data.ratingCount} ta baho` : "hali baho yo'q"}
         />
-        <Stat label="Chatdagi javoblar" value={data.answersTotal} hint="savollarga" />
+        <Stat art="ic3d_chats" label="Chatdagi javoblar" value={data.answersTotal} hint="savollarga" />
       </div>
 
       <Card
@@ -76,7 +78,7 @@ export function StatsPage() {
             ))}
           </ul>
         ) : (
-          <Empty>
+          <Empty art="ic3d_insights">
             Hali chatdagi savollarga javob bermagansiz.
             <div className="faint">Javob berganingizda mavzular shu yerda chiqadi.</div>
           </Empty>

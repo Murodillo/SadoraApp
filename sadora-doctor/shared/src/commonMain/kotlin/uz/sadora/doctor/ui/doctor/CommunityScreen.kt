@@ -1,5 +1,7 @@
 package uz.sadora.doctor.ui.doctor
 
+import uz.sadora.doctor.resources.Res
+import uz.sadora.doctor.resources.ic3d_chats
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -64,7 +66,7 @@ fun CommunityScreen(
             }
             if (doctors.feedLoaded && posts.isEmpty()) {
                 item(key = "empty") {
-                    EmptyState(title = t.feedEmpty, body = t.feedEmptyBody, actionText = strings.community.newPost, onAction = onNewPost)
+                    EmptyState(title = t.feedEmpty, body = t.feedEmptyBody, actionText = strings.community.newPost, onAction = onNewPost, art = Res.drawable.ic3d_chats)
                 }
             }
             items(posts.size, key = { posts[it].id }) { index ->

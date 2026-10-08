@@ -154,6 +154,19 @@ class StringsTest {
                 ),
             )
         }
+        with(t.badges) {
+            addAll(
+                listOf(
+                    title, subtitle, earnedOf(3, 41), tierName(1, 3), tierName(2, 3), tierName(3, 3),
+                    tierName(1, 1), locked, next(tierName(2, 3), 12, 25), allDone, principle, newBadge,
+                    tierReached(tierName(3, 3)), continueLabel, more(3), skipAll, earnedSection, lockedSection,
+                ),
+            )
+            uz.sadora.contract.DoctorBadges.catalogue.forEach { (key, thresholds) ->
+                add(name(key).orEmpty())
+                thresholds.forEach { add(goal(key, it)) }
+            }
+        }
     }
 
     @Test
@@ -188,6 +201,16 @@ class StringsTest {
             val same = uz.indices.count { uz[it] == other[it] }
             assertTrue(same * 10 < uz.size, "${t.language}: $same of ${uz.size} lines are the Uzbek text")
         }
+    }
+
+    @Test
+    fun `every badge has a name and the names are told apart within each language`() {
+        languages.forEach { t ->
+            val names = uz.sadora.contract.DoctorBadges.catalogue.map { t.badges.name(it.first) }
+            assertTrue(names.none { it == null }, "${t.language}: $names")
+            assertEquals(names.size, names.distinct().size, "${t.language}: $names")
+        }
+        assertEquals("5 вопросов", StringsRu.badges.goal(uz.sadora.contract.DoctorBadges.ANSWERS, 5).substringAfter("на "))
     }
 
     @Test

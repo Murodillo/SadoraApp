@@ -2867,6 +2867,7 @@ class ApiIntegrationTest {
         answerAndNote(id, doctor, patient)
         closeRateAndEarn(id, profileId, doctor, patient, admin, price)
         refundUnanswered(id, profileId, patient, admin)
+        doctorBadges(doctor, patient)
         // The staff panel's quality table has her, with one unanswered window.
         val quality = qualityRow(profileId, admin)
         assertEquals(2, quality.consultationsTotal)
@@ -2876,6 +2877,25 @@ class ApiIntegrationTest {
         put<uz.sadora.contract.DoctorSettings>("/v1/doctor/settings", doctor.token, uz.sadora.contract.UpdateDoctorSettingsRequest(busy = true))
         assertEquals(false, get<uz.sadora.contract.DoctorProfile>("/v1/doctors/$profileId", patient.token).availability?.onlineNow)
         put<uz.sadora.server.consultation.CommissionView>("/v1/admin/settings/commission", admin, uz.sadora.server.consultation.SetCommissionRequest(20))
+    }
+
+    private suspend fun Api.doctorBadges(doctor: TestUser, patient: TestUser) {
+        // What she did is on her board: verified, a consultation, a note, a quick reply.
+        val board = get<uz.sadora.contract.BadgeBoard>("/v1/doctor/badges", doctor.token)
+        assertEquals(uz.sadora.contract.DoctorBadges.catalogue.size, board.badges.size)
+        fun tier(key: String) = board.badges.first { it.key == key }.tier
+        assertEquals(1, tier(uz.sadora.contract.DoctorBadges.VERIFIED))
+        assertEquals(1, tier(uz.sadora.contract.DoctorBadges.CONSULTS))
+        assertEquals(1, tier(uz.sadora.contract.DoctorBadges.QUICK_REPLIES))
+        assertEquals(0, tier(uz.sadora.contract.DoctorBadges.RATED), "one review is short of five")
+        assertEquals(1, board.badges.first { it.key == uz.sadora.contract.DoctorBadges.NOTES }.progress)
+        assertFalse(board.canWear)
+        assertTrue(board.unseen.any { it.key == uz.sadora.contract.DoctorBadges.VERIFIED && it.coins == 0 })
+        // Seen once, and only hers: the patient is no doctor, and her own board is untouched.
+        postAck("/v1/doctor/badges/seen", doctor.token, uz.sadora.contract.MarkBadgesSeenRequest())
+        assertTrue(get<uz.sadora.contract.BadgeBoard>("/v1/doctor/badges", doctor.token).unseen.isEmpty())
+        assertEquals(HttpStatusCode.Forbidden, raw { client.get("/v1/doctor/badges") { auth(patient.token) } }.status)
+        assertTrue(get<uz.sadora.contract.BadgeBoard>("/v1/rewards/badges", doctor.token).badges.none { it.key == uz.sadora.contract.DoctorBadges.CONSULTS })
     }
 
     private suspend fun Api.paidPage(profileId: String, patient: TestUser, price: Long) {

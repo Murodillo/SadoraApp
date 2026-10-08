@@ -45,7 +45,7 @@ export function QuickRepliesPage() {
         ) : !replies.data ? (
           <ErrorNotice error={replies.error} onRetry={() => void replies.refetch()} />
         ) : !list.length ? (
-          <Empty>
+          <Empty art="ic3d_bulb">
             Hali tayyor javob yo'q.
             <div className="faint">Masalan: salomlashish, tahlil topshirish tartibi, qabulga yozilish.</div>
           </Empty>

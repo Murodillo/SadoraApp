@@ -1,5 +1,23 @@
 package uz.sadora.doctor.ui.doctor
 
+import uz.sadora.doctor.resources.ic3d_lock
+import org.jetbrains.compose.resources.DrawableResource
+import uz.sadora.doctor.resources.Res
+import uz.sadora.doctor.ui.components.ArtTile
+import uz.sadora.doctor.resources.ic3d_baby
+import uz.sadora.doctor.resources.ic3d_calendar
+import uz.sadora.doctor.resources.ic3d_clock
+import uz.sadora.doctor.resources.ic3d_doctor
+import uz.sadora.doctor.resources.ic3d_health
+import uz.sadora.doctor.resources.ic3d_heart
+import uz.sadora.doctor.resources.ic3d_meds
+import uz.sadora.doctor.resources.ic3d_mood
+import uz.sadora.doctor.resources.ic3d_nutrition
+import uz.sadora.doctor.resources.ic3d_period
+import uz.sadora.doctor.resources.ic3d_pregnancy
+import uz.sadora.doctor.resources.ic3d_record
+import uz.sadora.doctor.resources.ic3d_sym_hot_flush
+import uz.sadora.doctor.resources.ic3d_watch
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -11,7 +29,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
@@ -30,7 +47,6 @@ import uz.sadora.doctor.data.ApiFailure
 import uz.sadora.doctor.data.DoctorController
 import uz.sadora.doctor.data.attachedKey
 import uz.sadora.doctor.data.readable
-import uz.sadora.doctor.design.IconSize
 import uz.sadora.doctor.design.Radius
 import uz.sadora.doctor.design.Sadora
 import uz.sadora.doctor.design.SadoraIcons
@@ -38,7 +54,6 @@ import uz.sadora.doctor.design.Spacing
 import uz.sadora.doctor.i18n.strings
 import uz.sadora.doctor.ui.components.EmptyState
 import uz.sadora.doctor.ui.components.ErrorStrip
-import uz.sadora.doctor.ui.components.IconTile
 import uz.sadora.doctor.ui.components.SadoraCard
 import uz.sadora.doctor.ui.components.SadoraTopBar
 import uz.sadora.doctor.ui.components.ScreenContent
@@ -96,11 +111,11 @@ fun PatientRecordScreen(
             if (record == null) {
                 when {
                     failure is ApiFailure.NotFound -> item {
-                        EmptyState(title = t.recordGone, body = t.recordGoneBody, actionText = null, onAction = {})
+                        EmptyState(title = t.recordGone, body = t.recordGoneBody, actionText = null, onAction = {}, art = Res.drawable.ic3d_lock)
                     }
                     // An attached record closes with its consultation.
                     failure is ApiFailure.Forbidden -> item {
-                        EmptyState(title = t.consultationClosed, body = t.recordClosed, actionText = null, onAction = {})
+                        EmptyState(title = t.consultationClosed, body = t.recordClosed, actionText = null, onAction = {}, art = Res.drawable.ic3d_lock)
                     }
                     failure != null -> item {
                         ErrorStrip(failure.readable(), onRetry = { scope.launch { load() } })
@@ -132,7 +147,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.recordSections(record
                 } else null,
                 h.prediction.nextPeriodStart?.let { t.nextPeriod to "${fullDate(it)} (${t.estimated})" },
             )
-            RecordSection(t.cycleTitle, SadoraIcons.Drop) { Facts(facts) }
+            RecordSection(t.cycleTitle, Res.drawable.ic3d_period) { Facts(facts) }
         }
     }
 
@@ -144,7 +159,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.recordSections(record
                 pregnancy.dueDate?.let { t.dueDate to fullDate(it) },
                 pregnancy.childBirthDate?.let { t.birthDate to fullDate(it) },
             )
-            RecordSection(t.pregnancyTitle, SadoraIcons.Heart) {
+            RecordSection(t.pregnancyTitle, Res.drawable.ic3d_pregnancy) {
                 Facts(facts)
                 if (pregnancy.lessMovementDays.isNotEmpty()) {
                     Text(t.lessMovement(pregnancy.lessMovementDays.size), style = Sadora.type.body, color = Sadora.colors.danger)
@@ -158,7 +173,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.recordSections(record
     if (record.symptomCounts.isNotEmpty()) {
         item(key = "symptoms") {
             val t = strings.tabs
-            RecordSection(t.symptomsTitle, SadoraIcons.Document, subtitle = t.symptomsWindow(DoctorSummary.SHARE_WINDOW_DAYS)) {
+            RecordSection(t.symptomsTitle, Res.drawable.ic3d_record, subtitle = t.symptomsWindow(DoctorSummary.SHARE_WINDOW_DAYS)) {
                 Facts(record.symptomCounts.take(10).map { it.label to t.days(it.days) })
             }
         }
@@ -169,7 +184,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.recordSections(record
     if (noted.isNotEmpty()) {
         item(key = "days") {
             val t = strings.tabs
-            RecordSection(t.recentDaysTitle, SadoraIcons.Calendar) {
+            RecordSection(t.recentDaysTitle, Res.drawable.ic3d_calendar) {
                 Facts(
                     noted.map { day ->
                         strings.dates.dayMonth(day.date) to
@@ -183,7 +198,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.recordSections(record
     record.mind?.takeIf { it.daysLogged > 0 }?.let { mind ->
         item(key = "mind") {
             val t = strings.tabs
-            RecordSection(t.mindTitle, SadoraIcons.Heart) {
+            RecordSection(t.mindTitle, Res.drawable.ic3d_mood) {
                 Facts(
                     listOfNotNull(
                         t.daysLogged to "${mind.daysLogged} / ${mind.windowDays}",
@@ -200,7 +215,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.recordSections(record
         item(key = "meds") {
             val t = strings.tabs
             val c = Sadora.colors
-            RecordSection(t.medsTitle, SadoraIcons.Pill) {
+            RecordSection(t.medsTitle, Res.drawable.ic3d_meds) {
                 record.medications.forEach { med ->
                     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         Text(
@@ -228,7 +243,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.recordSections(record
         item(key = "appointments") {
             val t = strings.tabs
             val c = Sadora.colors
-            RecordSection(t.appointmentsTitle, SadoraIcons.Calendar) {
+            RecordSection(t.appointmentsTitle, Res.drawable.ic3d_doctor) {
                 record.appointments.forEach { visit ->
                     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         Text(visit.title, style = Sadora.type.h3, color = c.text)
@@ -246,7 +261,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.recordSections(record
     record.nutrition?.takeIf { it.daysLogged > 0 }?.let { food ->
         item(key = "nutrition") {
             val t = strings.tabs
-            RecordSection(t.nutritionTitle, SadoraIcons.Drop) {
+            RecordSection(t.nutritionTitle, Res.drawable.ic3d_nutrition) {
                 Facts(
                     listOfNotNull(
                         t.daysLogged to "${food.daysLogged} / ${food.windowDays}",
@@ -271,7 +286,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.recordSections(record
                     }
                 }
             }
-            if (facts.isNotEmpty()) RecordSection(t.wearableTitle, SadoraIcons.Watch) { Facts(facts) }
+            if (facts.isNotEmpty()) RecordSection(t.wearableTitle, Res.drawable.ic3d_watch) { Facts(facts) }
         }
     }
 
@@ -295,7 +310,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.stageSections(r: Shar
     r.feeding?.let { f ->
         item(key = "feeding") {
             val t = strings.tabs
-            RecordSection(t.feedingTitle, SadoraIcons.Heart, subtitle = t.lastDays(f.windowDays)) {
+            RecordSection(t.feedingTitle, Res.drawable.ic3d_baby, subtitle = t.lastDays(f.windowDays)) {
                 Facts(
                     listOfNotNull(
                         t.feedsPerDay to oneDecimal(f.feeds.toDouble() / f.windowDays),
@@ -310,7 +325,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.stageSections(r: Shar
     if (r.kickCounts.isNotEmpty()) {
         item(key = "kicks") {
             val t = strings.tabs
-            RecordSection(t.kicksTitle, SadoraIcons.Heart, subtitle = t.lastDays(SharedStageRecords.KICK_DAYS)) {
+            RecordSection(t.kicksTitle, Res.drawable.ic3d_heart, subtitle = t.lastDays(SharedStageRecords.KICK_DAYS)) {
                 Facts(r.kickCounts.map { moment(it.at) to t.kicksResult(it.kicks, minutesSeconds(it.durationSeconds)) })
                 if (r.kickCounts.any { it.isSlow }) Text(t.kicksSlow, style = Sadora.type.body, color = Sadora.colors.danger)
             }
@@ -319,7 +334,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.stageSections(r: Shar
     r.contractions?.let { c ->
         item(key = "contractions") {
             val t = strings.tabs
-            RecordSection(t.contractionsTitle, SadoraIcons.Watch, subtitle = t.lastHours(c.windowHours)) {
+            RecordSection(t.contractionsTitle, Res.drawable.ic3d_clock, subtitle = t.lastHours(c.windowHours)) {
                 Facts(
                     listOfNotNull(
                         t.count to c.count.toString(),
@@ -334,7 +349,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.stageSections(r: Shar
     r.hotFlushes?.let { h ->
         item(key = "hot-flushes") {
             val t = strings.tabs
-            RecordSection(t.hotFlushTitle, SadoraIcons.Drop, subtitle = t.lastDays(h.windowDays)) {
+            RecordSection(t.hotFlushTitle, Res.drawable.ic3d_sym_hot_flush, subtitle = t.lastDays(h.windowDays)) {
                 Facts(
                     listOf(
                         t.count to h.count.toString(),
@@ -349,7 +364,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.stageSections(r: Shar
         item(key = "epds") {
             val t = strings.tabs
             val c = Sadora.colors
-            RecordSection(t.epdsTitle, SadoraIcons.Heart) {
+            RecordSection(t.epdsTitle, Res.drawable.ic3d_health) {
                 if (r.moodScreens.any { it.selfHarm }) Text(t.epdsSelfHarm, style = Sadora.type.body, color = c.danger)
                 r.moodScreens.forEach { screen ->
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -417,14 +432,14 @@ private fun PersonCard(record: DoctorSummary) {
 @Composable
 private fun RecordSection(
     title: String,
-    icon: ImageVector,
+    art: DrawableResource,
     subtitle: String? = null,
     content: @Composable () -> Unit,
 ) {
     val c = Sadora.colors
     SadoraCard {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-            IconTile(icon, size = 36.dp, iconSize = IconSize.md)
+            ArtTile(art, size = 40.dp, artSize = 30.dp)
             Column(Modifier.weight(1f)) {
                 Text(title, style = Sadora.type.h3, color = c.text)
                 subtitle?.let { Text(it, style = Sadora.type.caption.copy(letterSpacing = TextUnit.Unspecified), color = c.muted2) }

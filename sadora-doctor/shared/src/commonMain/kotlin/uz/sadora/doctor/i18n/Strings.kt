@@ -41,6 +41,7 @@ interface Strings {
     val tabs: TabStrings
     val work: WorkStrings
     val photo: PhotoStrings
+    val badges: BadgeStrings
 }
 
 interface CommonStrings {

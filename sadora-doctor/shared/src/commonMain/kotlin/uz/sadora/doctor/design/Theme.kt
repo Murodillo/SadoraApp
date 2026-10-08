@@ -1,5 +1,6 @@
 package uz.sadora.doctor.design
 
+import uz.sadora.doctor.ui.components.clayBackdrop
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -60,7 +61,8 @@ fun SadoraTheme(
         LocalContentColor provides colors.text,
     ) {
         MaterialTheme(colorScheme = material) {
-            Box(Modifier.fillMaxSize().background(colors.bg)) { content() }
+            // The clay studio the cards and buttons stand in, not a flat sheet.
+            Box(Modifier.fillMaxSize().clayBackdrop(colors)) { content() }
         }
     }
 }

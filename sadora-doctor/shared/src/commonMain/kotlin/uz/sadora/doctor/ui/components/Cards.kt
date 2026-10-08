@@ -1,5 +1,6 @@
 package uz.sadora.doctor.ui.components
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -23,38 +24,23 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import org.jetbrains.compose.resources.DrawableResource
+import org.jetbrains.compose.resources.painterResource
 import uz.sadora.doctor.design.IconSize
 import uz.sadora.doctor.design.Radius
 import uz.sadora.doctor.design.Sadora
 import uz.sadora.doctor.design.Spacing
 
 /**
- * The soft lavender lift under every card in the deck.
- *
- * Dark surfaces skip it — a shadow on navy is invisible and only costs a layer — and
- * keep the hairline border instead, which is what separates a card from the ground
- * there.
+ * Every card in the clay finish the icons have: lit along the top, a bright rim where
+ * the light catches it, a soft lavender lift under it (light theme only — a shadow on
+ * navy is invisible and only costs a layer; the rim separates it there).
  */
 fun Modifier.cardSurface(
     colors: uz.sadora.doctor.design.SadoraColors,
     shape: Shape = Radius.card,
     elevation: Dp = 10.dp,
-): Modifier = this
-    .then(
-        if (colors.isDark) {
-            Modifier
-        } else {
-            Modifier.shadow(
-                elevation = elevation,
-                shape = shape,
-                ambientColor = colors.shadow.copy(alpha = 0.08f),
-                spotColor = colors.shadow.copy(alpha = 0.12f),
-            )
-        },
-    )
-    .clip(shape)
-    .background(colors.surface)
-    .border(1.dp, colors.line.copy(alpha = if (colors.isDark) 1f else 0.7f), shape)
+): Modifier = claySurface(colors, shape, colors.surface, elevation = elevation)
 
 /** The standard surface: 24dp radius, soft shadow, hairline border. */
 @Composable
@@ -130,6 +116,43 @@ fun IconTile(
         contentAlignment = Alignment.Center,
     ) {
         Icon(icon, contentDescription = null, Modifier.size(iconSize), tint = colour)
+    }
+}
+
+/**
+ * One of the colour clay icons (`composeResources/drawable/ic3d_*`) at [size] — the
+ * client app's set, so the two apps read as one family.
+ *
+ * They carry their own colour, so unlike [Icon] nothing tints them.
+ */
+@Composable
+fun ArtIcon(art: DrawableResource, size: Dp, modifier: Modifier = Modifier) {
+    Image(painterResource(art), contentDescription = null, modifier.size(size))
+}
+
+/**
+ * [IconTile] for a colour icon: the same washed-out disc, with [art] in it untinted.
+ * [tint] only colours the disc.
+ */
+@Composable
+fun ArtTile(
+    art: DrawableResource,
+    modifier: Modifier = Modifier,
+    tint: Color? = null,
+    size: Dp = 44.dp,
+    artSize: Dp = size * 0.74f,
+    shape: Shape = Radius.chip,
+) {
+    val c = Sadora.colors
+    val colour = tint ?: c.primary
+    Box(
+        modifier
+            .size(size)
+            .clip(shape)
+            .background(colour.copy(alpha = if (c.isDark) 0.22f else 0.13f)),
+        contentAlignment = Alignment.Center,
+    ) {
+        ArtIcon(art, artSize)
     }
 }
 

@@ -70,6 +70,9 @@ sealed interface Route {
 
     /** The patient of a consultation: her private note and their history together. */
     data class Patient(val conversationId: String) : Route
+
+    /** Her badges: what she has earned and what is ahead. */
+    data object Badges : Route
 }
 
 /** A route and how deep in the stack it sits: pushing goes deeper, popping comes back. */

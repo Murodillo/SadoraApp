@@ -1,5 +1,7 @@
 package uz.sadora.doctor.ui.doctor
 
+import org.jetbrains.compose.resources.DrawableResource
+import uz.sadora.doctor.ui.components.ArtTile
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -19,7 +21,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.TextUnit
@@ -35,7 +36,6 @@ import uz.sadora.doctor.design.Sadora
 import uz.sadora.doctor.design.SadoraIcons
 import uz.sadora.doctor.design.Spacing
 import uz.sadora.doctor.i18n.strings
-import uz.sadora.doctor.ui.components.IconTile
 import uz.sadora.doctor.ui.components.Motion
 import uz.sadora.doctor.ui.components.SadoraCard
 import uz.sadora.doctor.ui.components.noRippleToggleable
@@ -82,10 +82,13 @@ internal fun SwitchCard(
     }
 }
 
-/** A card row that opens a page of its own: icon, title, what is behind it, a chevron. */
+/**
+ * A card row that opens a page of its own: a colour icon, title, what is behind it, a
+ * chevron. [tint] washes the tile behind the icon.
+ */
 @Composable
 internal fun NavCard(
-    icon: ImageVector,
+    art: DrawableResource,
     title: String,
     subtitle: String?,
     onClick: () -> Unit,
@@ -95,7 +98,7 @@ internal fun NavCard(
     val c = Sadora.colors
     SadoraCard(modifier = modifier, onClick = onClick, padding = Spacing.sm) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-            IconTile(icon, tint = tint ?: c.primary, size = 40.dp, iconSize = IconSize.md)
+            ArtTile(art, tint = tint ?: c.primary, size = 40.dp, artSize = 30.dp)
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(title, style = Sadora.type.h3, color = c.text)
                 subtitle?.let { Text(it, style = Sadora.type.body, color = c.muted) }

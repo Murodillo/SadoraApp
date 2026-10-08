@@ -1,5 +1,7 @@
 package uz.sadora.doctor.ui.doctor
 
+import uz.sadora.doctor.resources.Res
+import uz.sadora.doctor.resources.ic3d_message
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
@@ -133,7 +135,7 @@ fun MessagesScreen(
             }
             if (doctors.conversationsLoaded && chats.isEmpty()) {
                 item(key = "empty") {
-                    EmptyState(title = t.messagesEmpty, body = t.messagesEmptyBody, actionText = null, onAction = {})
+                    EmptyState(title = t.messagesEmpty, body = t.messagesEmptyBody, actionText = null, onAction = {}, art = Res.drawable.ic3d_message)
                 }
             }
             items(chats.size, key = { chats[it].id }) { index ->

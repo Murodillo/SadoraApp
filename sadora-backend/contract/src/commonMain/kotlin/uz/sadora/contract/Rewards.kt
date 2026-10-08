@@ -343,6 +343,65 @@ data class WearBadgeRequest(val key: String? = null)
 @Serializable
 data class MarkBadgesSeenRequest(val keys: List<String> = emptyList())
 
+// ---------------------------------------------------------------- doctor badges
+
+/**
+ * A verified doctor's badges, read in the doctor app and her web panel.
+ *
+ * The same rule as hers: a badge is for what the doctor *does* — answering, writing,
+ * seeing patients, replying fast — never for money earned. The board and its tiers are
+ * the same shapes as a woman's ([BadgeBoard], [BadgeState], [BadgeUnlock]); only the
+ * catalogue differs, and there is no Gul and no wearing.
+ *
+ * "Rated" counts the reviews she was given, whatever the stars: a badge for five stars
+ * alone would reward a number a patient chose, so [FIVE_STARS] stays a gentle second
+ * ladder beside it rather than the only one.
+ */
+object DoctorBadges {
+    const val VERIFIED = "verified"
+    const val PHOTO = "photo"
+    const val ANSWERS = "answers"
+    const val POSTS = "posts"
+    const val CONSULTS = "consults"
+    const val PATIENTS = "patients"
+    const val FAST_REPLY = "fast_reply"
+    const val MESSAGES = "messages"
+    const val RATED = "rated"
+    const val FIVE_STARS = "five_stars"
+    const val RECORDS = "records"
+    const val NOTES = "notes"
+    const val QUICK_REPLIES = "quick_replies"
+    const val THANKED = "thanked"
+    const val TENURE = "tenure"
+
+    /** A first reply within this many minutes of the window opening counts as fast. */
+    const val FAST_REPLY_MINUTES = 60
+
+    /** Every badge with its tier thresholds, in the order the board shows them. */
+    val catalogue: List<Pair<String, List<Int>>> = listOf(
+        VERIFIED to listOf(1),
+        PHOTO to listOf(1),
+        ANSWERS to listOf(5, 25, 100),
+        POSTS to listOf(1, 10, 50),
+        CONSULTS to listOf(1, 10, 50),
+        PATIENTS to listOf(5, 25, 100),
+        FAST_REPLY to listOf(5, 25, 100),
+        MESSAGES to listOf(50, 250, 1000),
+        RATED to listOf(5, 25, 100),
+        FIVE_STARS to listOf(5, 25, 100),
+        RECORDS to listOf(1, 10, 50),
+        NOTES to listOf(5, 25, 100),
+        QUICK_REPLIES to listOf(1, 5, 15),
+        THANKED to listOf(10, 50, 200),
+        TENURE to listOf(30, 180, 365),
+    )
+
+    fun tiersOf(key: String): List<Int> = catalogue.firstOrNull { it.first == key }?.second.orEmpty()
+
+    /** The tier a count has reached: 0 below the first threshold. */
+    fun tierFor(key: String, count: Int): Int = tiersOf(key).count { count >= it }
+}
+
 // ---------------------------------------------------------------- referral
 
 /**

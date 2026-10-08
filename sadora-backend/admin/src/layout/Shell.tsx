@@ -2,12 +2,15 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { useAuth } from '../auth/AuthContext'
 import type { AdminRole } from '../api/types'
+import { Art } from '../components/art'
+import type { ArtName } from '../components/art'
 import { SadoraTile } from '../components/Logo'
 
 interface NavEntry {
   to: string
   label: string
-  glyph: string
+  /** The clay icon the apps use for the same idea. */
+  art: ArtName
   roles: AdminRole[]
 }
 
@@ -22,41 +25,41 @@ const groups: NavGroup[] = [
   {
     title: 'Umumiy',
     entries: [
-      { to: '/', label: 'Dashboard', glyph: '◧', roles: ALL },
-      { to: '/analytics', label: 'Analitika', glyph: '◫', roles: ['OWNER', 'ADMIN', 'ANALYST'] },
+      { to: '/', label: 'Dashboard', art: 'ic3d_home', roles: ALL },
+      { to: '/analytics', label: 'Analitika', art: 'ic3d_insights', roles: ['OWNER', 'ADMIN', 'ANALYST'] },
     ],
   },
   {
     title: 'Foydalanuvchilar',
     entries: [
-      { to: '/users', label: "Ro'yxat", glyph: '◎', roles: ALL },
-      { to: '/doctors', label: 'Shifokorlar', glyph: '✚', roles: ['OWNER', 'ADMIN', 'SUPPORT'] },
-      { to: '/consultations', label: 'Konsultatsiyalar', glyph: '✆', roles: ['OWNER', 'ADMIN', 'SUPPORT'] },
+      { to: '/users', label: "Ro'yxat", art: 'ic3d_profile', roles: ALL },
+      { to: '/doctors', label: 'Shifokorlar', art: 'ic3d_doctor', roles: ['OWNER', 'ADMIN', 'SUPPORT'] },
+      { to: '/consultations', label: 'Konsultatsiyalar', art: 'ic3d_message', roles: ['OWNER', 'ADMIN', 'SUPPORT'] },
     ],
   },
   {
     title: 'Kontent',
     entries: [
-      { to: '/community', label: 'Chat', glyph: '◉', roles: ALL },
-      { to: '/content', label: 'Bilim — maqolalar', glyph: '❑', roles: ALL },
-      { to: '/ai', label: 'AI xarajati', glyph: '✦', roles: ['OWNER', 'ADMIN', 'ANALYST'] },
-      { to: '/notifications', label: 'Bildirishnomalar', glyph: '◔', roles: ['OWNER', 'ADMIN', 'ANALYST'] },
-      { to: '/wearables', label: 'Wearable providerlar', glyph: '◐', roles: ['OWNER', 'ADMIN', 'ANALYST'] },
+      { to: '/community', label: 'Chat', art: 'ic3d_chats', roles: ALL },
+      { to: '/content', label: 'Bilim — maqolalar', art: 'ic3d_book', roles: ALL },
+      { to: '/ai', label: 'AI xarajati', art: 'ic3d_ai', roles: ['OWNER', 'ADMIN', 'ANALYST'] },
+      { to: '/notifications', label: 'Bildirishnomalar', art: 'ic3d_bell', roles: ['OWNER', 'ADMIN', 'ANALYST'] },
+      { to: '/wearables', label: 'Wearable providerlar', art: 'ic3d_watch', roles: ['OWNER', 'ADMIN', 'ANALYST'] },
     ],
   },
   {
     title: 'Gul',
     entries: [
-      { to: '/rewards', label: 'Mukofotlar va streak', glyph: '✷', roles: ALL },
-      { to: '/shop', label: "Do'kon — chegirmalar", glyph: '⌘', roles: ['OWNER', 'ADMIN', 'ANALYST'] },
+      { to: '/rewards', label: 'Mukofotlar va streak', art: 'ic3d_trophy', roles: ALL },
+      { to: '/shop', label: "Do'kon — chegirmalar", art: 'ic3d_shop', roles: ['OWNER', 'ADMIN', 'ANALYST'] },
     ],
   },
   {
     title: 'Sozlamalar',
     entries: [
-      { to: '/billing', label: 'Obunalar va to‘lovlar', glyph: '₴', roles: ALL },
-      { to: '/features', label: 'Entitlements va limitlar', glyph: '◈', roles: ['OWNER', 'ADMIN', 'ANALYST'] },
-      { to: '/flags', label: 'Feature flags', glyph: '⚑', roles: ['OWNER', 'ADMIN', 'ANALYST'] },
+      { to: '/billing', label: 'Obunalar va to‘lovlar', art: 'ic3d_crown', roles: ALL },
+      { to: '/features', label: 'Entitlements va limitlar', art: 'ic3d_gem', roles: ['OWNER', 'ADMIN', 'ANALYST'] },
+      { to: '/flags', label: 'Feature flags', art: 'ic3d_bulb', roles: ['OWNER', 'ADMIN', 'ANALYST'] },
     ],
   },
   {
@@ -64,8 +67,8 @@ const groups: NavGroup[] = [
     entries: [
       // Every role: 2FA is each operator's own to switch on, and one that cannot enrol
       // is one whose account stays a password.
-      { to: '/security', label: 'Hisobim va 2FA', glyph: '⚿', roles: ALL },
-      { to: '/audit', label: 'Audit log', glyph: '☰', roles: ['OWNER'] },
+      { to: '/security', label: 'Hisobim va 2FA', art: 'ic3d_lock', roles: ALL },
+      { to: '/audit', label: 'Audit log', art: 'ic3d_notebook', roles: ['OWNER'] },
     ],
   },
 ]
@@ -144,7 +147,9 @@ export function Shell() {
                   end={entry.to === '/'}
                   className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}
                 >
-                  <span className="glyph">{entry.glyph}</span>
+                  <span className="glyph" aria-hidden="true">
+                    <Art name={entry.art} size={22} />
+                  </span>
                   {entry.label}
                 </NavLink>
               ))}

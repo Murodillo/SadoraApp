@@ -1,5 +1,6 @@
 package uz.sadora.doctor.ui.doctor
 
+import uz.sadora.doctor.resources.ic3d_star
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -20,11 +21,21 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
+import org.jetbrains.compose.resources.DrawableResource
+import uz.sadora.doctor.resources.Res
+import uz.sadora.doctor.resources.ic3d_bell
+import uz.sadora.doctor.resources.ic3d_calendar
+import uz.sadora.doctor.resources.ic3d_chats
+import uz.sadora.doctor.resources.ic3d_gem
+import uz.sadora.doctor.resources.ic3d_message
+import uz.sadora.doctor.resources.ic3d_notebook
+import uz.sadora.doctor.resources.ic3d_qr
+import uz.sadora.doctor.ui.components.ArtTile
+import uz.sadora.doctor.ui.components.BadgeStrip
 import kotlin.time.Clock
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -44,7 +55,6 @@ import uz.sadora.doctor.ui.components.ChipFlowRow
 import uz.sadora.doctor.ui.components.CircleIconButton
 import uz.sadora.doctor.ui.components.EmptyState
 import uz.sadora.doctor.ui.components.ErrorStrip
-import uz.sadora.doctor.ui.components.IconTile
 import uz.sadora.doctor.ui.components.LoadMoreRow
 import uz.sadora.doctor.ui.components.SadoraCard
 import uz.sadora.doctor.ui.components.SadoraTopBar
@@ -71,6 +81,8 @@ fun DoctorHomeScreen(
     onOpenWork: () -> Unit,
     onOpenEarnings: () -> Unit,
     modifier: Modifier = Modifier,
+    /** Her badges page, from the strip that shows once she has one. */
+    onOpenBadges: () -> Unit = {},
     onToast: (String) -> Unit = {},
 ) {
     val t = strings.tabs
@@ -155,14 +167,14 @@ fun DoctorHomeScreen(
                                 null
                             },
                             label = t.statWaiting,
-                            icon = SadoraIcons.Document,
+                            art = Res.drawable.ic3d_bell,
                             tint = c.secondary,
                             modifier = Modifier.weight(1f),
                         )
                         StatTile(
                             value = if (doctors.conversationsLoaded) doctors.unreadMessages.toString() else null,
                             label = t.statUnread,
-                            icon = SadoraIcons.Message,
+                            art = Res.drawable.ic3d_message,
                             tint = c.primary,
                             modifier = Modifier.weight(1f),
                             onClick = onMessages,
@@ -172,14 +184,14 @@ fun DoctorHomeScreen(
                         StatTile(
                             value = profile?.answerCount?.toString(),
                             label = d.statAnswers,
-                            icon = SadoraIcons.Check,
+                            art = Res.drawable.ic3d_chats,
                             tint = c.success,
                             modifier = Modifier.weight(1f),
                         )
                         StatTile(
                             value = profile?.postCount?.toString(),
                             label = d.statPosts,
-                            icon = SadoraIcons.Chats,
+                            art = Res.drawable.ic3d_notebook,
                             tint = c.accent,
                             modifier = Modifier.weight(1f),
                             onClick = onProfile,
@@ -187,12 +199,16 @@ fun DoctorHomeScreen(
                     }
                 }
             }
+            // Her latest medals, once she has one; the page itself is on her profile too.
+            work.badges?.takeIf { board -> board.badges.any { it.tier > 0 } }?.let { board ->
+                item(key = "badges") { BadgeStrip(board, onOpen = onOpenBadges) }
+            }
             item(key = "consultations") { ConsultationStatsCard(work) }
             item(key = "earnings") { EarningsCard(work, onOpenEarnings) }
             item(key = "work") {
                 val settings = work.settings
                 NavCard(
-                    SadoraIcons.Calendar,
+                    Res.drawable.ic3d_calendar,
                     title = w.settingsTitle,
                     subtitle = settings?.let {
                         priceText(it.priceMinor) + " · " + (if (it.hours.isEmpty()) w.noHours else w.workDays(it.hours.size))
@@ -208,7 +224,7 @@ fun DoctorHomeScreen(
             }
             if (doctors.questionsLoaded && rows.isEmpty()) {
                 item(key = "questions-empty") {
-                    EmptyState(title = d.questionsEmpty, body = d.questionsEmptyBody, actionText = null, onAction = {})
+                    EmptyState(title = d.questionsEmpty, body = d.questionsEmptyBody, actionText = null, onAction = {}, art = Res.drawable.ic3d_star)
                 }
             }
             items(rows.size, key = { rows[it].post.id }) { index ->
@@ -252,14 +268,14 @@ private fun WhoCard(account: DoctorAccount, onClick: () -> Unit) {
 private fun StatTile(
     value: String?,
     label: String,
-    icon: ImageVector,
+    art: DrawableResource,
     tint: Color,
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
 ) {
     val c = Sadora.colors
     SadoraCard(modifier = modifier, padding = Spacing.sm, onClick = onClick, verticalGap = Spacing.xs) {
-        IconTile(icon, tint = tint, size = 36.dp, iconSize = IconSize.md)
+        ArtTile(art, tint = tint, size = 40.dp, artSize = 30.dp)
         if (value != null) {
             Text(value, style = Sadora.type.h1, color = c.text)
         } else {
@@ -276,13 +292,7 @@ private fun ScanCard(onScan: () -> Unit) {
     val c = Sadora.colors
     SadoraCard(onClick = onScan) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-            Column(
-                Modifier.size(52.dp).clip(Radius.chip).background(c.primary),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                Icon(SadoraIcons.Scan, contentDescription = null, Modifier.size(IconSize.lg), tint = c.onPrimary)
-            }
+            ArtTile(Res.drawable.ic3d_qr, tint = c.accent, size = 52.dp, artSize = 40.dp)
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Spacing.xxs)) {
                 Text(t.scanPatient, style = Sadora.type.h3, color = c.text)
                 Text(t.scanPatientBody, style = Sadora.type.body, color = c.muted)
@@ -355,7 +365,7 @@ private fun EarningsCard(work: WorkController, onOpen: () -> Unit) {
     val earnings = work.earnings
     SadoraCard(onClick = onOpen) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-            IconTile(SadoraIcons.Wallet, tint = c.success, size = 44.dp)
+            ArtTile(Res.drawable.ic3d_gem, tint = c.success, size = 44.dp)
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(w.earningsTitle, style = Sadora.type.h3, color = c.text)
                 Text(w.balance, style = Sadora.type.caption.copy(letterSpacing = TextUnit.Unspecified), color = c.muted)

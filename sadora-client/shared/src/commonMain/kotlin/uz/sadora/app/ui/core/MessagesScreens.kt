@@ -1,5 +1,6 @@
 package uz.sadora.app.ui.core
 
+import uz.sadora.app.ui.components.clayBackdrop
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -411,7 +412,7 @@ fun ConversationScreen(
     val name = thread?.alias ?: alias
     val canAttachRecord = window?.open == true && doctor != null
 
-    Box(modifier.fillMaxSize().background(c.bg)) {
+    Box(modifier.fillMaxSize().clayBackdrop(c)) {
         Column(Modifier.fillMaxSize()) {
             ConversationHeader(
                 thread = thread,

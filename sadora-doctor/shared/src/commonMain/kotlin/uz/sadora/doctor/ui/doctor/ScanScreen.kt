@@ -1,5 +1,8 @@
 package uz.sadora.doctor.ui.doctor
 
+import uz.sadora.doctor.resources.Res
+import uz.sadora.doctor.resources.ic3d_qr
+import uz.sadora.doctor.ui.components.ArtIcon
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -162,7 +165,7 @@ private fun CameraNote(text: String, action: (@Composable () -> Unit)? = null) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(Spacing.sm),
     ) {
-        Icon(SadoraIcons.Scan, contentDescription = null, Modifier.size(48.dp), tint = c.muted2)
+        ArtIcon(Res.drawable.ic3d_qr, 72.dp)
         Text(text, style = Sadora.type.body, color = c.muted, textAlign = TextAlign.Center)
         action?.invoke()
     }

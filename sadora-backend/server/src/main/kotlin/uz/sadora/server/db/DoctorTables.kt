@@ -137,3 +137,14 @@ object DoctorPhotos : Table("doctor_photos") {
 
     override val primaryKey = PrimaryKey(doctorId)
 }
+
+/** The badge tiers a doctor has reached (V41); the counts behind them are read live. */
+object DoctorBadgeTiers : Table("doctor_badges") {
+    val doctorId = uuid("doctor_id").references(DoctorProfiles.id)
+    val badge = text("badge")
+    val tier = integer("tier")
+    val earnedAt = timestampWithTimeZone("earned_at")
+    val seenAt = timestampWithTimeZone("seen_at").nullable()
+
+    override val primaryKey = PrimaryKey(doctorId, badge, tier)
+}

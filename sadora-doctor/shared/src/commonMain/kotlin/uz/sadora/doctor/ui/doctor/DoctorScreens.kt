@@ -1,5 +1,12 @@
 package uz.sadora.doctor.ui.doctor
 
+import uz.sadora.contract.BadgeBoard
+import uz.sadora.doctor.resources.Res
+import uz.sadora.doctor.resources.art_shield
+import uz.sadora.doctor.resources.ic3d_bulb
+import uz.sadora.doctor.resources.ic3d_calendar
+import uz.sadora.doctor.ui.components.ArtIcon
+import uz.sadora.doctor.ui.components.BadgeStrip
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.SizeTransform
@@ -67,7 +74,6 @@ import uz.sadora.doctor.ui.components.ChipFlowRow
 import uz.sadora.doctor.ui.components.CircleIconButton
 import uz.sadora.doctor.ui.components.EmptyState
 import uz.sadora.doctor.ui.components.ErrorStrip
-import uz.sadora.doctor.ui.components.IconTile
 import uz.sadora.doctor.ui.components.LoadMoreRow
 import uz.sadora.doctor.ui.components.Motion
 import uz.sadora.doctor.ui.components.PillButton
@@ -114,6 +120,9 @@ fun DoctorProfileScreen(
     onOpenReplies: (() -> Unit)? = null,
     /** Said after her photo is put up or taken down; only on her own Profile tab. */
     onToast: ((String) -> Unit)? = null,
+    /** Her badges page; only on her own Profile tab, where [badges] is her board. */
+    onOpenBadges: (() -> Unit)? = null,
+    badges: BadgeBoard? = null,
 ) {
     val d = strings.doctors
     val p = strings.photo
@@ -169,12 +178,15 @@ fun DoctorProfileScreen(
                         }
                     }
                 }
+                onOpenBadges?.let { open ->
+                    item { BadgeStrip(badges, onOpen = open, alwaysShow = true) }
+                }
                 if (account != null && onSaved != null) {
                     item { AcceptsConsultationsCard(account, doctors) }
                     onOpenWork?.let { open ->
                         item {
                             NavCard(
-                                SadoraIcons.Calendar,
+                                Res.drawable.ic3d_calendar,
                                 title = strings.work.settingsTitle,
                                 subtitle = priceText(profile.priceMinor),
                                 onClick = open,
@@ -182,7 +194,7 @@ fun DoctorProfileScreen(
                         }
                     }
                     onOpenReplies?.let { open ->
-                        item { NavCard(SadoraIcons.Message, title = strings.work.quickReplies, subtitle = null, onClick = open, tint = c.secondary) }
+                        item { NavCard(Res.drawable.ic3d_bulb, title = strings.work.quickReplies, subtitle = null, onClick = open, tint = c.secondary) }
                     }
                     item { EditDoctorCard(account, doctors, onSaved = onSaved) }
                 }
@@ -365,7 +377,7 @@ private fun IntroCard(onApply: () -> Unit) {
     val d = strings.doctors
     val c = Sadora.colors
     SadoraCard {
-        IconTile(SadoraIcons.Shield, tint = c.primary, size = 52.dp)
+        ArtIcon(Res.drawable.art_shield, 72.dp)
         Text(d.introTitle, style = Sadora.type.h2, color = c.text)
         Text(d.introBody, style = Sadora.type.body, color = c.muted)
         d.introPoints.forEach { point ->

@@ -43,32 +43,15 @@ import uz.sadora.app.design.Spacing
 import uz.sadora.app.resources.*
 
 /**
- * The soft lavender lift under every card in the deck.
- *
- * Dark surfaces skip it — a shadow on navy is invisible and only costs a layer — and
- * keep the hairline border instead, which is what separates a card from the ground
- * there.
+ * Every card in the clay finish the icons have: lit along the top, a bright rim where
+ * the light catches it, a soft lavender lift under it (light theme only — a shadow on
+ * navy is invisible and only costs a layer; the rim separates it there).
  */
 fun Modifier.cardSurface(
     colors: uz.sadora.app.design.SadoraColors,
     shape: Shape = Radius.card,
     elevation: Dp = 10.dp,
-): Modifier = this
-    .then(
-        if (colors.isDark) {
-            Modifier
-        } else {
-            Modifier.shadow(
-                elevation = elevation,
-                shape = shape,
-                ambientColor = colors.shadow.copy(alpha = 0.08f),
-                spotColor = colors.shadow.copy(alpha = 0.12f),
-            )
-        },
-    )
-    .clip(shape)
-    .background(colors.surface)
-    .border(1.dp, colors.line.copy(alpha = if (colors.isDark) 1f else 0.7f), shape)
+): Modifier = claySurface(colors, shape, colors.surface, elevation = elevation)
 
 /** The standard surface: 24dp radius, soft shadow, hairline border. */
 @Composable

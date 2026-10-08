@@ -1,5 +1,8 @@
 package uz.sadora.doctor.ui.components
 
+import org.jetbrains.compose.resources.DrawableResource
+import uz.sadora.doctor.resources.Res
+import uz.sadora.doctor.resources.ic3d_empty
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -19,7 +22,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -35,7 +37,6 @@ import androidx.compose.ui.semantics.Role
 import uz.sadora.doctor.design.MinTouchTarget
 import uz.sadora.doctor.design.Radius
 import uz.sadora.doctor.design.Sadora
-import uz.sadora.doctor.design.SadoraIcons
 import uz.sadora.doctor.design.Spacing
 import uz.sadora.doctor.i18n.strings
 
@@ -222,8 +223,10 @@ fun EmptyState(
     actionText: String?,
     onAction: () -> Unit,
     modifier: Modifier = Modifier,
-    /** Set only when a specific emoji says more than the default outline — "💊". */
+    /** Set only when a specific emoji says more than the default icon — "💊". */
     glyph: String? = null,
+    /** The colour icon above the title; the clay empty box unless a page has its own. */
+    art: DrawableResource = Res.drawable.ic3d_empty,
 ) {
     val c = Sadora.colors
     Column(
@@ -234,12 +237,7 @@ fun EmptyState(
         if (glyph != null) {
             Text(glyph, style = Sadora.type.display, color = c.muted2)
         } else {
-            Icon(
-                SadoraIcons.Empty,
-                contentDescription = null,
-                Modifier.size(40.dp),
-                tint = c.muted2,
-            )
+            ArtIcon(art, 72.dp)
         }
         Text(title, style = Sadora.type.h3, color = c.text)
         Text(

@@ -1,4 +1,6 @@
 import { cloneElement, isValidElement, useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
+import { Art, ArtTile } from './art'
+import type { ArtName } from './art'
 import type { ReactElement, ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import type { AccountStatus, SubscriptionTier } from '../api/types'
@@ -54,6 +56,7 @@ export function Stat({
   delta,
   spark,
   sparkColor,
+  art,
 }: {
   label: string
   value: ReactNode
@@ -63,9 +66,12 @@ export function Stat({
   /** A small trend behind the number. */
   spark?: number[]
   sparkColor?: string
+  /** A clay icon in the card's corner. */
+  art?: ArtName
 }) {
   return (
-    <div className="card stat">
+    <div className={`card stat${art ? ' with-art' : ''}`}>
+      {art && <ArtTile name={art} size={44} />}
       <div className="label">{label}</div>
       <div className="row" style={{ justifyContent: 'space-between', alignItems: 'flex-end', gap: 6 }}>
         <div className={`value${typeof value === 'number' ? '' : ' text'}`}>{typeof value === 'number' ? <CountedValue value={value} /> : value}</div>
@@ -133,8 +139,14 @@ export function Loading({ rows = 4 }: { rows?: number }) {
   )
 }
 
-export function Empty({ children }: { children: ReactNode }) {
-  return <div className="empty">{children}</div>
+/** Nothing here yet: a clay icon over the words, as the apps draw an empty state. */
+export function Empty({ children, art = 'ic3d_empty' }: { children: ReactNode; art?: ArtName | null }) {
+  return (
+    <div className="empty">
+      {art && <Art name={art} size={56} className="empty-art" />}
+      <div>{children}</div>
+    </div>
+  )
 }
 
 /** A short spinner for a button that is waiting on the server. */

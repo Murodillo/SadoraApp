@@ -105,9 +105,8 @@ fun CircleIconButton(
     Box(
         modifier
             .size(MinTouchTarget)
-            .clip(Radius.chip)
-            .background(c.surface2)
-            .pressable(pressedScale = 0.9f, onClick = onClick),
+            .pressable(pressedScale = 0.9f, onClick = onClick)
+            .clayBeadSurface(c, c.surface2, elevation = 4.dp),
         contentAlignment = Alignment.Center,
     ) {
         Icon(icon, contentDescription = contentDescription, Modifier.size(IconSize.md), tint = c.text)

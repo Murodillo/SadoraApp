@@ -33,6 +33,7 @@ import uz.sadora.server.community.CommunityService
 import uz.sadora.server.community.MessagingRepository
 import uz.sadora.server.community.MessagingService
 import uz.sadora.server.admin.AdminService
+import uz.sadora.server.doctor.DoctorBadgeService
 import uz.sadora.server.doctor.DoctorRepository
 import uz.sadora.server.doctor.DoctorService
 import uz.sadora.server.admin.AdminAnalyticsRepository
@@ -306,6 +307,7 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
         notifications = notificationRepository,
         messaging = messagingRepository,
     )
+    val doctorBadgeService = DoctorBadgeService(doctorRepository)
     val messagingService = MessagingService(
         messages = messagingRepository,
         community = communityService,

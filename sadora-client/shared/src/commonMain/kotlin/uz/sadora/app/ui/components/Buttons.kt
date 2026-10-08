@@ -1,5 +1,6 @@
 package uz.sadora.app.ui.components
 
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
@@ -62,12 +63,6 @@ fun SadoraButton(
     val pressed by interaction.collectIsPressedAsState()
     val scale by animateFloatAsState(if (pressed && enabled) 0.98f else 1f)
 
-    val background: Brush = when (tone) {
-        ButtonTone.Primary -> c.heroGradient
-        ButtonTone.Secondary -> Brush.linearGradient(listOf(c.surface2, c.surface2))
-        ButtonTone.Outline, ButtonTone.Ghost, ButtonTone.Destructive ->
-            Brush.linearGradient(listOf(Color.Transparent, Color.Transparent))
-    }
     val content = when (tone) {
         ButtonTone.Primary -> c.onPrimary
         ButtonTone.Secondary -> c.text
@@ -75,28 +70,32 @@ fun SadoraButton(
         ButtonTone.Ghost -> c.muted
         ButtonTone.Destructive -> c.danger
     }
+    // Pressed, a clay button sinks: it drops a little and its shadow tightens under it.
+    val sink by animateFloatAsState(if (pressed && enabled) 1f else 0f, label = "button-sink")
 
     Box(
         modifier = modifier
             .then(if (fillWidth) Modifier.fillMaxWidth() else Modifier)
             .scale(scale)
+            .graphicsLayer { translationY = sink * 2.dp.toPx() }
             .alpha(if (enabled) 1f else 0.45f)
             .then(
-                if (tone == ButtonTone.Primary && !c.isDark) {
-                    Modifier.shadow(
-                        10.dp, Radius.field,
-                        ambientColor = c.primary.copy(alpha = 0.25f),
-                        spotColor = c.primary.copy(alpha = 0.35f),
-                    )
-                } else Modifier,
-            )
-            .clip(Radius.field)
-            .background(background)
-            .then(
                 when (tone) {
-                    ButtonTone.Destructive -> Modifier.border(1.dp, c.danger.copy(alpha = 0.5f), Radius.field)
-                    ButtonTone.Outline -> Modifier.border(1.5.dp, c.primary.copy(alpha = 0.55f), Radius.field)
-                    else -> Modifier
+                    ButtonTone.Primary -> Modifier.claySurface(
+                        c, Radius.field, c.heroGradient,
+                        elevation = 12.dp - 8.dp * sink,
+                        shadowTint = c.primary,
+                        gloss = 0.9f,
+                        streak = true,
+                    )
+                    ButtonTone.Secondary -> Modifier.claySurface(c, Radius.field, c.surface2, elevation = 6.dp - 4.dp * sink, streak = true)
+                    ButtonTone.Outline -> Modifier
+                        .claySurface(c, Radius.field, c.surface, elevation = 6.dp - 4.dp * sink)
+                        .border(1.5.dp, c.primary.copy(alpha = 0.55f), Radius.field)
+                    ButtonTone.Destructive -> Modifier
+                        .claySurface(c, Radius.field, c.surface, elevation = 4.dp - 3.dp * sink)
+                        .border(1.dp, c.danger.copy(alpha = 0.5f), Radius.field)
+                    ButtonTone.Ghost -> Modifier.clip(Radius.field)
                 },
             )
             .defaultMinSize(minHeight = MinTouchTarget)
@@ -154,8 +153,12 @@ fun PillButton(
     Box(
         modifier = modifier
             .alpha(if (enabled) 1f else 0.5f)
-            .clip(Radius.chip)
-            .background(bg)
+            .claySurface(
+                c, Radius.chip, bg,
+                elevation = if (tone == ButtonTone.Primary) 6.dp else 3.dp,
+                shadowTint = if (tone == ButtonTone.Primary) c.primary else c.shadow,
+                streak = true,
+            )
             // The pill itself stays compact; the touch target around it is the full 44dp.
             .defaultMinSize(minWidth = MinTouchTarget, minHeight = MinTouchTarget)
             .pressable(enabled = enabled, onClick = onClick)
@@ -191,9 +194,8 @@ fun RoundIconButton(
     Box(
         modifier
             .size(size)
-            .clip(Radius.chip)
-            .background(if (filled) c.primary else c.surface2)
-            .pressable(pressedScale = 0.9f, onClick = onClick),
+            .pressable(pressedScale = 0.9f, onClick = onClick)
+            .clayBeadSurface(c, if (filled) c.primary else c.surface2),
         contentAlignment = Alignment.Center,
     ) {
         Icon(

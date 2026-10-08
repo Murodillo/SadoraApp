@@ -1,5 +1,6 @@
 package uz.sadora.app.ui.core
 
+import uz.sadora.app.ui.components.clayBackdrop
 import uz.sadora.app.data.readable
 import uz.sadora.app.ui.components.LoadMoreRow
 import uz.sadora.app.ui.components.ResizeForKeyboard
@@ -61,7 +62,7 @@ fun PostDetailScreen(
     // The feed carries only a count; the comments themselves come when the page opens.
     LaunchedEffect(postId) { community.loadComments(postId) }
 
-    Column(modifier.fillMaxSize().background(c.bg)) {
+    Column(modifier.fillMaxSize().clayBackdrop(c)) {
         SadoraTopBar(t.postTitle, onBack = onClose)
 
         if (post == null) {

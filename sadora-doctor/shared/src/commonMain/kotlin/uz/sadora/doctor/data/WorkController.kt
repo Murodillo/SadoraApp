@@ -1,8 +1,13 @@
 package uz.sadora.doctor.data
 
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.TimeSource
+import uz.sadora.contract.BadgeBoard
+import uz.sadora.contract.BadgeUnlock
 import uz.sadora.contract.DoctorEarnings
 import uz.sadora.contract.DoctorHours
 import uz.sadora.contract.DoctorSettings
@@ -37,6 +42,9 @@ class WorkController(private val api: DoctorApi?) {
 
     /** A patient's page: the note and the history. */
     val patientCalls = ApiCallState()
+
+    /** The badge board and the unlocks it hands out; always read quietly. */
+    val badgeCalls = ApiCallState()
 
     // ---------------------------------------------------------------- price, hours, busy
 
@@ -232,7 +240,51 @@ class WorkController(private val api: DoctorApi?) {
     }
 
     /** Forgets everything: another account may sign in on this phone next. */
+    // ---------------------------------------------------------------- badges
+
+    var badges by mutableStateOf<BadgeBoard?>(null)
+        private set
+
+    /** Tiers reached and not yet celebrated, oldest first: the unlock overlay plays the head. */
+    val unlocks = mutableStateListOf<BadgeUnlock>()
+
+    private var lastBadgeRead: TimeSource.Monotonic.ValueTimeMark? = null
+
+    /**
+     * Reads the board, which awards on the server. Asked for on every tab she opens, so a
+     * badge earned by answering a question plays as she lands back on Home — at most every
+     * [BADGE_READ_GAP], unless [force]d by the badges page itself.
+     */
+    suspend fun loadBadges(force: Boolean = false) {
+        val api = api ?: return
+        val now = TimeSource.Monotonic.markNow()
+        if (!force && lastBadgeRead?.let { now - it < BADGE_READ_GAP } == true) return
+        lastBadgeRead = now
+        val loaded = badgeCalls.run(silent = true) { api.badges() } ?: return
+        badges = loaded
+        val queued = unlocks.map { it.key to it.tier }.toSet()
+        unlocks.addAll(loaded.unseen.filter { (it.key to it.tier) !in queued })
+    }
+
+    /** The head of [unlocks] has been played; tell the server so it is not played again. */
+    suspend fun unlockShown(unlock: BadgeUnlock) {
+        unlocks.removeAll { it.key == unlock.key && it.tier <= unlock.tier }
+        val api = api ?: return
+        badgeCalls.run(silent = true) { api.badgesSeen(listOf(unlock.key)) }
+    }
+
+    /** Dismissed all at once: everything still queued counts as seen. */
+    suspend fun unlocksSkipped() {
+        val keys = unlocks.map { it.key }.distinct()
+        unlocks.clear()
+        val api = api ?: return
+        if (keys.isNotEmpty()) badgeCalls.run(silent = true) { api.badgesSeen(keys) }
+    }
+
     fun reset() {
+        badges = null
+        unlocks.clear()
+        lastBadgeRead = null
         settings = null
         stats = null
         earnings = null
@@ -245,6 +297,9 @@ class WorkController(private val api: DoctorApi?) {
         note = null
         history = null
         patientFor = null
-        listOf(settingsCalls, statsCalls, earningsCalls, replyCalls, patientCalls).forEach { it.clearError() }
+        listOf(settingsCalls, statsCalls, earningsCalls, replyCalls, patientCalls, badgeCalls).forEach { it.clearError() }
     }
 }
+
+/** The shortest gap between two badge reads the tabs ask for; a forced read ignores it. */
+private val BADGE_READ_GAP = 15.seconds

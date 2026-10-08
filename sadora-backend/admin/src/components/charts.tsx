@@ -219,10 +219,19 @@ export function BarChart({
   const barWidth = Math.max(2, slot - gap)
   const peak = Math.max(1, ...values)
   const axisIndexes = labelIndexes(values.length)
+  const gloss = `${useId()}-clay`
 
   return (
     <div className="chart" ref={wrap} style={{ height }}>
       <svg width={width} height={height} className="chart-svg" onMouseLeave={() => setTip(null)}>
+        <defs>
+          {/* The apps' clay finish: a column lit on its left, shaded on its right. */}
+          <linearGradient id={gloss} x1="0" x2="1" y1="0" y2="0">
+            <stop offset="0" stopColor="#fff" stopOpacity="0.32" />
+            <stop offset="0.5" stopColor="#fff" stopOpacity="0" />
+            <stop offset="1" stopColor="#000" stopOpacity="0.12" />
+          </linearGradient>
+        </defs>
         {values.map((value, index) => {
           const barHeight = value > 0 ? Math.max(3, (value / peak) * innerHeight) : 2
           const left = pad.left + index * slot + gap / 2
@@ -237,6 +246,23 @@ export function BarChart({
               className={`chart-bar${value === 0 ? ' empty' : ''}${tip?.index === index ? ' hot' : ''}`}
               style={{ fill: value === 0 ? undefined : color, animationDelay: `${Math.min(index * 18, 500)}ms` }}
               onMouseEnter={() => setTip({ index, x: left + barWidth / 2 })}
+            />
+          )
+        })}
+        {values.map((value, index) => {
+          if (value <= 0 || barWidth < 5) return null
+          const barHeight = Math.max(3, (value / peak) * innerHeight)
+          const left = pad.left + index * slot + gap / 2
+          return (
+            <rect
+              key={`gloss-${labels[index] ?? index}`}
+              x={left}
+              y={pad.top + innerHeight - barHeight}
+              width={barWidth}
+              height={barHeight}
+              rx={Math.min(3, barWidth / 2)}
+              className="chart-bar chart-gloss"
+              style={{ fill: `url(#${gloss})`, animationDelay: `${Math.min(index * 18, 500)}ms` }}
             />
           )
         })}
@@ -432,7 +458,7 @@ export function Funnel({ steps }: { steps: { key: string; label: string; value: 
             <div className="funnel-track">
               <div
                 className="funnel-bar"
-                style={{ width: `${Math.max(ofFirst, step.value > 0 ? 2 : 0)}%`, background: palette[index % palette.length], transitionDelay: `${index * 70}ms` }}
+                style={{ width: `${Math.max(ofFirst, step.value > 0 ? 2 : 0)}%`, backgroundColor: palette[index % palette.length], transitionDelay: `${index * 70}ms` }}
               />
             </div>
             {step.hint && <div className="faint funnel-hint">{step.hint}</div>}
@@ -459,7 +485,7 @@ export function RankedBars({ items, format = (value: number) => value.toLocaleSt
           <span className="ranked-track">
             <span
               className="ranked-bar"
-              style={{ width: `${(item.value / peak) * 100}%`, background: color ?? palette[index % palette.length], transitionDelay: `${index * 50}ms` }}
+              style={{ width: `${(item.value / peak) * 100}%`, backgroundColor: color ?? palette[index % palette.length], transitionDelay: `${index * 50}ms` }}
             />
           </span>
           <span className="ranked-value">

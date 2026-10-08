@@ -86,18 +86,21 @@ export function DashboardPage() {
       <div className="grid stat-row">
         <Stat
           label="Jami foydalanuvchi"
+          art="ic3d_profile"
           value={data.totalUsers}
           hint={`Haftada +${data.newThisWeek}`}
           spark={report?.perDay.map((day) => day.signUps)}
         />
         <Stat
           label={`Ro'yxatdan o'tgan · ${days} kun`}
+          art="ic3d_calendar"
           value={report?.current.signUps ?? data.newToday}
           delta={report ? { previous: report.previous.signUps } : undefined}
           hint={report ? `bugun ${data.newToday}` : 'bugun'}
         />
         <Stat
           label="Kunlik faol (DAU)"
+          art="ic3d_heart"
           value={data.activeToday}
           hint={dauOfMau !== null ? `MAU ${data.activeThisMonth} · ${dauOfMau}% qaytadi` : undefined}
           spark={report?.perDay.map((day) => day.activeUsers)}
@@ -105,6 +108,7 @@ export function DashboardPage() {
         />
         <Stat
           label="Aktiv obuna"
+          art="ic3d_crown"
           value={data.premiumUsers}
           hint={`${data.expiringWithinWeek} tasi hafta ichida tugaydi`}
           spark={report?.perDay.map((day) => day.premiumStarted)}
@@ -112,12 +116,13 @@ export function DashboardPage() {
         />
         <Stat
           label={`Tushum · ${days} kun`}
+          art="ic3d_gem"
           value={report ? `${som(report.current.revenueMinor)} so'm` : '—'}
           hint={report ? <Delta current={report.current.revenueMinor} previous={report.previous.revenueMinor} /> : undefined}
           spark={report?.perDay.map((day) => day.revenueMinor)}
           sparkColor="var(--c2)"
         />
-        <Stat label="Bloklangan" value={data.blockedUsers} hint={`${data.deletionPending} ta o'chirish so'rovi`} />
+        <Stat art="ic3d_lock" label="Bloklangan" value={data.blockedUsers} hint={`${data.deletionPending} ta o'chirish so'rovi`} />
       </div>
 
       {seesAnalytics && (

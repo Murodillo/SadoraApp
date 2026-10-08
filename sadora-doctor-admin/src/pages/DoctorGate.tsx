@@ -1,3 +1,4 @@
+import { BadgesPage } from './BadgesPage'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { useDoctorAccount } from '../api/hooks'
 import { useAuth } from '../auth/AuthContext'
@@ -68,6 +69,7 @@ export function DoctorGate() {
           <Route path="quick-replies" element={<QuickRepliesPage />} />
           <Route path="stats" element={<StatsPage />} />
           <Route path="earnings" element={<EarningsPage />} />
+          <Route path="badges" element={<BadgesPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>

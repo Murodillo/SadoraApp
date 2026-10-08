@@ -3,7 +3,6 @@ package uz.sadora.doctor.ui.components
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -21,7 +20,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.selection.selectableGroup
-import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -29,15 +27,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
-import uz.sadora.doctor.design.IconSize
+import org.jetbrains.compose.resources.DrawableResource
 import uz.sadora.doctor.design.Radius
 import uz.sadora.doctor.design.Sadora
 import uz.sadora.doctor.design.Spacing
@@ -47,14 +43,16 @@ private val PillHeight = 50.dp
 /** One line of the tab label at the default font size. */
 private val LabelLine = 14.dp
 private val PillInset = 6.dp
-private val BadgeSize = 8.dp
+private val BadgeSize = 9.dp
 
-/** One spring for everything that moves on the bar, so nothing arrives out of step. */
-private val BarSpring = spring<Float>(dampingRatio = 0.72f, stiffness = Spring.StiffnessMediumLow)
+/** The pill's spring; the icons hop on [SelectableArt]'s own. */
 private val BarSpringDp = spring<Dp>(dampingRatio = 0.72f, stiffness = Spring.StiffnessMediumLow)
 
-/** One slot on the bar. [badge] puts a dot on the icon — unread messages, questions waiting. */
-data class NavItemSpec<T>(val key: T, val label: String, val icon: ImageVector, val badge: Boolean = false)
+/**
+ * One slot on the bar: a colour clay icon, as the client app's bar has. [badge] puts a dot
+ * on the icon — unread messages, questions waiting.
+ */
+data class NavItemSpec<T>(val key: T, val label: String, val art: DrawableResource, val badge: Boolean = false)
 
 /**
  * The client app's tab bar: a floating pill of icons, the selected one on a lavender
@@ -126,7 +124,8 @@ fun <T> SadoraBottomNav(
 
 /**
  * One icon on the bar. Laid out at a fixed height whether or not it is selected — only
- * colour, scale and lift change — so selecting a tab never nudges its neighbours.
+ * colour and the icon's hop (drawn, not laid out) change — so selecting a tab never
+ * nudges its neighbours.
  */
 @Composable
 private fun <T> NavItem(
@@ -136,11 +135,7 @@ private fun <T> NavItem(
     modifier: Modifier = Modifier,
 ) {
     val c = Sadora.colors
-    val tint by animateColorAsState(if (selected) c.primary else c.muted2, label = "tab-tint")
     val labelColor by animateColorAsState(if (selected) c.textAccent else c.muted2, label = "tab-label")
-    val scale by animateFloatAsState(if (selected) 1.1f else 1f, animationSpec = BarSpring, label = "tab-scale")
-    val lift by animateFloatAsState(if (selected) -1f else 0f, animationSpec = BarSpring, label = "tab-lift")
-    val liftPx = with(LocalDensity.current) { lift.dp.toPx() }
 
     Box(
         // One element per tab: "Xabarlar, tab, selected", not an icon and a word.
@@ -151,25 +146,19 @@ private fun <T> NavItem(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(3.dp),
         ) {
+            // The colour icon carries the selection itself: full colour and a hop on
+            // the open tab, most of the colour drained from the other four.
             Box {
-                Icon(
-                    item.icon,
-                    contentDescription = null,
-                    Modifier
-                        .size(IconSize.lg)
-                        .graphicsLayer {
-                            scaleX = scale
-                            scaleY = scale
-                            translationY = liftPx
-                        },
-                    tint = tint,
-                )
+                SelectableArt(item.art, 28.dp, selected, dimWhenIdle = true)
                 if (item.badge) {
                     Box(
                         Modifier
                             .align(Alignment.TopEnd)
-                            .offset(x = 2.dp, y = (-1).dp)
+                            .offset(x = 1.dp, y = 1.dp)
                             .size(BadgeSize)
+                            .clip(Radius.chip)
+                            .background(c.surface)
+                            .padding(1.5.dp)
                             .clip(Radius.chip)
                             .background(c.danger),
                     )

@@ -38,6 +38,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.decodeToImageBitmap
+import uz.sadora.contract.BadgeState
 import uz.sadora.contract.DoctorAccount
 import uz.sadora.doctor.data.AuthController
 import uz.sadora.doctor.data.DoctorController
@@ -62,6 +63,14 @@ import uz.sadora.doctor.nav.Tab
 import uz.sadora.doctor.ui.SettingsSheet
 import uz.sadora.doctor.ui.SplashScreen
 import uz.sadora.doctor.ui.auth.SignInScreen
+import uz.sadora.doctor.resources.Res
+import uz.sadora.doctor.resources.ic3d_chats
+import uz.sadora.doctor.resources.ic3d_home
+import uz.sadora.doctor.resources.ic3d_message
+import uz.sadora.doctor.resources.ic3d_profile
+import uz.sadora.doctor.resources.ic3d_qr
+import uz.sadora.doctor.ui.components.BadgeDetailSheet
+import uz.sadora.doctor.ui.components.BadgeUnlockOverlay
 import uz.sadora.doctor.ui.components.CircleIconButton
 import uz.sadora.doctor.ui.components.LocalReduceMotion
 import uz.sadora.doctor.ui.components.LocalRemoteImages
@@ -74,6 +83,7 @@ import uz.sadora.doctor.ui.components.SadoraTopBar
 import uz.sadora.doctor.ui.components.ScreenContent
 import uz.sadora.doctor.ui.components.SystemBackHandler
 import uz.sadora.doctor.ui.components.systemReducesMotion
+import uz.sadora.doctor.ui.doctor.BadgesScreen
 import uz.sadora.doctor.ui.doctor.CommunityScreen
 import uz.sadora.doctor.ui.doctor.ConversationScreen
 import uz.sadora.doctor.ui.doctor.DoctorApplyScreen
@@ -263,6 +273,13 @@ private fun MainContent(
         if (pushed != null && tabbed) PushLinks.take()?.let(navigator::openConversation)
     }
 
+    // Her badge board, read as she moves between tabs (throttled in the controller): a
+    // tier crossed by an answer or a consultation plays as she lands on the next tab.
+    var openBadge by remember { mutableStateOf<BadgeState?>(null) }
+    LaunchedEffect(tabbed, navigator.tab, navigator.depth) {
+        if (tabbed && !navigator.canGoBack) work.loadBadges()
+    }
+
     SystemBackHandler(enabled = navigator.canGoBack || (tabbed && navigator.tab != Tab.Home)) {
         if (navigator.canGoBack) navigator.pop() else navigator.select(Tab.Home)
     }
@@ -380,6 +397,11 @@ private fun MainContent(
                             )
                             Route.Earnings -> EarningsScreen(work = work, onClose = navigator::pop)
                             Route.QuickReplies -> QuickRepliesScreen(work = work, onClose = navigator::pop)
+                            Route.Badges -> BadgesScreen(
+                                work = work,
+                                onClose = navigator::pop,
+                                onOpenBadge = { openBadge = it },
+                            )
                             is Route.Patient -> PatientScreen(
                                 conversationId = route.conversationId,
                                 work = work,
@@ -399,11 +421,11 @@ private fun MainContent(
             if (tabbed && !navigator.canGoBack) {
                 SadoraBottomNav(
                     items = listOf(
-                        NavItemSpec(Tab.Home, words.tabs.home, SadoraIcons.Home, badge = doctors.questionsLoaded && doctors.questions.isNotEmpty()),
-                        NavItemSpec(Tab.Messages, words.tabs.messages, SadoraIcons.Message, badge = doctors.unreadMessages > 0),
-                        NavItemSpec(Tab.Scan, words.tabs.scan, SadoraIcons.Scan),
-                        NavItemSpec(Tab.Community, words.tabs.community, SadoraIcons.Chats),
-                        NavItemSpec(Tab.Profile, words.tabs.profile, SadoraIcons.Profile),
+                        NavItemSpec(Tab.Home, words.tabs.home, Res.drawable.ic3d_home, badge = doctors.questionsLoaded && doctors.questions.isNotEmpty()),
+                        NavItemSpec(Tab.Messages, words.tabs.messages, Res.drawable.ic3d_message, badge = doctors.unreadMessages > 0),
+                        NavItemSpec(Tab.Scan, words.tabs.scan, Res.drawable.ic3d_qr),
+                        NavItemSpec(Tab.Community, words.tabs.community, Res.drawable.ic3d_chats),
+                        NavItemSpec(Tab.Profile, words.tabs.profile, Res.drawable.ic3d_profile),
                     ),
                     selected = navigator.tab,
                     onSelect = navigator::select,
@@ -419,6 +441,17 @@ private fun MainContent(
             doctors = doctors,
             onSaved = { onToast(words.photo.saved) },
             onDismiss = { photoNudge = false },
+        )
+
+        BadgeDetailSheet(openBadge, onDismiss = { openBadge = null })
+
+        // A tier just reached — never over the photo sheet, which asks something of her.
+        val scope = rememberCoroutineScope()
+        BadgeUnlockOverlay(
+            unlock = if (tabbed && !photoNudge) work.unlocks.firstOrNull() else null,
+            remaining = (work.unlocks.size - 1).coerceAtLeast(0),
+            onNext = { shown -> scope.launch { work.unlockShown(shown) } },
+            onSkipAll = { scope.launch { work.unlocksSkipped() } },
         )
     }
 }
@@ -458,6 +491,7 @@ private fun TabRoot(
             onOpenSettings = onOpenSettings,
             onOpenWork = { navigator.push(Route.WorkSettings) },
             onOpenEarnings = { navigator.push(Route.Earnings) },
+            onOpenBadges = { navigator.push(Route.Badges) },
             onToast = onToast,
         )
         Tab.Messages -> MessagesScreen(
@@ -488,6 +522,8 @@ private fun TabRoot(
                     onSaved = { onToast(savedText) },
                     onOpenWork = { navigator.push(Route.WorkSettings) },
                     onOpenReplies = { navigator.push(Route.QuickReplies) },
+                    onOpenBadges = { navigator.push(Route.Badges) },
+                    badges = work.badges,
                     onToast = onToast,
                 )
             } else {

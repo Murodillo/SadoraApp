@@ -3,6 +3,8 @@ import type { QueryClient } from '@tanstack/react-query'
 import { ApiFailure, query, request } from './client'
 import type {
   Ack,
+  BadgeBoard,
+  MarkBadgesSeenRequest,
   CloseConsultationRequest,
   CommunityComment,
   CommunityPost,
@@ -46,6 +48,7 @@ export const keys = {
     ['community', 'record', conversationId, messageId, open] as const,
   settings: ['doctor', 'settings'] as const,
   stats: ['doctor', 'stats'] as const,
+  badges: ['doctor', 'badges'] as const,
   earnings: ['doctor', 'earnings'] as const,
   quickReplies: ['doctor', 'quick-replies'] as const,
   note: (conversationId: string) => ['doctor', 'patients', conversationId, 'note'] as const,
@@ -360,6 +363,32 @@ export const useDoctorStats = () =>
     queryFn: () => request<DoctorStats>('/v1/doctor/stats'),
     refetchInterval: 60_000,
   })
+
+/**
+ * Her badge board. Reading it awards any tier newly crossed, so it is read again as she
+ * moves between pages (at most every 15 s) and every few minutes while the panel is open.
+ */
+export const useBadges = () =>
+  useQuery({
+    queryKey: keys.badges,
+    queryFn: () => request<BadgeBoard>('/v1/doctor/badges'),
+    staleTime: 15_000,
+    refetchInterval: 5 * 60_000,
+  })
+
+/** These unlocks have been played; the board's `unseen` drops them at once. */
+export function useMarkBadgesSeen() {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (body: MarkBadgesSeenRequest) =>
+      request<Ack>('/v1/doctor/badges/seen', { method: 'POST', body }),
+    onMutate: ({ keys: seen }) => {
+      client.setQueryData<BadgeBoard>(keys.badges, (board) =>
+        board ? { ...board, unseen: seen.length === 0 ? [] : board.unseen.filter((unlock) => !seen.includes(unlock.key)) } : board,
+      )
+    },
+  })
+}
 
 /** The totals over everything, and the first page of her consultations and of her payouts. */
 export const useDoctorEarnings = () =>

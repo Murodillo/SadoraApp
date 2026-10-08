@@ -88,15 +88,17 @@ export function QuestionsPage() {
       <div className="grid stat-row">
         <Stat
           label="Javob kutmoqda"
+          art="ic3d_bell"
           value={waitingAll === undefined ? '—' : everything.hasNextPage ? `${waitingAll}+` : waitingAll}
           hint="barcha bo'limlarda"
         />
         <Stat
           label="Javoblaringiz"
+          art="ic3d_chats"
           value={profile.data?.answerCount ?? '—'}
           hint={answered.size ? `shu safar +${answered.size}` : 'chatda jami'}
         />
-        <Stat label="Postlaringiz" value={profile.data?.postCount ?? '—'} hint="ochiq sahifangizda" />
+        <Stat art="ic3d_notebook" label="Postlaringiz" value={profile.data?.postCount ?? '—'} hint="ochiq sahifangizda" />
       </div>
 
       <div className="row" style={{ justifyContent: 'space-between' }}>
@@ -113,7 +115,7 @@ export function QuestionsPage() {
           ) : questions.isError ? (
             <ErrorNotice error={questions.error} onRetry={() => void questions.refetch()} />
           ) : !shown.length ? (
-            <Empty>
+            <Empty art="ic3d_star">
               Hozircha javob kutayotgan savol yo'q.
               <div className="faint">Yangi savollar o'zi paydo bo'ladi.</div>
             </Empty>
@@ -174,7 +176,7 @@ export function QuestionsPage() {
           </SwapPanel>
         ) : (
           <Card>
-            <Empty>Javob berish uchun chapdagi ro'yxatdan savolni tanlang.</Empty>
+            <Empty art="ic3d_chats">Javob berish uchun chapdagi ro'yxatdan savolni tanlang.</Empty>
           </Card>
         )}
       </div>

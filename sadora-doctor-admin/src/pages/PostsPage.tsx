@@ -43,10 +43,10 @@ export function PostsPage() {
         <ErrorNotice error={profile.error} onRetry={() => void profile.refetch()} />
       ) : (
         <div className="grid stat-row">
-          <Stat label="Postlar" value={profile.data.postCount} />
-          <Stat label="Javoblar" value={profile.data.answerCount} />
-          <Stat label="Tajriba" value={`${profile.data.experienceYears} yil`} />
-          <Stat label="Tasdiqlangan" value={formatDate(profile.data.verifiedSince)} />
+          <Stat art="ic3d_notebook" label="Postlar" value={profile.data.postCount} />
+          <Stat art="ic3d_chats" label="Javoblar" value={profile.data.answerCount} />
+          <Stat art="badge_doctor" label="Tajriba" value={`${profile.data.experienceYears} yil`} />
+          <Stat art="art_shield" label="Tasdiqlangan" value={formatDate(profile.data.verifiedSince)} />
         </div>
       )}
 
@@ -56,9 +56,9 @@ export function PostsPage() {
           {profile.isPending ? (
             <Loading rows={3} height={64} />
           ) : profile.isError ? (
-            <Empty>Postlar yuklanmadi.</Empty>
+            <Empty art="ic3d_notebook">Postlar yuklanmadi.</Empty>
           ) : !profile.data.posts.length ? (
-            <Empty>Hali post yozmagansiz. Chapdagi shakl orqali birinchisini yozing.</Empty>
+            <Empty art="ic3d_notebook">Hali post yozmagansiz. Chapdagi shakl orqali birinchisini yozing.</Empty>
           ) : (
             <MyPosts profileId={doctor.profileId} first={profile.data.posts} total={profile.data.postCount} />
           )}

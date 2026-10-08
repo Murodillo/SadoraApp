@@ -1,5 +1,8 @@
 package uz.sadora.doctor.ui.doctor
 
+import uz.sadora.doctor.resources.Res
+import uz.sadora.doctor.resources.ic3d_camera
+import uz.sadora.doctor.ui.components.ArtTile
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -28,7 +31,6 @@ import uz.sadora.doctor.design.Spacing
 import uz.sadora.doctor.i18n.strings
 import uz.sadora.doctor.ui.components.ButtonTone
 import uz.sadora.doctor.ui.components.ErrorStrip
-import uz.sadora.doctor.ui.components.IconTile
 import uz.sadora.doctor.ui.components.PhotoCapture
 import uz.sadora.doctor.ui.components.PillButton
 import uz.sadora.doctor.ui.components.SadoraBottomSheet
@@ -124,7 +126,7 @@ internal fun AskForPhotoCard(
             if (name != null) {
                 DoctorAvatar(name, size = 52.dp, verified = account.status == DoctorStatus.APPROVED)
             } else {
-                IconTile(SadoraIcons.Camera, tint = c.primary, size = 52.dp)
+                ArtTile(Res.drawable.ic3d_camera, tint = c.primary, size = 52.dp)
             }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Spacing.xxs)) {
                 Text(p.askTitle, style = Sadora.type.h3, color = c.text)

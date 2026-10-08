@@ -659,3 +659,35 @@ export interface DoctorEarnings {
   linesTotal?: number
   payoutsTotal?: number
 }
+
+// ---------------------------------------------------------------- badges (Rewards.kt)
+
+/** One badge on her board; `tier` is 0 while locked, `progress` the raw count behind it. */
+export interface BadgeState {
+  key: string
+  tier: number
+  thresholds: number[]
+  progress: number
+  earnedAt?: string | null
+}
+
+/** A tier she reached and has not been shown yet — what the unlock plays. */
+export interface BadgeUnlock {
+  key: string
+  tier: number
+  maxTier: number
+  coins: number
+  earnedAt: string
+}
+
+/** The whole board. Reading it is what awards a tier newly crossed. */
+export interface BadgeBoard {
+  badges: BadgeState[]
+  unseen: BadgeUnlock[]
+  worn?: string | null
+  canWear: boolean
+}
+
+export interface MarkBadgesSeenRequest {
+  keys: string[]
+}

@@ -1,5 +1,7 @@
 package uz.sadora.doctor.ui.doctor
 
+import uz.sadora.doctor.resources.Res
+import uz.sadora.doctor.resources.ic3d_bulb
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -94,7 +96,7 @@ fun QuickRepliesScreen(
                 }
                 if (work.quickRepliesLoaded && replies.isEmpty()) {
                     item(key = "empty") {
-                        EmptyState(title = w.quickRepliesEmpty, body = w.quickRepliesEmptyBody, actionText = w.addReply, onAction = startNew)
+                        EmptyState(title = w.quickRepliesEmpty, body = w.quickRepliesEmptyBody, actionText = w.addReply, onAction = startNew, art = Res.drawable.ic3d_bulb)
                     }
                 }
                 items(replies.size, key = { replies[it].id }) { index ->

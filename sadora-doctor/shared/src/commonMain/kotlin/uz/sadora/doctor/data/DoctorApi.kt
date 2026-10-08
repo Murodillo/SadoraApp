@@ -1,6 +1,8 @@
 package uz.sadora.doctor.data
 
 import io.ktor.client.request.setBody
+import uz.sadora.contract.BadgeBoard
+import uz.sadora.contract.MarkBadgesSeenRequest
 import uz.sadora.contract.Ack
 import uz.sadora.contract.CommunityPost
 import uz.sadora.contract.DoctorAccount
@@ -83,6 +85,16 @@ class DoctorApi(private val caller: ApiCaller) {
 
     suspend fun payouts(offset: Int): ApiResult<Page<DoctorPayoutView>> =
         caller.authenticated("v1/doctor/earnings/payouts?limit=${DoctorEarnings.PAGE}&offset=$offset", HttpMethodKind.GET)
+
+    // ---- her badges
+
+    /** Her board; reading it is what awards a tier newly crossed. */
+    suspend fun badges(): ApiResult<BadgeBoard> =
+        caller.authenticated("v1/doctor/badges", HttpMethodKind.GET)
+
+    /** These unlocks have been played; an empty list is every one still unseen. */
+    suspend fun badgesSeen(keys: List<String>): ApiResult<Ack> =
+        caller.authenticated("v1/doctor/badges/seen", HttpMethodKind.POST) { setBody(MarkBadgesSeenRequest(keys)) }
 
     // ---- her quick replies
 

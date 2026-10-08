@@ -2,6 +2,8 @@ import { cloneElement, isValidElement, useEffect, useId, useRef, useState } from
 import type { CSSProperties, ReactElement, ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { usePhoto } from '../api/photos'
+import { Art, ArtTile } from './art'
+import type { ArtName } from './art'
 import { useCountUp } from './motion'
 
 export { useCountUp } from './motion'
@@ -25,9 +27,10 @@ function CountedValue({ value }: { value: number }) {
   return <>{shown.toLocaleString('ru-RU')}</>
 }
 
-export function Stat({ label, value, hint }: { label: string; value: ReactNode; hint?: ReactNode }) {
+export function Stat({ label, value, hint, art }: { label: string; value: ReactNode; hint?: ReactNode; art?: ArtName }) {
   return (
-    <div className="card stat">
+    <div className={`card stat${art ? ' with-art' : ''}`}>
+      {art && <ArtTile name={art} size={44} />}
       <div className="label">{label}</div>
       <div className={`value${typeof value === 'number' ? '' : ' text'}`}>
         {typeof value === 'number' ? <CountedValue value={value} /> : value}
@@ -132,8 +135,14 @@ export function Loading({ rows = 4, height = 32 }: { rows?: number; height?: num
   )
 }
 
-export function Empty({ children }: { children: ReactNode }) {
-  return <div className="empty">{children}</div>
+/** Nothing here yet: a clay icon over the words, the app's empty state. */
+export function Empty({ children, art = 'ic3d_empty' }: { children: ReactNode; art?: ArtName | null }) {
+  return (
+    <div className="empty">
+      {art && <Art name={art} size={56} className="empty-art" />}
+      <div>{children}</div>
+    </div>
+  )
 }
 
 /** A short spinner for a button that is waiting on the server. */

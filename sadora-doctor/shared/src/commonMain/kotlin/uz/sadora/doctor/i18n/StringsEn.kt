@@ -110,4 +110,5 @@ object StringsEn : Strings {
     override val tabs: TabStrings = TabStringsEn
     override val work: WorkStrings = WorkStringsEn
     override val photo: PhotoStrings = PhotoStringsEn
+    override val badges: BadgeStrings = BadgeStringsEn
 }

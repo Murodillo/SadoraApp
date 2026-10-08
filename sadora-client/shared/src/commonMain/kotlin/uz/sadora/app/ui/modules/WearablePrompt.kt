@@ -28,7 +28,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.style.TextAlign
@@ -49,6 +48,7 @@ import uz.sadora.app.resources.ic3d_watch
 import uz.sadora.app.ui.components.ButtonTone
 import uz.sadora.app.ui.components.SadoraBottomSheet
 import uz.sadora.app.ui.components.SadoraButton
+import uz.sadora.app.ui.components.claySurface
 
 /** Days after sign-up before the question is first asked: long enough to have used the app. */
 const val WearableAskAfterDays = 3
@@ -156,7 +156,7 @@ private fun WatchToPhoneArt(modifier: Modifier) {
     )
 
     Box(
-        modifier.clip(Radius.card).background(c.surface2),
+        modifier.claySurface(c, Radius.card, c.surface2, elevation = 4.dp),
         contentAlignment = Alignment.Center,
     ) {
         Row(
@@ -202,9 +202,7 @@ private fun PhoneSketch(fill: Float) {
     Column(
         Modifier
             .size(width = 76.dp, height = 132.dp)
-            .shadow(8.dp, RoundedCornerShape(18.dp), ambientColor = c.shadow, spotColor = c.shadow)
-            .clip(RoundedCornerShape(18.dp))
-            .background(c.surface)
+            .claySurface(c, RoundedCornerShape(18.dp), c.surface, elevation = 8.dp)
             .padding(horizontal = 10.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,

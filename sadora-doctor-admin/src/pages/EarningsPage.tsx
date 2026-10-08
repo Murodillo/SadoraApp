@@ -81,16 +81,17 @@ export function EarningsPage() {
   return (
     <div className="grid" style={{ gap: 16 }}>
       <div className="grid stat-row">
-        <Stat label="Jami tushum" value={formatSom(data.grossMinor)} hint="to'langan konsultatsiyalar" />
-        <Stat label="Sadora ulushi" value={formatSom(data.commissionMinor)} hint="komissiya" />
-        <Stat label="Sizning daromadingiz" value={formatSom(data.netMinor)} hint="komissiyadan keyin" />
+        <Stat art="ic3d_gem" label="Jami tushum" value={formatSom(data.grossMinor)} hint="to'langan konsultatsiyalar" />
+        <Stat art="ic3d_heart" label="Sadora ulushi" value={formatSom(data.commissionMinor)} hint="komissiya" />
+        <Stat art="ic3d_trophy" label="Sizning daromadingiz" value={formatSom(data.netMinor)} hint="komissiyadan keyin" />
         <Stat
           label="To'lab berilgan"
+          art="ic3d_calendar"
           value={formatSom(data.paidOutMinor)}
           hint={`${data.payoutsTotal ?? data.payouts.length} ta to'lov`}
         />
-        <Stat label="Qoldiq" value={formatSom(data.balanceMinor)} hint="sizga to'lanadi" />
-        <Stat label="Qaytariladi" value={formatSom(data.refundDueMinor)} hint="javobsiz qolganlar" />
+        <Stat art="ic3d_gem" label="Qoldiq" value={formatSom(data.balanceMinor)} hint="sizga to'lanadi" />
+        <Stat art="ic3d_clock" label="Qaytariladi" value={formatSom(data.refundDueMinor)} hint="javobsiz qolganlar" />
       </div>
 
       <Card title="Konsultatsiyalar">
@@ -129,7 +130,7 @@ export function EarningsPage() {
             </table>
           </div>
         ) : (
-          <Empty>
+          <Empty art="ic3d_gem">
             Hali pullik konsultatsiya bo'lmagan.
             <div className="faint">Narxni "Ish vaqti va narx" sahifasida belgilaysiz.</div>
           </Empty>
@@ -163,7 +164,7 @@ export function EarningsPage() {
             </table>
           </div>
         ) : (
-          <Empty>Sadora hali sizga to'lov o'tkazmagan.</Empty>
+          <Empty art="ic3d_gem">Sadora hali sizga to'lov o'tkazmagan.</Empty>
         )}
         {payouts.error && <ErrorNotice error={payouts.error} onRetry={payouts.loadMore} />}
         {payouts.hasMore && <MoreButton loading={payouts.loading} onClick={payouts.loadMore} />}

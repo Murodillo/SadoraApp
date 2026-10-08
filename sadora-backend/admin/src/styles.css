@@ -2082,3 +2082,291 @@ tbody tr.selected:hover {
   color: var(--warn);
   font-weight: 600;
 }
+
+/* ================================================================ clay icons
+   The apps' colour clay icons (public/art) and their finish, brought to the panel: the
+   rail, the stat cards and the empty states wear the icons; bars and chart columns get
+   the icons' soft gloss and sit in a groove. */
+
+.art {
+  display: block;
+  flex: none;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.art-tile {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--tile, var(--primary)) 14%, transparent);
+}
+
+:root:not([data-theme='light']) .art-tile {
+  background: color-mix(in srgb, var(--tile, var(--primary)) 22%, transparent);
+}
+
+/* The rail: an idle icon keeps a little of its colour, the open page's is full and hops. */
+.nav-item .glyph {
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+}
+
+.nav-item .glyph .art {
+  filter: saturate(0.45);
+  opacity: 0.85;
+  transition:
+    filter var(--standard) var(--gentle),
+    opacity var(--standard) var(--gentle);
+}
+
+.nav-item:hover .glyph .art,
+.nav-item.active .glyph .art {
+  filter: none;
+  opacity: 1;
+}
+
+.nav-item.active .glyph .art {
+  animation: art-hop 520ms var(--emphasized) both;
+}
+
+@keyframes art-hop {
+  0% { transform: translateY(0) scale(1) rotate(0); }
+  25% { transform: translateY(-5px) scale(1.25) rotate(-12deg); }
+  45% { transform: translateY(0) scale(1.05) rotate(9deg); }
+  65% { transform: rotate(-5deg); }
+  85% { transform: rotate(2deg); }
+  100% { transform: none; }
+}
+
+.stat.with-art {
+  position: relative;
+  padding-right: 64px;
+}
+
+.stat.with-art > .art-tile {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  transition: transform var(--standard) var(--emphasized);
+}
+
+.card.stat.with-art:hover > .art-tile {
+  transform: translateY(-2px) rotate(-6deg) scale(1.06);
+}
+
+.empty .empty-art {
+  margin: 0 auto 10px;
+  animation: empty-float 4s ease-in-out infinite;
+}
+
+@keyframes empty-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+/* Clay bars: a groove for the track, a lit top and a streak of light along the fill. */
+.funnel-track,
+.ranked-track,
+.clay-track {
+  position: relative;
+  background: var(--surface-2);
+  box-shadow: inset 0 2px 3px color-mix(in srgb, #000 10%, transparent);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.clay-track {
+  height: 10px;
+  margin-top: 8px;
+}
+
+.funnel-bar,
+.ranked-bar {
+  position: relative;
+  background-image: linear-gradient(to bottom, rgb(255 255 255 / 0.34), transparent 50%, rgb(0 0 0 / 0.12));
+}
+
+.clay-fill {
+  position: relative;
+  background:
+    linear-gradient(to bottom, rgb(255 255 255 / 0.34), transparent 50%, rgb(0 0 0 / 0.12)),
+    var(--brand);
+}
+
+.clay-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  transition: width var(--slow) var(--emphasized);
+  animation: bar-grow var(--slow) var(--emphasized) both;
+  transform-origin: left center;
+}
+
+.funnel-bar::after,
+.ranked-bar::after,
+.clay-fill::after {
+  content: '';
+  position: absolute;
+  left: 6px;
+  right: 6px;
+  top: 17%;
+  height: 20%;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.45);
+}
+
+/* A chart column's gloss lies over it and takes no pointer; the ring gets a soft shadow. */
+.chart-gloss {
+  pointer-events: none;
+}
+
+.ring-arc {
+  filter: drop-shadow(0 2px 2px rgb(0 0 0 / 0.12));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nav-item .glyph .art,
+  .empty .empty-art {
+    animation: none !important;
+  }
+}
+
+/* ================================================================ clay surfaces
+   Buttons, cards and the ground in the icons' finish, as the apps draw them: a face lit
+   along the top with a bright rim where the light catches it, a breath of shade at the
+   bottom, a soft lift under it, and a ground lit like a studio — pools of the brand
+   colours instead of a flat sheet. Dark keeps the rim and the pools, quieter, and no lift. */
+
+:root {
+  --clay-hi: rgb(255 255 255 / 0.06);
+  --clay-lo: rgb(0 0 0 / 0.22);
+  --clay-rim: rgb(255 255 255 / 0.09);
+  --clay-lift: 0 0 0 transparent;
+  --clay-pool: 6%;
+}
+
+:root[data-theme='light'] {
+  --clay-hi: rgb(255 255 255 / 0.65);
+  --clay-lo: rgb(40 20 90 / 0.05);
+  --clay-rim: rgb(255 255 255 / 0.95);
+  --clay-lift: 0 8px 22px color-mix(in srgb, var(--primary) 10%, transparent), 0 1px 2px rgb(40 20 90 / 0.05);
+  --clay-pool: 10%;
+}
+
+body {
+  background:
+    radial-gradient(70vmax 70vmax at 0% 0%, color-mix(in srgb, var(--primary) var(--clay-pool), transparent), transparent 70%),
+    radial-gradient(60vmax 60vmax at 100% 45%, color-mix(in srgb, var(--secondary) calc(var(--clay-pool) * 0.8), transparent), transparent 70%),
+    radial-gradient(70vmax 70vmax at 10% 100%, color-mix(in srgb, #63d8ff calc(var(--clay-pool) * 0.7), transparent), transparent 70%),
+    var(--bg);
+  background-attachment: fixed;
+}
+
+/* The rail and the header let the ground through, frosted. */
+.nav,
+.header {
+  background: color-mix(in srgb, var(--surface) 72%, transparent);
+  backdrop-filter: blur(16px) saturate(1.2);
+  -webkit-backdrop-filter: blur(16px) saturate(1.2);
+}
+
+.card {
+  background:
+    linear-gradient(to bottom, var(--clay-hi), transparent 30px),
+    linear-gradient(to top, var(--clay-lo), transparent 22px),
+    var(--surface);
+  border-color: color-mix(in srgb, var(--border) 70%, transparent);
+  box-shadow:
+    inset 0 1px 0 var(--clay-rim),
+    var(--clay-lift);
+  border-radius: calc(var(--radius) + 4px);
+}
+
+.card.stat:hover {
+  box-shadow:
+    inset 0 1px 0 var(--clay-rim),
+    0 12px 28px color-mix(in srgb, var(--primary) 16%, transparent);
+}
+
+:is(button, a).btn {
+  position: relative;
+  border-radius: 12px;
+  border-color: color-mix(in srgb, var(--border) 60%, transparent);
+  background:
+    linear-gradient(to bottom, var(--clay-hi), transparent 55%, var(--clay-lo)),
+    var(--surface-2);
+  box-shadow:
+    inset 0 1px 0 var(--clay-rim),
+    inset 0 -2px 0 rgb(0 0 0 / 0.05),
+    0 3px 8px color-mix(in srgb, var(--primary) 10%, transparent);
+}
+
+/* Pressed, a clay button sinks into the page rather than only shrinking. */
+:is(button, a).btn:active:not(:disabled) {
+  transform: translateY(1px) scale(0.98);
+  box-shadow: inset 0 2px 4px rgb(0 0 0 / 0.1);
+}
+
+:is(button, a).btn.primary {
+  border-color: transparent;
+  color: #fff;
+  background:
+    linear-gradient(to bottom, rgb(255 255 255 / 0.3), transparent 50%, rgb(0 0 0 / 0.1)),
+    var(--brand);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.55),
+    inset 0 -2px 0 rgb(0 0 0 / 0.1),
+    0 8px 18px color-mix(in srgb, var(--primary) 32%, transparent);
+}
+
+/* The streak of light the icons carry, along the top of the gradient buttons. */
+:is(button, a).btn.primary::after {
+  content: '';
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  top: 3px;
+  height: 22%;
+  min-height: 3px;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.32);
+  pointer-events: none;
+}
+
+:is(button, a).btn.primary:active:not(:disabled) {
+  box-shadow:
+    inset 0 2px 4px rgb(0 0 0 / 0.18),
+    0 3px 8px color-mix(in srgb, var(--primary) 26%, transparent);
+}
+
+:is(button, a).btn.danger {
+  background:
+    linear-gradient(to bottom, var(--clay-hi), transparent 55%, var(--clay-lo)),
+    color-mix(in srgb, var(--danger) 8%, var(--surface));
+}
+
+:is(button, a).btn.ghost {
+  background: none;
+  border-color: transparent;
+  box-shadow: none;
+}
+
+:is(button, a).btn.ghost:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--surface-2) 70%, transparent);
+}
+
+input,
+select,
+textarea {
+  box-shadow: inset 0 2px 3px rgb(0 0 0 / 0.05);
+}
+
+.modal {
+  box-shadow:
+    inset 0 1px 0 var(--clay-rim),
+    0 24px 60px rgb(20 10 60 / 0.25);
+}

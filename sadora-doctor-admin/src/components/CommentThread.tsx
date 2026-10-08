@@ -21,7 +21,7 @@ export function CommentThread({ postId, emptyText }: { postId: string; emptyText
 
   if (comments.isPending) return <Loading rows={2} height={48} />
   if (comments.isError) return <ErrorNotice error={comments.error} onRetry={() => void comments.refetch()} />
-  if (!comments.data.length) return <Empty>{emptyText ?? "Hali izoh yo'q."}</Empty>
+  if (!comments.data.length) return <Empty art="ic3d_chats">{emptyText ?? "Hali izoh yo'q."}</Empty>
 
   return (
     <ol className="thread" aria-label="Izohlar">

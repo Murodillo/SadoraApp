@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
-import { uniqueRows, useConversations, useQuestions } from '../api/hooks'
+import { uniqueRows, useBadges, useConversations, useMarkBadgesSeen, useQuestions } from '../api/hooks'
 import { useAuth } from '../auth/AuthContext'
 import { useApprovedDoctor } from '../auth/doctor'
+import { Art } from '../components/art'
+import type { ArtName } from '../components/art'
+import { BadgeUnlockOverlay } from '../components/badges'
 import { SadoraTile } from '../components/Logo'
 import { specialtyLabel } from '../components/labels'
 import { ThemeToggle } from '../components/theme'
@@ -11,7 +14,8 @@ import { Avatar, VerifiedMark } from '../components/ui'
 interface NavEntry {
   to: string
   label: string
-  glyph: string
+  /** The clay icon the app uses for the same place. */
+  art: ArtName
 }
 
 interface NavGroup {
@@ -25,24 +29,25 @@ const groups: NavGroup[] = [
   {
     title: 'Chat',
     entries: [
-      { to: '/', label: 'Savollar', glyph: '◉' },
-      { to: '/messages', label: 'Xabarlar', glyph: '✉' },
-      { to: '/posts', label: 'Postlarim', glyph: '❑' },
+      { to: '/', label: 'Savollar', art: 'ic3d_chats' },
+      { to: '/messages', label: 'Xabarlar', art: 'ic3d_message' },
+      { to: '/posts', label: 'Postlarim', art: 'ic3d_notebook' },
     ],
   },
   {
     title: 'Ish',
     entries: [
-      { to: '/quick-replies', label: 'Tayyor javoblar', glyph: '⚡' },
-      { to: '/stats', label: 'Statistika', glyph: '▤' },
-      { to: '/earnings', label: 'Daromad', glyph: '◈' },
+      { to: '/quick-replies', label: 'Tayyor javoblar', art: 'ic3d_bulb' },
+      { to: '/stats', label: 'Statistika', art: 'ic3d_insights' },
+      { to: '/earnings', label: 'Daromad', art: 'ic3d_gem' },
+      { to: '/badges', label: 'Nishonlar', art: 'badge_laurel' },
     ],
   },
   {
     title: 'Hisob',
     entries: [
-      { to: '/settings', label: 'Ish vaqti va narx', glyph: '◷' },
-      { to: '/profile', label: 'Profil', glyph: '◎' },
+      { to: '/settings', label: 'Ish vaqti va narx', art: 'ic3d_calendar' },
+      { to: '/profile', label: 'Profil', art: 'ic3d_profile' },
     ],
   },
 ]
@@ -56,6 +61,7 @@ const titles: Record<string, string> = {
   '/quick-replies': 'Tayyor javoblar',
   '/stats': 'Statistika',
   '/earnings': 'Daromad',
+  '/badges': 'Nishonlar',
 }
 
 export function Shell() {
@@ -68,6 +74,20 @@ export function Shell() {
   const questions = useQuestions()
   // Polled here as well as on the page, so an unread line shows wherever she is.
   const conversations = useConversations()
+  // Her badges: read on every page change (the query keeps it to one read per 15 s), so a
+  // tier her last answer crossed plays wherever she goes next.
+  const badges = useBadges()
+  const markSeen = useMarkBadgesSeen()
+  const { refetch: refetchBadges, dataUpdatedAt: badgesReadAt } = badges
+  useEffect(() => {
+    if (Date.now() - badgesReadAt > BADGE_READ_GAP_MS) void refetchBadges()
+    // Only a page change asks; the read time is checked, not watched.
+  }, [location.pathname])
+  const unseen = badges.data?.unseen ?? []
+  const unlock = unseen[0]
+  const unlockTarget = unlock
+    ? badges.data?.badges.find((badge) => badge.key === unlock.key)?.thresholds[unlock.tier - 1] ?? 0
+    : 0
 
   // The rail closes itself after a choice on a narrow screen, and on Escape.
   useEffect(() => setNavOpen(false), [location.pathname])
@@ -109,7 +129,7 @@ export function Shell() {
                   {entry.to === '/profile' && doctor.photoUrl ? (
                     <Avatar name={doctor.fullName ?? ''} doctor url={doctor.photoUrl} size={18} />
                   ) : (
-                    entry.glyph
+                    <Art name={entry.art} size={22} />
                   )}
                 </span>
                 {entry.label}
@@ -169,9 +189,23 @@ export function Shell() {
           </div>
         </main>
       </div>
+
+      {unlock && (
+        <BadgeUnlockOverlay
+          key={`${unlock.key}:${unlock.tier}`}
+          unlock={unlock}
+          target={unlockTarget}
+          remaining={unseen.length - 1}
+          onNext={() => markSeen.mutate({ keys: [unlock.key] })}
+          onSkipAll={() => markSeen.mutate({ keys: [] })}
+        />
+      )}
     </div>
   )
 }
+
+/** The shortest gap between two badge reads a page change asks for. */
+const BADGE_READ_GAP_MS = 15_000
 
 const NUDGE_KEY = 'sadora.doctor.photo-nudge-dismissed'
 

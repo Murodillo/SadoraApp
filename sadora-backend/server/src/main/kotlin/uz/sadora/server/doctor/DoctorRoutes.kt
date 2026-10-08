@@ -14,6 +14,7 @@ import io.ktor.server.routing.post
 import io.ktor.server.routing.put
 import io.ktor.server.routing.route
 import uz.sadora.contract.Ack
+import uz.sadora.contract.MarkBadgesSeenRequest
 import uz.sadora.contract.CommunityTopic
 import uz.sadora.contract.DoctorApplicationRequest
 import uz.sadora.contract.DoctorStatus
@@ -106,6 +107,25 @@ fun Route.doctorRoutes(
                 val id = parseUuid(call.parameters["id"].orEmpty(), "id")
                 val request = runCatching { call.receive<StartConsultationRequest>() }.getOrDefault(StartConsultationRequest())
                 call.respond(HttpStatusCode.Created, messaging.startConsultation(call.requireUserId(), id, request))
+            }
+        }
+    }
+}
+
+/**
+ * Her badge board: reading it awards any tier newly crossed, and `seen` says the unlock
+ * has been played — by the app or the web panel, whichever she opened first.
+ */
+fun Route.doctorBadgeRoutes(badges: DoctorBadgeService) {
+    authenticate(USER_AUTH) {
+        route("/doctor/badges") {
+            get {
+                call.respond(badges.board(call.requireUserId()))
+            }
+            post("/seen") {
+                val request = call.receive<MarkBadgesSeenRequest>()
+                badges.markSeen(call.requireUserId(), request.keys)
+                call.respond(Ack())
             }
         }
     }

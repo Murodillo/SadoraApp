@@ -213,12 +213,12 @@ export function MessagesPage() {
           ) : conversations.isError && !all.length ? (
             <ErrorNotice error={conversations.error} onRetry={() => void conversations.refetch()} />
           ) : !all.length ? (
-            <Empty>
+            <Empty art="ic3d_message">
               Hozircha konsultatsiyalar yo'q.
               <div className="faint">Bemor sizga yozganda suhbat shu yerda paydo bo'ladi.</div>
             </Empty>
           ) : !shown.length ? (
-            <Empty>Bu shartga mos suhbat yo'q.</Empty>
+            <Empty art="ic3d_message">Bu shartga mos suhbat yo'q.</Empty>
           ) : (
             <ul className="conv-list">
               {shown.map((conversation) => (
@@ -250,7 +250,7 @@ export function MessagesPage() {
         />
       ) : (
         <Card className="chat-empty">
-          <Empty>
+          <Empty art="ic3d_message">
             Yozishmani ochish uchun chapdagi ro'yxatdan bemorni tanlang.
             <div className="faint">Bemorlar sizga konsultatsiya ochganda shu yerda yozishasiz.</div>
           </Empty>
@@ -524,7 +524,7 @@ function MessageList({
   if (!messages.length) {
     return (
       <div className="chat-scroll" ref={scroller}>
-        <Empty>Hali xabar yo'q.</Empty>
+        <Empty art="ic3d_message">Hali xabar yo'q.</Empty>
       </div>
     )
   }
