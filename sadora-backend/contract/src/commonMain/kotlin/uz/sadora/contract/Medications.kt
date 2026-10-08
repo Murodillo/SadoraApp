@@ -76,6 +76,13 @@ data class Medication(
     val stockDaysLeft: Int? = null,
     val active: Boolean = true,
     val createdAt: Instant,
+    /**
+     * Added from a doctor's prescription: the name, dose, food relation and length of
+     * the course are hers and locked; the times and reminders stay the patient's.
+     */
+    val prescriptionId: String? = null,
+    /** The doctor who prescribed it, for "Dr. … retsepti". */
+    val prescribedBy: String? = null,
 )
 
 @Serializable

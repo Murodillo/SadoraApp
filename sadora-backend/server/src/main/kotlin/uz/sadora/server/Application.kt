@@ -42,6 +42,7 @@ import uz.sadora.server.auth.authRoutes
 import uz.sadora.server.config.AppConfig
 import uz.sadora.server.health.healthRoutes
 import uz.sadora.server.health.medicationRoutes
+import uz.sadora.server.prescription.prescriptionRoutes
 import uz.sadora.server.health.appointmentRoutes
 import uz.sadora.server.health.stageEventRoutes
 import uz.sadora.server.health.mindRoutes
@@ -158,6 +159,7 @@ fun Application.apiModule(component: AppComponent) {
             wearablePublicRoutes(component.wearableConnectService, component.wearableSyncJob)
             adminWearableRoutes(component.wearableService, component.wearableRepository, component.auditService)
             communityRoutes(component.communityService, component.messagingService)
+            prescriptionRoutes(component.messagingService, component.prescriptionService)
             adminCommunityRoutes(component.communityModerationService)
             doctorRoutes(component.doctorService, component.communityService, component.messagingService, component.consultationService)
             consultationRoutes(component.consultationService)

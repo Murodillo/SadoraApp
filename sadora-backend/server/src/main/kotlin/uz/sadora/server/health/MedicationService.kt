@@ -45,12 +45,23 @@ class MedicationService(
      * exists, and so a coin that cannot be written never costs a log entry.
      */
     private val rewards: RewardHooks = RewardHooks.None,
+    /** The doctor's name behind each prescription id; nobody is named in tests without it. */
+    private val prescribers: suspend (List<Uuid>) -> Map<Uuid, String> = { emptyMap() },
 ) {
 
     suspend fun list(userId: Uuid, includeArchived: Boolean): List<Medication> {
         access.requireUser(userId)
-        return repository.listOf(userId, includeArchived).map { it.toDto() }
+        return dtos(repository.listOf(userId, includeArchived))
     }
+
+    /** Courses as the app reads them, with the prescribing doctor named where there is one. */
+    suspend fun dtos(records: List<MedicationRecord>): List<Medication> {
+        val ids = records.mapNotNull { it.prescriptionId }.distinct()
+        val names = if (ids.isEmpty()) emptyMap() else prescribers(ids)
+        return records.map { it.toDto(names[it.prescriptionId]) }
+    }
+
+    private suspend fun dto(record: MedicationRecord): Medication = dtos(listOf(record)).single()
 
     suspend fun day(userId: Uuid, date: LocalDate?): MedicationDay {
         val user = access.requireUser(userId)
@@ -97,14 +108,49 @@ class MedicationService(
         validate(request)
         val startedOn = request.startedOn ?: now().dayIn(user.timezone)
         val id = repository.add(userId, request, startedOn)
-        return repository.byId(userId, id)?.toDto() ?: throw NotFoundException("Dori topilmadi")
+        return repository.byId(userId, id)?.let { dto(it) } ?: throw NotFoundException("Dori topilmadi")
     }
+
+    /** A course from a doctor's prescription, linked to it; the prescription service checked the rest. */
+    suspend fun addPrescribed(userId: Uuid, request: SaveMedicationRequest, startedOn: LocalDate, prescriptionId: Uuid): Medication {
+        access.requireWritable(userId, FeatureKeys.MEDS_REMINDERS)
+        validate(request.copy(startedOn = startedOn))
+        val id = repository.add(userId, request, startedOn, prescriptionId)
+        return repository.byId(userId, id)?.let { dto(it) } ?: throw NotFoundException("Dori topilmadi")
+    }
+
+    /** A cancelled prescription's courses stop: archived, so they no longer ring. */
+    suspend fun archivePrescribed(prescriptionId: Uuid, today: LocalDate): Int =
+        repository.archiveForPrescription(prescriptionId, today)
 
     suspend fun update(userId: Uuid, id: Uuid, request: SaveMedicationRequest): Medication {
         access.requireWritable(userId, FeatureKeys.MEDS_REMINDERS)
         validate(request)
-        if (!repository.update(userId, id, request)) throw NotFoundException("Dori topilmadi")
-        return repository.byId(userId, id)?.toDto() ?: throw NotFoundException("Dori topilmadi")
+        val stored = repository.byId(userId, id) ?: throw NotFoundException("Dori topilmadi")
+        if (!repository.update(userId, id, lockPrescribed(stored, request))) throw NotFoundException("Dori topilmadi")
+        return repository.byId(userId, id)?.let { dto(it) } ?: throw NotFoundException("Dori topilmadi")
+    }
+
+    /**
+     * A course from a doctor's prescription keeps what the doctor decided — the name,
+     * dose, food relation, note, how often and how long — whatever the edit sends. Her
+     * own are the times (as many as the doctor gave), reminders, the pack and the emoji.
+     */
+    private fun lockPrescribed(stored: MedicationRecord, request: SaveMedicationRequest): SaveMedicationRequest {
+        if (stored.prescriptionId == null) return request
+        if (request.schedule.times.size != stored.times.size) {
+            throw ValidationException("schedule.times", "Shifokor kuniga ${stored.times.size} marta yozgan")
+        }
+        return request.copy(
+            name = stored.name,
+            dosage = stored.dosage,
+            unit = stored.unit,
+            foodRelation = stored.foodRelation,
+            note = stored.note,
+            schedule = MedicationSchedule(stored.scheduleKind, request.schedule.times, stored.weekdays, stored.intervalDays),
+            startedOn = stored.startedOn,
+            endedOn = stored.endedOn,
+        )
     }
 
     suspend fun archive(userId: Uuid, id: Uuid) {
@@ -167,7 +213,7 @@ class MedicationService(
             throw ValidationException("units", "Eng ko'pi $MAX_REFILL")
         }
         repository.adjustStock(userId, id, request.units)
-        return repository.byId(userId, id)?.toDto() ?: throw NotFoundException("Dori topilmadi")
+        return repository.byId(userId, id)?.let { dto(it) } ?: throw NotFoundException("Dori topilmadi")
     }
 
     // ---------------------------------------------------------------- plumbing
@@ -256,7 +302,7 @@ class MedicationService(
         }
     }
 
-    private fun MedicationRecord.toDto() = Medication(
+    private fun MedicationRecord.toDto(prescribedBy: String?) = Medication(
         id = id.toString(),
         name = name,
         emoji = emoji,
@@ -272,6 +318,8 @@ class MedicationService(
         stockDaysLeft = DoseSchedule.stockDaysLeft(this),
         active = active,
         createdAt = createdAt,
+        prescriptionId = prescriptionId?.toString(),
+        prescribedBy = prescribedBy,
     )
 
     private companion object {

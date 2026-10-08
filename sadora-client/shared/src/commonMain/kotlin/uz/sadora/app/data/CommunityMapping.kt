@@ -122,12 +122,14 @@ fun WireMessage.toAppMessage(): DirectMessage = DirectMessage(
     // on anything but a photo means nothing, so it is dropped rather than drawn.
     image = image?.takeIf { kind == WireKind.IMAGE }?.let { MessageImageSize(it.width, it.height) },
     read = read,
+    prescription = prescription?.takeIf { kind == WireKind.PRESCRIPTION },
 )
 
 fun WireKind.toAppKind(): MessageKind = when (this) {
     WireKind.TEXT -> MessageKind.Text
     WireKind.IMAGE -> MessageKind.Image
     WireKind.RECORD -> MessageKind.Record
+    WireKind.PRESCRIPTION -> MessageKind.Prescription
 }
 
 fun WireTopic.toAppTopic(): CommunityTopic = when (this) {

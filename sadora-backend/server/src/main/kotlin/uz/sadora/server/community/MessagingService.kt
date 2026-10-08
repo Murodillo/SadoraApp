@@ -31,6 +31,7 @@ import uz.sadora.contract.NotificationCategory
 import uz.sadora.contract.NotificationStatus
 import uz.sadora.contract.ReportRequest
 import uz.sadora.contract.SendMessageRequest
+import uz.sadora.contract.SendPrescriptionRequest
 import uz.sadora.contract.StartConsultationRequest
 import uz.sadora.contract.StartConversationRequest
 import uz.sadora.server.audit.ActorType
@@ -52,6 +53,9 @@ import uz.sadora.server.db.ContentStatus
 import uz.sadora.server.doctor.DoctorRecord
 import uz.sadora.server.doctor.DoctorRepository
 import uz.sadora.server.notify.NotificationRepository
+import uz.sadora.server.prescription.PrescriptionRecord
+import uz.sadora.server.prescription.PrescriptionRepository
+import uz.sadora.server.prescription.PrescriptionRules
 import uz.sadora.server.notify.TARGET_CLIENT
 import uz.sadora.server.notify.TARGET_DOCTOR
 import uz.sadora.server.user.UserRecord
@@ -94,6 +98,8 @@ class MessagingService(
     /** Each window's session: price, payment, first reply, summary, rating. Null in older tests. */
     private val consultations: ConsultationRepository? = null,
     private val clock: Clock = Clock.System,
+    /** The structured copy behind `prescription` lines. Null in tests without them. */
+    private val prescriptions: PrescriptionRepository? = null,
 ) {
     /** What happens after a window is closed — the patient's push. Set at wiring. */
     var onSessionClosed: (suspend (SessionRecord) -> Unit)? = null
@@ -142,7 +148,7 @@ class MessagingService(
                 unread = 0,
                 blocked = identities.blockedEitherWay(userId, other),
             ),
-            messages = lines.map { it.toDto(userId, otherReadAt) },
+            messages = dtos(userId, lines, otherReadAt),
             otherTyping = cache?.get(typingKey(conversationId, other)) != null,
             otherReadAt = otherReadAt,
             hasMore = hasMore,
@@ -160,7 +166,7 @@ class MessagingService(
             ?: throw NotFoundException("Xabar topilmadi")
         val (lines, hasMore) = messages.messagesOf(conversationId, limit.coerceIn(1, MAX_MESSAGES), before = anchor)
         val otherReadAt = thread.readAt(thread.other(userId))
-        return MessagePage(lines.map { it.toDto(userId, otherReadAt) }, hasMore)
+        return MessagePage(dtos(userId, lines, otherReadAt), hasMore)
     }
 
     // ---------------------------------------------------------------- starting
@@ -282,6 +288,46 @@ class MessagingService(
         // What was written ends the "yozmoqda…" it came from.
         cache?.delete(typingKey(conversationId, userId))
         return message.toDto(userId, thread.readAt(other))
+    }
+
+    /**
+     * The doctor sends a prescription into the consultation. Only the consultation's
+     * doctor, only while its window is open; the line's body is the prescription as
+     * plain text, and the structured copy is stored beside it.
+     */
+    suspend fun sendPrescription(userId: Uuid, conversationId: Uuid, request: SendPrescriptionRequest): DirectMessage {
+        val store = prescriptions ?: throw NotFoundException("Retsept topilmadi")
+        community.openIdentity(userId)
+        val thread = requireParticipant(userId, conversationId)
+        val other = thread.other(userId)
+        val doctor = thread.doctorId?.let { doctors?.byId(it) }
+        if (doctor == null || doctor.userId != userId) throw ForbiddenException(message = "Retseptni faqat shifokor yozadi")
+        if (doctor.status != DoctorStatus.APPROVED) throw ForbiddenException(message = DOCTOR_UNAVAILABLE)
+        if (identities.blockedEitherWay(userId, other)) throw ForbiddenException(message = UNAVAILABLE)
+        if (!thread.isOpen(clock.now())) throw ForbiddenException(message = CONSULTATION_CLOSED)
+
+        val clean = PrescriptionRules.clean(request)
+        val message = write(userId, thread, PrescriptionRules.plainText(clean.items, clean.note), MessageKind.PRESCRIPTION, null)
+        store.insert(
+            PrescriptionRecord(
+                id = Uuid.random(),
+                messageId = message.id,
+                conversationId = thread.id,
+                doctorId = doctor.id,
+                patientId = other,
+                items = clean.items,
+                note = clean.note,
+                createdAt = message.createdAt,
+                cancelledAt = null,
+                cancelReason = null,
+                addedAt = null,
+            ),
+        )
+        consultations?.currentSession(thread.id)
+            ?.takeIf { it.firstReplyAt == null }
+            ?.let { consultations.markFirstReply(it.id, message.createdAt) }
+        cache?.delete(typingKey(conversationId, userId))
+        return dtos(userId, listOf(message), thread.readAt(other)).single()
     }
 
     /** "yozmoqda…": remembered for a few seconds, and only while she may write. */
@@ -414,6 +460,7 @@ class MessagingService(
             MessageKind.TEXT -> message.body
             MessageKind.IMAGE -> "📷 Rasm" + message.body.takeIf { it.isNotEmpty() }?.let { ": $it" }.orEmpty()
             MessageKind.RECORD -> "📋 Tibbiy karta biriktirildi"
+            MessageKind.PRESCRIPTION -> "💊 Sizga retsept yozildi"
         }
         notifications.enqueue(
             userId = recipient,
@@ -560,6 +607,24 @@ class MessagingService(
         // The apps word these themselves from lastMessageKind; a caption rides along.
         MessageKind.IMAGE -> body.take(PREVIEW_LENGTH)
         MessageKind.RECORD -> ""
+        MessageKind.PRESCRIPTION -> ""
+    }
+
+    /**
+     * A page of lines as the apps read them. The prescriptions behind `prescription`
+     * lines are read once for the page, with their doctor.
+     */
+    private suspend fun dtos(viewer: Uuid, lines: List<MessageRecord>, otherReadAt: Instant?): List<DirectMessage> {
+        val ids = lines.filter { it.kind == MessageKind.PRESCRIPTION }.map { it.id }
+        val byMessage = if (ids.isEmpty()) emptyMap() else prescriptions?.byMessages(ids).orEmpty()
+        val doctorsById = byMessage.values.map { it.doctorId }.distinct()
+            .takeIf { it.isNotEmpty() }?.let { doctors?.byIds(it) }.orEmpty()
+        return lines.map { line ->
+            val prescription = byMessage[line.id]?.let { record ->
+                doctorsById[record.doctorId]?.let { PrescriptionRules.dto(record, it, patientName = null) }
+            }
+            line.toDto(viewer, otherReadAt).copy(prescription = prescription)
+        }
     }
 
     private fun MessageRecord.toDto(viewer: Uuid, otherReadAt: Instant?) = DirectMessage(

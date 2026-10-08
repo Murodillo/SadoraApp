@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- What the share sheet may read: only the cache folder pictures are written to before
+     they are shared (a prescription card), nothing else of the app's. -->
+<paths>
+    <cache-path name="shared" path="shared/" />
+</paths>

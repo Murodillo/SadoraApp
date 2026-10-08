@@ -20,6 +20,9 @@ import uz.sadora.contract.Page
 import uz.sadora.contract.ReportReason
 import uz.sadora.contract.ReportRequest
 import uz.sadora.contract.SendMessageRequest
+import uz.sadora.contract.SendPrescriptionRequest
+import uz.sadora.contract.Prescription
+import uz.sadora.contract.CancelPrescriptionRequest
 
 /**
  * The part of the community a doctor works in: the feed, a question and its thread, her
@@ -52,6 +55,22 @@ class CommunityApi(private val caller: ApiCaller) {
     suspend fun sendMessage(id: String, request: SendMessageRequest): ApiResult<DirectMessage> =
         caller.authenticated("v1/community/conversations/$id/messages", HttpMethodKind.POST) {
             setBody(request)
+        }
+
+    /** A prescription into the consultation; the answer is its line in the thread. */
+    suspend fun sendPrescription(id: String, request: SendPrescriptionRequest): ApiResult<DirectMessage> =
+        caller.authenticated("v1/community/conversations/$id/prescriptions", HttpMethodKind.POST) {
+            setBody(request)
+        }
+
+    /** Every prescription in a consultation, newest first. */
+    suspend fun prescriptions(id: String): ApiResult<List<Prescription>> =
+        caller.authenticated("v1/community/conversations/$id/prescriptions", HttpMethodKind.GET)
+
+    /** Cancels one she wrote, with the reason the patient is shown. */
+    suspend fun cancelPrescription(prescriptionId: String, reason: String): ApiResult<Prescription> =
+        caller.authenticated("v1/prescriptions/$prescriptionId/cancel", HttpMethodKind.POST) {
+            setBody(CancelPrescriptionRequest(reason))
         }
 
     /** A photo in a thread, as the bytes the patient's phone sent. */

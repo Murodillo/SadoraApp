@@ -154,7 +154,7 @@ data class ConsultationWindow(
 }
 
 /** What a line carries. Mirrors the wire enum without depending on it. */
-enum class MessageKind { Text, Image, Record }
+enum class MessageKind { Text, Image, Record, Prescription }
 
 /** A photo's pixel size, known before the picture itself, so the bubble keeps its place. */
 data class MessageImageSize(val width: Int, val height: Int) {
@@ -174,6 +174,8 @@ data class DirectMessage(
     val image: MessageImageSize? = null,
     /** Hers, and the other side has opened the thread since: the double tick. */
     val read: Boolean = false,
+    /** Set on a doctor's prescription line. */
+    val prescription: uz.sadora.contract.Prescription? = null,
 )
 
 /**

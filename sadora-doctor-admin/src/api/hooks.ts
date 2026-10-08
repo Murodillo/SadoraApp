@@ -22,6 +22,8 @@ import type {
   DoctorSummary,
   EarningLine,
   Page,
+  Prescription,
+  SendPrescriptionRequest,
   PatientHistory,
   PatientNote,
   PhotoUpload,
@@ -53,6 +55,7 @@ export const keys = {
   quickReplies: ['doctor', 'quick-replies'] as const,
   note: (conversationId: string) => ['doctor', 'patients', conversationId, 'note'] as const,
   history: (conversationId: string) => ['doctor', 'patients', conversationId, 'history'] as const,
+  prescriptions: (conversationId: string) => ['community', 'prescriptions', conversationId] as const,
 }
 
 /** How often the conversation list and an open thread ask the server again. */
@@ -269,6 +272,57 @@ export const useSendMessage = (conversationId: string) => {
       )
       void client.invalidateQueries({ queryKey: keys.thread(conversationId) })
       void client.invalidateQueries({ queryKey: keys.conversations })
+    },
+  })
+}
+
+/** Every prescription in a consultation, newest first. */
+export const useConversationPrescriptions = (conversationId: string, enabled = true) =>
+  useQuery({
+    queryKey: keys.prescriptions(conversationId),
+    queryFn: () => request<Prescription[]>(`${conversationPath(conversationId)}/prescriptions`),
+    enabled,
+  })
+
+/** A prescription into the consultation: its line goes into the thread at once. */
+export const useSendPrescription = (conversationId: string) => {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (body: SendPrescriptionRequest) =>
+      request<DirectMessage>(`${conversationPath(conversationId)}/prescriptions`, { method: 'POST', body }),
+    onSuccess: (message) => {
+      client.setQueryData<ConversationThread>(keys.thread(conversationId), (thread) =>
+        thread && !thread.messages.some((item) => item.id === message.id)
+          ? { ...thread, messages: [...thread.messages, message] }
+          : thread,
+      )
+      void client.invalidateQueries({ queryKey: keys.thread(conversationId) })
+      void client.invalidateQueries({ queryKey: keys.conversations })
+      void client.invalidateQueries({ queryKey: keys.prescriptions(conversationId) })
+    },
+  })
+}
+
+/** Cancels one she wrote; the patient is told why and its courses stop. */
+export const useCancelPrescription = (conversationId: string) => {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, reason }: { id: string; reason: string }) =>
+      request<Prescription>(`/v1/prescriptions/${encodeURIComponent(id)}/cancel`, { method: 'POST', body: { reason } }),
+    onSuccess: (cancelled) => {
+      client.setQueryData<ConversationThread>(keys.thread(conversationId), (thread) =>
+        thread
+          ? {
+              ...thread,
+              messages: thread.messages.map((item) =>
+                item.prescription?.id === cancelled.id ? { ...item, prescription: cancelled } : item,
+              ),
+            }
+          : thread,
+      )
+      client.setQueryData<Prescription[]>(keys.prescriptions(conversationId), (list) =>
+        list?.map((item) => (item.id === cancelled.id ? cancelled : item)),
+      )
     },
   })
 }

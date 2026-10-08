@@ -248,7 +248,7 @@ export interface CreateCommentRequest {
 
 export type LifeStage = 'cycle' | 'trying_to_conceive' | 'pregnancy' | 'postpartum' | 'perimenopause' | 'menopause'
 
-export type MessageKind = 'text' | 'image' | 'record'
+export type MessageKind = 'text' | 'image' | 'record' | 'prescription'
 
 /** Who a doctor is consulting: her real name, and what a doctor needs at a glance. */
 export interface ConsultationPatient {
@@ -318,6 +318,60 @@ export interface DirectMessage {
   image?: MessageImage | null
   /** Hers, and read by the other side. */
   read?: boolean
+  /** Set on a `prescription` line. */
+  prescription?: Prescription | null
+}
+
+// ---------------------------------------------------------------- prescriptions (Prescriptions.kt)
+
+export type PrescriptionForm = 'tablet' | 'capsule' | 'syrup' | 'drops' | 'injection' | 'ointment' | 'powder' | 'other'
+export type ScheduleKind = 'daily' | 'weekdays' | 'interval'
+
+export interface MedicationSchedule {
+  kind?: ScheduleKind
+  /** "09:00" — every dose in a day. */
+  times: string[]
+  intervalDays?: number | null
+}
+
+export interface PrescriptionItem {
+  name: string
+  form?: PrescriptionForm
+  /** The amount: "1", "500". */
+  dose: string
+  /** "tabletka", "mg", "ml". */
+  unit?: string | null
+  schedule: MedicationSchedule
+  foodRelation: FoodRelation
+  /** Day 1 is the day the patient starts. */
+  startDay?: number
+  /** Null is a course with no end. */
+  days?: number | null
+  note?: string | null
+}
+
+export interface Prescription {
+  id: string
+  conversationId: string
+  messageId: string
+  doctor: DoctorAuthor
+  patientName?: string | null
+  items: PrescriptionItem[]
+  note?: string | null
+  createdAt: string
+  cancelledAt?: string | null
+  cancelReason?: string | null
+  /** When the patient added it to her medications. */
+  addedAt?: string | null
+}
+
+export interface SendPrescriptionRequest {
+  items: PrescriptionItem[]
+  note?: string | null
+}
+
+export interface CancelPrescriptionRequest {
+  reason: string
 }
 
 /** A thread opened: reading it marks it read. Messages are oldest first, the last 200. */

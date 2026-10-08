@@ -66,6 +66,11 @@ export function CommunityPage() {
             hint="ochiq / jami"
           />
           <Stat label="Xabar shikoyatlari" value={stats.data.openMessageReports} hint="ochiq" />
+          <Stat
+            label="Retseptlar"
+            value={`${stats.data.prescriptionsAdded ?? 0} / ${stats.data.prescriptions ?? 0}`}
+            hint="bemor qo'shgan / yozilgan"
+          />
         </div>
       )}
 

@@ -379,6 +379,11 @@ class MessagesController(
         }
     }
 
+    /** A prescription changed — she added it — shown on its card in the open thread at once. */
+    fun replacePrescription(updated: uz.sadora.contract.Prescription) {
+        messages = messages.map { if (it.prescription?.id == updated.id) it.copy(prescription = updated) else it }
+    }
+
     /** Remembers a photo she just sent, so her own bubble does not download what she has. */
     suspend fun rememberImage(messageId: String, bytes: ByteArray) = imageCache.put(messageId, bytes)
 

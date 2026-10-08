@@ -203,6 +203,30 @@ class CommunityMappingTest {
     }
 
     @Test
+    fun `a prescription line carries its card, and a kind this release does not know reads as text`() {
+        val prescription = uz.sadora.contract.Prescription(
+            id = "rx1",
+            conversationId = "c1",
+            messageId = "m3",
+            doctor = uz.sadora.contract.DoctorAuthor("d1", "Dr Karimova", uz.sadora.contract.DoctorSpecialty.GYNECOLOGIST),
+            items = emptyList(),
+            createdAt = TestNow,
+        )
+        val line = WireMessage("m3", "💊 Retsept", TestNow, isMine = false, kind = WireKind.PRESCRIPTION, prescription = prescription)
+            .toAppMessage()
+        assertEquals(MessageKind.Prescription, line.kind)
+        assertEquals("rx1", line.prescription?.id)
+        assertNull(WireMessage("m4", "x", TestNow, isMine = false, prescription = prescription).toAppMessage().prescription)
+
+        val json = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
+        val future = json.decodeFromString<WireMessage>(
+            """{"id":"m5","body":"Yangi tur","createdAt":"2026-10-09T09:00:00Z","isMine":false,"kind":"voice"}""",
+        )
+        assertEquals(WireKind.TEXT, future.kind)
+        assertEquals("Yangi tur", future.toAppMessage().body)
+    }
+
+    @Test
     fun `a photo's shape is held to a range a bubble can draw`() {
         assertEquals(1.6f, MessageImageSize(100, 1000).aspect, "a tall strip does not become a tower")
         assertEquals(0.4f, MessageImageSize(1000, 100).aspect, "a panorama does not become a ribbon")

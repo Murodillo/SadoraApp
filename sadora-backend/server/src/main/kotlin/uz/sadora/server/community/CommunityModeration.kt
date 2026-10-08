@@ -108,6 +108,9 @@ data class CommunityStatsView(
     val consultations: Long = 0,
     val openConsultations: Long = 0,
     val openMessageReports: Long = 0,
+    /** Prescriptions written, and how many patients added theirs — counts only, never content. */
+    val prescriptions: Long = 0,
+    val prescriptionsAdded: Long = 0,
 )
 
 /**
@@ -174,6 +177,8 @@ class CommunityModerationService(
     private val messaging: MessagingRepository,
     /** Names a doctor side by her name in a report's context; null leaves aliases. */
     private val doctors: uz.sadora.server.doctor.DoctorRepository? = null,
+    /** Prescription counts for the stats; none without it. */
+    private val prescriptions: uz.sadora.server.prescription.PrescriptionRepository? = null,
 ) {
 
     suspend fun posts(
@@ -201,6 +206,7 @@ class CommunityModerationService(
     suspend fun stats(): CommunityStatsView {
         val stats = repository.stats(now().dayIn("UTC"))
         val dms = messaging.messagingStats(now() - 1.days)
+        val (written, added) = prescriptions?.counts() ?: (0L to 0L)
         return CommunityStatsView(
             stats.postsTotal, stats.postsToday, stats.hiddenPosts, stats.openReports,
             messagesToday = dms.messagesToday,
@@ -208,6 +214,8 @@ class CommunityModerationService(
             consultations = dms.consultations,
             openConsultations = dms.openConsultations,
             openMessageReports = dms.openMessageReports,
+            prescriptions = written,
+            prescriptionsAdded = added,
         )
     }
 

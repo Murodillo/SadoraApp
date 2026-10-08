@@ -225,9 +225,12 @@ export interface CommunityStats {
   consultations: number
   openConsultations: number
   openMessageReports: number
+  /** Written by doctors, and added by patients to their medications. Counts only. */
+  prescriptions?: number
+  prescriptionsAdded?: number
 }
 
-export type MessageKind = 'text' | 'image' | 'record'
+export type MessageKind = 'text' | 'image' | 'record' | 'prescription'
 
 /**
  * One line around a reported private message. `fromReported` is the side the report is

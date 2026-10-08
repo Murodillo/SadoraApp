@@ -3194,6 +3194,132 @@ class ApiIntegrationTest {
         assertNull(get<uz.sadora.contract.UserProfile>("/v1/me", patient.token).avatarUrl)
     }
 
+    @Test
+    fun `a doctor prescribes in a consultation and the patient adds it to her medications`() = api {
+        val doctor = signUp().also { onboard(it) }
+        val patient = signUp().also { onboard(it) }
+        val stranger = signUp().also { onboard(it) }
+        val admin = adminToken()
+        val name = "Dr Rx ${Uuid.random().toString().take(6)}"
+        val profileId = approvedDoctor(doctor, admin, name)
+        val opened = post<ConversationThread>("/v1/doctors/$profileId/consultations", patient.token, uz.sadora.contract.StartConsultationRequest("Salom"))
+        val id = opened.conversation.id
+        val nine = kotlinx.datetime.LocalTime(9, 0)
+        val twentyOne = kotlinx.datetime.LocalTime(21, 0)
+        val rx = uz.sadora.contract.SendPrescriptionRequest(
+            items = listOf(
+                uz.sadora.contract.PrescriptionItem(
+                    name = " Amoksitsillin ",
+                    dose = "500",
+                    unit = "mg",
+                    schedule = uz.sadora.contract.MedicationSchedule(times = listOf(twentyOne, nine)),
+                    foodRelation = uz.sadora.contract.FoodRelation.AFTER,
+                    days = 5,
+                ),
+                uz.sadora.contract.PrescriptionItem(
+                    name = "Vitamin D",
+                    form = uz.sadora.contract.PrescriptionForm.DROPS,
+                    dose = "2",
+                    unit = "tomchi",
+                    schedule = uz.sadora.contract.MedicationSchedule(times = listOf(nine)),
+                    foodRelation = uz.sadora.contract.FoodRelation.WITH,
+                    startDay = 6,
+                ),
+            ),
+            note = "Ko'p suv iching",
+        )
+        val path = "/v1/community/conversations/$id/prescriptions"
+
+        // Only the doctor writes one, and only something a pharmacy could read.
+        assertEquals(HttpStatusCode.Forbidden, raw { client.post(path) { auth(patient.token); json(rx) } }.status)
+        assertEquals(HttpStatusCode.NotFound, raw { client.post(path) { auth(stranger.token); json(rx) } }.status)
+        val noDose = rx.copy(items = listOf(rx.items.first().copy(dose = " ")))
+        assertEquals(HttpStatusCode.BadRequest, raw { client.post(path) { auth(doctor.token); json(noDose) } }.status)
+        val tooMany = rx.copy(items = List(uz.sadora.contract.Limits.PRESCRIPTION_ITEMS_MAX + 1) { rx.items.first() })
+        assertEquals(HttpStatusCode.BadRequest, raw { client.post(path) { auth(doctor.token); json(tooMany) } }.status)
+
+        val sent = post<DirectMessage>(path, doctor.token, rx)
+        assertEquals(uz.sadora.contract.MessageKind.PRESCRIPTION, sent.kind)
+        assertTrue(sent.body.contains("Amoksitsillin"), "the body is the prescription as text")
+        val written = assertNotNull(sent.prescription)
+        assertEquals("Amoksitsillin", written.items.first().name)
+        assertEquals(listOf(nine, twentyOne), written.items.first().schedule.times, "times are stored in order")
+
+        // She reads it in the thread, with the doctor named on it.
+        val line = get<ConversationThread>("/v1/community/conversations/$id", patient.token).messages.single { it.id == sent.id }
+        val hers = assertNotNull(line.prescription)
+        assertEquals(name, hers.doctor.fullName)
+        assertNull(hers.patientName, "her copy does not name her")
+        assertEquals("Test", get<List<uz.sadora.contract.Prescription>>(path, doctor.token).single().patientName)
+        assertEquals(hers.id, get<List<uz.sadora.contract.Prescription>>("/v1/prescriptions", patient.token).single().id)
+        assertEquals(HttpStatusCode.NotFound, raw { client.get("/v1/prescriptions/${hers.id}") { auth(stranger.token) } }.status)
+
+        // She adds it: the start date is hers, day 6 counts from it, and the times shift.
+        val today = kotlin.time.Clock.System.todayIn(kotlinx.datetime.TimeZone.of("Asia/Tashkent"))
+        val wrongCount = uz.sadora.contract.AddPrescriptionRequest(today, listOf(uz.sadora.contract.AddPrescriptionItem(0, listOf(nine))))
+        assertEquals(HttpStatusCode.BadRequest, raw { client.post("/v1/prescriptions/${hers.id}/add") { auth(patient.token); json(wrongCount) } }.status)
+        assertEquals(HttpStatusCode.NotFound, raw { client.post("/v1/prescriptions/${hers.id}/add") { auth(doctor.token); json(wrongCount) } }.status)
+        val eight = kotlinx.datetime.LocalTime(8, 0)
+        val added = post<uz.sadora.contract.AddPrescriptionResult>(
+            "/v1/prescriptions/${hers.id}/add",
+            patient.token,
+            uz.sadora.contract.AddPrescriptionRequest(
+                today,
+                listOf(
+                    uz.sadora.contract.AddPrescriptionItem(0, listOf(eight, twentyOne)),
+                    uz.sadora.contract.AddPrescriptionItem(1, listOf(nine)),
+                ),
+            ),
+        )
+        assertNotNull(added.prescription.addedAt)
+        val course = added.medications.first { it.name == "Amoksitsillin" }
+        assertEquals(listOf(eight, twentyOne), course.schedule.times)
+        assertEquals(today, course.startedOn)
+        assertEquals(today.plus(4, kotlinx.datetime.DateTimeUnit.DAY), course.endedOn, "five days, the first one included")
+        assertEquals(hers.id, course.prescriptionId)
+        assertEquals(name, course.prescribedBy)
+        val drops = added.medications.first { it.name == "Vitamin D" }
+        assertEquals(today.plus(5, kotlinx.datetime.DateTimeUnit.DAY), drops.startedOn)
+        assertNull(drops.endedOn)
+        assertEquals(HttpStatusCode.Conflict, raw { client.post("/v1/prescriptions/${hers.id}/add") { auth(patient.token); json(wrongCount) } }.status)
+        assertNotNull(get<List<uz.sadora.contract.Prescription>>(path, doctor.token).single().addedAt, "the doctor sees that she added it")
+
+        // Her edit keeps what the doctor decided and takes her times.
+        val edited = put<uz.sadora.contract.Medication>(
+            "/v1/meds/${course.id}",
+            patient.token,
+            uz.sadora.contract.SaveMedicationRequest(
+                name = "Boshqa nom",
+                dosage = "1000",
+                schedule = uz.sadora.contract.MedicationSchedule(times = listOf(kotlinx.datetime.LocalTime(7, 0), twentyOne)),
+                remindersEnabled = false,
+            ),
+        )
+        assertEquals("Amoksitsillin", edited.name)
+        assertEquals("500", edited.dosage)
+        assertEquals(uz.sadora.contract.FoodRelation.AFTER, edited.foodRelation)
+        assertEquals(course.endedOn, edited.endedOn)
+        assertEquals(kotlinx.datetime.LocalTime(7, 0), edited.schedule.times.first())
+        assertFalse(edited.remindersEnabled)
+
+        // The window closes; the doctor can still cancel, with a reason, once.
+        post<ConversationThread>("/v1/community/conversations/$id/close", doctor.token, uz.sadora.contract.Ack())
+        assertEquals(HttpStatusCode.Forbidden, raw { client.post(path) { auth(doctor.token); json(rx) } }.status)
+        val cancelPath = "/v1/prescriptions/${hers.id}/cancel"
+        assertEquals(HttpStatusCode.Forbidden, raw { client.post(cancelPath) { auth(patient.token); json(uz.sadora.contract.CancelPrescriptionRequest("x")) } }.status)
+        assertEquals(HttpStatusCode.BadRequest, raw { client.post(cancelPath) { auth(doctor.token); json(uz.sadora.contract.CancelPrescriptionRequest("  ")) } }.status)
+        val cancelled = post<uz.sadora.contract.Prescription>(cancelPath, doctor.token, uz.sadora.contract.CancelPrescriptionRequest("Doza xato yozildi"))
+        assertEquals("Doza xato yozildi", cancelled.cancelReason)
+        assertEquals(HttpStatusCode.Conflict, raw { client.post(cancelPath) { auth(doctor.token); json(uz.sadora.contract.CancelPrescriptionRequest("yana")) } }.status)
+        val courses = get<List<uz.sadora.contract.Medication>>("/v1/meds?includeArchived=true", patient.token).filter { it.prescriptionId == hers.id }
+        assertEquals(listOf("Amoksitsillin"), courses.map { it.name }, "the course from day 6 had not begun: it is gone, not archived")
+        assertTrue(courses.none { it.active }, "a cancelled prescription's courses stop")
+        assertEquals(today, courses.single().endedOn)
+        assertTrue(get<uz.sadora.contract.MedicationDay>("/v1/meds/days/${today.plus(5, kotlinx.datetime.DateTimeUnit.DAY)}", patient.token).doses.isEmpty())
+        assertEquals(1, outboxCount(patient, "rx-cancel:"))
+        assertNotNull(get<ConversationThread>("/v1/community/conversations/$id", patient.token).messages.single { it.id == sent.id }.prescription?.cancelledAt)
+    }
+
     private suspend fun Api.approvedDoctor(doctor: TestUser, admin: String, name: String): String {
         val jpeg = kotlin.io.encoding.Base64.encode(byteArrayOf(0xFF.toByte(), 0xD8.toByte(), 0xFF.toByte(), 0xE0.toByte(), 1, 2, 3))
         post<DoctorAccount>(

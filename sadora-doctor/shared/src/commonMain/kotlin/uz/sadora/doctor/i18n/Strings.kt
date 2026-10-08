@@ -42,6 +42,7 @@ interface Strings {
     val work: WorkStrings
     val photo: PhotoStrings
     val badges: BadgeStrings
+    val prescriptions: PrescriptionStrings
 }
 
 interface CommonStrings {

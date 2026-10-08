@@ -71,6 +71,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.decodeToImageBitmap
+import uz.sadora.app.data.HealthController
 import uz.sadora.app.data.MessagesController
 import uz.sadora.app.data.readable
 import uz.sadora.app.design.IconSize
@@ -270,12 +271,14 @@ private fun LastLine(thread: Conversation, unread: Boolean) {
         MessageKind.Text -> caption
         MessageKind.Image -> if (caption.isBlank()) t.photo else "${t.photo} · $caption"
         MessageKind.Record -> t.record
+        MessageKind.Prescription -> strings.prescriptions.lastLine
     }
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
         if (thread.lastMessageRead) ReadTicks(read = true, tint = c.textAccent)
         when (thread.lastMessageKind) {
             MessageKind.Image -> Icon(SadoraIcons.Camera, contentDescription = null, Modifier.size(14.dp), tint = colour)
             MessageKind.Record -> Icon(SadoraIcons.Document, contentDescription = null, Modifier.size(14.dp), tint = colour)
+            MessageKind.Prescription -> Icon(SadoraIcons.Pill, contentDescription = null, Modifier.size(14.dp), tint = colour)
             MessageKind.Text -> Unit
         }
         Text(text, style = style, color = colour, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -328,6 +331,9 @@ fun ConversationScreen(
     /** The thread was read: the unread count in the chat header and on the tab bar follows. */
     onRead: () -> Unit,
     onClose: () -> Unit,
+    /** Her medications, which a doctor's prescription is added to. */
+    health: HealthController,
+    onToast: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val t = strings.community
@@ -342,6 +348,8 @@ fun ConversationScreen(
     var confirmRecord by remember { mutableStateOf(false) }
     var recordFor by remember { mutableStateOf<String?>(null) }
     var viewing by remember { mutableStateOf<DirectMessage?>(null) }
+    var addingPrescription by remember { mutableStateOf<uz.sadora.contract.Prescription?>(null) }
+    val addedToast = strings.prescriptions.addedToast
     var reopening by remember { mutableStateOf(false) }
     /**
      * The window she rated from this screen, by its session, so it can say thank you once
@@ -491,6 +499,7 @@ fun ConversationScreen(
                         messages = messages,
                         onOpenImage = { viewing = message },
                         onOpenRecord = { recordFor = message.id },
+                        onAddPrescription = { addingPrescription = it },
                     )
                 }
                 if (otherTyping) {
@@ -580,6 +589,17 @@ fun ConversationScreen(
             messages.error?.takeIf { failed }?.let { ErrorStrip(it.readable(errors)) }
             if (!failed) RecordContent(messages.record)
         }
+
+        AddPrescriptionSheet(
+            prescription = addingPrescription,
+            health = health,
+            onAdded = { updated ->
+                messages.replacePrescription(updated)
+                addingPrescription = null
+                onToast(addedToast)
+            },
+            onDismiss = { addingPrescription = null },
+        )
 
         SadoraDialog(
             visible = confirmRecord,
@@ -985,10 +1005,32 @@ private fun Bubble(
     messages: MessagesController,
     onOpenImage: () -> Unit,
     onOpenRecord: () -> Unit,
+    onAddPrescription: (uz.sadora.contract.Prescription) -> Unit,
 ) {
     val c = Sadora.colors
     val t = strings.community
     val mine = message.isMine
+    // A prescription is a document, not a bubble: the card on the doctor's side.
+    val prescription = message.prescription
+    if (message.kind == MessageKind.Prescription && prescription != null) {
+        Column(Modifier.fillMaxWidth(), horizontalAlignment = if (mine) Alignment.End else Alignment.Start) {
+            PrescriptionCard(
+                prescription,
+                onAdd = if (!mine && prescription.addedAt == null && prescription.cancelledAt == null) {
+                    { onAddPrescription(prescription) }
+                } else {
+                    null
+                },
+            )
+            Text(
+                strings.dates.ago(message.createdAt, Clock.System.now()),
+                style = Sadora.type.caption.copy(letterSpacing = TextUnit.Unspecified),
+                color = c.muted2,
+                modifier = Modifier.padding(top = 2.dp, start = Spacing.xs),
+            )
+        }
+        return
+    }
     val shape = if (mine) {
         RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp, bottomStart = 18.dp, bottomEnd = 4.dp)
     } else {
@@ -1011,7 +1053,8 @@ private fun Bubble(
                 ),
         ) {
             when (message.kind) {
-                MessageKind.Text -> Text(message.body, style = Sadora.type.body, color = content)
+                // A prescription whose card did not come with it reads as its text.
+                MessageKind.Text, MessageKind.Prescription -> Text(message.body, style = Sadora.type.body, color = content)
                 MessageKind.Image -> {
                     PhotoInBubble(message, conversationId, messages, onOpenImage)
                     if (message.body.isNotBlank()) {

@@ -73,6 +73,9 @@ sealed interface Route {
 
     /** Her badges: what she has earned and what is ahead. */
     data object Badges : Route
+
+    /** Writing a prescription for the patient of a consultation. */
+    data class WritePrescription(val conversationId: String) : Route
 }
 
 /** A route and how deep in the stack it sits: pushing goes deeper, popping comes back. */

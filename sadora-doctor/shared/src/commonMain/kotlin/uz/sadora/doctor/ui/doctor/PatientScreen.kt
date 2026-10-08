@@ -78,7 +78,11 @@ fun PatientScreen(
     LaunchedEffect(conversationId) {
         calls.clearError()
         work.openPatient(conversationId)
+        doctors.loadPrescriptions(conversationId)
     }
+    val prescriptions = doctors.prescriptions[conversationId]
+    val rx = strings.prescriptions
+    var cancelling by remember { mutableStateOf<uz.sadora.contract.Prescription?>(null) }
     val loaded = work.patientFor == conversationId
     val note = work.note.takeIf { loaded }
     val history = work.history.takeIf { loaded }
@@ -171,6 +175,20 @@ fun PatientScreen(
                 }
             }
 
+            item(key = "rx-title") { SectionHeader(rx.history) }
+            when {
+                prescriptions == null -> item(key = "rx-loading") { Skeleton(Modifier.fillMaxWidth().height(96.dp), shape = Radius.card) }
+                prescriptions.isEmpty() -> item(key = "rx-empty") { Text(rx.historyEmpty, style = Sadora.type.body, color = c.muted) }
+                else -> items(prescriptions.size, key = { "rx-" + prescriptions[it].id }) { index ->
+                    val prescription = prescriptions[index]
+                    PrescriptionCard(
+                        prescription,
+                        modifier = Modifier.fillMaxWidth(),
+                        onCancel = if (!prescription.cancelled) { { cancelling = prescription } } else null,
+                    )
+                }
+            }
+
             item(key = "history-title") { SectionHeader(w.historyTitle) }
             if (history == null) {
                 if (calls.error == null) item(key = "history-loading") { Skeleton(Modifier.fillMaxWidth().height(120.dp), shape = Radius.card) }
@@ -185,6 +203,17 @@ fun PatientScreen(
             }
         }
     }
+
+    CancelPrescriptionSheet(
+        target = cancelling,
+        conversationId = conversationId,
+        doctors = doctors,
+        onDone = {
+            cancelling = null
+            onToast(rx.cancelledToast)
+        },
+        onDismiss = { cancelling = null },
+    )
 }
 
 /** One window with this patient, as the history lists it. */

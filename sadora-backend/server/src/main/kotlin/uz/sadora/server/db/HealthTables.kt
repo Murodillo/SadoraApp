@@ -152,6 +152,8 @@ object Medications : Table("medications") {
     val active = bool("active")
     val createdAt = timestampWithTimeZone("created_at")
     val updatedAt = timestampWithTimeZone("updated_at")
+    /** Added from a doctor's prescription (V43); its locked fields are hers. */
+    val prescriptionId = uuid("prescription_id").nullable()
 
     override val primaryKey = PrimaryKey(id)
 }

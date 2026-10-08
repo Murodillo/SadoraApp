@@ -626,6 +626,33 @@ class HealthController(
         return true
     }
 
+    /** Her prescriptions from every doctor, newest first; null until first read. */
+    var prescriptions by mutableStateOf<List<uz.sadora.contract.Prescription>?>(null)
+        private set
+
+    /** Calls for the prescription sheet: its own spinner and error, off the screen's. */
+    val prescriptionCalls = ApiCallState()
+
+    suspend fun loadPrescriptions() {
+        val api = medicationApi ?: return
+        prescriptionCalls.run(silent = prescriptions != null) { api.prescriptions() }?.let { prescriptions = it }
+    }
+
+    /**
+     * Adds the medicines she keeps from a prescription. The answer is the prescription as
+     * it now stands — added — for the card in the thread to show; null when it did not go.
+     */
+    suspend fun addPrescription(
+        id: String,
+        request: uz.sadora.contract.AddPrescriptionRequest,
+    ): uz.sadora.contract.Prescription? {
+        val api = medicationApi ?: return null
+        val result = prescriptionCalls.run { api.addPrescription(id, request) } ?: return null
+        prescriptions = prescriptions?.map { if (it.id == id) result.prescription else it }
+        refreshMedications()
+        return result.prescription
+    }
+
     suspend fun addMedication(request: uz.sadora.contract.SaveMedicationRequest): Boolean {
         val api = medicationApi ?: return true
         calls.run { api.add(request) } ?: return false

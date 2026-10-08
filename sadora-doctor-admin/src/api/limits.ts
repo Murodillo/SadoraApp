@@ -17,6 +17,17 @@ export const limits = {
   messageImageMaxBytes: 3_000_000,
   /** `Limits.REPORT_NOTE_MAX`. */
   reportNoteMax: 500,
+  /** `Limits.MEDICATION_NAME_MAX` and the `PRESCRIPTION_*` limits. */
+  medicationNameMax: 120,
+  medicationTimesPerDayMax: 8,
+  prescriptionItemsMax: 10,
+  prescriptionDoseMax: 40,
+  prescriptionUnitMax: 24,
+  prescriptionNoteMax: 1000,
+  prescriptionItemNoteMax: 300,
+  prescriptionStartDayMax: 90,
+  prescriptionDaysMax: 365,
+  prescriptionCancelReasonMax: 300,
 } as const
 
 /**

@@ -67,7 +67,12 @@ class MedicationRepository {
             ?.toRecord()
     }
 
-    suspend fun add(userId: Uuid, request: SaveMedicationRequest, startedOn: LocalDate): Uuid =
+    suspend fun add(
+        userId: Uuid,
+        request: SaveMedicationRequest,
+        startedOn: LocalDate,
+        prescriptionId: Uuid? = null,
+    ): Uuid =
         dbQuery {
             val id = Uuid.random()
             val timestamp = now().toOffsetDateTime()
@@ -91,6 +96,7 @@ class MedicationRepository {
                 it[active] = true
                 it[createdAt] = timestamp
                 it[updatedAt] = timestamp
+                it[Medications.prescriptionId] = prescriptionId
             }
             id
         }
@@ -127,6 +133,30 @@ class MedicationRepository {
             it[Medications.endedOn] = endedOn
             it[updatedAt] = now().toOffsetDateTime()
         } > 0
+    }
+
+    /**
+     * Stops every active course added from [prescriptionId], for a cancelled
+     * prescription. One that has begun is archived like any other, its history kept; one
+     * that has not begun yet has no history, and is removed — archived, it would still
+     * have shown its first day's doses. Reminders stop because only active courses ring.
+     */
+    suspend fun archiveForPrescription(prescriptionId: Uuid, today: LocalDate): Int = dbQuery {
+        val rows = Medications.selectAll()
+            .where { (Medications.prescriptionId eq prescriptionId) and (Medications.active eq true) }
+            .map { it[Medications.id] to it[Medications.startedOn] }
+        rows.forEach { (id, startedOn) ->
+            if (startedOn > today) {
+                Medications.deleteWhere { Medications.id eq id }
+            } else {
+                Medications.update({ Medications.id eq id }) {
+                    it[active] = false
+                    it[endedOn] = today
+                    it[updatedAt] = now().toOffsetDateTime()
+                }
+            }
+        }
+        rows.size
     }
 
     suspend fun adjustStock(userId: Uuid, id: Uuid, delta: Int): Int? = dbQuery {
@@ -235,6 +265,7 @@ class MedicationRepository {
         stockUnits = this[Medications.stockUnits],
         active = this[Medications.active],
         createdAt = this[Medications.createdAt].toKotlinInstant(),
+        prescriptionId = this[Medications.prescriptionId],
     )
 
     private fun ResultRow.toIntake() = IntakeRecord(

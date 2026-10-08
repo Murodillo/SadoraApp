@@ -19,7 +19,7 @@ import {
 import { formatBytes, ImageProblem, prepareImage } from '../api/image'
 import type { PreparedImage } from '../api/image'
 import { limits } from '../api/limits'
-import type { Conversation, ConsultationSession, DirectMessage, PatientHistory, QuickReply, ReportReason } from '../api/types'
+import type { Conversation, ConsultationSession, DirectMessage, PatientHistory, Prescription, QuickReply, ReportReason } from '../api/types'
 import { consultationOpen, timeLeft } from '../api/consultation'
 import {
   durationLabel,
@@ -38,6 +38,7 @@ import {
   reportReasonOrder,
 } from '../components/labels'
 import { PatientRecord } from '../components/PatientRecord'
+import { CancelPrescriptionDialog, PatientPrescriptions, PrescriptionCard, PrescriptionDialog } from '../components/Prescription'
 import { useToast } from '../components/toast'
 import {
   Avatar,
@@ -129,6 +130,8 @@ function lastLine(conversation: Conversation): string {
       return conversation.lastMessage ? `📷 Rasm · ${conversation.lastMessage}` : '📷 Rasm'
     case 'record':
       return '📋 Tibbiy karta'
+    case 'prescription':
+      return '💊 Retsept'
     default:
       return conversation.lastMessage ?? ''
   }
@@ -336,6 +339,8 @@ function ChatThread({
   const messages = thread.data?.messages ?? []
   const [closing, setClosing] = useState<'close' | 'summary' | null>(null)
   const [reporting, setReporting] = useState(false)
+  const [writing, setWriting] = useState(false)
+  const [cancelling, setCancelling] = useState<Prescription | null>(null)
   const [viewing, setViewing] = useState<{ url: string; caption: string } | null>(null)
   const records = messages.filter((message) => message.kind === 'record')
   const [pickedRecord, setPickedRecord] = useState<DirectMessage | null>(null)
@@ -420,6 +425,7 @@ function ChatThread({
             now={now}
             onImage={(url, caption) => setViewing({ url, caption })}
             onRecord={openRecord}
+            onCancelPrescription={setCancelling}
             activeRecordId={shownRecord?.id ?? null}
           />
         )}
@@ -431,6 +437,7 @@ function ChatThread({
             open={open}
             draft={draft}
             onDraft={onDraft}
+            onPrescription={conversation.consultation ? () => setWriting(true) : undefined}
           />
         )}
       </section>
@@ -459,6 +466,10 @@ function ChatThread({
         />
       )}
       {reporting && <ReportDialog conversationId={conversationId} onClose={() => setReporting(false)} />}
+      {writing && <PrescriptionDialog conversationId={conversationId} onClose={() => setWriting(false)} />}
+      {cancelling && (
+        <CancelPrescriptionDialog conversationId={conversationId} prescription={cancelling} onClose={() => setCancelling(null)} />
+      )}
       {viewing && (
         <Modal title="Rasm" wide onClose={() => setViewing(null)}>
           <img className="msg-full" src={viewing.url} alt={viewing.caption || 'Bemor yuborgan rasm'} />
@@ -499,6 +510,7 @@ function MessageList({
   now,
   onImage,
   onRecord,
+  onCancelPrescription,
   activeRecordId,
 }: {
   conversationId: string
@@ -508,6 +520,7 @@ function MessageList({
   now: number
   onImage: (url: string, caption: string) => void
   onRecord: (message: DirectMessage) => void
+  onCancelPrescription: (prescription: Prescription) => void
   activeRecordId: string | null
 }) {
   const scroller = useRef<HTMLDivElement>(null)
@@ -556,6 +569,7 @@ function MessageList({
                 message={message}
                 onImage={onImage}
                 onRecord={onRecord}
+                onCancelPrescription={onCancelPrescription}
                 activeRecord={message.id === activeRecordId}
               />
             </Fragment>
@@ -581,12 +595,14 @@ function MessageBubble({
   message,
   onImage,
   onRecord,
+  onCancelPrescription,
   activeRecord,
 }: {
   conversationId: string
   message: DirectMessage
   onImage: (url: string, caption: string) => void
   onRecord: (message: DirectMessage) => void
+  onCancelPrescription: (prescription: Prescription) => void
   activeRecord: boolean
 }) {
   const kind = message.kind ?? 'text'
@@ -607,7 +623,15 @@ function MessageBubble({
   )
 
   let content: ReactNode
-  if (kind === 'record') {
+  const prescription = kind === 'prescription' ? message.prescription : null
+  if (prescription) {
+    content = (
+      <PrescriptionCard
+        prescription={prescription}
+        onCancel={message.isMine && !prescription.cancelledAt ? () => onCancelPrescription(prescription) : undefined}
+      />
+    )
+  } else if (kind === 'record') {
     content = (
       <div className={`msg-record${activeRecord ? ' active' : ''}`}>
         <span className="msg-record-glyph" aria-hidden="true">
@@ -711,14 +735,18 @@ function Composer({
   open,
   draft,
   onDraft,
+  onPrescription,
 }: {
   conversationId: string
   conversation: Conversation
   open: boolean
   draft: string
   onDraft: (text: string) => void
+  /** Set in a consultation: the "+" menu offers a prescription beside the photo. */
+  onPrescription?: () => void
 }) {
   const send = useSendMessage(conversationId)
+  const [plus, setPlus] = useState(false)
   const quickReplies = useQuickReplies()
   const { notify } = useToast()
   const [image, setImage] = useState<PreparedImage | null>(null)
@@ -888,16 +916,46 @@ function Composer({
         </div>
       )}
       <div className="chat-input-row">
-        <button
-          type="button"
-          className="btn ghost chat-attach"
-          onClick={() => file.current?.click()}
-          disabled={Boolean(locked) || preparing || send.isPending}
-          aria-label="Rasm biriktirish"
-          title="Rasm biriktirish"
-        >
-          {preparing ? <Spinner /> : '📎'}
-        </button>
+        <span style={{ position: 'relative' }}>
+          <button
+            type="button"
+            className={`btn ghost chat-attach${plus ? ' on' : ''}`}
+            onClick={() => setPlus((current) => !current)}
+            disabled={Boolean(locked) || preparing || send.isPending}
+            aria-label="Biriktirish"
+            aria-haspopup="menu"
+            aria-expanded={plus}
+            title="Biriktirish"
+          >
+            {preparing ? <Spinner /> : '＋'}
+          </button>
+          {plus && !locked && (
+            <div className="chat-plus-menu" role="menu" onMouseLeave={() => setPlus(false)}>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  setPlus(false)
+                  file.current?.click()
+                }}
+              >
+                📷 Rasm
+              </button>
+              {onPrescription && (
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setPlus(false)
+                    onPrescription()
+                  }}
+                >
+                  💊 Retsept
+                </button>
+              )}
+            </div>
+          )}
+        </span>
         <button
           type="button"
           className={`btn ghost chat-attach${picker ? ' on' : ''}`}
@@ -1119,6 +1177,7 @@ function PatientPanel({
       </dl>
 
       {consultation && <PatientNoteBox key={conversationId} conversationId={conversationId} />}
+      {consultation && <PatientPrescriptions conversationId={conversationId} />}
       {consultation && <PatientHistoryList conversationId={conversationId} onRecord={onRecord} />}
 
       <h3 className="side-title">📋 Tibbiy karta</h3>

@@ -9,17 +9,13 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.windowInsetsBottomHeight
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -96,6 +92,7 @@ import uz.sadora.doctor.ui.doctor.MessagesScreen
 import uz.sadora.doctor.ui.doctor.NewPostScreen
 import uz.sadora.doctor.ui.doctor.PatientRecordScreen
 import uz.sadora.doctor.ui.doctor.PatientScreen
+import uz.sadora.doctor.ui.doctor.PrescriptionWriterScreen
 import uz.sadora.doctor.ui.doctor.PhotoNudgeSheet
 import uz.sadora.doctor.ui.doctor.QuestionScreen
 import uz.sadora.doctor.ui.doctor.QuickRepliesScreen
@@ -376,7 +373,17 @@ private fun MainContent(
                                 onOpenRecord = { navigator.push(Route.AttachedRecord(route.id, it)) },
                                 onOpenPatient = { navigator.push(Route.Patient(route.id)) },
                                 onManageReplies = { navigator.push(Route.QuickReplies) },
+                                onWritePrescription = { navigator.push(Route.WritePrescription(route.id)) },
                                 onToast = onToast,
+                            )
+                            is Route.WritePrescription -> PrescriptionWriterScreen(
+                                conversationId = route.conversationId,
+                                doctors = doctors,
+                                onClose = navigator::pop,
+                                onSent = {
+                                    navigator.pop()
+                                    onToast(words.prescriptions.sent)
+                                },
                             )
                             is Route.PatientRecord -> PatientRecordScreen(
                                 source = RecordSource.Share(route.token),
@@ -416,12 +423,11 @@ private fun MainContent(
                 }
             }
 
-            // The bar belongs to the roots; a pushed screen takes the whole display, its own
-            // composer included. Without the bar the system navigation bar gets the page
-            // colour behind it instead of the content scrolling through it.
-            if (!showBar) {
-                Box(Modifier.fillMaxWidth().windowInsetsBottomHeight(WindowInsets.navigationBars).background(c.bg))
-            }
+            // The bar belongs to the roots; a pushed screen takes the whole display and clears
+            // the system navigation bar itself — its composer pads for it, its list's bottom
+            // padding includes it — so nothing is stacked under it here. A strip of the bar's
+            // height used to sit below, and with the composer's own padding the space was
+            // left twice: an empty band under the chat's input.
         }
 
         // The bar floats over the page rather than below it, so what scrolls under it

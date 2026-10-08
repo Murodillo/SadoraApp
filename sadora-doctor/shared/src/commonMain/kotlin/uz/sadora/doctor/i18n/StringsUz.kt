@@ -108,4 +108,5 @@ object StringsUz : Strings {
     override val work: WorkStrings = WorkStringsUz
     override val photo: PhotoStrings = PhotoStringsUz
     override val badges: BadgeStrings = BadgeStringsUz
+    override val prescriptions: PrescriptionStrings = PrescriptionStringsUz
 }

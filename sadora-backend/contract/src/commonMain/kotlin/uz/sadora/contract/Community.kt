@@ -2,7 +2,13 @@ package uz.sadora.contract
 
 import kotlin.time.Instant
 import kotlinx.serialization.SerialName
+import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.descriptors.PrimitiveKind
+import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
+import kotlinx.serialization.descriptors.SerialDescriptor
+import kotlinx.serialization.encoding.Decoder
+import kotlinx.serialization.encoding.Encoder
 
 /** The rooms the secret chat is divided into. Mirrors `CommunityTopic` in the app. */
 @Serializable
@@ -177,15 +183,32 @@ data class Consultation(
     val doctorPriceMinor: Long = 0,
 )
 
-@Serializable
-enum class MessageKind {
-    @SerialName("text") TEXT,
+/**
+ * What a message is. Read through [MessageKindSerializer], so a kind added after an app
+ * was built reads as text — its body is always a readable line — instead of failing the
+ * whole thread.
+ */
+@Serializable(with = MessageKindSerializer::class)
+enum class MessageKind(val wire: String) {
+    TEXT("text"),
 
     /** A photo, fetched separately by [DirectMessage.id]; [DirectMessage.body] is its caption. */
-    @SerialName("image") IMAGE,
+    IMAGE("image"),
 
     /** The patient's health record, attached for her doctor and read live while the consultation is open. */
-    @SerialName("record") RECORD,
+    RECORD("record"),
+
+    /** A doctor's prescription: [DirectMessage.prescription]; [DirectMessage.body] is it as plain text. */
+    PRESCRIPTION("prescription"),
+}
+
+object MessageKindSerializer : KSerializer<MessageKind> {
+    override val descriptor: SerialDescriptor = PrimitiveSerialDescriptor("uz.sadora.contract.MessageKind", PrimitiveKind.STRING)
+    override fun serialize(encoder: Encoder, value: MessageKind) = encoder.encodeString(value.wire)
+    override fun deserialize(decoder: Decoder): MessageKind {
+        val wire = decoder.decodeString()
+        return MessageKind.entries.firstOrNull { it.wire == wire } ?: MessageKind.TEXT
+    }
 }
 
 /** A photo's shape, so a bubble can be sized before the picture arrives. */
@@ -206,6 +229,8 @@ data class DirectMessage(
     val image: MessageImage? = null,
     /** Hers, and the other side has opened the thread since it was sent: the double tick. */
     val read: Boolean = false,
+    /** Set on a [MessageKind.PRESCRIPTION] line. */
+    val prescription: Prescription? = null,
 )
 
 /**

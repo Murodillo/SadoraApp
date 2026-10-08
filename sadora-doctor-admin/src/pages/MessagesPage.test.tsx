@@ -11,7 +11,9 @@ import type {
   DoctorAccount,
   DoctorSummary,
   PatientNote,
+  Prescription,
   QuickReply,
+  SendPrescriptionRequest,
 } from '../api/types'
 import { apiError, json, mockApi } from '../test/http'
 import { doctorAccount, renderApp, signIn } from '../test/render'
@@ -138,6 +140,7 @@ function messagingBackend(
       firstReplyAt: ago(29 * HOUR),
     }),
   ]
+  const prescriptions: Prescription[] = []
   const threadOf = (): ConversationThread => ({ conversation: { ...malika, unread: 0 }, messages, otherTyping: false })
 
   const api = mockApi({
@@ -159,6 +162,35 @@ function messagingBackend(
       return json(sent, 201)
     },
     'POST /v1/community/conversations/c1/typing': { ok: true },
+    'GET /v1/community/conversations/c1/prescriptions': () => prescriptions,
+    'POST /v1/community/conversations/c1/prescriptions': (call) => {
+      const body = call.body as SendPrescriptionRequest
+      const prescription: Prescription = {
+        id: `rx${prescriptions.length + 1}`,
+        conversationId: 'c1',
+        messageId: `m${messages.length + 1}`,
+        doctor: { id: 'd1', fullName: 'Dr Test', specialty: 'gynecologist' },
+        items: body.items,
+        note: body.note,
+        createdAt: new Date().toISOString(),
+      }
+      prescriptions.unshift(prescription)
+      const sent = message(prescription.messageId, '💊 Retsept', {
+        isMine: true,
+        kind: 'prescription',
+        prescription,
+        createdAt: new Date().toISOString(),
+      })
+      messages.push(sent)
+      return json(sent, 201)
+    },
+    'POST /v1/prescriptions/rx1/cancel': (call) => {
+      prescriptions[0] = { ...prescriptions[0]!, cancelledAt: new Date().toISOString(), cancelReason: (call.body as { reason: string }).reason }
+      const line = messages.find((item) => item.prescription?.id === 'rx1')!
+      line.prescription = prescriptions[0]
+      return prescriptions[0]
+    },
+    'GET /v1/community/conversations/c2/prescriptions': [],
     'POST /v1/community/conversations/c1/close': () => {
       malika = { ...malika, consultation: { ...malika.consultation!, closedAt: new Date().toISOString(), open: false } }
       return threadOf()
@@ -334,10 +366,63 @@ describe('Xabarlar — the thread', () => {
     expect(await within(thread).findByText('Rahmat!', { selector: '.msg-text' })).toBeInTheDocument()
     expect(within(thread).getByLabelText('Xabar')).toBeDisabled()
     expect(within(thread).getByRole('button', { name: 'Yuborish' })).toBeDisabled()
-    expect(within(thread).getByRole('button', { name: 'Rasm biriktirish' })).toBeDisabled()
+    expect(within(thread).getByRole('button', { name: 'Biriktirish' })).toBeDisabled()
     expect(within(thread).getByText(/Konsultatsiya yopilgan — bemor yangisini ochsa/)).toBeInTheDocument()
     expect(within(thread).queryByRole('button', { name: 'Konsultatsiyani yakunlash' })).not.toBeInTheDocument()
     expect(api.callsTo('POST', '/v1/community/conversations/c2/messages')).toHaveLength(0)
+  })
+
+  it('writes a prescription from the + menu, refuses it half filled, shows its card and cancels it with a reason', async () => {
+    const api = messagingBackend()
+    const list = await openMessages()
+    await userEvent.click(await within(list).findByRole('button', { name: /Malika/ }))
+    const thread = screen.getByRole('region', { name: 'Yozishma' })
+    await within(thread).findByText(/belim og'riyapti/)
+
+    await userEvent.click(within(thread).getByRole('button', { name: 'Biriktirish' }))
+    await userEvent.click(within(thread).getByRole('menuitem', { name: /Retsept/ }))
+    const dialog = await screen.findByRole('dialog', { name: 'Retsept yozish' })
+
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Retseptni yuborish' }))
+    expect(await within(dialog).findByText(/Har bir dorining nomi, dozasi/)).toBeInTheDocument()
+    expect(api.callsTo('POST', '/v1/community/conversations/c1/prescriptions')).toHaveLength(0)
+
+    await userEvent.type(within(dialog).getByLabelText('Dori nomi'), 'Amoksitsillin')
+    await userEvent.type(within(dialog).getByLabelText('Doza'), '500')
+    await userEvent.clear(within(dialog).getByLabelText('Birligi'))
+    await userEvent.type(within(dialog).getByLabelText('Birligi'), 'mg')
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Ovqatdan keyin' }))
+    await userEvent.type(within(dialog).getByLabelText('Necha kun'), '5')
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Retseptni yuborish' }))
+
+    await waitFor(() => expect(api.callsTo('POST', '/v1/community/conversations/c1/prescriptions')).toHaveLength(1))
+    expect(api.callsTo('POST', '/v1/community/conversations/c1/prescriptions')[0]!.body).toEqual({
+      items: [
+        {
+          name: 'Amoksitsillin',
+          form: 'tablet',
+          dose: '500',
+          unit: 'mg',
+          schedule: { kind: 'daily', times: ['09:00', '21:00'], intervalDays: null },
+          foodRelation: 'after',
+          startDay: 1,
+          days: 5,
+          note: null,
+        },
+      ],
+      note: null,
+    })
+    const card = (await within(thread).findByText('Amoksitsillin')).closest('.rx-card') as HTMLElement
+    expect(card).toHaveTextContent('500 mg · kuniga 2 marta: 09:00, 21:00 · ovqatdan keyin · 5 kun')
+    expect(card).toHaveTextContent('Bemor hali qo')
+
+    await userEvent.click(within(card).getByRole('button', { name: 'Bekor qilish' }))
+    const cancel = await screen.findByRole('dialog', { name: 'Retseptni bekor qilish' })
+    await userEvent.type(within(cancel).getByRole('textbox'), 'Doza xato')
+    await userEvent.click(within(cancel).getByRole('button', { name: 'Bekor qilish' }))
+    await waitFor(() => expect(api.callsTo('POST', '/v1/prescriptions/rx1/cancel')).toHaveLength(1))
+    expect(api.callsTo('POST', '/v1/prescriptions/rx1/cancel')[0]!.body).toEqual({ reason: 'Doza xato' })
+    await waitFor(() => expect(within(thread).getAllByText(/Bekor qilingan — Doza xato/).length).toBeGreaterThan(0))
   })
 
   it('closes a consultation after she confirms', async () => {

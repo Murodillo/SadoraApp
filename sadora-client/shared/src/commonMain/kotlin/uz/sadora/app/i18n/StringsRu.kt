@@ -1532,6 +1532,7 @@ object StringsRu : Strings {
     override val tools: StageToolsStrings = StageToolsRu
     override val partner: PartnerStrings = PartnerRu
     override val badges: BadgeStrings = BadgesRu
+    override val prescriptions: PrescriptionStrings = PrescriptionStringsRu
     override val pet: PetStrings = PetRu
 
     override val rewards = object : RewardStrings {

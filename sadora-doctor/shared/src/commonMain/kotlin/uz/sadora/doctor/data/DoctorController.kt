@@ -19,6 +19,9 @@ import uz.sadora.contract.MessageImageUpload
 import uz.sadora.contract.PhotoUpload
 import uz.sadora.contract.ReportReason
 import uz.sadora.contract.SendMessageRequest
+import uz.sadora.contract.SendPrescriptionRequest
+import uz.sadora.contract.Prescription
+import uz.sadora.contract.DirectMessage
 import uz.sadora.contract.UpdateDoctorProfileRequest
 
 /**
@@ -566,6 +569,47 @@ class DoctorController(
     private suspend fun send(id: String, request: SendMessageRequest): Boolean {
         val community = community ?: return false
         val message = chatCalls.run { community.sendMessage(id, request) } ?: return false
+        placeSent(id, message)
+        return true
+    }
+
+    /** Calls for the prescription writer and the cancel sheet: kept off the thread's poll. */
+    val prescriptionCalls = ApiCallState()
+
+    /** False when it did not go; the writer then keeps what she wrote. */
+    suspend fun sendPrescription(id: String, request: SendPrescriptionRequest): Boolean {
+        val community = community ?: return false
+        val message = prescriptionCalls.run { community.sendPrescription(id, request) } ?: return false
+        placeSent(id, message)
+        message.prescription?.let { sent -> prescriptions = prescriptions + (id to (listOf(sent) + prescriptions[id].orEmpty())) }
+        return true
+    }
+
+    /** Each consultation's prescriptions, newest first, as last read. */
+    var prescriptions by mutableStateOf<Map<String, List<Prescription>>>(emptyMap())
+        private set
+
+    suspend fun loadPrescriptions(conversationId: String) {
+        val community = community ?: return
+        prescriptionCalls.run(silent = prescriptions.containsKey(conversationId)) { community.prescriptions(conversationId) }
+            ?.let { prescriptions = prescriptions + (conversationId to it) }
+    }
+
+    /** Cancels one; the line in the open thread and the history both show it at once. */
+    suspend fun cancelPrescription(conversationId: String, prescriptionId: String, reason: String): Boolean {
+        val community = community ?: return false
+        val cancelled = prescriptionCalls.run { community.cancelPrescription(prescriptionId, reason.trim()) } ?: return false
+        openConversation = openConversation?.takeIf { it.conversation.id == conversationId }?.let { thread ->
+            thread.copy(messages = thread.messages.map { if (it.prescription?.id == prescriptionId) it.copy(prescription = cancelled) else it })
+        }
+        prescriptions[conversationId]?.let { list ->
+            prescriptions = prescriptions + (conversationId to list.map { if (it.id == prescriptionId) cancelled else it })
+        }
+        return true
+    }
+
+    /** A line she sent, into the open thread and to the top of the list. */
+    private fun placeSent(id: String, message: DirectMessage) {
         openConversation = openConversation?.takeIf { it.conversation.id == id }?.let { thread ->
             thread.copy(
                 conversation = thread.conversation.copy(
@@ -588,7 +632,6 @@ class DoctorController(
                 }
             }
             .sortedByDescending { it.lastMessageAt }
-        return true
     }
 
     /** "yozmoqda…" for the patient: sent at most once per [TypingEveryMillis] while she types. */

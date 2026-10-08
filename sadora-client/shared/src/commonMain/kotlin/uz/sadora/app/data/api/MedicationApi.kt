@@ -6,6 +6,9 @@ import uz.sadora.app.data.ApiCaller
 import uz.sadora.app.data.ApiResult
 import uz.sadora.app.data.HttpMethodKind
 import uz.sadora.contract.Ack
+import uz.sadora.contract.AddPrescriptionRequest
+import uz.sadora.contract.AddPrescriptionResult
+import uz.sadora.contract.Prescription
 import uz.sadora.contract.Medication
 import uz.sadora.contract.MedicationDay
 import uz.sadora.contract.MedicationHistory
@@ -42,4 +45,12 @@ class MedicationApi(private val caller: ApiCaller) {
 
     suspend fun history(id: String, days: Int = 14): ApiResult<MedicationHistory> =
         caller.authenticated("v1/meds/$id/history?days=$days", HttpMethodKind.GET)
+
+    /** Her prescriptions from every doctor, newest first. */
+    suspend fun prescriptions(): ApiResult<List<Prescription>> =
+        caller.authenticated("v1/prescriptions", HttpMethodKind.GET)
+
+    /** The medicines she keeps from a prescription, as courses with reminders. */
+    suspend fun addPrescription(id: String, request: AddPrescriptionRequest): ApiResult<AddPrescriptionResult> =
+        caller.authenticated("v1/prescriptions/$id/add", HttpMethodKind.POST) { setBody(request) }
 }

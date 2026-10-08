@@ -1,6 +1,7 @@
 package uz.sadora.doctor.ui.doctor
 
 import uz.sadora.doctor.resources.Res
+import uz.sadora.doctor.resources.ic3d_meds
 import uz.sadora.doctor.resources.ic3d_message
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
@@ -65,6 +66,7 @@ import uz.sadora.contract.Conversation
 import uz.sadora.contract.DirectMessage
 import uz.sadora.contract.Limits
 import uz.sadora.contract.MessageKind
+import uz.sadora.contract.Prescription
 import uz.sadora.contract.QuickReply
 import uz.sadora.contract.ReportReason
 import uz.sadora.doctor.data.ApiFailure
@@ -213,6 +215,7 @@ private fun previewOf(chat: Conversation): String {
         MessageKind.TEXT -> text
         MessageKind.IMAGE -> "📷 " + t.photo + text.takeIf { it.isNotEmpty() }?.let { ": $it" }.orEmpty()
         MessageKind.RECORD -> "📋 " + t.record
+        MessageKind.PRESCRIPTION -> "💊 " + strings.prescriptions.title
     }
 }
 
@@ -289,11 +292,13 @@ fun ConversationScreen(
     onOpenRecord: (messageId: String) -> Unit,
     onOpenPatient: () -> Unit,
     onManageReplies: () -> Unit,
+    onWritePrescription: () -> Unit,
     onToast: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val t = strings.tabs
     val w = strings.work
+    val rx = strings.prescriptions
     val c = Sadora.colors
     val scope = rememberCoroutineScope()
     val calls = doctors.chatCalls
@@ -325,6 +330,8 @@ fun ConversationScreen(
     var reportOpen by remember { mutableStateOf(false) }
     var viewing by remember { mutableStateOf<DirectMessage?>(null) }
     var sendingPhoto by remember { mutableStateOf(false) }
+    var attachOpen by remember { mutableStateOf(false) }
+    var cancelling by remember { mutableStateOf<Prescription?>(null) }
 
     val picker = rememberPhotoCapture { photo ->
         sendingPhoto = true
@@ -421,6 +428,7 @@ fun ConversationScreen(
                         doctors = doctors,
                         onViewImage = { viewing = message },
                         onOpenRecord = { onOpenRecord(message.id) },
+                        onCancelPrescription = { cancelling = it },
                     )
                 }
                 if (thread?.otherTyping == true) {
@@ -453,17 +461,19 @@ fun ConversationScreen(
                         onWriteSummary = if (needsSummary) { { summaryMode = SummaryMode.Write } } else null,
                     )
                     else -> Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-                        if (picker.available) {
+                        // "+": a photo, and in a consultation a prescription. Quick replies keep
+                        // their own button beside it — they are used all day.
+                        if (picker.available || window != null) {
                             Box(
                                 Modifier
                                     .padding(bottom = 2.dp)
                                     .size(MinTouchTarget)
                                     .clip(Radius.chip)
                                     .background(c.surface2)
-                                    .noRippleClickable(enabled = canWrite && !sendingPhoto, role = Role.Button, onClick = picker::pickFromGallery),
+                                    .noRippleClickable(enabled = canWrite && !sendingPhoto, role = Role.Button, onClick = { attachOpen = true }),
                                 contentAlignment = Alignment.Center,
                             ) {
-                                Icon(SadoraIcons.Camera, contentDescription = t.attachPhoto, Modifier.size(IconSize.md), tint = c.text)
+                                Icon(SadoraIcons.Plus, contentDescription = rx.attach, Modifier.size(IconSize.md), tint = c.text)
                             }
                         }
                         Box(
@@ -505,6 +515,26 @@ fun ConversationScreen(
             }
             PillButton(t.report, onClick = { menuOpen = false; reportOpen = true }, modifier = Modifier.fillMaxWidth())
         }
+
+        SadoraBottomSheet(visible = attachOpen, title = rx.attachTitle, onDismiss = { attachOpen = false }) {
+            if (picker.available) {
+                AttachRow(SadoraIcons.Camera, rx.photo, onClick = { attachOpen = false; picker.pickFromGallery() })
+            }
+            if (window != null) {
+                AttachRow(null, rx.prescription, art = Res.drawable.ic3d_meds, onClick = { attachOpen = false; onWritePrescription() })
+            }
+        }
+
+        CancelPrescriptionSheet(
+            target = cancelling,
+            conversationId = id,
+            doctors = doctors,
+            onDone = {
+                cancelling = null
+                onToast(rx.cancelledToast)
+            },
+            onDismiss = { cancelling = null },
+        )
 
         SadoraBottomSheet(visible = reportOpen, title = t.reportTitle, onDismiss = { reportOpen = false }) {
             ReportReason.entries.forEach { reason ->
@@ -664,10 +694,26 @@ private fun MessageBubble(
     doctors: DoctorController,
     onViewImage: () -> Unit,
     onOpenRecord: () -> Unit,
+    onCancelPrescription: (Prescription) -> Unit,
 ) {
     val c = Sadora.colors
     val t = strings.tabs
     val mine = message.isMine
+    message.prescription?.takeIf { message.kind == MessageKind.PRESCRIPTION }?.let { prescription ->
+        Column(Modifier.fillMaxWidth(), horizontalAlignment = if (mine) Alignment.End else Alignment.Start) {
+            PrescriptionCard(
+                prescription,
+                onCancel = if (mine && !prescription.cancelled) { { onCancelPrescription(prescription) } } else null,
+            )
+            Text(
+                clock(message.createdAt),
+                style = Sadora.type.caption.copy(letterSpacing = TextUnit.Unspecified),
+                color = c.muted2,
+                modifier = Modifier.padding(top = 2.dp, end = Spacing.xs),
+            )
+        }
+        return
+    }
     val fg = if (mine) c.onPrimary else c.text
     Row(Modifier.fillMaxWidth(), horizontalArrangement = if (mine) Arrangement.End else Arrangement.Start) {
         Column(
@@ -693,7 +739,8 @@ private fun MessageBubble(
                     Text(t.recordCardBody, style = Sadora.type.body, color = fg.copy(alpha = 0.85f))
                     PillButton(t.viewRecord, onClick = onOpenRecord)
                 }
-                MessageKind.TEXT -> Text(message.body, style = Sadora.type.body, color = fg)
+                // A prescription whose structured copy is missing reads as its text.
+                MessageKind.TEXT, MessageKind.PRESCRIPTION -> Text(message.body, style = Sadora.type.body, color = fg)
             }
             Row(
                 Modifier.align(Alignment.End).padding(horizontal = if (message.kind == MessageKind.IMAGE) Spacing.xs else 0.dp),
@@ -708,6 +755,35 @@ private fun MessageBubble(
                 if (mine) ReadTicks(read = message.read, onPrimary = true)
             }
         }
+    }
+}
+
+/** One choice in the "+" sheet: an icon and what it attaches. */
+@Composable
+private fun AttachRow(
+    icon: androidx.compose.ui.graphics.vector.ImageVector?,
+    label: String,
+    art: org.jetbrains.compose.resources.DrawableResource? = null,
+    onClick: () -> Unit,
+) {
+    val c = Sadora.colors
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clip(Radius.card)
+            .background(c.surface2)
+            .noRippleClickable(role = Role.Button, onClick = onClick)
+            .padding(Spacing.sm),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+    ) {
+        Box(Modifier.size(40.dp).clip(Radius.chip).background(c.primary.copy(alpha = 0.12f)), contentAlignment = Alignment.Center) {
+            when {
+                art != null -> uz.sadora.doctor.ui.components.ArtIcon(art, 30.dp)
+                icon != null -> Icon(icon, contentDescription = null, Modifier.size(IconSize.md), tint = c.primary)
+            }
+        }
+        Text(label, style = Sadora.type.h3, color = c.text)
     }
 }
 

@@ -28,6 +28,8 @@ data class MedicationRecord(
     val stockUnits: Int?,
     val active: Boolean,
     val createdAt: kotlin.time.Instant,
+    /** Added from a doctor's prescription; null for her own courses. */
+    val prescriptionId: Uuid? = null,
 )
 
 /**

@@ -11,3 +11,13 @@ import androidx.compose.runtime.Composable
  */
 @Composable
 expect fun rememberShareAction(): (String) -> Unit
+
+/**
+ * Hands a picture to the share sheet: a PNG, by the bytes, under [fileName]. The
+ * prescription card uses it, so it can be shown at a pharmacy or sent to family.
+ */
+@Composable
+expect fun rememberImageShareAction(): (png: ByteArray, fileName: String) -> Unit
+
+/** The bitmap as PNG bytes, for [rememberImageShareAction]. */
+expect fun androidx.compose.ui.graphics.ImageBitmap.encodePng(): ByteArray

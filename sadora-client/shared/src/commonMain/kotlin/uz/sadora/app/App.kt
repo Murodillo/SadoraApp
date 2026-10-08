@@ -1248,6 +1248,8 @@ private fun PushedScreen(
             onPay = { overlays.payFor = it },
             onRead = onThreadRead,
             onClose = close,
+            health = controllers.health,
+            onToast = toast,
         )
 
         // Her account, behind the avatar in the home header.

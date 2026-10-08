@@ -85,6 +85,17 @@ object Limits {
     /** How long a consultation takes messages once the patient opens it. */
     const val CONSULTATION_HOURS = 24
 
+    // ---- prescriptions, written by a doctor inside a consultation
+    const val PRESCRIPTION_ITEMS_MAX = 10
+    const val PRESCRIPTION_DOSE_MAX = 40
+    const val PRESCRIPTION_UNIT_MAX = 24
+    const val PRESCRIPTION_NOTE_MAX = 1000
+    const val PRESCRIPTION_ITEM_NOTE_MAX = 300
+    /** The last day a course may start on, counted from day 1. */
+    const val PRESCRIPTION_START_DAY_MAX = 90
+    const val PRESCRIPTION_DAYS_MAX = 365
+    const val PRESCRIPTION_CANCEL_REASON_MAX = 300
+
     /**
      * Ratings a doctor needs before her average is shown as a number; below it the
      * apps say "Yangi shifokor". One five-star rating is not a reputation.

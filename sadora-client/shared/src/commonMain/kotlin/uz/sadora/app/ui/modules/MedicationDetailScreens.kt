@@ -132,6 +132,9 @@ private fun MedicationForm(
     }
     // Every N days cannot be drawn as weekdays; a course set that way keeps its rule.
     val keepsInterval = existing?.schedule?.kind == ScheduleKind.INTERVAL
+    // From a doctor's prescription: what she decided is shown, not edited — the server
+    // keeps it whatever is sent — and only the times move, as many as she gave.
+    val prescribed = existing?.prescriptionId != null
     var withFood by remember { mutableStateOf(existing?.foodRelation ?: FoodRelation.AFTER) }
     var stock by remember { mutableStateOf(existing?.stockUnits?.toString().orEmpty()) }
     var saving by remember { mutableStateOf(false) }
@@ -148,6 +151,19 @@ private fun MedicationForm(
         SadoraTopBar(if (existing == null) t.addMedTitle else t.editMedTitle, onBack = onClose)
 
         ScreenContent {
+            if (prescribed) {
+                item {
+                    val rx = strings.prescriptions
+                    SadoraCard(padding = Spacing.sm, verticalGap = Spacing.xxs) {
+                        Text(
+                            existing?.prescribedBy?.let(rx::prescribedBy) ?: rx.title,
+                            style = Sadora.type.h3,
+                            color = c.textAccent,
+                        )
+                        Text(rx.lockedNote, style = Sadora.type.body, color = c.muted)
+                    }
+                }
+            }
             item {
                 SadoraCard {
                     SadoraTextField(
@@ -156,6 +172,7 @@ private fun MedicationForm(
                         label = t.medName,
                         placeholder = t.medNameHint,
                         error = nameError,
+                        enabled = !prescribed,
                     )
                     Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                         SadoraTextField(
@@ -164,12 +181,14 @@ private fun MedicationForm(
                             label = t.medDose,
                             placeholder = "30",
                             keyboardType = KeyboardType.Number,
+                            enabled = !prescribed,
                             modifier = Modifier.weight(1f),
                         )
                         SadoraTextField(
                             unit,
                             { unit = acceptText(it, UnitMax) },
                             label = t.medUnit,
+                            enabled = !prescribed,
                             modifier = Modifier.weight(1f),
                         )
                     }
@@ -198,7 +217,7 @@ private fun MedicationForm(
                                     },
                                 modifier = Modifier.weight(1f),
                             )
-                            if (times.size > 1) {
+                            if (times.size > 1 && !prescribed) {
                                 Box(
                                     Modifier
                                         .size(40.dp)
@@ -213,13 +232,13 @@ private fun MedicationForm(
                             }
                         }
                     }
-                    if (times.size < Limits.MEDICATION_TIMES_PER_DAY_MAX) {
+                    if (times.size < Limits.MEDICATION_TIMES_PER_DAY_MAX && !prescribed) {
                         PillButton(t.addTime, { times.add("") })
                     }
                 }
             }
 
-            if (!keepsInterval) {
+            if (!keepsInterval && !prescribed) {
                 item {
                     SadoraCard {
                         CardLabel(t.medDays)
@@ -252,7 +271,7 @@ private fun MedicationForm(
                 }
             }
 
-            item {
+            if (!prescribed) item {
                 SadoraCard {
                     CardLabel(t.medFoodRelation)
                     ChipFlowRow {
@@ -289,7 +308,7 @@ private fun MedicationForm(
                         enabled = !saving && valid,
                         onClick = {
                             val chosen = parsed.filterNotNull().sorted()
-                            val schedule = existing?.schedule?.takeIf { keepsInterval }?.copy(times = chosen)
+                            val schedule = existing?.schedule?.takeIf { keepsInterval || prescribed }?.copy(times = chosen)
                                 ?: MedicationSchedule(
                                     // Every day is "daily" rather than seven weekdays: the
                                     // server derives the doses from the kind, and the two are

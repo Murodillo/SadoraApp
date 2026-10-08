@@ -1,10 +1,14 @@
 package uz.sadora.app.ui.modules
 
+import uz.sadora.app.ui.core.AddPrescriptionSheet
+import uz.sadora.app.ui.core.PrescriptionCard
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -43,6 +47,7 @@ import uz.sadora.app.ui.components.PillButton
 import uz.sadora.app.ui.components.SadoraBadge
 import uz.sadora.app.ui.components.SadoraCard
 import uz.sadora.app.ui.components.SadoraTopBar
+import uz.sadora.app.ui.components.SectionHeader
 import uz.sadora.app.ui.components.ScreenContent
 import uz.sadora.app.ui.components.SegmentedControl
 import uz.sadora.app.ui.components.noRippleClickable
@@ -71,13 +76,21 @@ fun MedicationsScreen(
     val t = strings.modules
     val c = Sadora.colors
     var tab by remember { mutableStateOf(TodayTab) }
-    LaunchedEffect(Unit) { health.refreshMedications() }
+    LaunchedEffect(Unit) {
+        health.refreshMedications()
+        health.loadPrescriptions()
+    }
+    var adding by remember { mutableStateOf<uz.sadora.contract.Prescription?>(null) }
+    // Ones she has not added yet are offered on the Today tab too, so they are not missed.
+    val prescriptions = health.prescriptions.orEmpty()
+    val waiting = prescriptions.filter { it.addedAt == null && it.cancelledAt == null }
     val edit = { medicationId: String -> onOpen(Route.EditMedication(medicationId)) }
     // t.later hides the next-dose card for this visit; the dose itself stays due,
     // because snoozing is not the same as skipping.
     var snoozedId by remember { mutableStateOf<String?>(null) }
 
-    Column(modifier) {
+    Box(modifier) {
+    Column(Modifier.fillMaxSize()) {
         SadoraTopBar(
             t.medsTitle,
             onBack = onClose,
@@ -123,7 +136,22 @@ fun MedicationsScreen(
                         CourseRow(courses[index]) { edit(courses[index].id) }
                     }
                 }
+                if (prescriptions.isNotEmpty()) {
+                    item(key = "rx-title") { SectionHeader(strings.prescriptions.listTitle) }
+                    items(prescriptions.size, key = { "rx-" + prescriptions[it].id }) { index ->
+                        val prescription = prescriptions[index]
+                        PrescriptionCard(
+                            prescription,
+                            modifier = Modifier.fillMaxWidth(),
+                            onAdd = { adding = prescription }.takeIf { prescription.addedAt == null && prescription.cancelledAt == null },
+                        )
+                    }
+                }
                 return@ScreenContent
+            }
+
+            items(waiting.size, key = { "rx-waiting-" + waiting[it].id }) { index ->
+                PrescriptionCard(waiting[index], modifier = Modifier.fillMaxWidth(), onAdd = { adding = waiting[index] })
             }
 
             val next = state.medications.firstOrNull { it.status == MedStatus.Pending && it.id != snoozedId }
@@ -222,6 +250,14 @@ fun MedicationsScreen(
             }
         }
     }
+
+    AddPrescriptionSheet(
+        prescription = adding,
+        health = health,
+        onAdded = { adding = null },
+        onDismiss = { adding = null },
+    )
+    }
 }
 
 @Composable
@@ -297,6 +333,9 @@ private fun CourseRow(course: Course, onClick: () -> Unit) {
                     style = Sadora.type.h3,
                     color = c.text,
                 )
+                course.prescribedBy?.let {
+                    Text(strings.prescriptions.prescribedBy(it), style = Sadora.type.caption, color = c.textAccent)
+                }
                 Text(
                     listOf(
                         course.schedule.times.joinToString(", ") { it.toString().take(5) },

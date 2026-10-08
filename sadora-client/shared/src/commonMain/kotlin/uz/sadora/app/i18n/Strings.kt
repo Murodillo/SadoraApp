@@ -66,6 +66,7 @@ interface Strings {
     val share: ShareStrings
     val partner: PartnerStrings
     val badges: BadgeStrings
+    val prescriptions: PrescriptionStrings
     val pet: PetStrings
     val premium: PremiumStrings
     val devices: DeviceStrings

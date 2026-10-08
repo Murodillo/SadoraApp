@@ -62,6 +62,8 @@ import uz.sadora.server.health.HealthRepository
 import uz.sadora.server.health.HealthService
 import uz.sadora.server.health.MedicationRepository
 import uz.sadora.server.health.MedicationService
+import uz.sadora.server.prescription.PrescriptionRepository
+import uz.sadora.server.prescription.PrescriptionService
 import uz.sadora.server.health.AppointmentRepository
 import uz.sadora.server.health.AppointmentService
 import uz.sadora.server.health.StageEventRepository
@@ -223,7 +225,13 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
         usage = aiUsageRepository,
         rewards = rewardsService,
     )
-    val medicationService = MedicationService(medicationRepository, healthAccess, rewardsService)
+    val prescriptionRepository = PrescriptionRepository()
+    val medicationService = MedicationService(
+        medicationRepository,
+        healthAccess,
+        rewardsService,
+        prescribers = prescriptionRepository::prescriberNames,
+    )
     val wearableService = WearableService(wearableRepository, healthAccess)
 
     /**
@@ -321,8 +329,17 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
         cache = cache,
         audit = auditService,
         consultations = consultationRepository,
+        prescriptions = prescriptionRepository,
     )
-    val communityModerationService = CommunityModerationService(communityRepository, auditService, messagingRepository, doctorRepository)
+    val prescriptionService = PrescriptionService(
+        prescriptions = prescriptionRepository,
+        messages = messagingRepository,
+        doctors = doctorRepository,
+        users = userRepository,
+        medications = medicationService,
+        notifications = notificationRepository,
+    )
+    val communityModerationService = CommunityModerationService(communityRepository, auditService, messagingRepository, doctorRepository, prescriptionRepository)
 
     val contentRepository = ContentRepository()
     val contentService = ContentService(

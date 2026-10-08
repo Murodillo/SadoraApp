@@ -1528,6 +1528,7 @@ object StringsUz : Strings {
     override val tools: StageToolsStrings = StageToolsUz
     override val partner: PartnerStrings = PartnerUz
     override val badges: BadgeStrings = BadgesUz
+    override val prescriptions: PrescriptionStrings = PrescriptionStringsUz
     override val pet: PetStrings = PetUz
 
     override val rewards = object : RewardStrings {
