@@ -81,7 +81,7 @@ fun main() {
     val logger = LoggerFactory.getLogger("uz.sadora.server")
     val component = AppComponent(config)
 
-    runBlocking { AdminBootstrap.run() }
+    runBlocking { AdminBootstrap.run(strict = config.environment != Environment.DEV) }
 
     // Reminders only mean anything if something is running to send them.
     component.notificationScheduler.start()
@@ -124,7 +124,7 @@ fun Application.apiModule(component: AppComponent) {
     configureHttp(config)
     configureStatusPages()
     configureRateLimit(config)
-    configureSecurity(component.jwtService, component.accountGate)
+    configureSecurity(component.jwtService, component.accountGate, config.adminRequireTotp)
 
     routing {
         healthCheckRoutes(config.environment.name.lowercase(), SERVER_VERSION)
@@ -193,8 +193,8 @@ fun Application.apiModule(component: AppComponent) {
             // The providers' own protocols; not behind the app's auth or its error envelope.
             paymeWebhook(component.paymeGateway, component.billingRepository)
             clickWebhook(component.clickGateway, component.billingRepository)
-            // Stands in for the providers where no merchant keys are set; refused in production.
-            if (config.environment != Environment.PROD) devPayRoutes(component.billingService)
+            // Stands in for the providers where no merchant keys are set; only where BILLING_DEV_PAY says so.
+            if (config.billing.devPay) devPayRoutes(component.billingService)
             adminRoutes(
                 adminAuth = component.adminAuthService,
                 adminService = component.adminService,

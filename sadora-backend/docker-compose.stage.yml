@@ -35,3 +35,8 @@ services:
   api:
     ports: !override
       - "8083:8080"
+    # Staging's testers pay through the instant dev-pay page and Play's licence-tester
+    # purchases. Production never sets these, and refuses to start with them in PROD.
+    environment:
+      BILLING_DEV_PAY: "true"
+      STORE_ALLOW_TEST_PURCHASES: "true"

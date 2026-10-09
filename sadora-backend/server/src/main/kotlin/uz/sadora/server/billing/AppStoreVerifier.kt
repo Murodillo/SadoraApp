@@ -34,9 +34,9 @@ class AppStoreVerifier(
     /**
      * Whether a sandbox transaction counts. Apple signs sandbox and TestFlight purchases
      * with the very same chain as paid ones, so the signature alone cannot tell them
-     * apart — only the payload's `environment` can. True on a laptop and on staging,
-     * where testers are the only buyers; false in production, or anybody with a
-     * TestFlight build could give herself Premium for nothing.
+     * apart — only the payload's `environment` can. True in production as well: App
+     * Review buys in the sandbox against the production server, and only people invited
+     * to TestFlight can make a sandbox purchase at all.
      */
     private val allowSandbox: Boolean = true,
 ) {

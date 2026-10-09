@@ -265,6 +265,8 @@ object AdminUsers : Table("admin_users") {
     val role = text("role")
     val totpSecret = text("totp_secret").nullable()
     val totpEnabled = bool("totp_enabled")
+    /** The time step of the last code that signed in; a code at or before it is a replay. */
+    val totpLastStep = long("totp_last_step").nullable()
     val status = text("status")
     val failedAttempts = integer("failed_attempts")
     val lockedUntil = timestampWithTimeZone("locked_until").nullable()

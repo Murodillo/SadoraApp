@@ -47,8 +47,8 @@ class GooglePlayVerifier(
     private val apiBase: String = "https://androidpublisher.googleapis.com",
     /**
      * Whether a licence tester's purchase — one Play never charged for — counts. True
-     * on a laptop and on staging, where those are the only purchases there are; false
-     * in production, where a tester's free receipt must not become a free subscription.
+     * on a laptop and on staging (STORE_ALLOW_TEST_PURCHASES), where those are the only
+     * purchases there are; false in production, where a tester's free receipt must not become a free subscription.
      */
     private val allowTestPurchases: Boolean = true,
 ) {

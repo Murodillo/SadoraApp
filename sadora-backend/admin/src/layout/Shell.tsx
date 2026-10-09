@@ -93,7 +93,11 @@ const titles: Record<string, string> = {
   '/audit': 'Audit log va xavfsizlik',
 }
 
-export function Shell() {
+/**
+ * [setupOnly]: 2FA is mandatory and she has not enrolled, so the server refuses every
+ * page but her own account. The rail shows only that one instead of a list of 403s.
+ */
+export function Shell({ setupOnly = false }: { setupOnly?: boolean }) {
   const { session, signOut, can } = useAuth()
   const location = useLocation()
   const [theme, setTheme] = useState(() => localStorage.getItem('sadora.admin.theme') ?? 'dark')
@@ -135,7 +139,9 @@ export function Shell() {
         </div>
 
         {groups.map((group) => {
-          const visible = group.entries.filter((entry) => can(entry.roles))
+          const visible = group.entries.filter(
+            (entry) => can(entry.roles) && (!setupOnly || entry.to === '/security'),
+          )
           if (!visible.length) return null
           return (
             <div key={group.title}>

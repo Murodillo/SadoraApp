@@ -7,6 +7,7 @@ import io.ktor.server.plugins.origin
 import io.ktor.server.request.userAgent
 import kotlin.uuid.Uuid
 import uz.sadora.contract.ErrorCodes
+import uz.sadora.server.admin.requireTotpEnrolled
 import uz.sadora.server.auth.RequestContext
 import uz.sadora.server.core.ForbiddenException
 import uz.sadora.server.core.UnauthorizedException
@@ -33,6 +34,7 @@ fun ApplicationCall.requireAdmin(): AdminPrincipal =
  */
 fun ApplicationCall.requireAdminRole(vararg allowed: AdminRole): AdminPrincipal {
     val principal = requireAdmin()
+    requireTotpEnrolled(principal)
     if (principal.role !in allowed) {
         throw ForbiddenException(message = "Bu amal uchun ruxsat yo'q")
     }

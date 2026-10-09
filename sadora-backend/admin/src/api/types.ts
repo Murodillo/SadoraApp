@@ -41,6 +41,8 @@ export interface AdminMe {
   email: string
   role: AdminRole
   totpEnabled: boolean
+  /** 2FA is mandatory on this server and she has not enrolled: only enrolment is open. */
+  totpSetupRequired?: boolean
 }
 
 export interface TotpEnrolment {

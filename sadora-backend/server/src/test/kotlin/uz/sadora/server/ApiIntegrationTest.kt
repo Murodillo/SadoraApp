@@ -48,6 +48,9 @@ import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
+import org.jetbrains.exposed.v1.jdbc.update
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Assumptions.assumeTrue
 import org.junit.jupiter.api.BeforeAll
@@ -188,6 +191,7 @@ import uz.sadora.contract.PartnerWebLink
 import uz.sadora.contract.SendPartnerMessageRequest
 import uz.sadora.contract.UzbekPhone
 import uz.sadora.server.admin.AdminSession
+import uz.sadora.server.admin.AdminPasswordChangeRequest
 import uz.sadora.server.admin.AdminMe
 import uz.sadora.server.admin.AdminSignInRequest
 import uz.sadora.server.admin.Totp
@@ -1542,6 +1546,60 @@ class ApiIntegrationTest {
             json(AdminSignInRequest(admin.email, admin.password, currentCodeFor(enrolment.secret)))
         }
         assertEquals(HttpStatusCode.OK, withCode.status, withCode.bodyAsTextSafe())
+
+        // The same code a second time is a replay: someone who saw it over her shoulder
+        // or phished it gets nothing for the rest of its 90 seconds.
+        val replayed = client.post("/v1/admin/auth/login") {
+            json(AdminSignInRequest(admin.email, admin.password, currentCodeFor(enrolment.secret)))
+        }
+        assertEquals(HttpStatusCode.Unauthorized, replayed.status, replayed.bodyAsTextSafe())
+    }
+
+    @Test
+    fun `an operator changes her own password, and only with the current one`() = api {
+        val admin = adminAccount()
+        val wrongCurrent = client.post("/v1/admin/me/password") {
+            auth(admin.token)
+            json(AdminPasswordChangeRequest(currentPassword = "Wrong12345", newPassword = "NewPass12345"))
+        }
+        assertEquals(HttpStatusCode.BadRequest, wrongCurrent.status)
+
+        val published = client.post("/v1/admin/me/password") {
+            auth(admin.token)
+            json(AdminPasswordChangeRequest(currentPassword = admin.password, newPassword = "changeme123"))
+        }
+        assertEquals(HttpStatusCode.BadRequest, published.status, "a password in the repository is refused")
+
+        val changed = client.post("/v1/admin/me/password") {
+            auth(admin.token)
+            json(AdminPasswordChangeRequest(currentPassword = admin.password, newPassword = "NewPass12345"))
+        }
+        assertEquals(HttpStatusCode.OK, changed.status, changed.bodyAsTextSafe())
+
+        val old = client.post("/v1/admin/auth/login") { json(AdminSignInRequest(admin.email, admin.password)) }
+        assertEquals(HttpStatusCode.Unauthorized, old.status)
+        val new = client.post("/v1/admin/auth/login") { json(AdminSignInRequest(admin.email, "NewPass12345")) }
+        assertEquals(HttpStatusCode.OK, new.status, new.bodyAsTextSafe())
+    }
+
+    @Test
+    fun `parallel wrong passwords still lock the account`() = api {
+        val admin = adminAccount()
+        coroutineScope {
+            repeat(10) {
+                launch { client.post("/v1/admin/auth/login") { json(AdminSignInRequest(admin.email, "Wrong12345")) } }
+            }
+        }
+        val right = client.post("/v1/admin/auth/login") { json(AdminSignInRequest(admin.email, admin.password)) }
+        assertEquals(HttpStatusCode.Forbidden, right.status, "locked after five failures, however they arrived")
+    }
+
+    @Test
+    fun `a disabled operator's token stops working at once`() = api {
+        val admin = adminAccount()
+        assertEquals(HttpStatusCode.OK, client.get("/v1/admin/me") { auth(admin.token) }.status)
+        dbQuery { AdminUsers.update({ AdminUsers.email eq admin.email }) { it[status] = "disabled" } }
+        assertEquals(HttpStatusCode.Unauthorized, client.get("/v1/admin/me") { auth(admin.token) }.status)
     }
 
     @Test
@@ -4061,6 +4119,9 @@ class ApiIntegrationTest {
                 secretKey = "test_click_secret",
                 checkoutUrl = "https://my.click.uz/services/pay",
             ),
+            // The suite pays consultations, pets and frames through the instant page.
+            devPay = true,
+            allowTestPurchases = true,
         ),
         policyVersion = "2026-08-01",
         minimumAppVersion = null,

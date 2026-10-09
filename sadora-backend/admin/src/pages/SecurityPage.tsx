@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useAdminMe, useConfirmTotp, useDisableTotp, useStartTotpEnrolment } from '../api/hooks'
+import { useAdminMe, useChangePassword, useConfirmTotp, useDisableTotp, useStartTotpEnrolment } from '../api/hooks'
 import type { TotpEnrolment } from '../api/types'
 import { useToast } from '../components/toast'
 import { Card, ErrorNotice, Field, Loading, Spinner } from '../components/ui'
@@ -38,7 +38,15 @@ export function SecurityPage() {
         </div>
       </Card>
 
+      {me.data.totpSetupRequired ? (
+        <div className="notice">
+          Bu serverda 2FA majburiy. Uni yoqmaguningizcha panelning boshqa bo'limlari ochilmaydi.
+        </div>
+      ) : null}
+
       {me.data.totpEnabled ? <DisableCard /> : <EnrolCard email={me.data.email} />}
+
+      <PasswordCard totpEnabled={me.data.totpEnabled} />
     </div>
   )
 }
@@ -155,6 +163,84 @@ function DisableCard() {
         {disable.isPending ? "O'chirilmoqda…" : "2FA'ni o'chirish"}
       </button>
       {disable.error ? <ErrorNotice error={disable.error} /> : null}
+    </Card>
+  )
+}
+
+function PasswordCard({ totpEnabled }: { totpEnabled: boolean }) {
+  const { notify } = useToast()
+  const change = useChangePassword()
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [repeat, setRepeat] = useState('')
+  const [code, setCode] = useState('')
+
+  const mismatch = repeat.length > 0 && repeat !== newPassword
+  const ready =
+    currentPassword.length > 0 &&
+    newPassword.length >= 8 &&
+    newPassword === repeat &&
+    (!totpEnabled || code.length === 6)
+
+  const submit = () =>
+    change.mutate(
+      { currentPassword, newPassword, ...(totpEnabled ? { totpCode: code } : {}) },
+      {
+        onSuccess: () => {
+          setCurrentPassword('')
+          setNewPassword('')
+          setRepeat('')
+          setCode('')
+          notify("Parol o'zgartirildi")
+        },
+      },
+    )
+
+  return (
+    <Card title="Parolni almashtirish">
+      <div className="filters">
+        <Field label="Joriy parol">
+          <input
+            type="password"
+            autoComplete="current-password"
+            value={currentPassword}
+            onChange={(event) => setCurrentPassword(event.target.value)}
+          />
+        </Field>
+        <Field label="Yangi parol">
+          <input
+            type="password"
+            autoComplete="new-password"
+            value={newPassword}
+            onChange={(event) => setNewPassword(event.target.value)}
+          />
+        </Field>
+        <Field label="Yangi parol — yana bir bor">
+          <input
+            type="password"
+            autoComplete="new-password"
+            value={repeat}
+            onChange={(event) => setRepeat(event.target.value)}
+          />
+        </Field>
+        {totpEnabled ? (
+          <Field label="2FA kodi">
+            <input
+              className="narrow"
+              inputMode="numeric"
+              maxLength={6}
+              value={code}
+              onChange={(event) => setCode(event.target.value.replace(/\D/g, ''))}
+            />
+          </Field>
+        ) : null}
+      </div>
+      {mismatch ? <div className="notice" style={{ marginTop: 12 }}>Yangi parollar bir xil emas.</div> : null}
+      <button className="btn primary" style={{ marginTop: 12 }} disabled={!ready || change.isPending} onClick={submit}>
+        {change.isPending && <Spinner />}
+        {change.isPending ? 'Saqlanmoqda…' : 'Saqlash'}
+      </button>
+      {change.error ? <ErrorNotice error={change.error} /> : null}
     </Card>
   )
 }

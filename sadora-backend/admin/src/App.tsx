@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Navigate, Route, BrowserRouter, Routes } from 'react-router-dom'
 import { ApiFailure } from './api/client'
+import { useAdminMe } from './api/hooks'
 import { AuthProvider, useAuth } from './auth/AuthContext'
 import { LoginPage } from './auth/LoginPage'
 import { ErrorBoundary } from './components/ErrorBoundary'
@@ -58,8 +59,28 @@ export function App() {
  * page the API would refuse is a courtesy to the operator, not a security boundary.
  */
 function AppRoutes() {
-  const { session, can } = useAuth()
+  const { session } = useAuth()
   if (!session) return <LoginPage />
+  return <SignedInRoutes />
+}
+
+function SignedInRoutes() {
+  const { can } = useAuth()
+  const me = useAdminMe()
+
+  // Where 2FA is mandatory, an operator who has not enrolled reaches her account page
+  // and nothing else; the server refuses the rest. Enrolling refetches `me` and the
+  // whole panel opens.
+  if (me.data?.totpSetupRequired) {
+    return (
+      <Routes>
+        <Route element={<Shell setupOnly />}>
+          <Route path="security" element={<SecurityPage />} />
+          <Route path="*" element={<Navigate to="/security" replace />} />
+        </Route>
+      </Routes>
+    )
+  }
 
   return (
     <Routes>

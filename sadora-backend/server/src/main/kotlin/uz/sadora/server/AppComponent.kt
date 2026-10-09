@@ -508,14 +508,14 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
                     http = outboundHttpClient,
                     packageName = it.packageName,
                     serviceAccount = GooglePlayVerifier.ServiceAccount.fromFile(it.serviceAccountFile!!),
-                    allowTestPurchases = !config.environment.isProduction,
+                    allowTestPurchases = config.billing.allowTestPurchases,
                 )
             },
-            // Sandbox and TestFlight receipts are signed exactly like paid ones; only
-            // production refuses them, so testers on staging can still buy.
+            // Sandbox and TestFlight receipts are signed exactly like paid ones. Accepted
+            // in production too, because App Review pays in the sandbox there.
             appStore = AppStoreVerifier(
                 bundleIds = config.social.appleBundleIds.toSet(),
-                allowSandbox = !config.environment.isProduction,
+                allowSandbox = config.billing.appStoreAllowSandbox,
             ),
         )
     val storePurchaseService = StorePurchaseService(
@@ -581,7 +581,7 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
         frames.owned = paymentRequestService::closeOpenFrameRequests
     }
 
-    val adminAuthService = AdminAuthService(jwtService, auditService)
+    val adminAuthService = AdminAuthService(jwtService, auditService, requireTotp = config.adminRequireTotp)
 
     val adminService = AdminService(
         users = userRepository,

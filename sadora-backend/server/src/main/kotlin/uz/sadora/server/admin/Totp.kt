@@ -43,15 +43,21 @@ object Totp {
             "&algorithm=SHA1&digits=$DIGITS&period=$TIME_STEP_SECONDS"
     }
 
-    fun verify(base32Secret: String, code: String): Boolean {
+    fun verify(base32Secret: String, code: String): Boolean = matchedStep(base32Secret, code) != null
+
+    /**
+     * The time step [code] belongs to, or null when it matches none in the window. Sign-in
+     * stores it, so the same code cannot be used a second time while it is still fresh.
+     */
+    fun matchedStep(base32Secret: String, code: String): Long? {
         val trimmed = code.filter { it.isDigit() }
-        if (trimmed.length != DIGITS) return false
-        val key = runCatching { decodeBase32(base32Secret) }.getOrNull() ?: return false
+        if (trimmed.length != DIGITS) return null
+        val key = runCatching { decodeBase32(base32Secret) }.getOrNull() ?: return null
         val counter = now().epochSeconds / TIME_STEP_SECONDS
-        return (-ALLOWED_DRIFT_STEPS..ALLOWED_DRIFT_STEPS).any { drift ->
+        return (-ALLOWED_DRIFT_STEPS..ALLOWED_DRIFT_STEPS)
+            .map { drift -> counter + drift }
             // Constant-time comparison: a timing oracle on a 6-digit code is worth having.
-            generate(key, counter + drift).constantTimeEquals(trimmed)
-        }
+            .lastOrNull { step -> generate(key, step).constantTimeEquals(trimmed) }
     }
 
     fun generate(key: ByteArray, counter: Long): String {

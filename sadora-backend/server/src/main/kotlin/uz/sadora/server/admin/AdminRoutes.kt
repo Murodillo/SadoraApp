@@ -74,6 +74,12 @@ fun Route.adminRoutes(
                 call.respond(Ack())
             }
 
+            post("/me/password") {
+                val request = call.receive<AdminPasswordChangeRequest>()
+                adminAuth.changePassword(call.requireAdmin().adminId, request, call.requestContext())
+                call.respond(Ack())
+            }
+
             post("/me/totp/disable") {
                 val request = call.receive<TotpDisableRequest>()
                 adminAuth.disableTotp(call.requireAdmin().adminId, request, call.requestContext())

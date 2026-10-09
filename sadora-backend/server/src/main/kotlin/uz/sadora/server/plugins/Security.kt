@@ -13,6 +13,10 @@ import uz.sadora.contract.ApiErrorResponse
 import uz.sadora.contract.ErrorCodes
 import uz.sadora.server.auth.JwtService
 import uz.sadora.server.auth.TokenSubjectType
+import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.jdbc.selectAll
+import uz.sadora.server.db.AdminUsers
+import uz.sadora.server.db.dbQuery
 
 const val USER_AUTH: String = "user-jwt"
 const val ADMIN_AUTH: String = "admin-jwt"
@@ -29,8 +33,12 @@ data class UserPrincipal(val userId: Uuid)
  */
 data class BlockedPrincipal(val userId: Uuid, val message: String)
 
-/** The signed-in admin operator. [role] gates which admin routes are reachable. */
-data class AdminPrincipal(val adminId: Uuid, val role: AdminRole)
+/**
+ * The signed-in admin operator. [role] gates which admin routes are reachable.
+ * [totpSetupRequired] is an operator who has not enrolled 2FA where it is mandatory:
+ * she reaches her own account page and nothing else until she does.
+ */
+data class AdminPrincipal(val adminId: Uuid, val role: AdminRole, val totpSetupRequired: Boolean = false)
 
 /**
  * Admin roles, narrowest last. The proposal fixes these four and the page list each one
@@ -45,7 +53,7 @@ enum class AdminRole {
     fun canReadAudit(): Boolean = this == OWNER
 }
 
-fun Application.configureSecurity(jwtService: JwtService, accountGate: AccountGate) {
+fun Application.configureSecurity(jwtService: JwtService, accountGate: AccountGate, adminRequireTotp: Boolean) {
     install(Authentication) {
         jwt(USER_AUTH) {
             realm = jwtService.realm
@@ -66,12 +74,21 @@ fun Application.configureSecurity(jwtService: JwtService, accountGate: AccountGa
             realm = jwtService.realm
             verifier(jwtService.verifier)
             validate { credential ->
-                credential.principalOf(TokenSubjectType.ADMIN)?.let { adminId ->
-                    val role = credential.payload.getClaim(CLAIM_ROLE).asString()
-                        ?.let { stored -> AdminRole.entries.firstOrNull { it.name.equals(stored, true) } }
-                        ?: return@validate null
-                    AdminPrincipal(adminId, role)
-                }
+                val adminId = credential.principalOf(TokenSubjectType.ADMIN) ?: return@validate null
+                // Read fresh on every call rather than trusted from the token: a disabled
+                // or demoted operator loses access now, not when her token runs out.
+                // There are a handful of operators, so the lookup costs nothing.
+                val row = dbQuery {
+                    AdminUsers.selectAll().where { AdminUsers.id eq adminId }.singleOrNull()
+                } ?: return@validate null
+                if (row[AdminUsers.status] != "active") return@validate null
+                val role = AdminRole.entries.firstOrNull { it.name.equals(row[AdminUsers.role], true) }
+                    ?: return@validate null
+                AdminPrincipal(
+                    adminId = adminId,
+                    role = role,
+                    totpSetupRequired = adminRequireTotp && !row[AdminUsers.totpEnabled],
+                )
             }
             challenge { _, _ -> call.respondUnauthorized() }
         }
