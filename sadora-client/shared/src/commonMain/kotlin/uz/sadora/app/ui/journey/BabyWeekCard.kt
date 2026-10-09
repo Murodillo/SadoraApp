@@ -19,9 +19,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.text.style.TextAlign
+import org.jetbrains.compose.resources.DrawableResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import uz.sadora.app.design.Radius
 import uz.sadora.app.design.Sadora
 import uz.sadora.app.design.SadoraIcons
@@ -29,6 +28,7 @@ import uz.sadora.app.design.Spacing
 import uz.sadora.app.i18n.forWeek
 import uz.sadora.app.i18n.strings
 import uz.sadora.app.model.PregnancyWeeks
+import uz.sadora.app.ui.components.ArtIcon
 import uz.sadora.app.ui.components.CardLabel
 import uz.sadora.app.ui.components.CircleIconButton
 import uz.sadora.app.ui.components.SadoraCard
@@ -40,9 +40,8 @@ import uz.sadora.app.ui.components.SadoraCard
  * stepping back to her own week brings the "this week" badge back, so it is always
  * clear whether she is reading about now or browsing.
  *
- * The picture is the size comparison: the fruit the baby matches this week, drawn large
- * on the stage's gradient. Illustrated artwork per week can replace the emoji later
- * without touching anything but [WeekPicture].
+ * The picture is the size comparison: the clay fruit the baby matches this week
+ * ([weekArt]), drawn large on the stage's gradient.
  */
 @Composable
 internal fun BabyWeekCard(currentWeek: Int, palette: List<androidx.compose.ui.graphics.Color>) {
@@ -75,7 +74,7 @@ internal fun BabyWeekCard(currentWeek: Int, palette: List<androidx.compose.ui.gr
         }
 
         WeekPicture(
-            emoji = week.emoji,
+            art = weekArt(shown),
             label = j.weekOnly(shown),
             badge = if (shown == own) t.thisWeekCaps else null,
             colors = palette,
@@ -114,7 +113,7 @@ internal fun BabyWeekCard(currentWeek: Int, palette: List<androidx.compose.ui.gr
 
 @Composable
 private fun WeekPicture(
-    emoji: String,
+    art: DrawableResource,
     label: String,
     badge: String?,
     colors: List<androidx.compose.ui.graphics.Color>,
@@ -127,12 +126,7 @@ private fun WeekPicture(
             .clip(Radius.cardSmall)
             .background(Brush.linearGradient(colors.map { it.copy(alpha = 0.35f) })),
     ) {
-        Text(
-            emoji,
-            fontSize = 88.sp,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.align(Alignment.Center),
-        )
+        ArtIcon(art, 132.dp, Modifier.align(Alignment.Center))
         Column(Modifier.padding(Spacing.sm), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(label, style = Sadora.type.h3, color = c.text)
             if (badge != null) {

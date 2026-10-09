@@ -15,6 +15,9 @@ usage:
     LABELS=1 ...   drops a text label Gemini put under each icon (sheet1 has them)
     SIZE=480 ...   a larger cut, for an illustration rather than an icon (art_shield)
     GRID=2 ...     a 2x2 sheet: four bigger icons, for art drawn large (the badge medals)
+    SHADOW=1 ...   also drops a pale grey cast shadow under the icon
+    HOLES=1 ...    also clears enclosed white gaps (cherry stems)
+    COLS=5 ...     a sheet with more columns than rows (Gemini sometimes draws 5x3)
 
 Output goes to sadora-client/shared/src/commonMain/composeResources/drawable/.
 """
@@ -37,6 +40,10 @@ def cut(cell):
     a = np.asarray(cell.convert("RGB")).astype(np.float32)
     d = (255 - a).max(axis=2)
     light = d < BG
+    if os.environ.get("SHADOW"):
+        # A soft grey cast shadow: light and almost colourless.
+        chroma = a.max(axis=2) - a.min(axis=2)
+        light |= (chroma < int(os.environ.get("SHADOW_CHROMA", 10))) & (a.min(axis=2) > 150)
     reach = np.zeros_like(light)
     reach[0, :] = light[0, :]; reach[-1, :] = light[-1, :]
     reach[:, 0] = light[:, 0]; reach[:, -1] = light[:, -1]
@@ -44,6 +51,21 @@ def cut(cell):
         nxt = dilate(reach) & light
         if (nxt == reach).all(): break
         reach = nxt
+    if os.environ.get("HOLES"):
+        # White showing through a gap (between cherry stems) is background too.
+        rest = light & ~reach
+        seen = np.zeros_like(rest)
+        for y0, x0 in zip(*np.where(rest)):
+            if seen[y0, x0]: continue
+            comp, stack = [], [(y0, x0)]
+            seen[y0, x0] = True
+            while stack:
+                y, x = stack.pop(); comp.append((y, x))
+                for ny, nx in ((y + 1, x), (y - 1, x), (y, x + 1), (y, x - 1)):
+                    if 0 <= ny < rest.shape[0] and 0 <= nx < rest.shape[1] and rest[ny, nx] and not seen[ny, nx]:
+                        seen[ny, nx] = True; stack.append((ny, nx))
+            if len(comp) > 150:
+                for y, x in comp: reach[y, x] = True
     band = reach.copy()
     for _ in range(BAND): band = dilate(band)
     edge = band & ~reach
@@ -80,10 +102,11 @@ def cut(cell):
 
 sheet = Image.open(sys.argv[1]); out = sys.argv[2]; names = sys.argv[3:]
 GRID = int(os.environ.get("GRID", 3))
-W, H = sheet.size; cw, ch = W // GRID, H // GRID
+COLS = int(os.environ.get("COLS", GRID))
+W, H = sheet.size; cw, ch = W // COLS, H // GRID
 for i, name in enumerate(names):
     if name == "-": continue
-    r, c = divmod(i, GRID)
+    r, c = divmod(i, COLS)
     cell = sheet.crop((c * cw + INSET, r * ch + INSET, (c + 1) * cw - INSET, (r + 1) * ch - INSET))
     cut(cell).save(os.path.join(out, f"{name}.png"), optimize=True)
     print(name)

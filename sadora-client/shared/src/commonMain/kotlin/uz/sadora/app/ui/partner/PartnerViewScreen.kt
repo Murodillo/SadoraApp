@@ -42,6 +42,7 @@ import uz.sadora.app.model.PregnancyWeeks
 import uz.sadora.app.ui.components.BadgeTone
 import uz.sadora.app.ui.components.ButtonTone
 import uz.sadora.app.ui.components.CardLabel
+import uz.sadora.app.ui.components.ArtIcon
 import uz.sadora.app.ui.components.ChipFlowRow
 import uz.sadora.app.ui.components.DisclaimerNote
 import uz.sadora.app.ui.components.ErrorStrip
@@ -266,12 +267,14 @@ private fun TodayCard(view: PartnerView) {
                 val week = pregnancy.week!!
                 Text(t.pregnancyWeek(week), style = Sadora.type.h2, color = c.text)
                 if (week >= PregnancyWeeks.FIRST) {
-                    val size = PregnancyWeeks.of(week)
-                    Text(
-                        "${size.emoji} " + t.babySize(strings.pregnancyWeeks.fruits.forWeek(week)),
-                        style = Sadora.type.body,
-                        color = c.muted,
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                        ArtIcon(uz.sadora.app.ui.journey.weekArt(week), 28.dp)
+                        Text(
+                            t.babySize(strings.pregnancyWeeks.fruits.forWeek(week)),
+                            style = Sadora.type.body,
+                            color = c.muted,
+                        )
+                    }
                 }
                 pregnancy.daysToGo?.let { Text(t.daysToGo(it), style = Sadora.type.h3, color = c.textAccent) }
             }
