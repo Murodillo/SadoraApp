@@ -750,7 +750,6 @@ private fun PregnancyJourney(state: AppState, health: HealthController, tools: S
             SadoraButton(
                 t.logToday,
                 onClick = { onOpen(Route.PregnancyCheckIn) },
-                tone = ButtonTone.Secondary,
             )
         }
 

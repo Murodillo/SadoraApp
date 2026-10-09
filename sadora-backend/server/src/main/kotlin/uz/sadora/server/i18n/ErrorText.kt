@@ -80,6 +80,11 @@ object ErrorText {
         Entry("Eng ko'pi {0} belgi", "Не больше {0} символов", "At most {0} characters"),
         Entry("Eng ko'pi {0}", "Не больше {0}", "At most {0}"),
         Entry("Kamida {0} ta belgi", "Не меньше {0} символов", "At least {0} characters"),
+        Entry(
+            "Chatda telefon raqam yozib bo'lmaydi — shaxsiy xabar orqali yozing",
+            "В чате нельзя писать номер телефона — напишите в личные сообщения",
+            "Phone numbers can't be posted in the chat — send a private message instead",
+        ),
         Entry("Kamida {0} ta belgi bo'lishi kerak", "Должно быть не меньше {0} символов", "Must be at least {0} characters"),
         Entry("{0}–{1} oralig'ida bo'lishi kerak", "Должно быть от {0} до {1}", "Must be between {0} and {1}"),
         Entry("{0}–{1} oralig'ida", "От {0} до {1}", "Between {0} and {1}"),

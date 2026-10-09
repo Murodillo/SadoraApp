@@ -484,6 +484,12 @@ class CommunityService(
     private fun validateBody(body: String, max: Int) {
         if (body.length < MIN_BODY_LENGTH) throw ValidationException("body", "Kamida $MIN_BODY_LENGTH ta belgi")
         if (body.length > max) throw ValidationException("body", "Eng ko'pi $max belgi")
+        // The feed is anonymous: a phone number in a post undoes that for whoever wrote
+        // it, and "menga yozing +998…" is how strangers get pulled off the app. Private
+        // messages are the way to talk one to one.
+        if (PHONE_NUMBER.containsMatchIn(body)) {
+            throw ValidationException("body", "Chatda telefon raqam yozib bo'lmaydi — shaxsiy xabar orqali yozing")
+        }
     }
 
     private fun IdentityRecord.toDto(
@@ -542,6 +548,13 @@ class CommunityService(
         const val AUTO_HIDE_REASON = "auto_reports"
         const val FALLBACK_ALIAS = "Anonim"
         const val PROFILE_POSTS = 20
+
+        /**
+         * Nine or more digits in one run, allowing the spaces, dashes, dots and brackets
+         * people type numbers with: "+998 90 123-45-67", "(90) 1234567", "901234567".
+         * A year or a dose ("2026", "500 mg") is far shorter than that.
+         */
+        val PHONE_NUMBER = Regex("""\+?\d(?:[\s\-().]*\d){8,}""")
         /** The most one page of a profile's posts may hold. */
         const val MAX_PROFILE_POSTS = 50
         /**

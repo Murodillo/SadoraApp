@@ -692,6 +692,8 @@ object StringsUz : Strings {
         override val blocked = "Bloklandi"
         override val unblocked = "Blokdan chiqarildi"
         override val viewProfile = "Profilni ko'rish"
+        override val doctorsLink = "Shifokorlar"
+        override val rulesLink = "Qoidalar"
         override val messagesTitle = "Xabarlar"
         override val messagesSubtitle = "Faqat ikkingiz o'rtasida — taxallus ostida yoki shifokor bilan"
         override val noMessages = "Hali xabar yo'q"

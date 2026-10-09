@@ -63,7 +63,7 @@ fun NotificationInboxScreen(
                         due.forEach { dose ->
                             SettingsRow(
                                 Res.drawable.ic3d_meds,
-                                t.inboxDoseDue("${dose.emoji} ${dose.name}", dose.time),
+                                t.inboxDoseDue(dose.name, dose.time),
                                 onClick = { onOpen(Route.Medications) },
                             )
                         }

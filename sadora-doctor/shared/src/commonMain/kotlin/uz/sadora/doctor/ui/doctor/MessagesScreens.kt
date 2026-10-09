@@ -1,7 +1,9 @@
 package uz.sadora.doctor.ui.doctor
 
 import uz.sadora.doctor.resources.Res
+import uz.sadora.doctor.resources.ic3d_camera
 import uz.sadora.doctor.resources.ic3d_meds
+import uz.sadora.doctor.resources.ic3d_record
 import uz.sadora.doctor.resources.ic3d_message
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
@@ -10,6 +12,8 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.Image
+import org.jetbrains.compose.resources.painterResource
+import org.jetbrains.compose.resources.DrawableResource
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -185,6 +189,9 @@ private fun ConversationRow(chat: Conversation, onClick: () -> Unit) {
                 }
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
                     if (chat.lastMessageRead) ReadTicks(read = true)
+                    previewArt(chat.lastMessageKind)?.let {
+                        Image(painterResource(it), contentDescription = null, modifier = Modifier.size(18.dp))
+                    }
                     Text(
                         previewOf(chat),
                         style = Sadora.type.body,
@@ -206,17 +213,25 @@ private fun ConversationRow(chat: Conversation, onClick: () -> Unit) {
     }
 }
 
-/** "📷 Rasm: caption", "📋 Tibbiy karta", or the line itself. */
+/** "Rasm: caption", "Tibbiy karta", or the line itself; the kind's mark is [previewArt]. */
 @Composable
 private fun previewOf(chat: Conversation): String {
     val t = strings.tabs
     val text = chat.lastMessage.orEmpty()
     return when (chat.lastMessageKind) {
         MessageKind.TEXT -> text
-        MessageKind.IMAGE -> "📷 " + t.photo + text.takeIf { it.isNotEmpty() }?.let { ": $it" }.orEmpty()
-        MessageKind.RECORD -> "📋 " + t.record
-        MessageKind.PRESCRIPTION -> "💊 " + strings.prescriptions.title
+        MessageKind.IMAGE -> t.photo + text.takeIf { it.isNotEmpty() }?.let { ": $it" }.orEmpty()
+        MessageKind.RECORD -> t.record
+        MessageKind.PRESCRIPTION -> strings.prescriptions.title
     }
+}
+
+/** The clay icon in front of a preview that is not plain text — the app's icons, not emoji. */
+private fun previewArt(kind: MessageKind): DrawableResource? = when (kind) {
+    MessageKind.TEXT -> null
+    MessageKind.IMAGE -> Res.drawable.ic3d_camera
+    MessageKind.RECORD -> Res.drawable.ic3d_record
+    MessageKind.PRESCRIPTION -> Res.drawable.ic3d_meds
 }
 
 @Composable

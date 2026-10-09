@@ -46,6 +46,7 @@ export function StatsPage() {
           label="Javobsiz qolgan"
           art="ic3d_bell"
           value={data.unansweredTotal}
+          alert={data.unansweredTotal > 0}
           hint={data.unansweredTotal ? 'muddati javobsiz tugagan' : 'hammasiga javob bergansiz'}
         />
         <Stat

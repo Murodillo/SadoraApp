@@ -77,7 +77,7 @@ fun CycleCalendarScreen(
     LaunchedEffect(Unit) { health.loadHistory() }
 
     Column(modifier) {
-        SadoraTopBar(t.calendarTitle, onBack = onClose, centered = true)
+        SadoraTopBar(t.calendarTitle, onBack = onClose)
 
         ScreenContent {
             item {

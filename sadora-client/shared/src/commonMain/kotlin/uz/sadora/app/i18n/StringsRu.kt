@@ -696,6 +696,8 @@ object StringsRu : Strings {
         override val blocked = "Заблокирована"
         override val unblocked = "Разблокирована"
         override val viewProfile = "Открыть профиль"
+        override val doctorsLink = "Врачи"
+        override val rulesLink = "Правила"
         override val messagesTitle = "Сообщения"
         override val messagesSubtitle = "Только между вами двумя — под псевдонимом или с врачом"
         override val noMessages = "Сообщений пока нет"

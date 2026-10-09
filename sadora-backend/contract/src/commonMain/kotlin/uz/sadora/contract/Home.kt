@@ -52,14 +52,15 @@ object HomeWidgets {
      * The default arrangement, in order.
      *
      * Everything ships visible except the four that would make a first run long before
-     * there is anything in them to show.
+     * there is anything in them to show. What today still asks of her comes first, then
+     * where she is; the assistant's read follows rather than leads.
      */
     val defaults: List<HomeWidget> = listOf(
-        HomeWidget(AI, 0, true),
-        HomeWidget(STREAK, 1, true),
-        HomeWidget(SCORE, 2, true),
-        HomeWidget(STAGE, 3, true),
-        HomeWidget(PLAN, 4, true),
+        HomeWidget(PLAN, 0, true),
+        HomeWidget(STAGE, 1, true),
+        HomeWidget(STREAK, 2, true),
+        HomeWidget(SCORE, 3, true),
+        HomeWidget(AI, 4, true),
         HomeWidget(SLEEP, 5, false),
         HomeWidget(MEDICATIONS, 6, false),
         HomeWidget(INSIGHTS, 7, false),
@@ -106,8 +107,12 @@ data class HomeLayout(
      */
     fun reconciled(): HomeLayout {
         val stored = widgets.associateBy { it.key }
+        // A card she has never placed goes after the ones she has, in shipped order —
+        // its default position is relative to the default deck, not to hers, and taken
+        // literally it would push in ahead of the card she put first.
+        val after = (widgets.maxOfOrNull { it.position } ?: -1) + 1
         val merged = HomeWidgets.defaults.map { fallback ->
-            val saved = stored[fallback.key] ?: return@map fallback
+            val saved = stored[fallback.key] ?: return@map fallback.copy(position = after + fallback.position)
             saved.copy(visible = saved.visible || fallback.key in HomeWidgets.required)
         }
         return HomeLayout(

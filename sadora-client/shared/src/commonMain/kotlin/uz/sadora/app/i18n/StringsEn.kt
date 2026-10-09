@@ -691,6 +691,8 @@ object StringsEn : Strings {
         override val blocked = "Blocked"
         override val unblocked = "Unblocked"
         override val viewProfile = "View profile"
+        override val doctorsLink = "Doctors"
+        override val rulesLink = "Rules"
         override val messagesTitle = "Messages"
         override val messagesSubtitle = "Between the two of you only — under an alias, or with a doctor"
         override val noMessages = "No messages yet"

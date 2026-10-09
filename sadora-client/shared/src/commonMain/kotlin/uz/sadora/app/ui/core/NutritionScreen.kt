@@ -25,6 +25,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.TextUnit
 import uz.sadora.app.design.IconSize
 import uz.sadora.app.design.Radius
 import uz.sadora.app.design.Sadora
@@ -79,7 +80,6 @@ fun NutritionScreen(
     Column {
         SadoraTopBar(
             t.title,
-            centered = true,
             trailing = {
                 CircleIconButton(SadoraIcons.Calendar, contentDescription = t.insights) { onOpen(Route.Insights) }
             },
@@ -251,7 +251,7 @@ private fun TodayRingCard(state: AppState) {
         }
         // Higher than the plain defaults because of her stage — said, so a third-trimester
         // 2300 kcal does not read as a number the app made up.
-        state.goalsBasis?.let { Text(strings.tools.goalsBasis(it), style = Sadora.type.caption, color = c.muted) }
+        state.goalsBasis?.let { Text(strings.tools.goalsBasis(it), style = Sadora.type.caption.copy(letterSpacing = TextUnit.Unspecified), color = c.muted) }
     }
 }
 

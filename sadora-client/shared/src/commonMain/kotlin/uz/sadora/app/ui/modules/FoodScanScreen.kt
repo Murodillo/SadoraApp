@@ -88,7 +88,7 @@ fun FoodScanScreen(
     }
 
     Column(modifier) {
-        SadoraTopBar(t.scanResult, onBack = onClose, centered = true)
+        SadoraTopBar(t.scanResult, onBack = onClose)
 
         ScreenContent {
             item {
