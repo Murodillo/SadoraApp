@@ -147,7 +147,7 @@ fun PrescriptionCard(
                     Icon(SadoraIcons.Check, contentDescription = null, Modifier.size(16.dp), tint = c.success)
                     Text(p.added, style = Sadora.type.body, color = c.success)
                 }
-                onAdd != null -> SadoraButton(p.addToPills, onClick = onAdd, icon = SadoraIcons.Pill)
+                onAdd != null -> SadoraButton(p.addToPills, onClick = onAdd)
             }
             PillButton(
                 p.shareImage,

@@ -278,7 +278,7 @@ private fun LastLine(thread: Conversation, unread: Boolean) {
         when (thread.lastMessageKind) {
             MessageKind.Image -> Icon(SadoraIcons.Camera, contentDescription = null, Modifier.size(14.dp), tint = colour)
             MessageKind.Record -> Icon(SadoraIcons.Document, contentDescription = null, Modifier.size(14.dp), tint = colour)
-            MessageKind.Prescription -> Icon(SadoraIcons.Pill, contentDescription = null, Modifier.size(14.dp), tint = colour)
+            MessageKind.Prescription -> ArtIcon(Res.drawable.ic3d_meds, 16.dp)
             MessageKind.Text -> Unit
         }
         Text(text, style = style, color = colour, maxLines = 1, overflow = TextOverflow.Ellipsis)

@@ -176,7 +176,7 @@ fun MedicationsScreen(
                                     .background(c.surface2),
                                 contentAlignment = Alignment.Center,
                             ) {
-                                Text("💊", style = Sadora.type.h2)
+                                MedArt("💊", 32.dp)
                             }
                             Column(
                                 Modifier.weight(1f),
@@ -277,7 +277,7 @@ private fun MedicationRow(medication: Medication, onClick: () -> Unit) {
                     .background(c.surface2),
                 contentAlignment = Alignment.Center,
             ) {
-                Text(medication.emoji, style = Sadora.type.h3)
+                MedArt(medication.emoji, 28.dp)
             }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(medication.name, style = Sadora.type.h3, color = c.text)
@@ -325,7 +325,7 @@ private fun CourseRow(course: Course, onClick: () -> Unit) {
                     .background(c.surface2),
                 contentAlignment = Alignment.Center,
             ) {
-                Text(course.emoji ?: "💊", style = Sadora.type.h3)
+                MedArt(course.emoji, 28.dp)
             }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(
@@ -351,6 +351,19 @@ private fun CourseRow(course: Course, onClick: () -> Unit) {
             }
             Icon(SadoraIcons.ChevronRight, contentDescription = null, Modifier.size(IconSize.md), tint = c.muted2)
         }
+    }
+}
+
+/**
+ * A course's picture: the colour pill for the plain one, or the emoji she chose for it
+ * — "🌙" for the evening vitamin says more than a pill would.
+ */
+@Composable
+private fun MedArt(emoji: String?, size: androidx.compose.ui.unit.Dp) {
+    if (emoji.isNullOrBlank() || emoji == "💊") {
+        uz.sadora.app.ui.components.ArtIcon(Res.drawable.ic3d_meds, size)
+    } else {
+        Text(emoji, style = Sadora.type.h3)
     }
 }
 
