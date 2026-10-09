@@ -53,6 +53,8 @@ object PaymentTransactions : Table("payment_transactions") {
     val refundedAt = timestampWithTimeZone("refunded_at").nullable()
     /** The legendary pet a one-off payment buys (V45). */
     val pet = text("pet").nullable()
+    /** The paid avatar frame a one-off payment buys (V46). */
+    val frame = text("frame").nullable()
     val createdAt = timestampWithTimeZone("created_at")
     val updatedAt = timestampWithTimeZone("updated_at")
 
@@ -82,6 +84,8 @@ object PaymentRequests : Table("payment_requests") {
     val doctorId = uuid("doctor_id").nullable()
     /** A legendary pet as a present (V45). */
     val pet = text("pet").nullable()
+    /** A paid avatar frame as a present (V46). */
+    val frame = text("frame").nullable()
     val amountMinor = long("amount_minor")
     val note = text("note").nullable()
     val partnerLinkId = uuid("partner_link_id").nullable()

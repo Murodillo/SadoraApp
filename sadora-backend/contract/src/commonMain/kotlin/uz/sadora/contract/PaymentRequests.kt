@@ -27,6 +27,8 @@ enum class PaymentRequestKind {
     @SerialName("consultation") CONSULTATION,
     /** A legendary pet as a present. */
     @SerialName("pet") PET,
+    /** A paid avatar frame as a present. */
+    @SerialName("frame") FRAME,
 }
 
 @Serializable
@@ -50,6 +52,8 @@ data class CreatePaymentRequest(
     val note: String? = null,
     /** Pet: which legendary pet. */
     val pet: PetKind? = null,
+    /** Frame: which paid frame ([AvatarFrames] key). */
+    val frame: String? = null,
 )
 
 @Serializable
@@ -63,6 +67,8 @@ data class PaymentRequest(
     val doctorName: String? = null,
     /** Pet: which one. */
     val pet: PetKind? = null,
+    /** Frame: which one ([AvatarFrames] key). */
+    val frame: String? = null,
     val amountMinor: Long,
     val currency: String = "UZS",
     val note: String? = null,
@@ -86,6 +92,7 @@ data class IncomingPaymentRequest(
     val period: BillingPeriod? = null,
     val doctorName: String? = null,
     val pet: PetKind? = null,
+    val frame: String? = null,
     val amountMinor: Long,
     val currency: String = "UZS",
     val note: String? = null,
@@ -95,6 +102,8 @@ data class IncomingPaymentRequest(
     val plans: List<BillingPlan> = emptyList(),
     /** Pet: its price row and store products, so a store build can sell it in its own sheet. */
     val petProduct: PetProduct? = null,
+    /** Frame: its price row and store products, the same way. */
+    val frameProduct: FrameProduct? = null,
     /** What this payer can pay with here. */
     val providers: List<PaymentProvider> = emptyList(),
 )

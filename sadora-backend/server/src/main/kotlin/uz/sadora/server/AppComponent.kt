@@ -295,6 +295,9 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
         gracePeriod = config.accountErasureGracePeriod,
     )
 
+    /** What frames each woman owns and wears; the chat reads it before billing exists. */
+    val frameRepository = uz.sadora.server.frame.FrameRepository()
+
     val communityRepository = CommunityRepository()
     val messagingRepository = MessagingRepository()
     val doctorRepository = DoctorRepository()
@@ -308,6 +311,7 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
         notifications = notificationRepository,
         doctors = doctorRepository,
         wornBadges = rewardsService::wornBy,
+        wornFrames = frameRepository::wornBy,
     )
     val doctorService = DoctorService(
         doctors = doctorRepository,
@@ -331,6 +335,7 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
         audit = auditService,
         consultations = consultationRepository,
         prescriptions = prescriptionRepository,
+        wornFrames = frameRepository::wornBy,
     )
     val prescriptionService = PrescriptionService(
         prescriptions = prescriptionRepository,
@@ -557,6 +562,23 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
         petService.shop = shop
         paymentRequestService.petShop = shop
         shop.owned = paymentRequestService::closeOpenPetRequests
+    }
+
+    /** Avatar frames: Gul, a badge, or money — the money through billing's own activation. */
+    val frameService = uz.sadora.server.frame.FrameService(
+        frames = frameRepository,
+        wallet = rewardsRepository,
+        billing = billingService,
+        billingRepository = billingRepository,
+        verifier = storeVerifier,
+        flags = flagService,
+        environment = config.environment,
+        users = userRepository,
+        audit = auditService,
+    ).also { frames ->
+        billingService.framePaid = frames::grant
+        paymentRequestService.frameShop = frames
+        frames.owned = paymentRequestService::closeOpenFrameRequests
     }
 
     val adminAuthService = AdminAuthService(jwtService, auditService)

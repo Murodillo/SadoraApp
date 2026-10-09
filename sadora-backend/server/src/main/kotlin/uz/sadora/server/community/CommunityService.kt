@@ -64,6 +64,8 @@ class CommunityService(
     private val doctors: uz.sadora.server.doctor.DoctorRepository? = null,
     /** The achievement badge each author wears; null in tests, which then show none. */
     private val wornBadges: (suspend (Collection<Uuid>) -> Map<Uuid, uz.sadora.contract.WornBadge>)? = null,
+    /** The avatar frame each author wears; null in tests, which then show none. */
+    private val wornFrames: (suspend (Collection<Uuid>) -> Map<Uuid, String>)? = null,
 ) {
 
     // ---------------------------------------------------------------- identity
@@ -81,6 +83,7 @@ class CommunityService(
         val stats = repository.activityFor(listOf(userId))[userId]
         return identity.toDto(
             worn = wornOf(listOf(userId))[userId],
+            frame = framesOf(listOf(userId))[userId],
             badges = stats?.let { CommunityBadges.of(it, now()) }.orEmpty(),
             // Her own threads only: the consultations she holds as a doctor are counted
             // in the doctor app, not on the chat header of her own.
@@ -124,6 +127,7 @@ class CommunityService(
             bio = identity.bio,
             badges = CommunityBadges.of(stats, now()),
             worn = wornOf(listOf(identity.userId))[identity.userId],
+            frame = framesOf(listOf(identity.userId))[identity.userId],
             postCount = stats.posts,
             commentCount = stats.comments,
             likesReceived = stats.likesReceived,
@@ -194,6 +198,7 @@ class CommunityService(
         val reactions = repository.reactionsFor(viewer, posts.map { it.id })
         val badges = badgesFor(posts.filter { it.doctorId == null }.map { it.userId })
         val worn = wornOf(posts.filter { it.doctorId == null }.map { it.userId })
+        val frames = framesOf(posts.filter { it.doctorId == null }.map { it.userId })
         return posts.map { post ->
             // A doctor post carries her name and nothing of her alias — not the tint,
             // not the badges — so the two can never be matched up on a screen.
@@ -213,6 +218,7 @@ class CommunityService(
                 isMine = post.userId == viewer,
                 badges = if (post.doctorId == null) badges[post.userId].orEmpty() else emptyList(),
                 worn = if (post.doctorId == null) worn[post.userId] else null,
+                frame = if (post.doctorId == null) frames[post.userId] else null,
                 doctor = byline?.toAuthor(),
                 doctorAnswers = reactions.doctorAnswers[post.id] ?: 0,
             )
@@ -224,6 +230,9 @@ class CommunityService(
 
     private suspend fun wornOf(userIds: Collection<Uuid>): Map<Uuid, uz.sadora.contract.WornBadge> =
         if (userIds.isEmpty()) emptyMap() else runCatching { wornBadges?.invoke(userIds) }.getOrNull().orEmpty()
+
+    private suspend fun framesOf(userIds: Collection<Uuid>): Map<Uuid, String> =
+        if (userIds.isEmpty()) emptyMap() else runCatching { wornFrames?.invoke(userIds) }.getOrNull().orEmpty()
 
     private suspend fun badgesFor(userIds: List<Uuid>): Map<Uuid, List<uz.sadora.contract.CommunityBadge>> {
         val at = now()
@@ -263,6 +272,7 @@ class CommunityService(
         val bylines = repository.doctorBylines(comments.mapNotNull { it.doctorId })
         val badges = badgesFor(comments.filter { it.doctorId == null }.map { it.userId })
         val worn = wornOf(comments.filter { it.doctorId == null }.map { it.userId })
+        val frames = framesOf(comments.filter { it.doctorId == null }.map { it.userId })
         // A doctor's answer is the one the asker came for, so answers lead the thread —
         // the repository orders them so, across pages.
         return comments
@@ -272,7 +282,7 @@ class CommunityService(
                     comment.toDto(null, viewer = userId).copy(alias = byline.fullName, doctor = byline.toAuthor())
                 } else {
                     comment.toDto(identities[comment.userId], viewer = userId, badges = badges[comment.userId].orEmpty())
-                        .copy(worn = worn[comment.userId])
+                        .copy(worn = worn[comment.userId], frame = frames[comment.userId])
                 }
             }
     }
@@ -296,7 +306,7 @@ class CommunityService(
         }
         val identity = ensureIdentity(userId)
         return repository.insertComment(postId, userId, body).toDto(identity, viewer = userId)
-            .copy(worn = wornOf(listOf(userId))[userId])
+            .copy(worn = wornOf(listOf(userId))[userId], frame = framesOf(listOf(userId))[userId])
     }
 
     suspend fun deleteComment(userId: Uuid, commentId: Uuid) {
@@ -480,8 +490,10 @@ class CommunityService(
         badges: List<uz.sadora.contract.CommunityBadge>,
         unread: Int,
         worn: uz.sadora.contract.WornBadge? = null,
+        frame: String? = null,
     ) = CommunityIdentity(
         worn = worn,
+        frame = frame,
         alias = alias,
         tint = tint,
         bio = bio,

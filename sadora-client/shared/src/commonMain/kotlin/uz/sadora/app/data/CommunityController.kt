@@ -55,6 +55,7 @@ class CommunityController(
         state.communityDmOpen = identity.dmOpen
         state.communityBadges = identity.badges.map { it.toAppBadge() }
         state.applyWornBadge(identity.worn)
+        state.applyWornFrame(identity.frame)
         state.communityUnread = identity.unreadMessages
     }
 

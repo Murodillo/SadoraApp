@@ -1,6 +1,15 @@
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { useGrantPremium, useSetBlocked, useUserCard, useUserRewards } from '../api/hooks'
+import {
+  useFrameProducts,
+  useGrantFrame,
+  useGrantPremium,
+  useSetBlocked,
+  useUserCard,
+  useUserFrames,
+  useUserRewards,
+} from '../api/hooks'
+import { frameNames } from './BillingPage'
 import { UserRewardsCard } from './RewardsPage'
 import { limits } from '../api/limits'
 import { useAuth } from '../auth/AuthContext'
@@ -228,7 +237,62 @@ function RewardsTab({ userId }: { userId: string }) {
   const rewards = useUserRewards(userId)
   if (rewards.isLoading) return <Loading rows={4} />
   if (rewards.error) return <ErrorNotice error={rewards.error} />
-  return <UserRewardsCard userId={userId} card={rewards.data} />
+  return (
+    <>
+      <UserRewardsCard userId={userId} card={rewards.data} />
+      <UserFramesCard userId={userId} />
+    </>
+  )
+}
+
+/** Her avatar frames, and a frame given by hand — a contest prize. A badge's frame only comes with the badge. */
+function UserFramesCard({ userId }: { userId: string }) {
+  const frames = useUserFrames(userId)
+  const grant = useGrantFrame(userId)
+  const toast = useToast()
+  const [choice, setChoice] = useState('')
+  const products = useFrameProducts()
+  const owned = frames.data?.owned ?? []
+  // The sold frames, as the server lists them: a badge's frame is never one of them.
+  const giftable = (products.data ?? []).map((product) => product.key).filter((key) => !owned.includes(key))
+  return (
+    <Card title="Avatar ramkalari">
+      <ErrorNotice error={frames.error ?? grant.error} />
+      {frames.isLoading ? (
+        <Loading rows={1} />
+      ) : (
+        <p>
+          {owned.length === 0
+            ? 'Ramkasi yo\'q.'
+            : owned.map((key) => `${frameNames[key] ?? key}${frames.data?.worn === key ? ' (taqilgan)' : ''}`).join(', ')}
+        </p>
+      )}
+      <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+        <select aria-label="Ramka" value={choice} onChange={(event) => setChoice(event.target.value)}>
+          <option value="">Ramka tanlang</option>
+          {giftable.map((key) => (
+            <option key={key} value={key}>
+              {frameNames[key] ?? key}
+            </option>
+          ))}
+        </select>
+        <button
+          className="btn small"
+          disabled={!choice || grant.isPending}
+          onClick={() =>
+            grant.mutate(choice, {
+              onSuccess: () => {
+                toast.notify('Ramka berildi')
+                setChoice('')
+              },
+            })
+          }
+        >
+          Sovg'a qilish
+        </button>
+      </div>
+    </Card>
+  )
 }
 
 function GrantPremiumDialog({ userId, onClose }: { userId: string; onClose: () => void }) {

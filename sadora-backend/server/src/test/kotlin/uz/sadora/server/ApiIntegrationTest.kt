@@ -892,6 +892,157 @@ class ApiIntegrationTest {
     }
 
     /**
+     * A Gul frame: refused while she cannot pay, then the coins and the frame go together,
+     * once. Wearing needs no Premium, and the frame rides on her alias in the chat.
+     */
+    @Test
+    fun `a frame bought with Gul is hers to wear on her alias`() = api {
+        val her = signUp().also { onboard(it) }
+        val reader = signUp().also { onboard(it) }
+        val tulip = uz.sadora.contract.AvatarFrames.TULIP
+        setFlag(adminToken(), uz.sadora.server.frame.FrameService.SALE_FLAG, enabled = false)
+
+        val board = get<uz.sadora.contract.FrameBoard>("/v1/frames", her.token)
+        val offered = board.frames.single { it.key == tulip }
+        assertEquals(300, offered.coinCost)
+        assertFalse(offered.owned)
+        assertTrue(board.frames.none { it.unlock == uz.sadora.contract.FrameUnlock.PAID }, "the paid ones wait for their sale")
+        assertTrue(board.frames.any { it.key == uz.sadora.contract.AvatarFrames.GOLD_FLAME && !it.owned }, "a badge frame shows its lock")
+
+        val poor = raw { client.post("/v1/frames/buy") { auth(her.token); json(uz.sadora.contract.BuyFrameRequest(tulip)) } }
+        assertEquals(HttpStatusCode.BadRequest, poor.status, "not enough Gul")
+        val notHers = raw { client.put("/v1/frames/worn") { auth(her.token); json(uz.sadora.contract.WearFrameRequest(tulip)) } }
+        assertEquals(HttpStatusCode.BadRequest, notHers.status, "a frame she does not own cannot be worn")
+
+        post<CoinBalance>("/v1/admin/rewards/users/${her.userId}/adjust", adminToken(), AdjustCoinsRequest(amount = 500, note = "frame test"))
+        val bought = post<uz.sadora.contract.FrameBoard>("/v1/frames/buy", her.token, uz.sadora.contract.BuyFrameRequest(tulip))
+        assertTrue(bought.frames.single { it.key == tulip }.owned)
+        assertEquals(200, bought.coins, "300 Gul taken")
+        assertNull(bought.worn, "bought, not yet worn")
+        val again = raw { client.post("/v1/frames/buy") { auth(her.token); json(uz.sadora.contract.BuyFrameRequest(tulip)) } }
+        assertEquals(HttpStatusCode.Conflict, again.status)
+        assertEquals(200, get<uz.sadora.contract.FrameBoard>("/v1/frames", her.token).coins, "a second tap takes nothing")
+
+        assertEquals(tulip, put<uz.sadora.contract.FrameBoard>("/v1/frames/worn", her.token, uz.sadora.contract.WearFrameRequest(tulip)).worn)
+        assertEquals(tulip, get<CommunityIdentity>("/v1/community/me", her.token).frame)
+        val created = post<CommunityPost>("/v1/community/posts", her.token, CreatePostRequest(CommunityTopic.CYCLE, "Ramka test ${Uuid.random()}"))
+        assertEquals(tulip, get<CommunityPost>("/v1/community/posts/${created.id}", reader.token).frame, "others see it")
+        assertEquals(tulip, post<CommunityComment>("/v1/community/posts/${created.id}/comments", her.token, CreateCommentRequest("izoh")).frame)
+        assertEquals(tulip, get<uz.sadora.contract.CommunityProfile>("/v1/community/profiles/${created.alias.encodeURLPathPart()}", reader.token).frame)
+
+        put<uz.sadora.contract.FrameBoard>("/v1/frames/worn", her.token, uz.sadora.contract.WearFrameRequest(null))
+        assertNull(get<CommunityPost>("/v1/community/posts/${created.id}", reader.token).frame, "taken off, gone everywhere")
+    }
+
+    /** A badge's gold tier owns its frame, with no purchase — and the unlock says so. */
+    @Test
+    fun `a badge frame comes with the badge's gold tier`() = api {
+        val her = signUp().also { onboard(it) }
+        val flame = uz.sadora.contract.AvatarFrames.GOLD_FLAME
+        val locked = raw { client.put("/v1/frames/worn") { auth(her.token); json(uz.sadora.contract.WearFrameRequest(flame)) } }
+        assertEquals(HttpStatusCode.BadRequest, locked.status)
+        val notForSale = raw { client.post("/v1/frames/buy") { auth(her.token); json(uz.sadora.contract.BuyFrameRequest(flame)) } }
+        assertEquals(HttpStatusCode.BadRequest, notForSale.status, "a badge frame is never sold")
+
+        dbQuery {
+            exec(
+                "INSERT INTO user_badges (user_id, badge, tier, earned_at) VALUES " +
+                    "('${her.userId}', 'streak', 1, now()), ('${her.userId}', 'streak', 2, now()), ('${her.userId}', 'streak', 3, now())",
+            )
+        }
+        val unseen = get<uz.sadora.contract.BadgeBoard>("/v1/rewards/badges", her.token).unseen
+        assertEquals(flame, unseen.single { it.key == uz.sadora.contract.Badges.STREAK && it.tier == 3 }.frame)
+        assertNull(unseen.single { it.key == uz.sadora.contract.Badges.STREAK && it.tier == 2 }.frame)
+
+        assertTrue(get<uz.sadora.contract.FrameBoard>("/v1/frames", her.token).frames.single { it.key == flame }.owned)
+        assertEquals(flame, put<uz.sadora.contract.FrameBoard>("/v1/frames/worn", her.token, uz.sadora.contract.WearFrameRequest(flame)).worn)
+    }
+
+    /**
+     * A paid frame by Payme: hidden until its sale is on, granted once on Payme's double
+     * delivery and put on at once; the panel's refund takes it off her avatar everywhere.
+     */
+    @Test
+    fun `a paid frame is worn once paid and taken off by a refund`() = api {
+        val admin = adminToken()
+        setFlag(admin, BillingService.PAYME_FLAG, enabled = true)
+        setFlag(admin, uz.sadora.server.frame.FrameService.SALE_FLAG, enabled = true)
+        val her = signUp().also { onboard(it) }
+        val rainbow = uz.sadora.contract.AvatarFrames.RAINBOW
+
+        val product = assertNotNull(get<uz.sadora.contract.FrameBoard>("/v1/frames", her.token).frames.single { it.key == rainbow }.product)
+        assertEquals(2_900_000, product.priceMinor, "29 000 so'm")
+        assertEquals("uz.sadora.frame.rainbow", product.googlePlayProductId)
+
+        val checkout = post<CheckoutSession>("/v1/frames/checkout", her.token, uz.sadora.contract.FrameCheckoutRequest(rainbow, PaymentProvider.PAYME))
+        assertEquals(2_900_000, checkout.amountMinor)
+        val paymeId = "pm-frame-${Random.nextInt(1_000_000)}"
+        payme(
+            """{"id":2,"method":"CreateTransaction","params":{"id":"$paymeId","time":1788600000000,""" +
+                """"amount":2900000,"account":{"order_id":"${checkout.transactionId}"}}}""",
+        )
+        repeat(2) { payme("""{"id":4,"method":"PerformTransaction","params":{"id":"$paymeId"}}""") }
+        val owned = get<uz.sadora.contract.FrameBoard>("/v1/frames", her.token)
+        assertTrue(owned.frames.single { it.key == rainbow }.owned)
+        assertNull(owned.frames.single { it.key == rainbow }.product, "nothing left to sell her")
+        assertEquals(rainbow, owned.worn, "she paid to wear it: it goes on at once")
+        assertEquals(rainbow, get<CommunityIdentity>("/v1/community/me", her.token).frame)
+        assertEquals(1, dbQuery { exec("SELECT count(*) FROM user_frames_owned WHERE user_id = '${her.userId}'") { it.next(); it.getInt(1) } })
+
+        val row = get<Page<uz.sadora.server.billing.AdminPaymentView>>("/v1/admin/billing/payments?limit=200", admin)
+            .items.single { it.id == checkout.transactionId }
+        assertEquals(rainbow, row.frame)
+        assertTrue(row.refundable)
+        postAck("/v1/admin/billing/payments/${checkout.transactionId}/refund", admin, Ack())
+        val refunded = get<uz.sadora.contract.FrameBoard>("/v1/frames", her.token)
+        assertFalse(refunded.frames.single { it.key == rainbow }.owned)
+        assertNull(refunded.worn)
+        assertNull(get<CommunityIdentity>("/v1/community/me", her.token).frame, "off her alias too")
+
+        // The panel can give one as a prize, and sees what she has.
+        val given = post<uz.sadora.server.frame.AdminUserFrames>(
+            "/v1/admin/users/${her.userId}/frames", admin, uz.sadora.server.frame.GrantFrameRequest(uz.sadora.contract.AvatarFrames.HUMO_WING),
+        )
+        assertEquals(listOf(uz.sadora.contract.AvatarFrames.HUMO_WING), given.owned)
+    }
+
+    /** Yaqinim can give her a paid frame: she asks, he pays by Payme, it is hers and on her photo. */
+    @Test
+    fun `Yaqinim can pay for a frame as a present`() = api {
+        val admin = adminToken()
+        setFlag(admin, BillingService.PAYME_FLAG, enabled = true)
+        setFlag(admin, uz.sadora.server.frame.FrameService.SALE_FLAG, enabled = true)
+        val her = signUp().also { onboard(it) }
+        val code = assertNotNull(post<PartnerInvite>("/v1/partner/invite", her.token, CreatePartnerInviteRequest()).code)
+        val him = signUp()
+        post<FollowedPerson>("/v1/partner/accept", him.token, AcceptPartnerInviteRequest(code, name = "Aziz", asPartnerAccount = true))
+        post<PartnerState>("/v1/partner/approve", her.token, Ack())
+        val wing = uz.sadora.contract.AvatarFrames.HUMO_WING
+
+        val asked = post<uz.sadora.contract.PaymentRequest>(
+            "/v1/payment-requests",
+            her.token,
+            uz.sadora.contract.CreatePaymentRequest(uz.sadora.contract.PaymentRequestKind.FRAME, frame = wing),
+        )
+        assertEquals(4_900_000, asked.amountMinor)
+        assertEquals(wing, asked.frame)
+        val incoming = get<List<uz.sadora.contract.IncomingPaymentRequest>>("/v1/payment-requests/incoming", him.token).single()
+        assertEquals(wing, incoming.frame)
+        assertEquals(wing, incoming.frameProduct?.key)
+
+        val checkout = post<CheckoutSession>("/v1/payment-requests/${incoming.id}/checkout", him.token, uz.sadora.contract.PayPaymentRequest(PaymentProvider.PAYME))
+        val paymeId = "pm-fg-${Random.nextInt(1_000_000)}"
+        payme(
+            """{"id":2,"method":"CreateTransaction","params":{"id":"$paymeId","time":1788600000000,""" +
+                """"amount":4900000,"account":{"order_id":"${checkout.transactionId}"}}}""",
+        )
+        payme("""{"id":4,"method":"PerformTransaction","params":{"id":"$paymeId"}}""")
+        assertEquals(wing, get<uz.sadora.contract.FrameBoard>("/v1/frames", her.token).worn)
+        assertTrue(get<uz.sadora.contract.FrameBoard>("/v1/frames", him.token).frames.none { it.owned }, "the payer gets nothing")
+        assertEquals(uz.sadora.contract.PaymentRequestStatus.PAID, get<uz.sadora.contract.PaymentRequestState>("/v1/payment-requests", her.token).current?.status)
+    }
+
+    /**
      * The pet: anyone may pick one, only Premium hears it, and it keeps quiet inside its
      * cooldowns — except for a low mood, which is answered at once with the journal.
      */

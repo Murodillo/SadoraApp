@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -75,6 +76,8 @@ fun ShopScreen(
     onClose: () -> Unit,
     onPremiumGranted: () -> Unit,
     modifier: Modifier = Modifier,
+    /** The door to the avatar frames, which Gul also buys; null hides it. */
+    onOpenFrames: (() -> Unit)? = null,
 ) {
     val t = strings.shop
     val c = Sadora.colors
@@ -110,6 +113,9 @@ fun ShopScreen(
         val products = rewards.productsOf(kind)
 
         ScreenContent {
+            if (onOpenFrames != null) {
+                item { FramesShopCard(state, onOpenFrames) }
+            }
             item {
                 SegmentedControl(
                     options = kinds.map { t.tab(it) },
@@ -426,5 +432,33 @@ private fun ShopSkeleton() {
     ) {
         Skeleton(Modifier.fillMaxWidth().height(44.dp))
         repeat(3) { Skeleton(Modifier.fillMaxWidth().height(148.dp)) }
+    }
+}
+
+/** The frames page's door: her photo in a frame, and what Gul buys there. */
+@Composable
+private fun FramesShopCard(state: AppState, onOpen: () -> Unit) {
+    val t = strings.frames
+    val c = Sadora.colors
+    SadoraCard(onClick = onOpen) {
+        Row(
+            Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+        ) {
+            uz.sadora.app.ui.components.FramedAvatar(state.wornFrame ?: uz.sadora.contract.AvatarFrames.SAKURA, size = 56.dp) { inner ->
+                uz.sadora.app.ui.components.Avatar(state.name, size = inner, photoUrl = state.avatarUrl)
+            }
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(t.shopCard, style = Sadora.type.h3, color = c.text)
+                Text(t.shopCardNote, style = Sadora.type.body, color = c.muted)
+            }
+            androidx.compose.material3.Icon(
+                uz.sadora.app.design.SadoraIcons.ChevronRight,
+                contentDescription = null,
+                Modifier.size(uz.sadora.app.design.IconSize.md),
+                tint = c.muted2,
+            )
+        }
     }
 }

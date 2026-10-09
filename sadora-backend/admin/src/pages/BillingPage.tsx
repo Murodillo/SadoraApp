@@ -1,7 +1,16 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useBillingPlans, useBillingSummary, usePayments, usePetProducts, useRefundGift, useUpdatePetProduct } from '../api/hooks'
-import type { AdminPetProduct, PaymentProvider, PaymentState } from '../api/types'
+import {
+  useBillingPlans,
+  useBillingSummary,
+  useFrameProducts,
+  usePayments,
+  usePetProducts,
+  useRefundGift,
+  useUpdateFrameProduct,
+  useUpdatePetProduct,
+} from '../api/hooks'
+import type { AdminFrameProduct, AdminPetProduct, PaymentProvider, PaymentState } from '../api/types'
 import { Card, Empty, ErrorNotice, formatDateTime, Loading, Stat } from '../components/ui'
 
 const providerLabels: Record<PaymentProvider, string> = {
@@ -145,6 +154,8 @@ export function BillingPage() {
 
       <PetProductsCard />
 
+      <FrameProductsCard />
+
       <Card
         title="To'lovlar"
         action={
@@ -189,7 +200,8 @@ export function BillingPage() {
                   <td className="faint">{formatDateTime(payment.paidAt ?? payment.createdAt)}</td>
                   <td>{providerLabels[payment.provider]}</td>
                   <td>
-                    {payment.planId ?? (payment.pet ? `Hamroh · ${payment.pet}` : 'Konsultatsiya')}
+                    {payment.planId ??
+                      (payment.pet ? `Hamroh · ${payment.pet}` : payment.frame ? `Ramka · ${frameNames[payment.frame] ?? payment.frame}` : 'Konsultatsiya')}
                     {payment.gift && <span className="badge" style={{ marginLeft: 6 }}>Sovg'a</span>}
                   </td>
                   <td>{sum(payment.amountMinor)}</td>
@@ -215,7 +227,7 @@ export function BillingPage() {
                         className="btn small"
                         disabled={refund.isPending}
                         onClick={() => {
-                          const what = payment.pet ? 'Hamroh' : "Sovg'a kunlari"
+                          const what = payment.pet ? 'Hamroh' : payment.frame ? 'Ramka' : "Sovg'a kunlari"
                           if (window.confirm(`Pul provayderda qaytarildimi? ${what} foydalanuvchidan olib tashlanadi.`)) {
                             refund.mutate(payment.id)
                           }
@@ -297,6 +309,88 @@ function PetProductRow({ product }: { product: AdminPetProduct }) {
       >
         Saqlash
       </button>
+      <ErrorNotice error={update.error} />
+    </div>
+  )
+}
+
+/** What each frame is called in the panel; the keys are the contract's AvatarFrames. */
+export const frameNames: Record<string, string> = {
+  tulip: 'Lola',
+  lavender: 'Lavanda',
+  sakura: 'Sakura',
+  moon: 'Oy va yulduzlar',
+  rose: 'Atirgul toji',
+  gold_flame: 'Oltin olov',
+  gold_laurel: 'Oltin dafna',
+  rainbow: 'Kamalak',
+  humo_wing: 'Humo qanoti',
+}
+
+/**
+ * Avatar frames sold for Gul or money. A badge's frame is not here: only the badge gives
+ * it. Switching a frame off hides it from anyone who does not own it yet. The paid frames'
+ * sale is the `frame_sale` flag.
+ */
+function FrameProductsCard() {
+  const products = useFrameProducts()
+  return (
+    <Card title="Avatar ramkalari">
+      <ErrorNotice error={products.error} />
+      {products.data?.map((product) => <FrameProductRow key={product.key} product={product} />)}
+      <p className="faint">
+        Pullik ramkalar <code>frame_sale</code> flagi bilan sotuvga chiqadi. Play va App Store narxi ularning
+        konsolida alohida o'zgartiriladi.
+      </p>
+    </Card>
+  )
+}
+
+function FrameProductRow({ product }: { product: AdminFrameProduct }) {
+  const update = useUpdateFrameProduct()
+  const coins = product.unlock === 'coins'
+  const current = coins ? (product.coinCost ?? 0) : Math.round((product.priceMinor ?? 0) / 100)
+  const [price, setPrice] = useState(String(current))
+  const whole = Number(price.replace(/\s/g, ''))
+  const valid = Number.isFinite(whole) && (coins ? whole >= 1 : whole >= 1000)
+  const save = (active: boolean) =>
+    update.mutate(
+      coins
+        ? { key: product.key, coinCost: whole, active }
+        : { key: product.key, priceMinor: whole * 100, active },
+    )
+  return (
+    <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+      <b style={{ minWidth: 140 }}>{frameNames[product.key] ?? product.key}</b>
+      {!coins && (
+        <span className="faint">
+          {product.appStoreProductId ?? '—'} · {product.googlePlayProductId ?? '—'}
+        </span>
+      )}
+      <input
+        aria-label={coins ? 'Narx, Gul' : "Narx, so'm"}
+        inputMode="numeric"
+        value={price}
+        onChange={(event) => setPrice(event.target.value)}
+        style={{ width: 120 }}
+      />
+      <span>{coins ? 'Gul' : "so'm"}</span>
+      <button
+        className="btn small"
+        disabled={!valid || update.isPending || whole === current}
+        onClick={() => save(product.active)}
+      >
+        Saqlash
+      </button>
+      <label style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+        <input
+          type="checkbox"
+          checked={product.active}
+          disabled={update.isPending || !valid}
+          onChange={(event) => save(event.target.checked)}
+        />
+        Sotuvda
+      </label>
       <ErrorNotice error={update.error} />
     </div>
   )

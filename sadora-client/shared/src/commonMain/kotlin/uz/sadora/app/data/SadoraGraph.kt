@@ -94,6 +94,7 @@ class SadoraGraph(
     val partnerApi: PartnerApi = PartnerApi(caller)
     val photoApi: PhotoApi = PhotoApi(caller)
     val petApi: PetApi = PetApi(caller)
+    val frameApi: uz.sadora.app.data.api.FrameApi = uz.sadora.app.data.api.FrameApi(caller)
     val repository: SadoraRepository = SadoraRepository(api, session, device, appVersion)
 
     /** One per process: its lock is what keeps a resume and a tap from reading twice at once. */
@@ -134,6 +135,13 @@ class SadoraGraph(
         petApi,
         state,
         prompts,
+        store = storeBilling,
+        currentUserId = { (session.state.value as? SessionState.SignedIn)?.user?.id },
+    )
+
+    fun frameController(state: uz.sadora.app.model.AppState): FrameController = FrameController(
+        frameApi,
+        state,
         store = storeBilling,
         currentUserId = { (session.state.value as? SessionState.SignedIn)?.user?.id },
     )

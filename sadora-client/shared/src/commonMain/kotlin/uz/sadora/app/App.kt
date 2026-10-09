@@ -439,6 +439,8 @@ private fun MainShell(
         rewards.loadBadges(force = true)
         // Which pet she has, and whether her plan lets it speak.
         controllers.pet.load()
+        // The frame she wears, for her photo and her alias before the chat is opened.
+        controllers.frames.load()
         // Whether she writes in the chat as a doctor; the composer names her either way.
         controllers.doctors.loadAccount()
         // Whether someone sees her — the labour button needs to know — and whom she follows.
@@ -775,6 +777,13 @@ private fun MainShell(
             remaining = (rewards.unlocks.size - 1).coerceAtLeast(0),
             onNext = { shown ->
                 scope.launch {
+                    rewards.unlockShown(shown)
+                    if (rewards.unlocks.isEmpty()) controllers.pet.after(uz.sadora.contract.PetTrigger.BADGE_EARNED)
+                }
+            },
+            onWearFrame = { shown ->
+                scope.launch {
+                    controllers.frames.wear(shown.frame)
                     rewards.unlockShown(shown)
                     if (rewards.unlocks.isEmpty()) controllers.pet.after(uz.sadora.contract.PetTrigger.BADGE_EARNED)
                 }
@@ -1170,10 +1179,19 @@ private fun PushedScreen(
             onUpgrade = upgrade,
         )
         Route.PetPicker -> uz.sadora.app.ui.modules.PetPickerScreen(controllers.pet, close, onUpgrade = upgrade, partner = controllers.partner)
+        Route.Frames -> uz.sadora.app.ui.modules.FramesScreen(
+            state = state,
+            frames = controllers.frames,
+            onClose = close,
+            onEditPhoto = { overlays.showPhotoSheet = true },
+            onOpenBadges = { navigator.push(Route.Badges) },
+            partner = controllers.partner,
+        )
         Route.Shop -> ShopScreen(
             state = state,
             rewards = controllers.rewards,
             onClose = close,
+            onOpenFrames = { navigator.push(Route.Frames) },
             // Premium bought with coins changes the tier, and half the app reads it.
             onPremiumGranted = {
                 controllers.analytics.event(AnalyticsEvents.PREMIUM_GRANTED, mapOf("via" to "coins"))

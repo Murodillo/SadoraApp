@@ -312,6 +312,11 @@ object ErrorText {
         Entry("Bu hamroh sotib olinmagan", "Этот компаньон не куплен", "This companion has not been bought"),
         Entry("Bu hamroh allaqachon sizniki", "Этот компаньон уже ваш", "This companion is already yours"),
         Entry("Narx juda past", "Цена слишком низкая", "The price is too low"),
+        Entry("Bunday ramka yo'q", "Такой рамки нет", "No such frame"),
+        Entry("Bu ramka Gulga sotilmaydi", "Эта рамка не продаётся за гули", "This frame is not sold for Gul"),
+        Entry("Bu ramka allaqachon sizniki", "Эта рамка уже ваша", "This frame is already yours"),
+        Entry("Bu ramka hali sizniki emas", "Эта рамка ещё не ваша", "This frame is not yours yet"),
+        Entry("Nishon ramkasi faqat nishon bilan beriladi", "Рамку значка даёт только сам значок", "A badge frame comes only with its badge"),
 
         // ---------------------------------------------------------------- articles
         Entry("Maqola topilmadi", "Статья не найдена", "Article not found"),

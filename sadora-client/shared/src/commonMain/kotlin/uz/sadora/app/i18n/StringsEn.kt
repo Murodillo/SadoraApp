@@ -1526,6 +1526,7 @@ object StringsEn : Strings {
     override val badges: BadgeStrings = BadgesEn
     override val prescriptions: PrescriptionStrings = PrescriptionStringsEn
     override val pet: PetStrings = PetEn
+    override val frames: FrameStrings = FramesEn
 
     override val rewards = object : RewardStrings {
         override val coinName = "Gul"

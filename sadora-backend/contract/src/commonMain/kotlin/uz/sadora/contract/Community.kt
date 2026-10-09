@@ -76,6 +76,8 @@ data class CommunityIdentity(
     val unreadMessages: Int = 0,
     /** The achievement badge she wears after her alias. */
     val worn: WornBadge? = null,
+    /** The frame around her alias ([AvatarFrames] key); an unknown key draws none. */
+    val frame: String? = null,
 )
 
 /** Edits to her own alias profile. A null field is left as it is; an empty bio clears it. */
@@ -100,6 +102,8 @@ data class CommunityProfile(
     val badges: List<CommunityBadge> = emptyList(),
     /** The achievement badge she wears after her alias. */
     val worn: WornBadge? = null,
+    /** The frame around her alias ([AvatarFrames] key). */
+    val frame: String? = null,
     val postCount: Int = 0,
     val commentCount: Int = 0,
     val likesReceived: Int = 0,
@@ -142,6 +146,8 @@ data class Conversation(
     val lastMessageKind: MessageKind = MessageKind.TEXT,
     /** The last line is the viewer's own and the other side has read it. */
     val lastMessageRead: Boolean = false,
+    /** The frame the other alias wears ([AvatarFrames] key); never set in a consultation. */
+    val frame: String? = null,
 )
 
 /** Who a doctor is consulting: her real name, and what a doctor needs at a glance. */
@@ -313,6 +319,8 @@ data class CommunityPost(
     val badges: List<CommunityBadge> = emptyList(),
     /** The achievement badge the author wears after her alias; never set on a doctor's post. */
     val worn: WornBadge? = null,
+    /** The frame around the author's alias ([AvatarFrames] key); never set on a doctor's post. */
+    val frame: String? = null,
     /**
      * Set when a verified doctor wrote it. [alias] then holds her name, and the app
      * opens her doctor page rather than an alias profile.
@@ -334,6 +342,8 @@ data class CommunityComment(
     val badges: List<CommunityBadge> = emptyList(),
     /** The achievement badge the author wears after her alias. */
     val worn: WornBadge? = null,
+    /** The frame around the author's alias ([AvatarFrames] key). */
+    val frame: String? = null,
     /** A verified doctor's answer; the thread lists these first. */
     val doctor: DoctorAuthor? = null,
 )

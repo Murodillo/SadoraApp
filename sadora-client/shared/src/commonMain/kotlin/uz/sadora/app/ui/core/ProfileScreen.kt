@@ -105,9 +105,9 @@ fun ProfileScreen(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                         ) {
-                            // Her photo is changed from the avatar itself; the rest of the
-                            // card still opens her details.
-                            EditableAvatar(state, photos, size = 52.dp, onClick = onEditPhoto)
+                            // The avatar opens her frames, its camera badge changes the photo;
+                            // the rest of the card still opens her details.
+                            EditableAvatar(state, photos, size = 52.dp, onClick = { onOpen(Route.Frames) }, onCamera = onEditPhoto)
                             Column(
                                 Modifier.weight(1f),
                                 verticalArrangement = Arrangement.spacedBy(2.dp),

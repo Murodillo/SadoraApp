@@ -47,6 +47,25 @@ class CommunityMappingTest {
     )
 
     @Test
+    fun `a worn frame survives the mapping and putting one on re-stamps her own posts and comments`() {
+        val hers = wirePost(liked = false, likeCount = 0).copy(id = "mine", isMine = true).toAppPost()
+        val theirs = wirePost(liked = false, likeCount = 0).copy(id = "other", frame = "sakura").toAppPost()
+        assertEquals("sakura", theirs.frame)
+        assertNull(hers.frame)
+
+        val state = AppState()
+        state.replaceCommunityFeed(listOf(hers, theirs), liked = emptySet(), saved = emptySet())
+        state.addComment("other", "Rahmat")
+        state.applyWornFrame("tulip")
+        assertEquals("tulip", state.communityPosts.single { it.id == "mine" }.frame)
+        assertEquals("sakura", state.communityPosts.single { it.id == "other" }.frame, "someone else's frame is hers to change")
+        assertEquals("tulip", state.commentsOf(state.communityPosts.single { it.id == "other" }).last().frame)
+
+        state.applyWornFrame(null)
+        assertNull(state.communityPosts.single { it.id == "mine" }.frame)
+    }
+
+    @Test
     fun `a doctor's byline and answers survive the mapping and drive the doctors chip`() {
         val doctor = uz.sadora.contract.DoctorAuthor("d1", "Dr Nodira Karimova", uz.sadora.contract.DoctorSpecialty.GYNECOLOGIST)
         val byDoctor = wirePost(liked = false, likeCount = 0).copy(id = "p2", alias = doctor.fullName, doctor = doctor).toAppPost()

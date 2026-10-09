@@ -301,6 +301,8 @@ data class BadgeUnlock(
     val maxTier: Int,
     val coins: Int = 0,
     val earnedAt: Instant,
+    /** The avatar frame this tier gives ([AvatarFrames] key), when it gives one. */
+    val frame: String? = null,
 )
 
 /**

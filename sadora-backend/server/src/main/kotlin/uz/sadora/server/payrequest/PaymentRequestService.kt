@@ -78,6 +78,9 @@ class PaymentRequestService(
     /** The legendary pet's sale, for a PET request. Set once at wiring. */
     var petShop: uz.sadora.server.pet.PetShopService? = null
 
+    /** The paid frames' sale, for a FRAME request. Set once at wiring. */
+    var frameShop: uz.sadora.server.frame.FrameService? = null
+
     // ---------------------------------------------------------------- her side
 
     suspend fun create(ownerId: Uuid, request: CreatePaymentRequest): PaymentRequest {
@@ -95,6 +98,7 @@ class PaymentRequestService(
         var sessionId: Uuid? = null
         var doctorId: Uuid? = null
         var pet: String? = null
+        var frame: String? = null
         val amount: Long
         when (request.kind) {
             PaymentRequestKind.PREMIUM -> {
@@ -116,6 +120,12 @@ class PaymentRequestService(
                 pet = product.pet.wireKey
                 amount = product.priceMinor
             }
+            PaymentRequestKind.FRAME -> {
+                val wanted = request.frame ?: throw ValidationException("frame", "Ko'rsatilishi shart")
+                val product = frames().forSale(ownerId, wanted)
+                frame = product.frame
+                amount = product.priceMinor!!
+            }
         }
 
         val link = links.activeOf(ownerId)?.takeIf { it.partnerId != null && it.acceptsPaymentRequests }
@@ -134,6 +144,7 @@ class PaymentRequestService(
                 at = at,
                 expiresAt = at + PaymentRequestLimits.OPEN_DAYS.days,
                 pet = pet,
+                frame = frame,
             )
         } catch (e: Exception) {
             // Two taps at once: the unique index lets one through.
@@ -196,6 +207,7 @@ class PaymentRequestService(
                     period = periodOf(record),
                     doctorName = record.doctorId?.let { consultations.doctorName(it) },
                     pet = petOf(record),
+                    frame = record.frame,
                     amountMinor = record.amountMinor,
                     note = record.note,
                     createdAt = record.createdAt,
@@ -203,6 +215,9 @@ class PaymentRequestService(
                     plans = if (record.kind == PaymentRequestKind.PREMIUM) billingRepository.giftPlans() else emptyList(),
                     petProduct = petShop?.product(record.pet)?.let {
                         uz.sadora.contract.PetProduct(it.pet, record.amountMinor, it.currency, it.appStoreProductId, it.googlePlayProductId, providers)
+                    },
+                    frameProduct = frameShop?.product(record.frame)?.let {
+                        uz.sadora.contract.FrameProduct(it.frame, record.amountMinor, it.currency, it.appStoreProductId, it.googlePlayProductId, providers)
                     },
                     providers = providers,
                 )
@@ -221,7 +236,7 @@ class PaymentRequestService(
     suspend fun pay(payerId: Uuid, id: String, request: PayPaymentRequest, origin: String): CheckoutSession =
         checkout(asked(payerId, id), payerId, request, origin)
 
-    /** A gift plan, or the legendary pet, bought in the payer's own store account. */
+    /** A gift plan, the legendary pet or a paid frame, bought in the payer's own store account. */
     suspend fun payInStore(payerId: Uuid, id: String, purchase: PaymentRequestStorePurchase): PaymentRequest {
         val record = asked(payerId, id, requireOpen = false)
         if (record.kind == PaymentRequestKind.CONSULTATION) throw ValidationException("kind", "Konsultatsiya store orqali to'lanmaydi")
@@ -240,6 +255,12 @@ class PaymentRequestService(
         }
         val pet = if (record.kind == PaymentRequestKind.PET) {
             shop().product(record.pet)?.takeIf { matches(it.appStoreProductId, it.googlePlayProductId) }
+                ?: throw ValidationException("productId", "Bunday mahsulot yo'q")
+        } else {
+            null
+        }
+        val frame = if (record.kind == PaymentRequestKind.FRAME) {
+            frames().product(record.frame)?.takeIf { matches(it.appStoreProductId, it.googlePlayProductId) }
                 ?: throw ValidationException("productId", "Bunday mahsulot yo'q")
         } else {
             null
@@ -267,6 +288,7 @@ class PaymentRequestService(
             payerId = payerId,
             paymentRequestId = record.id,
             pet = pet?.pet?.wireKey,
+            frame = frame?.frame,
         ).also { created ->
             if (!billingRepository.attachExternalId(created.id, verified.transactionId, null)) {
                 throw ConflictException("Bu chek allaqachon qayd etilgan")
@@ -409,7 +431,35 @@ class PaymentRequestService(
                 pet = record.pet,
             )
             }
+            PaymentRequestKind.FRAME -> {
+                // She has it already: a second payment would buy nothing.
+                closeIfFrameOwned(record)
+                billing.requestCheckout(
+                    beneficiaryId = record.ownerId,
+                    payerId = payerId,
+                    requestId = record.id,
+                    planId = null,
+                    consultationSessionId = null,
+                    amountMinor = record.amountMinor,
+                    provider = request.provider,
+                    origin = origin,
+                    frame = record.frame,
+                )
+            }
         }
+    }
+
+    /** A paid frame became hers by some other payment: an open request for it closes. */
+    suspend fun closeOpenFrameRequests(ownerId: Uuid, frame: String, except: Uuid?) {
+        val open = repository.openOf(ownerId) ?: return
+        if (open.kind != PaymentRequestKind.FRAME || open.frame != frame || open.id == except) return
+        repository.close(open.id, PaymentRequestStatus.CANCELLED, now())
+    }
+
+    private suspend fun closeIfFrameOwned(record: PaymentRequestRecord) {
+        if (!frames().owns(record.ownerId, record.frame)) return
+        repository.close(record.id, PaymentRequestStatus.CANCELLED, now())
+        throw ConflictException("So'rov yopilgan")
     }
 
     /**
@@ -440,6 +490,9 @@ class PaymentRequestService(
 
     private fun shop(): uz.sadora.server.pet.PetShopService =
         petShop ?: throw uz.sadora.server.core.FeatureDisabledException(uz.sadora.server.pet.PetShopService.SALE_FLAG)
+
+    private fun frames(): uz.sadora.server.frame.FrameService =
+        frameShop ?: throw uz.sadora.server.core.FeatureDisabledException(uz.sadora.server.frame.FrameService.SALE_FLAG)
 
     private fun petOf(record: PaymentRequestRecord): uz.sadora.contract.PetKind? =
         record.pet?.let { key -> uz.sadora.contract.PetKind.entries.firstOrNull { it.wireKey == key } }
@@ -534,6 +587,7 @@ class PaymentRequestService(
         period = periodOf(this),
         doctorName = doctorId?.let { consultations.doctorName(it) },
         pet = petOf(this),
+        frame = frame,
         amountMinor = amountMinor,
         note = note,
         sentToPartner = partnerLinkId != null,

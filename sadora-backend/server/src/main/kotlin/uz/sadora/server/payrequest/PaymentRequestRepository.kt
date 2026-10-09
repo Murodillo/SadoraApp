@@ -33,6 +33,8 @@ data class PaymentRequestRecord(
     val doctorId: Uuid?,
     /** The legendary pet a PET request is for. */
     val pet: String? = null,
+    /** The paid avatar frame a FRAME request is for. */
+    val frame: String? = null,
     val amountMinor: Long,
     val note: String?,
     val partnerLinkId: Uuid?,
@@ -59,6 +61,7 @@ class PaymentRequestRepository {
         at: Instant,
         expiresAt: Instant,
         pet: String? = null,
+        frame: String? = null,
     ): PaymentRequestRecord = dbQuery {
         val id = Uuid.random()
         PaymentRequests.insert {
@@ -69,6 +72,7 @@ class PaymentRequestRepository {
             it[PaymentRequests.consultationSessionId] = consultationSessionId
             it[PaymentRequests.doctorId] = doctorId
             it[PaymentRequests.pet] = pet
+            it[PaymentRequests.frame] = frame
             it[PaymentRequests.amountMinor] = amountMinor
             it[PaymentRequests.note] = note
             it[PaymentRequests.partnerLinkId] = partnerLinkId
@@ -172,6 +176,7 @@ class PaymentRequestRepository {
         consultationSessionId = this[PaymentRequests.consultationSessionId],
         doctorId = this[PaymentRequests.doctorId],
         pet = this[PaymentRequests.pet],
+        frame = this[PaymentRequests.frame],
         amountMinor = this[PaymentRequests.amountMinor],
         note = this[PaymentRequests.note],
         partnerLinkId = this[PaymentRequests.partnerLinkId],

@@ -156,7 +156,7 @@ fun CommunityRulesSheetContent(state: AppState, onDone: () -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
         state.communityAlias?.let { alias ->
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-                AliasAvatar(alias, state.communityTint)
+                AliasAvatar(alias, state.communityTint, frame = state.wornFrame)
                 Text(t.anonymousAs(alias), style = Sadora.type.h3, color = c.text)
             }
         }

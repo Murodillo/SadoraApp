@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -81,28 +82,54 @@ import uz.sadora.app.ui.components.ArtIcon
  * can be changed, and while a photo is going up or coming down it spins.
  */
 @Composable
-internal fun EditableAvatar(state: AppState, photos: PhotoController, size: Dp, onClick: () -> Unit) {
+internal fun EditableAvatar(
+    state: AppState,
+    photos: PhotoController,
+    size: Dp,
+    onClick: () -> Unit,
+    /** The camera badge: changes the photo. Without it the whole avatar does. */
+    onCamera: (() -> Unit)? = null,
+) {
     val c = Sadora.colors
-    val label = strings.profile.photoChange
-    Box(
-        Modifier
-            .size(size + 4.dp)
-            .clip(Radius.chip)
-            .noRippleClickable(role = Role.Button, onClick = onClick)
-            .semantics { contentDescription = label },
-    ) {
-        Avatar(state.name, size = size, photoUrl = state.avatarUrl)
-        if (photos.saving) {
-            Box(
-                Modifier.size(size).clip(Radius.chip).background(Color.Black.copy(alpha = 0.35f)),
-                contentAlignment = Alignment.Center,
-            ) {
-                SadoraLoader(size = size * 0.5f)
+    val label = if (onCamera != null) strings.frames.title else strings.profile.photoChange
+    val photoLabel = strings.profile.photoChange
+    Box(Modifier.size(size + 4.dp)) {
+        Box(
+            Modifier
+                .size(size)
+                .clip(Radius.chip)
+                .noRippleClickable(role = Role.Button, onClick = onClick)
+                .semantics { contentDescription = label },
+            contentAlignment = Alignment.Center,
+        ) {
+            uz.sadora.app.ui.components.FramedAvatar(state.wornFrame, size = size) { inner ->
+                Box(contentAlignment = Alignment.Center) {
+                    Avatar(state.name, size = inner, photoUrl = state.avatarUrl)
+                    if (photos.saving) {
+                        Box(
+                            Modifier.size(inner).clip(Radius.chip).background(Color.Black.copy(alpha = 0.35f)),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            SadoraLoader(size = inner * 0.5f)
+                        }
+                    }
+                }
             }
         }
         Box(
             Modifier
                 .align(Alignment.BottomEnd)
+                .then(
+                    if (onCamera != null) {
+                        // The badge is small; its hit area is the full touch target around it.
+                        Modifier
+                            .minimumInteractiveComponentSize()
+                            .noRippleClickable(role = Role.Button, onClick = onCamera)
+                            .semantics { contentDescription = photoLabel }
+                    } else {
+                        Modifier
+                    },
+                )
                 .size((size.value * 0.4f).dp)
                 .clip(Radius.chip)
                 .background(c.surface)

@@ -1530,6 +1530,7 @@ object StringsUz : Strings {
     override val badges: BadgeStrings = BadgesUz
     override val prescriptions: PrescriptionStrings = PrescriptionStringsUz
     override val pet: PetStrings = PetUz
+    override val frames: FrameStrings = FramesUz
 
     override val rewards = object : RewardStrings {
         override val coinName = "Gul"

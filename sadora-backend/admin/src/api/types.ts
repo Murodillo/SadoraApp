@@ -446,6 +446,24 @@ export interface AdminPetProduct {
   active: boolean
 }
 
+/** A sold avatar frame's prices: Gul for a `coins` frame, tiyin for a `paid` one. */
+export interface AdminFrameProduct {
+  key: string
+  unlock: 'coins' | 'paid'
+  coinCost?: number | null
+  priceMinor?: number | null
+  currency: string
+  appStoreProductId?: string | null
+  googlePlayProductId?: string | null
+  active: boolean
+}
+
+/** One account's frames: what she owns and the one she wears. */
+export interface AdminUserFrames {
+  owned: string[]
+  worn?: string | null
+}
+
 export interface AdminPayment {
   id: string
   userId: string
@@ -467,6 +485,8 @@ export interface AdminPayment {
   refundedAt?: string | null
   /** The legendary pet a one-off payment bought ("humo"). */
   pet?: string | null
+  /** The paid avatar frame a one-off payment bought ("rainbow"). */
+  frame?: string | null
 }
 
 export interface BillingSummary {

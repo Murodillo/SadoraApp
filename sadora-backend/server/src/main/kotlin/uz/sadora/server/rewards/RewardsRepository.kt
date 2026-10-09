@@ -202,6 +202,32 @@ class RewardsRepository {
     }
 
     /**
+     * Takes [amount] for [reference] and does [alongside] in the same transaction, under
+     * the wallet's lock: either both happen or neither. Null when she cannot pay, or when
+     * [alongside] declines (it returns false) — the coins are then never taken.
+     */
+    suspend fun spendAlongside(
+        userId: Uuid,
+        amount: Int,
+        reference: String,
+        alongside: JdbcTransaction.() -> Boolean,
+    ): CoinBalance? = dbQuery {
+        lockWallet(userId)
+        val balance = readBalance(userId)
+        if (amount <= 0 || balance.balance < amount) return@dbQuery null
+        if (!alongside()) return@dbQuery null
+        CoinLedger.insert {
+            it[id] = Uuid.random()
+            it[CoinLedger.userId] = userId
+            it[CoinLedger.amount] = -amount
+            it[reason] = uz.sadora.contract.CoinReasons.REDEMPTION
+            it[CoinLedger.reference] = reference
+            it[createdAt] = now().toOffsetDateTime()
+        }
+        readBalance(userId)
+    }
+
+    /**
      * An operator's correction, under the same lock as [spend]: a withdrawal may not
      * take the balance below zero, and two corrections at once may not both pass.
      */

@@ -56,6 +56,8 @@ data class TransactionRecord(
     val refundedAt: Instant? = null,
     /** The legendary pet this one-off payment buys, when it buys one. */
     val pet: String? = null,
+    /** The paid avatar frame this one-off payment buys, when it buys one. */
+    val frame: String? = null,
 )
 
 class BillingRepository {
@@ -100,6 +102,7 @@ class BillingRepository {
         payerId: Uuid? = null,
         paymentRequestId: Uuid? = null,
         pet: String? = null,
+        frame: String? = null,
     ): TransactionRecord = dbQuery {
         val id = Uuid.random()
         val timestamp = now().toOffsetDateTime()
@@ -111,6 +114,7 @@ class BillingRepository {
             it[PaymentTransactions.payerId] = payerId
             it[PaymentTransactions.paymentRequestId] = paymentRequestId
             it[PaymentTransactions.pet] = pet
+            it[PaymentTransactions.frame] = frame
             it[PaymentTransactions.provider] = provider.dbValue()
             it[PaymentTransactions.amountMinor] = amountMinor
             it[PaymentTransactions.currency] = currency
@@ -374,6 +378,7 @@ private fun ResultRow.toRecord() = TransactionRecord(
     paymentRequestId = this[PaymentTransactions.paymentRequestId],
     refundedAt = this[PaymentTransactions.refundedAt]?.toKotlinInstant(),
     pet = this[PaymentTransactions.pet],
+    frame = this[PaymentTransactions.frame],
 )
 
 /** What came in over a window, for the panel's revenue card. */

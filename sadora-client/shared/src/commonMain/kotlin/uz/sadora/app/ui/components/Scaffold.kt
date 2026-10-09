@@ -218,6 +218,8 @@ fun GreetingHeader(
     hasUnread: Boolean = true,
     /** Her photo, when she has added one. */
     photoUrl: String? = null,
+    /** The frame she wears around her photo. */
+    frame: String? = null,
 ) {
     val c = Sadora.colors
     Row(
@@ -245,7 +247,10 @@ fun GreetingHeader(
         }
         // The deck puts the face next to the bell: the avatar is the way into the
         // profile, so the greeting itself is left as plain text.
-        Avatar(name, size = MinTouchTarget, photoUrl = photoUrl, onClick = onAvatarClick)
+        // The whole box is the button, ring included, so a frame never shrinks the target.
+        FramedAvatar(frame, size = MinTouchTarget, modifier = Modifier.pressable(pressedScale = 0.9f, onClick = onAvatarClick)) { inner ->
+            Avatar(name, size = inner, photoUrl = photoUrl)
+        }
         Box {
             CircleIconButton(SadoraIcons.Bell, contentDescription = strings.profile.notifications, onClick = onNotificationsClick)
             if (hasUnread) {

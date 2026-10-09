@@ -57,6 +57,9 @@ class BillingService(
     /** A legendary pet's money: the pet becomes hers. Set once at wiring. */
     var petPaid: (suspend (TransactionRecord) -> Unit)? = null
 
+    /** A paid avatar frame's money: the frame becomes hers. Set once at wiring. */
+    var framePaid: (suspend (TransactionRecord) -> Unit)? = null
+
     suspend fun catalogue(userId: Uuid): BillingCatalogue {
         val user = users.findById(userId) ?: throw NotFoundException("Foydalanuvchi topilmadi")
         val context = FlagContext(
@@ -160,11 +163,15 @@ class BillingService(
             return null
         }
 
-        // A pet is kept, not timed: the grant is keyed by this payment, so a retry that
-        // lands after the claim finds it given and adds nothing.
-        if (transaction.pet != null) {
+        // A pet or a frame is kept, not timed: the grant is keyed by this payment, so a
+        // retry that lands after the claim finds it given and adds nothing.
+        if (transaction.pet != null || transaction.frame != null) {
             if (transaction.state != PaymentState.PAID && !repository.claimPaid(transaction.id)) return null
-            val grant = petPaid ?: error("Pet shop is not wired")
+            val grant = if (transaction.pet != null) {
+                petPaid ?: error("Pet shop is not wired")
+            } else {
+                framePaid ?: error("Frame shop is not wired")
+            }
             try {
                 grant(transaction)
             } catch (e: Throwable) {
@@ -249,6 +256,15 @@ class BillingService(
         origin: String,
     ): CheckoutSession = oneOffCheckout(userId, amountMinor, provider, origin, pet = pet)
 
+    /** A pending payment for a paid avatar frame, and the link that pays it. Same providers as a consultation. */
+    suspend fun frameCheckout(
+        userId: Uuid,
+        frame: String,
+        amountMinor: Long,
+        provider: PaymentProvider,
+        origin: String,
+    ): CheckoutSession = oneOffCheckout(userId, amountMinor, provider, origin, frame = frame)
+
     private suspend fun oneOffCheckout(
         userId: Uuid,
         amountMinor: Long,
@@ -256,6 +272,7 @@ class BillingService(
         origin: String,
         consultationSessionId: Uuid? = null,
         pet: String? = null,
+        frame: String? = null,
     ): CheckoutSession {
         if (provider !in consultationProviders(userId)) throw FeatureDisabledException(provider.name.lowercase())
         val transaction = repository.createTransaction(
@@ -266,6 +283,7 @@ class BillingService(
             currency = "UZS",
             consultationSessionId = consultationSessionId,
             pet = pet,
+            frame = frame,
         )
         val live = catalogue(userId).providers.contains(provider)
         val url = when {
@@ -299,6 +317,7 @@ class BillingService(
         provider: PaymentProvider,
         origin: String,
         pet: String? = null,
+        frame: String? = null,
     ): CheckoutSession {
         if (provider != PaymentProvider.PAYME && provider != PaymentProvider.CLICK) {
             throw ValidationException("provider", "Store xaridi ilova ichida bo'ladi")
@@ -314,6 +333,7 @@ class BillingService(
             payerId = payerId,
             paymentRequestId = requestId,
             pet = pet,
+            frame = frame,
         )
         val live = catalogue(beneficiaryId).providers.contains(provider)
         val url = when {
@@ -332,13 +352,17 @@ class BillingService(
 
     /**
      * The development page's payment: refused in production, and only for a consultation,
-     * a pet, or someone else's payment still pending. Everything after it is the same path a real
+     * a pet, a frame, or someone else's payment still pending. Everything after it is the same path a real
      * provider's callback takes.
      */
     suspend fun devPay(transactionId: Uuid): Boolean {
         if (environment == Environment.PROD) return false
         val transaction = repository.transaction(transactionId) ?: return false
-        if (transaction.consultationSessionId == null && transaction.paymentRequestId == null && transaction.pet == null) return false
+        if (transaction.consultationSessionId == null && transaction.paymentRequestId == null &&
+            transaction.pet == null && transaction.frame == null
+        ) {
+            return false
+        }
         activate(transaction)
         return true
     }

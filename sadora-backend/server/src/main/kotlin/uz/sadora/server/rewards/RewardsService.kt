@@ -262,6 +262,7 @@ class RewardsService(
                         maxTier = max,
                         coins = unit * Badges.coinMultiplier(it.tier, max),
                         earnedAt = it.earnedAt,
+                        frame = uz.sadora.contract.AvatarFrames.forBadge(it.badge, it.tier)?.key,
                     )
                 },
         )

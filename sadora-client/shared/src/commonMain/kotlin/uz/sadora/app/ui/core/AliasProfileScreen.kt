@@ -198,7 +198,7 @@ private fun ProfileHeader(profile: AliasProfile) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(Spacing.xs),
     ) {
-        AliasAvatar(profile.alias, profile.tint, size = 84.dp)
+        AliasAvatar(profile.alias, profile.tint, size = 84.dp, frame = profile.frame)
         // Her alias, and right after it the badge she chose to wear.
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.xxs)) {
             Text(profile.alias, style = Sadora.type.h2, color = c.text, textAlign = TextAlign.Center)

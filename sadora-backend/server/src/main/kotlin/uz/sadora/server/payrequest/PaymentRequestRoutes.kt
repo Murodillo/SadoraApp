@@ -118,13 +118,19 @@ fun Route.publicPaymentRequestRoutes(requests: PaymentRequestService) {
     }
 }
 
-/** The operator's refund of a gift or a legendary pet: what it bought goes back with the money. */
-fun Route.adminPaymentRequestRoutes(requests: PaymentRequestService, petShop: uz.sadora.server.pet.PetShopService) {
+/** The operator's refund of a gift, a legendary pet or a paid frame: what it bought goes back with the money. */
+fun Route.adminPaymentRequestRoutes(
+    requests: PaymentRequestService,
+    petShop: uz.sadora.server.pet.PetShopService,
+    frameShop: uz.sadora.server.frame.FrameService,
+) {
     authenticate(ADMIN_AUTH) {
         post("/admin/billing/payments/{id}/refund") {
             val admin = call.requireAdminRole(AdminRole.OWNER, AdminRole.ADMIN)
             val id = parseUuid(call.parameters["id"].orEmpty(), "id")
-            if (!petShop.refundIfPet(id, admin.adminId)) requests.refundGift(id, admin.adminId)
+            if (!petShop.refundIfPet(id, admin.adminId) && !frameShop.refundIfFrame(id, admin.adminId)) {
+                requests.refundGift(id, admin.adminId)
+            }
             call.respond(Ack())
         }
     }

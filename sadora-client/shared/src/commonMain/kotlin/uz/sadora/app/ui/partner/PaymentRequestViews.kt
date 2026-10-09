@@ -62,6 +62,8 @@ fun AskPartnerContent(
     onClose: () -> Unit,
     /** For a PET request: which legendary pet. */
     pet: uz.sadora.contract.PetKind? = null,
+    /** For a FRAME request: which paid frame. */
+    frame: String? = null,
 ) {
     val t = strings.partner
     val c = Sadora.colors
@@ -84,6 +86,7 @@ fun AskPartnerContent(
             PaymentRequestKind.PREMIUM -> t.askBodyPremium
             PaymentRequestKind.CONSULTATION -> t.askBodyConsultation
             PaymentRequestKind.PET -> strings.pet.askBody
+            PaymentRequestKind.FRAME -> strings.frames.askBody
         },
         style = Sadora.type.body,
         color = c.muted,
@@ -117,6 +120,7 @@ fun AskPartnerContent(
                     doctorId = doctorId,
                     note = note,
                     pet = pet,
+                    frame = frame,
                 )
             }
         },
@@ -181,11 +185,14 @@ fun IncomingRequestCard(
     val uriHandler = LocalUriHandler.current
     val premium = request.kind == PaymentRequestKind.PREMIUM
     val petProduct = request.petProduct?.takeIf { request.kind == PaymentRequestKind.PET }
+    val frameProduct = request.frameProduct?.takeIf { request.kind == PaymentRequestKind.FRAME }
     var planId by remember(request.id) {
         mutableStateOf(request.plans.firstOrNull { it.period == request.period }?.id ?: request.plans.firstOrNull()?.id)
     }
     val plan = request.plans.firstOrNull { it.id == planId }
-    val inStore = (premium || petProduct?.let(partner::storeProductId) != null) && partner.store != null
+    val inStore = (
+        premium || petProduct?.let(partner::storeProductId) != null || frameProduct?.let(partner::storeProductId) != null
+        ) && partner.store != null
     val direct = request.providers.filter { it == PaymentProvider.PAYME || it == PaymentProvider.CLICK }
     val waiting = partner.paying
 
@@ -205,6 +212,8 @@ fun IncomingRequestCard(
                 PaymentRequestKind.PREMIUM -> "Sadora " + t.premiumWhat(request.period == BillingPeriod.YEAR)
                 PaymentRequestKind.CONSULTATION -> t.consultationWhat(request.doctorName)
                 PaymentRequestKind.PET -> strings.pet.requestWhat
+                PaymentRequestKind.FRAME -> strings.frames.requestWhat +
+                    (request.frame?.let(strings.frames::name)?.let { " · $it" } ?: "")
             },
             style = Sadora.type.body,
             color = c.textAccent,
@@ -243,6 +252,15 @@ fun IncomingRequestCard(
                     t.giveGift(price),
                     enabled = !partner.busy && !partner.storePending,
                     onClick = { scope.launch { if (partner.payPetInStore(request.id, petProduct)) onToast(t.giftThanks) } },
+                )
+                if (partner.storePending) Text(t.giftStorePending, style = Sadora.type.body, color = c.muted)
+            }
+            inStore && frameProduct != null -> {
+                val price = partner.storeProductId(frameProduct)?.let { partner.giftPrices[it] }.orEmpty()
+                SadoraButton(
+                    t.giveGift(price),
+                    enabled = !partner.busy && !partner.storePending,
+                    onClick = { scope.launch { if (partner.payFrameInStore(request.id, frameProduct)) onToast(t.giftThanks) } },
                 )
                 if (partner.storePending) Text(t.giftStorePending, style = Sadora.type.body, color = c.muted)
             }
@@ -303,6 +321,7 @@ private fun PaymentRequest.what(): String {
         PaymentRequestKind.PREMIUM -> t.premiumWhat(period == BillingPeriod.YEAR)
         PaymentRequestKind.CONSULTATION -> t.consultationWhat(doctorName)
         PaymentRequestKind.PET -> strings.pet.requestWhat
+        PaymentRequestKind.FRAME -> strings.frames.requestWhat
     }
 }
 

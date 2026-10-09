@@ -32,6 +32,8 @@ data class CommunityPost(
     val badges: List<CommunityBadge> = emptyList(),
     /** The achievement badge the author chose to wear after her alias. */
     val worn: uz.sadora.contract.WornBadge? = null,
+    /** The frame around the author's alias ([uz.sadora.contract.AvatarFrames] key). */
+    val frame: String? = null,
     /** Her own post. The only thing that ever ties a post to her, and only on her phone. */
     val isMine: Boolean = false,
     /**
@@ -52,6 +54,8 @@ data class CommunityComment(
     val badges: List<CommunityBadge> = emptyList(),
     /** The achievement badge the author wears after her alias. */
     val worn: uz.sadora.contract.WornBadge? = null,
+    /** The frame around the author's alias. */
+    val frame: String? = null,
     /** A verified doctor's answer; the thread draws it apart and lists it first. */
     val doctor: DoctorAuthor? = null,
     /** The server's id; empty on her optimistic copy and on samples. Pages are joined by it. */
@@ -73,6 +77,8 @@ data class AliasProfile(
     val postCount: Int,
     /** The achievement badge she wears after her alias. */
     val worn: uz.sadora.contract.WornBadge? = null,
+    /** The frame around her alias. */
+    val frame: String? = null,
     val commentCount: Int,
     val likesReceived: Int,
     val memberSince: Instant,
@@ -111,6 +117,8 @@ data class Conversation(
     val lastMessageKind: MessageKind = MessageKind.Text,
     /** The last line is hers and the other side has read it: the double tick in the list. */
     val lastMessageRead: Boolean = false,
+    /** The frame the other alias wears; never on a consultation. */
+    val frame: String? = null,
 ) {
     val isConsultation: Boolean get() = consultation != null
 

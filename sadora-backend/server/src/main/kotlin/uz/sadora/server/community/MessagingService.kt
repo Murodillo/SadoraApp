@@ -100,6 +100,8 @@ class MessagingService(
     private val clock: Clock = Clock.System,
     /** The structured copy behind `prescription` lines. Null in tests without them. */
     private val prescriptions: PrescriptionRepository? = null,
+    /** The avatar frame each alias wears; null in tests, which then show none. */
+    private val wornFrames: (suspend (Collection<Uuid>) -> Map<Uuid, String>)? = null,
 ) {
     /** What happens after a window is closed — the patient's push. Set at wiring. */
     var onSessionClosed: (suspend (SessionRecord) -> Unit)? = null
@@ -501,6 +503,9 @@ class MessagingService(
             prices = consultations?.works(doctorIds)?.mapValues { it.value.priceMinor }.orEmpty(),
             identities = identities.identitiesFor(others),
             activity = identities.activityFor(others),
+            // Only aliases wear a frame: never the two sides of a consultation.
+            frames = runCatching { wornFrames?.invoke(threads.filter { !it.isConsultation }.map { it.other(viewer) }) }
+                .getOrNull().orEmpty(),
             doctors = doctorsById,
             patients = patients,
             now = clock.now(),
@@ -515,6 +520,7 @@ class MessagingService(
         val prices: Map<Uuid, Long>,
         val identities: Map<Uuid, IdentityRecord>,
         val activity: Map<Uuid, ActivityStats>,
+        val frames: Map<Uuid, String>,
         val doctors: Map<Uuid, DoctorRecord>,
         val patients: Map<Uuid, UserRecord>,
         val now: Instant,
@@ -557,6 +563,7 @@ class MessagingService(
                 lastMessageKind = last?.kind ?: MessageKind.TEXT,
                 lastMessageRead = last != null && last.senderId == viewer &&
                     thread.readAt(other)?.let { it >= last.createdAt } == true,
+                frame = if (thread.isConsultation) null else frames[other],
             )
             return when {
                 doctor == null -> base

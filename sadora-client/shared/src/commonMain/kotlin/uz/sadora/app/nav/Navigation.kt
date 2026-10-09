@@ -112,6 +112,8 @@ sealed interface Route {
     data object Badges : Route
     /** The AI companion: which of the five pets speaks up after her actions. */
     data object PetPicker : Route
+    /** Her avatar frames: bought with Gul or money, or given by a badge. */
+    data object Frames : Route
     data object Shop : Route
     data object Referral : Route
 

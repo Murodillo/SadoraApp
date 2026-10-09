@@ -90,6 +90,8 @@ fun BadgeUnlockOverlay(
     onNext: (BadgeUnlock) -> Unit,
     onSkipAll: () -> Unit,
     modifier: Modifier = Modifier,
+    /** A tier that gives an avatar frame: put it on and move on. Null hides the button. */
+    onWearFrame: ((BadgeUnlock) -> Unit)? = null,
 ) {
     val last = remember { mutableStateOf<BadgeUnlock?>(null) }
     unlock?.let { last.value = it }
@@ -113,7 +115,13 @@ fun BadgeUnlockOverlay(
             key(shown.key, shown.tier) {
                 val metal = BadgeMetal.of(shown.tier, shown.maxTier)
                 PetalShower(visible = metal == BadgeMetal.Gold || metal == BadgeMetal.Rose)
-                UnlockCard(shown, remaining, onNext = { onNext(shown) }, onSkipAll = onSkipAll)
+                UnlockCard(
+                    shown,
+                    remaining,
+                    onNext = { onNext(shown) },
+                    onSkipAll = onSkipAll,
+                    onWearFrame = onWearFrame?.let { wear -> { wear(shown) } },
+                )
             }
         }
     }
@@ -125,6 +133,7 @@ private fun UnlockCard(
     remaining: Int,
     onNext: () -> Unit,
     onSkipAll: () -> Unit,
+    onWearFrame: (() -> Unit)? = null,
 ) {
     val c = Sadora.colors
     val t = strings.badges
@@ -296,7 +305,27 @@ private fun UnlockCard(
                 )
             }
         }
+        val frameName = unlock.frame?.let { strings.frames.name(it) }
+        if (frameName != null) {
+            Spacer(Modifier.height(Spacing.sm))
+            Row(
+                Modifier.appearFromBelow(delayMillis = 860),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+            ) {
+                FrameRing(unlock.frame!!, animated = true, modifier = Modifier.size(44.dp))
+                Text(
+                    strings.frames.unlocked(frameName),
+                    style = Sadora.type.body.copy(fontWeight = FontWeight.SemiBold),
+                    color = Color.White,
+                )
+            }
+        }
         Spacer(Modifier.height(Spacing.lg))
+        if (frameName != null && onWearFrame != null) {
+            SadoraButton(strings.frames.wear, onWearFrame, modifier = Modifier.appearFromBelow(delayMillis = 900))
+            Spacer(Modifier.height(Spacing.xs))
+        }
         SadoraButton(t.continueLabel, onNext, modifier = Modifier.appearFromBelow(delayMillis = 900))
         if (remaining > 0) {
             Spacer(Modifier.height(Spacing.xs))

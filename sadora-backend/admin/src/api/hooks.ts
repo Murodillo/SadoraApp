@@ -33,6 +33,8 @@ import type {
   ArticleCategory,
   AuditEntry,
   AdminPetProduct,
+  AdminFrameProduct,
+  AdminUserFrames,
   BillingPlan,
   BillingSummary,
   AiUsageReport,
@@ -472,6 +474,44 @@ export const useUpdatePetProduct = () => {
       }),
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: ['billing', 'pet-products'] })
+    },
+  })
+}
+
+export const useFrameProducts = () =>
+  useQuery({
+    queryKey: ['frames', 'products'],
+    queryFn: () => request<AdminFrameProduct[]>('/v1/admin/frames/products'),
+  })
+
+/** A frame's Gul or money price, and whether it is offered. The stores' prices are set in their consoles. */
+export const useUpdateFrameProduct = () => {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (product: { key: string; coinCost?: number; priceMinor?: number; active: boolean }) =>
+      request<AdminFrameProduct[]>(`/v1/admin/frames/products/${product.key}`, {
+        method: 'PUT',
+        body: { coinCost: product.coinCost, priceMinor: product.priceMinor, active: product.active },
+      }),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: ['frames', 'products'] })
+    },
+  })
+}
+
+export const useUserFrames = (id: string) =>
+  useQuery({
+    queryKey: ['frames', 'user', id],
+    queryFn: () => request<AdminUserFrames>(`/v1/admin/users/${id}/frames`),
+  })
+
+/** An operator's present: a frame given as a prize. */
+export const useGrantFrame = (id: string) => {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (key: string) => request<AdminUserFrames>(`/v1/admin/users/${id}/frames`, { method: 'POST', body: { key } }),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: ['frames', 'user', id] })
     },
   })
 }

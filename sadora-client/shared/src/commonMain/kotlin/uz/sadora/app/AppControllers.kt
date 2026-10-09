@@ -5,6 +5,7 @@ import uz.sadora.app.data.Analytics
 import uz.sadora.app.data.BillingController
 import uz.sadora.app.data.CommunityController
 import uz.sadora.app.data.DoctorController
+import uz.sadora.app.data.FrameController
 import uz.sadora.app.data.MessagesController
 import uz.sadora.app.data.HealthController
 import uz.sadora.app.data.InsightsController
@@ -50,6 +51,7 @@ class AppControllers(
     val notifications: NotificationsController,
     val stageEvents: StageEventsController,
     val pet: PetController,
+    val frames: FrameController,
     val analytics: Analytics,
     val prompts: PromptPrefs = PromptPrefs.InMemory(),
 ) {
@@ -72,6 +74,7 @@ class AppControllers(
             notifications = graph?.notificationsController() ?: NotificationsController(null),
             stageEvents = graph?.stageEventsController() ?: StageEventsController(null),
             pet = graph?.petController(state) ?: PetController(null, state),
+            frames = graph?.frameController(state) ?: FrameController(null, state),
             analytics = graph?.analytics ?: Analytics.None,
             prompts = graph?.prompts ?: PromptPrefs.InMemory(),
         )

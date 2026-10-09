@@ -40,6 +40,7 @@ fun WirePost.toAppPost(): CommunityPost = CommunityPost(
     isMine = isMine,
     badges = badges.map { it.toAppBadge() },
     worn = worn,
+    frame = frame,
     doctor = doctor,
     doctorAnswers = doctorAnswers,
 )
@@ -52,6 +53,7 @@ fun WireComment.toAppComment(): CommunityComment = CommunityComment(
     isMine = isMine,
     badges = badges.map { it.toAppBadge() },
     worn = worn,
+    frame = frame,
     doctor = doctor,
     id = id,
 )
@@ -71,6 +73,7 @@ fun WireProfile.toAppProfile(): AliasProfile = AliasProfile(
     bio = bio,
     badges = badges.map { it.toAppBadge() },
     worn = worn,
+    frame = frame,
     postCount = postCount,
     commentCount = commentCount,
     likesReceived = likesReceived,
@@ -95,6 +98,7 @@ fun WireConversation.toAppConversation(): Conversation = Conversation(
     consultation = consultation?.toAppWindow(),
     lastMessageKind = lastMessageKind.toAppKind(),
     lastMessageRead = lastMessageRead,
+    frame = frame,
 )
 
 fun WireConsultation.toAppWindow(): ConsultationWindow = ConsultationWindow(

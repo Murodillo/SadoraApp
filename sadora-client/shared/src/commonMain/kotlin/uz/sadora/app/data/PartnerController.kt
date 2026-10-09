@@ -242,9 +242,11 @@ class PartnerController(
         doctorId: String? = null,
         note: String? = null,
         pet: uz.sadora.contract.PetKind? = null,
+        frame: String? = null,
     ): PaymentRequest? {
         val api = api ?: return null
-        val created = calls.run { api.askToPay(CreatePaymentRequest(kind, period, doctorId, note?.takeIf { it.isNotBlank() }, pet)) } ?: return null
+        val request = CreatePaymentRequest(kind, period, doctorId, note?.takeIf { it.isNotBlank() }, pet, frame)
+        val created = calls.run { api.askToPay(request) } ?: return null
         myRequest = created
         shareUrl = created.shareUrl
         shareUrlFor = created.id
@@ -301,13 +303,20 @@ class PartnerController(
         if (ids.isNotEmpty() && !giftPrices.keys.containsAll(ids)) {
             giftPrices = runCatching { store.giftPrices(ids) }.getOrDefault(emptyMap())
         }
-        val petIds = read.mapNotNull { it.petProduct }.mapNotNull(::storeProductId).distinct()
+        val petIds = read.mapNotNull { it.petProduct }.mapNotNull(::storeProductId).distinct() +
+            read.mapNotNull { it.frameProduct }.mapNotNull(::storeProductId).distinct()
         if (petIds.isNotEmpty() && !giftPrices.keys.containsAll(petIds)) {
             giftPrices = giftPrices + runCatching { store.keepsakePrices(petIds) }.getOrDefault(emptyMap())
         }
     }
 
     fun storeProductId(product: uz.sadora.contract.PetProduct): String? = when (store?.provider) {
+        PaymentProvider.GOOGLE_PLAY -> product.googlePlayProductId
+        PaymentProvider.APP_STORE -> product.appStoreProductId
+        else -> null
+    }
+
+    fun storeProductId(product: uz.sadora.contract.FrameProduct): String? = when (store?.provider) {
         PaymentProvider.GOOGLE_PLAY -> product.googlePlayProductId
         PaymentProvider.APP_STORE -> product.appStoreProductId
         else -> null
@@ -377,6 +386,9 @@ class PartnerController(
      * can still buy one for himself, or for someone else, later.
      */
     suspend fun payPetInStore(id: String, product: uz.sadora.contract.PetProduct): Boolean =
+        payInStore(id, storeProductId(product), keep = true)
+
+    suspend fun payFrameInStore(id: String, product: uz.sadora.contract.FrameProduct): Boolean =
         payInStore(id, storeProductId(product), keep = true)
 
     /** [keep] picks the in-app sheet a kept product is sold in; finishing is a gift's either way. */

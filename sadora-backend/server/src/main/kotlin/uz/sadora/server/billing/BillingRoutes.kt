@@ -212,11 +212,13 @@ data class AdminPaymentView(
     val payerId: String? = null,
     /** True for a payment answering her request — a gift plan or a consultation paid for her. */
     val gift: Boolean = false,
-    /** True for a gift plan or a legendary pet: what it bought goes back with the money. */
+    /** True for a gift plan, a legendary pet or a paid frame: what it bought goes back with the money. */
     val refundable: Boolean = false,
     val refundedAt: kotlin.time.Instant? = null,
     /** The legendary pet a one-off payment bought, when it bought one. */
     val pet: String? = null,
+    /** The paid avatar frame a one-off payment bought, when it bought one. */
+    val frame: String? = null,
 )
 
 private fun TransactionRecord.toView() = AdminPaymentView(
@@ -233,9 +235,10 @@ private fun TransactionRecord.toView() = AdminPaymentView(
     createdAt = createdAt,
     payerId = payerId?.toString(),
     gift = paymentRequestId != null || isGiftPlanId(planId),
-    refundable = state == PaymentState.PAID && refundedAt == null && (isGiftPlanId(planId) || pet != null),
+    refundable = state == PaymentState.PAID && refundedAt == null && (isGiftPlanId(planId) || pet != null || frame != null),
     refundedAt = refundedAt,
     pet = pet,
+    frame = frame,
 )
 
 /** The gift plans V44 seeded. Plan ids are fixed rows, so the prefix is their kind. */

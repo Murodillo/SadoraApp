@@ -443,7 +443,7 @@ internal fun PostCard(
         ) {
             // The name and the avatar open the author's page; the rest of the card, the post.
             Box(Modifier.clip(Radius.chip).noRippleClickable(onClick = onOpenAuthor)) {
-                if (doctor != null) DoctorAvatar(post.alias, photoUrl = doctor.photoUrl) else AliasAvatar(post.alias, post.tint)
+                if (doctor != null) DoctorAvatar(post.alias, photoUrl = doctor.photoUrl) else AliasAvatar(post.alias, post.tint, frame = post.frame)
             }
             Column(Modifier.weight(1f).noRippleClickable(onClick = onOpenAuthor)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.xxs)) {
@@ -537,19 +537,25 @@ internal fun PostCard(
 private const val FoldLength = 280
 
 @Composable
-internal fun AliasAvatar(alias: String, tint: Int, size: androidx.compose.ui.unit.Dp = 36.dp) {
-    val c = Sadora.colors
-    val t = strings.community
+internal fun AliasAvatar(
+    alias: String,
+    tint: Int,
+    size: androidx.compose.ui.unit.Dp = 36.dp,
+    /** The frame the alias wears; null draws the plain circle at full [size]. */
+    frame: String? = null,
+) {
     val colour = avatarTints()[tint % avatarTints().size]
-    Box(
-        Modifier.size(size).clip(Radius.chip).background(colour.copy(alpha = 0.18f)),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            alias.take(1).uppercase(),
-            style = Sadora.type.h3,
-            color = colour,
-        )
+    uz.sadora.app.ui.components.FramedAvatar(frame, size) { inner ->
+        Box(
+            Modifier.size(inner).clip(Radius.chip).background(colour.copy(alpha = 0.18f)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                alias.take(1).uppercase(),
+                style = Sadora.type.h3,
+                color = colour,
+            )
+        }
     }
 }
 
@@ -616,7 +622,7 @@ internal fun CommentRow(comment: CommunityComment, onOpenAuthor: () -> Unit) {
         horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
     ) {
         Box(Modifier.clip(Radius.chip).noRippleClickable(onClick = onOpenAuthor)) {
-            AliasAvatar(comment.alias, comment.tint, size = 30.dp)
+            AliasAvatar(comment.alias, comment.tint, size = 30.dp, frame = comment.frame)
         }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Row(

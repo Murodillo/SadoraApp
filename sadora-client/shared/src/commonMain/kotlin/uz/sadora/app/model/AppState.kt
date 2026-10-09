@@ -462,6 +462,25 @@ class AppState {
             for (i in list.indices) if (list[i].worn != worn) list[i] = list[i].copy(worn = worn)
         }
     }
+
+    /**
+     * The avatar frame she wears, around her photo and her alias. Set from the frames page
+     * and her chat identity; changing it re-stamps her posts already on screen.
+     */
+    var wornFrame by mutableStateOf<String?>(null)
+        private set
+
+    fun applyWornFrame(frame: String?) {
+        wornFrame = frame
+        for (i in communityPosts.indices) {
+            val post = communityPosts[i]
+            if (post.isMine && post.doctor == null && post.frame != frame) communityPosts[i] = post.copy(frame = frame)
+        }
+        if (doctorName == null) ownComments.values.forEach { list ->
+            for (i in list.indices) if (list[i].frame != frame) list[i] = list[i].copy(frame = frame)
+        }
+    }
+
     /** Unread private messages, for the badge on the chat header. */
     var communityUnread by mutableStateOf(0)
 
@@ -505,6 +524,7 @@ class AppState {
                     body = text,
                     isMine = true,
                     worn = if (doctorName == null) wornBadge else null,
+                    frame = if (doctorName == null) wornFrame else null,
                 ),
             )
         communitySync?.commentAdded(postId, text)
