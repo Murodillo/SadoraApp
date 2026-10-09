@@ -245,4 +245,41 @@ object PartnerEn : PartnerStrings {
     override val webRevoked = "Link taken back"
     override fun webDays(days: Int) = "$days days"
     override val webOutBody = "To show the link again, create a new one — the old one stops working."
+
+    override val askPartner = "Ask Yaqinim 💝"
+    override val askTitle = "Ask someone close"
+    override val askBodyPremium = "They get a notification. Once they pay, Premium opens for you automatically."
+    override val askBodyConsultation = "They get a notification. Once they pay, your chat with the doctor opens automatically."
+    override val askPeriod = "Length"
+    override fun period(year: Boolean) = if (year) "1 year" else "1 month"
+    override val askNoteHint = "A short note (optional)"
+    override val askSend = "Send request"
+    override fun premiumWhat(year: Boolean) = "Premium (${period(year)})"
+    override fun consultationWhat(doctor: String?) = "Consultation" + (doctor?.let { " · $it" } ?: "")
+    override val sentToPartner = "Sent to them 💝"
+    override val shareHint = "You can send the link to someone else too. They can pay with Payme or Click, no app needed."
+    override val shareLink = "Share link"
+    override fun shareRequestMessage(what: String, url: String) =
+        "Hi! I'd like $what on Sadora — could you help? 💝\n$url"
+    override fun requestStatus(status: uz.sadora.contract.PaymentRequestStatus) = when (status) {
+        uz.sadora.contract.PaymentRequestStatus.OPEN -> "Waiting for an answer"
+        uz.sadora.contract.PaymentRequestStatus.PAID -> "Paid 💝"
+        else -> "Request closed"
+    }
+    override fun requestExpires(date: String) = "Open until $date"
+    override val cancelRequest = "Cancel request"
+    override val requestCancelled = "Request cancelled"
+
+    override fun incomingTitle(name: String) = "$name is asking for your help 💝"
+    override val incomingBody = "Once you pay, it opens for her automatically."
+    override fun giveGift(price: String) = if (price.isBlank()) "Give it" else "Give it · $price"
+    override fun payWith(provider: String) = "Pay with $provider"
+    override val payWaiting = "Waiting for payment…"
+    override val payReopen = "Open the payment page again"
+    override val notNow = "Not now"
+    override val giftThanks = "Thank you! Your gift arrived 💝"
+    override val giftStorePending = "Waiting for the payment to clear"
+    override val giftNoProvider = "Payment isn't available here yet"
+    override val acceptRequests = "Accept requests to pay"
+    override val acceptRequestsNote = "If off, she can't ask you to pay"
 }

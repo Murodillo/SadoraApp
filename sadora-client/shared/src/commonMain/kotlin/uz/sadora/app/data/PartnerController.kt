@@ -15,6 +15,16 @@ import uz.sadora.contract.PartnerPermissions
 import uz.sadora.contract.PartnerRelation
 import uz.sadora.contract.PartnerState
 import uz.sadora.contract.PartnerView
+import uz.sadora.contract.BillingPeriod
+import uz.sadora.contract.BillingPlan
+import uz.sadora.contract.CheckoutSession
+import uz.sadora.contract.CreatePaymentRequest
+import uz.sadora.contract.IncomingPaymentRequest
+import uz.sadora.contract.PaymentProvider
+import uz.sadora.contract.PaymentRequest
+import uz.sadora.contract.PaymentRequestKind
+import uz.sadora.contract.PaymentRequestStatus
+import uz.sadora.contract.PaymentState
 
 /**
  * Yaqinim, both sides of it.
@@ -28,6 +38,10 @@ import uz.sadora.contract.PartnerView
 class PartnerController(
     private val api: PartnerApi?,
     private val analytics: Analytics = Analytics.None,
+    /** The store's sheet in a store build: a gift is bought there, never by Payme or Click. */
+    val store: StoreBilling? = null,
+    /** Stamped on a store purchase so the server can tell whose it is. */
+    private val currentUserId: () -> String? = { null },
 ) {
     private val calls = ApiCallState()
 
@@ -193,6 +207,172 @@ class PartnerController(
         views.remove(linkId)
         state = state?.let { s -> s.copy(following = s.following.filterNot { it.linkId == linkId }) }
         return true
+    }
+
+    suspend fun setAcceptsPaymentRequests(linkId: String, enabled: Boolean): Boolean {
+        val api = api ?: return false
+        val updated = calls.run { api.setAcceptsPaymentRequests(linkId, enabled) } ?: return false
+        state = state?.let { s -> s.copy(following = s.following.map { if (it.linkId == linkId) updated else it }) }
+        if (!enabled) incoming = incoming.filterNot { it.linkId == linkId }
+        return true
+    }
+
+    // ---------------------------------------------------------------- her requests to pay
+
+    /** Her request open now, or the one that closed in the last few days. */
+    var myRequest by mutableStateOf<PaymentRequest?>(null)
+        private set
+
+    /** The browser link of [myRequest], only on the answer that made it; the server keeps a hash. */
+    var shareUrl by mutableStateOf<String?>(null)
+        private set
+
+    suspend fun loadMyRequest() {
+        val api = api ?: return
+        val read = calls.run(silent = true) { api.myPaymentRequest() } ?: return
+        myRequest = read.current
+        if (read.current?.id != shareUrlFor) shareUrl = null
+    }
+
+    private var shareUrlFor: String? = null
+
+    suspend fun askToPay(kind: PaymentRequestKind, period: BillingPeriod? = null, doctorId: String? = null, note: String? = null): PaymentRequest? {
+        val api = api ?: return null
+        val created = calls.run { api.askToPay(CreatePaymentRequest(kind, period, doctorId, note?.takeIf { it.isNotBlank() })) } ?: return null
+        myRequest = created
+        shareUrl = created.shareUrl
+        shareUrlFor = created.id
+        analytics.event(AnalyticsEvents.PAYMENT_REQUEST_SENT, mapOf("kind" to kind.name.lowercase()))
+        return created
+    }
+
+    suspend fun cancelMyRequest(): Boolean {
+        val api = api ?: return false
+        val id = myRequest?.id ?: return false
+        myRequest = calls.run { api.cancelPaymentRequest(id) } ?: return false
+        shareUrl = null
+        return true
+    }
+
+    /** The link to share: the one in hand, or a fresh one (which retires the old). */
+    suspend fun requestShareUrl(): String? {
+        shareUrl?.let { return it }
+        val api = api ?: return null
+        val id = myRequest?.id ?: return null
+        val rotated = calls.run { api.sharePaymentRequest(id) } ?: return null
+        shareUrl = rotated.shareUrl
+        shareUrlFor = rotated.id
+        return rotated.shareUrl
+    }
+
+    /** True while her request is open: a second one would be refused. */
+    val hasOpenRequest: Boolean
+        get() = myRequest?.status == PaymentRequestStatus.OPEN
+
+    // ---------------------------------------------------------------- requests sent to this account
+
+    var incoming by mutableStateOf<List<IncomingPaymentRequest>>(emptyList())
+        private set
+
+    /** The store's localized prices for the gift plans, by product id. */
+    var giftPrices by mutableStateOf<Map<String, String>>(emptyMap())
+        private set
+
+    /** The request being paid, while its provider page is open. */
+    var paying by mutableStateOf<CheckoutSession?>(null)
+        private set
+
+    /** A store purchase that clears later — cash at a kiosk. */
+    var storePending by mutableStateOf(false)
+        private set
+
+    suspend fun loadIncoming() {
+        val api = api ?: return
+        val read = calls.run(silent = true) { api.incomingPaymentRequests() } ?: return
+        incoming = read
+        val store = store ?: return
+        val ids = read.flatMap { it.plans }.mapNotNull(::storeProductId).distinct()
+        if (ids.isNotEmpty() && !giftPrices.keys.containsAll(ids)) {
+            giftPrices = runCatching { store.giftPrices(ids) }.getOrDefault(emptyMap())
+        }
+    }
+
+    fun storeProductId(plan: BillingPlan): String? = when (store?.provider) {
+        PaymentProvider.GOOGLE_PLAY -> plan.googlePlayProductId
+        PaymentProvider.APP_STORE -> plan.appStoreProductId
+        else -> null
+    }
+
+    suspend fun declineRequest(id: String): Boolean {
+        val api = api ?: return false
+        calls.run { api.declinePaymentRequest(id) } ?: return false
+        incoming = incoming.filterNot { it.id == id }
+        return true
+    }
+
+    /** Payme or Click: the checkout link to open. */
+    suspend fun startRequestCheckout(id: String, provider: PaymentProvider, planId: String?): CheckoutSession? {
+        val api = api ?: return null
+        val session = calls.run { api.payPaymentRequest(id, provider, planId) } ?: return null
+        paying = session
+        return session
+    }
+
+    /** Waits for the provider's callback, the way the paywall does. True once paid. */
+    suspend fun awaitRequestPayment(): Boolean {
+        val api = api ?: return false
+        val session = paying ?: return false
+        repeat(PollAttempts) {
+            kotlinx.coroutines.delay(PollIntervalMillis)
+            val status = api.paymentStatus(session.transactionId).valueOrNull ?: return@repeat
+            when (status.state) {
+                PaymentState.PAID -> {
+                    paying = null
+                    loadIncoming()
+                    analytics.event(AnalyticsEvents.PAYMENT_REQUEST_PAID, mapOf("via" to session.provider.name.lowercase()))
+                    return true
+                }
+                PaymentState.CANCELLED, PaymentState.FAILED -> {
+                    paying = null
+                    return false
+                }
+                PaymentState.PENDING -> Unit
+            }
+        }
+        paying = null
+        return false
+    }
+
+    fun cancelRequestCheckout() {
+        paying = null
+    }
+
+    /**
+     * A gift plan through the store's own sheet: bought for this account, verified by the
+     * server for her, and only then consumed.
+     */
+    suspend fun payInStore(id: String, plan: BillingPlan): Boolean {
+        val api = api ?: return false
+        val store = store ?: return false
+        val productId = storeProductId(plan) ?: return false
+        val accountId = currentUserId() ?: return false
+        storePending = false
+        return when (val outcome = store.purchaseGift(productId, accountId)) {
+            is StoreOutcome.Purchased -> {
+                val receipt = outcome.receipt
+                calls.run { api.payPaymentRequestInStore(id, store.provider, receipt.productId, receipt.token) } ?: return false
+                runCatching { store.finishGift(receipt) }
+                incoming = incoming.filterNot { it.id == id }
+                analytics.event(AnalyticsEvents.PAYMENT_REQUEST_PAID, mapOf("via" to store.provider.name.lowercase()))
+                true
+            }
+            StoreOutcome.Pending -> {
+                storePending = true
+                false
+            }
+            StoreOutcome.Cancelled -> false
+            is StoreOutcome.Failed -> false
+        }
     }
 
     private fun apply(next: PartnerState) {

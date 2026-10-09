@@ -15,8 +15,8 @@ import uz.sadora.contract.PaymentState
  * one — a card number and an SMS code on Payme's page routinely take longer, and she came
  * back having paid to an app that had stopped looking.
  */
-private const val PollAttempts = 100
-private const val PollIntervalMillis = 3_000L
+internal const val PollAttempts = 100
+internal const val PollIntervalMillis = 3_000L
 
 /**
  * The paywall's state.
@@ -176,7 +176,7 @@ class BillingController(
      */
     suspend fun reconcileStore(onPaid: suspend () -> Unit = {}): Boolean {
         val store = store ?: return false
-        val receipts = runCatching { store.owned() }.getOrDefault(emptyList())
+        val receipts = runCatching { store.owned() }.getOrDefault(emptyList()).filterNot { isGiftProduct(it.productId) }
         var granted = false
         receipts.forEach { if (deliver(it)) granted = true }
         if (granted) {

@@ -19,7 +19,9 @@ enum class NotificationCategory {
     @SerialName("daily_check_in") DAILY_CHECK_IN,
     @SerialName("water") WATER,
     @SerialName("insight") INSIGHT,
-    @SerialName("system") SYSTEM;
+    @SerialName("system") SYSTEM,
+    /** Yaqinim's requests to pay: never capped away, but held until her quiet hours end. */
+    @SerialName("partner") PARTNER;
 
     /**
      * Categories that ignore the frequency caps and the quiet hours.

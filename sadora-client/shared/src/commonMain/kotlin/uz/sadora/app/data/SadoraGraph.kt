@@ -134,7 +134,12 @@ class SadoraGraph(
 
     fun shareController(): ShareController = ShareController(shareApi, analytics)
 
-    fun partnerController(): PartnerController = PartnerController(partnerApi, analytics)
+    fun partnerController(): PartnerController = PartnerController(
+        api = partnerApi,
+        analytics = analytics,
+        store = storeBilling,
+        currentUserId = { (session.state.value as? SessionState.SignedIn)?.user?.id },
+    )
 
     fun wearableController(): WearableController = WearableController(
         api = wearableApi,

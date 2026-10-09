@@ -80,6 +80,7 @@ fun PartnerShell(
         val job = scope.launch {
             if (!controllers.account.isSignedIn) return@launch
             partner.refresh()
+            partner.loadIncoming()
             shown?.let {
                 partner.loadView(it, silent = true)
                 partner.loadMessages(it)
@@ -98,6 +99,7 @@ fun PartnerShell(
                 codeSheet = true
             } else {
                 partner.refresh()
+                partner.loadIncoming()
                 shown?.let {
                     partner.loadView(it, silent = true)
                     partner.loadMessages(it)

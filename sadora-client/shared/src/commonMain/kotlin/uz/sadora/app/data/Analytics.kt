@@ -52,6 +52,8 @@ object AnalyticsEvents {
     const val PARTNER_LINKED = "partner_linked"
     const val PARTNER_MESSAGE = "partner_message"
     const val PARTNER_WEB_LINK = "partner_web_link"
+    const val PAYMENT_REQUEST_SENT = "payment_request_sent"
+    const val PAYMENT_REQUEST_PAID = "payment_request_paid"
     const val DEVICE_CONNECT_STARTED = "device_connect_started"
     const val DEVICE_CONNECTED = "device_connected"
     const val DEVICE_DISCONNECTED = "device_disconnected"

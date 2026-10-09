@@ -385,7 +385,19 @@ fun ConsultationPaySheetContent(
     doctors: DoctorController,
     onPaid: () -> Unit,
     onCancel: () -> Unit,
+    /** For "ask Yaqinim to pay" for the window instead. */
+    partner: uz.sadora.app.data.PartnerController? = null,
 ) {
+    var asking by remember(doctorId) { mutableStateOf(false) }
+    if (asking && partner != null) {
+        uz.sadora.app.ui.partner.AskPartnerContent(
+            partner = partner,
+            kind = uz.sadora.contract.PaymentRequestKind.CONSULTATION,
+            doctorId = doctorId,
+            onClose = { asking = false },
+        )
+        return
+    }
     val d = strings.doctors
     val c = Sadora.colors
     val scope = rememberCoroutineScope()
@@ -473,6 +485,9 @@ fun ConsultationPaySheetContent(
             }
         },
     )
+    if (partner != null) {
+        SadoraButton(strings.partner.askPartner, onClick = { asking = true }, tone = ButtonTone.Secondary)
+    }
     SadoraButton(strings.common.cancel, onClick = onCancel, tone = ButtonTone.Secondary)
 }
 

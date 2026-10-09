@@ -21,6 +21,9 @@ import uz.sadora.server.pet.petRoutes
 import uz.sadora.server.rewards.adminRewardsRoutes
 import uz.sadora.server.rewards.rewardsRoutes
 import uz.sadora.server.partner.partnerRoutes
+import uz.sadora.server.payrequest.adminPaymentRequestRoutes
+import uz.sadora.server.payrequest.paymentRequestRoutes
+import uz.sadora.server.payrequest.publicPaymentRequestRoutes
 import uz.sadora.server.partner.publicPartnerRoutes
 import uz.sadora.server.partner.publicPartnerWebRoutes
 import uz.sadora.server.share.publicShareRoutes
@@ -133,6 +136,7 @@ fun Application.apiModule(component: AppComponent) {
         publicShareRoutes(component.shareService)
         publicPartnerRoutes()
         publicPartnerWebRoutes(component.partnerService)
+        publicPaymentRequestRoutes(component.paymentRequestService)
 
         route("/$API_VERSION") {
             authRoutes(component.authService, component.otpService)
@@ -178,6 +182,8 @@ fun Application.apiModule(component: AppComponent) {
             adminContentRoutes(component.contentService)
             billingRoutes(component.billingService, component.storePurchaseService)
             adminBillingRoutes(component.billingService, component.billingRepository)
+            paymentRequestRoutes(component.paymentRequestService)
+            adminPaymentRequestRoutes(component.paymentRequestService)
             // The providers' own protocols; not behind the app's auth or its error envelope.
             paymeWebhook(component.paymeGateway, component.billingRepository)
             clickWebhook(component.clickGateway, component.billingRepository)

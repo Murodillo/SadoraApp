@@ -235,7 +235,7 @@ private fun ApplicationCall.earningsPage(): Pair<Int, Long> =
  * The host the app reached us on, as the proxy in front passes it along: the development
  * payment page must be opened on the same address the phone already talks to.
  */
-private fun ApplicationCall.origin(): String {
+internal fun ApplicationCall.origin(): String {
     val proto = request.headers["X-Forwarded-Proto"]?.substringBefore(',')?.trim() ?: "http"
     val host = request.headers["X-Forwarded-Host"]?.substringBefore(',')?.trim()
         ?: request.headers[HttpHeaders.Host]

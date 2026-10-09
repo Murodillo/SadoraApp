@@ -245,4 +245,41 @@ object PartnerUz : PartnerStrings {
     override val webRevoked = "Havola bekor qilindi"
     override fun webDays(days: Int) = "$days kun"
     override val webOutBody = "Havolani qayta ko'rsatish uchun yangisini yarating — eskisi ishlamay qoladi."
+
+    override val askPartner = "Yaqinimdan so'rash 💝"
+    override val askTitle = "Yaqinimdan so'rash"
+    override val askBodyPremium = "Yaqiningizga xabar boradi. U to'lasa, Premium sizga avtomatik ochiladi."
+    override val askBodyConsultation = "Yaqiningizga xabar boradi. U to'lasa, shifokor bilan suhbat sizga avtomatik ochiladi."
+    override val askPeriod = "Muddat"
+    override fun period(year: Boolean) = if (year) "1 yil" else "1 oy"
+    override val askNoteHint = "Qisqa izoh (ixtiyoriy)"
+    override val askSend = "So'rov yuborish"
+    override fun premiumWhat(year: Boolean) = "Premium (${period(year)})"
+    override fun consultationWhat(doctor: String?) = "Konsultatsiya" + (doctor?.let { " · $it" } ?: "")
+    override val sentToPartner = "Yaqiningizga yuborildi 💝"
+    override val shareHint = "Havolani boshqa yaqiningizga ham yuborishingiz mumkin. U ilovasiz, Payme yoki Click orqali to'lay oladi."
+    override val shareLink = "Havolani ulashish"
+    override fun shareRequestMessage(what: String, url: String) =
+        "Assalomu alaykum! Sadora'da $what olmoqchiman, yordam bera olasizmi? 💝\n$url"
+    override fun requestStatus(status: uz.sadora.contract.PaymentRequestStatus) = when (status) {
+        uz.sadora.contract.PaymentRequestStatus.OPEN -> "Javob kutilmoqda"
+        uz.sadora.contract.PaymentRequestStatus.PAID -> "To'landi 💝"
+        else -> "So'rov yopildi"
+    }
+    override fun requestExpires(date: String) = "$date gacha amal qiladi"
+    override val cancelRequest = "So'rovni bekor qilish"
+    override val requestCancelled = "So'rov bekor qilindi"
+
+    override fun incomingTitle(name: String) = "$name sizdan yordam so'rayapti 💝"
+    override val incomingBody = "To'lasangiz, u avtomatik ravishda unga ochiladi."
+    override fun giveGift(price: String) = if (price.isBlank()) "Sovg'a qilish" else "Sovg'a qilish · $price"
+    override fun payWith(provider: String) = "$provider orqali to'lash"
+    override val payWaiting = "To'lov kutilmoqda…"
+    override val payReopen = "To'lov sahifasini qayta ochish"
+    override val notNow = "Hozir emas"
+    override val giftThanks = "Rahmat! Sovg'a yetib bordi 💝"
+    override val giftStorePending = "To'lov tasdiqlanishi kutilmoqda"
+    override val giftNoProvider = "Hozircha bu yerda to'lab bo'lmaydi"
+    override val acceptRequests = "To'lov so'rovlarini qabul qilish"
+    override val acceptRequestsNote = "O'chirsangiz, u sizdan to'lov so'ray olmaydi"
 }

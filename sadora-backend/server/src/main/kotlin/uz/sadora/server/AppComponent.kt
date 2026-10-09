@@ -493,13 +493,9 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
     )
     val paymeGateway = PaymeGateway(billingRepository, billingService, config.billing.payme)
     val clickGateway = ClickGateway(billingRepository, billingService, config.billing.click)
-    val storePurchaseService = StorePurchaseService(
-        repository = billingRepository,
-        subscriptions = subscriptionRepository,
-        entitlements = entitlementService,
-        // Play needs a service account; without one its receipts are refused. The App
-        // Store needs nothing but Apple's pinned root, so it is always on.
-        verifier = StoreVerifiers(
+    // Play needs a service account; without one its receipts are refused. The App
+    // Store needs nothing but Apple's pinned root, so it is always on.
+    val storeVerifier = StoreVerifiers(
             googlePlay = config.billing.googlePlay.takeIf { it.isConfigured }?.let {
                 GooglePlayVerifier(
                     http = outboundHttpClient,
@@ -514,8 +510,35 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
                 bundleIds = config.social.appleBundleIds.toSet(),
                 allowSandbox = !config.environment.isProduction,
             ),
-        ),
+        )
+    val storePurchaseService = StorePurchaseService(
+        repository = billingRepository,
+        subscriptions = subscriptionRepository,
+        entitlements = entitlementService,
+        verifier = storeVerifier,
     )
+
+    /** "Ask Yaqinim to pay": gifts land through billing's own activation. */
+    val giftService = uz.sadora.server.billing.GiftService(subscriptionRepository, entitlementService).also { gifts ->
+        billingService.gifts = gifts
+        entitlementService.applyBankedGifts = gifts::applyBanked
+    }
+    val paymentRequestService = uz.sadora.server.payrequest.PaymentRequestService(
+        repository = uz.sadora.server.payrequest.PaymentRequestRepository(),
+        billing = billingService,
+        billingRepository = billingRepository,
+        gifts = giftService,
+        verifier = storeVerifier,
+        consultations = consultationService,
+        links = partnerRepository,
+        users = userRepository,
+        notifications = notificationRepository,
+        audit = auditService,
+        publicBaseUrl = config.publicBaseUrl,
+    ).also { requests ->
+        billingService.requestPaid = requests::onPaid
+        partnerAlertJob.extraTick = requests::tick
+    }
 
     val adminAuthService = AdminAuthService(jwtService, auditService)
 

@@ -7,12 +7,14 @@ import com.android.billingclient.api.BillingClient
 import com.android.billingclient.api.BillingClientStateListener
 import com.android.billingclient.api.BillingFlowParams
 import com.android.billingclient.api.BillingResult
+import com.android.billingclient.api.ConsumeParams
 import com.android.billingclient.api.PendingPurchasesParams
 import com.android.billingclient.api.ProductDetails
 import com.android.billingclient.api.Purchase
 import com.android.billingclient.api.QueryProductDetailsParams
 import com.android.billingclient.api.QueryPurchasesParams
 import com.android.billingclient.api.acknowledgePurchase
+import com.android.billingclient.api.consumePurchase
 import com.android.billingclient.api.queryProductDetails
 import com.android.billingclient.api.queryPurchasesAsync
 import java.lang.ref.WeakReference
@@ -57,22 +59,37 @@ class AndroidStoreBilling(context: Context) : StoreBilling {
             .filterValues { it.isNotEmpty() }
     }
 
-    override suspend fun purchase(productId: String, accountId: String): StoreOutcome {
+    override suspend fun purchase(productId: String, accountId: String): StoreOutcome =
+        launch(productId, accountId, BillingClient.ProductType.SUBS)
+
+    override suspend fun giftPrices(productIds: List<String>): Map<String, String> {
+        if (!connect()) return emptyMap()
+        return details(productIds, BillingClient.ProductType.INAPP)
+            .associate { it.productId to (it.oneTimePurchaseOfferDetails?.formattedPrice ?: "") }
+            .filterValues { it.isNotEmpty() }
+    }
+
+    override suspend fun purchaseGift(productId: String, accountId: String): StoreOutcome =
+        launch(productId, accountId, BillingClient.ProductType.INAPP)
+
+    override suspend fun finishGift(receipt: StoreReceipt) {
+        if (!connect()) return
+        client.consumePurchase(ConsumeParams.newBuilder().setPurchaseToken(receipt.token).build())
+    }
+
+    private suspend fun launch(productId: String, accountId: String, type: String): StoreOutcome {
         if (!connect()) return StoreOutcome.Failed("Google Play is not available")
-        val details = details(listOf(productId)).firstOrNull()
+        val details = details(listOf(productId), type).firstOrNull()
             ?: return StoreOutcome.Failed("Play does not sell $productId")
-        val offer = details.baseOffer() ?: return StoreOutcome.Failed("No base plan for $productId")
+        val product = BillingFlowParams.ProductDetailsParams.newBuilder().setProductDetails(details)
+        if (type == BillingClient.ProductType.SUBS) {
+            val offer = details.baseOffer() ?: return StoreOutcome.Failed("No base plan for $productId")
+            product.setOfferToken(offer.offerToken)
+        }
         val activity = activity.get() ?: return StoreOutcome.Failed("No screen to show the sheet on")
 
         val params = BillingFlowParams.newBuilder()
-            .setProductDetailsParamsList(
-                listOf(
-                    BillingFlowParams.ProductDetailsParams.newBuilder()
-                        .setProductDetails(details)
-                        .setOfferToken(offer.offerToken)
-                        .build(),
-                ),
-            )
+            .setProductDetailsParamsList(listOf(product.build()))
             // The server checks this against the account posting the receipt.
             .setObfuscatedAccountId(accountId)
             .build()
@@ -81,7 +98,7 @@ class AndroidStoreBilling(context: Context) : StoreBilling {
         when (launched.responseCode) {
             BillingClient.BillingResponseCode.OK -> Unit
             BillingClient.BillingResponseCode.USER_CANCELED -> return StoreOutcome.Cancelled
-            BillingClient.BillingResponseCode.ITEM_ALREADY_OWNED -> return ownedOutcome(productId)
+            BillingClient.BillingResponseCode.ITEM_ALREADY_OWNED -> return ownedOutcome(productId, type)
             else -> return StoreOutcome.Failed(launched.debugMessage)
         }
 
@@ -97,15 +114,17 @@ class AndroidStoreBilling(context: Context) : StoreBilling {
                 }
             }
             BillingClient.BillingResponseCode.USER_CANCELED -> StoreOutcome.Cancelled
-            BillingClient.BillingResponseCode.ITEM_ALREADY_OWNED -> ownedOutcome(productId)
+            BillingClient.BillingResponseCode.ITEM_ALREADY_OWNED -> ownedOutcome(productId, type)
             else -> StoreOutcome.Failed(result.debugMessage)
         }
     }
 
-    override suspend fun owned(): List<StoreReceipt> {
+    override suspend fun owned(): List<StoreReceipt> = owned(BillingClient.ProductType.SUBS)
+
+    private suspend fun owned(type: String): List<StoreReceipt> {
         if (!connect()) return emptyList()
         val result = client.queryPurchasesAsync(
-            QueryPurchasesParams.newBuilder().setProductType(BillingClient.ProductType.SUBS).build(),
+            QueryPurchasesParams.newBuilder().setProductType(type).build(),
         )
         return result.purchasesList
             .filter { it.purchaseState == Purchase.PurchaseState.PURCHASED }
@@ -119,17 +138,18 @@ class AndroidStoreBilling(context: Context) : StoreBilling {
 
     // ---------------------------------------------------------------- plumbing
 
-    private suspend fun ownedOutcome(productId: String): StoreOutcome =
-        owned().firstOrNull { it.productId == productId }?.let { StoreOutcome.Purchased(it) }
+    /** A gift bought but never consumed — the server was out of reach — is offered again here. */
+    private suspend fun ownedOutcome(productId: String, type: String): StoreOutcome =
+        owned(type).firstOrNull { it.productId == productId }?.let { StoreOutcome.Purchased(it) }
             ?: StoreOutcome.Failed("Play says it is owned but lists no purchase")
 
-    private suspend fun details(productIds: List<String>): List<ProductDetails> {
+    private suspend fun details(productIds: List<String>, type: String = BillingClient.ProductType.SUBS): List<ProductDetails> {
         val params = QueryProductDetailsParams.newBuilder()
             .setProductList(
                 productIds.map {
                     QueryProductDetailsParams.Product.newBuilder()
                         .setProductId(it)
-                        .setProductType(BillingClient.ProductType.SUBS)
+                        .setProductType(type)
                         .build()
                 },
             )

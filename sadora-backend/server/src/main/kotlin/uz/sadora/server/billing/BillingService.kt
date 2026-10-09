@@ -48,6 +48,12 @@ class BillingService(
      */
     var consultationPaid: (suspend (sessionId: Uuid, transaction: TransactionRecord) -> Unit)? = null
 
+    /** Gifted Premium: applied or banked. Set once at wiring. */
+    var gifts: GiftService? = null
+
+    /** What a payment answering her request does to the request. Set once at wiring. */
+    var requestPaid: (suspend (TransactionRecord) -> Unit)? = null
+
     suspend fun catalogue(userId: Uuid): BillingCatalogue {
         val user = users.findById(userId) ?: throw NotFoundException("Foydalanuvchi topilmadi")
         val context = FlagContext(
@@ -70,7 +76,7 @@ class BillingService(
     }
 
     suspend fun checkout(userId: Uuid, request: CheckoutRequest): CheckoutSession {
-        val plan = repository.plan(request.planId)
+        val plan = repository.plan(request.planId)?.takeUnless { repository.isGiftPlan(it.id) }
             ?: throw ValidationException("planId", "Bunday tarif yo'q")
         val catalogue = catalogue(userId)
         if (request.provider !in catalogue.providers) {
@@ -108,7 +114,7 @@ class BillingService(
             ?: throw NotFoundException("To'lov topilmadi")
         // Reading someone else's payment is a not-found, not a forbidden: whether a
         // transaction id exists is not this caller's business either way.
-        if (transaction.userId != userId) throw NotFoundException("To'lov topilmadi")
+        if (transaction.userId != userId && transaction.payerId != userId) throw NotFoundException("To'lov topilmadi")
 
         return PaymentStatus(
             transactionId = transaction.id.toString(),
@@ -118,7 +124,7 @@ class BillingService(
             amountMinor = transaction.amountMinor,
             paidAt = transaction.paidAt,
             consultationSessionId = transaction.consultationSessionId?.toString(),
-            subscription = if (transaction.state == PaymentState.PAID && transaction.planId != null) {
+            subscription = if (transaction.state == PaymentState.PAID && transaction.planId != null && transaction.userId == userId) {
                 entitlements.subscriptionStatus(userId)
             } else {
                 null
@@ -147,6 +153,7 @@ class BillingService(
         transaction.consultationSessionId?.let { sessionId ->
             if (transaction.state != PaymentState.PAID && !repository.claimPaid(transaction.id)) return null
             consultationPaid?.invoke(sessionId, transaction)
+            if (transaction.paymentRequestId != null) requestPaid?.invoke(transaction)
             return null
         }
 
@@ -155,6 +162,21 @@ class BillingService(
         // racing this one loses here and returns what the winner recorded.
         if (transaction.state != PaymentState.PAID && !repository.claimPaid(transaction.id)) {
             return repository.transaction(transaction.id)?.subscriptionId
+        }
+
+        // A present: the days go to her, applied or banked, keyed by this payment so a
+        // retry finds them given. A banked gift has no subscription yet, and that is fine.
+        if (repository.isGiftPlan(plan.id)) {
+            val giftService = gifts ?: error("Gift service is not wired")
+            val subscriptionId = try {
+                giftService.grant(transaction.userId, plan.period.duration().inWholeDays.toInt(), plan.id, transaction.id)
+            } catch (e: Throwable) {
+                repository.releasePaid(transaction.id, transaction.state)
+                throw e
+            }
+            subscriptionId?.let { repository.attachSubscription(transaction.id, it) }
+            if (transaction.paymentRequestId != null) requestPaid?.invoke(transaction)
+            return subscriptionId
         }
 
         val subscriptionId = try {
@@ -223,14 +245,61 @@ class BillingService(
         )
     }
 
+    // ---------------------------------------------------------------- someone else pays
+
+    /**
+     * A payment for her request, by someone else: [beneficiaryId] gets the thing, [payerId]
+     * (null for a browser payer) paid. A gift plan or a consultation window, never a
+     * subscription — those belong to the store account that pays.
+     */
+    suspend fun requestCheckout(
+        beneficiaryId: Uuid,
+        payerId: Uuid?,
+        requestId: Uuid,
+        planId: String?,
+        consultationSessionId: Uuid?,
+        amountMinor: Long,
+        provider: PaymentProvider,
+        origin: String,
+    ): CheckoutSession {
+        if (provider != PaymentProvider.PAYME && provider != PaymentProvider.CLICK) {
+            throw ValidationException("provider", "Store xaridi ilova ichida bo'ladi")
+        }
+        if (provider !in consultationProviders(beneficiaryId)) throw FeatureDisabledException(provider.name.lowercase())
+        val transaction = repository.createTransaction(
+            userId = beneficiaryId,
+            planId = planId,
+            provider = provider,
+            amountMinor = amountMinor,
+            currency = "UZS",
+            consultationSessionId = consultationSessionId,
+            payerId = payerId,
+            paymentRequestId = requestId,
+        )
+        val live = catalogue(beneficiaryId).providers.contains(provider)
+        val url = when {
+            !live -> "${origin.trimEnd('/')}$DEV_PAY_PATH/${transaction.id}"
+            provider == PaymentProvider.PAYME -> paymeUrl(transaction.id, amountMinor)
+            else -> clickUrl(transaction.id, amountMinor)
+        }
+        return CheckoutSession(
+            transactionId = transaction.id.toString(),
+            provider = provider,
+            url = url,
+            amountMinor = amountMinor,
+            currency = "UZS",
+        )
+    }
+
     /**
      * The development page's payment: refused in production, and only for a consultation
-     * still pending. Everything after it is the same path a real provider's callback takes.
+     * or someone else's payment still pending. Everything after it is the same path a real
+     * provider's callback takes.
      */
     suspend fun devPay(transactionId: Uuid): Boolean {
         if (environment == Environment.PROD) return false
         val transaction = repository.transaction(transactionId) ?: return false
-        if (transaction.consultationSessionId == null) return false
+        if (transaction.consultationSessionId == null && transaction.paymentRequestId == null) return false
         activate(transaction)
         return true
     }

@@ -49,15 +49,27 @@ data class TransactionRecord(
     val createdAt: Instant,
     /** The consultation window this payment opens, when it is for one. */
     val consultationSessionId: Uuid? = null,
+    /** Who paid, when it was someone else's account. [userId] is always who it is for. */
+    val payerId: Uuid? = null,
+    /** The request this payment answers, when it answers one. */
+    val paymentRequestId: Uuid? = null,
+    val refundedAt: Instant? = null,
 )
 
 class BillingRepository {
 
+    companion object {
+        const val KIND_SUBSCRIPTION = "subscription"
+        const val KIND_GIFT = "gift"
+    }
+
     // ---------------------------------------------------------------- plans
 
-    suspend fun plans(activeOnly: Boolean = true): List<BillingPlan> = dbQuery {
+    /** The subscription plans the paywall sells; gift plans are [giftPlans]. */
+    suspend fun plans(activeOnly: Boolean = true, kind: String? = KIND_SUBSCRIPTION): List<BillingPlan> = dbQuery {
         var query = BillingPlans.selectAll()
         if (activeOnly) query = query.andWhere { BillingPlans.active eq true }
+        kind?.let { wanted -> query = query.andWhere { BillingPlans.kind eq wanted } }
         query
             .orderBy(BillingPlans.position to SortOrder.ASC)
             .map { it.toPlan() }
@@ -65,6 +77,13 @@ class BillingRepository {
 
     suspend fun plan(id: String): BillingPlan? = dbQuery {
         BillingPlans.selectAll().where { BillingPlans.id eq id }.limit(1).firstOrNull()?.toPlan()
+    }
+
+    /** One-off plans someone else buys for her: a store subscription cannot be a present. */
+    suspend fun giftPlans(): List<BillingPlan> = plans(kind = KIND_GIFT)
+
+    suspend fun isGiftPlan(id: String): Boolean = dbQuery {
+        BillingPlans.selectAll().where { (BillingPlans.id eq id) and (BillingPlans.kind eq KIND_GIFT) }.count() > 0
     }
 
     // ---------------------------------------------------------------- transactions
@@ -76,6 +95,8 @@ class BillingRepository {
         amountMinor: Long,
         currency: String,
         consultationSessionId: Uuid? = null,
+        payerId: Uuid? = null,
+        paymentRequestId: Uuid? = null,
     ): TransactionRecord = dbQuery {
         val id = Uuid.random()
         val timestamp = now().toOffsetDateTime()
@@ -84,6 +105,8 @@ class BillingRepository {
             it[PaymentTransactions.userId] = userId
             it[PaymentTransactions.planId] = planId
             it[PaymentTransactions.consultationSessionId] = consultationSessionId
+            it[PaymentTransactions.payerId] = payerId
+            it[PaymentTransactions.paymentRequestId] = paymentRequestId
             it[PaymentTransactions.provider] = provider.dbValue()
             it[PaymentTransactions.amountMinor] = amountMinor
             it[PaymentTransactions.currency] = currency
@@ -273,6 +296,18 @@ class BillingRepository {
         )
     }
 
+    /** Marks a paid payment refunded, once. */
+    suspend fun markRefunded(id: Uuid): Boolean = dbQuery {
+        val timestamp = now().toOffsetDateTime()
+        PaymentTransactions.update({
+            (PaymentTransactions.id eq id) and (PaymentTransactions.state eq PaymentState.PAID.dbValue()) and
+                PaymentTransactions.refundedAt.isNull()
+        }) {
+            it[refundedAt] = timestamp
+            it[updatedAt] = timestamp
+        } > 0
+    }
+
     // ---------------------------------------------------------------- callbacks
 
     suspend fun recordCallback(
@@ -331,6 +366,9 @@ private fun ResultRow.toRecord() = TransactionRecord(
     subscriptionId = this[PaymentTransactions.subscriptionId],
     createdAt = this[PaymentTransactions.createdAt].toKotlinInstant(),
     consultationSessionId = this[PaymentTransactions.consultationSessionId],
+    payerId = this[PaymentTransactions.payerId],
+    paymentRequestId = this[PaymentTransactions.paymentRequestId],
+    refundedAt = this[PaymentTransactions.refundedAt]?.toKotlinInstant(),
 )
 
 /** What came in over a window, for the panel's revenue card. */

@@ -172,7 +172,7 @@ fun Route.adminBillingRoutes(billing: BillingService, repository: BillingReposit
         route("/admin/billing") {
             get("/plans") {
                 call.requireAdminRole(AdminRole.OWNER, AdminRole.ADMIN, AdminRole.SUPPORT, AdminRole.ANALYST)
-                call.respond(repository.plans(activeOnly = false))
+                call.respond(repository.plans(activeOnly = false, kind = null))
             }
 
             get("/payments") {
@@ -208,6 +208,13 @@ data class AdminPaymentView(
     val externalId: String?,
     val paidAt: kotlin.time.Instant?,
     val createdAt: kotlin.time.Instant,
+    /** Someone else paid for her: who, when it was an account; null for her own or a browser payer. */
+    val payerId: String? = null,
+    /** True for a payment answering her request — a gift plan or a consultation paid for her. */
+    val gift: Boolean = false,
+    /** True for a gift plan, the only kind the panel can refund (the days go back with it). */
+    val refundable: Boolean = false,
+    val refundedAt: kotlin.time.Instant? = null,
 )
 
 private fun TransactionRecord.toView() = AdminPaymentView(
@@ -222,4 +229,11 @@ private fun TransactionRecord.toView() = AdminPaymentView(
     externalId = externalId,
     paidAt = paidAt,
     createdAt = createdAt,
+    payerId = payerId?.toString(),
+    gift = paymentRequestId != null || isGiftPlanId(planId),
+    refundable = state == PaymentState.PAID && refundedAt == null && isGiftPlanId(planId),
+    refundedAt = refundedAt,
 )
+
+/** The gift plans V44 seeded. Plan ids are fixed rows, so the prefix is their kind. */
+private fun isGiftPlanId(planId: String?) = planId?.startsWith("gift_") == true

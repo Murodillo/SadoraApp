@@ -71,6 +71,36 @@ class GooglePlayVerifier(
         return interpret(json.decodeFromString<SubscriptionPurchaseV2>(body), productId)
     }
 
+    /** A one-off product — a gift plan — by `purchases.products.get`. */
+    suspend fun verifyProduct(productId: String, purchaseToken: String): VerifiedPurchase {
+        val url = "$apiBase/androidpublisher/v3/applications/${packageName.encodeURLPathPart()}" +
+            "/purchases/products/${productId.encodeURLPathPart()}/tokens/${purchaseToken.encodeURLPathPart()}"
+        val response: HttpResponse = http.get(url) {
+            header(HttpHeaders.Authorization, "Bearer ${accessToken()}")
+        }
+        if (!response.status.isSuccess()) {
+            throw ReceiptRejectedException("Google Play rejected the purchase token (${response.status.value})")
+        }
+        return interpretProduct(json.decodeFromString<ProductPurchase>(response.bodyAsText()), productId)
+    }
+
+    internal fun interpretProduct(purchase: ProductPurchase, productId: String): VerifiedPurchase {
+        // 0 is purchased; 1 cancelled, 2 pending — neither has paid.
+        if (purchase.purchaseState != 0) throw ReceiptRejectedException("Purchase state is ${purchase.purchaseState}")
+        // purchaseType 0 is a licence tester's purchase, which Play never charged for.
+        if (purchase.purchaseType == 0 && !allowTestPurchases) {
+            throw ReceiptRejectedException("Test purchases are not accepted here")
+        }
+        val orderId = purchase.orderId ?: throw ReceiptRejectedException("Play returned no order id")
+        return VerifiedPurchase(
+            productId = productId,
+            transactionId = orderId,
+            expiresAt = null,
+            autoRenewing = false,
+            accountId = purchase.obfuscatedExternalAccountId,
+        )
+    }
+
     /** Play's answer, turned into what we grant — or a refusal. */
     internal fun interpret(purchase: SubscriptionPurchaseV2, productId: String): VerifiedPurchase {
         if (purchase.subscriptionState !in PAID_STATES) {
@@ -193,6 +223,16 @@ internal data class SubscriptionPurchaseV2(
     class TestPurchase
 }
 
+/** `purchases.products.get`, the fields we read. */
+@Serializable
+internal data class ProductPurchase(
+    val purchaseState: Int? = null,
+    val orderId: String? = null,
+    val obfuscatedExternalAccountId: String? = null,
+    /** Present only for test (0), promo (1) and rewarded (2) purchases. */
+    val purchaseType: Int? = null,
+)
+
 /** Routes each store to its verifier; a store with no credentials refuses, as before. */
 class StoreVerifiers(
     private val googlePlay: GooglePlayVerifier?,
@@ -201,6 +241,13 @@ class StoreVerifiers(
     override suspend fun verify(provider: PaymentProvider, productId: String, token: String): VerifiedPurchase =
         when (provider) {
             PaymentProvider.GOOGLE_PLAY -> googlePlay?.verify(productId, token)
+            PaymentProvider.APP_STORE -> appStore?.verify(productId, token)
+            else -> null
+        } ?: UnconfiguredStoreVerifier.verify(provider, productId, token)
+
+    override suspend fun verifyOneTime(provider: PaymentProvider, productId: String, token: String): VerifiedPurchase =
+        when (provider) {
+            PaymentProvider.GOOGLE_PLAY -> googlePlay?.verifyProduct(productId, token)
             PaymentProvider.APP_STORE -> appStore?.verify(productId, token)
             else -> null
         } ?: UnconfiguredStoreVerifier.verify(provider, productId, token)

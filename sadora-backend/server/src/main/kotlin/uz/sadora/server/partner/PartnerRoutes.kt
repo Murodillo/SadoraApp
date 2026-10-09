@@ -109,6 +109,11 @@ fun Route.partnerRoutes(partners: PartnerService) {
                     partners.leave(call.requireUserId(), call.parameters["id"].orEmpty(), call.requestContext().ip)
                     call.respond(Ack())
                 }
+
+                put("/payment-requests") {
+                    val request = call.receive<uz.sadora.contract.PaymentRequestSwitch>()
+                    call.respond(partners.setAcceptsPaymentRequests(call.requireUserId(), call.parameters["id"].orEmpty(), request.enabled))
+                }
             }
         }
     }

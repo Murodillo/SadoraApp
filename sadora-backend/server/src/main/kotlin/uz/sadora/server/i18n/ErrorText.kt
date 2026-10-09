@@ -295,6 +295,17 @@ object ErrorText {
         Entry("To'lov topilmadi", "Платёж не найден", "Payment not found"),
         Entry("Chek tasdiqlanmadi", "Чек не подтверждён", "The receipt was not confirmed"),
         Entry("Bu chek allaqachon qayd etilgan", "Этот чек уже учтён", "This receipt has already been recorded"),
+        // Requests to pay (Yaqinim).
+        Entry("Bu hisobdan so'rov yuborib bo'lmaydi", "С этого аккаунта нельзя отправить просьбу", "This account cannot send a request"),
+        Entry("Sizda ochiq so'rov bor", "У вас уже есть открытая просьба", "You already have an open request"),
+        Entry("So'rov yopilgan", "Просьба закрыта", "The request is closed"),
+        Entry("Konsultatsiya store orqali to'lanmaydi", "Консультация не оплачивается через магазин", "A consultation is not paid through the store"),
+        Entry("Faqat to'langan sovg'ani qaytarish mumkin", "Вернуть можно только оплаченный подарок", "Only a paid gift can be refunded"),
+        Entry(
+            "Konsultatsiya narxi o'zgargan yoki allaqachon to'langan",
+            "Цена консультации изменилась или она уже оплачена",
+            "The consultation's price changed or it is already paid",
+        ),
         Entry("Bu xarid boshqa hisobga tegishli", "Эта покупка принадлежит другому аккаунту", "This purchase belongs to another account"),
         Entry("Bu provayder store emas", "Этот провайдер — не магазин приложений", "This provider is not an app store"),
         Entry("Store xaridi ilova ichida bo'ladi", "Покупка в магазине делается внутри приложения", "Store purchases happen inside the app"),

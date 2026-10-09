@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useBillingPlans, useBillingSummary, usePayments } from '../api/hooks'
+import { useBillingPlans, useBillingSummary, usePayments, useRefundGift } from '../api/hooks'
 import type { PaymentProvider, PaymentState } from '../api/types'
 import { Card, Empty, ErrorNotice, formatDateTime, Loading, Stat } from '../components/ui'
 
@@ -47,6 +47,7 @@ export function BillingPage() {
   const summary = useBillingSummary(days)
   const plans = useBillingPlans()
   const payments = usePayments(state, PAGE_SIZE, offset)
+  const refund = useRefundGift()
   const page = payments.data
 
   return (
@@ -163,6 +164,7 @@ export function BillingPage() {
         }
       >
         <ErrorNotice error={payments.error} />
+        <ErrorNotice error={refund.error} />
         {page && page.items.length === 0 && <Empty>To'lov topilmadi.</Empty>}
         {page && page.items.length > 0 && (
           <>
@@ -175,7 +177,8 @@ export function BillingPage() {
                 <th>Summa</th>
                 <th>Holat</th>
                 <th>Provayder ID</th>
-                <th>Foydalanuvchi</th>
+                <th>Kim → kimga</th>
+                <th />
               </tr>
             </thead>
             <tbody>
@@ -183,14 +186,41 @@ export function BillingPage() {
                 <tr key={payment.id}>
                   <td className="faint">{formatDateTime(payment.paidAt ?? payment.createdAt)}</td>
                   <td>{providerLabels[payment.provider]}</td>
-                  <td>{payment.planId}</td>
+                  <td>
+                    {payment.planId ?? 'Konsultatsiya'}
+                    {payment.gift && <span className="badge" style={{ marginLeft: 6 }}>Sovg'a</span>}
+                  </td>
                   <td>{sum(payment.amountMinor)}</td>
                   <td>
                     <span className={stateClass[payment.state]}>{stateLabels[payment.state]}</span>
+                    {payment.refundedAt && <div className="faint">Qaytarilgan {formatDateTime(payment.refundedAt)}</div>}
                   </td>
                   <td className="mono faint">{payment.externalId ?? '—'}</td>
                   <td>
-                    <Link to={`/users/${payment.userId}`}>Karta</Link>
+                    {payment.gift ? (
+                      <>
+                        {payment.payerId ? <Link to={`/users/${payment.payerId}`}>To'lovchi</Link> : <span className="faint">Brauzer</span>}
+                        {' → '}
+                        <Link to={`/users/${payment.userId}`}>Oluvchi</Link>
+                      </>
+                    ) : (
+                      <Link to={`/users/${payment.userId}`}>Karta</Link>
+                    )}
+                  </td>
+                  <td>
+                    {payment.refundable && (
+                      <button
+                        className="btn small"
+                        disabled={refund.isPending}
+                        onClick={() => {
+                          if (window.confirm("Pul provayderda qaytarildimi? Sovg'a kunlari foydalanuvchidan olib tashlanadi.")) {
+                            refund.mutate(payment.id)
+                          }
+                        }}
+                      >
+                        Qaytarish
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}

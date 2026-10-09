@@ -939,6 +939,7 @@ private fun MainShell(
                 ConsultationPaySheetContent(
                     doctorId = doctorId,
                     doctors = controllers.doctors,
+                    partner = controllers.partner,
                     onPaid = {
                         overlays.payFor = null
                         overlays.toast = paidToast
@@ -1290,7 +1291,7 @@ private fun PushedScreen(
         // The same documents onboarding shows, reachable again from settings.
         Route.Terms -> LegalScreen(LegalDocument.Terms, close)
         Route.PrivacyPolicy -> LegalScreen(LegalDocument.Privacy, close)
-        Route.Paywall -> PaywallScreen(state, controllers.account, controllers.billing, close)
+        Route.Paywall -> PaywallScreen(state, controllers.account, controllers.billing, close, partner = controllers.partner)
 
         // Settings detail screens reuse the existing surfaces they configure.
         Route.PersonalDetails,

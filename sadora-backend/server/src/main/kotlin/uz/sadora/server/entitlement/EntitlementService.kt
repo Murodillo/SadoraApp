@@ -40,8 +40,18 @@ class EntitlementService(
         definitionsExpireAtMillis = 0
     }
 
+    /**
+     * Spends gifted days banked behind a store subscription once nothing is active. Set
+     * at wiring; true when it made a subscription.
+     */
+    var applyBankedGifts: (suspend (Uuid) -> Boolean)? = null
+
+    private suspend fun activeSubscription(userId: Uuid) =
+        repository.activeSubscription(userId)
+            ?: if (applyBankedGifts?.invoke(userId) == true) repository.activeSubscription(userId) else null
+
     suspend fun resolve(userId: Uuid, timezone: String): Entitlements {
-        val subscription = repository.activeSubscription(userId)
+        val subscription = activeSubscription(userId)
         val tier = subscription?.tier ?: SubscriptionTier.FREE
         val overrides = repository.overridesOf(userId).associateBy { it.featureKey }
         val usage = repository.usage(userId, now().dayIn(timezone))
@@ -86,7 +96,7 @@ class EntitlementService(
     }
 
     suspend fun subscriptionStatus(userId: Uuid): SubscriptionStatus {
-        val subscription = repository.activeSubscription(userId)
+        val subscription = activeSubscription(userId)
             ?: return SubscriptionStatus(tier = SubscriptionTier.FREE)
         return SubscriptionStatus(
             tier = subscription.tier,

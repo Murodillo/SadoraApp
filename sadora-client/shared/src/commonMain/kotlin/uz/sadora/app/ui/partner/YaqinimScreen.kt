@@ -92,7 +92,12 @@ fun YaqinimScreen(
     var codeSheet by remember { mutableStateOf(false) }
     var prefill by remember { mutableStateOf("") }
 
-    LaunchedEffect(Unit) { partner.refresh(silent = partner.state != null) }
+    LaunchedEffect(Unit) {
+        partner.refresh(silent = partner.state != null)
+        partner.loadMyRequest()
+        // A request to pay someone she follows: the push about it lands on this screen.
+        partner.loadIncoming()
+    }
     // A code from a shared link opens the sheet prefilled — also when it arrives while
     // this screen is already open — and is consumed by opening it.
     LaunchedEffect(state.pendingPartnerCode) {
@@ -115,6 +120,10 @@ fun YaqinimScreen(
             ScreenContent {
                 partner.error?.let { failure ->
                     item { ErrorStrip(failure.partnerReadable(), onRetry = partner::clearError) }
+                }
+                if (partner.myRequest != null) item { MyRequestCard(partner) }
+                partner.incoming.forEach { request ->
+                    item(key = "payreq-${request.id}") { IncomingRequestCard(request, partner, onToast) }
                 }
 
                 when {

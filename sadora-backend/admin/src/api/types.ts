@@ -447,6 +447,13 @@ export interface AdminPayment {
   externalId?: string | null
   paidAt?: string | null
   createdAt: string
+  /** Someone else paid for her (Yaqinim); null when she paid or a browser payer did. */
+  payerId?: string | null
+  /** A payment answering her request to pay. */
+  gift?: boolean
+  /** A paid gift plan the panel can refund; its days go back with the money. */
+  refundable?: boolean
+  refundedAt?: string | null
 }
 
 export interface BillingSummary {

@@ -24,11 +24,15 @@ class PartnerAlertJob(
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var job: Job? = null
 
+    /** Another quarter-hourly pass riding on this one — requests to pay. Set at wiring. */
+    var extraTick: (suspend () -> Unit)? = null
+
     fun start() {
         job = scope.launch {
             logger.info("Partner alert job started, ticking every {}", tickInterval)
             while (isActive) {
                 runCatching { partners.dailyAlerts() }.onFailure { logger.error("Partner alert tick failed", it) }
+                extraTick?.let { tick -> runCatching { tick() }.onFailure { logger.error("Payment request tick failed", it) } }
                 delay(tickInterval)
             }
         }

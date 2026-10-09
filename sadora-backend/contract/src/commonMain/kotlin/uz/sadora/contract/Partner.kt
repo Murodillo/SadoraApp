@@ -104,6 +104,8 @@ data class PartnerLink(
     val lastViewedAt: Instant? = null,
     /** What they sent that she has not opened yet. */
     val unread: Int = 0,
+    /** Whether they take requests to pay; when off, she is not offered "ask Yaqinim". */
+    val acceptsPaymentRequests: Boolean = true,
 )
 
 /** Someone this account follows. */
@@ -115,6 +117,8 @@ data class FollowedPerson(
     val status: PartnerLinkStatus,
     /** What she sent that this account has not opened yet. */
     val unread: Int = 0,
+    /** Whether this account takes her requests to pay. */
+    val acceptsPaymentRequests: Boolean = true,
 )
 
 /** Her side and the follower side in one read, for the Yaqinim screen. */

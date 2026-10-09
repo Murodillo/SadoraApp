@@ -47,6 +47,7 @@ object PartnerLinks : Table("partner_links") {
     val endedBy = text("ended_by").nullable()
     val lastViewedAt = timestampWithTimeZone("last_viewed_at").nullable()
     val viewCount = integer("view_count")
+    val acceptsPaymentRequests = bool("accepts_payment_requests")
 
     override val primaryKey = PrimaryKey(id)
 }

@@ -2690,6 +2690,139 @@ class ApiIntegrationTest {
         assertEquals(1, get<uz.sadora.server.doctor.AdminDoctorDetail>("/v1/admin/doctors/$id", admin).documents.size)
     }
 
+    /**
+     * "Ask Yaqinim to pay": she asks, he hears of it, pays by Payme from his own app — and
+     * may switch the year she asked for to a month — and the days are hers. A refund takes
+     * them back. Behind a store subscription of hers the days are banked, and spent the
+     * day it is gone. A second open request is refused; his switch keeps him out of it.
+     */
+    @Test
+    fun `a request to pay reaches Yaqinim and his payment becomes her Premium`() = api {
+        val admin = adminToken()
+        setFlag(admin, BillingService.PAYME_FLAG, enabled = true)
+        val her = signUp().also { onboard(it) }
+        val code = assertNotNull(post<PartnerInvite>("/v1/partner/invite", her.token, CreatePartnerInviteRequest()).code)
+        val him = signUp()
+        val followed = post<FollowedPerson>("/v1/partner/accept", him.token, AcceptPartnerInviteRequest(code, name = "Aziz", asPartnerAccount = true))
+        post<PartnerState>("/v1/partner/approve", her.token, Ack())
+
+        val asked = post<uz.sadora.contract.PaymentRequest>(
+            "/v1/payment-requests",
+            her.token,
+            uz.sadora.contract.CreatePaymentRequest(uz.sadora.contract.PaymentRequestKind.PREMIUM, uz.sadora.contract.BillingPeriod.YEAR, note = "  Iltimos  "),
+        )
+        assertTrue(asked.sentToPartner)
+        assertEquals("Iltimos", asked.note)
+        assertEquals(29900000, asked.amountMinor)
+        assertTrue(asked.shareUrl.orEmpty().contains("/pr/"), asked.shareUrl.orEmpty())
+        assertEquals(1, outboxCount(him, "payreq:"))
+        val twice = raw {
+            client.post("/v1/payment-requests") {
+                auth(her.token)
+                json(uz.sadora.contract.CreatePaymentRequest(uz.sadora.contract.PaymentRequestKind.PREMIUM, uz.sadora.contract.BillingPeriod.MONTH))
+            }
+        }
+        assertEquals(HttpStatusCode.Conflict, twice.status, "one open request at a time")
+
+        // His side: her name, both gift plans, Payme.
+        val incoming = get<List<uz.sadora.contract.IncomingPaymentRequest>>("/v1/payment-requests/incoming", him.token).single()
+        assertEquals("Test", incoming.fromName)
+        assertEquals(setOf("gift_month", "gift_year"), incoming.plans.map { it.id }.toSet())
+        assertTrue(PaymentProvider.PAYME in incoming.providers)
+        assertTrue(get<List<uz.sadora.contract.IncomingPaymentRequest>>("/v1/payment-requests/incoming", her.token).isEmpty())
+        assertTrue(get<BillingCatalogue>("/v1/billing/plans", her.token).plans.none { it.id.startsWith("gift_") }, "the paywall sells no gift")
+
+        // He switches to a month and pays it; Payme delivers twice.
+        val checkout = post<CheckoutSession>(
+            "/v1/payment-requests/${incoming.id}/checkout",
+            him.token,
+            uz.sadora.contract.PayPaymentRequest(PaymentProvider.PAYME, planId = "gift_month"),
+        )
+        assertEquals(3990000, checkout.amountMinor)
+        val paymeId = "pm-g-${Random.nextInt(1_000_000)}"
+        payme(
+            """{"id":2,"method":"CreateTransaction","params":{"id":"$paymeId","time":1788600000000,""" +
+                """"amount":3990000,"account":{"order_id":"${checkout.transactionId}"}}}""",
+        )
+        repeat(2) { payme("""{"id":4,"method":"PerformTransaction","params":{"id":"$paymeId"}}""") }
+        assertEquals(PaymentState.PAID, get<PaymentStatus>("/v1/billing/payments/${checkout.transactionId}", him.token).state)
+
+        val herState = get<uz.sadora.contract.PaymentRequestState>("/v1/payment-requests", her.token)
+        assertEquals(uz.sadora.contract.PaymentRequestStatus.PAID, herState.current?.status)
+        val premium = get<Entitlements>("/v1/entitlements", her.token)
+        assertEquals(SubscriptionTier.PREMIUM, premium.tier)
+        val days = (assertNotNull(premium.expiresAt) - now()).inWholeDays
+        assertTrue(days in 29..30, "a month, not the year she asked for: $days")
+        assertEquals(SubscriptionTier.FREE, get<Entitlements>("/v1/entitlements", him.token).tier, "the payer gets nothing")
+        assertEquals(1, outboxCount(her, "payreq_paid:"))
+        assertTrue(get<List<uz.sadora.contract.IncomingPaymentRequest>>("/v1/payment-requests/incoming", him.token).isEmpty())
+
+        // The panel names who paid, and its refund takes the days back.
+        val row = get<Page<uz.sadora.server.billing.AdminPaymentView>>("/v1/admin/billing/payments?limit=200", admin)
+            .items.single { it.id == checkout.transactionId }
+        assertTrue(row.gift && row.refundable)
+        assertEquals(him.userId, row.payerId)
+        assertEquals(her.userId, row.userId)
+        postAck("/v1/admin/billing/payments/${checkout.transactionId}/refund", admin, Ack())
+        assertEquals(SubscriptionTier.FREE, get<Entitlements>("/v1/entitlements", her.token).tier)
+        assertEquals(1, outboxCount(her, "gift_refunded:"))
+
+        // The browser link: the page, Payme's door, and closed once she takes it back.
+        val second = post<uz.sadora.contract.PaymentRequest>(
+            "/v1/payment-requests",
+            her.token,
+            uz.sadora.contract.CreatePaymentRequest(uz.sadora.contract.PaymentRequestKind.PREMIUM, uz.sadora.contract.BillingPeriod.YEAR),
+        )
+        val path = "/pr/" + assertNotNull(second.shareUrl).substringAfter("/pr/")
+        val page = client.get(path)
+        assertEquals(HttpStatusCode.OK, page.status)
+        assertTrue(page.bodyAsText().contains("Test sizdan yordam"), "her name on the page")
+        val noRedirects = client.config { followRedirects = false }
+        val door = noRedirects.get("$path/pay?provider=payme&plan=gift_year")
+        assertEquals(HttpStatusCode.Found, door.status)
+        assertTrue(door.headers[HttpHeaders.Location].orEmpty().startsWith("https://checkout.paycom.uz/"))
+        val rotated = post<uz.sadora.contract.PaymentRequest>("/v1/payment-requests/${second.id}/share", her.token, Ack())
+        assertEquals(HttpStatusCode.NotFound, client.get(path).status, "a fresh link retires the old one")
+        val freshPath = "/pr/" + assertNotNull(rotated.shareUrl).substringAfter("/pr/")
+        assertEquals(uz.sadora.contract.PaymentRequestStatus.CANCELLED, raw { client.delete("/v1/payment-requests/${second.id}") { auth(her.token) } }.body<uz.sadora.contract.PaymentRequest>().status)
+        assertTrue(client.get(freshPath).bodyAsText().contains("yopilgan"))
+
+        // "Not now" closes it; she reads it as closed.
+        val third = post<uz.sadora.contract.PaymentRequest>(
+            "/v1/payment-requests",
+            her.token,
+            uz.sadora.contract.CreatePaymentRequest(uz.sadora.contract.PaymentRequestKind.PREMIUM, uz.sadora.contract.BillingPeriod.MONTH),
+        )
+        postAck("/v1/payment-requests/${third.id}/decline", him.token, Ack())
+        assertEquals(uz.sadora.contract.PaymentRequestStatus.DECLINED, get<uz.sadora.contract.PaymentRequestState>("/v1/payment-requests", her.token).current?.status)
+
+        // Behind her own store subscription, a gift is banked and spent when it is gone.
+        component.subscriptionRepository.grant(Uuid.parse(her.userId), SubscriptionSource.GOOGLE_PLAY, now() + 5.days, productId = "premium_month")
+        val fourth = post<uz.sadora.contract.PaymentRequest>(
+            "/v1/payment-requests",
+            her.token,
+            uz.sadora.contract.CreatePaymentRequest(uz.sadora.contract.PaymentRequestKind.PREMIUM, uz.sadora.contract.BillingPeriod.MONTH),
+        )
+        val banked = post<CheckoutSession>("/v1/payment-requests/${fourth.id}/checkout", him.token, uz.sadora.contract.PayPaymentRequest(PaymentProvider.PAYME))
+        assertEquals(HttpStatusCode.OK, raw { client.post("/v1/billing/dev-pay/${banked.transactionId}") }.status)
+        assertEquals(SubscriptionSource.GOOGLE_PLAY, get<Entitlements>("/v1/entitlements", her.token).source, "her store subscription stands")
+        component.subscriptionRepository.revoke(Uuid.parse(her.userId), "test: store lapsed")
+        val spent = get<Entitlements>("/v1/entitlements", her.token)
+        assertEquals(SubscriptionTier.PREMIUM, spent.tier)
+        assertEquals(SubscriptionSource.MANUAL, spent.source)
+
+        // His switch: off, and she is not offered him; a new request goes by link only.
+        put<FollowedPerson>("/v1/partner/following/${followed.linkId}/payment-requests", him.token, uz.sadora.contract.PaymentRequestSwitch(false))
+        assertEquals(false, get<PartnerState>("/v1/partner", her.token).link?.acceptsPaymentRequests)
+        val fifth = post<uz.sadora.contract.PaymentRequest>(
+            "/v1/payment-requests",
+            her.token,
+            uz.sadora.contract.CreatePaymentRequest(uz.sadora.contract.PaymentRequestKind.PREMIUM, uz.sadora.contract.BillingPeriod.MONTH),
+        )
+        assertFalse(fifth.sentToPartner)
+        assertTrue(get<List<uz.sadora.contract.IncomingPaymentRequest>>("/v1/payment-requests/incoming", him.token).isEmpty())
+    }
+
     private fun api(block: suspend Api.() -> Unit) = testApplication {
         application { apiModule(component) }
         val client = createClient {

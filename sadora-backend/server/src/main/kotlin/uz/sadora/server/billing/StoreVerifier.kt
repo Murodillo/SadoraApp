@@ -28,6 +28,13 @@ data class VerifiedPurchase(
  */
 fun interface StoreVerifier {
     suspend fun verify(provider: PaymentProvider, productId: String, token: String): VerifiedPurchase
+
+    /**
+     * A one-off purchase — a gift plan. Play asks a different endpoint for those; Apple's
+     * signed transaction is the same shape for both, so the default is [verify].
+     */
+    suspend fun verifyOneTime(provider: PaymentProvider, productId: String, token: String): VerifiedPurchase =
+        verify(provider, productId, token)
 }
 
 /** Raised when a receipt cannot be checked, or the store rejects it. */

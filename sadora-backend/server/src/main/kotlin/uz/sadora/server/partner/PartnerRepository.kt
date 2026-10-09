@@ -38,6 +38,8 @@ data class PartnerLinkRecord(
     val approvedAt: Instant?,
     val pausedAt: Instant?,
     val lastViewedAt: Instant?,
+    /** Whether the follower takes her requests to pay. */
+    val acceptsPaymentRequests: Boolean = true,
 )
 
 /** Someone an account follows, with the name the list shows. */
@@ -151,6 +153,10 @@ class PartnerRepository {
         }
     }
 
+    suspend fun setAcceptsPaymentRequests(id: Uuid, enabled: Boolean): Unit = dbQuery {
+        PartnerLinks.update({ PartnerLinks.id eq id }) { it[acceptsPaymentRequests] = enabled }
+    }
+
     suspend fun recordView(id: Uuid, at: Instant): Unit = dbQuery {
         PartnerLinks.update({ PartnerLinks.id eq id }) {
             it[viewCount] = viewCount + 1
@@ -194,6 +200,7 @@ class PartnerRepository {
         approvedAt = this[PartnerLinks.approvedAt]?.toKotlinInstant(),
         pausedAt = this[PartnerLinks.pausedAt]?.toKotlinInstant(),
         lastViewedAt = this[PartnerLinks.lastViewedAt]?.toKotlinInstant(),
+        acceptsPaymentRequests = this[PartnerLinks.acceptsPaymentRequests],
     )
 
     private companion object {

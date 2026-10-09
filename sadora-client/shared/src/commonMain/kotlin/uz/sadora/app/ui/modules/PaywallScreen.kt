@@ -1,5 +1,10 @@
 package uz.sadora.app.ui.modules
 
+import uz.sadora.app.ui.components.SadoraBottomSheet
+import uz.sadora.app.ui.components.SadoraButton
+import uz.sadora.app.ui.components.ButtonTone
+import uz.sadora.app.ui.partner.AskPartnerContent
+import uz.sadora.contract.PaymentRequestKind
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -63,6 +68,8 @@ fun PaywallScreen(
     billing: BillingController,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
+    /** For "ask Yaqinim to pay"; without it the paywall only sells. */
+    partner: uz.sadora.app.data.PartnerController? = null,
 ) {
     val t = strings.modules
     val c = Sadora.colors
@@ -74,6 +81,7 @@ fun PaywallScreen(
     val plans = catalogue?.plans.orEmpty().filter { !inStore || billing.storePrices.containsKey(billing.storeProductId(it)) }
     var selectedPlan by remember { mutableStateOf<String?>(null) }
     var restoreNote by remember { mutableStateOf<String?>(null) }
+    var askSheet by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) { billing.loadCatalogue() }
     LaunchedEffect(catalogue) { if (catalogue != null) billing.loadStorePrices() }
@@ -101,7 +109,8 @@ fun PaywallScreen(
         }
     }
 
-    Column(modifier) {
+    Box(modifier) {
+    Column {
         Row(
             Modifier.fillMaxWidth().padding(Spacing.sm),
             horizontalArrangement = Arrangement.Start,
@@ -249,6 +258,15 @@ fun PaywallScreen(
                         Text(t.storeRenewalTerms(storeName), style = Sadora.type.body, color = c.muted, textAlign = TextAlign.Center)
                     }
 
+                    // Someone close can pay instead: a gift plan, theirs to buy, hers to have.
+                    if (partner != null && !billing.paid && !state.isPremium && catalogue != null) {
+                        SadoraButton(
+                            strings.partner.askPartner,
+                            onClick = { askSheet = true },
+                            tone = ButtonTone.Secondary,
+                        )
+                    }
+
                     if (!inStore && payable.isEmpty() && catalogue != null) {
                         // The store flow needs the platform billing SDK, which the app
                         // does not carry yet; saying so is better than a button that
@@ -291,6 +309,18 @@ fun PaywallScreen(
                 }
             }
         }
+    }
+
+    if (partner != null) {
+        SadoraBottomSheet(visible = askSheet, title = strings.partner.askTitle, onDismiss = { askSheet = false }) {
+            AskPartnerContent(
+                partner = partner,
+                kind = PaymentRequestKind.PREMIUM,
+                initialYear = catalogue?.plans?.firstOrNull { it.id == selectedPlan }?.period != BillingPeriod.MONTH,
+                onClose = { askSheet = false },
+            )
+        }
+    }
     }
 }
 

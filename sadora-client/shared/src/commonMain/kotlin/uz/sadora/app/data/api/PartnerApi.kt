@@ -20,6 +20,16 @@ import uz.sadora.contract.PartnerRelation
 import uz.sadora.contract.PartnerState
 import uz.sadora.contract.PartnerView
 import uz.sadora.contract.PausePartnerRequest
+import uz.sadora.contract.CheckoutSession
+import uz.sadora.contract.CreatePaymentRequest
+import uz.sadora.contract.IncomingPaymentRequest
+import uz.sadora.contract.PayPaymentRequest
+import uz.sadora.contract.PaymentProvider
+import uz.sadora.contract.PaymentRequest
+import uz.sadora.contract.PaymentRequestState
+import uz.sadora.contract.PaymentRequestStorePurchase
+import uz.sadora.contract.PaymentRequestSwitch
+import uz.sadora.contract.PaymentStatus
 
 /** Yaqinim: her side under `/partner`, the follower's under `/partner/following`. */
 class PartnerApi(private val caller: ApiCaller) {
@@ -72,4 +82,43 @@ class PartnerApi(private val caller: ApiCaller) {
 
     suspend fun leave(linkId: String): ApiResult<Ack> =
         caller.authenticated("v1/partner/following/$linkId", HttpMethodKind.DELETE)
+
+    suspend fun setAcceptsPaymentRequests(linkId: String, enabled: Boolean): ApiResult<FollowedPerson> =
+        caller.authenticated("v1/partner/following/$linkId/payment-requests", HttpMethodKind.PUT) {
+            setBody(PaymentRequestSwitch(enabled))
+        }
+
+    // ---------------------------------------------------------------- requests to pay
+
+    suspend fun myPaymentRequest(): ApiResult<PaymentRequestState> =
+        caller.authenticated("v1/payment-requests", HttpMethodKind.GET)
+
+    suspend fun askToPay(request: CreatePaymentRequest): ApiResult<PaymentRequest> =
+        caller.authenticated("v1/payment-requests", HttpMethodKind.POST) { setBody(request) }
+
+    suspend fun cancelPaymentRequest(id: String): ApiResult<PaymentRequest> =
+        caller.authenticated("v1/payment-requests/$id", HttpMethodKind.DELETE)
+
+    suspend fun sharePaymentRequest(id: String): ApiResult<PaymentRequest> =
+        caller.authenticated("v1/payment-requests/$id/share", HttpMethodKind.POST)
+
+    suspend fun incomingPaymentRequests(): ApiResult<List<IncomingPaymentRequest>> =
+        caller.authenticated("v1/payment-requests/incoming", HttpMethodKind.GET)
+
+    suspend fun declinePaymentRequest(id: String): ApiResult<Ack> =
+        caller.authenticated("v1/payment-requests/$id/decline", HttpMethodKind.POST)
+
+    suspend fun payPaymentRequest(id: String, provider: PaymentProvider, planId: String?): ApiResult<CheckoutSession> =
+        caller.authenticated("v1/payment-requests/$id/checkout", HttpMethodKind.POST) {
+            setBody(PayPaymentRequest(provider, planId))
+        }
+
+    suspend fun payPaymentRequestInStore(id: String, provider: PaymentProvider, productId: String, token: String): ApiResult<PaymentRequest> =
+        caller.authenticated("v1/payment-requests/$id/store", HttpMethodKind.POST) {
+            setBody(PaymentRequestStorePurchase(provider, productId, token))
+        }
+
+    /** The payer polls the payment they started, the way the paywall does. */
+    suspend fun paymentStatus(transactionId: String): ApiResult<PaymentStatus> =
+        caller.authenticated("v1/billing/payments/$transactionId", HttpMethodKind.GET)
 }

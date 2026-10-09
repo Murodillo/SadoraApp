@@ -32,7 +32,21 @@ interface StoreBilling {
 
     /** Tells the store the purchase was delivered. Play refunds one that is not acknowledged within three days. */
     suspend fun finish(receipt: StoreReceipt)
+
+    /**
+     * A one-off gift plan, bought for someone else. Play sells those as in-app products
+     * rather than subscriptions; StoreKit buys a consumable exactly like anything else.
+     */
+    suspend fun giftPrices(productIds: List<String>): Map<String, String> = prices(productIds)
+
+    suspend fun purchaseGift(productId: String, accountId: String): StoreOutcome = purchase(productId, accountId)
+
+    /** Consumes a delivered gift, so the same product can be bought again next time. */
+    suspend fun finishGift(receipt: StoreReceipt) = finish(receipt)
 }
+
+/** Gift plans are never restored to the buyer: they were delivered to someone else. */
+fun isGiftProduct(productId: String): Boolean = productId.startsWith("gift_") || productId.contains(".gift.")
 
 /** One purchase as the store reported it. [token] is what the server verifies. */
 data class StoreReceipt(

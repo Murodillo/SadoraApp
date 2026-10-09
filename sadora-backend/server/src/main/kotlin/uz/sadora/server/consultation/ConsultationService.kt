@@ -240,6 +240,12 @@ class ConsultationService(
      * its price still stands, so tapping "pay" twice does not make two.
      */
     suspend fun checkout(userId: Uuid, doctorId: Uuid, provider: PaymentProvider, origin: String): CheckoutSession {
+        val (session, _) = pendingSessionFor(userId, doctorId)
+        return billing.consultationCheckout(userId, session.id, session.priceMinor, provider, origin)
+    }
+
+    /** The checkout's pending window, and the doctor's name — for her to ask someone else to pay it. */
+    suspend fun pendingSessionFor(userId: Uuid, doctorId: Uuid): Pair<SessionRecord, String> {
         val doctor = doctors.byId(doctorId)?.takeIf { it.status == DoctorStatus.APPROVED }
             ?: throw NotFoundException("Shifokor topilmadi")
         if (doctor.userId == userId) throw ValidationException("doctorId", "O'zingizga yozib bo'lmaydi")
@@ -261,8 +267,14 @@ class ConsultationService(
                 openedAt = null,
                 expiresAt = null,
             )
-        return billing.consultationCheckout(userId, session.id, session.priceMinor, provider, origin)
+        return session to doctor.fullName
     }
+
+    /** A window still waiting for its money, at its price — what a request's payer may pay. */
+    suspend fun payableSession(sessionId: Uuid): SessionRecord? =
+        repository.session(sessionId)?.takeIf { it.payment == ConsultationPayment.PENDING }
+
+    suspend fun doctorName(doctorId: Uuid): String? = doctors.byId(doctorId)?.fullName
 
     /** The provider says the money arrived: the window opens, and the doctor hears of it. */
     suspend fun onPaid(sessionId: Uuid, transaction: TransactionRecord) {

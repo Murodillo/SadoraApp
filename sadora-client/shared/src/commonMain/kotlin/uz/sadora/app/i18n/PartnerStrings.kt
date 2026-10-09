@@ -167,4 +167,39 @@ interface PartnerStrings {
     val webRevoked: String
     fun webDays(days: Int): String
     val webOutBody: String
+
+    // ---------------------------------------------------------------- asking Yaqinim to pay
+    val askPartner: String
+    val askTitle: String
+    val askBodyPremium: String
+    val askBodyConsultation: String
+    val askPeriod: String
+    fun period(year: Boolean): String
+    val askNoteHint: String
+    val askSend: String
+    /** "Premium (1 yil)" — what a request is for. */
+    fun premiumWhat(year: Boolean): String
+    fun consultationWhat(doctor: String?): String
+    val sentToPartner: String
+    val shareHint: String
+    val shareLink: String
+    fun shareRequestMessage(what: String, url: String): String
+    fun requestStatus(status: uz.sadora.contract.PaymentRequestStatus): String
+    fun requestExpires(date: String): String
+    val cancelRequest: String
+    val requestCancelled: String
+
+    // ---------------------------------------------------------------- a request, as the payer sees it
+    fun incomingTitle(name: String): String
+    val incomingBody: String
+    fun giveGift(price: String): String
+    fun payWith(provider: String): String
+    val payWaiting: String
+    val payReopen: String
+    val notNow: String
+    val giftThanks: String
+    val giftStorePending: String
+    val giftNoProvider: String
+    val acceptRequests: String
+    val acceptRequestsNote: String
 }

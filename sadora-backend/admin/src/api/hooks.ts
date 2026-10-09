@@ -454,6 +454,17 @@ export const usePayments = (state: string | undefined, limit: number, offset: nu
     placeholderData: (previous) => previous,
   })
 
+/** A gift's refund: the money is returned at the provider, this takes the days back. */
+export const useRefundGift = () => {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => request<{ ok: boolean }>(`/v1/admin/billing/payments/${id}/refund`, { method: 'POST' }),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: ['billing'] })
+    },
+  })
+}
+
 // ---------------------------------------------------------------- the operator's own account
 
 export const useAdminMe = () =>

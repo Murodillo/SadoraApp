@@ -120,6 +120,7 @@ class PartnerService(
                 relation = row.link.relation,
                 status = row.link.status,
                 unread = unread[row.link.id] ?: 0,
+                acceptsPaymentRequests = row.link.acceptsPaymentRequests,
             )
         }
     }
@@ -400,6 +401,14 @@ class PartnerService(
             relation = invite.relation,
             status = PartnerLinkStatus.PENDING,
         )
+    }
+
+    /** The follower's own switch for her requests to pay. */
+    suspend fun setAcceptsPaymentRequests(partnerId: Uuid, linkId: String, enabled: Boolean): FollowedPerson {
+        val link = links.byId(parseUuid(linkId))?.takeIf { it.partnerId == partnerId }
+            ?: throw NotFoundException("Topilmadi")
+        links.setAcceptsPaymentRequests(link.id, enabled)
+        return following(partnerId).first { it.linkId == link.id.toString() }
     }
 
     suspend fun leave(partnerId: Uuid, linkId: String, ip: String?) {
@@ -715,6 +724,7 @@ class PartnerService(
         approvedAt = approvedAt,
         pausedAt = pausedAt,
         lastViewedAt = lastViewedAt,
+        acceptsPaymentRequests = acceptsPaymentRequests,
     )
 
     private fun UserRecord.firstName(): String = name.trim().substringBefore(' ').ifBlank { "Sadora" }

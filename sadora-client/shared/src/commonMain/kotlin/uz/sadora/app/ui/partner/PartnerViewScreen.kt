@@ -105,6 +105,8 @@ fun PartnerViewBody(
     LaunchedEffect(linkId, listed) { partner.loadView(linkId, silent = partner.views[linkId] != null) }
     // The messages too, and again whenever the list says she sent something new.
     LaunchedEffect(linkId, unread) { partner.loadMessages(linkId) }
+    // Her requests to pay, read with the view; a push about one lands here too.
+    LaunchedEffect(linkId, listed) { partner.loadIncoming() }
 
     val view = partner.views[linkId]
 
@@ -113,6 +115,9 @@ fun PartnerViewBody(
             header?.invoke(this)
             partner.error?.let { failure ->
                 item { ErrorStrip(failure.partnerReadable(), onRetry = { scope.launch { partner.loadView(linkId) } }) }
+            }
+            partner.incoming.filter { it.linkId == linkId }.forEach { request ->
+                item(key = "payreq-${request.id}") { IncomingRequestCard(request, partner, onToast) }
             }
 
             when {
@@ -140,6 +145,7 @@ fun PartnerViewBody(
             }
 
             if (view != null) {
+                if (view.status == PartnerLinkStatus.ACTIVE) item { AcceptRequestsRow(linkId, partner) }
                 item {
                     SadoraButton(t.leave, { confirmLeave = true }, tone = ButtonTone.Ghost)
                 }

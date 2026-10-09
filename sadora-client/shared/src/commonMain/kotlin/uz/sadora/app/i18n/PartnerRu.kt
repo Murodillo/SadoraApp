@@ -245,4 +245,41 @@ object PartnerRu : PartnerStrings {
     override val webRevoked = "Ссылка отозвана"
     override fun webDays(days: Int) = "$days дн."
     override val webOutBody = "Чтобы показать ссылку снова, создайте новую — старая перестанет работать."
+
+    override val askPartner = "Попросить близкого 💝"
+    override val askTitle = "Попросить близкого"
+    override val askBodyPremium = "Близкому придёт уведомление. Когда он оплатит, Premium откроется у вас автоматически."
+    override val askBodyConsultation = "Близкому придёт уведомление. Когда он оплатит, чат с врачом откроется у вас автоматически."
+    override val askPeriod = "Срок"
+    override fun period(year: Boolean) = if (year) "1 год" else "1 месяц"
+    override val askNoteHint = "Короткая записка (необязательно)"
+    override val askSend = "Отправить просьбу"
+    override fun premiumWhat(year: Boolean) = "Premium (${period(year)})"
+    override fun consultationWhat(doctor: String?) = "Консультация" + (doctor?.let { " · $it" } ?: "")
+    override val sentToPartner = "Отправлено близкому 💝"
+    override val shareHint = "Ссылку можно отправить и другому близкому. Он сможет оплатить через Payme или Click без приложения."
+    override val shareLink = "Поделиться ссылкой"
+    override fun shareRequestMessage(what: String, url: String) =
+        "Здравствуйте! Хочу $what в Sadora — поможете? 💝\n$url"
+    override fun requestStatus(status: uz.sadora.contract.PaymentRequestStatus) = when (status) {
+        uz.sadora.contract.PaymentRequestStatus.OPEN -> "Ждём ответа"
+        uz.sadora.contract.PaymentRequestStatus.PAID -> "Оплачено 💝"
+        else -> "Просьба закрыта"
+    }
+    override fun requestExpires(date: String) = "Действует до $date"
+    override val cancelRequest = "Отменить просьбу"
+    override val requestCancelled = "Просьба отменена"
+
+    override fun incomingTitle(name: String) = "$name просит вас о помощи 💝"
+    override val incomingBody = "После оплаты всё откроется у неё автоматически."
+    override fun giveGift(price: String) = if (price.isBlank()) "Подарить" else "Подарить · $price"
+    override fun payWith(provider: String) = "Оплатить через $provider"
+    override val payWaiting = "Ждём оплату…"
+    override val payReopen = "Открыть страницу оплаты снова"
+    override val notNow = "Не сейчас"
+    override val giftThanks = "Спасибо! Подарок доставлен 💝"
+    override val giftStorePending = "Ждём подтверждения оплаты"
+    override val giftNoProvider = "Здесь пока нельзя оплатить"
+    override val acceptRequests = "Принимать просьбы об оплате"
+    override val acceptRequestsNote = "Если выключить, она не сможет попросить вас об оплате"
 }
