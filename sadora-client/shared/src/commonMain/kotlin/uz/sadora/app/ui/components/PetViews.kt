@@ -101,14 +101,14 @@ private fun loopFor(pet: PetKind, pose: PetPose): PetLoop? = when (pose) {
     PetPose.IDLE -> when (pet) {
         PetKind.NILUFAR -> PetLoop("nilufar_wave", 49)
         PetKind.MOMIQ -> PetLoop("momiq_wave", 109)
-        PetKind.LAYLO -> PetLoop("laylo_wave", 94)
+        PetKind.LAYLO -> PetLoop("laylo_wave", 115)
         PetKind.ANORXON -> PetLoop("anorxon_wave", 101)
         PetKind.OHU -> PetLoop("ohu_wave", 94)
     }
     PetPose.HAPPY -> when (pet) {
         PetKind.NILUFAR -> PetLoop("nilufar_happy", 43)
         PetKind.MOMIQ -> PetLoop("momiq_happy", 49)
-        PetKind.LAYLO -> PetLoop("laylo_happy", 56)
+        PetKind.LAYLO -> PetLoop("laylo_happy", 111)
         PetKind.ANORXON -> PetLoop("anorxon_happy", 44)
         PetKind.OHU -> PetLoop("ohu_happy", 109)
     }
