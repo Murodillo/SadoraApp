@@ -17,6 +17,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.unit.dp
@@ -70,9 +74,9 @@ fun NewPostScreen(
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
                     Text(t.topicLabel.uppercase(), style = Sadora.type.caption, color = c.muted)
-                    ChipFlowRow {
+                    ChipFlowRow(Modifier.selectableGroup()) {
                         CommunityTopic.entries.forEach { room ->
-                            SelectChip(label = t.topic(room), selected = topic == room, onClick = { topic = room })
+                            SelectChip(label = t.topic(room), selected = topic == room, onClick = { topic = room }, single = true)
                         }
                     }
                 }
@@ -87,7 +91,7 @@ fun NewPostScreen(
                         .heightIn(min = 160.dp),
                 ) {
                     if (body.isEmpty()) {
-                        Text(t.postHint, style = Sadora.type.body, color = c.muted2)
+                        Text(t.postHint, style = Sadora.type.body, color = c.muted2, modifier = Modifier.clearAndSetSemantics {})
                     }
                     BasicTextField(
                         value = body,
@@ -95,7 +99,9 @@ fun NewPostScreen(
                         onValueChange = { body = it.take(Limits.POST_MAX) },
                         textStyle = Sadora.type.body.copy(color = c.text),
                         cursorBrush = SolidColor(c.primary),
-                        modifier = Modifier.fillMaxWidth(),
+                        // The hint above is drawn only while empty and hidden from the
+                        // reader; the field itself carries it as its name.
+                        modifier = Modifier.fillMaxWidth().semantics { contentDescription = t.postHint },
                     )
                 }
             }

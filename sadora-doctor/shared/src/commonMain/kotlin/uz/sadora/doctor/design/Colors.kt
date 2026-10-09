@@ -38,11 +38,28 @@ data class SadoraColors(
      */
     val muted2: Color,
     val line: Color,
+    /**
+     * Border of a control — a field, an idle chip, an outline button. [line] is a
+     * hairline between surfaces (1.2:1); a control's edge is what tells her where to
+     * tap, so it needs 3:1 against the surfaces it sits on (WCAG 1.4.11).
+     */
+    val lineStrong: Color,
     val success: Color,
     /** [success] as text — the fill colour is 3.1:1 on white, too light to read. */
     val successText: Color,
     val warning: Color,
+    /** [warning] as text, including on its own 12–15% wash (a TintChip). */
+    val warningText: Color,
+    /** Fills only — a dot, a border, a wash. Text in this colour uses [dangerText]. */
     val danger: Color,
+    /** Errors and destructive labels: 4.5:1 on every surface and on a danger wash. */
+    val dangerText: Color,
+    /**
+     * A solid purple that white text sits on — my bubbles, count pills, the filled
+     * pill button. [primary] is too light for that (white was 4.2:1 / 3.3:1); this is
+     * the hero gradient's start, 5.26:1 under white, the same in both themes.
+     */
+    val primaryFill: Color,
     /** Content colour for filled primary buttons and gradient surfaces. */
     val onPrimary: Color,
     /** Card shadow tint. Lavender on light so the lift reads soft, not grey. */
@@ -66,12 +83,17 @@ data class SadoraColors(
         get() = Brush.linearGradient(heroColors)
 }
 
+/** The deepened brand pair behind [SadoraColors.heroColors]; the same in both themes.
+ * Declared above the palettes: top-level vals initialise in file order. */
+private val HeroStart = Color(0xFF6A4FF0)
+private val HeroEnd = Color(0xFFC93C88)
+
 val SadoraLightColors = SadoraColors(
     bg = Color(0xFFF7F5FF),
     surface = Color(0xFFFFFFFF),
     surface2 = Color(0xFFF1EDFF),
     primary = Color(0xFF7B61FF),
-    textAccent = Color(0xFF6247E0),
+    textAccent = Color(0xFF5E43DC),
     secondary = Color(0xFFFF6FB8),
     accent = Color(0xFF4FC3FF),
     accentText = Color(0xFF1B7FB0),
@@ -79,10 +101,14 @@ val SadoraLightColors = SadoraColors(
     muted = Color(0xFF66617F),
     muted2 = Color(0xFF6C6787),
     line = Color(0xFFEAE6FA),
+    lineStrong = Color(0xFF847E9F),
     success = Color(0xFF2BA57A),
-    successText = Color(0xFF1E7A5A),
+    successText = Color(0xFF1A6E50),
     warning = Color(0xFF9A6200),
+    warningText = Color(0xFF855300),
     danger = Color(0xFFD8404A),
+    dangerText = Color(0xFFB32A34),
+    primaryFill = HeroStart,
     onPrimary = Color(0xFFFFFFFF),
     shadow = Color(0xFF7B61FF),
     isDark = false,
@@ -101,17 +127,17 @@ val SadoraDarkColors = SadoraColors(
     muted = Color(0xFFA39DBF),
     muted2 = Color(0xFF948EB0),
     line = Color(0xFF2E2A52),
+    lineStrong = Color(0xFF78729F),
     success = Color(0xFF3FCF98),
     successText = Color(0xFF3FCF98),
     warning = Color(0xFFFFB020),
+    warningText = Color(0xFFFFB020),
     danger = Color(0xFFFF5C64),
+    dangerText = Color(0xFFFF878E),
+    primaryFill = HeroStart,
     onPrimary = Color(0xFFFFFFFF),
     shadow = Color(0xFF000000),
     isDark = true,
 )
-
-/** The deepened brand pair behind [SadoraColors.heroColors]; the same in both themes. */
-private val HeroStart = Color(0xFF6A4FF0)
-private val HeroEnd = Color(0xFFC93C88)
 
 val LocalSadoraColors = staticCompositionLocalOf { SadoraLightColors }

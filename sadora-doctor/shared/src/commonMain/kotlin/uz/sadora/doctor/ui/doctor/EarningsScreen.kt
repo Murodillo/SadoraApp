@@ -76,7 +76,7 @@ fun EarningsScreen(
                     MoneyLine(w.commissionLine, earnings.commissionMinor)
                     MoneyLine(w.net, earnings.netMinor, strong = true)
                     MoneyLine(w.paidOut, earnings.paidOutMinor)
-                    if (earnings.refundDueMinor > 0) MoneyLine(w.refundDue, earnings.refundDueMinor, tint = c.danger)
+                    if (earnings.refundDueMinor > 0) MoneyLine(w.refundDue, earnings.refundDueMinor, tint = c.dangerText)
                     Text(w.earningsNote, style = Sadora.type.caption.copy(letterSpacing = TextUnit.Unspecified), color = c.muted2)
                 }
             }
@@ -150,8 +150,8 @@ internal fun PaymentChip(payment: ConsultationPayment, modifier: Modifier = Modi
     val c = Sadora.colors
     val tint = when (payment) {
         ConsultationPayment.PAID -> c.successText
-        ConsultationPayment.REFUND_DUE -> c.danger
-        ConsultationPayment.PENDING -> c.warning
+        ConsultationPayment.REFUND_DUE -> c.dangerText
+        ConsultationPayment.PENDING -> c.warningText
         ConsultationPayment.FREE, ConsultationPayment.REFUNDED -> c.muted2
     }
     TintChip(strings.work.payment(payment), tint, modifier)

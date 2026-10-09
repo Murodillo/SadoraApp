@@ -2,7 +2,11 @@ package uz.sadora.doctor.ui
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.material3.Text
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.runtime.Composable
 import uz.sadora.contract.UzbekPhone
 import uz.sadora.doctor.design.Sadora
@@ -33,9 +37,9 @@ fun SettingsSheet(
     val c = Sadora.colors
     val t = strings.settings
     SadoraBottomSheet(visible = visible, title = t.title, onDismiss = onDismiss) {
-        Text(t.language.uppercase(), style = Sadora.type.caption, color = c.muted)
+        Text(t.language.uppercase(), style = Sadora.type.caption, color = c.muted, modifier = Modifier.semantics { heading() })
         LanguageOptions(current = language, onSelect = onLanguage)
-        Text(t.account.uppercase(), style = Sadora.type.caption, color = c.muted)
+        Text(t.account.uppercase(), style = Sadora.type.caption, color = c.muted, modifier = Modifier.semantics { heading() })
         phone?.let {
             Text(t.signedInAs("+${UzbekPhone.COUNTRY_CODE} ${UzbekPhone.format(it)}"), style = Sadora.type.body, color = c.text)
         }
@@ -60,12 +64,13 @@ fun LanguageSheet(
 @Composable
 private fun LanguageOptions(current: AppLanguage, onSelect: (AppLanguage) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-        ChipFlowRow {
+        ChipFlowRow(Modifier.selectableGroup()) {
             AppLanguage.entries.forEach { language ->
                 SelectChip(
                     label = stringsFor(language).languageName,
                     selected = language == current,
                     onClick = { onSelect(language) },
+                    single = true,
                 )
             }
         }

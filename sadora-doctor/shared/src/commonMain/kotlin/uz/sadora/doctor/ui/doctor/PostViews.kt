@@ -140,7 +140,15 @@ internal fun PostCard(
             enter = fadeIn(tween(Motion.Standard)) + expandVertically(tween(Motion.Standard, easing = Motion.Emphasized)),
             exit = fadeOut(tween(Motion.Quick)) + shrinkVertically(tween(Motion.Quick)),
         ) {
-            DoctorAnsweredChip(post.doctorAnswers, Modifier.noRippleClickable(onClick = onOpen ?: {}))
+            // A tap target only where there is a page to open; elsewhere it is a label.
+            Box(
+                if (onOpen != null) {
+                    Modifier.defaultMinSize(minHeight = MinTouchTarget).noRippleClickable(onClick = onOpen)
+                } else {
+                    Modifier
+                },
+                contentAlignment = Alignment.CenterStart,
+            ) { DoctorAnsweredChip(post.doctorAnswers) }
         }
         Row(
             Modifier.fillMaxWidth().padding(top = Spacing.xxs),
@@ -383,7 +391,7 @@ internal fun FieldNote(text: String, modifier: Modifier = Modifier, warn: Boolea
     Text(
         text,
         style = Sadora.type.caption.copy(letterSpacing = TextUnit.Unspecified),
-        color = if (warn) c.danger else c.muted2,
+        color = if (warn) c.dangerText else c.muted2,
         modifier = modifier.defaultMinSize(minHeight = 16.dp),
     )
 }

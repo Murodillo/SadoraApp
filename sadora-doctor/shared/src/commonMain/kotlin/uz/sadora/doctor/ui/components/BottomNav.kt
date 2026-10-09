@@ -26,6 +26,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
+import uz.sadora.doctor.i18n.strings
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
@@ -154,6 +157,7 @@ private fun <T> NavItem(
     val c = Sadora.colors
     val labelColor by animateColorAsState(if (selected) c.textAccent else c.muted2, label = "tab-label")
 
+    val unread = strings.common.unread
     Box(
         // One element per tab: "Xabarlar, tab, selected", not an icon and a word.
         modifier.noRippleSelectable(selected, role = Role.Tab, onClick = onClick),
@@ -177,7 +181,10 @@ private fun <T> NavItem(
                             .background(c.surface)
                             .padding(1.5.dp)
                             .clip(Radius.chip)
-                            .background(c.danger),
+                            .background(c.danger)
+                            // The dot is colour alone; its words merge into the tab's
+                            // own: "Xabarlar, new messages, tab, selected".
+                            .semantics { contentDescription = unread },
                     )
                 }
             }

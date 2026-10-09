@@ -162,7 +162,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.recordSections(record
             RecordSection(t.pregnancyTitle, Res.drawable.ic3d_pregnancy) {
                 Facts(facts)
                 if (pregnancy.lessMovementDays.isNotEmpty()) {
-                    Text(t.lessMovement(pregnancy.lessMovementDays.size), style = Sadora.type.body, color = Sadora.colors.danger)
+                    Text(t.lessMovement(pregnancy.lessMovementDays.size), style = Sadora.type.body, color = Sadora.colors.dangerText)
                 }
             }
         }
@@ -327,7 +327,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.stageSections(r: Shar
             val t = strings.tabs
             RecordSection(t.kicksTitle, Res.drawable.ic3d_heart, subtitle = t.lastDays(SharedStageRecords.KICK_DAYS)) {
                 Facts(r.kickCounts.map { moment(it.at) to t.kicksResult(it.kicks, minutesSeconds(it.durationSeconds)) })
-                if (r.kickCounts.any { it.isSlow }) Text(t.kicksSlow, style = Sadora.type.body, color = Sadora.colors.danger)
+                if (r.kickCounts.any { it.isSlow }) Text(t.kicksSlow, style = Sadora.type.body, color = Sadora.colors.dangerText)
             }
         }
     }
@@ -365,14 +365,14 @@ private fun androidx.compose.foundation.lazy.LazyListScope.stageSections(r: Shar
             val t = strings.tabs
             val c = Sadora.colors
             RecordSection(t.epdsTitle, Res.drawable.ic3d_health) {
-                if (r.moodScreens.any { it.selfHarm }) Text(t.epdsSelfHarm, style = Sadora.type.body, color = c.danger)
+                if (r.moodScreens.any { it.selfHarm }) Text(t.epdsSelfHarm, style = Sadora.type.body, color = c.dangerText)
                 r.moodScreens.forEach { screen ->
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                         Text(fullDate(screen.takenOn), style = Sadora.type.body, color = c.muted)
                         Text(
                             t.epdsResult(screen.score),
                             style = Sadora.type.body,
-                            color = if (screen.score >= Epds.LIKELY || screen.selfHarm) c.danger else c.text,
+                            color = if (screen.score >= Epds.LIKELY || screen.selfHarm) c.dangerText else c.text,
                         )
                     }
                 }

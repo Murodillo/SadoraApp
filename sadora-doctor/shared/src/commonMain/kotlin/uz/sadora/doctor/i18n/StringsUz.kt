@@ -15,6 +15,12 @@ object StringsUz : Strings {
         override val cancel = "Bekor qilish"
         override val saving = "Saqlanmoqda…"
         override val send = "Yuborish"
+        override val close = "Yopish"
+        override val unread = "Yangi xabarlar bor"
+        override val expanded = "Ochilgan"
+        override val collapsed = "Yopilgan"
+        override fun rated(stars: Int, of: Int) = "Baho: $of dan $stars"
+        override val errorPrefix = "Xato"
     }
 
     override val auth = object : AuthStrings {

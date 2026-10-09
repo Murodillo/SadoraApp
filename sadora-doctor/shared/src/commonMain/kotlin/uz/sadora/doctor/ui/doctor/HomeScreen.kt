@@ -325,7 +325,7 @@ private fun ConsultationStatsCard(work: WorkController) {
         }
         FigureLine(w.openNow, stats.openNow.toString())
         FigureLine(w.avgReply, stats.avgFirstReplyMinutes?.let(w::duration) ?: w.noValue)
-        FigureLine(w.unanswered, stats.unansweredTotal.toString(), tint = if (stats.unansweredTotal > 0) c.danger else null)
+        FigureLine(w.unanswered, stats.unansweredTotal.toString(), tint = if (stats.unansweredTotal > 0) c.dangerText else null)
         FigureLine(
             w.rating,
             stats.rating?.let { "★ " + w.ratingValue(it.toString(), stats.ratingCount) } ?: w.noRating,

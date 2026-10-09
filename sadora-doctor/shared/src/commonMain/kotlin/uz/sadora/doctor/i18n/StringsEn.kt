@@ -14,6 +14,12 @@ object StringsEn : Strings {
         override val cancel = "Cancel"
         override val saving = "Saving…"
         override val send = "Send"
+        override val close = "Close"
+        override val unread = "New messages"
+        override val expanded = "Expanded"
+        override val collapsed = "Collapsed"
+        override fun rated(stars: Int, of: Int) = "Rated $stars of $of"
+        override val errorPrefix = "Error"
     }
 
     override val auth = object : AuthStrings {

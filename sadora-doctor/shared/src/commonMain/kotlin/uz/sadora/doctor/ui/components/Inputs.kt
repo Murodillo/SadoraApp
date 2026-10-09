@@ -3,6 +3,10 @@ package uz.sadora.doctor.ui.components
 import uz.sadora.doctor.i18n.strings
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.error
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -97,12 +101,22 @@ fun SadoraTextField(
     val borderColor = when {
         error != null -> c.danger
         focused -> c.primary
-        else -> c.line
+        else -> c.lineStrong
     }
+    // The field is one element for a screen reader: its name is the label (or the
+    // placeholder where there is no label), and the label and placeholder texts drawn
+    // around it are hidden so they are not read a second time as loose text.
+    val name = label ?: placeholder
+    val errorPrefix = strings.common.errorPrefix
 
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
         if (label != null) {
-            Text(label.uppercase(), style = Sadora.type.caption, color = c.muted)
+            Text(
+                label.uppercase(),
+                style = Sadora.type.caption,
+                color = c.muted,
+                modifier = Modifier.clearAndSetSemantics {},
+            )
         }
         Box(
             Modifier
@@ -131,7 +145,12 @@ fun SadoraTextField(
                 }
                 Box(Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
                     if (value.isEmpty()) {
-                        Text(placeholder, style = Sadora.type.h3, color = c.muted2)
+                        Text(
+                            placeholder,
+                            style = Sadora.type.h3,
+                            color = c.muted2,
+                            modifier = Modifier.clearAndSetSemantics {},
+                        )
                     }
                     BasicTextField(
                         value = value,
@@ -151,7 +170,10 @@ fun SadoraTextField(
                             imeAction = imeAction,
                         ),
                         keyboardActions = keyboardActions,
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth().semantics {
+                            if (name.isNotEmpty()) contentDescription = name
+                            if (error != null) error(error)
+                        },
                     )
                 }
                 if (suffix != null) Text(suffix, style = Sadora.type.body, color = c.muted)
@@ -159,7 +181,16 @@ fun SadoraTextField(
             }
         }
         if (error != null) {
-            Text(error, style = Sadora.type.body, color = c.danger)
+            Text(
+                error,
+                style = Sadora.type.body,
+                color = c.dangerText,
+                // Read out when it appears; the field itself also carries it as its error.
+                modifier = Modifier.semantics {
+                    liveRegion = LiveRegionMode.Polite
+                    contentDescription = "$errorPrefix: $error"
+                },
+            )
         }
     }
 }
@@ -177,10 +208,18 @@ fun OtpInput(
 ) {
     val c = Sadora.colors
     val description = strings.auth.otpEntered(code.length, length)
+    val wrongCode = strings.errors.otpInvalid
     // One element for the reader: six separate one-digit texts said nothing about how
     // far along she was, and read out the code a digit at a time.
     Row(
-        modifier = modifier.fillMaxWidth().clearAndSetSemantics { contentDescription = description },
+        // A wrong code was only a red border; it is said in words as the row's error.
+        modifier = modifier.fillMaxWidth().clearAndSetSemantics {
+            contentDescription = description
+            if (isError) {
+                error(wrongCode)
+                liveRegion = LiveRegionMode.Polite
+            }
+        },
         horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
     ) {
         repeat(length) { index ->
@@ -190,7 +229,7 @@ fun OtpInput(
                 isError -> c.danger
                 char.isNotEmpty() -> c.primary
                 active -> c.secondary
-                else -> c.line
+                else -> c.lineStrong
             }
             Box(
                 Modifier

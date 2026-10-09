@@ -52,6 +52,18 @@ interface CommonStrings {
     val cancel: String
     val saving: String
     val send: String
+
+    // What a screen reader hears where the screen shows it only by colour or shape.
+    /** The label of a tap outside a dialog or sheet, and of a viewer's close. */
+    val close: String
+    /** State of a tab or row with the unread dot. */
+    val unread: String
+    val expanded: String
+    val collapsed: String
+    /** "Rated 4 of 5" — the stars. */
+    fun rated(stars: Int, of: Int): String
+    /** Said before a field's error, so the reason is never colour alone. */
+    val errorPrefix: String
 }
 
 /** The sign-in screen: the number, then the code. */

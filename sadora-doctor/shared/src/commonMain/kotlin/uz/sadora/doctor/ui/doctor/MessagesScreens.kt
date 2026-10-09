@@ -44,6 +44,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import uz.sadora.doctor.ui.components.LocalReduceMotion
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.layout.ContentScale
@@ -223,7 +224,7 @@ private fun previewOf(chat: Conversation): String {
 private fun CountPill(text: String) {
     val c = Sadora.colors
     Box(
-        Modifier.clip(Radius.chip).background(c.primary).padding(horizontal = Spacing.xs, vertical = 2.dp),
+        Modifier.clip(Radius.chip).background(c.primaryFill).padding(horizontal = Spacing.xs, vertical = 2.dp),
         contentAlignment = Alignment.Center,
     ) {
         Text(text, style = Sadora.type.caption.copy(letterSpacing = TextUnit.Unspecified), color = c.onPrimary)
@@ -269,7 +270,7 @@ private fun ConsultationChips(window: Consultation) {
         ConsultationPayment.REFUND_DUE -> PaymentChip(ConsultationPayment.REFUND_DUE)
         else -> Unit
     }
-    if (window.open && !window.answered) TintChip(w.awaitingReply, c.warning)
+    if (window.open && !window.answered) TintChip(w.awaitingReply, c.warningText)
 }
 
 // ---------------------------------------------------------------- one consultation
@@ -720,7 +721,7 @@ private fun MessageBubble(
             Modifier
                 .widthIn(max = 290.dp)
                 .clip(Radius.card)
-                .background(if (mine) c.primary else c.surface)
+                .background(if (mine) c.primaryFill else c.surface)
                 .padding(if (message.kind == MessageKind.IMAGE) Spacing.xxs else Spacing.sm),
             verticalArrangement = Arrangement.spacedBy(Spacing.xxs),
         ) {
@@ -736,7 +737,7 @@ private fun MessageBubble(
                         Icon(SadoraIcons.Document, contentDescription = null, Modifier.size(IconSize.lg), tint = fg)
                         Text(t.recordCardTitle, style = Sadora.type.h3, color = fg)
                     }
-                    Text(t.recordCardBody, style = Sadora.type.body, color = fg.copy(alpha = 0.85f))
+                    Text(t.recordCardBody, style = Sadora.type.body, color = fg)
                     PillButton(t.viewRecord, onClick = onOpenRecord)
                 }
                 // A prescription whose structured copy is missing reads as its text.
@@ -750,7 +751,7 @@ private fun MessageBubble(
                 Text(
                     clock(message.createdAt),
                     style = Sadora.type.caption.copy(letterSpacing = TextUnit.Unspecified),
-                    color = if (mine) c.onPrimary.copy(alpha = 0.75f) else c.muted2,
+                    color = if (mine) c.onPrimary else c.muted2,
                 )
                 if (mine) ReadTicks(read = message.read, onPrimary = true)
             }
@@ -793,7 +794,7 @@ private fun ReadTicks(read: Boolean, onPrimary: Boolean = false) {
     val c = Sadora.colors
     val label = if (read) strings.tabs.read else strings.tabs.sent
     val tint = when {
-        onPrimary -> c.onPrimary.copy(alpha = if (read) 1f else 0.7f)
+        onPrimary -> c.onPrimary
         read -> c.primary
         else -> c.muted2
     }
@@ -831,7 +832,7 @@ private fun PhotoViewer(message: DirectMessage, conversationId: String, doctors:
         Modifier
             .fillMaxSize()
             .background(androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.92f))
-            .noRippleClickable(onClick = onDismiss)
+            .noRippleClickable(onClickLabel = strings.common.close, onClick = onDismiss)
             .statusBarsPadding()
             .navigationBarsPadding(),
         contentAlignment = Alignment.Center,
@@ -849,7 +850,13 @@ private fun SystemBackHandlerFor(onBack: () -> Unit) =
 private fun TypingRow() {
     val c = Sadora.colors
     var phase by remember { mutableStateOf(0) }
-    LaunchedEffect(Unit) {
+    // The dots stop taking turns when the phone asks for less motion; the word stays.
+    val still = LocalReduceMotion.current
+    LaunchedEffect(still) {
+        if (still) {
+            phase = 0
+            return@LaunchedEffect
+        }
         while (true) {
             delay(380)
             phase = (phase + 1) % 3

@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -16,6 +17,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
@@ -27,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.painterResource
 import uz.sadora.doctor.design.IconSize
+import uz.sadora.doctor.design.MinTouchTarget
 import uz.sadora.doctor.design.Radius
 import uz.sadora.doctor.design.Sadora
 import uz.sadora.doctor.design.Spacing
@@ -80,15 +84,22 @@ fun SectionHeader(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        Text(title, style = Sadora.type.h2, color = c.text)
+        Text(title, style = Sadora.type.h2, color = c.text, modifier = Modifier.semantics { heading() })
         when {
             trailing != null -> trailing()
-            action != null -> Text(
-                action,
-                style = Sadora.type.body.copy(fontWeight = FontWeight.SemiBold),
-                color = c.textAccent,
-                modifier = Modifier.noRippleClickable { onAction?.invoke() },
-            )
+            action != null -> Box(
+                // The word alone was ~20dp tall; the tap target is the full 44dp.
+                Modifier
+                    .defaultMinSize(minWidth = MinTouchTarget, minHeight = MinTouchTarget)
+                    .noRippleClickable(enabled = onAction != null) { onAction?.invoke() },
+                contentAlignment = Alignment.CenterEnd,
+            ) {
+                Text(
+                    action,
+                    style = Sadora.type.body.copy(fontWeight = FontWeight.SemiBold),
+                    color = c.textAccent,
+                )
+            }
         }
     }
 }

@@ -215,14 +215,18 @@ fun QuestionScaffold(
         ) {
             // The chevron holds its slot even on the first page, so the progress bar
             // does not shift sideways between questions.
-            Box(Modifier.size(MinTouchTarget), contentAlignment = Alignment.Center) {
+            // The whole 44dp slot takes the tap, not just the 28dp glyph.
+            Box(
+                Modifier
+                    .size(MinTouchTarget)
+                    .then(if (onBack != null) Modifier.noRippleClickable(onClick = onBack) else Modifier),
+                contentAlignment = Alignment.Center,
+            ) {
                 if (onBack != null) {
                     Icon(
                         SadoraIcons.ChevronLeft,
                         contentDescription = strings.common.back,
-                        Modifier
-                            .size(IconSize.lg)
-                            .noRippleClickable(onClick = onBack),
+                        Modifier.size(IconSize.lg),
                         tint = c.text,
                     )
                 }

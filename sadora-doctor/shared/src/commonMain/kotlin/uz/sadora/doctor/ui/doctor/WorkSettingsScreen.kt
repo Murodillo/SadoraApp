@@ -200,7 +200,7 @@ private fun HoursCard(week: List<DayHours>, timezone: String, onChange: (DayHour
         Text(w.hoursTitle, style = Sadora.type.h3, color = c.text)
         Text(w.hoursNote, style = Sadora.type.body, color = c.muted)
         week.forEach { day -> DayRow(day, onChange) }
-        if (!week.allValid()) Text(w.hoursInvalid, style = Sadora.type.body, color = c.danger)
+        if (!week.allValid()) Text(w.hoursInvalid, style = Sadora.type.body, color = c.dangerText)
         Text(w.timezone(timezone), style = Sadora.type.caption.copy(letterSpacing = TextUnit.Unspecified), color = c.muted2)
     }
 }

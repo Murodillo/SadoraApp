@@ -44,6 +44,9 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -196,7 +199,14 @@ fun PrescriptionWriterScreen(
             verticalArrangement = Arrangement.spacedBy(Spacing.xs),
         ) {
             calls.error?.let { ErrorStrip(it.readable()) }
-            if (tried && !draft.ready) Text(p.missing, style = Sadora.type.body, color = c.danger)
+            if (tried && !draft.ready) {
+                Text(
+                    p.missing,
+                    style = Sadora.type.body,
+                    color = c.dangerText,
+                    modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+                )
+            }
             SadoraButton(
                 if (sending) p.sending else p.send,
                 enabled = !sending,
@@ -243,13 +253,16 @@ private fun ItemCard(
     val required = p.required
     val ready = item.problems().isEmpty()
     val turn by animateFloatAsState(if (expanded) 90f else 0f, label = "chevron")
+    val expandedText = strings.common.expanded
+    val collapsedText = strings.common.collapsed
 
     SadoraCard(modifier, verticalGap = Spacing.sm) {
         Row(
             Modifier
                 .fillMaxWidth()
-                .noRippleClickable(role = Role.Button, onClick = onToggle)
-                .semantics { stateDescription = if (expanded) p.collapse else p.expand },
+                // The state is what it is (open / folded); the action word is the click's label.
+                .noRippleClickable(role = Role.Button, onClickLabel = if (expanded) p.collapse else p.expand, onClick = onToggle)
+                .semantics { stateDescription = if (expanded) expandedText else collapsedText },
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
         ) {
@@ -260,7 +273,7 @@ private fun ItemCard(
                         .align(Alignment.TopEnd)
                         .offset(x = 4.dp, y = (-4).dp)
                         .size(20.dp)
-                        .clayBeadSurface(c, c.primary, elevation = 2.dp),
+                        .clayBeadSurface(c, c.primaryFill, elevation = 2.dp),
                     contentAlignment = Alignment.Center,
                 ) {
                     Text("$number", style = Sadora.type.caption.copy(letterSpacing = TextUnit.Unspecified), color = c.onPrimary)
@@ -277,7 +290,7 @@ private fun ItemCard(
                 Text(
                     if (ready) p.summary(item.toItem(p.defaultUnit(item.form))) else if (item.name.isBlank()) p.unnamed else p.notFilled,
                     style = Sadora.type.caption.copy(letterSpacing = TextUnit.Unspecified),
-                    color = if (ready) c.muted else if (showProblems) c.danger else c.muted2,
+                    color = if (ready) c.muted else if (showProblems) c.dangerText else c.muted2,
                     maxLines = if (expanded) 1 else 2,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -327,9 +340,9 @@ private fun ItemFields(
         )
 
         Label(p.formLabel)
-        ChipFlowRow {
+        ChipFlowRow(Modifier.selectableGroup()) {
             PrescriptionForm.entries.forEach { form ->
-                SelectChip(p.form(form), selected = item.form == form, onClick = { onChange { it.copy(form = form) } })
+                SelectChip(p.form(form), selected = item.form == form, onClick = { onChange { it.copy(form = form) } }, single = true)
             }
         }
 
@@ -351,9 +364,9 @@ private fun ItemFields(
         }
 
         Label(p.when_, Res.drawable.ic3d_clock)
-        ChipFlowRow {
+        ChipFlowRow(Modifier.selectableGroup()) {
             (1..4).forEach { count ->
-                SelectChip(p.timesPerDay(count), selected = item.timesPerDay == count, onClick = { onChange { it.withTimesPerDay(count) } })
+                SelectChip(p.timesPerDay(count), selected = item.timesPerDay == count, onClick = { onChange { it.withTimesPerDay(count) } }, single = true)
             }
         }
         item.minutes.forEachIndexed { index, minute ->
@@ -363,20 +376,20 @@ private fun ItemFields(
                 onLater = { onChange { it.stepTime(index, 1) } },
             )
         }
-        ChipFlowRow {
-            SelectChip(p.everyDay, selected = item.everyDays == null, onClick = { onChange { it.copy(everyDays = null) } })
+        ChipFlowRow(Modifier.selectableGroup()) {
+            SelectChip(p.everyDay, selected = item.everyDays == null, onClick = { onChange { it.copy(everyDays = null) } }, single = true)
             listOf(2, 3, 7).forEach { every ->
-                SelectChip(p.everyDays(every), selected = item.everyDays == every, onClick = { onChange { it.copy(everyDays = every) } })
+                SelectChip(p.everyDays(every), selected = item.everyDays == every, onClick = { onChange { it.copy(everyDays = every) } }, single = true)
             }
         }
 
         Label(p.food)
-        ChipFlowRow {
+        ChipFlowRow(Modifier.selectableGroup()) {
             listOf(FoodRelation.BEFORE, FoodRelation.WITH, FoodRelation.AFTER, FoodRelation.ANY).forEach { relation ->
-                SelectChip(p.food(relation), selected = item.food == relation, onClick = { onChange { it.copy(food = relation) } })
+                SelectChip(p.food(relation), selected = item.food == relation, onClick = { onChange { it.copy(food = relation) } }, single = true)
             }
         }
-        if (ItemProblem.Food in problems) Text(required, style = Sadora.type.caption, color = c.danger)
+        if (ItemProblem.Food in problems) Text(required, style = Sadora.type.caption, color = c.dangerText)
 
         Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs), verticalAlignment = Alignment.Bottom) {
             SadoraTextField(
@@ -489,7 +502,7 @@ fun PrescriptionCard(
         }
         when {
             cancelled -> {
-                Text(p.cancelled, style = Sadora.type.h3, color = c.danger)
+                Text(p.cancelled, style = Sadora.type.h3, color = c.dangerText)
                 prescription.cancelReason?.let { Text(p.cancelReason(it), style = Sadora.type.body, color = c.muted) }
             }
             else -> Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
@@ -499,7 +512,7 @@ fun PrescriptionCard(
                 Text(
                     if (prescription.addedAt != null) p.added else p.notAdded,
                     style = Sadora.type.caption.copy(letterSpacing = TextUnit.Unspecified),
-                    color = if (prescription.addedAt != null) c.success else c.muted2,
+                    color = if (prescription.addedAt != null) c.successText else c.muted2,
                     modifier = Modifier.weight(1f),
                 )
                 onCancel?.let { PillButton(p.cancel, onClick = it) }

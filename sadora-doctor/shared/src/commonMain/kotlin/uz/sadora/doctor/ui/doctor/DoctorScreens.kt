@@ -350,11 +350,11 @@ fun DoctorPanelScreen(
                             // The application went in: the same tick that marks a sent answer.
                             leading = { SuccessCheck(size = 44.dp) },
                         )
-                        is PanelState.Rejected -> StatusCard(title = d.rejectedTitle, body = null, note = state.note, tint = c.danger) {
+                        is PanelState.Rejected -> StatusCard(title = d.rejectedTitle, body = null, note = state.note, tint = c.dangerText) {
                             SadoraButton(d.reapply, onClick = onApply)
                         }
                         is PanelState.Suspended ->
-                            StatusCard(title = d.suspendedTitle, body = d.suspendedBody, note = state.note, tint = c.danger)
+                            StatusCard(title = d.suspendedTitle, body = d.suspendedBody, note = state.note, tint = c.dangerText)
                         is PanelState.Approved -> ApprovedCard(
                             state.account,
                             onOpenPage = { state.account.profileId?.let(onOpenPage) },

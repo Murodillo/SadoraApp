@@ -15,6 +15,9 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.wrapContentSize
+import uz.sadora.doctor.design.MinTouchTarget
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -102,7 +105,8 @@ fun BadgeUnlockOverlay(
             Modifier
                 .fillMaxSize()
                 .background(Color.Black.copy(alpha = 0.8f))
-                .noRippleClickable { },
+                // Blocks taps to the screen behind without becoming one big node.
+                .swallowTaps(),
             contentAlignment = Alignment.Center,
         ) {
             // Keyed on the tier, so the next badge in the queue is struck from the start.
@@ -284,7 +288,12 @@ private fun UnlockCard(
                     t.skipAll,
                     style = Sadora.type.body.copy(fontWeight = FontWeight.SemiBold),
                     color = Color.White,
-                    modifier = Modifier.clip(Radius.chip).pressable(onClick = onSkipAll).padding(horizontal = Spacing.xs, vertical = 4.dp),
+                    modifier = Modifier
+                        .defaultMinSize(minWidth = MinTouchTarget, minHeight = MinTouchTarget)
+                        .clip(Radius.chip)
+                        .pressable(onClick = onSkipAll)
+                        .wrapContentSize()
+                        .padding(horizontal = Spacing.xs, vertical = 4.dp),
                 )
             }
         }

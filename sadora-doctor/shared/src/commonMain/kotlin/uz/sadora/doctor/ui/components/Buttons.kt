@@ -68,7 +68,7 @@ fun SadoraButton(
         ButtonTone.Secondary -> c.text
         ButtonTone.Outline -> c.textAccent
         ButtonTone.Ghost -> c.muted
-        ButtonTone.Destructive -> c.danger
+        ButtonTone.Destructive -> c.dangerText
     }
     // Pressed, a clay button sinks: it drops a little and its shadow tightens under it.
     val sink by animateFloatAsState(if (pressed && enabled) 1f else 0f, label = "button-sink")
@@ -91,10 +91,10 @@ fun SadoraButton(
                     ButtonTone.Secondary -> Modifier.claySurface(c, Radius.field, c.surface2, elevation = 6.dp - 4.dp * sink, streak = true)
                     ButtonTone.Outline -> Modifier
                         .claySurface(c, Radius.field, c.surface, elevation = 6.dp - 4.dp * sink)
-                        .border(1.5.dp, c.primary.copy(alpha = 0.55f), Radius.field)
+                        .border(1.5.dp, c.textAccent, Radius.field)
                     ButtonTone.Destructive -> Modifier
                         .claySurface(c, Radius.field, c.surface, elevation = 4.dp - 3.dp * sink)
-                        .border(1.dp, c.danger.copy(alpha = 0.5f), Radius.field)
+                        .border(1.dp, c.dangerText, Radius.field)
                     ButtonTone.Ghost -> Modifier.clip(Radius.field)
                 },
             )
@@ -136,7 +136,7 @@ fun PillButton(
     enabled: Boolean = true,
 ) {
     val c = Sadora.colors
-    val bg = if (tone == ButtonTone.Primary) c.primary else c.surface2
+    val bg = if (tone == ButtonTone.Primary) c.primaryFill else c.surface2
     val fg = if (tone == ButtonTone.Primary) c.onPrimary else c.text
     Box(
         modifier = modifier

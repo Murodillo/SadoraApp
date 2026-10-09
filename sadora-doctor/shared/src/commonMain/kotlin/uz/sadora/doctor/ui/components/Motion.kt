@@ -72,7 +72,9 @@ object Motion {
 fun Modifier.pressable(
     enabled: Boolean = true,
     pressedScale: Float = 0.975f,
-    role: Role? = null,
+    /** A button unless said otherwise, as [noRippleClickable]. */
+    role: Role? = Role.Button,
+    onClickLabel: String? = null,
     onClick: () -> Unit,
 ): Modifier = composed {
     val source = remember { MutableInteractionSource() }
@@ -85,11 +87,12 @@ fun Modifier.pressable(
     graphicsLayer {
         scaleX = scale
         scaleY = scale
-    }.clickable(
+    }.focusRing(source).clickable(
         interactionSource = source,
         indication = null,
         enabled = enabled,
         role = role,
+        onClickLabel = onClickLabel,
         onClick = onClick,
     )
 }

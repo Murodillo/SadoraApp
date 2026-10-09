@@ -11,6 +11,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import uz.sadora.doctor.data.DoctorController
@@ -53,9 +54,9 @@ fun CommunityScreen(
         )
         ScreenContent(animateItems = true) {
             item(key = "filters") {
-                Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-                    SelectChip(t.filterAll, selected = !doctorsOnly, onClick = { scope.launch { doctors.loadFeed(doctorsOnly = false) } })
-                    SelectChip(t.filterDoctors, selected = doctorsOnly, onClick = { scope.launch { doctors.loadFeed(doctorsOnly = true) } })
+                Row(Modifier.selectableGroup(), horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                    SelectChip(t.filterAll, selected = !doctorsOnly, onClick = { scope.launch { doctors.loadFeed(doctorsOnly = false) } }, single = true)
+                    SelectChip(t.filterDoctors, selected = doctorsOnly, onClick = { scope.launch { doctors.loadFeed(doctorsOnly = true) } }, single = true)
                 }
             }
             doctors.feedCalls.error?.let { failure ->

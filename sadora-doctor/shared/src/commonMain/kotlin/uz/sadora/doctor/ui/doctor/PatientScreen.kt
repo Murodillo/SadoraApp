@@ -263,15 +263,16 @@ private fun SessionCard(session: ConsultationSession, onOpenRecord: (String) -> 
     }
 }
 
-/** "★★★★☆", read out as "4 / 5". */
+/** "★★★★☆", read out as "Rated 4 of 5". */
 @Composable
 internal fun Stars(rating: Int, modifier: Modifier = Modifier) {
     val c = Sadora.colors
     val filled = rating.coerceIn(0, 5)
+    val rated = strings.common.rated(filled, 5)
     Text(
         "★".repeat(filled) + "☆".repeat(5 - filled),
         style = Sadora.type.h3,
         color = c.warning,
-        modifier = modifier.semantics { contentDescription = "$filled / 5" },
+        modifier = modifier.semantics { contentDescription = rated },
     )
 }

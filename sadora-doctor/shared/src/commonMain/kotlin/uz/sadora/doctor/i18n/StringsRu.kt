@@ -14,6 +14,12 @@ object StringsRu : Strings {
         override val cancel = "Отмена"
         override val saving = "Сохраняем…"
         override val send = "Отправить"
+        override val close = "Закрыть"
+        override val unread = "Есть новые сообщения"
+        override val expanded = "Развёрнуто"
+        override val collapsed = "Свёрнуто"
+        override fun rated(stars: Int, of: Int) = "Оценка $stars из $of"
+        override val errorPrefix = "Ошибка"
     }
 
     override val auth = object : AuthStrings {

@@ -31,12 +31,17 @@ fun SelectChip(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     leading: String? = null,
+    /**
+     * One answer out of several (a language, a form, a timing): announced as a radio
+     * button, "selected", rather than a checkbox. Put `selectableGroup()` on the row.
+     */
+    single: Boolean = false,
 ) {
     val c = Sadora.colors
     val bg by animateColorAsState(
         if (selected) c.primary.copy(alpha = if (c.isDark) 0.22f else 0.12f) else c.surface,
     )
-    val border by animateColorAsState(if (selected) c.primary else c.line)
+    val border by animateColorAsState(if (selected) c.primary else c.lineStrong)
     val fg by animateColorAsState(if (selected) c.textAccent else c.text)
 
     Box(
@@ -45,7 +50,13 @@ fun SelectChip(
             .background(bg)
             .border(1.dp, border, Radius.chip)
             .defaultMinSize(minHeight = MinTouchTarget)
-            .noRippleToggleable(selected, role = Role.Checkbox) { onClick() }
+            .then(
+                if (single) {
+                    Modifier.noRippleSelectable(selected, role = Role.RadioButton, onClick = onClick)
+                } else {
+                    Modifier.noRippleToggleable(selected, role = Role.Checkbox) { onClick() }
+                },
+            )
             .padding(horizontal = 14.dp, vertical = Spacing.xs),
         contentAlignment = Alignment.Center,
     ) {
