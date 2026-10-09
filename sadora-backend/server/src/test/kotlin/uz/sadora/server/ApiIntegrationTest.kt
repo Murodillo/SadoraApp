@@ -103,6 +103,7 @@ import kotlinx.datetime.minus
 import kotlinx.datetime.plus
 import kotlinx.datetime.todayIn
 import kotlinx.datetime.toInstant
+import kotlinx.datetime.toLocalDateTime
 import uz.sadora.contract.StageBaseline
 import uz.sadora.contract.AuthSession
 import uz.sadora.contract.BillingCatalogue
@@ -1556,6 +1557,37 @@ class ApiIntegrationTest {
     }
 
     @Test
+    fun `a dose the last tick missed, and one just past midnight, are both reminded`() = api {
+        val her = signUp()
+        val userId = Uuid.parse(her.userId)
+        val zone = kotlinx.datetime.TimeZone.of(component.userRepository.findById(userId)!!.timezone)
+        val local = now().toLocalDateTime(zone)
+        // Ten minutes late (a slow tick, a restart) and three minutes ahead — either may sit
+        // on another day's schedule when the test runs near midnight.
+        val late = (now() - 10.minutes).toLocalDateTime(zone).time.let { kotlinx.datetime.LocalTime(it.hour, it.minute) }
+        val soon = (now() + 3.minutes).toLocalDateTime(zone).time.let { kotlinx.datetime.LocalTime(it.hour, it.minute) }
+        val id = component.medicationRepository.add(
+            userId,
+            uz.sadora.contract.SaveMedicationRequest(
+                name = "Test",
+                schedule = uz.sadora.contract.MedicationSchedule(times = listOf(late, soon)),
+            ),
+            startedOn = local.date.minus(2, kotlinx.datetime.DateTimeUnit.DAY),
+        )
+        dbQuery { exec("UPDATE medications SET created_at = now() - interval '2 days' WHERE id = '$id'") }
+
+        component.notificationScheduler.tick()
+
+        val queued = dbQuery {
+            exec("SELECT count(*) FROM notification_outbox WHERE user_id = '$userId' AND dedupe_key LIKE 'med:$id:%'") { rows ->
+                rows.next()
+                rows.getInt(1)
+            } ?: 0
+        }
+        assertEquals(2, queued, "the late dose and the coming one")
+    }
+
+    @Test
     fun `two extensions landing together both count`() = api {
         val her = Uuid.parse(signUp().userId)
         val repo = component.subscriptionRepository
@@ -1570,8 +1602,8 @@ class ApiIntegrationTest {
     fun `a payment granted once is not granted again on the provider's retry`() = api {
         val her = Uuid.parse(signUp().userId)
         val repo = component.subscriptionRepository
-        val first = repo.extend(her, SubscriptionSource.PAYME, 30.days, onceFor = "payment test-1")
-        val second = repo.extend(her, SubscriptionSource.PAYME, 30.days, onceFor = "payment test-1")
+        val first = repo.extend(her, SubscriptionSource.PAYME, 30.days, onceFor = "payment $her")
+        val second = repo.extend(her, SubscriptionSource.PAYME, 30.days, onceFor = "payment $her")
         assertEquals(first, second)
         val ends = component.entitlementService.subscriptionStatus(her).expiresAt!!
         assertTrue(ends < now() + 31.days, "one month: $ends")
@@ -1582,12 +1614,12 @@ class ApiIntegrationTest {
         val her = Uuid.parse(signUp().userId)
         val repo = component.subscriptionRepository
         repo.extend(her, SubscriptionSource.PAYME, 300.days, reason = "yearly, mostly left")
-        repo.grantStore(her, SubscriptionSource.APP_STORE, now() + 30.days, "premium_month", "tx-1", "store receipt")
+        repo.grantStore(her, SubscriptionSource.APP_STORE, now() + 30.days, "premium_month", "tx-${Uuid.random()}", "store receipt")
         val afterPurchase = component.entitlementService.subscriptionStatus(her).expiresAt!!
         assertTrue(afterPurchase > now() + 329.days, "a month on top of 300 days: $afterPurchase")
 
         // The store's own renewal says a month from now; what is running is longer and stays.
-        repo.grantStore(her, SubscriptionSource.APP_STORE, now() + 60.days, "premium_month", "tx-2", "store receipt")
+        repo.grantStore(her, SubscriptionSource.APP_STORE, now() + 60.days, "premium_month", "tx-${Uuid.random()}", "store receipt")
         val afterRenewal = component.entitlementService.subscriptionStatus(her).expiresAt!!
         assertTrue(afterRenewal >= afterPurchase, "a renewal never shortens: $afterRenewal < $afterPurchase")
     }
