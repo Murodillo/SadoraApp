@@ -436,10 +436,21 @@ export interface BillingPlan {
   googlePlayProductId?: string | null
 }
 
+/** A legendary pet's price row. */
+export interface AdminPetProduct {
+  pet: string
+  priceMinor: number
+  currency: string
+  appStoreProductId?: string | null
+  googlePlayProductId?: string | null
+  active: boolean
+}
+
 export interface AdminPayment {
   id: string
   userId: string
-  planId: string
+  /** Null for a consultation or a legendary pet. */
+  planId?: string | null
   provider: PaymentProvider
   amountMinor: number
   currency: string
@@ -451,9 +462,11 @@ export interface AdminPayment {
   payerId?: string | null
   /** A payment answering her request to pay. */
   gift?: boolean
-  /** A paid gift plan the panel can refund; its days go back with the money. */
+  /** A paid gift plan or legendary pet the panel can refund; what it bought goes back with the money. */
   refundable?: boolean
   refundedAt?: string | null
+  /** The legendary pet a one-off payment bought ("humo"). */
+  pet?: string | null
 }
 
 export interface BillingSummary {

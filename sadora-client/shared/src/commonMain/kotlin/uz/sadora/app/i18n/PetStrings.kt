@@ -32,6 +32,34 @@ interface PetStrings {
     fun chatIntro(name: String): String
     /** On the free plan's chat preview, under the sleeping pet. */
     fun chatAsleep(name: String): String
+
+    // ---- the legendary pet, sold once
+    /** The tag on its card. */
+    val legendary: String
+    /** On a pet she bought. */
+    val owned: String
+    fun buy(price: String): String
+    /** Under its name on the buy sheet: what she gets. */
+    val buyBody: String
+    /** Told before she pays, when she has no Premium: it would sleep. */
+    val needsPremium: String
+    /** The moments it acts out, shown on the buy sheet. */
+    fun moment(index: Int): String
+    val momentCount: Int
+    val askYaqinim: String
+    /** What a request to Yaqinim asks for. */
+    val requestWhat: String
+    val askBody: String
+    val paying: String
+    val payReopen: String
+    val storePending: String
+    val noProvider: String
+    val bought: String
+    /** After buying it without Premium: it sleeps until Premium. */
+    val boughtAsleep: String
+    /** Its one-off visit. */
+    val offer: String
+    val offerSee: String
 }
 
 object PetUz : PetStrings {
@@ -43,6 +71,7 @@ object PetUz : PetStrings {
         PetKind.LAYLO -> "Laylo"
         PetKind.ANORXON -> "Anorxon"
         PetKind.OHU -> "Ohu"
+        PetKind.HUMO -> "Humo"
     }
     override fun personality(pet: PetKind) = when (pet) {
         PetKind.NILUFAR -> "Lotus guli ruhi — xotirjam va dono"
@@ -50,6 +79,7 @@ object PetUz : PetStrings {
         PetKind.LAYLO -> "Laylakcha — opadek g'amxo'r"
         PetKind.ANORXON -> "Anorcha — quvnoq, sog'lom ovqat ishqibozi"
         PetKind.OHU -> "Ohu bolasi — uyatchan va nozik"
+        PetKind.HUMO -> "Afsonaviy baxt qushi — dono va ulug'vor"
     }
     override val choose = "Tanlash"
     override val chosen = "Tanlangan"
@@ -73,6 +103,25 @@ object PetUz : PetStrings {
     override fun chatIntro(name: String) = "Salom! Men $name — sizning shaxsiy yordamchingiz. " +
         "Sikl, ovqatlanish, uyqu yoki kayfiyat haqida so'rang, ma'lumotlaringizga qarab javob beraman."
     override fun chatAsleep(name: String) = "$name hozir uxlayapti. Premium bilan uyg'onib, savollaringizga javob beradi."
+    override val legendary = "Legendar"
+    override val owned = "Sizniki"
+    override fun buy(price: String) = "Sotib olish · $price"
+    override val buyBody = "Bir marta sotib olinadi va doim sizniki bo'ladi. O'n xil jonli harakat, oltin maslahat oynasi va o'z duolari bilan."
+    override val needsPremium = "Humo gapirishi uchun Premium kerak. Premium bo'lmasa, u boshqa hamrohlar kabi uxlab turadi."
+    private val moments = listOf("Uchib kelish", "Uchib ketish", "Salomlashish", "Quvonch", "O'ylash", "Uyqu", "Tasalli", "Bayram", "Suv va ovqat", "Pat tozalash")
+    override fun moment(index: Int) = moments[index]
+    override val momentCount = moments.size
+    override val askYaqinim = "Yaqinimdan so'rash"
+    override val requestWhat = "Humo — legendar AI hamroh"
+    override val askBody = "Yaqiningizdan Humo'ni sovg'a qilishni so'rang. To'lagach, u darhol sizniki bo'ladi."
+    override val paying = "To'lov kutilmoqda…"
+    override val payReopen = "To'lov sahifasini qayta ochish"
+    override val storePending = "To'lov tasdiqlanishi kutilmoqda — tushishi bilan Humo o'zi keladi."
+    override val noProvider = "Hozircha bu yerda to'lov usuli yo'q."
+    override val bought = "Humo endi sizniki! 💛"
+    override val boughtAsleep = "Humo sizniki, lekin hozir uxlayapti. Premium bilan uyg'onib, maslahat bera boshlaydi."
+    override val offer = "Salom! Men Humo — baxt qushi. Meni ham uyingizga olasizmi?"
+    override val offerSee = "Ko'rish"
 }
 
 object PetRu : PetStrings {
@@ -84,6 +133,7 @@ object PetRu : PetStrings {
         PetKind.LAYLO -> "Лайло"
         PetKind.ANORXON -> "Анорхон"
         PetKind.OHU -> "Оху"
+        PetKind.HUMO -> "Хумо"
     }
     override fun personality(pet: PetKind) = when (pet) {
         PetKind.NILUFAR -> "Дух лотоса — спокойная и мудрая"
@@ -91,6 +141,7 @@ object PetRu : PetStrings {
         PetKind.LAYLO -> "Аистёнок — заботливый, как старшая сестра"
         PetKind.ANORXON -> "Гранатик — весёлый фанат здоровой еды"
         PetKind.OHU -> "Оленёнок — застенчивый и нежный"
+        PetKind.HUMO -> "Легендарная птица счастья — мудрая и величественная"
     }
     override val choose = "Выбрать"
     override val chosen = "Выбран"
@@ -114,6 +165,25 @@ object PetRu : PetStrings {
     override fun chatIntro(name: String) = "Привет! Я $name — ваш личный помощник. " +
         "Спрашивайте о цикле, питании, сне или настроении — отвечу с учётом ваших данных."
     override fun chatAsleep(name: String) = "$name сейчас спит. С Premium проснётся и ответит на ваши вопросы."
+    override val legendary = "Легендарный"
+    override val owned = "Ваш"
+    override fun buy(price: String) = "Купить · $price"
+    override val buyBody = "Покупается один раз и остаётся вашим навсегда. Десять живых движений, золотое окно советов и свои благословения."
+    override val needsPremium = "Чтобы Хумо заговорил, нужен Premium. Без него он спит, как и другие компаньоны."
+    private val moments = listOf("Прилёт", "Отлёт", "Привет", "Радость", "Раздумье", "Сон", "Утешение", "Праздник", "Вода и еда", "Чистит перья")
+    override fun moment(index: Int) = moments[index]
+    override val momentCount = moments.size
+    override val askYaqinim = "Попросить близкого"
+    override val requestWhat = "Хумо — легендарный AI-компаньон"
+    override val askBody = "Попросите близкого подарить вам Хумо. Как только он оплатит, Хумо станет вашим."
+    override val paying = "Ждём оплату…"
+    override val payReopen = "Открыть страницу оплаты снова"
+    override val storePending = "Ждём подтверждения оплаты — как только она пройдёт, Хумо прилетит сам."
+    override val noProvider = "Здесь пока нет способа оплаты."
+    override val bought = "Хумо теперь ваш! 💛"
+    override val boughtAsleep = "Хумо ваш, но сейчас спит. С Premium он проснётся и начнёт помогать."
+    override val offer = "Привет! Я Хумо — птица счастья. Возьмёте меня к себе?"
+    override val offerSee = "Посмотреть"
 }
 
 object PetEn : PetStrings {
@@ -125,6 +195,7 @@ object PetEn : PetStrings {
         PetKind.LAYLO -> "Laylo"
         PetKind.ANORXON -> "Anorxon"
         PetKind.OHU -> "Ohu"
+        PetKind.HUMO -> "Humo"
     }
     override fun personality(pet: PetKind) = when (pet) {
         PetKind.NILUFAR -> "A lotus spirit — calm and wise"
@@ -132,6 +203,7 @@ object PetEn : PetStrings {
         PetKind.LAYLO -> "A baby stork — caring like a big sister"
         PetKind.ANORXON -> "A pomegranate — cheerful healthy-food fan"
         PetKind.OHU -> "A baby fawn — shy and gentle"
+        PetKind.HUMO -> "The legendary bird of happiness — wise and regal"
     }
     override val choose = "Choose"
     override val chosen = "Chosen"
@@ -155,4 +227,23 @@ object PetEn : PetStrings {
     override fun chatIntro(name: String) = "Hi! I'm $name, your personal assistant. " +
         "Ask me about your cycle, food, sleep or mood and I'll answer with your own data in mind."
     override fun chatAsleep(name: String) = "$name is asleep right now. With Premium it wakes up and answers your questions."
+    override val legendary = "Legendary"
+    override val owned = "Yours"
+    override fun buy(price: String) = "Buy · $price"
+    override val buyBody = "Bought once and yours for good. Ten living moves, a golden tip bubble and blessings of its own."
+    override val needsPremium = "Humo needs Premium to speak. Without it, it sleeps like the other companions."
+    private val moments = listOf("Flying in", "Flying off", "Hello", "Joy", "Thinking", "Sleep", "Comfort", "Celebration", "Water and food", "Preening")
+    override fun moment(index: Int) = moments[index]
+    override val momentCount = moments.size
+    override val askYaqinim = "Ask someone close"
+    override val requestWhat = "Humo — the legendary AI companion"
+    override val askBody = "Ask someone close to give you Humo. As soon as they pay, it's yours."
+    override val paying = "Waiting for the payment…"
+    override val payReopen = "Open the payment page again"
+    override val storePending = "Waiting for the payment to clear — Humo will fly in as soon as it does."
+    override val noProvider = "There's no way to pay here yet."
+    override val bought = "Humo is yours! 💛"
+    override val boughtAsleep = "Humo is yours, but asleep for now. With Premium it wakes up and starts helping."
+    override val offer = "Hello! I'm Humo, the bird of happiness. Will you take me home?"
+    override val offerSee = "Take a look"
 }

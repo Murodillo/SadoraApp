@@ -17,6 +17,7 @@ import uz.sadora.server.billing.billingRoutes
 import uz.sadora.server.billing.clickWebhook
 import uz.sadora.server.billing.paymeWebhook
 import uz.sadora.server.ai.aiRoutes
+import uz.sadora.server.pet.adminPetRoutes
 import uz.sadora.server.pet.petRoutes
 import uz.sadora.server.rewards.adminRewardsRoutes
 import uz.sadora.server.rewards.rewardsRoutes
@@ -173,7 +174,7 @@ fun Application.apiModule(component: AppComponent) {
             adminPhotoRoutes(component.photoService)
             adminDoctorRoutes(component.doctorService)
             aiRoutes(component.aiService, component.greetingService)
-            petRoutes(component.petService)
+            petRoutes(component.petService, component.petShopService)
             rewardsRoutes(component.rewardsService, component.shopService, component.homeLayoutRepository)
             adminRewardsRoutes(component.rewardsService, component.shopService, component.auditService)
             adminAiRoutes(component.aiService, component.adminService)
@@ -183,7 +184,8 @@ fun Application.apiModule(component: AppComponent) {
             billingRoutes(component.billingService, component.storePurchaseService)
             adminBillingRoutes(component.billingService, component.billingRepository)
             paymentRequestRoutes(component.paymentRequestService)
-            adminPaymentRequestRoutes(component.paymentRequestService)
+            adminPaymentRequestRoutes(component.paymentRequestService, component.petShopService)
+            adminPetRoutes(component.petShopService)
             // The providers' own protocols; not behind the app's auth or its error envelope.
             paymeWebhook(component.paymeGateway, component.billingRepository)
             clickWebhook(component.clickGateway, component.billingRepository)

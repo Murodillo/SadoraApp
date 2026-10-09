@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useBillingPlans, useBillingSummary, usePayments, useRefundGift } from '../api/hooks'
-import type { PaymentProvider, PaymentState } from '../api/types'
+import { useBillingPlans, useBillingSummary, usePayments, usePetProducts, useRefundGift, useUpdatePetProduct } from '../api/hooks'
+import type { AdminPetProduct, PaymentProvider, PaymentState } from '../api/types'
 import { Card, Empty, ErrorNotice, formatDateTime, Loading, Stat } from '../components/ui'
 
 const providerLabels: Record<PaymentProvider, string> = {
@@ -143,6 +143,8 @@ export function BillingPage() {
         </p>
       </Card>
 
+      <PetProductsCard />
+
       <Card
         title="To'lovlar"
         action={
@@ -187,7 +189,7 @@ export function BillingPage() {
                   <td className="faint">{formatDateTime(payment.paidAt ?? payment.createdAt)}</td>
                   <td>{providerLabels[payment.provider]}</td>
                   <td>
-                    {payment.planId ?? 'Konsultatsiya'}
+                    {payment.planId ?? (payment.pet ? `Hamroh · ${payment.pet}` : 'Konsultatsiya')}
                     {payment.gift && <span className="badge" style={{ marginLeft: 6 }}>Sovg'a</span>}
                   </td>
                   <td>{sum(payment.amountMinor)}</td>
@@ -213,7 +215,8 @@ export function BillingPage() {
                         className="btn small"
                         disabled={refund.isPending}
                         onClick={() => {
-                          if (window.confirm("Pul provayderda qaytarildimi? Sovg'a kunlari foydalanuvchidan olib tashlanadi.")) {
+                          const what = payment.pet ? 'Hamroh' : "Sovg'a kunlari"
+                          if (window.confirm(`Pul provayderda qaytarildimi? ${what} foydalanuvchidan olib tashlanadi.`)) {
                             refund.mutate(payment.id)
                           }
                         }}
@@ -247,6 +250,54 @@ export function BillingPage() {
           </>
         )}
       </Card>
+    </div>
+  )
+}
+
+/**
+ * The legendary pet's price. One price everywhere: the app shows this one and Payme and
+ * Click charge it; the stores charge what is set in their consoles, so a change here has
+ * to be made there too. The sale itself is the `pet_humo_sale` flag.
+ */
+function PetProductsCard() {
+  const products = usePetProducts()
+  return (
+    <Card title="Legendar hamroh">
+      <ErrorNotice error={products.error} />
+      {products.data?.map((product) => <PetProductRow key={product.pet} product={product} />)}
+      <p className="faint">
+        Sotuv <code>pet_humo_sale</code> flagi bilan yoqiladi. Play va App Store narxi ularning konsolida
+        alohida o'zgartiriladi.
+      </p>
+    </Card>
+  )
+}
+
+function PetProductRow({ product }: { product: AdminPetProduct }) {
+  const update = useUpdatePetProduct()
+  const [price, setPrice] = useState(String(Math.round(product.priceMinor / 100)))
+  const whole = Number(price.replace(/\s/g, ''))
+  const valid = Number.isFinite(whole) && whole >= 1000
+  return (
+    <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+      <b style={{ textTransform: 'capitalize' }}>{product.pet}</b>
+      <span className="faint">{product.appStoreProductId ?? '—'} · {product.googlePlayProductId ?? '—'}</span>
+      <input
+        aria-label="Narx, so'm"
+        inputMode="numeric"
+        value={price}
+        onChange={(event) => setPrice(event.target.value)}
+        style={{ width: 140 }}
+      />
+      <span>so'm</span>
+      <button
+        className="btn small"
+        disabled={!valid || update.isPending || whole * 100 === product.priceMinor}
+        onClick={() => update.mutate({ pet: product.pet, priceMinor: whole * 100, active: product.active })}
+      >
+        Saqlash
+      </button>
+      <ErrorNotice error={update.error} />
     </div>
   )
 }

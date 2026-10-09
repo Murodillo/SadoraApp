@@ -22,6 +22,7 @@ import uz.sadora.server.ai.GeminiFoodVision
 import uz.sadora.server.ai.GreetingService
 import uz.sadora.server.pet.PetRepository
 import uz.sadora.server.pet.PetService
+import uz.sadora.server.pet.PetShopService
 import uz.sadora.server.rewards.HomeLayoutRepository
 import uz.sadora.server.rewards.RewardsRepository
 import uz.sadora.server.rewards.RewardsService
@@ -415,6 +416,7 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
         health = healthService,
         usage = aiUsageRepository,
         model = config.ai.apiKey?.let { GeminiAnswerer(outboundHttpClient, config.ai) },
+        rewards = rewardsRepository,
     ).also { pets ->
         // Her medication reminders come from her companion when she has one.
         notificationScheduler.companionOf = pets::companionOf
@@ -538,6 +540,23 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
     ).also { requests ->
         billingService.requestPaid = requests::onPaid
         partnerAlertJob.extraTick = requests::tick
+    }
+
+    /** Humo, the legendary pet: sold once, granted through billing's own activation. */
+    val petShopService = PetShopService(
+        pets = PetRepository(),
+        billing = billingService,
+        billingRepository = billingRepository,
+        verifier = storeVerifier,
+        flags = flagService,
+        environment = config.environment,
+        users = userRepository,
+        audit = auditService,
+    ).also { shop ->
+        billingService.petPaid = shop::grant
+        petService.shop = shop
+        paymentRequestService.petShop = shop
+        shop.owned = paymentRequestService::closeOpenPetRequests
     }
 
     val adminAuthService = AdminAuthService(jwtService, auditService)

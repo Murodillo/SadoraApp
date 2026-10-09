@@ -25,6 +25,8 @@ object PaymentRequestLimits {
 enum class PaymentRequestKind {
     @SerialName("premium") PREMIUM,
     @SerialName("consultation") CONSULTATION,
+    /** A legendary pet as a present. */
+    @SerialName("pet") PET,
 }
 
 @Serializable
@@ -46,6 +48,8 @@ data class CreatePaymentRequest(
     val doctorId: String? = null,
     /** A line of her own, up to [PaymentRequestLimits.NOTE_MAX] characters. */
     val note: String? = null,
+    /** Pet: which legendary pet. */
+    val pet: PetKind? = null,
 )
 
 @Serializable
@@ -57,6 +61,8 @@ data class PaymentRequest(
     val period: BillingPeriod? = null,
     /** Consultation: who with. */
     val doctorName: String? = null,
+    /** Pet: which one. */
+    val pet: PetKind? = null,
     val amountMinor: Long,
     val currency: String = "UZS",
     val note: String? = null,
@@ -79,6 +85,7 @@ data class IncomingPaymentRequest(
     val kind: PaymentRequestKind,
     val period: BillingPeriod? = null,
     val doctorName: String? = null,
+    val pet: PetKind? = null,
     val amountMinor: Long,
     val currency: String = "UZS",
     val note: String? = null,
@@ -86,6 +93,8 @@ data class IncomingPaymentRequest(
     val expiresAt: Instant,
     /** Premium: the gift plans, so the payer can switch month and year. */
     val plans: List<BillingPlan> = emptyList(),
+    /** Pet: its price row and store products, so a store build can sell it in its own sheet. */
+    val petProduct: PetProduct? = null,
     /** What this payer can pay with here. */
     val providers: List<PaymentProvider> = emptyList(),
 )

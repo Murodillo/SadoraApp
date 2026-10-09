@@ -236,9 +236,15 @@ class PartnerController(
 
     private var shareUrlFor: String? = null
 
-    suspend fun askToPay(kind: PaymentRequestKind, period: BillingPeriod? = null, doctorId: String? = null, note: String? = null): PaymentRequest? {
+    suspend fun askToPay(
+        kind: PaymentRequestKind,
+        period: BillingPeriod? = null,
+        doctorId: String? = null,
+        note: String? = null,
+        pet: uz.sadora.contract.PetKind? = null,
+    ): PaymentRequest? {
         val api = api ?: return null
-        val created = calls.run { api.askToPay(CreatePaymentRequest(kind, period, doctorId, note?.takeIf { it.isNotBlank() })) } ?: return null
+        val created = calls.run { api.askToPay(CreatePaymentRequest(kind, period, doctorId, note?.takeIf { it.isNotBlank() }, pet)) } ?: return null
         myRequest = created
         shareUrl = created.shareUrl
         shareUrlFor = created.id
@@ -295,6 +301,16 @@ class PartnerController(
         if (ids.isNotEmpty() && !giftPrices.keys.containsAll(ids)) {
             giftPrices = runCatching { store.giftPrices(ids) }.getOrDefault(emptyMap())
         }
+        val petIds = read.mapNotNull { it.petProduct }.mapNotNull(::storeProductId).distinct()
+        if (petIds.isNotEmpty() && !giftPrices.keys.containsAll(petIds)) {
+            giftPrices = giftPrices + runCatching { store.keepsakePrices(petIds) }.getOrDefault(emptyMap())
+        }
+    }
+
+    fun storeProductId(product: uz.sadora.contract.PetProduct): String? = when (store?.provider) {
+        PaymentProvider.GOOGLE_PLAY -> product.googlePlayProductId
+        PaymentProvider.APP_STORE -> product.appStoreProductId
+        else -> null
     }
 
     fun storeProductId(plan: BillingPlan): String? = when (store?.provider) {
@@ -327,9 +343,11 @@ class PartnerController(
             val status = api.paymentStatus(session.transactionId).valueOrNull ?: return@repeat
             when (status.state) {
                 PaymentState.PAID -> {
-                    paying = null
                     loadIncoming()
                     analytics.event(AnalyticsEvents.PAYMENT_REQUEST_PAID, mapOf("via" to session.provider.name.lowercase()))
+                    // Last, and with nothing suspending after it: the card waiting on this
+                    // call is keyed on [paying], and clearing it cancels that wait.
+                    paying = null
                     return true
                 }
                 PaymentState.CANCELLED, PaymentState.FAILED -> {
@@ -351,13 +369,25 @@ class PartnerController(
      * A gift plan through the store's own sheet: bought for this account, verified by the
      * server for her, and only then consumed.
      */
-    suspend fun payInStore(id: String, plan: BillingPlan): Boolean {
+    suspend fun payInStore(id: String, plan: BillingPlan): Boolean = payInStore(id, storeProductId(plan), keep = false)
+
+    /**
+     * Her legendary pet through the store's own sheet. It is kept by her, not by this
+     * account, so like a gift plan it is consumed where the store allows (Play): the payer
+     * can still buy one for himself, or for someone else, later.
+     */
+    suspend fun payPetInStore(id: String, product: uz.sadora.contract.PetProduct): Boolean =
+        payInStore(id, storeProductId(product), keep = true)
+
+    /** [keep] picks the in-app sheet a kept product is sold in; finishing is a gift's either way. */
+    private suspend fun payInStore(id: String, storeProductId: String?, keep: Boolean): Boolean {
         val api = api ?: return false
         val store = store ?: return false
-        val productId = storeProductId(plan) ?: return false
+        val productId = storeProductId ?: return false
         val accountId = currentUserId() ?: return false
         storePending = false
-        return when (val outcome = store.purchaseGift(productId, accountId)) {
+        val outcome = if (keep) store.purchaseKeepsake(productId, accountId) else store.purchaseGift(productId, accountId)
+        return when (outcome) {
             is StoreOutcome.Purchased -> {
                 val receipt = outcome.receipt
                 calls.run { api.payPaymentRequestInStore(id, store.provider, receipt.productId, receipt.token) } ?: return false

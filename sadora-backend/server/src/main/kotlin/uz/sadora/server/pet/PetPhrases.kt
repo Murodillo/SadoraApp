@@ -71,6 +71,7 @@ object PetPhrases {
             PetKind.LAYLO -> "Лайло"
             PetKind.ANORXON -> "Анорхон"
             PetKind.OHU -> "Оху"
+            PetKind.HUMO -> "Хумо"
         }
         else -> when (pet) {
             PetKind.NILUFAR -> "Nilufar"
@@ -78,6 +79,7 @@ object PetPhrases {
             PetKind.LAYLO -> "Laylo"
             PetKind.ANORXON -> "Anorxon"
             PetKind.OHU -> "Ohu"
+            PetKind.HUMO -> "Humo"
         }
     }
 
@@ -94,8 +96,12 @@ object PetPhrases {
         }
     }
 
-    /** Each pet's word before a cheer; the calm lotus needs none. */
+    /**
+     * Each pet's word before a cheer; the calm lotus needs none. Humo, the bird of
+     * happiness, gives a small blessing instead — one of a few, so it does not repeat.
+     */
     fun opener(language: Language, pet: PetKind): String = when (pet) {
+        PetKind.HUMO -> humoBlessings.getValue(language).random()
         PetKind.NILUFAR -> ""
         PetKind.MOMIQ -> when (language) { Language.UZ -> "Miyov! "; Language.RU -> "Мяу! "; Language.EN -> "Meow! " }
         PetKind.LAYLO -> when (language) { Language.UZ -> "Voy, jonim! "; Language.RU -> "Ой, дорогая! "; Language.EN -> "Oh, dear! " }
@@ -112,7 +118,15 @@ object PetPhrases {
         PetKind.LAYLO -> "Laylo, a baby stork; caring like an older sister, encouraging"
         PetKind.ANORXON -> "Anorxon, a cheerful pomegranate; energetic, upbeat, loves healthy food"
         PetKind.OHU -> "Ohu, a shy baby fawn; sweet, soft-spoken, kind"
+        PetKind.HUMO -> "Humo, the legendary bird of happiness from Uzbek tales; wise, regal, protective, " +
+            "speaks with gentle blessings"
     }
+
+    private val humoBlessings = mapOf(
+        Language.UZ to listOf("Baxt qanotim ustingizda! ", "Omad yor bo'lsin! ", "Barakali kun bo'lsin! "),
+        Language.RU to listOf("Моё крыло счастья над вами! ", "Пусть удача будет рядом! ", "Благословенного дня! "),
+        Language.EN to listOf("My wing of happiness is over you! ", "May luck be with you! ", "A blessed day to you! "),
+    )
 
     private fun languageName(language: Language) = when (language) {
         Language.UZ -> "Uzbek (Latin script)"

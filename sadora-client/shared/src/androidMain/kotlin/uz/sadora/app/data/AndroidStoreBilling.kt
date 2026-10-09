@@ -72,6 +72,13 @@ class AndroidStoreBilling(context: Context) : StoreBilling {
     override suspend fun purchaseGift(productId: String, accountId: String): StoreOutcome =
         launch(productId, accountId, BillingClient.ProductType.INAPP)
 
+    // A legendary pet: the same in-app product sheet as a gift, but kept — finish()
+    // acknowledges it and nothing ever consumes it.
+    override suspend fun keepsakePrices(productIds: List<String>): Map<String, String> = giftPrices(productIds)
+
+    override suspend fun purchaseKeepsake(productId: String, accountId: String): StoreOutcome =
+        launch(productId, accountId, BillingClient.ProductType.INAPP)
+
     override suspend fun finishGift(receipt: StoreReceipt) {
         if (!connect()) return
         client.consumePurchase(ConsumeParams.newBuilder().setPurchaseToken(receipt.token).build())

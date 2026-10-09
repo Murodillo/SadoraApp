@@ -15,10 +15,22 @@ enum class PetKind {
     @SerialName("momiq") MOMIQ,
     @SerialName("laylo") LAYLO,
     @SerialName("anorxon") ANORXON,
-    @SerialName("ohu") OHU;
+    @SerialName("ohu") OHU,
+    /**
+     * The legendary one: Humo, the bird of happiness. Never picked for free — bought once,
+     * for real money ([PetProduct]), and hers from then on. Like the others it only speaks
+     * with Premium; what she buys is the companion, not better advice.
+     */
+    @SerialName("humo") HUMO;
+
+    /** Sold rather than picked; the picker draws it apart and the app gives it more motion. */
+    val legendary: Boolean get() = this == HUMO
 
     companion object {
         val DEFAULT = NILUFAR
+
+        /** The five anyone may pick. */
+        val free: List<PetKind> get() = entries.filterNot { it.legendary }
     }
 }
 
@@ -72,6 +84,42 @@ data class PetState(
     val pet: PetKind = PetKind.DEFAULT,
     /** True when her plan includes the pet; false shows only the sleeping teaser. */
     val active: Boolean = false,
+    /** What the picker shows: the five, plus a legendary pet that is hers or on sale. */
+    val available: List<PetKind> = PetKind.free,
+    /** The legendary pets she bought. */
+    val owned: List<PetKind> = emptyList(),
+    /** What is on sale to her now; empty once she owns it, or while the sale is off. */
+    val shop: List<PetProduct> = emptyList(),
+    /**
+     * Show the one-off offer now: a milestone reached (Premium started, a 30-day streak),
+     * the pet not hers, and the offer never seen. The app reports it seen right away.
+     */
+    val offerDue: Boolean = false,
+)
+
+/** A legendary pet on sale: one price everywhere, in tiyin, and the store products that sell it. */
+@Serializable
+data class PetProduct(
+    val pet: PetKind,
+    val priceMinor: Long,
+    val currency: String = "UZS",
+    val appStoreProductId: String? = null,
+    val googlePlayProductId: String? = null,
+    /** How she can pay for it here: Payme and Click where offered, the stores when in-app purchase is on. */
+    val providers: List<PaymentProvider> = emptyList(),
+)
+
+/** Buying a legendary pet with Payme or Click; the answer is the link to pay. */
+@Serializable
+data class PetCheckoutRequest(val pet: PetKind, val provider: PaymentProvider)
+
+/** A store receipt for a legendary pet, bought for her own account. */
+@Serializable
+data class PetStorePurchase(
+    val pet: PetKind,
+    val provider: PaymentProvider,
+    val productId: String,
+    val token: String,
 )
 
 @Serializable

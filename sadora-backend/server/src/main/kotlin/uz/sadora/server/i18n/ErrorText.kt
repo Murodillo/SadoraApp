@@ -309,6 +309,9 @@ object ErrorText {
         Entry("Bu xarid boshqa hisobga tegishli", "Эта покупка принадлежит другому аккаунту", "This purchase belongs to another account"),
         Entry("Bu provayder store emas", "Этот провайдер — не магазин приложений", "This provider is not an app store"),
         Entry("Store xaridi ilova ichida bo'ladi", "Покупка в магазине делается внутри приложения", "Store purchases happen inside the app"),
+        Entry("Bu hamroh sotib olinmagan", "Этот компаньон не куплен", "This companion has not been bought"),
+        Entry("Bu hamroh allaqachon sizniki", "Этот компаньон уже ваш", "This companion is already yours"),
+        Entry("Narx juda past", "Цена слишком низкая", "The price is too low"),
 
         // ---------------------------------------------------------------- articles
         Entry("Maqola topilmadi", "Статья не найдена", "Article not found"),

@@ -48,6 +48,13 @@ import org.jetbrains.compose.resources.decodeToImageBitmap
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.painterResource
 import uz.sadora.app.data.PetBubble
+import uz.sadora.app.data.PetMoment
+import uz.sadora.app.design.Radius
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Shape
 import uz.sadora.app.design.Sadora
 import uz.sadora.app.design.SadoraIcons
 import uz.sadora.app.design.Spacing
@@ -88,6 +95,12 @@ fun PetKind.art(pose: PetPose): DrawableResource = when (this) {
         PetPose.THINK -> Res.drawable.pet_ohu_think
         PetPose.SLEEP -> Res.drawable.pet_ohu_sleep
     }
+    PetKind.HUMO -> when (pose) {
+        PetPose.IDLE -> Res.drawable.pet_humo_idle
+        PetPose.HAPPY -> Res.drawable.pet_humo_happy
+        PetPose.THINK -> Res.drawable.pet_humo_think
+        PetPose.SLEEP -> Res.drawable.pet_humo_sleep
+    }
 }
 
 /**
@@ -104,6 +117,7 @@ private fun loopFor(pet: PetKind, pose: PetPose): PetLoop? = when (pose) {
         PetKind.LAYLO -> PetLoop("laylo_wave", 115)
         PetKind.ANORXON -> PetLoop("anorxon_wave", 101)
         PetKind.OHU -> PetLoop("ohu_wave", 94)
+        PetKind.HUMO -> null
     }
     PetPose.HAPPY -> when (pet) {
         PetKind.NILUFAR -> PetLoop("nilufar_happy", 43)
@@ -111,6 +125,7 @@ private fun loopFor(pet: PetKind, pose: PetPose): PetLoop? = when (pose) {
         PetKind.LAYLO -> PetLoop("laylo_happy", 111)
         PetKind.ANORXON -> PetLoop("anorxon_happy", 44)
         PetKind.OHU -> PetLoop("ohu_happy", 109)
+        PetKind.HUMO -> null
     }
     PetPose.THINK -> when (pet) {
         PetKind.NILUFAR -> PetLoop("nilufar_think", 109)
@@ -118,6 +133,7 @@ private fun loopFor(pet: PetKind, pose: PetPose): PetLoop? = when (pose) {
         PetKind.LAYLO -> PetLoop("laylo_think", 112)
         PetKind.ANORXON -> PetLoop("anorxon_think", 102)
         PetKind.OHU -> PetLoop("ohu_think", 94)
+        PetKind.HUMO -> null
     }
     PetPose.SLEEP -> when (pet) {
         PetKind.NILUFAR -> PetLoop("nilufar_sleep", 41)
@@ -125,12 +141,41 @@ private fun loopFor(pet: PetKind, pose: PetPose): PetLoop? = when (pose) {
         PetKind.LAYLO -> PetLoop("laylo_sleep", 44)
         PetKind.ANORXON -> PetLoop("anorxon_sleep", 42)
         PetKind.OHU -> PetLoop("ohu_sleep", 97)
+        PetKind.HUMO -> null
     }
+}
+
+/**
+ * What only a legendary pet acts out, beyond its four poses: flying in and off around its
+ * bubble, the moments an action calls for, and preening when it has stood a while.
+ */
+private enum class PetAct { ENTER, EXIT, COMFORT, CELEBRATE, SNACK, PREEN }
+
+/** Its loop for [act], or null until that clip is cut — then the pose plays instead. */
+private fun actLoop(pet: PetKind, act: PetAct): PetLoop? {
+    if (!pet.legendary) return null
+    return when (act) {
+        PetAct.ENTER -> null
+        PetAct.EXIT -> null
+        PetAct.COMFORT -> null
+        PetAct.CELEBRATE -> null
+        PetAct.SNACK -> null
+        PetAct.PREEN -> null
+    }
+}
+
+private fun PetMoment.act(): PetAct = when (this) {
+    PetMoment.COMFORT -> PetAct.COMFORT
+    PetMoment.CELEBRATE -> PetAct.CELEBRATE
+    PetMoment.SNACK -> PetAct.SNACK
 }
 
 /**
  * A pet, alive. Where a video loop exists it plays it; otherwise the still bobs when
  * awake and breathes when asleep. Both stop with the system's reduce-motion.
+ *
+ * A legendary pet acts out [moment] where it has a loop for it, and now and then, while
+ * it stands idle, preens.
  */
 @Composable
 fun PetImage(
@@ -138,13 +183,86 @@ fun PetImage(
     pose: PetPose,
     size: Dp,
     modifier: Modifier = Modifier,
+    moment: PetMoment? = null,
 ) {
-    val loop = loopFor(pet, pose)
-    if (loop != null && !LocalReduceMotion.current) {
-        PetLoopImage(loop, pet, pose, size, modifier)
+    if (LocalReduceMotion.current) {
+        PetStill(pet, pose, size, modifier)
         return
     }
-    PetStill(pet, pose, size, modifier)
+    moment?.let { actLoop(pet, it.act()) }?.let {
+        PetLoopImage(it, pet, pose, size, modifier)
+        return
+    }
+    val loop = loopFor(pet, pose)
+    val preen = if (pose == PetPose.IDLE) actLoop(pet, PetAct.PREEN) else null
+    if (preen != null) {
+        var preening by remember(pet) { mutableStateOf(false) }
+        LaunchedEffect(pet, preening) {
+            if (!preening) {
+                delay(PreenEveryMillis)
+                preening = true
+            }
+        }
+        if (preening) {
+            PetLoopImage(preen, pet, pose, size, modifier, once = true, onDone = { preening = false })
+            return
+        }
+    }
+    if (loop != null) PetLoopImage(loop, pet, pose, size, modifier) else PetStill(pet, pose, size, modifier)
+}
+
+/**
+ * Everything a legendary pet can do, one after another, with its name underneath: the buy
+ * sheet's preview of what she is paying for. The order is [PetStrings.moment]'s.
+ */
+@Composable
+fun PetShowcase(pet: PetKind, size: Dp, modifier: Modifier = Modifier) {
+    val t = strings.pet
+    var index by remember(pet) { mutableStateOf(0) }
+    LaunchedEffect(pet) {
+        while (true) {
+            delay(ShowcaseStepMillis)
+            index = (index + 1) % t.momentCount
+        }
+    }
+    val (act, pose) = ShowcaseOrder[index % ShowcaseOrder.size]
+    Column(modifier, horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(Spacing.xxs)) {
+        val loop = act?.let { actLoop(pet, it) } ?: loopFor(pet, pose)
+        if (loop == null || LocalReduceMotion.current) {
+            PetStill(pet, pose, size)
+        } else {
+            PetLoopImage(loop, pet, pose, size, Modifier)
+        }
+        Text(t.moment(index), style = Sadora.type.caption.copy(letterSpacing = TextUnit.Unspecified), color = LegendaryGoldText)
+    }
+}
+
+/** The showcase's ten, in [PetStrings.moment]'s order: an act where there is one, else the pose it falls back to. */
+private val ShowcaseOrder: List<Pair<PetAct?, PetPose>> = listOf(
+    PetAct.ENTER to PetPose.HAPPY,
+    PetAct.EXIT to PetPose.IDLE,
+    null to PetPose.IDLE,
+    null to PetPose.HAPPY,
+    null to PetPose.THINK,
+    null to PetPose.SLEEP,
+    PetAct.COMFORT to PetPose.THINK,
+    PetAct.CELEBRATE to PetPose.HAPPY,
+    PetAct.SNACK to PetPose.HAPPY,
+    PetAct.PREEN to PetPose.IDLE,
+)
+
+private const val ShowcaseStepMillis = 3_200L
+
+/** Plays one of a legendary pet's acts once — flying in or off — and then [onDone]. */
+@Composable
+private fun PetActOnce(pet: PetKind, act: PetAct, pose: PetPose, size: Dp, modifier: Modifier, onDone: () -> Unit) {
+    val loop = actLoop(pet, act)
+    if (loop == null || LocalReduceMotion.current) {
+        LaunchedEffect(Unit) { onDone() }
+        PetStill(pet, pose, size, modifier)
+        return
+    }
+    PetLoopImage(loop, pet, pose, size, modifier, once = true, onDone = onDone)
 }
 
 /**
@@ -153,14 +271,26 @@ fun PetImage(
  * Until the bytes are read the still stands in, so nothing pops.
  */
 @Composable
-private fun PetLoopImage(loop: PetLoop, pet: PetKind, pose: PetPose, size: Dp, modifier: Modifier) {
+private fun PetLoopImage(
+    loop: PetLoop,
+    pet: PetKind,
+    pose: PetPose,
+    size: Dp,
+    modifier: Modifier,
+    once: Boolean = false,
+    onDone: () -> Unit = {},
+) {
     var frame by remember(loop.name) { mutableStateOf<ImageBitmap?>(null) }
     LaunchedEffect(loop.name) {
         val bytes = withContext(Dispatchers.Default) {
             runCatching {
                 (0 until loop.frames).map { Res.readBytes("files/pets/${loop.name}/${it.toString().padStart(3, '0')}.webp") }
             }.getOrNull()
-        } ?: return@LaunchedEffect
+        }
+        if (bytes == null) {
+            if (once) onDone()
+            return@LaunchedEffect
+        }
         val step = 1000L / loop.fps
         var n = 0
         while (true) {
@@ -168,6 +298,10 @@ private fun PetLoopImage(loop: PetLoop, pet: PetKind, pose: PetPose, size: Dp, m
             frame = withContext(Dispatchers.Default) { runCatching { bytes[n].decodeToImageBitmap() }.getOrNull() } ?: frame
             n = (n + 1) % bytes.size
             delay((step - started.elapsedNow().inWholeMilliseconds).coerceAtLeast(1))
+            if (once && n == 0) {
+                onDone()
+                return@LaunchedEffect
+            }
         }
     }
     val shown = frame
@@ -225,8 +359,13 @@ fun PetBubbleOverlay(
     onWake: () -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
+    /** The legendary pet's one-off visit: to the picker. */
+    onOffer: () -> Unit = {},
 ) {
-    SystemBackHandler(enabled = bubble != null) { onDismiss() }
+    // Back and a tap on the page ask the pet to go rather than removing it, so a legendary
+    // one still flies off the way the close button and the timer send it.
+    var leaveAsked by remember(bubble) { mutableStateOf(0) }
+    SystemBackHandler(enabled = bubble != null) { leaveAsked++ }
     Box(Modifier.fillMaxSize()) {
         AnimatedVisibility(
             visible = bubble != null,
@@ -237,29 +376,40 @@ fun PetBubbleOverlay(
                 Modifier
                     .fillMaxSize()
                     .background(Color.Black.copy(alpha = ScrimAlpha))
-                    .noRippleClickable(onClick = onDismiss),
+                    .noRippleClickable { leaveAsked++ },
             )
         }
-        PetSpeech(bubble, onAction, onWake, onDismiss, Modifier.align(Alignment.BottomEnd).then(modifier))
+        PetSpeech(bubble, leaveAsked, onAction, onWake, onDismiss, onOffer, Modifier.align(Alignment.BottomEnd).then(modifier))
     }
 }
+
+/** A legendary pet flies in before it speaks and off before the bubble goes. */
+private enum class Flight { IN, HERE, OFF }
 
 @Composable
 private fun PetSpeech(
     bubble: PetBubble?,
+    leaveAsked: Int,
     onAction: (PetAction) -> Unit,
     onWake: () -> Unit,
     onDismiss: () -> Unit,
+    onOffer: () -> Unit,
     modifier: Modifier,
 ) {
     val last = remember { mutableStateOf<PetBubble?>(null) }
     bubble?.let { last.value = it }
+    var flight by remember(bubble) { mutableStateOf(if (bubble?.pet?.legendary == true) Flight.IN else Flight.HERE) }
+    // Every way out goes through here, so a legendary pet always gets to fly off first.
+    val leave: () -> Unit = {
+        if (last.value?.pet?.legendary == true && flight != Flight.OFF) flight = Flight.OFF else onDismiss()
+    }
 
     LaunchedEffect(bubble) {
         val shown = bubble ?: return@LaunchedEffect
         delay(if (shown.teaser) TeaserMillis else BubbleMillis)
-        onDismiss()
+        leave()
     }
+    LaunchedEffect(leaveAsked) { if (leaveAsked > 0) leave() }
 
     AnimatedVisibility(
         visible = bubble != null,
@@ -272,58 +422,108 @@ private fun PetSpeech(
         val c = Sadora.colors
         val type = Sadora.type
         val t = strings.pet
+        val legendary = shown.pet.legendary
         Row(
             verticalAlignment = Alignment.Bottom,
             horizontalArrangement = Arrangement.spacedBy(Spacing.xxs),
         ) {
-            Column(
-                Modifier
-                    .padding(bottom = 56.dp)
-                    .widthIn(max = 232.dp)
-                    .cardSurface(c)
-                    .padding(start = Spacing.md, end = Spacing.xs, top = Spacing.xs, bottom = Spacing.sm),
-                verticalArrangement = Arrangement.spacedBy(Spacing.xs),
-            ) {
-                Row(verticalAlignment = Alignment.Top) {
+            // While it flies in the bubble waits; while it flies off the bubble is already gone.
+            AnimatedVisibility(visible = flight == Flight.HERE, enter = fadeIn(tween(Motion.Standard)), exit = fadeOut(tween(Motion.Quick))) {
+                Column(
+                    Modifier
+                        .padding(bottom = 56.dp)
+                        .widthIn(max = 232.dp)
+                        .cardSurface(c)
+                        .then(if (legendary) Modifier.legendaryFrame() else Modifier)
+                        .padding(start = Spacing.md, end = Spacing.xs, top = Spacing.xs, bottom = Spacing.sm),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+                ) {
+                    Row(verticalAlignment = Alignment.Top) {
+                        Text(
+                            text = if (legendary) "✦ " + t.name(shown.pet) else t.name(shown.pet),
+                            style = type.caption.copy(letterSpacing = TextUnit.Unspecified),
+                            color = if (legendary) LegendaryGoldText else c.textAccent,
+                            modifier = Modifier.weight(1f).padding(top = Spacing.xxs),
+                        )
+                        Box(
+                            Modifier
+                                .size(28.dp)
+                                .noRippleClickable(onClick = leave)
+                                .semantics { contentDescription = t.close },
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            // The plus, turned: the icon set has no cross of its own.
+                            Icon(SadoraIcons.Plus, null, tint = c.muted, modifier = Modifier.size(16.dp).rotate(45f))
+                        }
+                    }
                     Text(
-                        text = t.name(shown.pet),
-                        style = type.caption.copy(letterSpacing = TextUnit.Unspecified),
-                        color = c.textAccent,
-                        modifier = Modifier.weight(1f).padding(top = Spacing.xxs),
+                        text = when {
+                            shown.teaser -> t.teaser
+                            shown.offer -> t.offer
+                            else -> shown.text.orEmpty()
+                        },
+                        style = type.body,
+                        color = c.text,
+                        modifier = Modifier.padding(end = Spacing.xs),
                     )
-                    Box(
-                        Modifier
-                            .size(28.dp)
-                            .noRippleClickable(onClick = onDismiss)
-                            .semantics { contentDescription = t.close },
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        // The plus, turned: the icon set has no cross of its own.
-                        Icon(SadoraIcons.Plus, null, tint = c.muted, modifier = Modifier.size(16.dp).rotate(45f))
+                    when {
+                        shown.teaser -> PillButton(t.wake, onClick = onWake, tone = ButtonTone.Primary)
+                        shown.offer -> PillButton(t.offerSee, onClick = onOffer, tone = ButtonTone.Primary)
+                        shown.action != null -> PillButton(t.action(shown.action), onClick = { onAction(shown.action) })
                     }
                 }
-                Text(
-                    text = if (shown.teaser) t.teaser else shown.text.orEmpty(),
-                    style = type.body,
-                    color = c.text,
-                    modifier = Modifier.padding(end = Spacing.xs),
-                )
-                when {
-                    shown.teaser -> PillButton(t.wake, onClick = onWake, tone = ButtonTone.Primary)
-                    shown.action != null -> PillButton(t.action(shown.action), onClick = { onAction(shown.action) })
-                }
             }
-            PetImage(
-                shown.pet,
-                shown.pose,
-                size = PetSize,
-                modifier = Modifier.noRippleClickable { if (shown.teaser) onWake() else onDismiss() },
-            )
+            val tap = Modifier.noRippleClickable { if (shown.teaser) onWake() else leave() }
+            when (flight) {
+                Flight.IN -> PetActOnce(shown.pet, PetAct.ENTER, shown.pose, PetSize, tap) { flight = Flight.HERE }
+                Flight.OFF -> PetActOnce(shown.pet, PetAct.EXIT, shown.pose, PetSize, tap, onDone = onDismiss)
+                Flight.HERE -> PetImage(shown.pet, shown.pose, size = PetSize, modifier = tap, moment = shown.moment)
+            }
         }
     }
 }
 
 private val PetSize = 104.dp
+
+/** The legendary pet's gold: the frame of its bubble and the tag on its card. */
+val LegendaryGold = Color(0xFFE2B33C)
+val LegendaryGoldText = Color(0xFFB8860B)
+/** Text on the gold tag: dark in both themes, as gold is light in both. */
+val LegendaryInk = Color(0xFF3A2A00)
+private val LegendaryTurquoise = Color(0xFF3CC8C0)
+
+/** A legendary pet she owns, small, in a gold ring: worn after her name like a badge. */
+@Composable
+fun LegendaryMark(pet: PetKind, size: Dp, modifier: Modifier = Modifier) {
+    Image(
+        painter = painterResource(pet.art(PetPose.IDLE)),
+        contentDescription = strings.pet.name(pet),
+        modifier = modifier
+            .size(size)
+            .border(1.5.dp, LegendaryGold, CircleShape)
+            .padding(2.dp),
+    )
+}
+
+/** A thin gold-to-turquoise edge with a slow shimmer: the one bubble that is not like the others. */
+@Composable
+fun Modifier.legendaryFrame(shape: Shape = Radius.card): Modifier {
+    val shimmer = rememberInfiniteTransition(label = "legendary")
+    val turn by shimmer.animateFloatUnlessReduced(
+        0f, 1f,
+        infiniteRepeatable(tween(LegendaryShimmerMillis, easing = Motion.Gentle), RepeatMode.Reverse),
+        label = "legendary-turn",
+    )
+    val brush = Brush.linearGradient(
+        colors = listOf(LegendaryGold, LegendaryTurquoise, LegendaryGold),
+        start = Offset(0f, 0f),
+        end = Offset(400f * (0.5f + turn), 400f * (1.5f - turn)),
+    )
+    return border(1.5.dp, brush, shape)
+}
+
+private const val LegendaryShimmerMillis = 2_400
+private const val PreenEveryMillis = 14_000L
 
 /** How dark the page behind the pet goes: enough to step back, not enough to hide it. */
 private const val ScrimAlpha = 0.4f

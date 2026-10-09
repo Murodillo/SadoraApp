@@ -26,7 +26,7 @@ import uz.sadora.server.flags.FlagContext
 import uz.sadora.server.user.UserRepository
 
 /**
- * Buying Premium, and paying for a doctor's consultation.
+ * Buying Premium, a legendary pet, and paying for a doctor's consultation.
  *
  * Checkout only ever creates a pending row and a link. Nothing here grants anything: a
  * subscription appears when a provider says the money arrived, through
@@ -53,6 +53,9 @@ class BillingService(
 
     /** What a payment answering her request does to the request. Set once at wiring. */
     var requestPaid: (suspend (TransactionRecord) -> Unit)? = null
+
+    /** A legendary pet's money: the pet becomes hers. Set once at wiring. */
+    var petPaid: (suspend (TransactionRecord) -> Unit)? = null
 
     suspend fun catalogue(userId: Uuid): BillingCatalogue {
         val user = users.findById(userId) ?: throw NotFoundException("Foydalanuvchi topilmadi")
@@ -157,6 +160,21 @@ class BillingService(
             return null
         }
 
+        // A pet is kept, not timed: the grant is keyed by this payment, so a retry that
+        // lands after the claim finds it given and adds nothing.
+        if (transaction.pet != null) {
+            if (transaction.state != PaymentState.PAID && !repository.claimPaid(transaction.id)) return null
+            val grant = petPaid ?: error("Pet shop is not wired")
+            try {
+                grant(transaction)
+            } catch (e: Throwable) {
+                repository.releasePaid(transaction.id, transaction.state)
+                throw e
+            }
+            if (transaction.paymentRequestId != null) requestPaid?.invoke(transaction)
+            return null
+        }
+
         val plan = transaction.planId?.let { repository.plan(it) } ?: return null
         // The claim, not the state read above, decides who grants: a second delivery
         // racing this one loses here and returns what the winner recorded.
@@ -220,6 +238,24 @@ class BillingService(
         amountMinor: Long,
         provider: PaymentProvider,
         origin: String,
+    ): CheckoutSession = oneOffCheckout(userId, amountMinor, provider, origin, consultationSessionId = sessionId)
+
+    /** A pending payment for a legendary pet, and the link that pays it. Same providers as a consultation. */
+    suspend fun petCheckout(
+        userId: Uuid,
+        pet: String,
+        amountMinor: Long,
+        provider: PaymentProvider,
+        origin: String,
+    ): CheckoutSession = oneOffCheckout(userId, amountMinor, provider, origin, pet = pet)
+
+    private suspend fun oneOffCheckout(
+        userId: Uuid,
+        amountMinor: Long,
+        provider: PaymentProvider,
+        origin: String,
+        consultationSessionId: Uuid? = null,
+        pet: String? = null,
     ): CheckoutSession {
         if (provider !in consultationProviders(userId)) throw FeatureDisabledException(provider.name.lowercase())
         val transaction = repository.createTransaction(
@@ -228,7 +264,8 @@ class BillingService(
             provider = provider,
             amountMinor = amountMinor,
             currency = "UZS",
-            consultationSessionId = sessionId,
+            consultationSessionId = consultationSessionId,
+            pet = pet,
         )
         val live = catalogue(userId).providers.contains(provider)
         val url = when {
@@ -261,6 +298,7 @@ class BillingService(
         amountMinor: Long,
         provider: PaymentProvider,
         origin: String,
+        pet: String? = null,
     ): CheckoutSession {
         if (provider != PaymentProvider.PAYME && provider != PaymentProvider.CLICK) {
             throw ValidationException("provider", "Store xaridi ilova ichida bo'ladi")
@@ -275,6 +313,7 @@ class BillingService(
             consultationSessionId = consultationSessionId,
             payerId = payerId,
             paymentRequestId = requestId,
+            pet = pet,
         )
         val live = catalogue(beneficiaryId).providers.contains(provider)
         val url = when {
@@ -292,14 +331,14 @@ class BillingService(
     }
 
     /**
-     * The development page's payment: refused in production, and only for a consultation
-     * or someone else's payment still pending. Everything after it is the same path a real
+     * The development page's payment: refused in production, and only for a consultation,
+     * a pet, or someone else's payment still pending. Everything after it is the same path a real
      * provider's callback takes.
      */
     suspend fun devPay(transactionId: Uuid): Boolean {
         if (environment == Environment.PROD) return false
         val transaction = repository.transaction(transactionId) ?: return false
-        if (transaction.consultationSessionId == null && transaction.paymentRequestId == null) return false
+        if (transaction.consultationSessionId == null && transaction.paymentRequestId == null && transaction.pet == null) return false
         activate(transaction)
         return true
     }

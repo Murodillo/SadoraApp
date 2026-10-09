@@ -31,6 +31,8 @@ data class PaymentRequestRecord(
     val planId: String?,
     val consultationSessionId: Uuid?,
     val doctorId: Uuid?,
+    /** The legendary pet a PET request is for. */
+    val pet: String? = null,
     val amountMinor: Long,
     val note: String?,
     val partnerLinkId: Uuid?,
@@ -56,6 +58,7 @@ class PaymentRequestRepository {
         webTokenHash: String,
         at: Instant,
         expiresAt: Instant,
+        pet: String? = null,
     ): PaymentRequestRecord = dbQuery {
         val id = Uuid.random()
         PaymentRequests.insert {
@@ -65,6 +68,7 @@ class PaymentRequestRepository {
             it[PaymentRequests.planId] = planId
             it[PaymentRequests.consultationSessionId] = consultationSessionId
             it[PaymentRequests.doctorId] = doctorId
+            it[PaymentRequests.pet] = pet
             it[PaymentRequests.amountMinor] = amountMinor
             it[PaymentRequests.note] = note
             it[PaymentRequests.partnerLinkId] = partnerLinkId
@@ -167,6 +171,7 @@ class PaymentRequestRepository {
         planId = this[PaymentRequests.planId],
         consultationSessionId = this[PaymentRequests.consultationSessionId],
         doctorId = this[PaymentRequests.doctorId],
+        pet = this[PaymentRequests.pet],
         amountMinor = this[PaymentRequests.amountMinor],
         note = this[PaymentRequests.note],
         partnerLinkId = this[PaymentRequests.partnerLinkId],

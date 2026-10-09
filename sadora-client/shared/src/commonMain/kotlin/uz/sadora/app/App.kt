@@ -467,10 +467,12 @@ private fun MainShell(
 
     // The pet's first word of the day — a feature she has not tried — a few seconds in,
     // after the opening's own moments. A free account instead sees it asleep now and then.
+    // The legendary pet's one-off visit, on the day it is due, takes the slot instead.
     LaunchedEffect(health.loaded) {
         if (!health.loaded) return@LaunchedEffect
         delay(PetOpenDelayMillis)
         val pet = controllers.pet
+        if (pet.maybeOffer()) return@LaunchedEffect
         if (pet.active) {
             pet.after(uz.sadora.contract.PetTrigger.APP_OPEN)
         } else {
@@ -811,6 +813,10 @@ private fun MainShell(
                 navigator.push(Route.Paywall)
             },
             onDismiss = controllers.pet::dismiss,
+            onOffer = {
+                controllers.pet.dismiss()
+                navigator.push(Route.PetPicker)
+            },
             // The layer covers the whole shell, tab bar included; this places the pet in it.
             modifier = Modifier
                 .navigationBarsPadding()
@@ -1163,7 +1169,7 @@ private fun PushedScreen(
             onOpenBadge = { overlays.openBadge = it },
             onUpgrade = upgrade,
         )
-        Route.PetPicker -> uz.sadora.app.ui.modules.PetPickerScreen(controllers.pet, close, onUpgrade = upgrade)
+        Route.PetPicker -> uz.sadora.app.ui.modules.PetPickerScreen(controllers.pet, close, onUpgrade = upgrade, partner = controllers.partner)
         Route.Shop -> ShopScreen(
             state = state,
             rewards = controllers.rewards,
@@ -1262,6 +1268,7 @@ private fun PushedScreen(
             partner = controllers.partner,
             badges = controllers.rewards.badges,
             pet = controllers.pet.pet,
+            legendaryPet = controllers.pet.owned.firstOrNull { it.legendary },
             onEditPhoto = { overlays.showPhotoSheet = true },
             onOpen = {
                 when (it) {

@@ -60,6 +60,8 @@ fun AskPartnerContent(
     doctorId: String? = null,
     initialYear: Boolean = true,
     onClose: () -> Unit,
+    /** For a PET request: which legendary pet. */
+    pet: uz.sadora.contract.PetKind? = null,
 ) {
     val t = strings.partner
     val c = Sadora.colors
@@ -78,7 +80,11 @@ fun AskPartnerContent(
     }
 
     Text(
-        if (kind == PaymentRequestKind.PREMIUM) t.askBodyPremium else t.askBodyConsultation,
+        when (kind) {
+            PaymentRequestKind.PREMIUM -> t.askBodyPremium
+            PaymentRequestKind.CONSULTATION -> t.askBodyConsultation
+            PaymentRequestKind.PET -> strings.pet.askBody
+        },
         style = Sadora.type.body,
         color = c.muted,
     )
@@ -110,6 +116,7 @@ fun AskPartnerContent(
                     period = if (kind == PaymentRequestKind.PREMIUM) (if (year) BillingPeriod.YEAR else BillingPeriod.MONTH) else null,
                     doctorId = doctorId,
                     note = note,
+                    pet = pet,
                 )
             }
         },
@@ -173,11 +180,12 @@ fun IncomingRequestCard(
     val scope = rememberCoroutineScope()
     val uriHandler = LocalUriHandler.current
     val premium = request.kind == PaymentRequestKind.PREMIUM
+    val petProduct = request.petProduct?.takeIf { request.kind == PaymentRequestKind.PET }
     var planId by remember(request.id) {
         mutableStateOf(request.plans.firstOrNull { it.period == request.period }?.id ?: request.plans.firstOrNull()?.id)
     }
     val plan = request.plans.firstOrNull { it.id == planId }
-    val inStore = premium && partner.store != null
+    val inStore = (premium || petProduct?.let(partner::storeProductId) != null) && partner.store != null
     val direct = request.providers.filter { it == PaymentProvider.PAYME || it == PaymentProvider.CLICK }
     val waiting = partner.paying
 
@@ -193,7 +201,11 @@ fun IncomingRequestCard(
     SadoraCard {
         Text(t.incomingTitle(request.fromName), style = Sadora.type.h3, color = c.text)
         Text(
-            if (premium) "Sadora " + t.premiumWhat(request.period == BillingPeriod.YEAR) else t.consultationWhat(request.doctorName),
+            when (request.kind) {
+                PaymentRequestKind.PREMIUM -> "Sadora " + t.premiumWhat(request.period == BillingPeriod.YEAR)
+                PaymentRequestKind.CONSULTATION -> t.consultationWhat(request.doctorName)
+                PaymentRequestKind.PET -> strings.pet.requestWhat
+            },
             style = Sadora.type.body,
             color = c.textAccent,
         )
@@ -224,6 +236,15 @@ fun IncomingRequestCard(
                 }
                 SadoraButton(t.payReopen, { uriHandler.openUri(waiting.url) }, tone = ButtonTone.Secondary)
                 SadoraButton(strings.common.cancel, { partner.cancelRequestCheckout() }, tone = ButtonTone.Ghost)
+            }
+            inStore && petProduct != null -> {
+                val price = partner.storeProductId(petProduct)?.let { partner.giftPrices[it] }.orEmpty()
+                SadoraButton(
+                    t.giveGift(price),
+                    enabled = !partner.busy && !partner.storePending,
+                    onClick = { scope.launch { if (partner.payPetInStore(request.id, petProduct)) onToast(t.giftThanks) } },
+                )
+                if (partner.storePending) Text(t.giftStorePending, style = Sadora.type.body, color = c.muted)
             }
             inStore -> {
                 val price = plan?.let(partner::storeProductId)?.let { partner.giftPrices[it] }.orEmpty()
@@ -278,7 +299,11 @@ fun AcceptRequestsRow(linkId: String, partner: PartnerController) {
 @Composable
 private fun PaymentRequest.what(): String {
     val t = strings.partner
-    return if (kind == PaymentRequestKind.PREMIUM) t.premiumWhat(period == BillingPeriod.YEAR) else t.consultationWhat(doctorName)
+    return when (kind) {
+        PaymentRequestKind.PREMIUM -> t.premiumWhat(period == BillingPeriod.YEAR)
+        PaymentRequestKind.CONSULTATION -> t.consultationWhat(doctorName)
+        PaymentRequestKind.PET -> strings.pet.requestWhat
+    }
 }
 
 @Composable

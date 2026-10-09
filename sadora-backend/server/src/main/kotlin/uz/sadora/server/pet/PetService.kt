@@ -25,6 +25,7 @@ import uz.sadora.server.ai.ModelUnavailableException
 import uz.sadora.server.cache.Cache
 import uz.sadora.server.config.AiConfig
 import uz.sadora.server.config.Environment
+import uz.sadora.server.core.ForbiddenException
 import uz.sadora.server.core.NotFoundException
 import uz.sadora.server.core.dayIn
 import uz.sadora.server.core.now
@@ -32,6 +33,7 @@ import uz.sadora.server.entitlement.EntitlementService
 import uz.sadora.server.flags.FeatureFlagService
 import uz.sadora.server.flags.FlagContext
 import uz.sadora.server.health.HealthService
+import uz.sadora.server.rewards.RewardsRepository
 import uz.sadora.server.user.UserRecord
 import uz.sadora.server.user.UserRepository
 
@@ -58,21 +60,64 @@ class PetService(
     private val health: HealthService,
     private val usage: AiUsageRecorder,
     private val model: AiModel? = null,
+    private val rewards: RewardsRepository? = null,
 ) {
+    /** The legendary pet's sale. Set once at wiring: the shop needs billing, which comes later. */
+    var shop: PetShopService? = null
 
     suspend fun state(userId: Uuid): PetState {
-        val pet = pets.chosen(userId) ?: PetKind.DEFAULT
-        val active = entitlements?.enabledAmong(listOf(userId), FeatureKeys.AI_PET)?.contains(userId) ?: true
-        return PetState(pet = pet, active = active)
+        val owned = pets.owned(userId)
+        // A bought pet whose purchase was taken back reads as the default until she picks again.
+        val pet = pets.chosen(userId)?.takeIf { !it.legendary || it in owned } ?: PetKind.DEFAULT
+        val active = isActive(userId)
+        val products = shop?.products(userId, owned).orEmpty()
+        return PetState(
+            pet = pet,
+            active = active,
+            available = PetKind.free + (owned + products.map { it.pet }).distinct(),
+            owned = owned,
+            shop = products,
+            offerDue = products.any { offerDue(userId, it.pet, active) },
+        )
     }
 
     /** Her chosen pet when her plan includes it, for the reminders it sends in its voice. */
-    suspend fun companionOf(userId: Uuid): PetKind? = state(userId).takeIf { it.active }?.pet
+    suspend fun companionOf(userId: Uuid): PetKind? {
+        // Read per queued reminder, so only what it needs: not the shop or the offer.
+        if (!isActive(userId)) return null
+        val pet = pets.chosen(userId) ?: return PetKind.DEFAULT
+        return pet.takeIf { !it.legendary || it in pets.owned(userId) } ?: PetKind.DEFAULT
+    }
 
-    /** Picking is free for everyone, so the picker can show all five before she subscribes. */
+    /**
+     * Picking is free for the five, so the picker can show them all before she subscribes.
+     * A legendary pet is picked only once it is hers.
+     */
     suspend fun choose(userId: Uuid, pet: PetKind): PetState {
+        if (pet.legendary && pet !in pets.owned(userId)) throw ForbiddenException(message = "Bu hamroh sotib olinmagan")
         pets.choose(userId, pet)
         return state(userId)
+    }
+
+    /** The one-off offer was shown; it never comes again. */
+    suspend fun offerSeen(userId: Uuid): PetState {
+        shop?.products(userId, pets.owned(userId))?.forEach { pets.markOfferSeen(userId, it.pet) }
+        return state(userId)
+    }
+
+    private suspend fun isActive(userId: Uuid): Boolean =
+        entitlements?.enabledAmong(listOf(userId), FeatureKeys.AI_PET)?.contains(userId) ?: true
+
+    /**
+     * Once, at a milestone that says the app is hers: the day her Premium starts, or a
+     * 30-day streak. Whichever comes first; [offerSeen] closes it for good.
+     */
+    private suspend fun offerDue(userId: Uuid, pet: PetKind, active: Boolean): Boolean {
+        if (pets.offerSeen(userId, pet)) return false
+        if (active) return true
+        val user = users.findById(userId) ?: return false
+        val streak = rewards?.streak(userId, now().dayIn(user.timezone))?.current ?: 0
+        return streak >= OFFER_STREAK_DAYS
     }
 
     suspend fun nudge(userId: Uuid, request: PetNudgeRequest): PetNudgeAnswer {
@@ -200,6 +245,9 @@ class PetService(
         const val MAX_TOKENS = 160
         const val MIN_LENGTH = 8
         const val MAX_LENGTH = 180
+
+        /** The streak that earns the legendary pet's one-off offer without Premium. */
+        const val OFFER_STREAK_DAYS = 30
 
         /** Quiet time between two lines, so a burst of logging is not a burst of bubbles. */
         val GAP = 10.minutes

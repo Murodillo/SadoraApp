@@ -926,6 +926,202 @@ class ApiIntegrationTest {
         assertEquals(uz.sadora.contract.PetAction.MIND_JOURNAL, gentle.action)
     }
 
+    /**
+     * Humo, the legendary pet: hidden until its flag is on, then on sale but never picked
+     * for free. A store receipt buys it once, for the account it was bought for; the pet is
+     * hers from then on, and speaks in her chosen voice when she has Premium.
+     */
+    @Test
+    fun `Humo is bought once with a store receipt and only then can be chosen`() = api {
+        val admin = adminToken()
+        val buyer = signUp().also { onboard(it) }
+        val other = signUp().also { onboard(it) }
+        val humo = uz.sadora.contract.PetKind.HUMO
+
+        setFlag(admin, uz.sadora.server.pet.PetShopService.SALE_FLAG, enabled = false)
+        val hidden = get<uz.sadora.contract.PetState>("/v1/pet", buyer.token)
+        assertFalse(humo in hidden.available, "not on sale: not shown")
+        assertTrue(hidden.shop.isEmpty())
+        assertFalse(hidden.offerDue)
+
+        setFlag(admin, uz.sadora.server.pet.PetShopService.SALE_FLAG, enabled = true)
+        val onSale = get<uz.sadora.contract.PetState>("/v1/pet", buyer.token)
+        assertTrue(humo in onSale.available)
+        val product = onSale.shop.single()
+        assertEquals(humo, product.pet)
+        assertEquals(49_900_000, product.priceMinor, "499 000 so'm")
+        assertEquals("uz.sadora.pet.humo", product.googlePlayProductId)
+        val refused = raw { client.put("/v1/pet") { auth(buyer.token); json(uz.sadora.contract.ChoosePetRequest(humo)) } }
+        assertEquals(HttpStatusCode.Forbidden, refused.status, "a legendary pet is never picked for free")
+
+        put<uz.sadora.contract.PetState>("/v1/pet", buyer.token, uz.sadora.contract.ChoosePetRequest(uz.sadora.contract.PetKind.LAYLO))
+        val verifier = uz.sadora.server.billing.StoreVerifier { _, productId, _ ->
+            uz.sadora.server.billing.VerifiedPurchase(
+                productId = productId,
+                transactionId = "GPA.humo-${buyer.userId}",
+                expiresAt = null,
+                autoRenewing = false,
+                accountId = buyer.userId,
+            )
+        }
+        val shop = component.petShopService.verifiedBy(verifier)
+        val receipt = uz.sadora.contract.PetStorePurchase(humo, PaymentProvider.GOOGLE_PLAY, "uz.sadora.pet.humo", "token")
+        kotlin.test.assertFailsWith<uz.sadora.server.core.ValidationException> {
+            shop.buyInStore(Uuid.parse(other.userId), receipt)
+        }
+        assertTrue(get<uz.sadora.contract.PetState>("/v1/pet", other.token).owned.isEmpty())
+
+        assertEquals(listOf(humo), shop.buyInStore(Uuid.parse(buyer.userId), receipt))
+        val bought = get<uz.sadora.contract.PetState>("/v1/pet", buyer.token)
+        assertEquals(listOf(humo), bought.owned)
+        assertEquals(humo, bought.pet, "a pet she just bought comes to her at once")
+        assertTrue(bought.shop.isEmpty(), "nothing left to sell her")
+        shop.buyInStore(Uuid.parse(buyer.userId), receipt)
+        assertEquals(1, countRowsFor(Uuid.parse(buyer.userId), "payment_transactions"), "a replayed receipt buys nothing twice")
+
+        // Hers even with the sale switched off again; it speaks once she has Premium.
+        setFlag(admin, uz.sadora.server.pet.PetShopService.SALE_FLAG, enabled = false)
+        assertTrue(humo in get<uz.sadora.contract.PetState>("/v1/pet", buyer.token).available)
+        postAck("/v1/admin/users/${buyer.userId}/premium", admin, uz.sadora.server.admin.GrantPremiumRequest(reason = "humo test"))
+        val water = uz.sadora.contract.PetNudgeRequest(uz.sadora.contract.PetTrigger.WATER_GOAL)
+        assertEquals(humo, assertNotNull(post<uz.sadora.contract.PetNudgeAnswer>("/v1/pet/nudge", buyer.token, water).nudge).pet)
+    }
+
+    /**
+     * Humo by Payme: the payment row carries the pet, Payme's double delivery grants it
+     * once, and the panel's refund takes it back — she is returned to the pet she had.
+     */
+    @Test
+    fun `Humo paid with Payme is hers, and a refund takes it back`() = api {
+        val admin = adminToken()
+        setFlag(admin, BillingService.PAYME_FLAG, enabled = true)
+        setFlag(admin, uz.sadora.server.pet.PetShopService.SALE_FLAG, enabled = true)
+        val user = signUp().also { onboard(it) }
+        put<uz.sadora.contract.PetState>("/v1/pet", user.token, uz.sadora.contract.ChoosePetRequest(uz.sadora.contract.PetKind.OHU))
+
+        val checkout = post<CheckoutSession>(
+            "/v1/pet/checkout",
+            user.token,
+            uz.sadora.contract.PetCheckoutRequest(uz.sadora.contract.PetKind.HUMO, PaymentProvider.PAYME),
+        )
+        assertEquals(49_900_000, checkout.amountMinor)
+        val paymeId = "pm-humo-${Random.nextInt(1_000_000)}"
+        payme(
+            """{"id":2,"method":"CreateTransaction","params":{"id":"$paymeId","time":1788600000000,""" +
+                """"amount":49900000,"account":{"order_id":"${checkout.transactionId}"}}}""",
+        )
+        repeat(2) { payme("""{"id":4,"method":"PerformTransaction","params":{"id":"$paymeId"}}""") }
+        val owned = get<uz.sadora.contract.PetState>("/v1/pet", user.token)
+        assertEquals(listOf(uz.sadora.contract.PetKind.HUMO), owned.owned)
+        assertEquals(uz.sadora.contract.PetKind.HUMO, owned.pet)
+
+        val row = get<Page<uz.sadora.server.billing.AdminPaymentView>>("/v1/admin/billing/payments?limit=200", admin)
+            .items.single { it.id == checkout.transactionId }
+        assertEquals("humo", row.pet)
+        assertTrue(row.refundable)
+        postAck("/v1/admin/billing/payments/${checkout.transactionId}/refund", admin, Ack())
+        val refunded = get<uz.sadora.contract.PetState>("/v1/pet", user.token)
+        assertTrue(refunded.owned.isEmpty())
+        assertEquals(uz.sadora.contract.PetKind.OHU, refunded.pet, "back to the pet she had before")
+    }
+
+    /** Yaqinim can give her Humo: she asks, he pays by Payme, the pet is hers and not his. */
+    @Test
+    fun `Yaqinim can pay for Humo as a present`() = api {
+        val admin = adminToken()
+        setFlag(admin, BillingService.PAYME_FLAG, enabled = true)
+        setFlag(admin, uz.sadora.server.pet.PetShopService.SALE_FLAG, enabled = true)
+        val her = signUp().also { onboard(it) }
+        val code = assertNotNull(post<PartnerInvite>("/v1/partner/invite", her.token, CreatePartnerInviteRequest()).code)
+        val him = signUp()
+        post<FollowedPerson>("/v1/partner/accept", him.token, AcceptPartnerInviteRequest(code, name = "Aziz", asPartnerAccount = true))
+        post<PartnerState>("/v1/partner/approve", her.token, Ack())
+
+        val asked = post<uz.sadora.contract.PaymentRequest>(
+            "/v1/payment-requests",
+            her.token,
+            uz.sadora.contract.CreatePaymentRequest(uz.sadora.contract.PaymentRequestKind.PET, pet = uz.sadora.contract.PetKind.HUMO),
+        )
+        assertEquals(49_900_000, asked.amountMinor)
+        assertEquals(uz.sadora.contract.PetKind.HUMO, asked.pet)
+        val incoming = get<List<uz.sadora.contract.IncomingPaymentRequest>>("/v1/payment-requests/incoming", him.token).single()
+        assertEquals(uz.sadora.contract.PetKind.HUMO, incoming.pet)
+
+        val checkout = post<CheckoutSession>(
+            "/v1/payment-requests/${incoming.id}/checkout",
+            him.token,
+            uz.sadora.contract.PayPaymentRequest(PaymentProvider.PAYME),
+        )
+        val paymeId = "pm-hg-${Random.nextInt(1_000_000)}"
+        payme(
+            """{"id":2,"method":"CreateTransaction","params":{"id":"$paymeId","time":1788600000000,""" +
+                """"amount":49900000,"account":{"order_id":"${checkout.transactionId}"}}}""",
+        )
+        payme("""{"id":4,"method":"PerformTransaction","params":{"id":"$paymeId"}}""")
+        assertEquals(listOf(uz.sadora.contract.PetKind.HUMO), get<uz.sadora.contract.PetState>("/v1/pet", her.token).owned)
+        assertTrue(get<uz.sadora.contract.PetState>("/v1/pet", him.token).owned.isEmpty(), "the payer gets nothing")
+        assertEquals(uz.sadora.contract.PaymentRequestStatus.PAID, get<uz.sadora.contract.PaymentRequestState>("/v1/payment-requests", her.token).current?.status)
+    }
+
+    /** She asked Yaqinim for Humo, then bought it herself: the request closes, so he cannot pay twice. */
+    @Test
+    fun `buying Humo herself closes the request she sent for it`() = api {
+        val admin = adminToken()
+        setFlag(admin, BillingService.PAYME_FLAG, enabled = true)
+        setFlag(admin, uz.sadora.server.pet.PetShopService.SALE_FLAG, enabled = true)
+        val her = signUp().also { onboard(it) }
+        val code = assertNotNull(post<PartnerInvite>("/v1/partner/invite", her.token, CreatePartnerInviteRequest()).code)
+        val him = signUp()
+        post<FollowedPerson>("/v1/partner/accept", him.token, AcceptPartnerInviteRequest(code, name = "Aziz", asPartnerAccount = true))
+        post<PartnerState>("/v1/partner/approve", her.token, Ack())
+        val asked = post<uz.sadora.contract.PaymentRequest>(
+            "/v1/payment-requests",
+            her.token,
+            uz.sadora.contract.CreatePaymentRequest(uz.sadora.contract.PaymentRequestKind.PET, pet = uz.sadora.contract.PetKind.HUMO),
+        )
+
+        val own = post<CheckoutSession>(
+            "/v1/pet/checkout",
+            her.token,
+            uz.sadora.contract.PetCheckoutRequest(uz.sadora.contract.PetKind.HUMO, PaymentProvider.PAYME),
+        )
+        val paymeId = "pm-hs-${Random.nextInt(1_000_000)}"
+        payme(
+            """{"id":2,"method":"CreateTransaction","params":{"id":"$paymeId","time":1788600000000,""" +
+                """"amount":49900000,"account":{"order_id":"${own.transactionId}"}}}""",
+        )
+        payme("""{"id":4,"method":"PerformTransaction","params":{"id":"$paymeId"}}""")
+
+        assertEquals(uz.sadora.contract.PaymentRequestStatus.CANCELLED, get<uz.sadora.contract.PaymentRequestState>("/v1/payment-requests", her.token).current?.status)
+        assertTrue(get<List<uz.sadora.contract.IncomingPaymentRequest>>("/v1/payment-requests/incoming", him.token).isEmpty())
+        val late = raw {
+            client.post("/v1/payment-requests/${asked.id}/checkout") { auth(him.token); json(uz.sadora.contract.PayPaymentRequest(PaymentProvider.PAYME)) }
+        }
+        assertEquals(HttpStatusCode.Conflict, late.status)
+    }
+
+    /** The one-off offer: due once she has Premium (or a 30-day streak), gone once seen or bought. */
+    @Test
+    fun `Humo is offered once a milestone is reached and never again after she has seen it`() = api {
+        val admin = adminToken()
+        setFlag(admin, uz.sadora.server.pet.PetShopService.SALE_FLAG, enabled = true)
+        val user = signUp().also { onboard(it) }
+        assertFalse(get<uz.sadora.contract.PetState>("/v1/pet", user.token).offerDue, "no milestone yet")
+
+        postAck("/v1/admin/users/${user.userId}/premium", admin, uz.sadora.server.admin.GrantPremiumRequest(reason = "offer test"))
+        assertTrue(get<uz.sadora.contract.PetState>("/v1/pet", user.token).offerDue, "the day Premium starts")
+        val seen = post<uz.sadora.contract.PetState>("/v1/pet/offer/seen", user.token, Ack())
+        assertFalse(seen.offerDue)
+        assertFalse(get<uz.sadora.contract.PetState>("/v1/pet", user.token).offerDue, "once, ever")
+
+        // The panel sets the price; the app reads it from the server.
+        val row = get<List<uz.sadora.server.pet.AdminPetProduct>>("/v1/admin/billing/pet-products", admin).single()
+        assertEquals(49_900_000, row.priceMinor)
+        put<Ack>("/v1/admin/billing/pet-products/humo", admin, uz.sadora.server.pet.UpdatePetProductRequest(45_000_000))
+        assertEquals(45_000_000, get<uz.sadora.contract.PetState>("/v1/pet", user.token).shop.single().priceMinor)
+        put<Ack>("/v1/admin/billing/pet-products/humo", admin, uz.sadora.server.pet.UpdatePetProductRequest(49_900_000))
+    }
+
     /** Ten meals is the bronze of "mindful eater", and the progress counts up to it. */
     @Test
     fun `logging meals moves the meals badge to its first tier`() = api {

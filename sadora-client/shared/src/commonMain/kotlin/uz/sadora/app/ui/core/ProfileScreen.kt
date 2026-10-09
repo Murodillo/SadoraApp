@@ -76,6 +76,8 @@ fun ProfileScreen(
     badges: uz.sadora.contract.BadgeBoard? = null,
     /** Her AI companion, for its row; null hides the row (no backend, no pet). */
     pet: uz.sadora.contract.PetKind? = null,
+    /** A legendary pet she owns, marked in gold after her name. */
+    legendaryPet: uz.sadora.contract.PetKind? = null,
     onSignedOut: () -> Unit,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
@@ -123,6 +125,7 @@ fun ProfileScreen(
                                         modifier = Modifier.weight(1f, fill = false),
                                     )
                                     uz.sadora.app.ui.components.WornBadgeMark(state.wornBadge, size = 26.dp)
+                                    legendaryPet?.let { uz.sadora.app.ui.components.LegendaryMark(it, size = 26.dp) }
                                 }
                                 // A phone-only account has no email; the number is what she signed in with.
                                 Text(

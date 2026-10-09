@@ -21,10 +21,10 @@ internal object PaymentRequestPage {
         val body = StringBuilder()
         body.append("<section>")
         body.append("<h1>").append(t.asks(e(view.ownerName))).append(" 💝</h1>")
-        val what = if (request.kind == PaymentRequestKind.PREMIUM) {
-            "Sadora Premium · ${t.period(request.period)}"
-        } else {
-            t.consultation + (request.doctorName?.let { " · ${e(it)}" } ?: "")
+        val what = when (request.kind) {
+            PaymentRequestKind.PREMIUM -> "Sadora Premium · ${t.period(request.period)}"
+            PaymentRequestKind.CONSULTATION -> t.consultation + (request.doctorName?.let { " · ${e(it)}" } ?: "")
+            PaymentRequestKind.PET -> t.humo
         }
         body.append("<p class=\"big\">").append(what).append("</p>")
         request.note?.let { body.append("<p class=\"note\">“").append(e(it)).append("”</p>") }
@@ -106,6 +106,7 @@ internal object PaymentRequestPage {
         fun period(period: BillingPeriod?) =
             if (period == BillingPeriod.YEAR) pick("1 yil", "1 год", "1 year") else pick("1 oy", "1 месяц", "1 month")
         val consultation = pick("Shifokor konsultatsiyasi", "Консультация врача", "Doctor consultation")
+        val humo = pick("Humo · legendar AI hamroh", "Хумо · легендарный AI-компаньон", "Humo · the legendary AI companion")
         val paid = pick("To'langan ✓ Rahmat!", "Оплачено ✓ Спасибо!", "Paid ✓ Thank you!")
         val closed = pick("Bu so'rov yopilgan.", "Эта просьба закрыта.", "This request is closed.")
         val goneTitle = pick("Havola ishlamaydi", "Ссылка не работает", "This link no longer works")

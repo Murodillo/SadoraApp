@@ -43,6 +43,14 @@ interface StoreBilling {
 
     /** Consumes a delivered gift, so the same product can be bought again next time. */
     suspend fun finishGift(receipt: StoreReceipt) = finish(receipt)
+
+    /**
+     * Something kept for good — a legendary pet. Play sells it in-app like a gift but it
+     * is acknowledged with [finish], never consumed; StoreKit sells it as a non-consumable.
+     */
+    suspend fun keepsakePrices(productIds: List<String>): Map<String, String> = giftPrices(productIds)
+
+    suspend fun purchaseKeepsake(productId: String, accountId: String): StoreOutcome = purchaseGift(productId, accountId)
 }
 
 /** Gift plans are never restored to the buyer: they were delivered to someone else. */

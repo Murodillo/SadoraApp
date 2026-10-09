@@ -47,6 +47,7 @@ import uz.sadora.server.core.parseUuid
 import uz.sadora.server.core.randomToken
 import uz.sadora.server.core.sha256
 import uz.sadora.server.notify.NotificationPolicy
+import uz.sadora.server.pet.wireKey
 import uz.sadora.server.notify.NotificationRepository
 import uz.sadora.server.partner.PartnerRepository
 import uz.sadora.server.user.UserRecord
@@ -74,6 +75,8 @@ class PaymentRequestService(
     private val audit: AuditService,
     private val publicBaseUrl: String,
 ) {
+    /** The legendary pet's sale, for a PET request. Set once at wiring. */
+    var petShop: uz.sadora.server.pet.PetShopService? = null
 
     // ---------------------------------------------------------------- her side
 
@@ -91,6 +94,7 @@ class PaymentRequestService(
         var planId: String? = null
         var sessionId: Uuid? = null
         var doctorId: Uuid? = null
+        var pet: String? = null
         val amount: Long
         when (request.kind) {
             PaymentRequestKind.PREMIUM -> {
@@ -105,6 +109,12 @@ class PaymentRequestService(
                 val (session, _) = consultations.pendingSessionFor(ownerId, doctorId)
                 sessionId = session.id
                 amount = session.priceMinor
+            }
+            PaymentRequestKind.PET -> {
+                val wanted = request.pet ?: throw ValidationException("pet", "Ko'rsatilishi shart")
+                val product = shop().forSale(ownerId, wanted)
+                pet = product.pet.wireKey
+                amount = product.priceMinor
             }
         }
 
@@ -123,6 +133,7 @@ class PaymentRequestService(
                 webTokenHash = sha256(token),
                 at = at,
                 expiresAt = at + PaymentRequestLimits.OPEN_DAYS.days,
+                pet = pet,
             )
         } catch (e: Exception) {
             // Two taps at once: the unique index lets one through.
@@ -184,11 +195,15 @@ class PaymentRequestService(
                     kind = record.kind,
                     period = periodOf(record),
                     doctorName = record.doctorId?.let { consultations.doctorName(it) },
+                    pet = petOf(record),
                     amountMinor = record.amountMinor,
                     note = record.note,
                     createdAt = record.createdAt,
                     expiresAt = record.expiresAt,
                     plans = if (record.kind == PaymentRequestKind.PREMIUM) billingRepository.giftPlans() else emptyList(),
+                    petProduct = petShop?.product(record.pet)?.let {
+                        uz.sadora.contract.PetProduct(it.pet, record.amountMinor, it.currency, it.appStoreProductId, it.googlePlayProductId, providers)
+                    },
                     providers = providers,
                 )
             }
@@ -206,19 +221,29 @@ class PaymentRequestService(
     suspend fun pay(payerId: Uuid, id: String, request: PayPaymentRequest, origin: String): CheckoutSession =
         checkout(asked(payerId, id), payerId, request, origin)
 
-    /** A gift plan bought in the payer's own store account. */
+    /** A gift plan, or the legendary pet, bought in the payer's own store account. */
     suspend fun payInStore(payerId: Uuid, id: String, purchase: PaymentRequestStorePurchase): PaymentRequest {
         val record = asked(payerId, id, requireOpen = false)
-        if (record.kind != PaymentRequestKind.PREMIUM) throw ValidationException("kind", "Konsultatsiya store orqali to'lanmaydi")
+        if (record.kind == PaymentRequestKind.CONSULTATION) throw ValidationException("kind", "Konsultatsiya store orqali to'lanmaydi")
         if (purchase.provider != PaymentProvider.APP_STORE && purchase.provider != PaymentProvider.GOOGLE_PLAY) {
             throw ValidationException("provider", "Bu provayder store emas")
         }
-        val plan = billingRepository.giftPlans().firstOrNull {
-            when (purchase.provider) {
-                PaymentProvider.APP_STORE -> it.appStoreProductId == purchase.productId
-                else -> it.googlePlayProductId == purchase.productId
-            }
-        } ?: throw ValidationException("productId", "Bunday mahsulot yo'q")
+        fun matches(appStore: String?, googlePlay: String?) = when (purchase.provider) {
+            PaymentProvider.APP_STORE -> appStore == purchase.productId
+            else -> googlePlay == purchase.productId
+        }
+        val plan = if (record.kind == PaymentRequestKind.PREMIUM) {
+            billingRepository.giftPlans().firstOrNull { matches(it.appStoreProductId, it.googlePlayProductId) }
+                ?: throw ValidationException("productId", "Bunday mahsulot yo'q")
+        } else {
+            null
+        }
+        val pet = if (record.kind == PaymentRequestKind.PET) {
+            shop().product(record.pet)?.takeIf { matches(it.appStoreProductId, it.googlePlayProductId) }
+                ?: throw ValidationException("productId", "Bunday mahsulot yo'q")
+        } else {
+            null
+        }
 
         val verified = try {
             verifier.verifyOneTime(purchase.provider, purchase.productId, purchase.token)
@@ -235,12 +260,13 @@ class PaymentRequestService(
         if (existing == null && record.status != PaymentRequestStatus.OPEN) throw ConflictException("So'rov yopilgan")
         val transaction = existing ?: billingRepository.createTransaction(
             userId = record.ownerId,
-            planId = plan.id,
+            planId = plan?.id,
             provider = purchase.provider,
-            amountMinor = plan.priceMinor,
-            currency = plan.currency,
+            amountMinor = plan?.priceMinor ?: record.amountMinor,
+            currency = plan?.currency ?: "UZS",
             payerId = payerId,
             paymentRequestId = record.id,
+            pet = pet?.pet?.wireKey,
         ).also { created ->
             if (!billingRepository.attachExternalId(created.id, verified.transactionId, null)) {
                 throw ConflictException("Bu chek allaqachon qayd etilgan")
@@ -368,7 +394,38 @@ class PaymentRequestService(
                     origin = origin,
                 )
             }
+            PaymentRequestKind.PET -> {
+                // She bought it herself meanwhile: a second payment would buy nothing.
+                closeIfOwned(record)
+                billing.requestCheckout(
+                beneficiaryId = record.ownerId,
+                payerId = payerId,
+                requestId = record.id,
+                planId = null,
+                consultationSessionId = null,
+                amountMinor = record.amountMinor,
+                provider = request.provider,
+                origin = origin,
+                pet = record.pet,
+            )
+            }
         }
+    }
+
+    /**
+     * Humo became hers by some other payment: an open request for it would only take a
+     * second payment for nothing, so it closes. [except] is the request that payment answered.
+     */
+    suspend fun closeOpenPetRequests(ownerId: Uuid, petKey: String, except: Uuid?) {
+        val open = repository.openOf(ownerId) ?: return
+        if (open.kind != PaymentRequestKind.PET || open.pet != petKey || open.id == except) return
+        repository.close(open.id, PaymentRequestStatus.CANCELLED, now())
+    }
+
+    private suspend fun closeIfOwned(record: PaymentRequestRecord) {
+        if (!shop().owns(record.ownerId, record.pet)) return
+        repository.close(record.id, PaymentRequestStatus.CANCELLED, now())
+        throw ConflictException("So'rov yopilgan")
     }
 
     /** Payme and Click where they are offered, and the stores when in-app purchase is on. */
@@ -380,6 +437,12 @@ class PaymentRequestService(
     private suspend fun giftPlan(period: BillingPeriod): BillingPlan =
         billingRepository.giftPlans().firstOrNull { it.period == period }
             ?: throw ValidationException("period", "Bunday tarif yo'q")
+
+    private fun shop(): uz.sadora.server.pet.PetShopService =
+        petShop ?: throw uz.sadora.server.core.FeatureDisabledException(uz.sadora.server.pet.PetShopService.SALE_FLAG)
+
+    private fun petOf(record: PaymentRequestRecord): uz.sadora.contract.PetKind? =
+        record.pet?.let { key -> uz.sadora.contract.PetKind.entries.firstOrNull { it.wireKey == key } }
 
     private suspend fun periodOf(record: PaymentRequestRecord): BillingPeriod? =
         record.planId?.let { billingRepository.plan(it) }?.period
@@ -470,6 +533,7 @@ class PaymentRequestService(
         status = status,
         period = periodOf(this),
         doctorName = doctorId?.let { consultations.doctorName(it) },
+        pet = petOf(this),
         amountMinor = amountMinor,
         note = note,
         sentToPartner = partnerLinkId != null,

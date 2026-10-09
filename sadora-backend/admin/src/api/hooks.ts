@@ -32,6 +32,7 @@ import type {
   AdminUserSummary,
   ArticleCategory,
   AuditEntry,
+  AdminPetProduct,
   BillingPlan,
   BillingSummary,
   AiUsageReport,
@@ -453,6 +454,27 @@ export const usePayments = (state: string | undefined, limit: number, offset: nu
     queryFn: () => request<Page<AdminPayment>>(`/v1/admin/billing/payments${query({ state, limit, offset })}`),
     placeholderData: (previous) => previous,
   })
+
+export const usePetProducts = () =>
+  useQuery({
+    queryKey: ['billing', 'pet-products'],
+    queryFn: () => request<AdminPetProduct[]>('/v1/admin/billing/pet-products'),
+  })
+
+/** A legendary pet's price here. The stores' own prices are set in their consoles. */
+export const useUpdatePetProduct = () => {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (product: { pet: string; priceMinor: number; active: boolean }) =>
+      request<{ ok: boolean }>(`/v1/admin/billing/pet-products/${product.pet}`, {
+        method: 'PUT',
+        body: { priceMinor: product.priceMinor, active: product.active },
+      }),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: ['billing', 'pet-products'] })
+    },
+  })
+}
 
 /** A gift's refund: the money is returned at the provider, this takes the days back. */
 export const useRefundGift = () => {

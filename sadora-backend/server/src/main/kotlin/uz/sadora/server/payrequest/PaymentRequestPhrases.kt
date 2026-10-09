@@ -16,26 +16,26 @@ internal object PaymentRequestPhrases {
     fun asked(name: String, kind: PaymentRequestKind, period: BillingPeriod?, language: Language) = when (language) {
         Language.UZ -> Text(
             "$name sizdan yordam so'rayapti 💝",
-            if (kind == PaymentRequestKind.PREMIUM) {
-                "U Sadora Premium (${period.uz()}) olmoqchi. Ilovada ko'ring"
-            } else {
-                "U shifokor bilan konsultatsiya olmoqchi. Ilovada ko'ring"
+            when (kind) {
+                PaymentRequestKind.PREMIUM -> "U Sadora Premium (${period.uz()}) olmoqchi. Ilovada ko'ring"
+                PaymentRequestKind.CONSULTATION -> "U shifokor bilan konsultatsiya olmoqchi. Ilovada ko'ring"
+                PaymentRequestKind.PET -> "U Humo — legendar AI hamrohni olmoqchi. Ilovada ko'ring"
             },
         )
         Language.RU -> Text(
             "$name просит вас о помощи 💝",
-            if (kind == PaymentRequestKind.PREMIUM) {
-                "Она хочет Sadora Premium (${period.ru()}). Посмотрите в приложении"
-            } else {
-                "Она хочет консультацию врача. Посмотрите в приложении"
+            when (kind) {
+                PaymentRequestKind.PREMIUM -> "Она хочет Sadora Premium (${period.ru()}). Посмотрите в приложении"
+                PaymentRequestKind.CONSULTATION -> "Она хочет консультацию врача. Посмотрите в приложении"
+                PaymentRequestKind.PET -> "Она хочет Хумо — легендарного AI-компаньона. Посмотрите в приложении"
             },
         )
         Language.EN -> Text(
             "$name is asking for your help 💝",
-            if (kind == PaymentRequestKind.PREMIUM) {
-                "She'd like Sadora Premium (${period.en()}). See it in the app"
-            } else {
-                "She'd like a doctor consultation. See it in the app"
+            when (kind) {
+                PaymentRequestKind.PREMIUM -> "She'd like Sadora Premium (${period.en()}). See it in the app"
+                PaymentRequestKind.CONSULTATION -> "She'd like a doctor consultation. See it in the app"
+                PaymentRequestKind.PET -> "She'd like Humo, the legendary AI companion. See it in the app"
             },
         )
     }
@@ -51,26 +51,26 @@ internal object PaymentRequestPhrases {
     fun paid(payer: String?, kind: PaymentRequestKind, period: BillingPeriod?, language: Language) = when (language) {
         Language.UZ -> {
             val who = payer ?: "Yaqiningiz"
-            if (kind == PaymentRequestKind.PREMIUM) {
-                Text("$who sizga ${period.uz()} Premium sovg'a qildi 💝", "Premium ochildi")
-            } else {
-                Text("$who konsultatsiya uchun to'ladi 💝", "Shifokor bilan suhbat ochildi")
+            when (kind) {
+                PaymentRequestKind.PREMIUM -> Text("$who sizga ${period.uz()} Premium sovg'a qildi 💝", "Premium ochildi")
+                PaymentRequestKind.CONSULTATION -> Text("$who konsultatsiya uchun to'ladi 💝", "Shifokor bilan suhbat ochildi")
+                PaymentRequestKind.PET -> Text("$who sizga Humo'ni sovg'a qildi 💝", "Baxt qushi endi sizniki")
             }
         }
         Language.RU -> {
             val who = payer ?: "Близкий человек"
-            if (kind == PaymentRequestKind.PREMIUM) {
-                Text("$who подарил(а) вам Premium (${period.ru()}) 💝", "Premium уже открыт")
-            } else {
-                Text("$who оплатил(а) консультацию 💝", "Чат с врачом открыт")
+            when (kind) {
+                PaymentRequestKind.PREMIUM -> Text("$who подарил(а) вам Premium (${period.ru()}) 💝", "Premium уже открыт")
+                PaymentRequestKind.CONSULTATION -> Text("$who оплатил(а) консультацию 💝", "Чат с врачом открыт")
+                PaymentRequestKind.PET -> Text("$who подарил(а) вам Хумо 💝", "Птица счастья теперь ваша")
             }
         }
         Language.EN -> {
             val who = payer ?: "Someone close to you"
-            if (kind == PaymentRequestKind.PREMIUM) {
-                Text("$who gave you ${period.en()} of Premium 💝", "Premium is open")
-            } else {
-                Text("$who paid for your consultation 💝", "Your chat with the doctor is open")
+            when (kind) {
+                PaymentRequestKind.PREMIUM -> Text("$who gave you ${period.en()} of Premium 💝", "Premium is open")
+                PaymentRequestKind.CONSULTATION -> Text("$who paid for your consultation 💝", "Your chat with the doctor is open")
+                PaymentRequestKind.PET -> Text("$who gave you Humo 💝", "The bird of happiness is yours now")
             }
         }
     }

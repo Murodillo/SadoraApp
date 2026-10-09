@@ -130,7 +130,13 @@ class SadoraGraph(
 
     fun photoController(state: uz.sadora.app.model.AppState): PhotoController = PhotoController(photoApi, state)
 
-    fun petController(state: uz.sadora.app.model.AppState): PetController = PetController(petApi, state, prompts)
+    fun petController(state: uz.sadora.app.model.AppState): PetController = PetController(
+        petApi,
+        state,
+        prompts,
+        store = storeBilling,
+        currentUserId = { (session.state.value as? SessionState.SignedIn)?.user?.id },
+    )
 
     fun shareController(): ShareController = ShareController(shareApi, analytics)
 
