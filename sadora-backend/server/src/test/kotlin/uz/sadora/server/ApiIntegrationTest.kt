@@ -1556,6 +1556,43 @@ class ApiIntegrationTest {
     }
 
     @Test
+    fun `two extensions landing together both count`() = api {
+        val her = Uuid.parse(signUp().userId)
+        val repo = component.subscriptionRepository
+        coroutineScope {
+            repeat(2) { launch { repo.extend(her, SubscriptionSource.PAYME, 30.days, reason = "test") } }
+        }
+        val ends = component.entitlementService.subscriptionStatus(her).expiresAt!!
+        assertTrue(ends > now() + 59.days, "two months, not one: $ends")
+    }
+
+    @Test
+    fun `a payment granted once is not granted again on the provider's retry`() = api {
+        val her = Uuid.parse(signUp().userId)
+        val repo = component.subscriptionRepository
+        val first = repo.extend(her, SubscriptionSource.PAYME, 30.days, onceFor = "payment test-1")
+        val second = repo.extend(her, SubscriptionSource.PAYME, 30.days, onceFor = "payment test-1")
+        assertEquals(first, second)
+        val ends = component.entitlementService.subscriptionStatus(her).expiresAt!!
+        assertTrue(ends < now() + 31.days, "one month: $ends")
+    }
+
+    @Test
+    fun `a store subscription keeps the time she already paid for elsewhere`() = api {
+        val her = Uuid.parse(signUp().userId)
+        val repo = component.subscriptionRepository
+        repo.extend(her, SubscriptionSource.PAYME, 300.days, reason = "yearly, mostly left")
+        repo.grantStore(her, SubscriptionSource.APP_STORE, now() + 30.days, "premium_month", "tx-1", "store receipt")
+        val afterPurchase = component.entitlementService.subscriptionStatus(her).expiresAt!!
+        assertTrue(afterPurchase > now() + 329.days, "a month on top of 300 days: $afterPurchase")
+
+        // The store's own renewal says a month from now; what is running is longer and stays.
+        repo.grantStore(her, SubscriptionSource.APP_STORE, now() + 60.days, "premium_month", "tx-2", "store receipt")
+        val afterRenewal = component.entitlementService.subscriptionStatus(her).expiresAt!!
+        assertTrue(afterRenewal >= afterPurchase, "a renewal never shortens: $afterRenewal < $afterPurchase")
+    }
+
+    @Test
     fun `an operator changes her own password, and only with the current one`() = api {
         val admin = adminAccount()
         val wrongCurrent = client.post("/v1/admin/me/password") {

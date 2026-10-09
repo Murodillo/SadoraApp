@@ -205,17 +205,16 @@ class BillingService(
         }
 
         val subscriptionId = try {
-            val current = entitlements.subscriptionStatus(transaction.userId)
             // Renewing before the old one lapses extends it rather than throwing the rest
-            // away; anything expired starts from now.
-            val startsFrom = current.expiresAt?.takeIf { it > now() } ?: now()
-            subscriptions.grant(
+            // away. Keyed by this payment: a provider's retry that arrives after the claim
+            // but before the subscription is attached finds it granted and adds nothing.
+            subscriptions.extend(
                 userId = transaction.userId,
                 source = transaction.provider.asSubscriptionSource(),
-                expiresAt = startsFrom + plan.period.duration(),
+                by = plan.period.duration(),
                 productId = plan.id,
                 externalId = transaction.externalId,
-                reason = "payment ${transaction.id}",
+                onceFor = "payment ${transaction.id}",
             )
         } catch (e: Throwable) {
             repository.releasePaid(transaction.id, transaction.state)

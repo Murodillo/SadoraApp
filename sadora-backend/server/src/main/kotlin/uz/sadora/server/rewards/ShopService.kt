@@ -86,16 +86,22 @@ class ShopService(
         if (product.kind == ShopKind.PREMIUM && product.premiumDays != null) {
             // Extends an existing subscription rather than replacing it: buying a week
             // on the last day of a month should add to it, not cut it short.
-            val current = entitlements.subscriptionStatus(userId).expiresAt
-            val from = current?.takeIf { it > now() } ?: now()
-            subscriptions.grant(
-                userId = userId,
-                source = SubscriptionSource.MANUAL,
-                expiresAt = from + product.premiumDays.days,
-                productId = product.slug,
-                externalId = redemption.id,
-                reason = "nur_shop",
-            )
+            try {
+                subscriptions.extend(
+                    userId = userId,
+                    source = SubscriptionSource.MANUAL,
+                    by = product.premiumDays.days,
+                    productId = product.slug,
+                    externalId = redemption.id,
+                    reason = "nur_shop",
+                )
+            } catch (e: Throwable) {
+                // The coins went in their own transaction; a grant that failed gives them
+                // back rather than leaving her a spent balance and no Premium.
+                rewards.adjust(userId, product.coinCost, "Premium berilmadi, Gul qaytarildi (${redemption.id})")
+                shop.setStatus(Uuid.parse(redemption.id), RedemptionStatus.CANCELLED)
+                throw e
+            }
             premiumGranted = true
         }
 

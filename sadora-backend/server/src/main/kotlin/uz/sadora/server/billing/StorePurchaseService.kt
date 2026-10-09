@@ -71,10 +71,10 @@ class StorePurchaseService(
             }
         }
 
-        val subscriptionId = subscriptions.grant(
+        val subscriptionId = subscriptions.grantStore(
             userId = userId,
             source = request.provider.asSubscriptionSource(),
-            expiresAt = verified.expiresAt,
+            storeExpiresAt = verified.expiresAt,
             productId = plan.id,
             externalId = verified.transactionId,
             reason = "store receipt",
