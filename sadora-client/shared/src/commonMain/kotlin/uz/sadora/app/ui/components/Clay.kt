@@ -220,7 +220,7 @@ internal fun DrawScope.clayBead(at: Offset, r: Float, color: Color, lift: Float 
  * the light theme, a soft shadow tinted [shadowTint] below. Clips to [shape].
  *
  * [streak] adds the white highlight pill the icons carry — for buttons, which should
- * read as pressable objects rather than painted rectangles.
+ * read as pressable objects rather than painted rectangles. Surfaces under 48dp tall skip it.
  */
 fun Modifier.claySurface(
     colors: SadoraColors,
@@ -271,7 +271,9 @@ fun Modifier.claySurface(
         )
         if (streak) {
             val h = size.height
-            if (size.width > h * 1.4f) {
+            // On a pill under 48dp ("+250 ml", "Qabul qildim") the streak is a thin bar
+            // above the label that reads as a loading skeleton, so only taller buttons get it.
+            if (size.width > h * 1.4f && h >= 48.dp.toPx()) {
                 drawRoundRect(
                     Color.White.copy(alpha = 0.32f * gloss),
                     topLeft = Offset(h * 0.45f, h * 0.11f),
