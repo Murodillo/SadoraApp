@@ -1,5 +1,11 @@
 package uz.sadora.app.ui.core
 
+import org.jetbrains.compose.resources.DrawableResource
+import uz.sadora.app.ui.components.SelectableArt
+import uz.sadora.app.resources.ic3d_bookmark
+import uz.sadora.app.resources.ic3d_share
+import uz.sadora.app.resources.ic3d_chats
+import uz.sadora.app.resources.ic3d_heart
 import androidx.compose.ui.semantics.Role
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
@@ -15,7 +21,6 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.WindowInsets
@@ -29,11 +34,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -64,13 +69,10 @@ import uz.sadora.app.design.Sadora
 import uz.sadora.app.design.SadoraIcons
 import uz.sadora.app.design.Spacing
 import uz.sadora.app.data.CommunityController
-import uz.sadora.app.data.DoctorController
 import uz.sadora.app.model.AppState
 import uz.sadora.app.model.CommunityComment
 import uz.sadora.app.model.CommunityFilter
 import uz.sadora.app.model.CommunityPost
-import uz.sadora.app.model.CommunitySort
-import uz.sadora.app.model.CommunityTopic
 import uz.sadora.app.ui.components.BadgeRow
 import uz.sadora.app.ui.components.WornBadgeMark
 import uz.sadora.app.ui.components.RoundIconButton
@@ -78,8 +80,6 @@ import uz.sadora.app.ui.components.SadoraButton
 import uz.sadora.app.ui.components.SadoraCard
 import uz.sadora.app.ui.components.SadoraTextField
 import uz.sadora.app.ui.components.SadoraTopBar
-import uz.sadora.app.ui.components.SegmentedControl
-import uz.sadora.app.ui.components.SelectChip
 import uz.sadora.app.ui.components.Skeleton
 import uz.sadora.app.ui.components.EntranceGated
 import uz.sadora.app.ui.components.appearFromBelow
@@ -115,8 +115,6 @@ private fun avatarTints(): List<Color> {
 fun SecretChatScreen(
     state: AppState,
     community: CommunityController,
-    /** The directory, for the strip of doctors at the top of the feed. */
-    doctors: DoctorController,
     /** Opens the post's own page: the whole text and the comments. */
     onOpenPost: (CommunityPost) -> Unit,
     /** An alias's page — an author's from a card, her own from the header. */
@@ -124,7 +122,7 @@ fun SecretChatScreen(
     onOpenMessages: () -> Unit,
     /** A verified doctor's page, by her doctor id. */
     onOpenDoctor: (String) -> Unit,
-    /** The directory of every verified doctor: the header's button and the strip's "Hammasi". */
+    /** The directory of every verified doctor, behind the header's stethoscope. */
     onOpenDoctors: () -> Unit,
     /**
      * Raises the post menu.
@@ -136,6 +134,8 @@ fun SecretChatScreen(
     onOpenMenu: (CommunityPost) -> Unit,
     onCompose: () -> Unit,
     onOpenRules: () -> Unit,
+    /** The topic, whose posts, the order — once two rows of chips, now one sheet. */
+    onOpenFilters: () -> Unit,
     onClose: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
@@ -143,28 +143,23 @@ fun SecretChatScreen(
     val t = strings.community
     val share = rememberShareAction()
     val posts = state.visiblePosts()
-    val filters = CommunityFilter.entries
 
     // The server's feed replaces the samples on open; the samples are what a build
     // with no backend keeps showing.
     LaunchedEffect(community) { community.load() }
-    // Quiet: without the list the strip is simply not drawn, and the feed is the point.
-    LaunchedEffect(doctors) { doctors.loadDirectory(quiet = true) }
 
     Box(modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {
             SadoraTopBar(
                 title = t.title,
                 onBack = onClose,
-                // A verified doctor is not anonymous here, and the header says so.
-                subtitle = state.doctorName?.let(strings.doctors::writingAs)
-                    ?: state.communityAlias?.let(t::anonymousAs) ?: t.anonymous,
                 trailing = {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(Spacing.xxs),
                     ) {
                         RoundIconButton(SadoraIcons.Info, onClick = onOpenRules, filled = false, contentDescription = t.rulesTitle)
+                        FilterIconButton(active = state.communityFiltered, onClick = onOpenFilters, contentDescription = t.filtersTitle)
                         RoundIconButton(
                             SadoraIcons.Stethoscope,
                             onClick = onOpenDoctors,
@@ -175,6 +170,16 @@ fun SecretChatScreen(
                         RoundIconButton(SadoraIcons.Pencil, onClick = onCompose, contentDescription = t.compose)
                     }
                 },
+            )
+            // Under the bar rather than in it: beside five buttons the line had a third
+            // of the width and broke into four.
+            // A verified doctor is not anonymous here, and the header says so.
+            Text(
+                state.doctorName?.let(strings.doctors::writingAs)
+                    ?: state.communityAlias?.let(t::anonymousAs) ?: t.anonymous,
+                style = Sadora.type.body,
+                color = c.muted,
+                modifier = Modifier.padding(horizontal = Spacing.screen).padding(bottom = Spacing.xxs),
             )
             // Her alias is the door to her own page: the bio, the badges, the door switch.
             state.communityAlias?.let { alias ->
@@ -191,54 +196,6 @@ fun SecretChatScreen(
                     BadgeRow(state.communityBadges, max = 3)
                     Text(t.viewProfile, style = Sadora.type.caption.copy(letterSpacing = TextUnit.Unspecified), color = c.textAccent)
                 }
-            }
-
-            Row(
-                Modifier
-                    .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState())
-                    .padding(horizontal = Spacing.screen, vertical = Spacing.xs),
-                horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
-            ) {
-                // Across every room, so it sits before them rather than among them.
-                SelectChip(
-                    // The chip draws its own check once selected; before that, ours says "doctors".
-                    label = if (state.communityDoctorsOnly) strings.doctors.filterChip else "✓ " + strings.doctors.filterChip,
-                    selected = state.communityDoctorsOnly,
-                    onClick = { state.communityDoctorsOnly = !state.communityDoctorsOnly },
-                )
-                CommunityTopic.entries.forEach { topic ->
-                    SelectChip(
-                        label = t.topic(topic),
-                        selected = state.communityTopic == topic,
-                        onClick = { state.communityTopic = topic },
-                    )
-                }
-            }
-
-            // Whose posts, and in what order. The sort is one chip that flips: two
-            // states do not need a control of their own.
-            Row(
-                Modifier
-                    .fillMaxWidth()
-                    .padding(start = Spacing.screen, end = Spacing.screen, bottom = Spacing.xs),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
-            ) {
-                SegmentedControl(
-                    options = filters.map(t::filter),
-                    selectedIndex = filters.indexOf(state.communityFilter),
-                    onSelect = { state.communityFilter = filters[it] },
-                    modifier = Modifier.weight(1f),
-                )
-                SelectChip(
-                    label = t.sort(CommunitySort.Active),
-                    selected = state.communitySort == CommunitySort.Active,
-                    onClick = {
-                        state.communitySort =
-                            if (state.communitySort == CommunitySort.Active) CommunitySort.Newest else CommunitySort.Active
-                    },
-                )
             }
 
             // Over a feed that is showing; with no feed the error is the state below.
@@ -285,16 +242,6 @@ fun SecretChatScreen(
                         ),
                         verticalArrangement = Arrangement.spacedBy(Spacing.sm),
                     ) {
-                        // The doctors lead the feed rather than its saved or own halves,
-                        // and only once there are some: an empty strip is a promise broken.
-                        val directory = doctors.directory
-                        if (state.communityFilter == CommunityFilter.Feed && directory.isNotEmpty()) {
-                            item(key = "doctors") {
-                                Box(Modifier.appearFromBelow(0)) {
-                                    DoctorStrip(directory, onOpenDoctor = onOpenDoctor, onOpenAll = onOpenDoctors)
-                                }
-                            }
-                        }
                         itemsIndexed(posts, key = { _, post -> post.id }) { index, post ->
                             Box(Modifier.appearFromBelow(index.coerceAtMost(6))) {
                                 PostCard(
@@ -510,21 +457,21 @@ internal fun PostCard(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             PostAction(
-                icon = SadoraIcons.Heart,
+                art = Res.drawable.ic3d_heart,
                 label = likes.toString(),
                 active = liked,
                 activeTint = c.primary,
                 onClick = onLike,
             )
             PostAction(
-                icon = SadoraIcons.Message,
+                art = Res.drawable.ic3d_chats,
                 label = comments.toString(),
                 onClick = onOpen ?: {},
             )
-            PostAction(icon = SadoraIcons.Share, onClick = onShare)
+            PostAction(art = Res.drawable.ic3d_share, onClick = onShare)
             Spacer(Modifier.weight(1f))
             PostAction(
-                icon = SadoraIcons.Bookmark,
+                art = Res.drawable.ic3d_bookmark,
                 active = saved,
                 activeTint = c.secondary,
                 onClick = onSave,
@@ -560,27 +507,23 @@ internal fun AliasAvatar(
 }
 
 /**
- * One action under a post.
+ * One action under a post, as a clay icon like the tab bar's.
  *
- * The icon springs when it turns on — small, and only on the transition, so a feed of
- * five posts never looks like it is fidgeting.
+ * Idle, the icon is drained of most of its colour; a like or a save brings it back in
+ * full with the tab bar's hop — only on the transition, so a feed of five posts never
+ * looks like it is fidgeting. Comment and share are never "on", so they stay drained
+ * and the coloured ones in a row are exactly what she has done to the post.
  */
 @Composable
 private fun PostAction(
-    icon: ImageVector,
+    art: DrawableResource,
     onClick: () -> Unit,
     label: String? = null,
     active: Boolean = false,
     activeTint: Color = Sadora.colors.primary,
 ) {
     val c = Sadora.colors
-    val t = strings.community
     val tint by animateColorAsState(if (active) activeTint else c.muted, tween(220), label = "action")
-    val scale by animateFloatAsState(
-        targetValue = if (active) 1.12f else 1f,
-        animationSpec = spring(dampingRatio = 0.45f),
-        label = "action-scale",
-    )
     Row(
         Modifier
             .clip(Radius.chip)
@@ -590,12 +533,7 @@ private fun PostAction(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        Icon(
-            icon,
-            contentDescription = null,
-            Modifier.size(IconSize.lg).graphicsLayer { scaleX = scale; scaleY = scale },
-            tint = tint,
-        )
+        SelectableArt(art, 26.dp, active, dimWhenIdle = true)
         if (label != null) {
             Text(
                 label,
@@ -693,6 +631,31 @@ private fun DoctorCommentRow(comment: CommunityComment, onOpenDoctor: () -> Unit
         }
         Text(comment.body, style = Sadora.type.body, color = c.text)
         Text(d.disclaimer, style = Sadora.type.caption.copy(letterSpacing = TextUnit.Unspecified), color = c.muted2)
+    }
+}
+
+/**
+ * The filter button on the chat header. A dot on its shoulder while any filter is off
+ * its default, so a feed that looks thin says why without the chips on screen.
+ */
+@Composable
+private fun FilterIconButton(active: Boolean, onClick: () -> Unit, contentDescription: String) {
+    val c = Sadora.colors
+    Box {
+        RoundIconButton(SadoraIcons.Filter, onClick = onClick, filled = false, contentDescription = contentDescription)
+        if (active) {
+            Box(
+                Modifier
+                    .align(Alignment.TopEnd)
+                    .offset(x = (-4).dp, y = 4.dp)
+                    .size(10.dp)
+                    .clip(Radius.chip)
+                    .background(c.surface)
+                    .padding(2.dp)
+                    .clip(Radius.chip)
+                    .background(c.secondary),
+            )
+        }
     }
 }
 

@@ -278,6 +278,13 @@ object SadoraIcons {
         stroke { moveTo(15.5f, 15.5f); lineTo(19.8f, 19.8f) }
     }
 
+    /** Filtr — three lines narrowing downward: the many posts sifted to a few. */
+    val Filter: ImageVector = icon("Filter") {
+        stroke { moveTo(4f, 7f); lineTo(20f, 7f) }
+        stroke { moveTo(7f, 12f); lineTo(17f, 12f) }
+        stroke { moveTo(10f, 17f); lineTo(14f, 17f) }
+    }
+
     // ---------------------------------------------------------------- profile
 
     /** Dorilar — a capsule split across the middle. */

@@ -630,6 +630,13 @@ object StringsRu : Strings {
             "Пост, нарушающий правила, отметьте флажком — его проверят.",
         )
         override val rulesButton = "Понятно"
+        override val filtersTitle = "Фильтр"
+        override val filtersShow = "Показать"
+        override val filtersTopic = "Тема"
+        override val filtersAuthor = "От кого"
+        override val filtersSort = "Порядок"
+        override val filtersReset = "Сбросить"
+        override val filtersDone = "Готово"
         override fun reportReason(reason: ReportReason) = when (reason) {
             ReportReason.Spam -> "Спам или реклама"
             ReportReason.Abuse -> "Оскорбление или угроза"

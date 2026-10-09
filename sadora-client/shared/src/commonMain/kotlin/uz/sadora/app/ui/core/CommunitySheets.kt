@@ -1,5 +1,11 @@
 package uz.sadora.app.ui.core
 
+import uz.sadora.app.ui.components.SegmentedControl
+import uz.sadora.app.ui.components.ChipFlowRow
+import uz.sadora.app.model.CommunitySort
+import uz.sadora.app.model.CommunityFilter
+import androidx.compose.ui.unit.TextUnit
+import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.LaunchedEffect
 import uz.sadora.app.data.readable
 import uz.sadora.app.ui.components.ErrorStrip
@@ -169,6 +175,80 @@ fun CommunityRulesSheetContent(state: AppState, onDone: () -> Unit) {
         }
         Spacer(Modifier.width(0.dp))
         SadoraButton(t.rulesButton, onClick = onDone)
+    }
+}
+
+/**
+ * Behind the header's filter button: what the two rows of chips over the feed used to
+ * hold. Every choice applies as it is made — the feed behind the sheet is the preview —
+ * so "Tayyor" only closes, and "Tozalash" puts all four back at once.
+ */
+@Composable
+fun CommunityFiltersSheetContent(state: AppState, onDone: () -> Unit) {
+    val c = Sadora.colors
+    val t = strings.community
+    val filters = CommunityFilter.entries
+    val sorts = CommunitySort.entries
+
+    @Composable
+    fun Label(text: String) = Text(text, style = Sadora.type.caption.copy(letterSpacing = TextUnit.Unspecified), color = c.muted)
+
+    Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+        Label(t.filtersShow)
+        SegmentedControl(
+            options = filters.map(t::filter),
+            selectedIndex = filters.indexOf(state.communityFilter),
+            onSelect = { state.communityFilter = filters[it] },
+            modifier = Modifier.fillMaxWidth(),
+        )
+
+        Spacer(Modifier.height(Spacing.xxs))
+        Label(t.filtersTopic)
+        ChipFlowRow(horizontalGap = Spacing.xs, verticalGap = Spacing.xs) {
+            CommunityTopic.entries.forEach { topic ->
+                SelectChip(
+                    label = t.topic(topic),
+                    selected = state.communityTopic == topic,
+                    onClick = { state.communityTopic = topic },
+                )
+            }
+        }
+
+        Spacer(Modifier.height(Spacing.xxs))
+        Label(t.filtersAuthor)
+        ChipFlowRow(horizontalGap = Spacing.xs, verticalGap = Spacing.xs) {
+            SelectChip(
+                label = t.topic(CommunityTopic.All),
+                selected = !state.communityDoctorsOnly,
+                onClick = { state.communityDoctorsOnly = false },
+            )
+            SelectChip(
+                label = strings.doctors.filterChip,
+                selected = state.communityDoctorsOnly,
+                onClick = { state.communityDoctorsOnly = true },
+            )
+        }
+
+        Spacer(Modifier.height(Spacing.xxs))
+        Label(t.filtersSort)
+        SegmentedControl(
+            options = sorts.map(t::sort),
+            selectedIndex = sorts.indexOf(state.communitySort),
+            onSelect = { state.communitySort = sorts[it] },
+            modifier = Modifier.fillMaxWidth(),
+        )
+
+        Spacer(Modifier.height(Spacing.xs))
+        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+            SadoraButton(
+                t.filtersReset,
+                onClick = { state.resetCommunityFilters() },
+                tone = ButtonTone.Outline,
+                enabled = state.communityFiltered,
+                modifier = Modifier.weight(1f),
+            )
+            SadoraButton(t.filtersDone, onClick = onDone, modifier = Modifier.weight(1f))
+        }
     }
 }
 

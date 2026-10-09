@@ -626,6 +626,13 @@ object StringsUz : Strings {
             "Qoidani buzgan postni bayroqcha orqali xabar qiling — u tekshiriladi.",
         )
         override val rulesButton = "Tushunarli"
+        override val filtersTitle = "Filtr"
+        override val filtersShow = "Ko'rsatish"
+        override val filtersTopic = "Mavzu"
+        override val filtersAuthor = "Kimdan"
+        override val filtersSort = "Tartib"
+        override val filtersReset = "Tozalash"
+        override val filtersDone = "Tayyor"
         override fun reportReason(reason: ReportReason) = when (reason) {
             ReportReason.Spam -> "Spam yoki reklama"
             ReportReason.Abuse -> "Haqorat yoki tahdid"

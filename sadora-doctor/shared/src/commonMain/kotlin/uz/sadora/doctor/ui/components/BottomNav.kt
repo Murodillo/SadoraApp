@@ -5,6 +5,7 @@ import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -27,6 +28,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
@@ -86,8 +89,22 @@ fun <T> SadoraBottomNav(
                     ambientColor = c.shadow.copy(alpha = if (c.isDark) 0.6f else 0.12f),
                     spotColor = c.shadow.copy(alpha = if (c.isDark) 0.6f else 0.18f),
                 )
-                .clip(Radius.chip)
-                .background(c.surface),
+                // The cards' clay: a lit top and the rim that is bright along the top
+                // edge and settles into the line colour underneath. The shadow above
+                // stays the bar's own, which is deeper than a card's and kept on dark.
+                .claySurface(c, Radius.chip, c.surface, elevation = 0.dp)
+                // A firmer rim than a card's: the bar floats over everything, and the
+                // cards' white-to-line rim vanished against the light page behind it.
+                .border(
+                    1.5.dp,
+                    Brush.verticalGradient(
+                        listOf(
+                            lerp(c.line, c.primary, if (c.isDark) 0.18f else 0.22f),
+                            lerp(c.line, c.primary, if (c.isDark) 0.32f else 0.42f),
+                        ),
+                    ),
+                    Radius.chip,
+                ),
         ) {
             val slot = maxWidth / items.size
             val selectedIndex = items.indexOfFirst { it.key == selected }.coerceAtLeast(0)

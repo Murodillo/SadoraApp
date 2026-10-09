@@ -71,7 +71,7 @@ import uz.sadora.contract.DoctorListItem
 import uz.sadora.app.resources.*
 
 // "Shifokorlar": every verified doctor in one list, and the two small doors into it —
-// the strip at the top of the chat's feed and the card on Bugun. Before this a doctor
+// the stethoscope on the chat's header and the card on Bugun. Before this a doctor
 // could only be reached by tapping her name on a post she happened to write.
 
 /**
@@ -365,103 +365,7 @@ private fun DirectorySkeleton() {
 
 // ---------------------------------------------------------------- the ways in
 
-/** How many doctors the chat's strip and Bugun's card show before "Hammasi". */
-internal const val DoctorStripSize = 4
 private const val AskDoctorAvatars = 3
-
-/**
- * The top of the chat's feed: the first few doctors of the recommended order as small
- * cards, and "Hammasi →" into the directory. Drawn edge to edge — a row that scrolls
- * sideways reads as one when it runs off the screen, not when it stops at the margin.
- */
-@Composable
-internal fun DoctorStrip(
-    doctors: List<DoctorListItem>,
-    onOpenDoctor: (String) -> Unit,
-    onOpenAll: () -> Unit,
-) {
-    val c = Sadora.colors
-    val d = strings.doctors
-    Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text(d.directoryTitle, style = Sadora.type.h3, color = c.text, modifier = Modifier.weight(1f))
-            Text(
-                d.seeAll + " →",
-                style = Sadora.type.body.copy(fontWeight = FontWeight.SemiBold),
-                color = c.textAccent,
-                modifier = Modifier
-                    .clip(Radius.chip)
-                    .noRippleClickable(role = Role.Button, onClick = onOpenAll)
-                    .padding(vertical = Spacing.xxs),
-            )
-        }
-        Row(
-            Modifier
-                .bleed(Spacing.screen)
-                .horizontalScroll(rememberScrollState())
-                .height(IntrinsicSize.Min)
-                .padding(horizontal = Spacing.screen, vertical = Spacing.xxs),
-            horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
-        ) {
-            doctors.take(DoctorStripSize).forEach { doctor ->
-                CompactDoctorCard(doctor, onClick = { onOpenDoctor(doctor.id) })
-            }
-            Column(
-                Modifier
-                    .width(96.dp)
-                    .fillMaxHeight()
-                    .pressable(role = Role.Button, onClick = onOpenAll)
-                    .cardSurface(c, shape = Radius.cardSmall, elevation = 6.dp)
-                    .padding(Spacing.sm),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                Icon(SadoraIcons.ChevronRight, contentDescription = null, Modifier.size(IconSize.lg), tint = c.textAccent)
-                Text(
-                    d.seeAll,
-                    style = Sadora.type.body.copy(fontWeight = FontWeight.SemiBold),
-                    color = c.textAccent,
-                    textAlign = TextAlign.Center,
-                )
-            }
-        }
-    }
-}
-
-/** A doctor in the strip: the avatar, her name, her specialty, and online or price. */
-@Composable
-private fun CompactDoctorCard(doctor: DoctorListItem, onClick: () -> Unit) {
-    val c = Sadora.colors
-    val d = strings.doctors
-    Column(
-        Modifier
-            .width(148.dp)
-            .fillMaxHeight()
-            .pressable(onClick = onClick)
-            .cardSurface(c, shape = Radius.cardSmall, elevation = 6.dp)
-            .padding(Spacing.sm),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        DoctorAvatar(doctor.fullName, size = 40.dp, photoUrl = doctor.photoUrl)
-        Text(doctor.fullName, style = Sadora.type.h3, color = c.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        Text(
-            d.specialty(doctor.specialty),
-            style = Sadora.type.caption.copy(letterSpacing = TextUnit.Unspecified),
-            color = c.muted,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            if (doctor.onlineNow) Box(Modifier.size(8.dp).clip(Radius.chip).background(c.success))
-            Text(
-                doctorPriceLabel(doctor.priceMinor, d),
-                style = Sadora.type.caption.copy(letterSpacing = TextUnit.Unspecified, fontWeight = FontWeight.SemiBold),
-                color = if (doctor.priceMinor > 0) c.text else c.successText,
-                maxLines = 1,
-            )
-        }
-    }
-}
 
 /**
  * Bugun's "Shifokordan so'rang": one line on what a consultation is, a few faces from

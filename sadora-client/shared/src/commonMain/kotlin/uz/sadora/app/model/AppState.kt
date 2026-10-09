@@ -432,6 +432,18 @@ class AppState {
     /** Only what verified doctors wrote; a chip beside the rooms, across all of them. */
     var communityDoctorsOnly by mutableStateOf(false)
 
+    /** Anything off its default: the header's filter button wears a dot while it is. */
+    val communityFiltered: Boolean
+        get() = communityTopic != CommunityTopic.All || communityFilter != CommunityFilter.Feed ||
+            communitySort != CommunitySort.Newest || communityDoctorsOnly
+
+    fun resetCommunityFilters() {
+        communityTopic = CommunityTopic.All
+        communityFilter = CommunityFilter.Feed
+        communitySort = CommunitySort.Newest
+        communityDoctorsOnly = false
+    }
+
     /**
      * Her name as a verified doctor, once the server says she is one. Everything she
      * writes in the chat then carries it instead of her alias.

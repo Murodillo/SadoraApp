@@ -621,6 +621,13 @@ object StringsEn : Strings {
             "Flag a post that breaks a rule — it will be reviewed.",
         )
         override val rulesButton = "Got it"
+        override val filtersTitle = "Filter"
+        override val filtersShow = "Show"
+        override val filtersTopic = "Topic"
+        override val filtersAuthor = "From"
+        override val filtersSort = "Order"
+        override val filtersReset = "Reset"
+        override val filtersDone = "Done"
         override fun reportReason(reason: ReportReason) = when (reason) {
             ReportReason.Spam -> "Spam or advertising"
             ReportReason.Abuse -> "Abuse or a threat"

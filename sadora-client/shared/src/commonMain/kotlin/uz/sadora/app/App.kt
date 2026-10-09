@@ -89,6 +89,7 @@ import uz.sadora.app.ui.core.ConsultationPaySheetContent
 import uz.sadora.app.ui.core.ProfilePhotoSheets
 import uz.sadora.app.ui.core.DoctorDirectoryScreen
 import uz.sadora.app.ui.core.DoctorProfileScreen
+import uz.sadora.app.ui.core.CommunityFiltersSheetContent
 import uz.sadora.app.ui.core.CommunityRulesSheetContent
 import uz.sadora.app.ui.core.ConversationMenuSheetContent
 import uz.sadora.app.ui.core.ConversationScreen
@@ -357,6 +358,7 @@ private class ShellOverlays {
     var menuFor by mutableStateOf<CommunityPost?>(null)
     var showCompose by mutableStateOf(false)
     var showCommunityRules by mutableStateOf(false)
+    var showCommunityFilters by mutableStateOf(false)
     var showEditBio by mutableStateOf(false)
     var showConversationMenu by mutableStateOf(false)
     /** The doctor she is about to open a consultation with: the consent sheet is up. */
@@ -377,7 +379,7 @@ private class ShellOverlays {
     var lastWaterAdded by mutableStateOf(0)
 
     val anyOpen: Boolean
-        get() = showWaterSheet || showSymptomSheet || menuFor != null || showCompose || showCommunityRules ||
+        get() = showWaterSheet || showSymptomSheet || menuFor != null || showCompose || showCommunityRules || showCommunityFilters ||
             showEditBio || showConversationMenu || consultWith != null || payFor != null || showPhotoSheet
 
     /** Closes the topmost sheet. False when none was open. */
@@ -387,6 +389,7 @@ private class ShellOverlays {
         menuFor != null -> { menuFor = null; true }
         showCompose -> { showCompose = false; true }
         showCommunityRules -> { showCommunityRules = false; true }
+        showCommunityFilters -> { showCommunityFilters = false; true }
         showEditBio -> { showEditBio = false; true }
         showConversationMenu -> { showConversationMenu = false; true }
         consultWith != null -> { consultWith = null; true }
@@ -891,6 +894,14 @@ private fun MainShell(
         }
 
         SadoraBottomSheet(
+            visible = overlays.showCommunityFilters,
+            title = communityStrings.filtersTitle,
+            onDismiss = { overlays.showCommunityFilters = false },
+        ) {
+            CommunityFiltersSheetContent(state, onDone = { overlays.showCommunityFilters = false })
+        }
+
+        SadoraBottomSheet(
             visible = overlays.showEditBio,
             title = communityStrings.editBio,
             onDismiss = { overlays.showEditBio = false },
@@ -1055,7 +1066,6 @@ private fun RootTab(
         Tab.SecretChat -> SecretChatScreen(
             state = state,
             community = controllers.community,
-            doctors = controllers.doctors,
             onOpenPost = { navigator.push(Route.Post(it.id)) },
             onOpenProfile = { navigator.push(Route.AliasProfile(it)) },
             onOpenMessages = { navigator.push(Route.Messages) },
@@ -1064,6 +1074,7 @@ private fun RootTab(
             onOpenMenu = { overlays.menuFor = it },
             onCompose = { overlays.showCompose = true },
             onOpenRules = { overlays.showCommunityRules = true },
+            onOpenFilters = { overlays.showCommunityFilters = true },
         )
 
         Tab.Journey -> JourneyScreen(state = state, health = controllers.health, tools = controllers.stageEvents, onOpen = navigator::push)
@@ -1204,7 +1215,6 @@ private fun PushedScreen(
         Route.SecretChat -> SecretChatScreen(
             state = state,
             community = controllers.community,
-            doctors = controllers.doctors,
             onOpenPost = { navigator.push(Route.Post(it.id)) },
             onOpenProfile = { navigator.push(Route.AliasProfile(it)) },
             onOpenMessages = { navigator.push(Route.Messages) },
@@ -1213,6 +1223,7 @@ private fun PushedScreen(
             onOpenMenu = { overlays.menuFor = it },
             onCompose = { overlays.showCompose = true },
             onOpenRules = { overlays.showCommunityRules = true },
+            onOpenFilters = { overlays.showCommunityFilters = true },
             onClose = close,
         )
         is Route.Post -> PostDetailScreen(

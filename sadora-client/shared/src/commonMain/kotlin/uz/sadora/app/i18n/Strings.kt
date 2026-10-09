@@ -256,6 +256,17 @@ interface CommunityStrings {
     val rules: List<String>
     val rulesButton: String
 
+    // ---- the filter sheet behind the header's filter button
+    val filtersTitle: String
+    /** Feed / saved / mine. */
+    val filtersShow: String
+    val filtersTopic: String
+    /** Whose posts: everyone's, or doctors' alone. */
+    val filtersAuthor: String
+    val filtersSort: String
+    val filtersReset: String
+    val filtersDone: String
+
     val nothingSaved: String
     val nothingHere: String
     val nothingMine: String
