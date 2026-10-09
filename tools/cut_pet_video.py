@@ -16,9 +16,10 @@ import cv2
 import numpy as np
 from PIL import Image
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from pet_matting import clear_holes, close_specks, drop_crumbs, key_green, model_mask, model_pockets, green_floor
+from pet_matting import clear_holes, close_specks, drop_crumbs, key_green, key_magenta, blue_ambient, model_mask, model_pockets, green_floor
 
 KEY = "white"
+GLOW = False
 BG = 12   # whiteness distance still counted as background (--bg lowers it for a white pet)
 SH = 70   # how dark a neutral pixel may be and still count as floor shadow
 
@@ -39,9 +40,12 @@ def flood(seed, allow):
 
 def cut(img):
     a = np.asarray(img.convert("RGB")).astype(np.float32)
-    if KEY == "green":
-        rgb, alpha, shadow = key_green(a)
-        green_floor(a, rgb, alpha, model_mask(a))
+    if KEY in ("green", "magenta"):
+        rgb, alpha, shadow = (key_green if KEY == "green" else key_magenta)(a)
+        mask = model_mask(a)
+        green_floor(a, rgb, alpha, mask)
+        if GLOW:
+            blue_ambient(rgb, alpha, mask, a.shape[0] / 720)
         # No speck closing here: a green key leaves no pinholes, and closing would fill the
         # narrow green gap between a wing tip and the beak with the source's green.
         drop_crumbs(alpha)
@@ -91,13 +95,17 @@ def main():
     p.add_argument("--quality", type=int, default=88)
     p.add_argument("--bg", type=int, default=12)
     # A pet filmed on solid chroma green instead of white (Laylo).
-    p.add_argument("--key", choices=["white", "green"], default="white")
+    # Magenta for a pet whose own glow is blue or green (Humo).
+    p.add_argument("--key", choices=["white", "green", "magenta"], default="white")
+    # Humo: its sparkles turn blue and its wings glow (pet_matting.blue_ambient).
+    p.add_argument("--glow", action="store_true")
     # Forward then back: for a clip with no frame close enough to its first to loop on.
     p.add_argument("--pingpong", action="store_true")
     args = p.parse_args()
-    global BG, KEY
+    global BG, KEY, GLOW
     BG = args.bg
     KEY = args.key
+    GLOW = args.glow
 
     tmp = tempfile.mkdtemp()
     subprocess.run(["ffmpeg", "-v", "error", "-i", args.video, "-vf", f"fps={args.fps}", f"{tmp}/f%03d.png"], check=True)

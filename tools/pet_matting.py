@@ -147,6 +147,79 @@ def key_green(a, lo=25.0, hi=75.0):
     return rgb, alpha, dark
 
 
+def key_magenta(a, lo=35.0, hi=110.0):
+    """
+    Chroma key for a pet filmed on solid magenta (Humo, whose wings throw a blue and
+    turquoise glow a green key would eat). Magentaness = min(R, B) - G: the ground is
+    ~250, gold and cyan are below zero, so the glow and its particles stay. The soft band
+    is wider than green's because the glow fades into the ground over many pixels; magenta
+    spill on the rim is taken off R and B. The floor shadow is handled as for green.
+    Returns (rgb, alpha, shadow).
+    """
+    r, g, b = a[..., 0], a[..., 1], a[..., 2]
+    magenta = np.minimum(r, b) - g
+    alpha = np.clip(1 - (magenta - lo) / (hi - lo), 0, 1).astype(np.float32)
+    rgb = a.copy()
+    spill = np.clip(magenta, 0, None)
+    rgb[..., 0] = np.clip(r - spill, 0, 255)
+    rgb[..., 2] = np.clip(b - spill, 0, 255)
+    # Magenta seen through the translucent glowing tail stays pink after the despill;
+    # pushed toward blue it reads as the glow it is. Cheeks (green above blue) are not hit.
+    nr, ng, nb = rgb[..., 0], rgb[..., 1], rgb[..., 2]
+    purple = (nr > ng + 12) & (nb > ng + 12) & (nb >= nr * 0.85)
+    rgb[..., 0][purple] = ng[purple] * 0.85
+    ground = alpha < 0.05
+    lum = a.mean(2)
+    ground_lum = float(np.median(lum[ground])) if ground.any() else 255.0
+    dark = ground & (lum < ground_lum - 10)
+    h = a.shape[0]
+    dark[: int(h * 0.5)] = False
+    alpha[dark] = np.clip((ground_lum - lum[dark]) / ground_lum * 1.6, 0, 0.45)
+    rgb[dark] = 0
+    return rgb, alpha, dark
+
+
+def blue_ambient(rgb, alpha, mask, scale=1.0):
+    """
+    Humo's ambient light, made reliable: Veo draws its sparkles white, which on a light
+    page read as grey bubbles. Everything keyed in that the model says is not the bird
+    becomes a blue glow particle (brightness kept as alpha), and the turquoise of the wing
+    feathers throws a soft blue halo outside the body. [scale] is the frame height / 720.
+    """
+    blue = np.array([96, 178, 255], np.float32)
+    c = rgb.astype(np.float32)
+    lum = c.mean(2)
+    bird = cv2.GaussianBlur(mask, (0, 0), 2) > 0.3
+    # Only small separate specks are sparkles: a foot or a tail tip the model missed is a
+    # big piece, and keeps its colour.
+    # Pieces are cut on the keyed alpha alone, so a sparkle hugging a wing (inside the
+    # model's blurred bird) still counts; the body is the largest piece and never one.
+    solid = alpha > 0.05
+    n, labels, stats, _ = cv2.connectedComponentsWithStats(solid.astype(np.uint8), connectivity=8)
+    limit = max(60 * scale * scale, 0.002 * bird.sum())
+    small = np.zeros(n, bool)
+    if n > 1:
+        area = stats[:, cv2.CC_STAT_AREA]
+        sat = c.max(2) - c.min(2)
+        # A white sparkle is colourless; a foot or tail tip the key split off is not.
+        pale = np.bincount(labels.ravel(), weights=sat.ravel(), minlength=n) / np.maximum(area, 1) < 50
+        small[1:] = (area[1:] < limit) | (pale[1:] & (area[1:] < 0.03 * bird.sum()))
+        small[int(np.argmax(np.where(np.arange(n) == 0, -1, area)))] = False
+    faint = (~bird) & (alpha > 0.02) & ~solid
+    loose = (small[labels] & solid) | faint
+    rgb[loose] = blue * (0.75 + 0.25 * (lum[loose] / 255.0))[:, None]
+    alpha[loose] = alpha[loose] * np.clip(lum[loose] / 180.0, 0.25, 1.0)
+    r, g, b = c[..., 0], c[..., 1], c[..., 2]
+    feathers = bird & (alpha > 0.5) & (b - r > 30) & (g - r > 10)
+    glow = cv2.GaussianBlur(feathers.astype(np.float32), (0, 0), 7 * scale) * 0.85
+    glow = np.clip(glow, 0, 0.55)
+    under = glow * (1 - alpha)
+    out = alpha + under
+    nz = out > 1e-4
+    rgb[nz] = (rgb[nz].astype(np.float32) * alpha[nz][:, None] + blue * under[nz][:, None]) / out[nz][:, None]
+    alpha[:] = out
+
+
 # ---------------------------------------------------------------- model-guided pockets
 
 _SESSIONS = {}

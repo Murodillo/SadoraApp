@@ -117,7 +117,7 @@ private fun loopFor(pet: PetKind, pose: PetPose): PetLoop? = when (pose) {
         PetKind.LAYLO -> PetLoop("laylo_wave", 115)
         PetKind.ANORXON -> PetLoop("anorxon_wave", 101)
         PetKind.OHU -> PetLoop("ohu_wave", 94)
-        PetKind.HUMO -> null
+        PetKind.HUMO -> PetLoop("humo_wave", 113)
     }
     PetPose.HAPPY -> when (pet) {
         PetKind.NILUFAR -> PetLoop("nilufar_happy", 43)
@@ -125,7 +125,7 @@ private fun loopFor(pet: PetKind, pose: PetPose): PetLoop? = when (pose) {
         PetKind.LAYLO -> PetLoop("laylo_happy", 111)
         PetKind.ANORXON -> PetLoop("anorxon_happy", 44)
         PetKind.OHU -> PetLoop("ohu_happy", 109)
-        PetKind.HUMO -> null
+        PetKind.HUMO -> PetLoop("humo_happy", 113)
     }
     PetPose.THINK -> when (pet) {
         PetKind.NILUFAR -> PetLoop("nilufar_think", 109)
@@ -133,7 +133,7 @@ private fun loopFor(pet: PetKind, pose: PetPose): PetLoop? = when (pose) {
         PetKind.LAYLO -> PetLoop("laylo_think", 112)
         PetKind.ANORXON -> PetLoop("anorxon_think", 102)
         PetKind.OHU -> PetLoop("ohu_think", 94)
-        PetKind.HUMO -> null
+        PetKind.HUMO -> PetLoop("humo_think", 112)
     }
     PetPose.SLEEP -> when (pet) {
         PetKind.NILUFAR -> PetLoop("nilufar_sleep", 41)
@@ -141,7 +141,7 @@ private fun loopFor(pet: PetKind, pose: PetPose): PetLoop? = when (pose) {
         PetKind.LAYLO -> PetLoop("laylo_sleep", 44)
         PetKind.ANORXON -> PetLoop("anorxon_sleep", 42)
         PetKind.OHU -> PetLoop("ohu_sleep", 97)
-        PetKind.HUMO -> null
+        PetKind.HUMO -> PetLoop("humo_sleep", 40)
     }
 }
 
