@@ -62,10 +62,21 @@ class HealthConnectPlatform(context: Context) : HealthPlatform {
 
     override val provider: HealthProvider = HealthProvider.HEALTH_CONNECT
 
-    private val client: HealthConnectClient? by lazy {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return@lazy null
-        runCatching { HealthConnectClient.getOrCreate(this.context) }.getOrNull()
-    }
+    /**
+     * Made on first use and kept once there is one. Not a `lazy`: a phone without Health
+     * Connect cached null for the life of the process, so installing it from the gate's
+     * Play button changed nothing until she killed the app.
+     */
+    @Volatile
+    private var madeClient: HealthConnectClient? = null
+
+    private val client: HealthConnectClient?
+        get() {
+            madeClient?.let { return it }
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return null
+            if (HealthConnectClient.getSdkStatus(context) != HealthConnectClient.SDK_AVAILABLE) return null
+            return runCatching { HealthConnectClient.getOrCreate(context) }.getOrNull()?.also { madeClient = it }
+        }
 
     override suspend fun availability(): HealthAvailability {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return HealthAvailability.UNSUPPORTED

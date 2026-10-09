@@ -495,6 +495,8 @@ private fun MainShell(
         val job = scope.launch {
             if (controllers.account.currentUserId != null) {
                 controllers.billing.reconcileStore { controllers.account.refreshEntitlements() }
+                controllers.pet.reconcileStore()
+                controllers.frames.reconcileStore()
             }
         }
         onPauseOrDispose { job.cancel() }

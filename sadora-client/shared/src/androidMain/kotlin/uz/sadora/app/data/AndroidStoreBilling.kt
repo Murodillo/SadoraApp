@@ -109,7 +109,13 @@ class AndroidStoreBilling(context: Context) : StoreBilling {
             else -> return StoreOutcome.Failed(launched.debugMessage)
         }
 
-        val (result, purchases) = updates.first()
+        // This sheet's answer, not whatever Play reports next: a pending purchase that
+        // clears while the sheet is open arrives here too, and used to be taken for this
+        // one — leaving the real purchase unread and unacknowledged.
+        val (result, purchases) = updates.first { (result, purchases) ->
+            result.responseCode != BillingClient.BillingResponseCode.OK ||
+                purchases.orEmpty().any { productId in it.products }
+        }
         return when (result.responseCode) {
             BillingClient.BillingResponseCode.OK -> {
                 val purchase = purchases.orEmpty().firstOrNull { productId in it.products }
@@ -127,6 +133,9 @@ class AndroidStoreBilling(context: Context) : StoreBilling {
     }
 
     override suspend fun owned(): List<StoreReceipt> = owned(BillingClient.ProductType.SUBS)
+
+    override suspend fun unfinishedKeepsakes(): List<StoreReceipt> =
+        owned(BillingClient.ProductType.INAPP).filter { it.needsFinish }
 
     private suspend fun owned(type: String): List<StoreReceipt> {
         if (!connect()) return emptyList()
