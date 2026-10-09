@@ -23,6 +23,8 @@ interface PetStrings {
     val teaser: String
     val wake: String
     val close: String
+    /** What a tap on the pet in its chat header does, read to a screen reader. */
+    val poke: String
     fun action(action: PetAction): String
 
     // ---- in the AI chat, where the companion is the assistant
@@ -88,6 +90,7 @@ object PetUz : PetStrings {
     override val teaser = "Zzz… Premium bilan uyg'onsam, har kuni sizga yordam beraman."
     override val wake = "Uyg'otish"
     override val close = "Yopish"
+    override val poke = "Erkalash"
     override fun action(action: PetAction) = when (action) {
         PetAction.FOOD_SCANNER -> "Rasmga olish"
         PetAction.MIND_JOURNAL -> "Yozish"
@@ -150,6 +153,7 @@ object PetRu : PetStrings {
     override val teaser = "Zzz… С Premium я проснусь и буду помогать вам каждый день."
     override val wake = "Разбудить"
     override val close = "Закрыть"
+    override val poke = "Погладить"
     override fun action(action: PetAction) = when (action) {
         PetAction.FOOD_SCANNER -> "Сфотографировать"
         PetAction.MIND_JOURNAL -> "Написать"
@@ -212,6 +216,7 @@ object PetEn : PetStrings {
     override val teaser = "Zzz… With Premium I'll wake up and help you every day."
     override val wake = "Wake up"
     override val close = "Close"
+    override val poke = "Pet it"
     override fun action(action: PetAction) = when (action) {
         PetAction.FOOD_SCANNER -> "Take a photo"
         PetAction.MIND_JOURNAL -> "Write"

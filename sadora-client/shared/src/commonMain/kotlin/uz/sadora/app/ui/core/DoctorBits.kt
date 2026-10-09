@@ -75,7 +75,7 @@ internal fun DoctorAvatar(name: String, size: Dp = 36.dp, photoUrl: String? = nu
                 Modifier.fillMaxSize().background(c.primary.copy(alpha = if (c.isDark) 0.28f else 0.14f)),
                 contentAlignment = Alignment.Center,
             ) {
-                Text(initials(name), style = Sadora.type.h3, color = c.primary)
+                Text(initials(name), style = Sadora.type.h3, color = c.textAccent)
             }
         }
         Box(Modifier.align(Alignment.BottomEnd)) { VerifiedMark(size = (size.value * 0.42f).dp) }

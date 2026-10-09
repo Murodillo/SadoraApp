@@ -1,5 +1,11 @@
 package uz.sadora.app.ui.journey
 
+import uz.sadora.app.ui.components.noRippleToggleable
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.Role
+import androidx.compose.foundation.border
+import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.semantics.semantics
 import uz.sadora.app.ui.components.animateFloatUnlessReduced
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -119,12 +125,15 @@ fun JourneyScreen(
 
 // ---------------------------------------------------------------- cycle
 
-/** The dial colour of a phase, as the deck's legend draws it. */
-private fun CyclePhase.dialColor(): Color = when (this) {
-    CyclePhase.Period -> PhaseColors.period
-    CyclePhase.Follicular -> PhaseColors.follicular
-    CyclePhase.Fertile -> PhaseColors.fertile
-    CyclePhase.Luteal -> PhaseColors.luteal
+/**
+ * The dial colour of a phase, as the deck's legend draws it — in its mark shade, since
+ * every use here is a dot or bead that has to stand out from the card (3:1).
+ */
+private fun CyclePhase.dialColor(dark: Boolean): Color = when (this) {
+    CyclePhase.Period -> PhaseColors.periodMark(dark)
+    CyclePhase.Follicular -> PhaseColors.follicularMark(dark)
+    CyclePhase.Fertile -> PhaseColors.fertileMark(dark)
+    CyclePhase.Luteal -> PhaseColors.lutealMark(dark)
 }
 
 /**
@@ -415,7 +424,7 @@ private fun CycleDial(state: AppState, modifier: Modifier = Modifier) {
                 // Days after today are the prediction, and the design never lets a
                 // forecast look like a recorded fact.
                 val future = day > today
-                val colour = phaseOf(day).dialColor().copy(alpha = (if (future) 0.4f else 1f) * t)
+                val colour = phaseOf(day).dialColor(c.isDark).copy(alpha = (if (future) 0.4f else 1f) * t)
 
                 // Recorded days are glossy clay beads, like the icons; the forecast stays
                 // flat and faint, so it never passes for something she logged.
@@ -468,12 +477,15 @@ private fun CycleWeekStrip(state: AppState, onOpen: (Route) -> Unit) {
             val date = monday.plus(index, DateTimeUnit.DAY)
             val isToday = date == state.today
             val phase = state.phaseForDate(date)
+            val phaseName = phase?.let { strings.common.phase(it) }
 
             Column(
                 Modifier
                     .weight(1f)
                     .clip(Radius.chip)
-                    .pressable { onOpen(Route.CycleDay(date.toString())) },
+                    .pressable { onOpen(Route.CycleDay(date.toString())) }
+                    // The dot under the date is colour alone, so the day says its phase.
+                    .semantics(mergeDescendants = true) { if (phaseName != null) stateDescription = phaseName },
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
@@ -497,12 +509,16 @@ private fun CycleWeekStrip(state: AppState, onOpen: (Route) -> Unit) {
                         maxLines = 1,
                     )
                 }
-                Box(
-                    Modifier
-                        .size(5.dp)
-                        .clip(Radius.chip)
-                        .background(phase?.dialColor() ?: Color.Transparent),
-                )
+                // Fertile is a ring and the rest are filled dots: period and fertile pink
+                // are too close in colour to tell apart by colour alone.
+                val mark = phase?.dialColor(c.isDark) ?: Color.Transparent
+                Box(Modifier.size(7.dp), contentAlignment = Alignment.Center) {
+                    if (phase == CyclePhase.Fertile) {
+                        Box(Modifier.size(7.dp).border(1.5.dp, mark, Radius.chip))
+                    } else {
+                        Box(Modifier.size(5.dp).clip(Radius.chip).background(mark))
+                    }
+                }
             }
         }
     }
@@ -520,7 +536,7 @@ private fun PhaseLegend() {
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(5.dp),
             ) {
-                Box(Modifier.size(8.dp).clip(Radius.chip).background(phase.dialColor()))
+                Box(Modifier.size(8.dp).clip(Radius.chip).background(phase.dialColor(c.isDark)))
                 Text(
                     strings.common.phase(phase).substringBefore(" "),
                     style = Sadora.type.caption.copy(letterSpacing = androidx.compose.ui.unit.TextUnit.Unspecified),
@@ -544,7 +560,8 @@ private fun SymptomTileView(
 ) {
     val c = Sadora.colors
     Column(
-        modifier.noRippleClickable(onClick = onClick),
+        // Several can be on at once, so each is a checkbox: the tint alone was the state.
+        modifier.noRippleToggleable(selected, Role.Checkbox, focusShape = Radius.tile) { onClick() },
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
@@ -555,7 +572,7 @@ private fun SymptomTileView(
                 .background(if (selected) c.primary.copy(alpha = 0.16f) else c.surface2, Radius.chip),
             contentAlignment = Alignment.Center,
         ) {
-            if (art != null) SelectableArt(art, 38.dp, selected) else Text(emoji, style = Sadora.type.h2)
+            if (art != null) SelectableArt(art, 38.dp, selected) else Text(emoji, style = Sadora.type.h2, modifier = Modifier.clearAndSetSemantics {})
         }
         Text(
             label,
@@ -849,7 +866,7 @@ private fun PostpartumJourney(state: AppState, health: HealthController, tools: 
                     "${Fmt.litres(state.waterMl)} / ${Fmt.litres(state.waterGoalMl)} " +
                         strings.common.litres,
                     state.waterMl / state.waterGoalMl.coerceAtLeast(1).toFloat(),
-                    color = c.accent,
+                    color = c.chartAccent,
                 )
                 LabeledProgress(
                     t.calories,
@@ -1039,7 +1056,7 @@ private fun MenopauseJourney(state: AppState, health: HealthController, tools: S
                         progress = if (measured) score / 100f else 0f,
                         size = 120.dp,
                         strokeWidth = 11.dp,
-                        color = c.accent,
+                        color = c.chartAccent,
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(if (measured) "$score" else NoValue, style = Sadora.type.data, color = c.text)

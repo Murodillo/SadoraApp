@@ -503,7 +503,8 @@ private fun FeatureTile(feature: Feature, modifier: Modifier = Modifier) {
     Row(
         modifier
             .fillMaxWidth()
-            .height(72.dp)
+            // A floor, not a height: at a large font the two lines grow the tile.
+            .heightIn(min = 72.dp)
             .cardSurface(c, shape = Radius.tile)
             .padding(horizontal = Spacing.sm),
         verticalAlignment = Alignment.CenterVertically,

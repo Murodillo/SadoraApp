@@ -1037,7 +1037,8 @@ private fun Bubble(
         RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp, bottomStart = 4.dp, bottomEnd = 18.dp)
     }
     val content = if (mine) c.onPrimary else c.text
-    val meta = if (mine) c.onPrimary.copy(alpha = 0.85f) else c.muted2
+    // Full white: at 85% the time under her own bubble fell under 4.5:1 on the hero.
+    val meta = if (mine) c.onPrimary else c.muted2
     Column(
         Modifier.fillMaxWidth(),
         horizontalAlignment = if (mine) Alignment.End else Alignment.Start,

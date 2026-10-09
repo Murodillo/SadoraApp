@@ -352,11 +352,11 @@ private fun StageCard(state: AppState, onOpen: () -> Unit) {
                 progress = progress.coerceIn(0f, 1f),
                 size = 64.dp,
                 strokeWidth = 7.dp,
-                color = if (cycle) phase.color() else stage.palette.tint,
+                color = if (cycle) phase.color(c.isDark) else stage.palette.tint,
             ) {
                 ArtTile(
                     if (cycle) Res.drawable.ic3d_period else stage.art(),
-                    tint = if (cycle) phase.color() else stage.palette.tint,
+                    tint = if (cycle) phase.color(c.isDark) else stage.palette.tint,
                     size = 38.dp,
                     artSize = 28.dp,
                 )
@@ -367,11 +367,11 @@ private fun StageCard(state: AppState, onOpen: () -> Unit) {
 }
 
 /** The dial colour of a phase, as the deck's legend draws it. */
-internal fun CyclePhase.color() = when (this) {
-    CyclePhase.Period -> PhaseColors.period
-    CyclePhase.Follicular -> PhaseColors.follicular
-    CyclePhase.Fertile -> PhaseColors.fertile
-    CyclePhase.Luteal -> PhaseColors.luteal
+internal fun CyclePhase.color(dark: Boolean) = when (this) {
+    CyclePhase.Period -> PhaseColors.periodMark(dark)
+    CyclePhase.Follicular -> PhaseColors.follicularMark(dark)
+    CyclePhase.Fertile -> PhaseColors.fertileMark(dark)
+    CyclePhase.Luteal -> PhaseColors.lutealMark(dark)
 }
 
 /** t.quickActions — the four shortcuts under the grid. */

@@ -1,5 +1,6 @@
 package uz.sadora.app.ui.modules
 
+import uz.sadora.app.ui.components.loadingSemantics
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -100,7 +101,7 @@ fun FramesScreen(
                             }
                             Text(t.subtitle, style = type.body, color = c.muted, textAlign = TextAlign.Center)
                             board?.let { Text(t.balance(it.coins), style = type.h3, color = c.textAccent) }
-                            notice?.let { Text(it, style = type.body, color = c.primary, textAlign = TextAlign.Center) }
+                            notice?.let { Text(it, style = type.body, color = c.textAccent, textAlign = TextAlign.Center) }
                             SadoraButton(t.changePhoto, onEditPhoto, tone = ButtonTone.Secondary)
                         }
                     }
@@ -108,7 +109,7 @@ fun FramesScreen(
                 if (board == null && frames.busy) {
                     item {
                         Box(Modifier.fillMaxWidth().padding(Spacing.lg), contentAlignment = Alignment.Center) {
-                            CircularProgressIndicator(Modifier.size(28.dp), color = c.primary)
+                            CircularProgressIndicator(Modifier.size(28.dp).loadingSemantics(), color = c.primary)
                         }
                     }
                 }
@@ -231,7 +232,7 @@ private fun FrameTile(
                     else -> frame.product?.let { priceText(frames, it) }.orEmpty()
                 },
                 style = type.caption.copy(letterSpacing = TextUnit.Unspecified),
-                color = if (worn || frame.owned) c.primary else c.muted,
+                color = if (worn || frame.owned) c.textAccent else c.muted,
                 maxLines = 1,
             )
         }
@@ -316,7 +317,7 @@ private fun PaidContent(frames: FrameController, product: FrameProduct, canAsk: 
     when {
         waiting != null -> {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                CircularProgressIndicator(Modifier.size(20.dp), color = c.primary, strokeWidth = 2.5.dp)
+                CircularProgressIndicator(Modifier.size(20.dp).loadingSemantics(), color = c.primary, strokeWidth = 2.5.dp)
                 Text(t.paying, style = type.h3, color = c.text)
             }
             SadoraButton(t.payReopen, { uriHandler.openUri(waiting.url) }, tone = ButtonTone.Secondary)

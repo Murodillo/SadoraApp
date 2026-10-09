@@ -1,7 +1,10 @@
 package uz.sadora.app.ui.components
 
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -68,7 +71,7 @@ fun SadoraButton(
         ButtonTone.Secondary -> c.text
         ButtonTone.Outline -> c.textAccent
         ButtonTone.Ghost -> c.muted
-        ButtonTone.Destructive -> c.danger
+        ButtonTone.Destructive -> c.dangerText
     }
     // Pressed, a clay button sinks: it drops a little and its shadow tightens under it.
     val sink by animateFloatAsState(if (pressed && enabled) 1f else 0f, label = "button-sink")
@@ -85,21 +88,21 @@ fun SadoraButton(
                         c, Radius.field, c.heroGradient,
                         elevation = 12.dp - 8.dp * sink,
                         shadowTint = c.primary,
-                        gloss = 0.9f,
+                        gloss = HeroLabelGloss,
                         streak = true,
                     )
                     ButtonTone.Secondary -> Modifier.claySurface(c, Radius.field, c.surface2, elevation = 6.dp - 4.dp * sink, streak = true)
                     ButtonTone.Outline -> Modifier
                         .claySurface(c, Radius.field, c.surface, elevation = 6.dp - 4.dp * sink)
-                        .border(1.5.dp, c.primary.copy(alpha = 0.55f), Radius.field)
+                        .border(1.5.dp, c.primary, Radius.field)
                     ButtonTone.Destructive -> Modifier
                         .claySurface(c, Radius.field, c.surface, elevation = 4.dp - 3.dp * sink)
-                        .border(1.dp, c.danger.copy(alpha = 0.5f), Radius.field)
+                        .border(1.dp, c.danger, Radius.field)
                     ButtonTone.Ghost -> Modifier.clip(Radius.field)
                 },
             )
             .defaultMinSize(minHeight = MinTouchTarget)
-            .noRippleClickable(enabled = enabled, interactionSource = interaction, onClick = onClick)
+            .noRippleClickable(enabled = enabled, interactionSource = interaction, role = Role.Button, focusShape = Radius.field, onClick = onClick)
             .padding(horizontal = Spacing.lg, vertical = 14.dp),
         contentAlignment = Alignment.Center,
     ) {
@@ -126,6 +129,14 @@ fun SadoraButton(
 }
 
 /**
+ * How much of the clay light a white-labelled button on the hero keeps. The full lit
+ * face is a 42% white wash along the top that fades over the upper half, and the
+ * label's first line sits halfway into it: at the old 0.9 white there fell to 3.6:1.
+ * At this the wash behind the label stays near 3%, which holds 4.5:1 across the hero.
+ */
+internal const val HeroLabelGloss = 0.15f
+
+/**
  * Premium call-to-action. Same gradient pill as the primary button; kept as its own
  * name so a paywall reads as one in the code.
  */
@@ -148,7 +159,9 @@ fun PillButton(
     enabled: Boolean = true,
 ) {
     val c = Sadora.colors
-    val bg = if (tone == ButtonTone.Primary) c.primary else c.surface2
+    // Filled, the pill takes the deep end of the hero rather than [primary]: white on
+    // primary was 4.2:1 on light and 3.3:1 on dark, and 5.3:1 on this in both.
+    val bg = if (tone == ButtonTone.Primary) c.heroColors.first() else c.surface2
     val fg = if (tone == ButtonTone.Primary) c.onPrimary else c.text
     Box(
         modifier = modifier
@@ -157,11 +170,12 @@ fun PillButton(
                 c, Radius.chip, bg,
                 elevation = if (tone == ButtonTone.Primary) 6.dp else 3.dp,
                 shadowTint = if (tone == ButtonTone.Primary) c.primary else c.shadow,
+                gloss = if (tone == ButtonTone.Primary) HeroLabelGloss else 1f,
                 streak = true,
             )
             // The pill itself stays compact; the touch target around it is the full 44dp.
             .defaultMinSize(minWidth = MinTouchTarget, minHeight = MinTouchTarget)
-            .pressable(enabled = enabled, onClick = onClick)
+            .pressable(enabled = enabled, role = Role.Button, focusShape = Radius.chip, onClick = onClick)
             .padding(horizontal = 14.dp, vertical = Spacing.xs),
         contentAlignment = Alignment.Center,
     ) {
@@ -173,6 +187,7 @@ fun PillButton(
             style = Sadora.type.body.copy(fontWeight = FontWeight.SemiBold),
             maxLines = 1,
             softWrap = false,
+            overflow = TextOverflow.Ellipsis,
         )
     }
 }
@@ -194,8 +209,8 @@ fun RoundIconButton(
     Box(
         modifier
             .size(size)
-            .pressable(pressedScale = 0.9f, onClick = onClick)
-            .clayBeadSurface(c, if (filled) c.primary else c.surface2),
+            .pressable(pressedScale = 0.9f, role = Role.Button, focusShape = CircleShape, onClick = onClick)
+            .clayBeadSurface(c, if (filled) c.heroColors.first() else c.surface2),
         contentAlignment = Alignment.Center,
     ) {
         Icon(

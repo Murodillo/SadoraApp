@@ -511,7 +511,7 @@ fun SadoraLoader(modifier: Modifier = Modifier, size: Dp = 56.dp) {
         animationSpec = infiniteRepeatable(tween(800), RepeatMode.Reverse),
     )
 
-    Canvas(modifier.size(size)) {
+    Canvas(modifier.size(size).loadingSemantics()) {
         val r = this.size.minDimension / 2f
         val ball = r * 0.72f * breath
 

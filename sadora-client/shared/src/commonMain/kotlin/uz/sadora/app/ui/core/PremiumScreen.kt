@@ -25,6 +25,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import uz.sadora.app.data.SadoraController
 import uz.sadora.app.design.Radius
@@ -212,10 +214,11 @@ private fun StatusHero(state: AppState, onOpen: (Route) -> Unit) {
                     Box(
                         Modifier
                             .clip(Radius.chip)
-                            .background(onGradient.copy(alpha = 0.18f))
+                            // A dark wash, not a white one: white on white-washed hero was 3.6:1.
+                            .background(Color.Black.copy(alpha = 0.15f))
                             .padding(horizontal = Spacing.xs, vertical = 4.dp),
                     ) {
-                        Text(feature, style = Sadora.type.caption, color = onGradient, maxLines = 1, softWrap = false)
+                        Text(feature, style = Sadora.type.caption, color = onGradient, maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis)
                     }
                 }
             }

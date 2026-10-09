@@ -622,6 +622,10 @@ object StringsEn : Strings {
         )
         override val rulesButton = "Got it"
         override val filtersTitle = "Filter"
+        override val filtersOn = "Filter on"
+        override val like = "Like"
+        override val save = "Save"
+        override val sharePost = "Share"
         override val filtersShow = "Show"
         override val filtersTopic = "Topic"
         override val filtersAuthor = "From"

@@ -1,5 +1,10 @@
 package uz.sadora.app.ui.modules
 
+import uz.sadora.app.ui.components.noRippleSelectable
+import androidx.compose.ui.semantics.Role
+import uz.sadora.app.design.MinTouchTarget
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import uz.sadora.app.ui.components.SadoraBottomSheet
 import uz.sadora.app.ui.components.SadoraButton
 import uz.sadora.app.ui.components.ButtonTone
@@ -109,6 +114,7 @@ fun PaywallScreen(
         }
     }
 
+    val closeLabel = strings.common.close
     Box(modifier) {
     Column {
         Row(
@@ -117,10 +123,11 @@ fun PaywallScreen(
         ) {
             Box(
                 Modifier
-                    .size(40.dp)
+                    .size(MinTouchTarget)
                     .clip(Radius.chip)
                     .background(c.surface2)
-                    .noRippleClickable(onClick = onClose),
+                    .noRippleClickable(focusShape = Radius.chip, onClick = onClose)
+                    .clearAndSetSemantics { contentDescription = closeLabel },
                 contentAlignment = Alignment.Center,
             ) {
                 Text("✕", style = Sadora.type.h3, color = c.text)
@@ -341,7 +348,7 @@ private fun PlanOption(
             .clip(Radius.card)
             .background(if (selected) c.primary.copy(alpha = if (c.isDark) 0.14f else 0.07f) else c.surface)
             .border(if (selected) 1.5.dp else 1.dp, if (selected) c.primary else c.line, Radius.card)
-            .noRippleClickable(onClick = onClick)
+            .noRippleSelectable(selected, Role.RadioButton, focusShape = Radius.card, onClick = onClick)
             .padding(Spacing.md),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
@@ -366,7 +373,7 @@ private fun PlanOption(
             Text(price, style = Sadora.type.h3, color = c.text)
             if (note != null) Text(note, style = Sadora.type.body, color = c.muted)
         }
-        if (selected) Text("✓", style = Sadora.type.h2, color = c.textAccent)
+        if (selected) Text("✓", style = Sadora.type.h2, color = c.textAccent, modifier = Modifier.clearAndSetSemantics {})
     }
 }
 

@@ -125,7 +125,7 @@ fun SleepScreen(
                         TrendBars(
                             values = week.barValues(),
                             labels = week.barLabels(strings.dates),
-                            color = c.accent,
+                            color = c.chartAccent,
                             highlightLast = true,
                         )
                         Text(
@@ -228,7 +228,7 @@ private fun LastNightCard(minutes: Int, today: DailyHealth?) {
                 progress = (minutes / SleepGoalMinutes.toFloat()).coerceIn(0f, 1f),
                 size = 116.dp,
                 strokeWidth = 11.dp,
-                color = c.accent,
+                color = c.chartAccent,
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(minutesLabel(minutes, strings.modules, strings.common), style = Sadora.type.h2, color = c.text)
@@ -271,8 +271,8 @@ private fun stagesCard(today: DailyHealth?, totalMinutes: Int, t: ModuleStrings)
         val c = Sadora.colors
         val stages = listOfNotNull(
             Triple(t.deep, deep, c.primary),
-            Triple("REM", rem, c.secondary),
-            Triple(t.light, light, c.accent),
+            Triple("REM", rem, c.chartSecondary),
+            Triple(t.light, light, c.chartAccent),
             awake?.takeIf { it > 0 }?.let { Triple(t.metric(HealthMetric.SLEEP_AWAKE), it, c.muted2) },
         )
         SadoraCard {

@@ -131,7 +131,7 @@ fun PrescriptionCard(
                 )
             }
             if (cancelled) {
-                Text(p.cancelled, style = Sadora.type.h3, color = c.danger)
+                Text(p.cancelled, style = Sadora.type.h3, color = c.dangerText)
                 prescription.cancelReason?.let { Text(p.cancelReason(it), style = Sadora.type.body, color = c.muted) }
             }
             Text(p.disclaimer, style = Sadora.type.caption.copy(letterSpacing = TextUnit.Unspecified), color = c.muted2)
@@ -144,8 +144,8 @@ fun PrescriptionCard(
             when {
                 cancelled -> Unit
                 prescription.addedAt != null -> Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-                    Icon(SadoraIcons.Check, contentDescription = null, Modifier.size(16.dp), tint = c.success)
-                    Text(p.added, style = Sadora.type.body, color = c.success)
+                    Icon(SadoraIcons.Check, contentDescription = null, Modifier.size(16.dp), tint = c.successText)
+                    Text(p.added, style = Sadora.type.body, color = c.successText)
                 }
                 onAdd != null -> SadoraButton(p.addToPills, onClick = onAdd)
             }
@@ -247,7 +247,7 @@ fun AddPrescriptionSheet(
         }
 
         val picked = rx.items.indices.filter { chosen[it] ?: true }
-        if (picked.isEmpty()) Text(p.nothingChosen, style = Sadora.type.body, color = c.danger)
+        if (picked.isEmpty()) Text(p.nothingChosen, style = Sadora.type.body, color = c.dangerText)
         health.prescriptionCalls.error?.let { ErrorStrip(it.readable(strings.errors)) }
         SadoraButton(
             if (busy) p.adding else p.addConfirm,

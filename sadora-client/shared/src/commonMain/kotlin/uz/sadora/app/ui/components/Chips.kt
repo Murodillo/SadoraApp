@@ -24,6 +24,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import uz.sadora.app.design.MinTouchTarget
 import uz.sadora.app.design.Radius
@@ -46,7 +47,8 @@ fun SelectChip(
     val bg by animateColorAsState(
         if (selected) c.primary.copy(alpha = if (c.isDark) 0.22f else 0.12f) else c.surface,
     )
-    val border by animateColorAsState(if (selected) c.primary else c.line)
+    // Unpicked, the outline is the chip's only edge on a white card, so it needs 3:1.
+    val border by animateColorAsState(if (selected) c.primary else c.lineStrong)
     val fg by animateColorAsState(if (selected) c.textAccent else c.text)
 
     Box(
@@ -90,11 +92,13 @@ fun SadoraBadge(
 ) {
     val c = Sadora.colors
     val (bg, fg) = when (tone) {
-        BadgeTone.Premium -> c.secondary.copy(alpha = if (c.isDark) 0.24f else 0.14f) to c.secondary
-        BadgeTone.Connected, BadgeTone.Success -> c.success.copy(alpha = 0.16f) to c.success
+        // The wash keeps the tone's own colour; the word takes its text shade, since the
+        // fills read at 2.2–4.1:1 on their own wash on light.
+        BadgeTone.Premium -> c.secondary.copy(alpha = if (c.isDark) 0.24f else 0.14f) to c.secondaryText
+        BadgeTone.Connected, BadgeTone.Success -> c.success.copy(alpha = 0.16f) to c.successText
         BadgeTone.Estimated, BadgeTone.Neutral -> c.surface2 to c.muted
-        BadgeTone.Warning -> c.warning.copy(alpha = 0.16f) to c.warning
-        BadgeTone.Danger -> c.danger.copy(alpha = 0.14f) to c.danger
+        BadgeTone.Warning -> c.warning.copy(alpha = 0.16f) to c.warningText
+        BadgeTone.Danger -> c.danger.copy(alpha = 0.14f) to c.dangerText
     }
     Box(
         modifier = modifier
@@ -111,7 +115,7 @@ fun SadoraBadge(
             } else if (leading != null) {
                 Text(leading, style = Sadora.type.caption, color = fg)
             }
-            Text(text, style = Sadora.type.caption, color = fg, maxLines = 1, softWrap = false)
+            Text(text, style = Sadora.type.caption, color = fg, maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis)
         }
     }
 }
@@ -128,7 +132,7 @@ fun PremiumGradientBadge(modifier: Modifier = Modifier, text: String = "PREMIUM"
     ) {
         // A badge is sized to its word; wrapping it is always a layout bug at the call
         // site, so it never wraps here.
-        Text(text, style = Sadora.type.caption, color = c.onPrimary, maxLines = 1, softWrap = false)
+        Text(text, style = Sadora.type.caption, color = c.onPrimary, maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis)
     }
 }
 

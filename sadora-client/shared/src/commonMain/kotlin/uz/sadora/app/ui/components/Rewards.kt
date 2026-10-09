@@ -232,7 +232,7 @@ private fun StreakCard(result: DailyCheckInResult) {
                 progress = if (milestone != null) 1f else result.streak.milestoneProgress,
                 size = 116.dp,
                 strokeWidth = 9.dp,
-                color = c.secondary,
+                color = c.chartSecondary,
                 glow = true,
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {

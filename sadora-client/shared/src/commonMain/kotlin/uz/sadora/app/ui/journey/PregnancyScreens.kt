@@ -1,5 +1,14 @@
 package uz.sadora.app.ui.journey
 
+import uz.sadora.app.ui.components.noRippleSelectable
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
+import uz.sadora.app.ui.components.noRippleToggleable
+import androidx.compose.ui.semantics.Role
+import uz.sadora.app.design.MinTouchTarget
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import uz.sadora.app.data.readable
 import uz.sadora.app.ui.components.ErrorStrip
 import androidx.compose.foundation.background
@@ -107,10 +116,11 @@ fun PregnancyAppointmentsScreen(
             trailing = {
                 Box(
                     Modifier
-                        .size(40.dp)
+                        .size(MinTouchTarget)
                         .clip(Radius.chip)
                         .background(c.surface2)
-                        .noRippleClickable { composing = true },
+                        .noRippleClickable(focusShape = Radius.chip) { composing = true }
+                        .clearAndSetSemantics { contentDescription = t.addAppointment },
                     contentAlignment = Alignment.Center,
                 ) {
                     Text("＋", style = Sadora.type.h2, color = c.text)
@@ -235,6 +245,7 @@ private fun EventRow(
 ) {
     val c = Sadora.colors
     val t = strings.journey
+    val editLabel = strings.common.edit
     Row(
         Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
@@ -245,7 +256,9 @@ private fun EventRow(
                 .clip(Radius.field)
                 .background(if (highlighted) c.primary.copy(alpha = 0.16f) else c.surface2)
                 .padding(horizontal = Spacing.sm, vertical = Spacing.xs)
-                .noRippleClickable(onClick = onToggleDone),
+                // Done or not was a tint alone; now it is a checkbox she hears the state of.
+                .noRippleToggleable(appointment.isDone, Role.Checkbox, focusShape = Radius.field) { onToggleDone() }
+                .clearAndSetSemantics { contentDescription = "${appointment.title}: ${t.appointmentDone}" },
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
@@ -279,7 +292,10 @@ private fun EventRow(
             }
         }
         Box(
-            Modifier.size(32.dp).noRippleClickable(onClick = onEdit),
+            Modifier
+                .size(MinTouchTarget)
+                .noRippleClickable(focusShape = Radius.chip, onClick = onEdit)
+                .clearAndSetSemantics { contentDescription = editLabel },
             contentAlignment = Alignment.Center,
         ) {
             Text("✎", style = Sadora.type.h3, color = c.muted2)
@@ -458,13 +474,13 @@ fun PregnancyCheckInScreen(
 
         ScreenContent {
             item {
-                Text(t.checkInTitle, style = Sadora.type.h1, color = c.text)
+                Text(t.checkInTitle, style = Sadora.type.h1, color = c.text, modifier = Modifier.semantics { heading() })
             }
 
             item {
                 SadoraCard {
                     Row(
-                        Modifier.fillMaxWidth(),
+                        Modifier.fillMaxWidth().selectableGroup(),
                         horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
                     ) {
                         Mood.entries.forEach { option ->
@@ -524,8 +540,8 @@ fun PregnancyCheckInScreen(
                             .padding(Spacing.sm),
                         horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
                     ) {
-                        Text("⚠", style = Sadora.type.h3, color = c.danger)
-                        Text(t.movementWarning, style = Sadora.type.body, color = c.danger)
+                        Text("⚠", style = Sadora.type.h3, color = c.dangerText)
+                        Text(t.movementWarning, style = Sadora.type.body, color = c.dangerText)
                     }
                 }
             }
@@ -583,12 +599,12 @@ internal fun MoodCell(
             .background(
                 if (selected) c.primary.copy(alpha = if (c.isDark) 0.2f else 0.1f) else c.surface2,
             )
-            .noRippleClickable(onClick = onClick)
+            .noRippleSelectable(selected, Role.RadioButton, focusShape = Radius.field, onClick = onClick)
             .padding(vertical = Spacing.xs),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
-        Text(emoji, style = Sadora.type.h2)
+        Text(emoji, style = Sadora.type.h2, modifier = Modifier.clearAndSetSemantics {})
         Text(
             label,
             style = Sadora.type.caption.copy(

@@ -1,5 +1,6 @@
 package uz.sadora.app.ui.modules
 
+import uz.sadora.app.ui.components.loadingSemantics
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -240,7 +241,7 @@ private fun BuyContent(
     when {
         waiting != null -> {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                CircularProgressIndicator(Modifier.size(20.dp), color = c.primary, strokeWidth = 2.5.dp)
+                CircularProgressIndicator(Modifier.size(20.dp).loadingSemantics(), color = c.primary, strokeWidth = 2.5.dp)
                 Text(t.paying, style = type.h3, color = c.text)
             }
             SadoraButton(t.payReopen, { uriHandler.openUri(waiting.url) }, tone = ButtonTone.Secondary)

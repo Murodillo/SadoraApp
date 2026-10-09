@@ -56,9 +56,9 @@ fun BalanceScreen(
     val directions = listOf(
         Quad("🍽", t.food, goalRatio(state.caloriesEaten, state.calorieGoal), c.primary,
             t.ofKcal(Fmt.int(state.caloriesEaten), Fmt.int(state.calorieGoal))),
-        Quad("💧", t.water, goalRatio(state.waterMl, state.waterGoalMl), c.accent,
+        Quad("💧", t.water, goalRatio(state.waterMl, state.waterGoalMl), c.chartAccent,
             t.ofLitres(Fmt.litres(state.waterMl), Fmt.litres(state.waterGoalMl))),
-        Quad("👟", t.activity, activity, c.secondary, activityCaption),
+        Quad("👟", t.activity, activity, c.chartSecondary, activityCaption),
         Quad("💤", t.sleep, state.sleepMinutes?.let { goalRatio(it, DailySleepGoalMinutes) }, c.success,
             t.ofSleep(state.sleepLabel(format = strings.common::hoursMinutes))),
     )

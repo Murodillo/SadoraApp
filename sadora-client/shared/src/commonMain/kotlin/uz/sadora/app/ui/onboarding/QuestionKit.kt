@@ -1,5 +1,9 @@
 package uz.sadora.app.ui.onboarding
 
+import uz.sadora.app.ui.components.noRippleToggleable
+import uz.sadora.app.ui.components.noRippleSelectable
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.ui.semantics.Role
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
@@ -565,7 +569,7 @@ fun AnswerTile(
             .clip(Radius.tile)
             .background(c.surface)
             .border(if (selected) 1.5.dp else 1.dp, ring, Radius.tile)
-            .noRippleClickable(onClick = onClick)
+            .noRippleToggleable(selected, Role.Checkbox, focusShape = Radius.tile) { onClick() }
             .padding(vertical = Spacing.md, horizontal = Spacing.xs),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(Spacing.xs),
@@ -914,16 +918,18 @@ fun LanguageSwitch(
         modifier
             .clip(Radius.chip)
             .background(c.surface2)
-            .padding(3.dp),
+            .padding(horizontal = 3.dp),
     ) {
+        // Each segment's hit area is the full 44dp; the white thumb sits 3dp inside it.
         Box(
             Modifier
                 .offset(x = offset)
-                .size(width = segment, height = 30.dp)
+                .padding(vertical = 3.dp)
+                .size(width = segment, height = MinTouchTarget - 6.dp)
                 .clip(Radius.chip)
                 .background(c.surface),
         )
-        Row {
+        Row(Modifier.selectableGroup()) {
             options.forEach { language ->
                 val active = language == selected
                 val label by animateColorAsState(
@@ -933,9 +939,9 @@ fun LanguageSwitch(
                 )
                 Box(
                     Modifier
-                        .size(width = segment, height = 30.dp)
+                        .size(width = segment, height = MinTouchTarget)
                         .clip(Radius.chip)
-                        .noRippleClickable { onSelect(language) },
+                        .noRippleSelectable(active, Role.RadioButton, focusShape = Radius.chip) { onSelect(language) },
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(

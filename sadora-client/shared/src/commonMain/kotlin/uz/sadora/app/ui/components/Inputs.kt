@@ -3,6 +3,10 @@ package uz.sadora.app.ui.components
 import uz.sadora.app.i18n.strings
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.error
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -98,12 +102,19 @@ fun SadoraTextField(
     val borderColor = when {
         error != null -> c.danger
         focused -> c.primary
-        else -> c.line
+        // Idle, the border is the field's only edge on a white card: 3:1, not a hairline.
+        else -> c.lineStrong
     }
 
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
         if (label != null) {
-            Text(label.uppercase(), style = Sadora.type.caption, color = c.muted)
+            // The field itself carries the label as its name; read here too it was said twice.
+            Text(
+                label.uppercase(),
+                style = Sadora.type.caption,
+                color = c.muted,
+                modifier = Modifier.clearAndSetSemantics {},
+            )
         }
         Box(
             Modifier
@@ -132,7 +143,12 @@ fun SadoraTextField(
                 }
                 Box(Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
                     if (value.isEmpty()) {
-                        Text(placeholder, style = Sadora.type.h3, color = c.muted2)
+                        Text(
+                            placeholder,
+                            style = Sadora.type.h3,
+                            color = c.muted2,
+                            modifier = Modifier.clearAndSetSemantics {},
+                        )
                     }
                     BasicTextField(
                         value = value,
@@ -152,7 +168,14 @@ fun SadoraTextField(
                             imeAction = imeAction,
                         ),
                         keyboardActions = keyboardActions,
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .semantics {
+                                // A field named only by a placeholder drawn beside it had no
+                                // name for a screen reader once she started typing.
+                                (label ?: placeholder.takeIf { it.isNotEmpty() })?.let { contentDescription = it }
+                                if (error != null) error(error)
+                            },
                     )
                 }
                 if (suffix != null) Text(suffix, style = Sadora.type.body, color = c.muted)
@@ -160,7 +183,12 @@ fun SadoraTextField(
             }
         }
         if (error != null) {
-            Text(error, style = Sadora.type.body, color = c.danger)
+            Text(
+                error,
+                style = Sadora.type.body,
+                color = c.dangerText,
+                modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+            )
         }
     }
 }
@@ -207,7 +235,7 @@ fun OtpInput(
                 isError -> c.danger
                 char.isNotEmpty() -> c.primary
                 active -> c.secondary
-                else -> c.line
+                else -> c.lineStrong
             }
             Box(
                 Modifier

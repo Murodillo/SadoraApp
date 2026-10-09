@@ -21,6 +21,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.composed
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -76,7 +77,9 @@ object Motion {
 fun Modifier.pressable(
     enabled: Boolean = true,
     pressedScale: Float = 0.975f,
-    role: Role? = null,
+    role: Role? = Role.Button,
+    onClickLabel: String? = null,
+    focusShape: Shape = FocusRingShape,
     onClick: () -> Unit,
 ): Modifier = composed {
     val source = remember { MutableInteractionSource() }
@@ -89,10 +92,11 @@ fun Modifier.pressable(
     graphicsLayer {
         scaleX = scale
         scaleY = scale
-    }.clickable(
+    }.focusRing(source, focusShape).clickable(
         interactionSource = source,
         indication = null,
         enabled = enabled,
+        onClickLabel = onClickLabel,
         role = role,
         onClick = onClick,
     )

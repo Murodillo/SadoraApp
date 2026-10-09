@@ -1,14 +1,38 @@
 package uz.sadora.app.ui.components
 
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.unit.dp
+import uz.sadora.app.design.Radius
+import uz.sadora.app.design.Sadora
+
+/** The ring's default corners when the caller does not pass the element's own shape. */
+val FocusRingShape: Shape = RoundedCornerShape(Radius.sm)
+
+/**
+ * A 2dp ring while [source] holds keyboard / D-pad focus (WCAG 2.4.7).
+ *
+ * The press feedback here is a scale, not a ripple, so without this someone moving with a
+ * keyboard cannot see where they are. Touch never focuses a clickable, so the ring only
+ * appears for keyboard and switch users.
+ */
+@Composable
+internal fun Modifier.focusRing(source: MutableInteractionSource, shape: Shape): Modifier {
+    val focused by source.collectIsFocusedAsState()
+    return if (focused) border(2.dp, Sadora.colors.primary, shape) else this
+}
 
 /**
  * Clickable without the Material ripple.
@@ -19,14 +43,17 @@ import androidx.compose.ui.semantics.Role
 fun Modifier.noRippleClickable(
     enabled: Boolean = true,
     interactionSource: MutableInteractionSource? = null,
-    role: Role? = null,
+    role: Role? = Role.Button,
+    onClickLabel: String? = null,
+    focusShape: Shape = FocusRingShape,
     onClick: () -> Unit,
 ): Modifier = composed {
     val source = interactionSource ?: remember { MutableInteractionSource() }
-    clickable(
+    focusRing(source, focusShape).clickable(
         interactionSource = source,
         indication = null,
         enabled = enabled,
+        onClickLabel = onClickLabel,
         role = role,
         onClick = onClick,
     )
@@ -41,11 +68,13 @@ fun Modifier.noRippleSelectable(
     selected: Boolean,
     role: Role,
     enabled: Boolean = true,
+    focusShape: Shape = FocusRingShape,
     onClick: () -> Unit,
 ): Modifier = composed {
-    selectable(
+    val source = remember { MutableInteractionSource() }
+    focusRing(source, focusShape).selectable(
         selected = selected,
-        interactionSource = remember { MutableInteractionSource() },
+        interactionSource = source,
         indication = null,
         enabled = enabled,
         role = role,
@@ -58,11 +87,13 @@ fun Modifier.noRippleToggleable(
     value: Boolean,
     role: Role,
     enabled: Boolean = true,
+    focusShape: Shape = FocusRingShape,
     onValueChange: (Boolean) -> Unit,
 ): Modifier = composed {
-    toggleable(
+    val source = remember { MutableInteractionSource() }
+    focusRing(source, focusShape).toggleable(
         value = value,
-        interactionSource = remember { MutableInteractionSource() },
+        interactionSource = source,
         indication = null,
         enabled = enabled,
         role = role,

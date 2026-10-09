@@ -1,5 +1,9 @@
 package uz.sadora.app.ui.components
 
+import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.heading
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -68,7 +72,7 @@ fun SadoraCard(
             .fillMaxWidth()
             // A tappable card dips under the finger; a static one must not, or every
             // surface on the screen would look interactive.
-            .then(if (onClick != null) Modifier.pressable(onClick = onClick) else Modifier)
+            .then(if (onClick != null) Modifier.pressable(role = Role.Button, focusShape = Radius.card, onClick = onClick) else Modifier)
             .cardSurface(c)
             .padding(padding),
         verticalArrangement = Arrangement.spacedBy(verticalGap),
@@ -116,14 +120,18 @@ fun SectionHeader(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        Text(title, style = Sadora.type.h2, color = c.text)
+        Text(title, style = Sadora.type.h2, color = c.text, modifier = Modifier.semantics { heading() })
         when {
             trailing != null -> trailing()
             action != null -> Text(
                 action,
                 style = Sadora.type.body.copy(fontWeight = FontWeight.SemiBold),
                 color = c.textAccent,
-                modifier = Modifier.noRippleClickable { onAction?.invoke() },
+                // A 44dp hit area around the short word; the text stays where it was drawn.
+                modifier = Modifier
+                    .defaultMinSize(minWidth = MinTouchTarget, minHeight = MinTouchTarget)
+                    .noRippleClickable { onAction?.invoke() }
+                    .wrapContentSize(Alignment.CenterEnd),
             )
         }
     }

@@ -1,5 +1,8 @@
 package uz.sadora.app.ui.modules
 
+import uz.sadora.app.design.MinTouchTarget
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import uz.sadora.app.ui.core.AddPrescriptionSheet
 import uz.sadora.app.ui.core.PrescriptionCard
 
@@ -97,10 +100,11 @@ fun MedicationsScreen(
             trailing = {
                 Box(
                     Modifier
-                        .size(40.dp)
+                        .size(MinTouchTarget)
                         .clip(Radius.chip)
                         .background(c.surface2)
-                        .noRippleClickable { onOpen(Route.AddMedication) },
+                        .noRippleClickable(focusShape = Radius.chip) { onOpen(Route.AddMedication) }
+                        .clearAndSetSemantics { contentDescription = t.addMedication },
                     contentAlignment = Alignment.Center,
                 ) {
                     Text("＋", style = Sadora.type.h2, color = c.text)

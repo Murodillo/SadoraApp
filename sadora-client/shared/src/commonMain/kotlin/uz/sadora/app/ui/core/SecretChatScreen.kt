@@ -1,5 +1,10 @@
 package uz.sadora.app.ui.core
 
+import uz.sadora.app.ui.components.noRippleToggleable
+import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import org.jetbrains.compose.resources.DrawableResource
 import uz.sadora.app.ui.components.SelectableArt
 import uz.sadora.app.resources.ic3d_bookmark
@@ -59,6 +64,7 @@ import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withLink
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
@@ -203,7 +209,7 @@ fun SecretChatScreen(
                 Text(
                     community.error?.readable().orEmpty(),
                     style = Sadora.type.body,
-                    color = c.danger,
+                    color = c.dangerText,
                     modifier = Modifier.padding(horizontal = Spacing.screen, vertical = Spacing.xs),
                 )
             }
@@ -399,6 +405,7 @@ internal fun PostCard(
                         style = Sadora.type.h3,
                         color = c.text,
                         maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f, fill = false),
                     )
                     // The badge she chose to wear stands right after her alias.
@@ -412,6 +419,7 @@ internal fun PostCard(
                     style = Sadora.type.body,
                     color = c.muted2,
                     maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
             Icon(
@@ -458,6 +466,7 @@ internal fun PostCard(
         ) {
             PostAction(
                 art = Res.drawable.ic3d_heart,
+                name = t.like,
                 label = likes.toString(),
                 active = liked,
                 activeTint = c.primary,
@@ -465,13 +474,15 @@ internal fun PostCard(
             )
             PostAction(
                 art = Res.drawable.ic3d_chats,
+                name = t.comments,
                 label = comments.toString(),
                 onClick = onOpen ?: {},
             )
-            PostAction(art = Res.drawable.ic3d_share, onClick = onShare)
+            PostAction(art = Res.drawable.ic3d_share, name = t.sharePost, onClick = onShare)
             Spacer(Modifier.weight(1f))
             PostAction(
                 art = Res.drawable.ic3d_bookmark,
+                name = t.save,
                 active = saved,
                 activeTint = c.secondary,
                 onClick = onSave,
@@ -518,22 +529,34 @@ internal fun AliasAvatar(
 private fun PostAction(
     art: DrawableResource,
     onClick: () -> Unit,
+    /** What the action is, for a screen reader: the row draws only an icon and a count. */
+    name: String,
     label: String? = null,
-    active: Boolean = false,
+    /** Null for an action that is never "on" (comment, share); like and save are toggles. */
+    active: Boolean? = null,
     activeTint: Color = Sadora.colors.primary,
 ) {
     val c = Sadora.colors
-    val tint by animateColorAsState(if (active) activeTint else c.muted, tween(220), label = "action")
+    val on = active == true
+    val tint by animateColorAsState(if (on) activeTint else c.muted, tween(220), label = "action")
+    val description = if (label != null) "$name, $label" else name
     Row(
         Modifier
             .clip(Radius.chip)
-            .defaultMinSize(minHeight = MinTouchTarget)
-            .noRippleClickable(onClick = onClick)
+            .defaultMinSize(minWidth = MinTouchTarget, minHeight = MinTouchTarget)
+            .then(
+                if (active != null) {
+                    Modifier.noRippleToggleable(active, Role.Checkbox, focusShape = Radius.chip) { onClick() }
+                } else {
+                    Modifier.noRippleClickable(focusShape = Radius.chip, onClick = onClick)
+                },
+            )
+            .clearAndSetSemantics { contentDescription = description }
             .padding(vertical = Spacing.xxs),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        SelectableArt(art, 26.dp, active, dimWhenIdle = true)
+        SelectableArt(art, 26.dp, on, dimWhenIdle = true)
         if (label != null) {
             Text(
                 label,
@@ -641,8 +664,16 @@ private fun DoctorCommentRow(comment: CommunityComment, onOpenDoctor: () -> Unit
 @Composable
 private fun FilterIconButton(active: Boolean, onClick: () -> Unit, contentDescription: String) {
     val c = Sadora.colors
+    val stateText = if (active) strings.community.filtersOn else null
     Box {
-        RoundIconButton(SadoraIcons.Filter, onClick = onClick, filled = false, contentDescription = contentDescription)
+        RoundIconButton(
+            SadoraIcons.Filter,
+            onClick = onClick,
+            filled = false,
+            contentDescription = contentDescription,
+            // The dot was the only sign a filter was on; now the button says it too.
+            modifier = Modifier.semantics { stateText?.let { stateDescription = it } },
+        )
         if (active) {
             Box(
                 Modifier
@@ -663,8 +694,10 @@ private fun FilterIconButton(active: Boolean, onClick: () -> Unit, contentDescri
 @Composable
 internal fun UnreadIconButton(count: Int, onClick: () -> Unit, contentDescription: String) {
     val c = Sadora.colors
+    // The count on the shoulder is folded into the button's name, so it is read with it.
+    val described = if (count > 0) "$contentDescription, ${strings.community.unreadCount(count)}" else contentDescription
     Box {
-        RoundIconButton(SadoraIcons.Message, onClick = onClick, filled = false, contentDescription = contentDescription)
+        RoundIconButton(SadoraIcons.Message, onClick = onClick, filled = false, contentDescription = described)
         if (count > 0) {
             Box(
                 Modifier
@@ -672,7 +705,8 @@ internal fun UnreadIconButton(count: Int, onClick: () -> Unit, contentDescriptio
                     .defaultMinSize(minWidth = 18.dp, minHeight = 18.dp)
                     .clip(Radius.chip)
                     .background(c.secondary)
-                    .padding(horizontal = 5.dp),
+                    .padding(horizontal = 5.dp)
+                    .clearAndSetSemantics {},
                 contentAlignment = Alignment.Center,
             ) {
                 Text(

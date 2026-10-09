@@ -1,5 +1,8 @@
 package uz.sadora.app.ui.core
 
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import uz.sadora.app.ui.components.SegmentedControl
 import uz.sadora.app.ui.components.ChipFlowRow
 import uz.sadora.app.model.CommunitySort
@@ -105,7 +108,7 @@ fun ComposePostSheetContent(
                 .heightIn(min = 120.dp),
         ) {
             if (body.isEmpty()) {
-                Text(t.whatIsOnYourMind, style = Sadora.type.body, color = c.muted2)
+                Text(t.whatIsOnYourMind, style = Sadora.type.body, color = c.muted2, modifier = Modifier.clearAndSetSemantics {})
             }
             BasicTextField(
                 value = body,
@@ -113,7 +116,7 @@ fun ComposePostSheetContent(
                 onValueChange = { body = it.take(MaxPostLength) },
                 textStyle = Sadora.type.body.copy(color = c.text),
                 cursorBrush = SolidColor(c.primary),
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().semantics { contentDescription = t.whatIsOnYourMind },
             )
         }
 
@@ -280,13 +283,13 @@ fun EditBioSheetContent(
                 .padding(Spacing.sm)
                 .heightIn(min = 72.dp),
         ) {
-            if (bio.isEmpty()) Text(t.noBio, style = Sadora.type.body, color = c.muted2)
+            if (bio.isEmpty()) Text(t.noBio, style = Sadora.type.body, color = c.muted2, modifier = Modifier.clearAndSetSemantics {})
             BasicTextField(
                 value = bio,
                 onValueChange = { if (it.length <= Limits.BIO_MAX) bio = it },
                 textStyle = Sadora.type.body.copy(color = c.text),
                 cursorBrush = SolidColor(c.primary),
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().semantics { contentDescription = t.bioHint },
             )
         }
         Text("${bio.length} / ${Limits.BIO_MAX}", style = Sadora.type.body, color = c.muted2)

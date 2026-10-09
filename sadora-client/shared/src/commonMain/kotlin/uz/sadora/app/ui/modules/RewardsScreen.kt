@@ -187,7 +187,7 @@ private fun StreakCard(streak: StreakStatus) {
                 progress = streak.milestoneProgress,
                 size = 84.dp,
                 strokeWidth = 8.dp,
-                color = c.secondary,
+                color = c.chartSecondary,
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     AnimatedNumber(streak.current, Sadora.type.h2, c.text)
@@ -330,7 +330,7 @@ fun StreakWidget(
                     progress = if (state.streakDays > 0) 1f else 0f,
                     size = 56.dp,
                     strokeWidth = 6.dp,
-                    color = c.secondary,
+                    color = c.chartSecondary,
                 ) {
                     AnimatedNumber(state.streakDays, Sadora.type.h3, c.text)
                 }

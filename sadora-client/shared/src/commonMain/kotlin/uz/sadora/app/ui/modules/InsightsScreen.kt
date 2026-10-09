@@ -214,9 +214,9 @@ private fun TrendCard(title: String, trend: MetricTrend) {
             values = trend.barValues(),
             labels = trend.barLabels(strings.dates),
             color = when (trend.metric) {
-                TrendMetric.SLEEP_MINUTES -> c.accent
+                TrendMetric.SLEEP_MINUTES -> c.chartAccent
                 TrendMetric.STEPS -> c.primary
-                else -> c.secondary
+                else -> c.chartSecondary
             },
             highlightLast = true,
         )

@@ -1,5 +1,10 @@
 package uz.sadora.app.ui.journey
 
+import uz.sadora.app.ui.components.noRippleSelectable
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.Role
 import kotlinx.datetime.LocalDate
 import uz.sadora.contract.DailyLog
 import uz.sadora.app.ui.components.ErrorStrip
@@ -149,15 +154,17 @@ fun SymptomSheet(
 
         if (selected.isNotEmpty()) {
             CardLabel(t.severity)
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+            Row(Modifier.fillMaxWidth().selectableGroup(), horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
                 (1..5).forEach { level ->
                     val isSelected = level == severity
+                    val levelLabel = "$level, ${t.severityWords[level - 1]}"
                     Box(
                         Modifier
                             .weight(1f)
                             .clip(Radius.field)
                             .background(if (isSelected) c.primary else c.surface2)
-                            .noRippleClickable { severity = level }
+                            .noRippleSelectable(isSelected, Role.RadioButton, focusShape = Radius.field) { severity = level }
+                            .clearAndSetSemantics { contentDescription = levelLabel }
                             .padding(vertical = Spacing.sm),
                         contentAlignment = Alignment.Center,
                     ) {

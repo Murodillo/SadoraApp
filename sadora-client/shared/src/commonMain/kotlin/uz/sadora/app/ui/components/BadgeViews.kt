@@ -45,6 +45,10 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import uz.sadora.app.design.MinTouchTarget
+import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.ui.semantics.paneTitle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.TextUnit
@@ -55,6 +59,7 @@ import kotlin.math.sin
 import kotlinx.coroutines.launch
 import uz.sadora.app.design.Radius
 import uz.sadora.app.design.Sadora
+import uz.sadora.app.design.SadoraLightColors
 import uz.sadora.app.design.SadoraIcons
 import uz.sadora.app.design.Spacing
 import uz.sadora.app.i18n.strings
@@ -104,11 +109,13 @@ fun BadgeUnlockOverlay(
         modifier = modifier,
     ) {
         val shown = last.value ?: return@AnimatedVisibility
+        val pane = strings.badges.name(shown.key).orEmpty()
         Box(
             Modifier
                 .fillMaxSize()
                 .background(Color.Black.copy(alpha = 0.8f))
-                .noRippleClickable { },
+                .semantics { paneTitle = pane }
+                .swallowTaps(),
             contentAlignment = Alignment.Center,
         ) {
             // Keyed on the tier, so the next badge in the queue is struck from the start.
@@ -339,7 +346,12 @@ private fun UnlockCard(
                     t.skipAll,
                     style = Sadora.type.body.copy(fontWeight = FontWeight.SemiBold),
                     color = Color.White,
-                    modifier = Modifier.clip(Radius.chip).pressable(onClick = onSkipAll).padding(horizontal = Spacing.xs, vertical = 4.dp),
+                    modifier = Modifier
+                        .defaultMinSize(minHeight = MinTouchTarget)
+                        .clip(Radius.chip)
+                        .pressable(focusShape = Radius.chip, onClick = onSkipAll)
+                        .wrapContentHeight(Alignment.CenterVertically)
+                        .padding(horizontal = Spacing.xs, vertical = 4.dp),
                 )
             }
         }
@@ -374,7 +386,9 @@ fun TierPill(tierName: String, metal: BadgeMetal, modifier: Modifier = Modifier)
     Text(
         tierName,
         style = Sadora.type.caption.copy(fontWeight = FontWeight.Bold, letterSpacing = TextUnit.Unspecified),
-        color = if (metal == BadgeMetal.Locked) Sadora.colors.muted else palette.dark.darken(),
+        // The pill is painted in the light palette in both themes, so its ink is the
+        // light theme's too: dark-theme text would be pale on pale.
+        color = if (metal == BadgeMetal.Locked) SadoraLightColors.text else palette.dark.darken(),
         modifier = modifier
             .clip(Radius.chip)
             .background(Brush.horizontalGradient(listOf(palette.light, palette.mid, palette.light)))
@@ -383,7 +397,7 @@ fun TierPill(tierName: String, metal: BadgeMetal, modifier: Modifier = Modifier)
 }
 
 /** A metal's darkest stop, darker still, so text on its own strip clears contrast. */
-private fun Color.darken(): Color = Color(red * 0.62f, green * 0.62f, blue * 0.62f, alpha)
+private fun Color.darken(): Color = Color(red * 0.5f, green * 0.5f, blue * 0.5f, alpha)
 
 private const val RAYS = 12
 private const val FLYING_SPARKLES = 10
@@ -523,7 +537,10 @@ private fun BadgeCell(badge: BadgeState, index: Int, worn: Boolean, modifier: Mo
             .clip(Radius.card)
             .pressable(onClick = onClick)
             .padding(vertical = Spacing.xs)
-            .semantics { contentDescription = "$name, ${if (badge.tier > 0) t.tierName(badge.tier, badge.maxTier) else t.locked}" },
+            .semantics {
+                contentDescription = "$name, ${if (badge.tier > 0) t.tierName(badge.tier, badge.maxTier) else t.locked}" +
+                    if (worn) ", ${t.wearing}" else ""
+            },
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
@@ -648,7 +665,7 @@ fun BadgeDetailSheet(
                     )
                 }
                 if (done) {
-                    Icon(SadoraIcons.Check, contentDescription = null, tint = c.success, modifier = Modifier.size(20.dp))
+                    Icon(SadoraIcons.Check, contentDescription = t.tierReached, tint = c.successText, modifier = Modifier.size(20.dp))
                 } else {
                     Text(
                         "${minOf(shown.progress, target)} / $target",

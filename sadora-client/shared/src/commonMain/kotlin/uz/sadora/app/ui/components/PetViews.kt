@@ -35,6 +35,8 @@ import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import uz.sadora.app.design.MinTouchTarget
+import androidx.compose.ui.semantics.paneTitle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
@@ -219,8 +221,10 @@ fun PetImage(
 fun PetShowcase(pet: PetKind, size: Dp, modifier: Modifier = Modifier) {
     val t = strings.pet
     var index by remember(pet) { mutableStateOf(0) }
-    LaunchedEffect(pet) {
-        while (true) {
+    val still = LocalReduceMotion.current
+    // With motion reduced the showcase holds its first moment rather than cycling.
+    LaunchedEffect(pet, still) {
+        while (!still) {
             delay(ShowcaseStepMillis)
             index = (index + 1) % t.momentCount
         }
@@ -376,7 +380,7 @@ fun PetBubbleOverlay(
                 Modifier
                     .fillMaxSize()
                     .background(Color.Black.copy(alpha = ScrimAlpha))
-                    .noRippleClickable { leaveAsked++ },
+                    .noRippleClickable(onClickLabel = strings.common.close) { leaveAsked++ },
             )
         }
         PetSpeech(bubble, leaveAsked, onAction, onWake, onDismiss, onOffer, Modifier.align(Alignment.BottomEnd).then(modifier))
@@ -404,8 +408,12 @@ private fun PetSpeech(
         if (last.value?.pet?.legendary == true && flight != Flight.OFF) flight = Flight.OFF else onDismiss()
     }
 
-    LaunchedEffect(bubble) {
+    // With reduced motion on, the bubble waits to be closed instead of timing itself out:
+    // a screen reader or a slower reader gets all the time it needs.
+    val holdOpen = LocalReduceMotion.current
+    LaunchedEffect(bubble, holdOpen) {
         val shown = bubble ?: return@LaunchedEffect
+        if (holdOpen) return@LaunchedEffect
         delay(if (shown.teaser) TeaserMillis else BubbleMillis)
         leave()
     }
@@ -431,6 +439,7 @@ private fun PetSpeech(
             AnimatedVisibility(visible = flight == Flight.HERE, enter = fadeIn(tween(Motion.Standard)), exit = fadeOut(tween(Motion.Quick))) {
                 Column(
                     Modifier
+                        .semantics { paneTitle = t.name(shown.pet) }
                         .padding(bottom = 56.dp)
                         .widthIn(max = 232.dp)
                         .cardSurface(c)
@@ -447,8 +456,8 @@ private fun PetSpeech(
                         )
                         Box(
                             Modifier
-                                .size(28.dp)
-                                .noRippleClickable(onClick = leave)
+                                .size(MinTouchTarget)
+                                .noRippleClickable(focusShape = Radius.chip, onClick = leave)
                                 .semantics { contentDescription = t.close },
                             contentAlignment = Alignment.Center,
                         ) {
@@ -487,7 +496,14 @@ private val PetSize = 104.dp
 
 /** The legendary pet's gold: the frame of its bubble and the tag on its card. */
 val LegendaryGold = Color(0xFFE2B33C)
-val LegendaryGoldText = Color(0xFFB8860B)
+/**
+ * The gold as text. On white the dark-goldenrod was 3.25:1, so light takes a deeper
+ * shade; dark keeps it, where it reads 5.2:1 on the card.
+ */
+val LegendaryGoldText: Color
+    @Composable get() = if (Sadora.colors.isDark) LegendaryGoldTextDark else LegendaryGoldTextLight
+internal val LegendaryGoldTextLight = Color(0xFF8A6400)
+internal val LegendaryGoldTextDark = Color(0xFFB8860B)
 /** Text on the gold tag: dark in both themes, as gold is light in both. */
 val LegendaryInk = Color(0xFF3A2A00)
 private val LegendaryTurquoise = Color(0xFF3CC8C0)

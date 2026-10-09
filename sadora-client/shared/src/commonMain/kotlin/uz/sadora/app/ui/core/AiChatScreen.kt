@@ -1,5 +1,8 @@
 package uz.sadora.app.ui.core
 
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import uz.sadora.app.ui.components.ResizeForKeyboard
 import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
@@ -176,7 +179,7 @@ fun AiChatScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(Spacing.xs, Alignment.CenterHorizontally),
             ) {
-                PetImage(pet.pet, pose, size = 44.dp, modifier = Modifier.noRippleClickable(onClick = poke))
+                PetImage(pet.pet, pose, size = 44.dp, modifier = Modifier.noRippleClickable(onClickLabel = tp.poke, onClick = poke))
                 Column {
                     Text(name, style = Sadora.type.h3.copy(fontWeight = FontWeight.SemiBold), color = c.text)
                     Text(tp.chatSubtitle, style = Sadora.type.caption.copy(letterSpacing = 0.02.em), color = c.muted)
@@ -278,7 +281,7 @@ fun AiChatScreen(
                 contentAlignment = Alignment.CenterStart,
             ) {
                 if (draft.isEmpty()) {
-                    Text(t.inputHint, style = Sadora.type.body, color = c.muted2)
+                    Text(t.inputHint, style = Sadora.type.body, color = c.muted2, modifier = Modifier.clearAndSetSemantics {})
                 }
                 BasicTextField(
                     value = draft,
@@ -290,7 +293,7 @@ fun AiChatScreen(
                     singleLine = true,
                     textStyle = Sadora.type.body.copy(color = c.text),
                     cursorBrush = SolidColor(c.primary),
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().semantics { contentDescription = t.inputHint },
                 )
             }
             val canSend = draft.isNotBlank() && ai.canAsk && !ai.busy

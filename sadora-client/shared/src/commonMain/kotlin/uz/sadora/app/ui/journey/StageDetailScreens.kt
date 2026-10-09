@@ -220,7 +220,7 @@ fun StageSleepMoodScreen(
     val c = Sadora.colors
     val t = strings.journey
     val modules = strings.modules
-    val stageColors = listOf(c.secondary, c.accent, c.muted2)
+    val stageColors = listOf(c.chartSecondary, c.chartAccent, c.muted2)
 
     LaunchedEffect(Unit) {
         health.refreshWearables()
@@ -262,7 +262,7 @@ fun StageSleepMoodScreen(
                                 progress = (minutes / goal.toFloat()).coerceIn(0f, 1f),
                                 size = 112.dp,
                                 strokeWidth = 11.dp,
-                                color = c.accent,
+                                color = c.chartAccent,
                             ) {
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                     Text(
@@ -323,7 +323,7 @@ fun StageSleepMoodScreen(
                         WeeklyBars(
                             values = mood.barValues().map { it ?: 0f }.map { (it / 5f).coerceIn(0f, 1f) },
                             labels = mood.barLabels(strings.dates),
-                            color = c.secondary,
+                            color = c.chartSecondary,
                             highlightIndex = mood.points.lastIndex,
                         )
                     }

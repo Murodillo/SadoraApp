@@ -35,7 +35,8 @@ fun ProviderLogo(provider: HealthProvider, size: Dp, modifier: Modifier = Modifi
         Text(
             initial,
             style = Sadora.type.h2.copy(fontWeight = FontWeight.Bold, fontSize = (size.value * 0.42f).sp),
-            color = Color.White,
+            // Fitbit's teal is too light for white (2.65:1); its initial takes a dark ink.
+            color = if (provider == HealthProvider.FITBIT) Color(0xFF0B2B2E) else Color.White,
         )
     }
 }

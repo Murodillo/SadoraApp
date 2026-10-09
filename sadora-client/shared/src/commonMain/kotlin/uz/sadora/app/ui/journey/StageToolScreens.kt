@@ -1,5 +1,10 @@
 package uz.sadora.app.ui.journey
 
+import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.foundation.layout.defaultMinSize
+import uz.sadora.app.design.MinTouchTarget
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -107,6 +112,7 @@ private fun BigFigure(text: String, caption: String? = null) {
 @Composable
 private fun EventLine(title: String, detail: String, onDelete: () -> Unit) {
     val c = Sadora.colors
+    val deleteLabel = strings.common.delete
     Row(
         Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
@@ -120,7 +126,12 @@ private fun EventLine(title: String, detail: String, onDelete: () -> Unit) {
             "✕",
             style = Sadora.type.body,
             color = c.muted,
-            modifier = Modifier.clip(Radius.chip).noRippleClickable(onClick = onDelete).padding(Spacing.xs),
+            modifier = Modifier
+                .defaultMinSize(minWidth = MinTouchTarget, minHeight = MinTouchTarget)
+                .noRippleClickable(focusShape = Radius.chip, onClick = onDelete)
+                .clearAndSetSemantics { contentDescription = deleteLabel }
+                .wrapContentSize(Alignment.Center)
+                .padding(Spacing.xs),
         )
     }
 }
@@ -137,8 +148,8 @@ private fun Warning(text: String) {
             .padding(Spacing.sm),
         horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
     ) {
-        Text("⚠", style = Sadora.type.h3, color = c.danger)
-        Text(text, style = Sadora.type.body, color = c.danger)
+        Text("⚠", style = Sadora.type.h3, color = c.dangerText)
+        Text(text, style = Sadora.type.body, color = c.dangerText)
     }
 }
 

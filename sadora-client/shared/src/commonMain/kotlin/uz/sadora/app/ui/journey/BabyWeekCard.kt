@@ -16,7 +16,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import org.jetbrains.compose.resources.DrawableResource
@@ -63,13 +62,13 @@ internal fun BabyWeekCard(currentWeek: Int, palette: List<androidx.compose.ui.gr
             val canForward = shown < PregnancyWeeks.LAST
             CircleIconButton(
                 SadoraIcons.ChevronLeft,
-                Modifier.alpha(if (canBack) 1f else 0.35f),
                 contentDescription = t.previousWeek,
+                enabled = canBack,
             ) { if (canBack) shown-- }
             CircleIconButton(
                 SadoraIcons.ChevronRight,
-                Modifier.alpha(if (canForward) 1f else 0.35f),
                 contentDescription = t.nextWeek,
+                enabled = canForward,
             ) { if (canForward) shown++ }
         }
 

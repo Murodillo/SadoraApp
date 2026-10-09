@@ -1,5 +1,6 @@
 package uz.sadora.app.ui.partner
 
+import uz.sadora.app.ui.components.loadingSemantics
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -240,7 +241,7 @@ fun IncomingRequestCard(
         when {
             waiting != null -> {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                    CircularProgressIndicator(Modifier.size(20.dp), color = c.primary, strokeWidth = 2.5.dp)
+                    CircularProgressIndicator(Modifier.size(20.dp).loadingSemantics(), color = c.primary, strokeWidth = 2.5.dp)
                     Text(t.payWaiting, style = Sadora.type.h3, color = c.text)
                 }
                 SadoraButton(t.payReopen, { uriHandler.openUri(waiting.url) }, tone = ButtonTone.Secondary)

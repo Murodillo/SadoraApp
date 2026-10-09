@@ -1,5 +1,7 @@
 package uz.sadora.app.ui.settings
 
+import uz.sadora.app.design.Radius
+import uz.sadora.app.design.MinTouchTarget
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.Spring
 import androidx.compose.foundation.layout.Arrangement
@@ -121,7 +123,8 @@ private fun WidgetRow(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
         ) {
-            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            // The two 44dp targets touch: a gap between them was dead space under the thumb.
+            Column {
                 MoveArrow(up = true, enabled = canMoveUp) { onMove(-1) }
                 MoveArrow(up = false, enabled = canMoveDown) { onMove(1) }
             }
@@ -153,8 +156,8 @@ private fun MoveArrow(up: Boolean, enabled: Boolean, onClick: () -> Unit) {
     val c = Sadora.colors
     Box(
         Modifier
-            .size(28.dp)
-            .noRippleClickable(enabled = enabled, onClick = onClick),
+            .size(MinTouchTarget)
+            .noRippleClickable(enabled = enabled, focusShape = Radius.chip, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         Icon(

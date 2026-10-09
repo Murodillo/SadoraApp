@@ -187,7 +187,7 @@ fun HealthGate(wearables: WearableController, content: @Composable () -> Unit) {
                         if (current == GateStep.Partial) {
                             val (granted, total) = counts ?: (0 to 0)
                             SadoraCard {
-                                Text(t.partial(granted, total), style = Sadora.type.h3, color = c.danger)
+                                Text(t.partial(granted, total), style = Sadora.type.h3, color = c.dangerText)
                                 Text(t.partialBody, style = Sadora.type.body, color = c.muted)
                             }
                             SadoraButton(t.openSettings, onClick = platform::openPermissionSettings)

@@ -177,6 +177,8 @@ fun SadoraSwitch(
             .size(width = 46.dp, height = 28.dp)
             .clip(Radius.chip)
             .background(track)
+            // Off, the pale track alone is 1.1:1 on a card; the outline gives it an edge.
+            .border(1.dp, if (checked) Color.Transparent else c.lineStrong, Radius.chip)
             .noRippleToggleable(checked, role = Role.Switch, onValueChange = onCheckedChange)
             .padding(3.dp),
         contentAlignment = if (checked) Alignment.CenterEnd else Alignment.CenterStart,

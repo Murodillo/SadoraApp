@@ -1,5 +1,8 @@
 package uz.sadora.app.ui.components
 
+import uz.sadora.app.i18n.strings
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -21,10 +24,20 @@ import uz.sadora.app.design.Spacing
  * too short to push it off screen brings the one after it, and a list that is scrolled
  * nowhere near its end never asks at all: a lazy list does not compose what it does not show.
  */
+/**
+ * Names a spinner for a screen reader: a bare progress indicator is announced as nothing,
+ * so she could not tell that the app was busy rather than empty (WCAG 4.1.3).
+ */
+@Composable
+fun Modifier.loadingSemantics(): Modifier {
+    val label = strings.common.loading
+    return semantics { contentDescription = label }
+}
+
 @Composable
 fun LoadMoreRow(loadedKey: Any, onLoadMore: suspend () -> Unit, modifier: Modifier = Modifier) {
     LaunchedEffect(loadedKey) { onLoadMore() }
     Box(modifier.fillMaxWidth().padding(vertical = Spacing.xs), contentAlignment = Alignment.Center) {
-        CircularProgressIndicator(Modifier.size(20.dp), color = Sadora.colors.primary, strokeWidth = 2.dp)
+        CircularProgressIndicator(Modifier.size(20.dp).loadingSemantics(), color = Sadora.colors.primary, strokeWidth = 2.dp)
     }
 }

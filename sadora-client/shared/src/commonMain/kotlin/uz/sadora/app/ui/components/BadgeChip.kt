@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import uz.sadora.app.design.Radius
@@ -48,6 +49,23 @@ fun CommunityBadge.tint(): Color {
 }
 
 /**
+ * The badge's word in a shade that reads on its [tint] wash. The tints themselves are
+ * fills — on light, Loved pink was 2.3:1 behind its own word and Newcomer green 2.7:1.
+ */
+@Composable
+fun CommunityBadge.textTint(): Color {
+    val c = Sadora.colors
+    return when (this) {
+        CommunityBadge.Newcomer -> c.successText
+        CommunityBadge.Early -> c.warningText
+        CommunityBadge.Writer -> c.textAccent
+        CommunityBadge.Helper -> c.accentText
+        CommunityBadge.Loved -> c.secondaryText
+        CommunityBadge.Veteran -> c.textAccent
+    }
+}
+
+/**
  * One badge as a small pill: glyph and word. [compact] drops the word for the feed,
  * where two of these sit beside an alias and a word each would push the age off the line.
  */
@@ -72,8 +90,9 @@ fun BadgeChip(badge: CommunityBadge, compact: Boolean = false, modifier: Modifie
             Text(
                 strings.community.badge(badge),
                 style = Sadora.type.caption.copy(letterSpacing = TextUnit.Unspecified, fontWeight = FontWeight.SemiBold),
-                color = tint,
+                color = badge.textTint(),
                 maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
         }
     }

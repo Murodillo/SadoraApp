@@ -45,6 +45,8 @@ interface BadgeStrings {
 
     // ---- the badges page ----
     val earnedSection: String
+    /** Read out for the tick beside a tier she has reached on the ladder. */
+    val tierReached: String
     val lockedSection: String
     /** Above the worn badge's name on the page's header. */
     val wornLabel: String
@@ -79,6 +81,7 @@ object BadgesUz : BadgeStrings {
     override val skipAll = "Hammasini yopish"
     override val viewAll = "Hammasi"
     override val earnedSection = "Olingan nishonlar"
+    override val tierReached = "Erishildi"
     override val lockedSection = "Keyingi maqsadlar"
     override val wornLabel = "Ismingiz yonida"
     override val wornNone = "Hali nishon taqmagansiz — olingan nishonni bosing va ismingiz yonida taqing."
@@ -175,6 +178,7 @@ object BadgesRu : BadgeStrings {
     override val skipAll = "Закрыть все"
     override val viewAll = "Все"
     override val earnedSection = "Полученные значки"
+    override val tierReached = "Достигнуто"
     override val lockedSection = "Следующие цели"
     override val wornLabel = "Рядом с вашим именем"
     override val wornNone = "Вы ещё не носите значок — нажмите на полученный и наденьте его рядом с именем."
@@ -271,6 +275,7 @@ object BadgesEn : BadgeStrings {
     override val skipAll = "Close all"
     override val viewAll = "See all"
     override val earnedSection = "Earned badges"
+    override val tierReached = "Reached"
     override val lockedSection = "Next goals"
     override val wornLabel = "Next to your name"
     override val wornNone = "You aren't wearing a badge yet — tap one you've earned to wear it next to your name."

@@ -1,5 +1,10 @@
 package uz.sadora.app.ui.components
 
+import androidx.compose.ui.draw.alpha
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.heading
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -83,6 +88,7 @@ fun SadoraTopBar(
                     color = c.text,
                     textAlign = if (centered) TextAlign.Center else TextAlign.Start,
                     maxLines = 1,
+                    modifier = Modifier.semantics { heading() },
                 )
                 if (subtitle != null) {
                     Text(subtitle, style = Sadora.type.body, color = c.muted, textAlign = if (centered) TextAlign.Center else TextAlign.Start)
@@ -101,13 +107,16 @@ fun CircleIconButton(
     icon: ImageVector,
     modifier: Modifier = Modifier,
     contentDescription: String? = null,
+    /** Off at the end of a range: drawn faded, and a screen reader hears it as disabled. */
+    enabled: Boolean = true,
     onClick: () -> Unit,
 ) {
     val c = Sadora.colors
     Box(
         modifier
             .size(MinTouchTarget)
-            .pressable(pressedScale = 0.9f, onClick = onClick)
+            .then(if (enabled) Modifier else Modifier.alpha(0.35f))
+            .pressable(enabled = enabled, pressedScale = 0.9f, role = Role.Button, focusShape = CircleShape, onClick = onClick)
             .clayBeadSurface(c, c.surface2, elevation = 4.dp),
         contentAlignment = Alignment.Center,
     ) {

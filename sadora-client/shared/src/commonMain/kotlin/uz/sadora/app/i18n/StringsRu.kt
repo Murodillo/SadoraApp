@@ -631,6 +631,10 @@ object StringsRu : Strings {
         )
         override val rulesButton = "Понятно"
         override val filtersTitle = "Фильтр"
+        override val filtersOn = "Фильтр включён"
+        override val like = "Нравится"
+        override val save = "Сохранить"
+        override val sharePost = "Поделиться"
         override val filtersShow = "Показать"
         override val filtersTopic = "Тема"
         override val filtersAuthor = "От кого"

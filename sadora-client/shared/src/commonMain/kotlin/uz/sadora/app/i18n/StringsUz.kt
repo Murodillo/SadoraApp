@@ -627,6 +627,10 @@ object StringsUz : Strings {
         )
         override val rulesButton = "Tushunarli"
         override val filtersTitle = "Filtr"
+        override val filtersOn = "Filtr yoqilgan"
+        override val like = "Yoqtirish"
+        override val save = "Saqlash"
+        override val sharePost = "Ulashish"
         override val filtersShow = "Ko'rsatish"
         override val filtersTopic = "Mavzu"
         override val filtersAuthor = "Kimdan"

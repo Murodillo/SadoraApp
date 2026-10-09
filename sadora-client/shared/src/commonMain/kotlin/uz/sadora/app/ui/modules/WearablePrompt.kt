@@ -2,7 +2,6 @@ package uz.sadora.app.ui.modules
 
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
@@ -49,6 +48,7 @@ import uz.sadora.app.ui.components.ButtonTone
 import uz.sadora.app.ui.components.SadoraBottomSheet
 import uz.sadora.app.ui.components.SadoraButton
 import uz.sadora.app.ui.components.claySurface
+import uz.sadora.app.ui.components.animateFloatUnlessReduced
 
 /** Days after sign-up before the question is first asked: long enough to have used the app. */
 const val WearableAskAfterDays = 3
@@ -136,23 +136,26 @@ fun WearablePromptSheet(
 private fun WatchToPhoneArt(modifier: Modifier) {
     val c = Sadora.colors
     val motion = rememberInfiniteTransition(label = "wearable-art")
-    val travel by motion.animateFloat(
+    val travel by motion.animateFloatUnlessReduced(
         initialValue = 0f,
         targetValue = 1f,
         animationSpec = infiniteRepeatable(tween(1600, easing = LinearEasing)),
         label = "dots",
+        still = 0.5f,
     )
-    val bob by motion.animateFloat(
+    val bob by motion.animateFloatUnlessReduced(
         initialValue = -4f,
         targetValue = 4f,
         animationSpec = infiniteRepeatable(tween(1400), RepeatMode.Reverse),
         label = "bob",
+        still = 0f,
     )
-    val fill by motion.animateFloat(
+    val fill by motion.animateFloatUnlessReduced(
         initialValue = 0.35f,
         targetValue = 1f,
         animationSpec = infiniteRepeatable(tween(1600), RepeatMode.Reverse),
         label = "fill",
+        still = 1f,
     )
 
     Box(

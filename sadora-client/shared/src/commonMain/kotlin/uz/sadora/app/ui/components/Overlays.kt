@@ -42,6 +42,68 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import uz.sadora.contract.PetPose
+import androidx.compose.foundation.focusable
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.isTraversalGroup
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.paneTitle
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.traversalIndex
+
+/**
+ * Eats taps on a dialog card or sheet body so they never reach the scrim behind it,
+ * without adding a click action — a `clickable {}` here merged the whole sheet into one
+ * button a screen reader could only read as a block.
+ */
+fun Modifier.swallowTaps(): Modifier = pointerInput(Unit) { detectTapGestures { } }
+
+/**
+ * The full-screen layer under a dialog or sheet: a dimmed scrim that closes it (and says
+ * so to a screen reader), with the overlay read before whatever screen sits beneath.
+ * The scrim is a sibling of the content, not its parent, so its click does not swallow
+ * the sheet's own nodes.
+ */
+@Composable
+internal fun OverlayLayer(
+    title: String,
+    onDismiss: () -> Unit,
+    contentAlignment: Alignment,
+    content: @Composable BoxScope.() -> Unit,
+) {
+    Box(
+        Modifier
+            .fillMaxSize()
+            .semantics {
+                isTraversalGroup = true
+                traversalIndex = -1f
+                paneTitle = title
+            },
+        contentAlignment = contentAlignment,
+    ) {
+        Box(
+            Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.55f))
+                .noRippleClickable(onClickLabel = strings.common.close, onClick = onDismiss)
+                .semantics { traversalIndex = 1f },
+        )
+        content()
+    }
+}
+
+/** Takes keyboard focus to the title when a dialog or sheet opens, so focus is inside it. */
+@Composable
+internal fun rememberOpenFocus(): FocusRequester {
+    val requester = remember { FocusRequester() }
+    LaunchedEffect(Unit) { runCatching { requester.requestFocus() } }
+    return requester
+}
 
 /**
  * Centre modal — destructive confirmations such as "Hisobni o'chirish?".
@@ -65,13 +127,8 @@ fun SadoraDialog(
     // screen underneath and took the open confirmation with it.
     SystemBackHandler(enabled = visible, onBack = onDismiss)
     AnimatedVisibility(visible, enter = fadeIn(), exit = fadeOut()) {
-        Box(
-            Modifier
-                .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.55f))
-                .noRippleClickable(onClick = onDismiss),
-            contentAlignment = Alignment.Center,
-        ) {
+        OverlayLayer(title, onDismiss, Alignment.Center) {
+            val focus = rememberOpenFocus()
             Column(
                 Modifier
                     .padding(Spacing.xl)
@@ -79,11 +136,19 @@ fun SadoraDialog(
                     .background(c.surface)
                     // Swallows the tap so it never reaches the scrim behind, which
                     // would dismiss the dialog the user is reading.
-                    .noRippleClickable {}
+                    .swallowTaps()
                     .padding(Spacing.lg),
                 verticalArrangement = Arrangement.spacedBy(Spacing.sm),
             ) {
-                Text(title, style = Sadora.type.h2, color = c.text)
+                Text(
+                    title,
+                    style = Sadora.type.h2,
+                    color = c.text,
+                    modifier = Modifier
+                        .semantics { heading() }
+                        .focusRequester(focus)
+                        .focusable(),
+                )
                 Text(body, style = Sadora.type.body, color = c.muted)
                 Row(
                     Modifier.fillMaxWidth().padding(top = Spacing.xs),
@@ -120,13 +185,7 @@ fun SadoraBottomSheet(
     // to Today — throwing away a breathing session mid-count and whatever was typed.
     SystemBackHandler(enabled = visible, onBack = onDismiss)
     AnimatedVisibility(visible, enter = fadeIn(), exit = fadeOut()) {
-        Box(
-            Modifier
-                .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.55f))
-                .noRippleClickable(onClick = onDismiss),
-            contentAlignment = Alignment.BottomCenter,
-        ) {
+        OverlayLayer(title, onDismiss, Alignment.BottomCenter) {
             AnimatedVisibility(
                 visible,
                 enter = slideInVertically { it },
@@ -138,7 +197,7 @@ fun SadoraBottomSheet(
                         .clip(Radius.sheet)
                         .background(c.surface)
                         // Same as the dialog: the sheet body must not dismiss itself.
-                        .noRippleClickable {}
+                        .swallowTaps()
                         // A sheet with a text field rises above the keyboard and scrolls,
                         // so the button under the field is never left beneath it.
                         .imePadding()
@@ -154,7 +213,16 @@ fun SadoraBottomSheet(
                             .clip(Radius.chip)
                             .background(c.line),
                     )
-                    Text(title, style = Sadora.type.h2, color = c.text)
+                    val focus = rememberOpenFocus()
+                    Text(
+                        title,
+                        style = Sadora.type.h2,
+                        color = c.text,
+                        modifier = Modifier
+                            .semantics { heading() }
+                            .focusRequester(focus)
+                            .focusable(),
+                    )
                     content()
                 }
             }
@@ -184,12 +252,18 @@ fun SadoraToast(
         exit = slideOutVertically { it } + fadeOut(),
     ) {
         val text = message ?: return@AnimatedVisibility
+        // Long enough to read, and to reach Undo by keyboard or screen reader (WCAG 2.2.1):
+        // an action or an error stays 10 s, a plain confirmation 4 s.
+        val holdMillis = if (actionText != null || tone == ToastTone.Error) 10_000L else 4_000L
         LaunchedEffect(text) {
-            delay(2600)
+            delay(holdMillis)
             onTimeout()
         }
         Row(
             Modifier
+                .semantics {
+                    liveRegion = if (tone == ToastTone.Error) LiveRegionMode.Assertive else LiveRegionMode.Polite
+                }
                 .fillMaxWidth()
                 .padding(horizontal = Spacing.screen)
                 .clip(Radius.cardSmall)
@@ -205,12 +279,19 @@ fun SadoraToast(
             )
             Text(text, style = Sadora.type.body, color = c.text, modifier = Modifier.weight(1f))
             if (actionText != null) {
-                Text(
-                    actionText,
-                    style = Sadora.type.body.copy(fontWeight = FontWeight.SemiBold),
-                    color = c.textAccent,
-                    modifier = Modifier.noRippleClickable { onAction?.invoke() },
-                )
+                Box(
+                    Modifier
+                        .defaultMinSize(minWidth = MinTouchTarget, minHeight = MinTouchTarget)
+                        .noRippleClickable { onAction?.invoke() }
+                        .padding(horizontal = Spacing.xs),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        actionText,
+                        style = Sadora.type.body.copy(fontWeight = FontWeight.SemiBold),
+                        color = c.textAccent,
+                    )
+                }
             }
         }
     }
@@ -302,6 +383,7 @@ fun ErrorStrip(text: String, onRetry: (() -> Unit)? = null, modifier: Modifier =
     val c = Sadora.colors
     Row(
         modifier = modifier
+            .semantics { liveRegion = LiveRegionMode.Polite }
             .fillMaxWidth()
             .clip(Radius.cardSmall)
             .background(c.danger.copy(alpha = 0.12f))
@@ -316,12 +398,12 @@ fun ErrorStrip(text: String, onRetry: (() -> Unit)? = null, modifier: Modifier =
         } else {
             Text("⚠", style = Sadora.type.h3, color = c.danger)
         }
-        Text(text, style = Sadora.type.body, color = c.danger, modifier = Modifier.weight(1f))
+        Text(text, style = Sadora.type.body, color = c.dangerText, modifier = Modifier.weight(1f))
         if (onRetry != null) {
             Text(
                 strings.common.retry,
                 style = Sadora.type.body.copy(fontWeight = FontWeight.SemiBold),
-                color = c.danger,
+                color = c.dangerText,
                 modifier = Modifier
                     .defaultMinSize(minHeight = MinTouchTarget)
                     .noRippleClickable(role = Role.Button, onClick = onRetry)

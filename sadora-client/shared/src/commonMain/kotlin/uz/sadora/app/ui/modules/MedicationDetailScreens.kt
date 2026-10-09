@@ -1,5 +1,9 @@
 package uz.sadora.app.ui.modules
 
+import uz.sadora.app.design.MinTouchTarget
+import uz.sadora.app.ui.components.noRippleToggleable
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -220,11 +224,11 @@ private fun MedicationForm(
                             if (times.size > 1 && !prescribed) {
                                 Box(
                                     Modifier
-                                        .size(40.dp)
+                                        .size(MinTouchTarget)
                                         .clip(Radius.chip)
                                         .background(c.surface2)
-                                        .semantics { contentDescription = t.removeTime }
-                                        .noRippleClickable { times.removeAt(index) },
+                                        .noRippleClickable(focusShape = Radius.chip) { times.removeAt(index) }
+                                        .clearAndSetSemantics { contentDescription = t.removeTime },
                                     contentAlignment = Alignment.Center,
                                 ) {
                                     Text("✕", style = Sadora.type.body, color = c.muted)
@@ -248,15 +252,18 @@ private fun MedicationForm(
                         ) {
                             Weekday.entries.forEachIndexed { index, weekday ->
                                 val on = weekday in weekdays
+                                val dayName = strings.dates.weekdays[index]
                                 Box(
                                     Modifier
                                         .weight(1f)
                                         .aspectRatio(1f)
                                         .clip(Radius.chip)
                                         .background(if (on) c.primary else c.surface2)
-                                        .noRippleClickable {
+                                        // A day is on or off; the fill alone said which.
+                                        .noRippleToggleable(on, Role.Checkbox, focusShape = Radius.chip) {
                                             if (!weekdays.remove(weekday)) weekdays.add(weekday)
-                                        },
+                                        }
+                                        .clearAndSetSemantics { contentDescription = dayName },
                                     contentAlignment = Alignment.Center,
                                 ) {
                                     Text(

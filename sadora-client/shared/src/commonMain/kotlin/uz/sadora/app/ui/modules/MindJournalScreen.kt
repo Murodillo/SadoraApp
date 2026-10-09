@@ -1,5 +1,7 @@
 package uz.sadora.app.ui.modules
 
+import uz.sadora.app.design.Radius
+import uz.sadora.app.design.MinTouchTarget
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -187,8 +189,8 @@ private fun JournalCard(note: JournalNote, label: String, onDelete: () -> Unit) 
             Text(note.time, style = Sadora.type.body, color = c.muted2)
             Box(
                 Modifier
-                    .size(28.dp)
-                    .noRippleClickable(onClick = onDelete),
+                    .size(MinTouchTarget)
+                    .noRippleClickable(focusShape = Radius.chip, onClick = onDelete),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(

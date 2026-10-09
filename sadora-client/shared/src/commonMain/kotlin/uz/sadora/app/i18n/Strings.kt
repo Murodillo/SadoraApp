@@ -258,6 +258,12 @@ interface CommunityStrings {
 
     // ---- the filter sheet behind the header's filter button
     val filtersTitle: String
+    /** Read with the filter button while any filter is off its default. */
+    val filtersOn: String
+    /** Names of the post's actions for a screen reader; the row shows only icons and counts. */
+    val like: String
+    val save: String
+    val sharePost: String
     /** Feed / saved / mine. */
     val filtersShow: String
     val filtersTopic: String

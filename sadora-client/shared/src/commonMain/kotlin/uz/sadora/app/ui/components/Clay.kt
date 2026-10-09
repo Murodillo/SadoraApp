@@ -252,7 +252,7 @@ fun Modifier.claySurface(
         val under = minOf(size.height * 0.45f, 22.dp.toPx())
         drawRect(
             Brush.verticalGradient(
-                0f to Color.White.copy(alpha = (if (colors.isDark) 0.07f else 0.42f) * gloss),
+                0f to Color.White.copy(alpha = (if (colors.isDark) ClayLitAlphaDark else ClayLitAlphaLight) * gloss),
                 1f to Color.Transparent,
                 startY = 0f,
                 endY = lit,
@@ -291,6 +291,10 @@ fun Modifier.claySurface(
         ),
         shape,
     )
+
+/** The white along the top edge of a [claySurface] at full gloss, per theme. */
+internal const val ClayLitAlphaLight = 0.42f
+internal const val ClayLitAlphaDark = 0.07f
 
 /** [claySurface] in one flat colour. */
 fun Modifier.claySurface(

@@ -21,6 +21,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
@@ -365,7 +366,7 @@ private fun ProductCard(
                     )
                 }
                 when {
-                    product.outOfStock -> Text(t.outOfStock, style = Sadora.type.body, color = c.warningSoft)
+                    product.outOfStock -> Text(t.outOfStock, style = Sadora.type.body, color = c.warning)
                     short > 0 -> Text(
                         t.shortBy(Fmt.int(short)),
                         style = Sadora.type.caption.copy(letterSpacing = TextUnit.Unspecified),
@@ -401,8 +402,9 @@ private fun RedemptionRow(redemption: Redemption) {
         horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
     ) {
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(redemption.productTitle, style = Sadora.type.body, color = c.text, maxLines = 1)
-            Text(redemption.code, style = Sadora.type.h3, color = c.textAccent, maxLines = 1)
+            Text(redemption.productTitle, style = Sadora.type.body, color = c.text, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            // A code is copied by eye, so it wraps rather than losing its tail at a large font.
+            Text(redemption.code, style = Sadora.type.h3, color = c.textAccent)
         }
         SadoraBadge(
             when (redemption.status) {
