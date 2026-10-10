@@ -31,6 +31,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLinkStyles
@@ -102,14 +104,29 @@ internal fun PostCard(
                     )
                     if (doctor != null) VerifiedMark()
                 }
-                Text(
-                    // A doctor's specialty leads: it is why her post is worth reading.
-                    (doctor?.let { strings.doctors.specialty(it.specialty) + " · " } ?: "") +
-                        "${t.topic(post.topic)} · " + strings.dates.ago(post.createdAt, Clock.System.now()),
-                    style = Sadora.type.body,
-                    color = c.muted2,
-                    maxLines = 1,
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        // A doctor's specialty leads: it is why her post is worth reading.
+                        (doctor?.let { strings.doctors.specialty(it.specialty) + " · " } ?: "") +
+                            "${t.topic(post.topic)} · " + strings.dates.ago(post.createdAt, Clock.System.now()),
+                        style = Sadora.type.body,
+                        color = c.muted2,
+                        maxLines = 1,
+                        modifier = Modifier.weight(1f, fill = false),
+                    )
+                    // How many readers it reached, as the patient app shows it. This app
+                    // only shows the number; a doctor reading is not counted into it.
+                    if (post.viewCount > 0) {
+                        Row(
+                            Modifier.clearAndSetSemantics { contentDescription = t.viewsSpoken(post.viewCount) },
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(" · ", style = Sadora.type.body, color = c.muted2)
+                            Icon(SadoraIcons.Eye, contentDescription = null, Modifier.size(15.dp), tint = c.muted2)
+                            Text(" " + t.viewsShort(post.viewCount), style = Sadora.type.body, color = c.muted2, maxLines = 1)
+                        }
+                    }
+                }
             }
         }
         // A long post is cut at the fold so the list stays a list, with the link on the

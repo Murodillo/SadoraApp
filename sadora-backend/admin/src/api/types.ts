@@ -186,6 +186,8 @@ export interface ModerationPost {
   likeCount: number
   commentCount: number
   openReports: number
+  /** How many readers it has reached, each counted once. */
+  viewCount: number
 }
 
 export interface ModerationComment {

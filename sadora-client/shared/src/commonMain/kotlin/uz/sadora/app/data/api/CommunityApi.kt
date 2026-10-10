@@ -24,6 +24,7 @@ import kotlinx.serialization.json.JsonObject
 import uz.sadora.contract.CreateCommentRequest
 import uz.sadora.contract.CreatePostRequest
 import uz.sadora.contract.LikeState
+import uz.sadora.contract.PostViewsRequest
 import uz.sadora.contract.MessagePage
 import uz.sadora.contract.Page
 import uz.sadora.contract.ReportReason
@@ -186,6 +187,12 @@ class CommunityApi(private val caller: ApiCaller) {
             "v1/community/posts/$postId/like",
             if (liked) HttpMethodKind.PUT else HttpMethodKind.DELETE,
         )
+
+    /** Reports the posts that were on her screen; the server counts each once per reader. */
+    suspend fun recordViews(postIds: List<String>): ApiResult<Ack> =
+        caller.authenticated("v1/community/posts/views", HttpMethodKind.POST) {
+            setBody(PostViewsRequest(postIds))
+        }
 
     suspend fun setSaved(postId: String, saved: Boolean): ApiResult<SaveState> =
         caller.authenticated(

@@ -43,6 +43,8 @@ data class CommunityPost(
     val doctor: DoctorAuthor? = null,
     /** How many verified doctors have answered under it. */
     val doctorAnswers: Int = 0,
+    /** How many other readers have had it on screen, as of the last read of the feed. */
+    val viewCount: Int = 0,
 )
 
 data class CommunityComment(

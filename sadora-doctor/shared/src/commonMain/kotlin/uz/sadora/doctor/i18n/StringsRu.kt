@@ -87,6 +87,8 @@ object StringsRu : Strings {
         }
         override val you = "вы"
         override val readMore = "…ещё"
+        override fun viewsShort(count: Int) = compactCount(count, thousand = " тыс.", million = " млн", decimal = ',')
+        override fun viewsSpoken(count: Int) = "Просмотров: $count"
         override fun commentsCount(count: Int) = if (count == 0) "Комментарии" else "Комментариев: $count"
         override val noComments = "Комментариев пока нет. Ваш ответ будет первым."
         override val questionTitle = "Вопрос"

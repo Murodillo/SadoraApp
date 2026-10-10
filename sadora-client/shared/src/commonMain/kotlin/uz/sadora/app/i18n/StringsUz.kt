@@ -652,6 +652,8 @@ object StringsUz : Strings {
         override val nothingHereBody = "Birinchi bo'lib yozing — savolingiz taxallus ostida chiqadi."
         override val nothingMineBody = "Yozgan postlaringiz shu yerda yig'iladi. Boshqalar faqat taxallusni ko'radi."
         override val readMore = "…ko'proq"
+        override fun viewsShort(count: Int) = compactCount(count, thousand = " ming", million = " mln", decimal = ',')
+        override fun viewsSpoken(count: Int) = "$count marta ko'rildi"
         override val postTitle = "Post"
         override fun commentsCount(count: Int) = if (count == 0) "Izohlar" else "$count izoh"
         override fun badge(badge: CommunityBadge) = when (badge) {

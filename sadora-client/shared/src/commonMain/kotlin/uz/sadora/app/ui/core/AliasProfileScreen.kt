@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -82,6 +83,7 @@ fun AliasProfileScreen(
     var confirmBlock by remember { mutableStateOf(false) }
 
     LaunchedEffect(alias) { community.loadProfile(alias) }
+    DisposableEffect(state) { onDispose { state.flushPostViews() } }
 
     val profile = community.profile?.takeIf { it.alias == alias }
 
@@ -165,6 +167,7 @@ fun AliasProfileScreen(
                         onOpenAuthor = {},
                         onShare = { share("${post.body}\n\n" + t.shareSuffix) },
                         onMore = { onOpenMenu(post) },
+                        onSeen = { state.postSeen(post) },
                     )
                 }
                 if (community.profileHasMore) {

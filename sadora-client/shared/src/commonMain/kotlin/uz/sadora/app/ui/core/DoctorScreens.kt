@@ -103,6 +103,7 @@ fun DoctorProfileScreen(
     val scope = rememberCoroutineScope()
     val share = rememberShareAction()
 
+    DisposableEffect(state) { onDispose { state.flushPostViews() } }
     LaunchedEffect(doctorId) {
         doctors.loadProfile(doctorId)
         doctors.loadReviews(doctorId)
@@ -177,6 +178,7 @@ fun DoctorProfileScreen(
                         onOpenAuthor = {},
                         onShare = { share("${post.body}\n\n" + t.shareSuffix) },
                         onMore = { onOpenMenu(post) },
+                        onSeen = { state.postSeen(post) },
                     )
                 }
                 if (doctors.profilePostsHasMore) {

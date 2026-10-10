@@ -328,6 +328,8 @@ data class CommunityPost(
     val doctor: DoctorAuthor? = null,
     /** How many verified doctors have answered under it. */
     val doctorAnswers: Int = 0,
+    /** How many other accounts have had it on screen, each counted once. */
+    val viewCount: Int = 0,
 )
 
 @Serializable
@@ -362,6 +364,13 @@ data class ReportRequest(
     val reason: ReportReason,
     val note: String? = null,
 )
+
+/**
+ * The posts that were on her screen since the app last said so. Sent in batches; the
+ * server counts each post once per reader and ignores what she could not have seen.
+ */
+@Serializable
+data class PostViewsRequest(val ids: List<String>)
 
 /** Returned by like and unlike, so the count on screen is the server's, not a guess. */
 @Serializable

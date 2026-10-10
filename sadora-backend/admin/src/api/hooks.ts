@@ -212,6 +212,8 @@ export interface ModerationFilters {
   hidden?: boolean
   topic?: string
   reported?: boolean
+  /** Most seen first; newest first when unset. */
+  sort?: 'views'
   limit: number
   offset: number
 }
@@ -232,6 +234,7 @@ export const useModerationPosts = (filters: ModerationFilters) =>
           hidden: filters.hidden === undefined ? undefined : String(filters.hidden),
           topic: filters.topic,
           reported: filters.reported ? 'true' : undefined,
+          sort: filters.sort,
           limit: filters.limit,
           offset: filters.offset,
         })}`,

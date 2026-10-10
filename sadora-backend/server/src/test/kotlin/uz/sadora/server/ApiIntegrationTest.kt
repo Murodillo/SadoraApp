@@ -46,6 +46,7 @@ import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.serializer
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.update
@@ -159,6 +160,7 @@ import uz.sadora.contract.OtpVerifyRequest
 import uz.sadora.contract.RefreshRequest
 import uz.sadora.contract.Page
 import uz.sadora.contract.PaymentProvider
+import uz.sadora.contract.PostViewsRequest
 import uz.sadora.contract.PaymentState
 import uz.sadora.contract.PaymentStatus
 import uz.sadora.contract.Platform
@@ -240,6 +242,7 @@ import uz.sadora.server.user.AccountErasureJob
 import uz.sadora.server.core.toOffsetDateTime
 import uz.sadora.server.db.AdminUsers
 import uz.sadora.server.db.AuditLog
+import uz.sadora.server.db.CommunityPostViews
 import uz.sadora.server.db.dbQuery
 
 /**
@@ -2195,6 +2198,57 @@ class ApiIntegrationTest {
         // The author can still take her own post down; the reader cannot.
         assertEquals(HttpStatusCode.NotFound, raw { client.delete("/v1/community/posts/${created.id}") { auth(reader.token) } }.status)
         assertEquals(HttpStatusCode.OK, raw { client.delete("/v1/community/posts/${created.id}") { auth(author.token) } }.status)
+    }
+
+    /**
+     * A post's view count is how many other accounts have had it on screen: each once,
+     * however often the app says so, never the author, and never for a post the reader
+     * could not have been shown.
+     */
+    @Test
+    fun `a post counts each reader once and never its author or a hidden post`() = api {
+        val author = signUp().also { onboard(it) }
+        val reader = signUp().also { onboard(it) }
+        val second = signUp().also { onboard(it) }
+        val late = signUp().also { onboard(it) }
+        val admin = adminToken()
+        val views = "/v1/community/posts/views"
+
+        val created = post<CommunityPost>("/v1/community/posts", author.token, CreatePostRequest(CommunityTopic.BODY, "Ko'rishlar soni sanaladigan post"))
+        val other = post<CommunityPost>("/v1/community/posts", author.token, CreatePostRequest(CommunityTopic.BODY, "Uning ikkinchi posti"))
+        assertEquals(0, created.viewCount)
+        suspend fun count(id: String = created.id) = get<CommunityPost>("/v1/community/posts/$id", reader.token).viewCount
+
+        postAck(views, reader.token, PostViewsRequest(listOf(created.id)))
+        assertEquals(1, count())
+        postAck(views, reader.token, PostViewsRequest(listOf(created.id)))
+        assertEquals(1, count(), "seeing it again is the same view")
+
+        postAck(views, author.token, PostViewsRequest(listOf(created.id)))
+        assertEquals(1, count(), "her own post is not a view")
+
+        // One batch: a repeat, an id that is no post, and one that is no id at all.
+        postAck(views, second.token, PostViewsRequest(listOf(created.id, created.id, other.id, Uuid.random().toString(), "not-an-id")))
+        assertEquals(2, count())
+        assertEquals(1, count(other.id))
+
+        val feed = get<Page<CommunityPost>>("/v1/community/posts?topic=body&limit=50", reader.token)
+        assertEquals(2, feed.items.first { it.id == created.id }.viewCount, "the feed carries it")
+        val byViews = get<Page<ModerationPostView>>("/v1/admin/community/posts?sort=views&limit=200", admin)
+        assertEquals(2, byViews.items.first { it.id == created.id }.viewCount)
+        assertEquals(byViews.items.map { it.viewCount }.sortedDescending(), byViews.items.map { it.viewCount }, "most seen first")
+
+        // A hidden post is on nobody's screen, so nothing claimed for it is believed.
+        postAck("/v1/admin/community/posts/${created.id}/hide", admin, HideRequest(hidden = true, reason = "integration test"))
+        postAck(views, late.token, PostViewsRequest(listOf(created.id)))
+        postAck("/v1/admin/community/posts/${created.id}/hide", admin, HideRequest(hidden = false))
+        assertEquals(2, count())
+        postAck(views, late.token, PostViewsRequest(listOf(created.id)))
+        assertEquals(3, count(), "and it counts again once it is back")
+
+        // The count outlives the reader: only the record of who it was goes with her.
+        dbQuery { CommunityPostViews.deleteWhere { CommunityPostViews.userId eq Uuid.parse(reader.userId) } }
+        assertEquals(3, get<CommunityPost>("/v1/community/posts/${created.id}", second.token).viewCount)
     }
 
     /**

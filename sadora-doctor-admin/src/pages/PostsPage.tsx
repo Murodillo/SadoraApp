@@ -239,6 +239,7 @@ function MyPost({ post }: { post: CommunityPost }) {
       <p className="post-body">{post.body}</p>
       <div className="row faint" style={{ justifyContent: 'space-between' }}>
         <span>
+          {post.viewCount ? `${post.viewCount} marta ko'rildi · ` : ''}
           {post.likeCount} yoqdi · {post.commentCount} izoh
         </span>
         <button className="btn ghost small" type="button" onClick={() => setOpen((value) => !value)} aria-expanded={open}>

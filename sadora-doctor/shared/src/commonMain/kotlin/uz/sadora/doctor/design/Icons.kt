@@ -139,6 +139,24 @@ object SadoraIcons {
         }
     }
 
+    /** Ko'rildi — an eye: how many readers a post has reached. */
+    val Eye: ImageVector = icon("Eye") {
+        stroke {
+            moveTo(2.6f, 12f)
+            curveTo(4.9f, 7.9f, 8.2f, 5.8f, 12f, 5.8f)
+            curveTo(15.8f, 5.8f, 19.1f, 7.9f, 21.4f, 12f)
+            curveTo(19.1f, 16.1f, 15.8f, 18.2f, 12f, 18.2f)
+            curveTo(8.2f, 18.2f, 4.9f, 16.1f, 2.6f, 12f)
+            close()
+        }
+        stroke {
+            moveTo(9.1f, 12f)
+            arcToRelative(2.9f, 2.9f, 0f, false, true, 5.8f, 0f)
+            arcToRelative(2.9f, 2.9f, 0f, false, true, -5.8f, 0f)
+            close()
+        }
+    }
+
     /** Izoh — a speech bubble with its tail on the lower left. */
     val Message: ImageVector = icon("Message") {
         stroke {

@@ -37,6 +37,8 @@ object CommunityPosts : Table("community_posts") {
     val updatedAt = timestampWithTimeZone("updated_at")
     /** Set when written as a verified doctor; see [DoctorProfiles]. */
     val doctorId = uuid("doctor_id").nullable()
+    /** How many readers it has reached; one per row of [CommunityPostViews], kept when the row goes. */
+    val viewCount = integer("view_count")
 
     override val primaryKey = PrimaryKey(id)
 }
@@ -55,6 +57,15 @@ object CommunityComments : Table("community_comments") {
 }
 
 object CommunityPostLikes : Table("community_post_likes") {
+    val postId = uuid("post_id").references(CommunityPosts.id)
+    val userId = uuid("user_id").references(Users.id)
+    val createdAt = timestampWithTimeZone("created_at")
+
+    override val primaryKey = PrimaryKey(postId, userId)
+}
+
+/** Who has had a post on screen. Only ever written and counted, never listed. */
+object CommunityPostViews : Table("community_post_views") {
     val postId = uuid("post_id").references(CommunityPosts.id)
     val userId = uuid("user_id").references(Users.id)
     val createdAt = timestampWithTimeZone("created_at")

@@ -81,6 +81,8 @@ object StringsEn : Strings {
         }
         override val you = "you"
         override val readMore = "…more"
+        override fun viewsShort(count: Int) = compactCount(count, thousand = "K", million = "M", decimal = '.')
+        override fun viewsSpoken(count: Int) = if (count == 1) "1 view" else "$count views"
         override fun commentsCount(count: Int) = when (count) {
             0 -> "Replies"
             1 -> "1 reply"

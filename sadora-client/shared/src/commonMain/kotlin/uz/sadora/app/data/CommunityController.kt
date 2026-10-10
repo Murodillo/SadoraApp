@@ -257,6 +257,15 @@ class CommunityController(
         return result != null
     }
 
+    /**
+     * Reports a batch of seen posts. Not through [calls]: it runs behind whatever she is
+     * doing, and must neither raise the busy flag nor an error.
+     */
+    suspend fun sendViews(postIds: List<String>): Boolean {
+        val api = api ?: return true
+        return api.recordViews(postIds) is ApiResult.Success
+    }
+
     suspend fun setSaved(postId: String, saved: Boolean): Boolean {
         val api = api ?: return true
         val result = calls.run(silent = true) { api.setSaved(postId, saved) }
@@ -322,6 +331,12 @@ class CommunitySyncBridge(
     private val community: CommunityController,
     private val scope: CoroutineScope,
 ) : CommunitySync {
+
+    private val views = PostViewTracker(scope, community::sendViews)
+
+    override fun postSeen(postId: String) = views.seen(postId)
+
+    override fun flushPostViews() = views.flush()
 
     override fun postLiked(postId: String, liked: Boolean) {
         scope.launch { community.setLiked(postId, liked) }

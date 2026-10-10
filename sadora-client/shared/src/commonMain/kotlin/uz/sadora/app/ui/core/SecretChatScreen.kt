@@ -48,6 +48,13 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.findRootCoordinates
+import androidx.compose.ui.layout.boundsInWindow
+import kotlinx.coroutines.delay
+import kotlin.time.Duration.Companion.seconds
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -153,6 +160,8 @@ fun SecretChatScreen(
     // The server's feed replaces the samples on open; the samples are what a build
     // with no backend keeps showing.
     LaunchedEffect(community) { community.load() }
+    // What she read here is reported as she leaves, not after the batch's wait.
+    DisposableEffect(state) { onDispose { state.flushPostViews() } }
 
     Box(modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {
@@ -277,6 +286,7 @@ fun SecretChatScreen(
                                     onOpenAuthor = { post.doctor?.let { onOpenDoctor(it.id) } ?: onOpenProfile(post.alias) },
                                     onShare = { share("${post.body}\n\n" + t.shareSuffix) },
                                     onMore = { onOpenMenu(post) },
+                                    onSeen = { state.postSeen(post) },
                                 )
                             }
                         }
@@ -397,13 +407,15 @@ internal fun PostCard(
     onOpenAuthor: () -> Unit,
     onShare: () -> Unit,
     onMore: () -> Unit,
+    /** The card has been on screen long enough to count as read; see [whenSeen]. */
+    onSeen: () -> Unit,
     /** False on the post's own page, where the whole text is the point. */
     foldable: Boolean = true,
 ) {
     val c = Sadora.colors
     val t = strings.community
     val doctor = post.doctor
-    SadoraCard(onClick = onOpen) {
+    SadoraCard(modifier = Modifier.whenSeen(post.id, onSeen), onClick = onOpen) {
         Row(
             Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
@@ -427,15 +439,22 @@ internal fun PostCard(
                     if (doctor == null) WornBadgeMark(post.worn, size = 26.dp)
                     if (doctor != null) VerifiedMark() else BadgeRow(post.badges, max = 2, compact = true)
                 }
-                Text(
-                    // A doctor's specialty leads: it is why her post is worth reading.
-                    (doctor?.let { strings.doctors.specialty(it.specialty) + " · " } ?: "") +
-                        "${t.topic(post.topic)} · " + strings.dates.ago(post.createdAt, Clock.System.now()),
-                    style = Sadora.type.body,
-                    color = c.muted2,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        // A doctor's specialty leads: it is why her post is worth reading.
+                        (doctor?.let { strings.doctors.specialty(it.specialty) + " · " } ?: "") +
+                            "${t.topic(post.topic)} · " + strings.dates.ago(post.createdAt, Clock.System.now()),
+                        style = Sadora.type.body,
+                        color = c.muted2,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false),
+                    )
+                    // Beside the time and not among the actions: it is a fact about the
+                    // post, and down there it would look like something to press. A post
+                    // nobody has reached yet says nothing rather than "0".
+                    if (post.viewCount > 0) PostViews(post.viewCount)
+                }
             }
             Icon(
                 SadoraIcons.More,
@@ -505,6 +524,46 @@ internal fun PostCard(
         }
     }
 }
+
+/** "· (eye) 240" after the post's age, read out as one phrase. */
+@Composable
+private fun PostViews(count: Int) {
+    val c = Sadora.colors
+    val t = strings.community
+    Row(
+        Modifier.clearAndSetSemantics { contentDescription = t.viewsSpoken(count) },
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(" · ", style = Sadora.type.body, color = c.muted2)
+        Icon(SadoraIcons.Eye, contentDescription = null, Modifier.size(15.dp), tint = c.muted2)
+        Text(" " + t.viewsShort(count), style = Sadora.type.body, color = c.muted2, maxLines = 1)
+    }
+}
+
+/**
+ * Calls [onSeen] once the card has been on screen long enough to have been read: half
+ * of it — or, for a card taller than the screen, half the screen — for [SeenAfter].
+ * A card flicked past never gets there. It may call again when the card comes back;
+ * counting it once is the caller's business.
+ */
+@Composable
+private fun Modifier.whenSeen(key: Any, onSeen: () -> Unit): Modifier {
+    var showing by remember(key) { mutableStateOf(false) }
+    val seen by rememberUpdatedState(onSeen)
+    LaunchedEffect(key, showing) {
+        if (showing) {
+            delay(SeenAfter)
+            seen()
+        }
+    }
+    return onGloballyPositioned { card ->
+        val height = card.size.height
+        val enough = minOf(height, card.findRootCoordinates().size.height) / 2f
+        showing = height > 0 && card.boundsInWindow().height >= enough
+    }
+}
+
+private val SeenAfter = 1.seconds
 
 /** Characters a post shows before it is folded. About six lines on a phone. */
 private const val FoldLength = 280

@@ -60,6 +60,8 @@ data class ModerationPostView(
     val openReports: Int,
     /** Written as a verified doctor; [alias] is then her name. */
     val byDoctor: Boolean = false,
+    /** How many readers it has reached. */
+    val viewCount: Int = 0,
 )
 
 @Serializable
@@ -187,9 +189,10 @@ class CommunityModerationService(
         reportedOnly: Boolean,
         limit: Int,
         offset: Long,
+        mostViewedFirst: Boolean = false,
     ): Page<ModerationPostView> {
         val status = hidden?.let { if (it) ContentStatus.HIDDEN else ContentStatus.VISIBLE }
-        val (rows, total) = repository.listForModeration(status, topic, reportedOnly, limit, offset)
+        val (rows, total) = repository.listForModeration(status, topic, reportedOnly, limit, offset, mostViewedFirst)
         return Page(rows.map { it.toView() }, total, limit, offset.toInt())
     }
 
@@ -402,6 +405,7 @@ class CommunityModerationService(
         commentCount = commentCount,
         openReports = openReports,
         byDoctor = byDoctor,
+        viewCount = viewCount,
     )
 
     private fun ModerationCommentRow.toView() = ModerationCommentView(
@@ -481,6 +485,7 @@ fun Route.adminCommunityRoutes(moderation: CommunityModerationService) {
                         reportedOnly = call.request.queryParameters["reported"].toBoolean(),
                         limit = call.intParameter("limit", default = 50, max = 200),
                         offset = call.intParameter("offset", default = 0, max = Int.MAX_VALUE).toLong(),
+                        mostViewedFirst = call.request.queryParameters["sort"] == "views",
                     ),
                 )
             }

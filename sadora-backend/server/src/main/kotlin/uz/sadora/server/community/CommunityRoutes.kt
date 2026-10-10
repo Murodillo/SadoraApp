@@ -20,6 +20,7 @@ import uz.sadora.contract.CommunityTopic
 import uz.sadora.contract.CreateCommentRequest
 import uz.sadora.contract.CreatePostRequest
 import uz.sadora.contract.Language
+import uz.sadora.contract.PostViewsRequest
 import uz.sadora.contract.ReportRequest
 import uz.sadora.contract.SendMessageRequest
 import uz.sadora.contract.StartConversationRequest
@@ -158,6 +159,13 @@ fun Route.communityRoutes(community: CommunityService, messaging: MessagingServi
                 post {
                     val request = call.receive<CreatePostRequest>()
                     call.respond(HttpStatusCode.Created, community.createPost(call.requireUserId(), request))
+                }
+
+                /** The posts that were on her screen; see [CommunityService.recordViews]. */
+                post("/views") {
+                    val request = call.receive<PostViewsRequest>()
+                    community.recordViews(call.requireUserId(), request.ids)
+                    call.respond(Ack())
                 }
 
                 route("/{id}") {

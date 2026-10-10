@@ -222,6 +222,7 @@ class CommunityService(
                 frame = if (post.doctorId == null) frames[post.userId] else null,
                 doctor = byline?.toAuthor(),
                 doctorAnswers = reactions.doctorAnswers[post.id] ?: 0,
+                viewCount = post.viewCount,
             )
         }
     }
@@ -417,6 +418,19 @@ class CommunityService(
         return LikeState(liked = liked, likeCount = repository.likeCount(postId))
     }
 
+    /**
+     * Counts her as a reader of the posts her app says were on screen.
+     *
+     * No id in it is refused: a batch is a report, not a request, and a stale or
+     * made-up id is simply not counted. Anything past [MAX_VIEWS_PER_BATCH] is
+     * dropped rather than queued — the app sends far fewer in one go.
+     */
+    suspend fun recordViews(userId: Uuid, ids: List<String>) {
+        requireOpen(userId)
+        val postIds = ids.asSequence().mapNotNull(Uuid::parseOrNull).distinct().take(MAX_VIEWS_PER_BATCH).toList()
+        repository.recordViews(userId, postIds)
+    }
+
     suspend fun setSaved(userId: Uuid, postId: Uuid, saved: Boolean): SaveState {
         requireOpen(userId)
         requireVisiblePost(postId)
@@ -551,6 +565,7 @@ class CommunityService(
         const val MAX_DOCTOR_COMMENTS_PER_DAY = 300
         /** One page of comments; also what a phone that sends no limit gets. */
         const val MAX_COMMENTS = 200
+        const val MAX_VIEWS_PER_BATCH = 100
         const val QUESTION_WINDOW_DAYS = 30
         const val AUTO_HIDE_REPORTS = 5
         const val AUTO_HIDE_REASON = "auto_reports"

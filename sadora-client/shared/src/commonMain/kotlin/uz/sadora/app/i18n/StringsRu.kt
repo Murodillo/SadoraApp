@@ -656,6 +656,8 @@ object StringsRu : Strings {
         override val nothingMine = "Вы ещё ничего не писали"
         override val nothingMineBody = "Ваши посты собираются здесь. Остальные видят только псевдоним."
         override val readMore = "…ещё"
+        override fun viewsShort(count: Int) = compactCount(count, thousand = " тыс.", million = " млн", decimal = ',')
+        override fun viewsSpoken(count: Int) = "Просмотров: $count"
         override val postTitle = "Пост"
         override fun commentsCount(count: Int) = if (count == 0) "Комментарии" else "Комментариев: $count"
         override fun badge(badge: CommunityBadge) = when (badge) {

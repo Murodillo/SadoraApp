@@ -19,7 +19,9 @@ import org.jetbrains.exposed.v1.core.greaterEq
 import org.jetbrains.exposed.v1.core.inList
 import org.jetbrains.exposed.v1.core.isNotNull
 import org.jetbrains.exposed.v1.core.isNull
+import org.jetbrains.exposed.v1.core.neq
 import org.jetbrains.exposed.v1.core.or
+import org.jetbrains.exposed.v1.core.plus
 import org.jetbrains.exposed.v1.jdbc.andWhere
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insert
@@ -43,6 +45,7 @@ import uz.sadora.server.db.CommunityMessages
 import uz.sadora.server.db.CommunityConversations
 import uz.sadora.server.db.CommunityPostLikes
 import uz.sadora.server.db.CommunityPostSaves
+import uz.sadora.server.db.CommunityPostViews
 import uz.sadora.server.db.CommunityPosts
 import uz.sadora.server.db.CommunityReports
 import uz.sadora.server.db.CommunityRestrictions
@@ -81,6 +84,7 @@ data class PostRecord(
     val createdAt: Instant,
     /** The doctor profile it was written as, or null for an alias post. */
     val doctorId: Uuid? = null,
+    val viewCount: Int = 0,
 )
 
 /** A verified doctor as a byline: the public id, the name, the specialty. */
@@ -119,6 +123,7 @@ data class ModerationPostRow(
     val openReports: Int,
     /** Written as a verified doctor; [alias] then holds her name. */
     val byDoctor: Boolean = false,
+    val viewCount: Int = 0,
 )
 
 data class ModerationCommentRow(
@@ -515,6 +520,33 @@ class CommunityRepository {
         )
     }
 
+    /**
+     * Counts [viewer] as a reader of each of [postIds] she has not been counted for.
+     *
+     * Only posts a reader can be shown, and never her own: the app is not trusted about
+     * what was on her screen, so an id for anything else is dropped without a word. The
+     * count moves only when the row is new, which is what keeps it one per reader.
+     */
+    suspend fun recordViews(viewer: Uuid, postIds: Collection<Uuid>): Unit = dbQuery {
+        if (postIds.isEmpty()) return@dbQuery
+        val countable = CommunityPosts.select(CommunityPosts.id)
+            .where { (CommunityPosts.id inList postIds) and (CommunityPosts.userId neq viewer) and readerVisiblePost() }
+            .map { it[CommunityPosts.id] }
+        val timestamp = now().toOffsetDateTime()
+        // One post at a time and in one order, so two batches that overlap take their
+        // row locks the same way round and neither waits on the other for ever.
+        countable.sorted().forEach { postId ->
+            val firstTime = CommunityPostViews.insertIgnore {
+                it[CommunityPostViews.postId] = postId
+                it[CommunityPostViews.userId] = viewer
+                it[createdAt] = timestamp
+            }.insertedCount > 0
+            if (firstTime) {
+                CommunityPosts.update({ CommunityPosts.id eq postId }) { it[viewCount] = viewCount + 1 }
+            }
+        }
+    }
+
     suspend fun likeCount(postId: Uuid): Int = dbQuery {
         CommunityPostLikes.selectAll().where { CommunityPostLikes.postId eq postId }.count().toInt()
     }
@@ -640,6 +672,7 @@ class CommunityRepository {
         reportedOnly: Boolean,
         limit: Int,
         offset: Long,
+        mostViewedFirst: Boolean = false,
     ): Pair<List<ModerationPostRow>, Long> = dbQuery {
         var query = CommunityPosts.selectAll()
         status?.let { query = query.andWhere { CommunityPosts.status eq it.dbValue() } }
@@ -653,7 +686,8 @@ class CommunityRepository {
             query = query.andWhere { CommunityPosts.id inList reported }
         }
         val total = query.count()
-        val posts = query.orderBy(CommunityPosts.createdAt to SortOrder.DESC)
+        val newestFirst = CommunityPosts.createdAt to SortOrder.DESC
+        val posts = (if (mostViewedFirst) query.orderBy(CommunityPosts.viewCount to SortOrder.DESC, newestFirst) else query.orderBy(newestFirst))
             .limit(limit)
             .offset(offset)
             .map { it.toPost() }
@@ -684,6 +718,7 @@ class CommunityRepository {
                 commentCount = comments[post.id] ?: 0,
                 openReports = reports[post.id] ?: 0,
                 byDoctor = post.doctorId != null,
+                viewCount = post.viewCount,
             )
         } to total
     }
@@ -989,6 +1024,7 @@ class CommunityRepository {
         hiddenReason = this[CommunityPosts.hiddenReason],
         createdAt = this[CommunityPosts.createdAt].toKotlinInstant(),
         doctorId = this[CommunityPosts.doctorId],
+        viewCount = this[CommunityPosts.viewCount],
     )
 
     private fun ResultRow.toComment() = CommentRecord(

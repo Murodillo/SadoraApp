@@ -648,6 +648,8 @@ object StringsEn : Strings {
         override val nothingMine = "You haven't posted yet"
         override val nothingMineBody = "Posts you write collect here. Others only ever see the alias."
         override val readMore = "…more"
+        override fun viewsShort(count: Int) = compactCount(count, thousand = "K", million = "M", decimal = '.')
+        override fun viewsSpoken(count: Int) = if (count == 1) "1 view" else "$count views"
         override val postTitle = "Post"
         override fun commentsCount(count: Int) = when (count) {
             0 -> "Comments"

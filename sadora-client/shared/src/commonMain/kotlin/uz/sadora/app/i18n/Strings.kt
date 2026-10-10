@@ -281,6 +281,10 @@ interface CommunityStrings {
     val nothingMineBody: String
     /** Appended inline where a long post is cut: "…ko'proq". */
     val readMore: String
+    /** A post's view count as the card draws it: "240", "1,2 ming". */
+    fun viewsShort(count: Int): String
+    /** The same for a screen reader, whole and with what it counts: "240 marta ko'rildi". */
+    fun viewsSpoken(count: Int): String
     /** The post page's title. */
     val postTitle: String
     /** "3 izoh" — the heading over the comments on the post page. */

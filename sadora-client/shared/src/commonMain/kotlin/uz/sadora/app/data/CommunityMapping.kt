@@ -43,6 +43,7 @@ fun WirePost.toAppPost(): CommunityPost = CommunityPost(
     frame = frame,
     doctor = doctor,
     doctorAnswers = doctorAnswers,
+    viewCount = viewCount,
 )
 
 fun WireComment.toAppComment(): CommunityComment = CommunityComment(

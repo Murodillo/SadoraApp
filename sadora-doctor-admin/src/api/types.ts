@@ -220,6 +220,8 @@ export interface CommunityPost {
   doctor?: DoctorAuthor | null
   /** How many verified doctors have answered under it. */
   doctorAnswers: number
+  /** How many readers it has reached, each counted once. */
+  viewCount?: number
 }
 
 export interface CommunityComment {

@@ -516,6 +516,15 @@ class AppState {
         communitySync?.postLiked(postId, liked)
     }
 
+    /** Her own post never counts: the number is how many others it reached. */
+    fun postSeen(post: CommunityPost) {
+        if (!post.isMine) communitySync?.postSeen(post.id)
+    }
+
+    fun flushPostViews() {
+        communitySync?.flushPostViews()
+    }
+
     fun toggleSaved(postId: String) {
         val saved = !savedPosts.remove(postId)
         if (saved) savedPosts.add(postId)

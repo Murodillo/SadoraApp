@@ -143,6 +143,13 @@ function PostsTab() {
               ))}
             </select>
           </div>
+          <div className="field">
+            <label>Tartib</label>
+            <select value={filters.sort ?? ''} onChange={(event) => update({ sort: event.target.value === 'views' ? 'views' : undefined })}>
+              <option value="">Yangilari avval</option>
+              <option value="views">Ko'p ko'rilganlar avval</option>
+            </select>
+          </div>
           <label className="row" style={{ gap: 6, alignSelf: 'end', paddingBottom: 8 }}>
             <input
               type="checkbox"
@@ -171,6 +178,7 @@ function PostsTab() {
                     <th>Muallif</th>
                     <th>Bo'lim</th>
                     <th style={{ width: '40%' }}>Matn</th>
+                    <th>Ko'rildi</th>
                     <th>Yoqdi</th>
                     <th>Izoh</th>
                     <th>Shikoyat</th>
@@ -250,6 +258,7 @@ function PostRow({
         <td style={{ fontWeight: 600, whiteSpace: 'nowrap' }}>{post.alias}</td>
         <td className="muted">{topicLabels[post.topic] ?? post.topic}</td>
         <td>{expanded ? post.body : excerpt(post.body)}</td>
+        <td style={{ textAlign: 'right' }}>{post.viewCount}</td>
         <td style={{ textAlign: 'right' }}>{post.likeCount}</td>
         <td style={{ textAlign: 'right' }}>{post.commentCount}</td>
         <td style={{ textAlign: 'right' }}>

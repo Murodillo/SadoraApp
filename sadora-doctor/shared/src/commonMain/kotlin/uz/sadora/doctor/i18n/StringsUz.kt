@@ -82,6 +82,8 @@ object StringsUz : Strings {
         }
         override val you = "siz"
         override val readMore = "…ko'proq"
+        override fun viewsShort(count: Int) = compactCount(count, thousand = " ming", million = " mln", decimal = ',')
+        override fun viewsSpoken(count: Int) = "$count marta ko'rildi"
         override fun commentsCount(count: Int) = if (count == 0) "Izohlar" else "$count izoh"
         override val noComments = "Hali izoh yo'q. Birinchi bo'lib javob bering."
         override val questionTitle = "Savol"

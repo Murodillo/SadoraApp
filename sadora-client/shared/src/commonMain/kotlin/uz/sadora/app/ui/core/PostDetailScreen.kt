@@ -19,6 +19,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
@@ -61,6 +62,7 @@ fun PostDetailScreen(
 
     // The feed carries only a count; the comments themselves come when the page opens.
     LaunchedEffect(postId) { community.loadComments(postId) }
+    DisposableEffect(state) { onDispose { state.flushPostViews() } }
 
     Column(modifier.fillMaxSize().clayBackdrop(c)) {
         SadoraTopBar(t.postTitle, onBack = onClose)
@@ -98,6 +100,7 @@ fun PostDetailScreen(
                     onOpenAuthor = { post.doctor?.let { onOpenDoctor(it.id) } ?: onOpenProfile(post.alias) },
                     onShare = { share("${post.body}\n\n" + t.shareSuffix) },
                     onMore = { onOpenMenu(post) },
+                    onSeen = { state.postSeen(post) },
                     foldable = false,
                 )
             }

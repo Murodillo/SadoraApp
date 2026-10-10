@@ -50,4 +50,8 @@ interface CommunitySync {
     fun postCreated(topic: CommunityTopic, body: String)
     fun postDeleted(postId: String)
     fun postReported(postId: String, reason: ReportReason, note: String?)
+    /** A post has been on her screen long enough to count as read. */
+    fun postSeen(postId: String)
+    /** The screen is being left: what was seen goes up now rather than after the wait. */
+    fun flushPostViews()
 }
