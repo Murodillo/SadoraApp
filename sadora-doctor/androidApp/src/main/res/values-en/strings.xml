@@ -1,0 +1,4 @@
+<resources>
+    <!-- The notification channel as Android settings name it, in the phone's language. -->
+    <string name="push_channel_name">Messages</string>
+</resources>

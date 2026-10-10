@@ -17,33 +17,33 @@ object StringsEn : Strings {
     }
 
     override val auth = object : AuthStrings {
-        override val title = "Sadora for doctors"
-        override val subtitle = "Sign in with the number you use in the Sadora app. Apply, and once " +
+        override val title = "SADORA for doctors"
+        override val subtitle = "Sign in with the number you use in the SADORA app. Apply, and once " +
             "you're verified, answer women's questions."
         override val phoneLabel = "Phone number"
         override val phoneNote = "The number is only used to sign in. We'll text a one-time code to it."
-        override val sendCode = "Send the code"
+        override val sendCode = "Send code"
         override val sending = "Sending…"
-        override val codeTitle = "Enter the code"
+        override val codeTitle = "Enter code"
         override fun codeSubtitle(phone: String) = "We sent a 6-digit code to +998 $phone."
         override val confirm = "Confirm"
         override val checking = "Checking…"
         override fun resendIn(seconds: Int) = "Send again · ${seconds}s"
-        override val resend = "Send the code again"
-        override val changeNumber = "Change the number"
-        override val codeSecrecy = "Never share the code. Sadora staff will not ask for it."
+        override val resend = "Resend code"
+        override val changeNumber = "Change number"
+        override val codeSecrecy = "Never share the code. SADORA staff will never ask for it."
         override val devCodeFilled = "The test server sent the code back, so it's filled in."
         override fun otpEntered(entered: Int, length: Int) = "Verification code: $entered of $length digits entered"
-        override val deleteDigit = "Delete the last digit"
+        override val deleteDigit = "Delete last digit"
     }
 
     override val errors = object : ErrorStrings {
-        override val phoneInvalid = "That number is incomplete, or no operator uses that code"
-        override val network = "Could not reach the internet. Try again."
-        override val validation = "Something you entered is not right."
+        override val phoneInvalid = "That number is incomplete, or no operator uses that code. Enter all 9 digits, starting with the operator code."
+        override val network = "Couldn't reach the internet. Check your connection and try again."
+        override val validation = "Some details aren't right. Check them and send again."
         override val sessionExpired = "Your session has ended. Please sign in again."
-        override val blocked = "This account is blocked. Please contact Sadora."
-        override val forbidden = "You cannot do this."
+        override val blocked = "This account is blocked. Please contact SADORA."
+        override val forbidden = "You don't have access to this. If you think that's a mistake, contact SADORA."
         override val notFound = "Not found — it may have been deleted."
         override fun retryAfter(seconds: Int) = "Too many attempts. Try again in $seconds s."
         override val retrySoon = "Too many attempts. Try again shortly."
@@ -64,7 +64,7 @@ object StringsEn : Strings {
         override val justNow = "just now"
         override fun minutesAgo(minutes: Int) = "$minutes min ago"
         override fun hoursAgo(hours: Int) = if (hours == 1) "1 hour ago" else "$hours hours ago"
-        override fun daysAgo(days: Int) = "$days days ago"
+        override fun daysAgo(days: Int) = "$days ${en(days, "day", "days")} ago"
     }
 
     override val community = object : CommunityStrings {

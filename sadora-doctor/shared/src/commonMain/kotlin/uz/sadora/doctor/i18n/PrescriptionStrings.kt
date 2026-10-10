@@ -43,8 +43,6 @@ interface PrescriptionStrings {
     fun timesPerDay(count: Int): String
     val everyDay: String
     fun everyDays(days: Int): String
-    val earlier: String
-    val later: String
     val food: String
     fun food(relation: FoodRelation): String
     val startDay: String
@@ -104,7 +102,7 @@ object PrescriptionStringsUz : PrescriptionStrings {
         PrescriptionForm.CAPSULE -> "Kapsula"
         PrescriptionForm.SYRUP -> "Sirop"
         PrescriptionForm.DROPS -> "Tomchi"
-        PrescriptionForm.INJECTION -> "Ukol"
+        PrescriptionForm.INJECTION -> "In'eksiya"
         PrescriptionForm.OINTMENT -> "Surtma"
         PrescriptionForm.POWDER -> "Kukun"
         PrescriptionForm.OTHER -> "Boshqa"
@@ -119,21 +117,19 @@ object PrescriptionStringsUz : PrescriptionStrings {
     }
     override val dose = "Doza"
     override val unit = "Birligi"
-    override val when_ = "Qachon ichiladi"
+    override val when_ = "Qabul vaqti"
     override fun timesPerDay(count: Int) = "Kuniga $count marta"
     override val everyDay = "Har kuni"
     override fun everyDays(days: Int) = "Har $days kunda"
-    override val earlier = "erta"
-    override val later = "kech"
     override val food = "Ovqatga nisbatan"
     override fun food(relation: FoodRelation) = when (relation) {
         FoodRelation.BEFORE -> "Ovqatdan oldin"
         FoodRelation.WITH -> "Ovqat bilan"
         FoodRelation.AFTER -> "Ovqatdan keyin"
-        FoodRelation.ANY -> "Farqi yo'q"
+        FoodRelation.ANY -> "Ovqatdan qat'i nazar"
     }
-    override val startDay = "Nechanchi kundan"
-    override val days = "Necha kun"
+    override val startDay = "Kursning nechanchi kunidan"
+    override val days = "Davomiyligi (kun)"
     override val ongoing = "Doimiy"
     override val itemNote = "Izoh (ixtiyoriy)"
     override val note = "Umumiy izoh"
@@ -145,22 +141,22 @@ object PrescriptionStringsUz : PrescriptionStrings {
     override val missing = "Nomi, doza, ovqatga nisbatan va davomiylikni to'ldiring"
 
     override val title = "Retsept"
-    override val disclaimer = "Maslahat retsepti, rasmiy retsept emas"
+    override val disclaimer = "Shifokor tavsiyasi — rasmiy retsept emas"
     override fun summary(item: PrescriptionItem) = listOfNotNull(
         listOfNotNull(item.dose, item.unit).joinToString(" "),
         schedule(item, "Kuniga ${item.schedule.times.size} marta", "har ${item.schedule.intervalDays} kunda"),
         food(item.foodRelation).lowercase(),
-        (if (item.startDay > 1) "${item.startDay}-kundan " else "") + (item.days?.let { "$it kun" } ?: "doimiy"),
+        (if (item.startDay > 1) "${item.startDay}-kundan boshlab, " else "") + (item.days?.let { "$it kun" } ?: "doimiy"),
     ).joinToString(" · ")
-    override val added = "Bemor tabletkalariga qo'shdi"
+    override val added = "Bemor dorilariga qo'shdi"
     override val notAdded = "Bemor hali qo'shmagan"
     override val cancelled = "Bekor qilingan"
     override fun cancelReason(reason: String) = "Sabab: $reason"
     override val cancel = "Bekor qilish"
-    override val cancelTitle = "Retseptni bekor qilish"
-    override val cancelBody = "Bemor xabar oladi, retseptdan qo'shgan dorilari to'xtatiladi."
+    override val cancelTitle = "Retsept bekor qilinsinmi?"
+    override val cancelBody = "Bemorga xabar boradi va dorilar to'xtatiladi. Qaytarib bo'lmaydi."
     override val reasonHint = "Sababi, masalan: doza xato yozildi"
-    override val confirmCancel = "Bekor qilish"
+    override val confirmCancel = "Retseptni bekor qilish"
     override val cancelledToast = "Retsept bekor qilindi"
 
     override val history = "Retseptlar"
@@ -174,14 +170,14 @@ object PrescriptionStringsRu : PrescriptionStrings {
     override val prescription = "Рецепт"
 
     override val writerTitle = "Выписать рецепт"
-    override fun medicine(number: Int) = "Препарат $number"
+    override fun medicine(number: Int) = "Лекарство $number"
     override val unnamed = "Без названия"
     override val filled = "Готово"
     override val notFilled = "Не заполнено"
     override val required = "Обязательное поле"
     override val expand = "Развернуть"
     override val collapse = "Свернуть"
-    override val addMedicine = "Добавить препарат"
+    override val addMedicine = "Добавить лекарство"
     override val remove = "Убрать"
     override val name = "Название"
     override val namePlaceholder = "Например, Амоксициллин"
@@ -206,25 +202,23 @@ object PrescriptionStringsRu : PrescriptionStrings {
     }
     override val dose = "Доза"
     override val unit = "Единица"
-    override val when_ = "Когда принимать"
-    override fun timesPerDay(count: Int) = "$count раз${if (count in 2..4) "а" else ""} в день"
+    override val when_ = "Время приёма"
+    override fun timesPerDay(count: Int) = "$count ${ru(count, "раз", "раза", "раз")} в день"
     override val everyDay = "Каждый день"
-    override fun everyDays(days: Int) = "Раз в $days дн."
-    override val earlier = "раньше"
-    override val later = "позже"
+    override fun everyDays(days: Int) = "Раз в $days ${ru(days, "день", "дня", "дней")}"
     override val food = "Относительно еды"
     override fun food(relation: FoodRelation) = when (relation) {
         FoodRelation.BEFORE -> "До еды"
         FoodRelation.WITH -> "Во время еды"
         FoodRelation.AFTER -> "После еды"
-        FoodRelation.ANY -> "Неважно"
+        FoodRelation.ANY -> "Независимо от еды"
     }
-    override val startDay = "С какого дня"
-    override val days = "Сколько дней"
+    override val startDay = "С какого дня курса"
+    override val days = "Длительность (дней)"
     override val ongoing = "Постоянно"
     override val itemNote = "Примечание (необязательно)"
     override val note = "Общее примечание"
-    override val notePlaceholder = "Пить больше воды, повторный приём через 2 недели…"
+    override val notePlaceholder = "Пить больше воды, повторный визит через 2 недели…"
     override val copyPrevious = "Скопировать прошлый рецепт"
     override val send = "Отправить рецепт"
     override val sending = "Отправляем…"
@@ -232,20 +226,20 @@ object PrescriptionStringsRu : PrescriptionStrings {
     override val missing = "Заполните название, дозу, приём относительно еды и длительность"
 
     override val title = "Рецепт"
-    override val disclaimer = "Рекомендация врача, не официальный рецепт"
+    override val disclaimer = "Рекомендация врача — не официальный рецепт"
     override fun summary(item: PrescriptionItem) = listOfNotNull(
         listOfNotNull(item.dose, item.unit).joinToString(" "),
-        schedule(item, timesPerDay(item.schedule.times.size), "раз в ${item.schedule.intervalDays} дн."),
+        schedule(item, timesPerDay(item.schedule.times.size), "раз в ${item.schedule.intervalDays} ${ru(item.schedule.intervalDays ?: 0, "день", "дня", "дней")}"),
         food(item.foodRelation).lowercase(),
-        (if (item.startDay > 1) "с ${item.startDay}-го дня " else "") + (item.days?.let { "$it дн." } ?: "постоянно"),
+        (if (item.startDay > 1) "с ${item.startDay}-го дня, " else "") + (item.days?.let { "$it ${ru(it, "день", "дня", "дней")}" } ?: "постоянно"),
     ).joinToString(" · ")
     override val added = "Пациентка добавила в лекарства"
     override val notAdded = "Пациентка ещё не добавила"
     override val cancelled = "Отменён"
     override fun cancelReason(reason: String) = "Причина: $reason"
     override val cancel = "Отменить"
-    override val cancelTitle = "Отменить рецепт"
-    override val cancelBody = "Пациентка получит уведомление, добавленные из рецепта лекарства будут остановлены."
+    override val cancelTitle = "Отменить рецепт?"
+    override val cancelBody = "Пациентка получит уведомление, и лекарства из рецепта будут остановлены. Действие необратимо."
     override val reasonHint = "Причина, например: ошибка в дозе"
     override val confirmCancel = "Отменить рецепт"
     override val cancelledToast = "Рецепт отменён"
@@ -261,14 +255,14 @@ object PrescriptionStringsEn : PrescriptionStrings {
     override val prescription = "Prescription"
 
     override val writerTitle = "Write a prescription"
-    override fun medicine(number: Int) = "Medicine $number"
+    override fun medicine(number: Int) = "Medication $number"
     override val unnamed = "No name yet"
     override val filled = "Ready"
     override val notFilled = "Not filled in"
     override val required = "Required"
     override val expand = "Expand"
     override val collapse = "Collapse"
-    override val addMedicine = "Add a medicine"
+    override val addMedicine = "Add medication"
     override val remove = "Remove"
     override val name = "Name"
     override val namePlaceholder = "e.g. Amoxicillin"
@@ -296,43 +290,41 @@ object PrescriptionStringsEn : PrescriptionStrings {
     override val when_ = "When to take"
     override fun timesPerDay(count: Int) = if (count == 1) "Once a day" else "$count times a day"
     override val everyDay = "Every day"
-    override fun everyDays(days: Int) = "Every $days days"
-    override val earlier = "earlier"
-    override val later = "later"
-    override val food = "With food"
+    override fun everyDays(days: Int) = en(days, "Every day", "Every $days days")
+    override val food = "Food timing"
     override fun food(relation: FoodRelation) = when (relation) {
         FoodRelation.BEFORE -> "Before food"
         FoodRelation.WITH -> "With food"
         FoodRelation.AFTER -> "After food"
-        FoodRelation.ANY -> "Doesn't matter"
+        FoodRelation.ANY -> "With or without food"
     }
-    override val startDay = "From day"
-    override val days = "For days"
+    override val startDay = "Start on course day"
+    override val days = "Duration (days)"
     override val ongoing = "Ongoing"
     override val itemNote = "Note (optional)"
     override val note = "General note"
     override val notePlaceholder = "Drink plenty of water, follow-up in 2 weeks…"
-    override val copyPrevious = "Copy the last prescription"
+    override val copyPrevious = "Copy last prescription"
     override val send = "Send prescription"
     override val sending = "Sending…"
     override val sent = "Prescription sent"
-    override val missing = "Fill in the name, dose, food and duration"
+    override val missing = "Fill in the name, dose, food timing and duration"
 
     override val title = "Prescription"
-    override val disclaimer = "Doctor's advice, not an official prescription"
+    override val disclaimer = "Doctor's advice — not an official prescription"
     override fun summary(item: PrescriptionItem) = listOfNotNull(
         listOfNotNull(item.dose, item.unit).joinToString(" "),
-        schedule(item, timesPerDay(item.schedule.times.size), "every ${item.schedule.intervalDays} days"),
+        schedule(item, timesPerDay(item.schedule.times.size), en(item.schedule.intervalDays ?: 0, "every day", "every ${item.schedule.intervalDays} days")),
         food(item.foodRelation).lowercase(),
-        (if (item.startDay > 1) "from day ${item.startDay}, " else "") + (item.days?.let { "$it days" } ?: "ongoing"),
+        (if (item.startDay > 1) "from day ${item.startDay}, " else "") + (item.days?.let { "for $it ${en(it, "day", "days")}" } ?: "ongoing"),
     ).joinToString(" · ")
     override val added = "Added to her medications"
     override val notAdded = "Not added yet"
     override val cancelled = "Cancelled"
     override fun cancelReason(reason: String) = "Reason: $reason"
     override val cancel = "Cancel"
-    override val cancelTitle = "Cancel the prescription"
-    override val cancelBody = "She is notified, and the medicines she added from it stop."
+    override val cancelTitle = "Cancel this prescription?"
+    override val cancelBody = "She'll be notified and the medications from it will stop. This can't be undone."
     override val reasonHint = "Why, e.g. wrong dose"
     override val confirmCancel = "Cancel prescription"
     override val cancelledToast = "Prescription cancelled"

@@ -1,0 +1,3 @@
+/* Permission prompts. */
+"NSPhotoLibraryUsageDescription" = "You choose photos of your diploma and licence, and your profile photo, from your gallery.";
+"NSCameraUsageDescription" = "You scan the SADORA QR code a patient shows you and take your profile photo.";

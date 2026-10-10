@@ -243,7 +243,7 @@ private fun TimeStepper(label: String, minute: Int, onEarlier: () -> Unit, onLat
     val c = Sadora.colors
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
         Text(label, style = Sadora.type.body, color = c.muted, modifier = Modifier.weight(1f))
-        CircleIconButton(SadoraIcons.ChevronLeft, contentDescription = "$label: ${w.earlier}", onClick = onEarlier)
+        CircleIconButton(SadoraIcons.ChevronLeft, contentDescription = w.stepEarlier(label, clockOf(minute)), onClick = onEarlier)
         Text(
             clockOf(minute),
             style = Sadora.type.h3,
@@ -251,6 +251,6 @@ private fun TimeStepper(label: String, minute: Int, onEarlier: () -> Unit, onLat
             textAlign = TextAlign.Center,
             modifier = Modifier.widthIn(min = 56.dp),
         )
-        CircleIconButton(SadoraIcons.ChevronRight, contentDescription = "$label: ${w.later}", onClick = onLater)
+        CircleIconButton(SadoraIcons.ChevronRight, contentDescription = w.stepLater(label, clockOf(minute)), onClick = onLater)
     }
 }

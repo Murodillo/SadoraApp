@@ -1,0 +1,3 @@
+/* Ruxsat so'rovlari — Info.plist bilan bir xil bo'lsin. */
+"NSPhotoLibraryUsageDescription" = "Diplom va litsenziyangiz rasmini hamda profil rasmingizni galereyadan tanlaysiz.";
+"NSCameraUsageDescription" = "Bemor ko'rsatgan SADORA QR kodini skanerlaysiz va profil rasmingizni suratga olasiz.";

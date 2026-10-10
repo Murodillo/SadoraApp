@@ -101,7 +101,7 @@ object DoctorStringsUz : DoctorStrings {
     override val verified = "Tasdiqlangan shifokor"
     override val doctorAnswer = "Shifokor javobi"
     override fun answeredBy(count: Int) = if (count <= 1) "Shifokor javob berdi" else "$count shifokor javob berdi"
-    override val disclaimer = "Shifokorning chatdagi javobi umumiy maslahat, tashxis emas. Shoshilinch holatda 103 ga qo'ng'iroq qiling."
+    override val disclaimer = "Shifokorning hamjamiyatdagi javobi umumiy maslahat, tashxis emas. Shoshilinch holatda 103 ga qo'ng'iroq qiling."
     override fun writingAs(name: String) = "Siz shifokor sifatida yozasiz: $name ✓"
 
     override val profileTitle = "Shifokor"
@@ -110,15 +110,15 @@ object DoctorStringsUz : DoctorStrings {
     override val statAnswers = "javob"
     override val statYears = "yil tajriba"
     override val herPosts = "Postlari"
-    override val noPosts = "Hali post yozmagan."
-    override val noPostsBody = "Birinchi postingizni yozing — u lentada ismingiz va ✓ belgisi bilan chiqadi."
+    override val noPosts = "Hali post yo'q."
+    override val noPostsBody = "Shifokor postlari shu yerda ismi va ✓ belgisi bilan chiqadi."
 
     override val panelTitle = "Shifokor paneli"
-    override val introTitle = "Sadora'da shifokor bo'ling"
-    override val introBody = "Ayollar savollariga javob bering, maslahatlaringizni ulashing. Tasdiqlangandan keyin Chatdagi postlaringiz va izohlaringiz ismingiz va ✓ belgisi bilan chiqadi."
+    override val introTitle = "SADORA'da shifokor bo'ling"
+    override val introBody = "Ayollar savollariga javob bering, maslahatlaringizni ulashing. Tasdiqlangandan keyin Hamjamiyatdagi postlaringiz va izohlaringiz ismingiz va ✓ belgisi bilan chiqadi."
     override val introPoints = listOf(
-        "Diplom va litsenziyangizni Sadora admini tekshiradi",
-        "Postlaringiz lentada \"Tasdiqlangan shifokor\" deb ko'rinadi",
+        "Diplom va litsenziyangizni SADORA admini tekshiradi",
+        "Postlaringiz lentada «Tasdiqlangan shifokor» deb ko'rinadi",
         "Javob kutayotgan savollar ro'yxati sizga alohida ko'rsatiladi",
     )
     override val applyButton = "Ariza topshirish"
@@ -128,15 +128,15 @@ object DoctorStringsUz : DoctorStrings {
     override val reapply = "Qayta topshirish"
     override val adminNote = "Admin izohi"
     override val suspendedTitle = "Shifokor hisobingiz to'xtatilgan"
-    override val suspendedBody = "Bu vaqtda postlaringiz lentada ko'rinmaydi. Savollar bo'lsa, Sadora bilan bog'laning."
+    override val suspendedBody = "Bu vaqtda postlaringiz lentada ko'rinmaydi. Savollar bo'lsa, SADORA bilan bog'laning."
     override val approvedTitle = "Siz tasdiqlangan shifokorsiz"
-    override val approvedBody = "Chatda yozgan post va izohlaringiz ismingiz va ✓ belgisi bilan chiqadi."
+    override val approvedBody = "Hamjamiyatda yozgan post va izohlaringiz ismingiz va ✓ belgisi bilan chiqadi."
     override val myPage = "Mening sahifam"
     override val editTitle = "Profilni tahrirlash"
     override val save = "Saqlash"
     override val saved = "Saqlandi"
     override val questionsTitle = "Javob kutayotgan savollar"
-    override val questionsHint = "So'nggi 30 kunda yozilgan va hali shifokor javob bermagan postlar."
+    override val questionsHint = "So'nggi 30 kunda berilgan va hali shifokor javob bermagan savollar."
     override val questionsEmpty = "Hozircha javobsiz savol yo'q."
     override val questionsEmptyBody = "Yangi savollar paydo bo'lishi bilan shu yerda ko'rinadi."
     override fun submittedOn(date: String) = "Yuborilgan: $date"
@@ -152,7 +152,7 @@ object DoctorStringsUz : DoctorStrings {
     override val bio = "O'zingiz haqingizda"
     override val bioHint = "Ixtiyoriy: nima bilan shug'ullanasiz, qaysi savollarga javob berasiz"
     override val documents = "Hujjatlar"
-    override val documentsHint = "Diplom va litsenziya rasmini yuklang (1–4 ta). Ularni faqat Sadora admini ko'radi."
+    override val documentsHint = "Diplom va litsenziya rasmini yuklang (1–4 ta). Ularni faqat SADORA admini ko'radi."
     override val addDocument = "Rasm qo'shish"
     override val remove = "Olib tashlash"
     override val galleryUnavailable = "Bu qurilmada galereyadan rasm tanlab bo'lmaydi."
@@ -183,23 +183,23 @@ object DoctorStringsRu : DoctorStrings {
     override val verified = "Подтверждённый врач"
     override val doctorAnswer = "Ответ врача"
     override fun answeredBy(count: Int) = if (count <= 1) "Врач ответил" else "Ответили врачи: $count"
-    override val disclaimer = "Ответ врача в чате — общий совет, а не диагноз. В экстренном случае звоните 103."
+    override val disclaimer = "Ответ врача в сообществе — общий совет, а не диагноз. В экстренном случае звоните 103."
     override fun writingAs(name: String) = "Вы пишете как врач: $name ✓"
 
     override val profileTitle = "Врач"
-    override fun verifiedSince(date: String) = "Подтверждён: $date"
-    override val statPosts = "посты"
-    override val statAnswers = "ответы"
-    override val statYears = "лет практики"
+    override fun verifiedSince(date: String) = "Подтверждено: $date"
+    override val statPosts = "Посты"
+    override val statAnswers = "Ответы"
+    override val statYears = "Стаж, лет"
     override val herPosts = "Посты"
-    override val noPosts = "Пока нет постов."
-    override val noPostsBody = "Напишите первый пост — он появится в ленте с вашим именем и отметкой ✓."
+    override val noPosts = "Постов пока нет."
+    override val noPostsBody = "Посты врача появляются здесь с именем и отметкой ✓."
 
     override val panelTitle = "Панель врача"
-    override val introTitle = "Станьте врачом в Sadora"
-    override val introBody = "Отвечайте на вопросы женщин и делитесь советами. После проверки ваши посты и комментарии в чате будут подписаны вашим именем и отметкой ✓."
+    override val introTitle = "Станьте врачом в SADORA"
+    override val introBody = "Отвечайте на вопросы женщин и делитесь советами. После проверки ваши посты и комментарии в сообществе будут подписаны вашим именем и отметкой ✓."
     override val introPoints = listOf(
-        "Диплом и лицензию проверяет администратор Sadora",
+        "Диплом и лицензию проверяет администратор SADORA",
         "В ленте ваши посты отмечены как «Подтверждённый врач»",
         "Вопросы, ждущие ответа, собраны для вас отдельным списком",
     )
@@ -210,15 +210,15 @@ object DoctorStringsRu : DoctorStrings {
     override val reapply = "Подать снова"
     override val adminNote = "Комментарий администратора"
     override val suspendedTitle = "Аккаунт врача приостановлен"
-    override val suspendedBody = "Пока он приостановлен, ваши посты не видны в ленте. По вопросам свяжитесь с Sadora."
+    override val suspendedBody = "Пока он приостановлен, ваши посты не видны в ленте. По вопросам свяжитесь с SADORA."
     override val approvedTitle = "Вы подтверждённый врач"
-    override val approvedBody = "Ваши посты и комментарии в чате подписаны вашим именем и отметкой ✓."
+    override val approvedBody = "Ваши посты и комментарии в сообществе подписаны вашим именем и отметкой ✓."
     override val myPage = "Моя страница"
     override val editTitle = "Редактировать профиль"
     override val save = "Сохранить"
     override val saved = "Сохранено"
     override val questionsTitle = "Вопросы без ответа"
-    override val questionsHint = "Посты за последние 30 дней, на которые ещё не ответил врач."
+    override val questionsHint = "Вопросы за последние 30 дней, на которые ещё не ответил врач."
     override val questionsEmpty = "Сейчас вопросов без ответа нет."
     override val questionsEmptyBody = "Новые вопросы появятся здесь, как только их зададут."
     override fun submittedOn(date: String) = "Отправлено: $date"
@@ -234,7 +234,7 @@ object DoctorStringsRu : DoctorStrings {
     override val bio = "О себе"
     override val bioHint = "Необязательно: чем занимаетесь, на какие вопросы отвечаете"
     override val documents = "Документы"
-    override val documentsHint = "Загрузите фото диплома и лицензии (1–4). Их видит только администратор Sadora."
+    override val documentsHint = "Загрузите фото диплома и лицензии (1–4). Их видит только администратор SADORA."
     override val addDocument = "Добавить фото"
     override val remove = "Убрать"
     override val galleryUnavailable = "На этом устройстве нельзя выбрать фото из галереи."
@@ -245,14 +245,14 @@ object DoctorStringsRu : DoctorStrings {
 
 object DoctorStringsEn : DoctorStrings {
     override fun specialty(specialty: DoctorSpecialty) = when (specialty) {
-        DoctorSpecialty.GYNECOLOGIST -> "Gynecologist"
+        DoctorSpecialty.GYNECOLOGIST -> "Gynaecologist"
         DoctorSpecialty.OBSTETRICIAN -> "Obstetrician"
         DoctorSpecialty.REPRODUCTOLOGIST -> "Fertility specialist"
         DoctorSpecialty.ENDOCRINOLOGIST -> "Endocrinologist"
         DoctorSpecialty.MAMMOLOGIST -> "Breast specialist"
         DoctorSpecialty.PSYCHOLOGIST -> "Psychologist"
         DoctorSpecialty.NUTRITIONIST -> "Nutritionist"
-        DoctorSpecialty.PEDIATRICIAN -> "Pediatrician"
+        DoctorSpecialty.PEDIATRICIAN -> "Paediatrician"
         DoctorSpecialty.GENERAL -> "General practitioner"
         DoctorSpecialty.OTHER -> "Other specialist"
     }
@@ -265,24 +265,24 @@ object DoctorStringsEn : DoctorStrings {
     override val verified = "Verified doctor"
     override val doctorAnswer = "Doctor's answer"
     override fun answeredBy(count: Int) = if (count <= 1) "A doctor answered" else "$count doctors answered"
-    override val disclaimer = "A doctor's answer in the chat is general advice, not a diagnosis. In an emergency, call 103."
+    override val disclaimer = "A doctor's answer in the community is general advice, not a diagnosis. In an emergency, call 103."
     override fun writingAs(name: String) = "You are writing as a doctor: $name ✓"
 
     override val profileTitle = "Doctor"
     override fun verifiedSince(date: String) = "Verified since $date"
-    override val statPosts = "posts"
-    override val statAnswers = "answers"
-    override val statYears = "years in practice"
+    override val statPosts = "Posts"
+    override val statAnswers = "Answers"
+    override val statYears = "Years in practice"
     override val herPosts = "Posts"
     override val noPosts = "No posts yet."
-    override val noPostsBody = "Write your first post — it shows in the feed with your name and a ✓."
+    override val noPostsBody = "A doctor's posts show here with their name and a ✓."
 
     override val panelTitle = "Doctor panel"
-    override val introTitle = "Join Sadora as a doctor"
-    override val introBody = "Answer women's questions and share your advice. Once verified, your posts and comments in the chat carry your name and a ✓."
+    override val introTitle = "Join SADORA as a doctor"
+    override val introBody = "Answer women's questions and share your advice. Once verified, your posts and comments in the community carry your name and a ✓."
     override val introPoints = listOf(
-        "A Sadora admin checks your diploma and licence",
-        "Your posts show in the feed as \"Verified doctor\"",
+        "A SADORA admin checks your diploma and licence",
+        "Your posts show in the feed as “Verified doctor”",
         "Questions still waiting for an answer are listed for you",
     )
     override val applyButton = "Apply"
@@ -292,15 +292,15 @@ object DoctorStringsEn : DoctorStrings {
     override val reapply = "Apply again"
     override val adminNote = "Admin's note"
     override val suspendedTitle = "Your doctor account is suspended"
-    override val suspendedBody = "While it is, your posts are hidden from the feed. Contact Sadora with any questions."
+    override val suspendedBody = "While it is, your posts are hidden from the feed. Contact SADORA with any questions."
     override val approvedTitle = "You are a verified doctor"
-    override val approvedBody = "Your posts and comments in the chat carry your name and a ✓."
+    override val approvedBody = "Your posts and comments in the community carry your name and a ✓."
     override val myPage = "My page"
     override val editTitle = "Edit profile"
     override val save = "Save"
     override val saved = "Saved"
     override val questionsTitle = "Questions waiting for an answer"
-    override val questionsHint = "Posts from the last 30 days that no doctor has answered yet."
+    override val questionsHint = "Questions from the last 30 days that no doctor has answered yet."
     override val questionsEmpty = "No unanswered questions right now."
     override val questionsEmptyBody = "New questions show up here as soon as they are asked."
     override fun submittedOn(date: String) = "Sent: $date"
@@ -316,7 +316,7 @@ object DoctorStringsEn : DoctorStrings {
     override val bio = "About you"
     override val bioHint = "Optional: what you do, which questions you answer"
     override val documents = "Documents"
-    override val documentsHint = "Upload photos of your diploma and licence (1–4). Only a Sadora admin sees them."
+    override val documentsHint = "Upload photos of your diploma and licence (1–4). Only a SADORA admin sees them."
     override val addDocument = "Add photo"
     override val remove = "Remove"
     override val galleryUnavailable = "Picking a photo from the gallery isn't available on this device."

@@ -10,7 +10,7 @@ object StringsUz : Strings {
 
     override val common = object : CommonStrings {
         override val appName = "Sadora Doctor"
-        override val back = "Ortga"
+        override val back = "Orqaga"
         override val retry = "Qayta urinish"
         override val cancel = "Bekor qilish"
         override val saving = "Saqlanmoqda…"
@@ -18,8 +18,8 @@ object StringsUz : Strings {
     }
 
     override val auth = object : AuthStrings {
-        override val title = "Shifokorlar uchun Sadora"
-        override val subtitle = "Sadora ilovasidagi raqamingiz bilan kiring. Ariza topshiring, " +
+        override val title = "Shifokorlar uchun SADORA"
+        override val subtitle = "SADORA ilovasidagi raqamingiz bilan kiring. Ariza topshiring, " +
             "tasdiqlangach esa ayollarning savollariga javob bering."
         override val phoneLabel = "Telefon raqami"
         override val phoneNote = "Raqam faqat kirish uchun kerak. Unga bir martalik SMS kod yuboramiz."
@@ -29,22 +29,22 @@ object StringsUz : Strings {
         override fun codeSubtitle(phone: String) = "+998 $phone raqamiga 6 xonali kod yubordik."
         override val confirm = "Tasdiqlash"
         override val checking = "Tekshirilmoqda…"
-        override fun resendIn(seconds: Int) = "Qayta yuborish · ${seconds}s"
+        override fun resendIn(seconds: Int) = "Qayta yuborish · $seconds sek"
         override val resend = "Kodni qayta yuborish"
         override val changeNumber = "Raqamni o'zgartirish"
-        override val codeSecrecy = "Kodni hech kimga aytmang. Sadora xodimlari kodni so'ramaydi."
+        override val codeSecrecy = "Kodni hech kimga aytmang. SADORA xodimlari kodni so'ramaydi."
         override val devCodeFilled = "Test serveri kodni qaytardi — u avtomatik to'ldirildi."
         override fun otpEntered(entered: Int, length: Int) = "Tasdiqlash kodi: $length tadan $entered ta raqam kiritildi"
         override val deleteDigit = "Oxirgi raqamni o'chirish"
     }
 
     override val errors = object : ErrorStrings {
-        override val phoneInvalid = "Raqam to'liq emas yoki bunday operator kodi yo'q"
+        override val phoneInvalid = "Raqam to'liq emas yoki bunday operator kodi yo'q. Operator kodi bilan 9 ta raqamni kiriting."
         override val network = "Internetga ulanib bo'lmadi. Qayta urinib ko'ring."
-        override val validation = "Kiritilgan ma'lumot noto'g'ri."
-        override val sessionExpired = "Sessiya tugadi. Qaytadan kiring."
-        override val blocked = "Hisob bloklangan. Sadora bilan bog'laning."
-        override val forbidden = "Bu amal uchun ruxsat yo'q."
+        override val validation = "Ba'zi ma'lumotlar noto'g'ri kiritilgan. Tekshirib, qayta yuboring."
+        override val sessionExpired = "Seans tugadi. Qaytadan kiring."
+        override val blocked = "Hisob bloklangan. SADORA bilan bog'laning."
+        override val forbidden = "Bu amal uchun ruxsat yo'q. Xato deb o'ylasangiz, SADORA bilan bog'laning."
         override val notFound = "Topilmadi: u o'chirilgan bo'lishi mumkin."
         override fun retryAfter(seconds: Int) = "Juda ko'p urinish. $seconds soniyadan keyin qayta urining."
         override val retrySoon = "Juda ko'p urinish. Birozdan keyin qayta urining."

@@ -118,7 +118,7 @@ fun ScanScreen(
                         value = link,
                         onValueChange = { link = it.trim() },
                         label = t.pasteLabel,
-                        placeholder = "https://…/share/…",
+                        placeholder = t.pastePlaceholder,
                         keyboardType = KeyboardType.Uri,
                         imeAction = ImeAction.Go,
                         keyboardActions = KeyboardActions(onGo = { if (open(link)) link = "" }),

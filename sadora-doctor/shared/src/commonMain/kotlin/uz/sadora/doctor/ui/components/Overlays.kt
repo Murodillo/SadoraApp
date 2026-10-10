@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import uz.sadora.doctor.design.MinTouchTarget
 import uz.sadora.doctor.design.Radius
 import uz.sadora.doctor.design.Sadora
@@ -267,7 +268,8 @@ fun ErrorStrip(text: String, onRetry: (() -> Unit)? = null, modifier: Modifier =
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
     ) {
-        Text("⚠", style = Sadora.type.h3, color = c.danger)
+        // Decoration: the message beside it says it all, so TalkBack skips the sign.
+        Text("⚠", style = Sadora.type.h3, color = c.danger, modifier = Modifier.clearAndSetSemantics { })
         Text(text, style = Sadora.type.body, color = c.danger, modifier = Modifier.weight(1f))
         if (onRetry != null) {
             Text(

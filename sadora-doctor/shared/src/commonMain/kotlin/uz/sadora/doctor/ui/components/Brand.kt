@@ -20,6 +20,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
@@ -174,6 +176,19 @@ private const val TaglineMillis = 700
 /** The brand's own line, in English on every language, as the client app sets it. */
 const val BrandTagline = "EVERY WOMAN. EVERY MOMENT."
 
+/** How the doctor app's logo is read aloud: the name, not the capitals spelled out. */
+const val BrandNameSpoken = "SADORA Doctor"
+
+/**
+ * What a screen reader hears for the lockup. The wordmark and its tagline are logo
+ * text and stay as drawn in every language; this is the name said once instead.
+ */
+private fun spokenLogo(taglineText: String, tagline: Boolean): String = when {
+    !tagline || taglineText == BrandTagline -> "SADORA"
+    taglineText.equals("DOCTOR", ignoreCase = true) -> BrandNameSpoken
+    else -> "SADORA ${taglineText.lowercase().replaceFirstChar { it.uppercase() }}"
+}
+
 /** How long the whole reveal takes, tagline included. Callers wait this long. */
 const val LogoRevealMillis = TaglineDelay + TaglineMillis
 
@@ -307,7 +322,7 @@ fun SadoraWordmark(
     val paths = WordStrokes.map { rememberPath(it) }
 
     Column(
-        modifier,
+        modifier.clearAndSetSemantics { contentDescription = spokenLogo(taglineText, tagline) },
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(width * 0.075f),
     ) {
@@ -383,7 +398,7 @@ fun SadoraLogoReveal(
 
     val now = clock.value
     Column(
-        modifier,
+        modifier.clearAndSetSemantics { contentDescription = spokenLogo(taglineText, tagline) },
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(size * 0.2f),
     ) {
