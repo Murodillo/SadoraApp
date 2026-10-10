@@ -275,17 +275,19 @@ class CommunityService(
         val badges = badgesFor(comments.filter { it.doctorId == null }.map { it.userId })
         val worn = wornOf(comments.filter { it.doctorId == null }.map { it.userId })
         val frames = framesOf(comments.filter { it.doctorId == null }.map { it.userId })
+        val likes = repository.commentLikesFor(userId, comments.map { it.id })
         // A doctor's answer is the one the asker came for, so answers lead the thread —
         // the repository orders them so, across pages.
         return comments
             .map { comment ->
                 val byline = comment.doctorId?.let { bylines[it] }
-                if (byline != null) {
+                val dto = if (byline != null) {
                     comment.toDto(null, viewer = userId).copy(alias = byline.fullName, doctor = byline.toAuthor())
                 } else {
                     comment.toDto(identities[comment.userId], viewer = userId, badges = badges[comment.userId].orEmpty())
                         .copy(worn = worn[comment.userId], frame = frames[comment.userId])
                 }
+                dto.copy(likeCount = likes.counts[comment.id] ?: 0, liked = comment.id in likes.liked)
             }
     }
 
@@ -416,6 +418,15 @@ class CommunityService(
         requireVisiblePost(postId)
         repository.setLiked(postId, userId, liked)
         return LikeState(liked = liked, likeCount = repository.likeCount(postId))
+    }
+
+    /** Liking a comment, under the rules of liking a post: anyone who can read it may. */
+    suspend fun setCommentLiked(userId: Uuid, commentId: Uuid, liked: Boolean): LikeState {
+        requireOpen(userId)
+        val comment = repository.readableCommentById(commentId) ?: throw NotFoundException("Izoh topilmadi")
+        repository.readablePostById(comment.postId) ?: throw NotFoundException("Izoh topilmadi")
+        repository.setCommentLiked(commentId, userId, liked)
+        return LikeState(liked = liked, likeCount = repository.commentLikeCount(commentId))
     }
 
     /**

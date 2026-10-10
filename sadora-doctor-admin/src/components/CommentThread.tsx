@@ -50,6 +50,7 @@ function Comment({ comment, arrived }: { comment: CommunityComment; arrived: boo
             </>
           )}
           {comment.isMine && <span className="badge free">Siz</span>}
+          {comment.likeCount ? <span className="faint">{comment.likeCount} yoqdi</span> : null}
           <span className="faint comment-time" title={formatDateTime(comment.createdAt)}>
             {formatAgo(comment.createdAt)}
           </span>

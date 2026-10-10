@@ -516,6 +516,40 @@ class AppState {
         communitySync?.postLiked(postId, liked)
     }
 
+    /**
+     * Likes or unlikes a comment, the count moving with the heart. Her optimistic copy of
+     * a comment has no id yet, so there is nothing to like until the server has it.
+     */
+    fun toggleCommentLike(postId: String, commentId: String) {
+        if (commentId.isEmpty()) return
+        var liked = false
+        val found = updateComment(postId, commentId) { comment ->
+            liked = !comment.liked
+            comment.copy(liked = liked, likeCount = (comment.likeCount + if (liked) 1 else -1).coerceAtLeast(0))
+        }
+        if (found) communitySync?.commentLiked(postId, commentId, liked)
+    }
+
+    /** Undoes a comment like the server did not take; a no-op once a reload has replaced it. */
+    fun revertCommentLike(postId: String, commentId: String, liked: Boolean) {
+        updateComment(postId, commentId) { comment ->
+            if (comment.liked != liked) {
+                comment
+            } else {
+                comment.copy(liked = !liked, likeCount = (comment.likeCount + if (liked) -1 else 1).coerceAtLeast(0))
+            }
+        }
+    }
+
+    private fun updateComment(postId: String, commentId: String, change: (CommunityComment) -> CommunityComment): Boolean {
+        val index = communityPosts.indexOfFirst { it.id == postId }
+        if (index < 0) return false
+        val post = communityPosts[index]
+        if (post.comments.none { it.id == commentId }) return false
+        communityPosts[index] = post.copy(comments = post.comments.map { if (it.id == commentId) change(it) else it })
+        return true
+    }
+
     /** Her own post never counts: the number is how many others it reached. */
     fun postSeen(post: CommunityPost) {
         if (!post.isMine) communitySync?.postSeen(post.id)

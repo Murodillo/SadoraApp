@@ -110,7 +110,11 @@ fun PostDetailScreen(
                 item { Text(t.noComments, style = Sadora.type.body, color = c.muted) }
             } else {
                 items(comments) { comment ->
-                    CommentRow(comment, onOpenAuthor = { comment.doctor?.let { onOpenDoctor(it.id) } ?: onOpenProfile(comment.alias) })
+                    CommentRow(
+                        comment,
+                        onOpenAuthor = { comment.doctor?.let { onOpenDoctor(it.id) } ?: onOpenProfile(comment.alias) },
+                        onLike = { state.toggleCommentLike(post.id, comment.id) },
+                    )
                 }
                 if (post.id in community.commentsWithMore) {
                     item(key = "more") {

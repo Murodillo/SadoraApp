@@ -146,6 +146,8 @@ interface CommunityStrings {
     fun viewsSpoken(count: Int): String
     fun commentsCount(count: Int): String
     val noComments: String
+    /** How many liked a comment, for a screen reader; the row draws a heart and the number. */
+    fun likesSpoken(count: Int): String
     val questionTitle: String
     val postTitle: String
     val postMissing: String

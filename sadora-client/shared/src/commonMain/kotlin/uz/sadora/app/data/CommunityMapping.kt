@@ -57,6 +57,8 @@ fun WireComment.toAppComment(): CommunityComment = CommunityComment(
     frame = frame,
     doctor = doctor,
     id = id,
+    likeCount = likeCount,
+    liked = liked,
 )
 
 fun WireBadge.toAppBadge(): CommunityBadge = when (this) {

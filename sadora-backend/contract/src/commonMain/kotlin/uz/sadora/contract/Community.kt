@@ -348,6 +348,10 @@ data class CommunityComment(
     val frame: String? = null,
     /** A verified doctor's answer; the thread lists these first. */
     val doctor: DoctorAuthor? = null,
+    /** Everyone who liked it, the caller and the author included. */
+    val likeCount: Int = 0,
+    /** Whether the caller is one of those who liked it. */
+    val liked: Boolean = false,
 )
 
 @Serializable

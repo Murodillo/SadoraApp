@@ -8,6 +8,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -44,6 +45,7 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import kotlin.time.Clock
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.painterResource
 import uz.sadora.contract.CommunityComment
 import uz.sadora.contract.CommunityPost
 import uz.sadora.contract.Limits
@@ -54,6 +56,8 @@ import uz.sadora.doctor.design.Sadora
 import uz.sadora.doctor.design.SadoraIcons
 import uz.sadora.doctor.design.Spacing
 import uz.sadora.doctor.i18n.strings
+import uz.sadora.doctor.resources.Res
+import uz.sadora.doctor.resources.ic3d_heart
 import uz.sadora.doctor.ui.components.Motion
 import uz.sadora.doctor.ui.components.SadoraCard
 import uz.sadora.doctor.ui.components.SadoraTextField
@@ -263,6 +267,29 @@ internal fun CommentRow(comment: CommunityComment, modifier: Modifier = Modifier
             )
             Text(comment.body, style = Sadora.type.body, color = c.text)
         }
+        CommentLikes(comment.likeCount)
+    }
+}
+
+/**
+ * How many readers liked a comment. Only the number: liking is the patient app's, and
+ * here it is what a doctor's Thanked badge grows from.
+ */
+@Composable
+private fun CommentLikes(count: Int) {
+    if (count <= 0) return
+    val spoken = strings.community.likesSpoken(count)
+    Row(
+        Modifier.clearAndSetSemantics { contentDescription = spoken },
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Spacing.xxs),
+    ) {
+        Image(painterResource(Res.drawable.ic3d_heart), contentDescription = null, Modifier.size(16.dp))
+        Text(
+            count.toString(),
+            style = Sadora.type.caption.copy(letterSpacing = TextUnit.Unspecified, fontWeight = FontWeight.Medium),
+            color = Sadora.colors.muted,
+        )
     }
 }
 
@@ -311,6 +338,7 @@ private fun DoctorCommentRow(comment: CommunityComment, modifier: Modifier = Mod
                     color = c.muted2,
                 )
             }
+            CommentLikes(comment.likeCount)
         }
         Text(comment.body, style = Sadora.type.body, color = c.text)
         Text(d.disclaimer, style = Sadora.type.caption.copy(letterSpacing = TextUnit.Unspecified), color = c.muted2)

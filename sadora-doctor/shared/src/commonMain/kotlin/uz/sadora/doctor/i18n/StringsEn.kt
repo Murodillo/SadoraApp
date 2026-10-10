@@ -89,6 +89,7 @@ object StringsEn : Strings {
             else -> "$count replies"
         }
         override val noComments = "No replies yet. Be the first."
+        override fun likesSpoken(count: Int) = if (count == 1) "1 like" else "$count likes"
         override val questionTitle = "Question"
         override val postTitle = "Post"
         override val postMissing = "This post was deleted or hidden."

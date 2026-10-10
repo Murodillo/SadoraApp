@@ -5,6 +5,8 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.disabled
+import androidx.compose.ui.draw.alpha
 import org.jetbrains.compose.resources.DrawableResource
 import uz.sadora.app.ui.components.SelectableArt
 import uz.sadora.app.resources.ic3d_bookmark
@@ -645,9 +647,9 @@ private fun PostAction(
 
 /** One comment on the post page: the alias with its badges, its age, and the text. */
 @Composable
-internal fun CommentRow(comment: CommunityComment, onOpenAuthor: () -> Unit) {
+internal fun CommentRow(comment: CommunityComment, onOpenAuthor: () -> Unit, onLike: () -> Unit) {
     if (comment.doctor != null) {
-        DoctorCommentRow(comment, onOpenAuthor)
+        DoctorCommentRow(comment, onOpenAuthor, onLike)
         return
     }
     val c = Sadora.colors
@@ -676,6 +678,48 @@ internal fun CommentRow(comment: CommunityComment, onOpenAuthor: () -> Unit) {
             }
             Text(comment.body, style = Sadora.type.body, color = c.text)
         }
+        CommentLike(comment, onLike)
+    }
+}
+
+/**
+ * The heart at the end of a comment: the post's own, smaller, with the count under it
+ * once there is one. Her comment that has not reached the server yet has no id to like,
+ * so the heart waits, drawn but not a button.
+ */
+@Composable
+private fun CommentLike(comment: CommunityComment, onLike: () -> Unit) {
+    val c = Sadora.colors
+    val sent = comment.id.isNotEmpty()
+    val tint by animateColorAsState(if (comment.liked) c.primary else c.muted, tween(220), label = "commentLike")
+    val name = strings.community.like
+    val description = if (comment.likeCount > 0) "$name, ${comment.likeCount}" else name
+    Column(
+        Modifier
+            .clip(Radius.chip)
+            .defaultMinSize(minWidth = 48.dp, minHeight = 48.dp)
+            .then(
+                if (sent) {
+                    Modifier.noRippleToggleable(comment.liked, Role.Checkbox, focusShape = Radius.chip) { onLike() }
+                } else {
+                    Modifier.alpha(0.4f)
+                },
+            )
+            .clearAndSetSemantics {
+                contentDescription = description
+                if (!sent) disabled()
+            },
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        SelectableArt(Res.drawable.ic3d_heart, 20.dp, comment.liked, dimWhenIdle = true)
+        if (comment.likeCount > 0) {
+            Text(
+                comment.likeCount.toString(),
+                style = Sadora.type.caption.copy(letterSpacing = TextUnit.Unspecified, fontWeight = FontWeight.Medium),
+                color = tint,
+            )
+        }
     }
 }
 
@@ -684,7 +728,7 @@ internal fun CommentRow(comment: CommunityComment, onOpenAuthor: () -> Unit) {
  * her specialty and the check mark, and the reminder that it is not a diagnosis.
  */
 @Composable
-private fun DoctorCommentRow(comment: CommunityComment, onOpenDoctor: () -> Unit) {
+private fun DoctorCommentRow(comment: CommunityComment, onOpenDoctor: () -> Unit, onLike: () -> Unit) {
     val c = Sadora.colors
     val d = strings.doctors
     val doctor = comment.doctor ?: return
@@ -703,12 +747,13 @@ private fun DoctorCommentRow(comment: CommunityComment, onOpenDoctor: () -> Unit
             color = c.textAccent,
         )
         Row(
-            Modifier.noRippleClickable(onClick = onOpenDoctor),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
         ) {
-            DoctorAvatar(comment.alias, size = 30.dp, photoUrl = doctor.photoUrl)
-            Column(Modifier.weight(1f)) {
+            Box(Modifier.clip(Radius.chip).noRippleClickable(onClick = onOpenDoctor)) {
+                DoctorAvatar(comment.alias, size = 30.dp, photoUrl = doctor.photoUrl)
+            }
+            Column(Modifier.weight(1f).noRippleClickable(onClick = onOpenDoctor)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.xxs)) {
                     Text(
                         comment.alias,
@@ -725,6 +770,7 @@ private fun DoctorCommentRow(comment: CommunityComment, onOpenDoctor: () -> Unit
                     color = c.muted2,
                 )
             }
+            CommentLike(comment, onLike)
         }
         Text(comment.body, style = Sadora.type.body, color = c.text)
         Text(d.disclaimer, style = Sadora.type.caption.copy(letterSpacing = TextUnit.Unspecified), color = c.muted2)

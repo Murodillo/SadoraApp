@@ -70,7 +70,12 @@ class BadgeRepository {
               (SELECT count(*) FROM profile_shares WHERE user_id = $u),
               (SELECT count(*) FROM community_comments WHERE user_id = $u AND status = 'visible'),
               (SELECT count(*) FROM community_post_likes l JOIN community_posts p ON p.id = l.post_id
-                 WHERE p.user_id = $u AND l.user_id <> $u),
+                 WHERE p.user_id = $u AND l.user_id <> $u AND p.status = 'visible' AND p.doctor_id IS NULL)
+                + (SELECT count(*) FROM community_comment_likes l
+                     JOIN community_comments c ON c.id = l.comment_id
+                     JOIN community_posts p ON p.id = c.post_id
+                   WHERE c.user_id = $u AND l.user_id <> $u AND c.status = 'visible' AND c.doctor_id IS NULL
+                     AND p.status = 'visible'),
               (SELECT count(*) FROM shop_redemptions WHERE user_id = $u AND status <> 'cancelled'),
               (SELECT coalesce(sum(amount), 0) FROM coin_ledger
                  WHERE user_id = $u AND amount > 0 AND reason <> '${CoinReasons.ADMIN_ADJUSTMENT}')

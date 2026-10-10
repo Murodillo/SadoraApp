@@ -235,6 +235,7 @@ export interface CommunityComment {
   badges?: CommunityBadge[]
   /** A verified doctor's answer; the server lists these first. */
   doctor?: DoctorAuthor | null
+  likeCount?: number
 }
 
 export interface CreatePostRequest {

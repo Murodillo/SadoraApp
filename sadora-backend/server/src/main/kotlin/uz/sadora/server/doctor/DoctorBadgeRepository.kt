@@ -51,7 +51,11 @@ class DoctorBadgeRepository {
               (SELECT count(*) FROM doctor_patient_notes WHERE doctor_id = $d),
               (SELECT count(*) FROM doctor_quick_replies WHERE doctor_id = $d),
               (SELECT count(*) FROM community_post_likes l JOIN community_posts p ON p.id = l.post_id
-                 WHERE p.doctor_id = $d AND l.user_id <> $u),
+                 WHERE p.doctor_id = $d AND l.user_id <> $u AND p.status = 'visible')
+                + (SELECT count(*) FROM community_comment_likes l
+                     JOIN community_comments c ON c.id = l.comment_id
+                     JOIN community_posts p ON p.id = c.post_id
+                   WHERE c.doctor_id = $d AND l.user_id <> $u AND c.status = 'visible' AND p.status = 'visible'),
               (SELECT coalesce(floor(extract(epoch FROM now() - verified_at) / 86400), 0)::int
                  FROM doctor_profiles WHERE id = $d)
         """.trimIndent()

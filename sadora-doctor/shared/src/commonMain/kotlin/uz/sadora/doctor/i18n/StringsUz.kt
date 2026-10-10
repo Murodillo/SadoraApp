@@ -86,6 +86,7 @@ object StringsUz : Strings {
         override fun viewsSpoken(count: Int) = "$count marta ko'rildi"
         override fun commentsCount(count: Int) = if (count == 0) "Izohlar" else "$count izoh"
         override val noComments = "Hali izoh yo'q. Birinchi bo'lib javob bering."
+        override fun likesSpoken(count: Int) = "$count kishiga yoqdi"
         override val questionTitle = "Savol"
         override val postTitle = "Post"
         override val postMissing = "Bu post o'chirilgan yoki yashirilgan."

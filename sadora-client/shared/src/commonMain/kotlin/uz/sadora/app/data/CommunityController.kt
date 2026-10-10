@@ -257,6 +257,14 @@ class CommunityController(
         return result != null
     }
 
+    suspend fun setCommentLiked(postId: String, commentId: String, liked: Boolean): Boolean {
+        val api = api ?: return true
+        // Silent and undone here, as a like on a post is.
+        val result = calls.run(silent = true) { api.setCommentLiked(commentId, liked) }
+        if (result == null) state.revertCommentLike(postId, commentId, liked)
+        return result != null
+    }
+
     /**
      * Reports a batch of seen posts. Not through [calls]: it runs behind whatever she is
      * doing, and must neither raise the busy flag nor an error.
@@ -340,6 +348,10 @@ class CommunitySyncBridge(
 
     override fun postLiked(postId: String, liked: Boolean) {
         scope.launch { community.setLiked(postId, liked) }
+    }
+
+    override fun commentLiked(postId: String, commentId: String, liked: Boolean) {
+        scope.launch { community.setCommentLiked(postId, commentId, liked) }
     }
 
     override fun postSaved(postId: String, saved: Boolean) {

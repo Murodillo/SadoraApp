@@ -62,6 +62,9 @@ data class CommunityComment(
     val doctor: DoctorAuthor? = null,
     /** The server's id; empty on her optimistic copy and on samples. Pages are joined by it. */
     val id: String = "",
+    /** Everyone's likes, hers among them when [liked]. */
+    val likeCount: Int = 0,
+    val liked: Boolean = false,
 )
 
 /**

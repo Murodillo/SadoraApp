@@ -188,6 +188,12 @@ class CommunityApi(private val caller: ApiCaller) {
             if (liked) HttpMethodKind.PUT else HttpMethodKind.DELETE,
         )
 
+    suspend fun setCommentLiked(commentId: String, liked: Boolean): ApiResult<LikeState> =
+        caller.authenticated(
+            "v1/community/comments/$commentId/like",
+            if (liked) HttpMethodKind.PUT else HttpMethodKind.DELETE,
+        )
+
     /** Reports the posts that were on her screen; the server counts each once per reader. */
     suspend fun recordViews(postIds: List<String>): ApiResult<Ack> =
         caller.authenticated("v1/community/posts/views", HttpMethodKind.POST) {

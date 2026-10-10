@@ -45,6 +45,7 @@ enum class PracticeKind { Breathing, Meditation }
  */
 interface CommunitySync {
     fun postLiked(postId: String, liked: Boolean)
+    fun commentLiked(postId: String, commentId: String, liked: Boolean)
     fun postSaved(postId: String, saved: Boolean)
     fun commentAdded(postId: String, body: String)
     fun postCreated(topic: CommunityTopic, body: String)

@@ -2251,6 +2251,78 @@ class ApiIntegrationTest {
         assertEquals(3, get<CommunityPost>("/v1/community/posts/${created.id}", second.token).viewCount)
     }
 
+    @Test
+    fun `comments collect likes that count towards her profile and her badges`() = api {
+        val author = signUp().also { onboard(it) }
+        val helper = signUp().also { onboard(it) }
+        val reader = signUp().also { onboard(it) }
+        val doctor = signUp().also { onboard(it) }
+        val admin = adminToken()
+        approvedDoctor(doctor, admin, "Dr. Like ${Uuid.random()}")
+
+        val created = post<CommunityPost>(
+            "/v1/community/posts", author.token, CreatePostRequest(CommunityTopic.CYCLE, "Og'riqni nima yengillashtiradi, kim nima qiladi?"),
+        )
+        val commentsPath = "/v1/community/posts/${created.id}/comments"
+        val comment = post<CommunityComment>(commentsPath, helper.token, CreateCommentRequest("Menga iliq choy yordam bergan"))
+        val answer = post<CommunityComment>(commentsPath, doctor.token, CreateCommentRequest("Shifokor javobi: bu odatiy holat"))
+        assertEquals(0, comment.likeCount)
+        assertFalse(comment.liked)
+
+        // A like is one per reader however often she taps, and the answer is the server's count.
+        val likePath = "/v1/community/comments/${comment.id}/like"
+        assertEquals(LikeState(liked = true, likeCount = 1), put<LikeState>(likePath, reader.token))
+        assertEquals(1, put<LikeState>(likePath, reader.token).likeCount, "liking twice is one like")
+        assertEquals(2, put<LikeState>(likePath, author.token).likeCount)
+        // Her own comment takes her like too; it only never counts for her.
+        assertEquals(3, put<LikeState>(likePath, helper.token).likeCount)
+        put<LikeState>("/v1/community/comments/${answer.id}/like", reader.token)
+
+        // The thread carries the count, and whether the viewer is one of them.
+        val seenByReader = get<List<CommunityComment>>(commentsPath, reader.token)
+        assertEquals(listOf(answer.id, comment.id), seenByReader.map { it.id }, "likes do not reorder the thread")
+        assertTrue(seenByReader.all { it.liked })
+        assertEquals(listOf(1, 3), seenByReader.map { it.likeCount })
+        assertFalse(get<List<CommunityComment>>(commentsPath, doctor.token).any { it.liked })
+
+        // Liking a comment is not liking the post.
+        assertEquals(0, get<CommunityPost>("/v1/community/posts/${created.id}", reader.token).likeCount)
+
+        // Two others liked her comment: that is what her profile and her badge say.
+        suspend fun likesOnProfile() =
+            get<CommunityProfile>("/v1/community/profiles/${comment.alias.encodeURLPathPart()}", reader.token).likesReceived
+        suspend fun lovedProgress() = get<uz.sadora.contract.BadgeBoard>("/v1/rewards/badges", helper.token)
+            .badges.first { it.key == uz.sadora.contract.Badges.LOVED }.progress
+        assertEquals(2, likesOnProfile())
+        assertEquals(2, lovedProgress())
+        // The doctor's answer counts towards her thanks, not towards an alias.
+        val thanked = get<uz.sadora.contract.BadgeBoard>("/v1/doctor/badges", doctor.token)
+            .badges.first { it.key == uz.sadora.contract.DoctorBadges.THANKED }
+        assertEquals(1, thanked.progress)
+
+        // Unliking takes it back.
+        val unliked = raw { client.delete(likePath) { auth(author.token) } }
+        assertEquals(LikeState(liked = false, likeCount = 2), unliked.body<LikeState>())
+        assertEquals(1, likesOnProfile())
+
+        // A hidden comment cannot be liked, and what it had collected stops counting.
+        postAck("/v1/admin/community/comments/${comment.id}/hide", admin, HideRequest(hidden = true, reason = "integration test"))
+        assertEquals(HttpStatusCode.NotFound, raw { client.put(likePath) { auth(author.token) } }.status)
+        assertEquals(0, likesOnProfile())
+        assertEquals(0, lovedProgress())
+        postAck("/v1/admin/community/comments/${comment.id}/hide", admin, HideRequest(hidden = false))
+        assertEquals(1, likesOnProfile())
+
+        // Nor can a comment under a post that was taken down.
+        postAck("/v1/admin/community/posts/${created.id}/hide", admin, HideRequest(hidden = true, reason = "integration test"))
+        assertEquals(HttpStatusCode.NotFound, raw { client.put(likePath) { auth(author.token) } }.status)
+        assertEquals(0, lovedProgress())
+        assertEquals(
+            HttpStatusCode.NotFound,
+            raw { client.put("/v1/community/comments/${Uuid.random()}/like") { auth(reader.token) } }.status,
+        )
+    }
+
     /**
      * The chat's long lists page. A thread gives its newest lines and says older ones
      * exist; `/messages?before=` reads them upward and never past another thread's line;

@@ -6,6 +6,7 @@ import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.atStartOfDayIn
 import org.jetbrains.exposed.v1.core.Column
+import org.jetbrains.exposed.v1.core.JoinType
 import org.jetbrains.exposed.v1.core.Op
 import org.jetbrains.exposed.v1.core.inSubQuery
 import org.jetbrains.exposed.v1.core.notInSubQuery
@@ -39,6 +40,7 @@ import uz.sadora.server.core.now
 import uz.sadora.server.core.toKotlinInstant
 import uz.sadora.server.core.toOffsetDateTime
 import uz.sadora.server.db.CommunityBlocks
+import uz.sadora.server.db.CommunityCommentLikes
 import uz.sadora.server.db.CommunityComments
 import uz.sadora.server.db.CommunityIdentities
 import uz.sadora.server.db.CommunityMessages
@@ -239,12 +241,30 @@ class CommunityRepository {
             .groupBy(CommunityComments.userId)
             .associate { it[CommunityComments.userId] to it[commentCounter].toInt() }
 
+        // Likes from others on what is still up, under a post and under a comment alike.
+        // BadgeRepository counts the same rows for the Loved badge; keep the two in step.
         val likeCounter = CommunityPostLikes.userId.count()
-        val likes = (CommunityPostLikes innerJoin CommunityPosts)
+        val postLikes = (CommunityPostLikes innerJoin CommunityPosts)
             .select(CommunityPosts.userId, likeCounter)
-            .where { (CommunityPosts.userId inList ids) and (CommunityPosts.status eq visible) and CommunityPosts.doctorId.isNull() }
+            .where {
+                (CommunityPosts.userId inList ids) and (CommunityPosts.status eq visible) and
+                    CommunityPosts.doctorId.isNull() and (CommunityPostLikes.userId neq CommunityPosts.userId)
+            }
             .groupBy(CommunityPosts.userId)
             .associate { it[CommunityPosts.userId] to it[likeCounter].toInt() }
+
+        val commentLikeCounter = CommunityCommentLikes.userId.count()
+        val commentLikes = CommunityCommentLikes
+            .join(CommunityComments, JoinType.INNER, CommunityCommentLikes.commentId, CommunityComments.id)
+            .join(CommunityPosts, JoinType.INNER, CommunityComments.postId, CommunityPosts.id)
+            .select(CommunityComments.userId, commentLikeCounter)
+            .where {
+                (CommunityComments.userId inList ids) and (CommunityComments.status eq visible) and
+                    CommunityComments.doctorId.isNull() and (CommunityPosts.status eq visible) and
+                    (CommunityCommentLikes.userId neq CommunityComments.userId)
+            }
+            .groupBy(CommunityComments.userId)
+            .associate { it[CommunityComments.userId] to it[commentLikeCounter].toInt() }
 
         // The moment the room stopped being new: whoever arrived before it is early.
         val earlyUntil = CommunityIdentities.select(CommunityIdentities.createdAt)
@@ -259,7 +279,7 @@ class CommunityRepository {
             ActivityStats(
                 posts = posts[userId] ?: 0,
                 comments = comments[userId] ?: 0,
-                likesReceived = likes[userId] ?: 0,
+                likesReceived = (postLikes[userId] ?: 0) + (commentLikes[userId] ?: 0),
                 memberSince = identity.createdAt,
                 early = earlyUntil == null || identity.createdAt <= earlyUntil,
             )
@@ -549,6 +569,36 @@ class CommunityRepository {
 
     suspend fun likeCount(postId: Uuid): Int = dbQuery {
         CommunityPostLikes.selectAll().where { CommunityPostLikes.postId eq postId }.count().toInt()
+    }
+
+    suspend fun setCommentLiked(commentId: Uuid, userId: Uuid, liked: Boolean): Unit = dbQuery {
+        if (liked) {
+            CommunityCommentLikes.insertIgnore {
+                it[CommunityCommentLikes.commentId] = commentId
+                it[CommunityCommentLikes.userId] = userId
+                it[createdAt] = now().toOffsetDateTime()
+            }
+        } else {
+            CommunityCommentLikes.deleteWhere {
+                (CommunityCommentLikes.commentId eq commentId) and (CommunityCommentLikes.userId eq userId)
+            }
+        }
+    }
+
+    suspend fun commentLikeCount(commentId: Uuid): Int = dbQuery {
+        CommunityCommentLikes.selectAll().where { CommunityCommentLikes.commentId eq commentId }.count().toInt()
+    }
+
+    /** The likes on a page of comments and which of them are the viewer's, in two queries. */
+    suspend fun commentLikesFor(viewer: Uuid, commentIds: List<Uuid>): CommentLikes = dbQuery {
+        if (commentIds.isEmpty()) return@dbQuery CommentLikes()
+        CommentLikes(
+            counts = countBy(CommunityCommentLikes.commentId, commentIds),
+            liked = CommunityCommentLikes.select(CommunityCommentLikes.commentId)
+                .where { (CommunityCommentLikes.userId eq viewer) and (CommunityCommentLikes.commentId inList commentIds) }
+                .map { it[CommunityCommentLikes.commentId] }
+                .toSet(),
+        )
     }
 
     private fun countBy(column: Column<Uuid>, ids: List<Uuid>): Map<Uuid, Int> {
@@ -905,6 +955,14 @@ class CommunityRepository {
     private fun approvedDoctorIds() = DoctorProfiles.select(DoctorProfiles.id)
         .where { DoctorProfiles.status eq DoctorStatus.APPROVED.dbValue() }
 
+    /** A comment a reader may see; its post is checked apart, by [readablePostById]. */
+    suspend fun readableCommentById(id: Uuid): CommentRecord? = dbQuery {
+        CommunityComments.selectAll()
+            .where { (CommunityComments.id eq id) and readerVisibleComment() }
+            .singleOrNull()
+            ?.toComment()
+    }
+
     /** A post a reader may open: visible, and not by a doctor who has since been suspended. */
     suspend fun readablePostById(id: Uuid): PostRecord? = dbQuery {
         CommunityPosts.selectAll()
@@ -1042,6 +1100,11 @@ class CommunityRepository {
         const val EXCERPT_LENGTH = 200
     }
 }
+
+data class CommentLikes(
+    val counts: Map<Uuid, Int> = emptyMap(),
+    val liked: Set<Uuid> = emptySet(),
+)
 
 data class PostReactions(
     val likeCounts: Map<Uuid, Int> = emptyMap(),

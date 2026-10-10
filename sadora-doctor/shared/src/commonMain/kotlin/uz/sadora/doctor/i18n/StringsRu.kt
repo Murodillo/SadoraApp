@@ -91,6 +91,7 @@ object StringsRu : Strings {
         override fun viewsSpoken(count: Int) = "Просмотров: $count"
         override fun commentsCount(count: Int) = if (count == 0) "Комментарии" else "Комментариев: $count"
         override val noComments = "Комментариев пока нет. Ваш ответ будет первым."
+        override fun likesSpoken(count: Int) = "Понравилось: $count"
         override val questionTitle = "Вопрос"
         override val postTitle = "Пост"
         override val postMissing = "Этот пост удалён или скрыт."

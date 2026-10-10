@@ -14,6 +14,7 @@ import uz.sadora.app.model.CommunityTopic
 import uz.sadora.app.model.ReportReason
 import uz.sadora.contract.AiChatQuota
 import uz.sadora.contract.AiChatReply
+import uz.sadora.contract.CommunityComment
 import uz.sadora.contract.CommunityIdentity
 import uz.sadora.contract.CommunityPost
 import uz.sadora.contract.CommunityTopic as WireTopic
@@ -92,6 +93,46 @@ class CommunityAndAiControllerTest {
         assertEquals(1, recording.countOf("/v1/community/posts/p1/like"))
         assertEquals(1, recording.countOf("/v1/community/posts/p1/save"))
         assertTrue("p1" in state.likedPosts && "p1" in state.savedPosts)
+    }
+
+    @Test
+    fun `a comment's like moves its count at once and is taken back when the server refuses`() = runTest {
+        var refuse = false
+        val comment = CommunityComment("c1", "s1", "Mayin Shabnam", 3, "Menda ham shunday", TestNow, likeCount = 2)
+        val recording = RecordingEngine { request ->
+            when {
+                request.url.encodedPath.endsWith("/like") ->
+                    if (refuse) json(errorBody(ErrorCodes.NOT_FOUND, "no"), HttpStatusCode.NotFound) else json(encode(LikeState(true, 3)))
+                request.url.encodedPath.endsWith("/comments") -> json(encode(listOf(comment)))
+                request.url.encodedPath.endsWith("/community/posts") -> json(encode(Page(listOf(serverPost("s1")), 1, 100, 0)))
+                else -> json(encode(CommunityIdentity("Sokin Bulut", 2)))
+            }
+        }
+        val state = AppState()
+        val controller = graph(recording).communityController(state)
+        state.communitySync = CommunitySyncBridge(controller, this)
+        controller.load()
+        controller.loadComments("s1")
+        fun shown() = state.communityPosts.single().comments.single()
+
+        state.toggleCommentLike("s1", "c1")
+        assertTrue(shown().liked)
+        assertEquals(3, shown().likeCount)
+        coroutineContext.job.children.forEach { it.join() }
+        assertEquals(1, recording.countOf("/v1/community/comments/c1/like"))
+        assertTrue(shown().liked, "the server took it")
+
+        refuse = true
+        state.toggleCommentLike("s1", "c1")
+        assertEquals(2, shown().likeCount)
+        coroutineContext.job.children.forEach { it.join() }
+        assertTrue(shown().liked, "an unlike that failed leaves the heart on")
+        assertEquals(3, shown().likeCount)
+
+        // Her own comment that has not reached the server has no id, so nothing is sent.
+        state.toggleCommentLike("s1", "")
+        coroutineContext.job.children.forEach { it.join() }
+        assertEquals(2, recording.countOf("/v1/community/comments/c1/like"))
     }
 
     @Test

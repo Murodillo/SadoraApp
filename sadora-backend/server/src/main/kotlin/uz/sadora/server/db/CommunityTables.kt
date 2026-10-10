@@ -64,6 +64,14 @@ object CommunityPostLikes : Table("community_post_likes") {
     override val primaryKey = PrimaryKey(postId, userId)
 }
 
+object CommunityCommentLikes : Table("community_comment_likes") {
+    val commentId = uuid("comment_id").references(CommunityComments.id)
+    val userId = uuid("user_id").references(Users.id)
+    val createdAt = timestampWithTimeZone("created_at")
+
+    override val primaryKey = PrimaryKey(commentId, userId)
+}
+
 /** Who has had a post on screen. Only ever written and counted, never listed. */
 object CommunityPostViews : Table("community_post_views") {
     val postId = uuid("post_id").references(CommunityPosts.id)

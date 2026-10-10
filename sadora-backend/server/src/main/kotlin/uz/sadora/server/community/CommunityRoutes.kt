@@ -227,6 +227,14 @@ fun Route.communityRoutes(community: CommunityService, messaging: MessagingServi
                     call.respond(Ack())
                 }
 
+                put("/like") {
+                    call.respond(community.setCommentLiked(call.requireUserId(), call.commentId(), liked = true))
+                }
+
+                delete("/like") {
+                    call.respond(community.setCommentLiked(call.requireUserId(), call.commentId(), liked = false))
+                }
+
                 post("/report") {
                     val request = call.receive<ReportRequest>()
                     community.reportComment(call.requireUserId(), call.commentId(), request)
