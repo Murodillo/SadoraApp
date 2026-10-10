@@ -135,7 +135,7 @@ export function AnalyticsPage() {
             <Card title="Streaklar">
               <RankedBars items={named(report.streaks, (key) => streakLabels[key] ?? key)} color="var(--c4)" />
               <p className="faint" style={{ margin: '10px 0 0' }}>
-                Jonli streak — bugun yoki kecha ochilgan. "Uzilgan" — streak boshlagan, lekin
+                Jonli ketma-ketlik — bugun yoki kecha ochilgan. «Uzilgan» — ketma-ketlik boshlagan, lekin
                 ikki kundan beri kirmagan hisoblar.
               </p>
             </Card>
@@ -294,7 +294,7 @@ function Retention({ report }: { report: AdminAnalytics }) {
             <div>
               <div className="title">{cohort.horizonDays}-kun</div>
               <div className="faint">
-                {cohort.cohort ? `${cohort.returned} / ${cohort.cohort} qaytdi` : 'kohorta hali yo‘q'}
+                {cohort.cohort ? `${cohort.returned} / ${cohort.cohort} qaytdi` : "kohorta hali yo'q"}
               </div>
             </div>
           </div>

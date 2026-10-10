@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { Delta, Modal, Switch, Tabs } from './ui'
+import { ConfirmDialog, Delta, Modal, Switch, Tabs } from './ui'
 
 describe('Modal', () => {
   beforeEach(() => vi.useFakeTimers())
@@ -108,5 +108,24 @@ describe('Delta', () => {
     expect(screen.getByText('yangi')).toBeInTheDocument()
     rerender(<Delta current={0} previous={0} />)
     expect(container).toBeEmptyDOMElement()
+  })
+})
+
+describe('ConfirmDialog', () => {
+  it('names the action, runs it once confirmed and shows its own progress label', () => {
+    const onConfirm = vi.fn()
+    const { rerender } = render(
+      <ConfirmDialog title="O'chirilsinmi?" confirmLabel="Maqolani o'chirish" pendingLabel="O'chirilmoqda…" onConfirm={onConfirm} onClose={() => {}}>
+        Qaytarib bo'lmaydi.
+      </ConfirmDialog>,
+    )
+    expect(screen.getByRole('dialog', { name: "O'chirilsinmi?" })).toHaveTextContent("Qaytarib bo'lmaydi.")
+    fireEvent.click(screen.getByRole('button', { name: "Maqolani o'chirish" }))
+    expect(onConfirm).toHaveBeenCalledTimes(1)
+
+    rerender(
+      <ConfirmDialog title="O'chirilsinmi?" confirmLabel="Maqolani o'chirish" pendingLabel="O'chirilmoqda…" pending onConfirm={onConfirm} onClose={() => {}} />,
+    )
+    expect(screen.getByRole('button', { name: "O'chirilmoqda…" })).toBeDisabled()
   })
 })

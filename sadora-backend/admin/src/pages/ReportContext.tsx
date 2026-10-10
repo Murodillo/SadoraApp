@@ -82,14 +82,14 @@ export function ReportContextModal({
                       { id: report.id, action: 'dismiss' },
                       {
                         onSuccess: () => {
-                          notify('Shikoyat rad etildi')
+                          notify('Shikoyat yopildi, xabar qoldi')
                           onClose()
                         },
                       },
                     )
                   }
                 >
-                  Rad etish
+                  Shikoyatni yopish (xabar qoladi)
                 </button>
                 <button
                   className="btn danger"
@@ -107,7 +107,7 @@ export function ReportContextModal({
                   }
                 >
                   {resolve.isPending && <Spinner />}
-                  Yashirish
+                  Xabarni yashirish
                 </button>
               </>
             )}
@@ -223,7 +223,7 @@ export function RestrictSenderForm({ reportId, onDone, onCancel }: { reportId: s
           }
         >
           {restrict.isPending && <Spinner />}
-          {restrict.isPending ? 'Yuborilmoqda…' : 'Cheklash'}
+          {restrict.isPending ? 'Cheklanmoqda…' : 'Cheklash'}
         </button>
       </div>
     </div>

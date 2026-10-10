@@ -11,7 +11,7 @@ import { acceptSlug, limits, slugPattern } from '../api/limits'
 import type { AdminArticle, ArticleBlock, ArticleKind, SaveArticleBody } from '../api/types'
 import { useAuth } from '../auth/AuthContext'
 import { useToast } from '../components/toast'
-import { Card, Empty, ErrorNotice, Field, formatDateTime, Loading, Modal, Spinner, Switch } from '../components/ui'
+import { Card, ConfirmDialog, Empty, ErrorNotice, Field, formatDateTime, Loading, Modal, Spinner, Switch } from '../components/ui'
 
 const kindLabels: Record<ArticleKind, string> = {
   article: 'Maqola',
@@ -34,6 +34,7 @@ export function ContentPage() {
   const publish = usePublishArticle()
   const remove = useDeleteArticle()
   const [editing, setEditing] = useState<AdminArticle | 'new' | null>(null)
+  const [removing, setRemoving] = useState<AdminArticle | null>(null)
 
   const mayEdit = can(['OWNER', 'ADMIN'])
   const categoryLabels = useMemo(
@@ -115,11 +116,7 @@ export function ContentPage() {
                         </button>
                         <button
                           className="btn small danger"
-                          onClick={() => {
-                            if (confirm(`"${article.title}" o'chirilsinmi?`)) {
-                              remove.mutate(article.slug, { onSuccess: () => notify(`"${article.title}" o‘chirildi`, 'info') })
-                            }
-                          }}
+                          onClick={() => setRemoving(article)}
                         >
                           O'chirish
                         </button>
@@ -133,6 +130,30 @@ export function ContentPage() {
         )}
         <ErrorNotice error={publish.error ?? remove.error} />
       </Card>
+
+      {removing && (
+        <ConfirmDialog
+          title={`«${removing.title}» o'chirilsinmi?`}
+          confirmLabel="Maqolani o'chirish"
+          pendingLabel="O'chirilmoqda…"
+          danger
+          pending={remove.isPending}
+          onClose={() => setRemoving(null)}
+          onConfirm={() =>
+            remove.mutate(removing.slug, {
+              onSuccess: () => {
+                notify(`«${removing.title}» o'chirildi`, 'info')
+                setRemoving(null)
+              },
+            })
+          }
+        >
+          <p className="muted" style={{ margin: 0 }}>
+            Maqola ilovadan va panel ro'yxatidan yo'qoladi. Buni qaytarib bo'lmaydi.
+          </p>
+          {remove.error && <ErrorNotice error={remove.error} />}
+        </ConfirmDialog>
+      )}
 
       {editing && (
         <ArticleEditor
@@ -214,7 +235,7 @@ function ArticleEditor({
     <Modal title={article ? article.title : 'Yangi maqola'} onClose={onClose} wide>
       <div className="grid" style={{ gap: 12 }}>
         {!article && (
-          <Field label="Slug — havolada shu ko'rinadi va keyin o'zgarmaydi">
+          <Field label="Havoladagi nomi — lotincha, keyin o'zgarmaydi">
             <input
               value={slug}
               onChange={(e) => setSlug(acceptSlug(e.target.value))}

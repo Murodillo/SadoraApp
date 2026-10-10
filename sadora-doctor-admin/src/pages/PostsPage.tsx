@@ -219,7 +219,7 @@ function NewPostCard() {
             </button>
             <button className="btn primary" type="button" onClick={publish} disabled={create.isPending}>
               {create.isPending && <Spinner />}
-              {create.isPending ? 'Yuborilmoqda…' : 'Chop etish'}
+              {create.isPending ? 'Chop etilmoqda…' : 'Chop etish'}
             </button>
           </div>
         </Modal>

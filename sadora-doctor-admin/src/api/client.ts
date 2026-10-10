@@ -1,5 +1,5 @@
 import { deviceId } from './device'
-import type { ApiError, AuthSession, TokenPair } from './types'
+import type { ApiError, AuthSession, Language, TokenPair } from './types'
 
 /**
  * The API's origin, put in front of every `/v1/…` path. Blank (the default) calls this
@@ -71,6 +71,21 @@ export class ApiFailure extends Error {
 
 /** Raised when the session cannot be renewed, so the app can drop back to sign-in from anywhere. */
 export const SESSION_EXPIRED_EVENT = 'sadora:doctor-session-expired'
+
+/**
+ * The language the server should answer in. The panel has no language setting of its own,
+ * so it follows the browser: Uzbek whenever the browser lists it at all (and when it lists
+ * nothing the server speaks), Russian or English for a doctor whose browser asks only for
+ * those. Without this a Russian-speaking doctor got every refusal in Uzbek.
+ */
+export function panelLanguage(
+  preferred: readonly string[] = typeof navigator === 'undefined' ? [] : navigator.languages?.length ? navigator.languages : [navigator.language],
+): Language {
+  const bases = preferred.filter(Boolean).map((tag) => tag.toLowerCase().split(/[-_]/)[0])
+  if (bases.includes('uz')) return 'uz'
+  const first = bases.find((base) => base === 'ru' || base === 'en')
+  return (first as Language | undefined) ?? 'uz'
+}
 
 const OFFLINE_MESSAGE = "Serverga ulanib bo'lmadi. Internet aloqasini tekshiring."
 
@@ -209,9 +224,8 @@ async function send(path: string, options: RequestOptions, token: string | null)
       signal,
       headers: {
         'Content-Type': 'application/json',
-        // The panel speaks Uzbek, and the server words its refusals in the language asked
-        // for — a browser's own Accept-Language would get them in Russian or English.
-        'Accept-Language': 'uz',
+        // The server words its refusals in the language asked for: see panelLanguage.
+        'Accept-Language': panelLanguage(),
         ...headers,
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
@@ -260,11 +274,20 @@ function tokensOf(payload: unknown): TokenPair | null {
     : null
 }
 
+/**
+ * What the operator reads when the server sent no message of its own — a proxy's 502
+ * page, a bare 403. Says what to do next; the status stays at the end for a bug report.
+ */
+export function fallbackMessage(status: number): string {
+  if (status >= 500) return `Server hozir javob bermadi. Birozdan keyin qayta urinib ko'ring. (xato ${status})`
+  return `So'rov bajarilmadi. Sahifani yangilab, qayta urinib ko'ring. (xato ${status})`
+}
+
 function failureFrom(status: number, parsed: unknown): ApiFailure {
   const error = (parsed as { error?: ApiError } | null)?.error
   return new ApiFailure(
     error?.code ?? 'unexpected',
-    error?.message ?? `Server xatosi (${status})`,
+    error?.message ?? fallbackMessage(status),
     error?.details ?? {},
     error?.requestId,
     status,

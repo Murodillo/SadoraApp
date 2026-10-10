@@ -396,7 +396,7 @@ function HideCommentDialog({ comment, onClose }: { comment: ModerationComment; o
           }
         >
           {hide.isPending && <Spinner />}
-          {hide.isPending ? 'Yuborilmoqda…' : 'Yashirish'}
+          {hide.isPending ? 'Yashirilmoqda…' : 'Yashirish'}
         </button>
       </div>
     </Modal>
@@ -444,7 +444,7 @@ function HideDialog({ post, onClose }: { post: ModerationPost; onClose: () => vo
           }
         >
           {hide.isPending && <Spinner />}
-          {hide.isPending ? 'Yuborilmoqda…' : 'Yashirish'}
+          {hide.isPending ? 'Yashirilmoqda…' : 'Yashirish'}
         </button>
       </div>
     </Modal>
@@ -494,7 +494,7 @@ function RestrictDialog({ post, onClose }: { post: ModerationPost; onClose: () =
           }
         >
           {restrict.isPending && <Spinner />}
-          {restrict.isPending ? 'Yuborilmoqda…' : 'Cheklash'}
+          {restrict.isPending ? 'Cheklanmoqda…' : 'Cheklash'}
         </button>
       </div>
     </Modal>
@@ -638,7 +638,7 @@ function ReportRow({
       <td className="muted">{report.note ?? ''}</td>
       <td>
         {report.resolvedAt ? (
-          <span className="badge free">{report.resolution === 'hidden' ? 'Yashirildi' : 'Rad etildi'}</span>
+          <span className="badge free">{report.resolution === 'hidden' ? 'Yashirildi' : 'Yopildi'}</span>
         ) : report.targetHidden ? (
           <span className="badge danger">Avval yashirilgan</span>
         ) : (
@@ -657,9 +657,9 @@ function ReportRow({
               <button
                 className="btn small"
                 disabled={resolve.isPending}
-                onClick={() => resolve.mutate({ id: report.id, action: 'dismiss' }, { onSuccess: () => notify('Shikoyat rad etildi') })}
+                onClick={() => resolve.mutate({ id: report.id, action: 'dismiss' }, { onSuccess: () => notify('Shikoyat yopildi, matn qoldi') })}
               >
-                Rad etish
+                Shikoyatni yopish (matn qoladi)
               </button>
               <button
                 className="btn small danger"
@@ -671,7 +671,7 @@ function ReportRow({
                   )
                 }
               >
-                Yashirish
+                Matnni yashirish
               </button>
             </>
           )}

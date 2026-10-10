@@ -417,9 +417,9 @@ describe('Xabarlar — the thread', () => {
     expect(card).toHaveTextContent('Bemor hali qo')
 
     await userEvent.click(within(card).getByRole('button', { name: 'Bekor qilish' }))
-    const cancel = await screen.findByRole('dialog', { name: 'Retseptni bekor qilish' })
+    const cancel = await screen.findByRole('dialog', { name: 'Retsept bekor qilinsinmi?' })
     await userEvent.type(within(cancel).getByRole('textbox'), 'Doza xato')
-    await userEvent.click(within(cancel).getByRole('button', { name: 'Bekor qilish' }))
+    await userEvent.click(within(cancel).getByRole('button', { name: 'Retseptni bekor qilish' }))
     await waitFor(() => expect(api.callsTo('POST', '/v1/prescriptions/rx1/cancel')).toHaveLength(1))
     expect(api.callsTo('POST', '/v1/prescriptions/rx1/cancel')[0]!.body).toEqual({ reason: 'Doza xato' })
     await waitFor(() => expect(within(thread).getAllByText(/Bekor qilingan — Doza xato/).length).toBeGreaterThan(0))

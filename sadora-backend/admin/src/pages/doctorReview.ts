@@ -43,6 +43,14 @@ export const reviewActionLabels: Record<DoctorReviewAction, string> = {
   reinstate: 'Qayta tiklash',
 }
 
+/** What the button says while the action runs. */
+export const reviewActionPending: Record<DoctorReviewAction, string> = {
+  approve: 'Tasdiqlanmoqda…',
+  reject: 'Rad etilmoqda…',
+  suspend: "To'xtatilmoqda…",
+  reinstate: 'Qayta tiklanmoqda…',
+}
+
 /** What the operator is told once the server has accepted the action. */
 export const reviewActionDone: Record<DoctorReviewAction, string> = {
   approve: 'Shifokor tasdiqlandi',

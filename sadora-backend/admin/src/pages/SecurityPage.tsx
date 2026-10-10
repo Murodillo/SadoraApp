@@ -66,8 +66,8 @@ function EnrolCard({ email }: { email: string }) {
   return (
     <Card title="Ikki bosqichli kirish">
       <div className="notice" style={{ marginBottom: 12 }}>
-        Hozir hisobingiz faqat parol bilan himoyalangan. Operator tokeni mahsulotdagi har
-        bir obunani ochadi, shuning uchun 2FA — tavsiya emas, zarurat.
+        Hozir hisobingiz faqat parol bilan himoyalangan. Panelga kirgan operator har bir
+        foydalanuvchining obunasini o'zgartira oladi, shuning uchun ikki bosqichli kirish — tavsiya emas, zarurat.
       </div>
 
       {!enrolment ? (
@@ -107,7 +107,7 @@ function EnrolCard({ email }: { email: string }) {
             <button
               className="btn primary"
               disabled={code.length !== 6 || confirm.isPending}
-              onClick={() => confirm.mutate(code, { onSuccess: () => notify('2FA yoqildi — keyingi kirishda kod so‘raladi') })}
+              onClick={() => confirm.mutate(code, { onSuccess: () => notify("2FA yoqildi — keyingi kirishda kod so'raladi") })}
             >
               {confirm.isPending && <Spinner />}
               {confirm.isPending ? 'Tekshirilmoqda…' : 'Yoqish'}

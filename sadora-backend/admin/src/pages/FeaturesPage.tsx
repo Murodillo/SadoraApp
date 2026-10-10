@@ -115,7 +115,7 @@ export function FeaturesPage() {
                         onClick={() => {
                           setSaving(feature.key)
                           update.mutate(current, {
-                            onSuccess: () => notify(`${feature.key} saqlandi — keyingi o‘qishdan kuchga kiradi`),
+                            onSuccess: () => notify(`${feature.key} saqlandi — keyingi o'qishdan kuchga kiradi`),
                             onSettled: () => setSaving(null),
                           })
                         }}

@@ -31,6 +31,7 @@ import {
   photoRemovalReasons,
   reviewActionDone,
   reviewActionLabels,
+  reviewActionPending,
   reviewNeedsNote,
   reviewNoteValid,
   specialtyLabels,
@@ -488,7 +489,7 @@ function ReviewDialog({
           onClick={submit}
         >
           {review.isPending && <Spinner />}
-          {review.isPending ? 'Yuborilmoqda…' : reviewActionLabels[action]}
+          {review.isPending ? reviewActionPending[action] : reviewActionLabels[action]}
         </button>
       </div>
     </Modal>
@@ -549,7 +550,7 @@ function RemovePhotoDialog({ doctor, onClose }: { doctor: AdminDoctorDetail; onC
         </button>
         <button className="btn danger" disabled={remove.isPending} onClick={submit}>
           {remove.isPending && <Spinner />}
-          {remove.isPending ? 'Yuborilmoqda…' : 'Olib tashlash'}
+          {remove.isPending ? 'Olib tashlanmoqda…' : 'Olib tashlash'}
         </button>
       </div>
     </Modal>

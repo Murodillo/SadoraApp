@@ -83,7 +83,7 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
     })
   } catch (cause) {
     if (signal?.aborted) throw cause
-    throw new ApiFailure('network', 'Serverga ulanib bo‘lmadi. Backend ishga tushganmi?')
+    throw new ApiFailure('network', "Serverga ulanib bo'lmadi. Internet aloqasini tekshirib, qayta urinib ko'ring.")
   }
 
   if (response.status === 204) return undefined as T
@@ -111,7 +111,7 @@ export async function requestBlob(path: string, options: { signal?: AbortSignal 
     })
   } catch (cause) {
     if (options.signal?.aborted) throw cause
-    throw new ApiFailure('network', 'Serverga ulanib bo‘lmadi. Backend ishga tushganmi?')
+    throw new ApiFailure('network', "Serverga ulanib bo'lmadi. Internet aloqasini tekshirib, qayta urinib ko'ring.")
   }
   if (!response.ok) {
     const payload = await response.text()
@@ -120,11 +120,20 @@ export async function requestBlob(path: string, options: { signal?: AbortSignal 
   return response.blob()
 }
 
+/**
+ * What the operator reads when the server sent no message of its own — a proxy's 502
+ * page, a bare 403. Says what to do next; the status stays at the end for a bug report.
+ */
+export function fallbackMessage(status: number): string {
+  if (status >= 500) return `Server hozir javob bermadi. Birozdan keyin qayta urinib ko'ring. (xato ${status})`
+  return `So'rov bajarilmadi. Sahifani yangilab, qayta urinib ko'ring. (xato ${status})`
+}
+
 function failureFrom(status: number, parsed: unknown, anonymous: boolean): ApiFailure {
   const error = (parsed as { error?: ApiError } | null)?.error
   const failure = new ApiFailure(
     error?.code ?? 'unexpected',
-    error?.message ?? `Server xatosi (${status})`,
+    error?.message ?? fallbackMessage(status),
     error?.details ?? {},
     error?.requestId,
     status,

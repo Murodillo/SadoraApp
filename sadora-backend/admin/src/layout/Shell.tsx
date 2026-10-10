@@ -25,7 +25,7 @@ const groups: NavGroup[] = [
   {
     title: 'Umumiy',
     entries: [
-      { to: '/', label: 'Dashboard', art: 'ic3d_home', roles: ALL },
+      { to: '/', label: 'Boshqaruv paneli', art: 'ic3d_home', roles: ALL },
       { to: '/analytics', label: 'Analitika', art: 'ic3d_insights', roles: ['OWNER', 'ADMIN', 'ANALYST'] },
     ],
   },
@@ -44,22 +44,22 @@ const groups: NavGroup[] = [
       { to: '/content', label: 'Bilim — maqolalar', art: 'ic3d_book', roles: ALL },
       { to: '/ai', label: 'AI xarajati', art: 'ic3d_ai', roles: ['OWNER', 'ADMIN', 'ANALYST'] },
       { to: '/notifications', label: 'Bildirishnomalar', art: 'ic3d_bell', roles: ['OWNER', 'ADMIN', 'ANALYST'] },
-      { to: '/wearables', label: 'Wearable providerlar', art: 'ic3d_watch', roles: ['OWNER', 'ADMIN', 'ANALYST'] },
+      { to: '/wearables', label: 'Taqiladigan qurilmalar', art: 'ic3d_watch', roles: ['OWNER', 'ADMIN', 'ANALYST'] },
     ],
   },
   {
     title: 'Gul',
     entries: [
-      { to: '/rewards', label: 'Mukofotlar va streak', art: 'ic3d_trophy', roles: ALL },
+      { to: '/rewards', label: 'Mukofotlar va ketma-ketlik', art: 'ic3d_trophy', roles: ALL },
       { to: '/shop', label: "Do'kon — chegirmalar", art: 'ic3d_shop', roles: ['OWNER', 'ADMIN', 'ANALYST'] },
     ],
   },
   {
     title: 'Sozlamalar',
     entries: [
-      { to: '/billing', label: 'Obunalar va to‘lovlar', art: 'ic3d_crown', roles: ALL },
-      { to: '/features', label: 'Entitlements va limitlar', art: 'ic3d_gem', roles: ['OWNER', 'ADMIN', 'ANALYST'] },
-      { to: '/flags', label: 'Feature flags', art: 'ic3d_bulb', roles: ['OWNER', 'ADMIN', 'ANALYST'] },
+      { to: '/billing', label: "Obunalar va to'lovlar", art: 'ic3d_crown', roles: ALL },
+      { to: '/features', label: 'Obuna huquqlari va limitlar', art: 'ic3d_gem', roles: ['OWNER', 'ADMIN', 'ANALYST'] },
+      { to: '/flags', label: 'Funksiya bayroqlari', art: 'ic3d_bulb', roles: ['OWNER', 'ADMIN', 'ANALYST'] },
     ],
   },
   {
@@ -67,14 +67,14 @@ const groups: NavGroup[] = [
     entries: [
       // Every role: 2FA is each operator's own to switch on, and one that cannot enrol
       // is one whose account stays a password.
-      { to: '/security', label: 'Hisobim va 2FA', art: 'ic3d_lock', roles: ALL },
-      { to: '/audit', label: 'Audit log', art: 'ic3d_notebook', roles: ['OWNER'] },
+      { to: '/security', label: 'Hisobim va ikki bosqichli kirish', art: 'ic3d_lock', roles: ALL },
+      { to: '/audit', label: 'Audit jurnali', art: 'ic3d_notebook', roles: ['OWNER'] },
     ],
   },
 ]
 
 const titles: Record<string, string> = {
-  '/': 'Dashboard',
+  '/': 'Boshqaruv paneli',
   '/analytics': 'Analitika',
   '/users': 'Foydalanuvchilar',
   '/doctors': 'Shifokorlar — tekshiruv',
@@ -84,13 +84,13 @@ const titles: Record<string, string> = {
   '/ai': 'AI xarajati',
   '/billing': "Obunalar va to'lovlar",
   '/notifications': 'Bildirishnomalar',
-  '/wearables': 'Wearable providerlar',
-  '/rewards': 'Gul — mukofotlar va streak',
+  '/wearables': 'Taqiladigan qurilmalar',
+  '/rewards': 'Gul — mukofotlar va ketma-ketlik',
   '/shop': "Gul do'koni — mahsulot va chegirmalar",
-  '/features': 'Entitlements va limitlar',
-  '/flags': 'Feature flags',
-  '/security': 'Hisobim va 2FA',
-  '/audit': 'Audit log va xavfsizlik',
+  '/features': 'Obuna huquqlari va limitlar',
+  '/flags': 'Funksiya bayroqlari',
+  '/security': 'Hisobim va ikki bosqichli kirish',
+  '/audit': 'Audit jurnali va xavfsizlik',
 }
 
 /**

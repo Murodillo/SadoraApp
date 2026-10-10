@@ -10,8 +10,9 @@ import {
   useUpdateFrameProduct,
   useUpdatePetProduct,
 } from '../api/hooks'
-import type { AdminFrameProduct, AdminPetProduct, PaymentProvider, PaymentState } from '../api/types'
-import { Card, Empty, ErrorNotice, formatDateTime, Loading, Stat } from '../components/ui'
+import type { AdminFrameProduct, AdminPayment, AdminPetProduct, PaymentProvider, PaymentState } from '../api/types'
+import { useToast } from '../components/toast'
+import { Card, ConfirmDialog, Empty, ErrorNotice, formatDateTime, Loading, Stat } from '../components/ui'
 
 const providerLabels: Record<PaymentProvider, string> = {
   payme: 'Payme',
@@ -56,7 +57,7 @@ export function BillingPage() {
   const summary = useBillingSummary(days)
   const plans = useBillingPlans()
   const payments = usePayments(state, PAGE_SIZE, offset)
-  const refund = useRefundGift()
+  const [refunding, setRefunding] = useState<AdminPayment | null>(null)
   const page = payments.data
 
   return (
@@ -177,7 +178,6 @@ export function BillingPage() {
         }
       >
         <ErrorNotice error={payments.error} />
-        <ErrorNotice error={refund.error} />
         {page && page.items.length === 0 && <Empty>To'lov topilmadi.</Empty>}
         {page && page.items.length > 0 && (
           <>
@@ -223,17 +223,8 @@ export function BillingPage() {
                   </td>
                   <td>
                     {payment.refundable && (
-                      <button
-                        className="btn small"
-                        disabled={refund.isPending}
-                        onClick={() => {
-                          const what = payment.pet ? 'Hamroh' : payment.frame ? 'Ramka' : "Sovg'a kunlari"
-                          if (window.confirm(`Pul provayderda qaytarildimi? ${what} foydalanuvchidan olib tashlanadi.`)) {
-                            refund.mutate(payment.id)
-                          }
-                        }}
-                      >
-                        Qaytarish
+                      <button className="btn small" onClick={() => setRefunding(payment)}>
+                        Qaytarildi deb belgilash
                       </button>
                     )}
                   </td>
@@ -262,7 +253,51 @@ export function BillingPage() {
           </>
         )}
       </Card>
+      {refunding && <RefundGiftDialog payment={refunding} onClose={() => setRefunding(null)} />}
     </div>
+  )
+}
+
+/**
+ * Marks a payment refunded after the money went back in the provider's cabinet. The panel
+ * moves no money itself: it only takes back what the payment bought and records the refund.
+ */
+function RefundGiftDialog({ payment, onClose }: { payment: AdminPayment; onClose: () => void }) {
+  const refund = useRefundGift()
+  const { notify } = useToast()
+  const [confirmed, setConfirmed] = useState(false)
+  const provider = providerLabels[payment.provider] ?? payment.provider
+  const what = payment.pet ? 'Hamroh' : payment.frame ? 'Ramka' : "Sovg'a qilingan Premium kunlari"
+
+  return (
+    <ConfirmDialog
+      title="Qaytarildi deb belgilash"
+      confirmLabel="Qaytarildi deb belgilash"
+      pendingLabel="Belgilanmoqda…"
+      cancelLabel="Bekor qilish"
+      pending={refund.isPending}
+      disabled={!confirmed}
+      onClose={onClose}
+      onConfirm={() =>
+        refund.mutate(payment.id, {
+          onSuccess: () => {
+            notify("To'lov qaytarilgan deb belgilandi", 'ok')
+            onClose()
+          },
+        })
+      }
+    >
+      <div className="notice">
+        Sadora pulni o'zi qaytarmaydi. Avval <strong>{provider}</strong> kabinetida{' '}
+        <strong>{sum(payment.amountMinor)}</strong> ni qaytaring, keyin shu yerda belgilang. {what} foydalanuvchidan
+        olib tashlanadi.
+      </div>
+      <label className="row" style={{ gap: 8 }}>
+        <input type="checkbox" style={{ width: 'auto' }} checked={confirmed} onChange={(event) => setConfirmed(event.target.checked)} />
+        <span>Pul {provider} kabinetida qaytarildi</span>
+      </label>
+      {refund.error && <ErrorNotice error={refund.error} />}
+    </ConfirmDialog>
   )
 }
 

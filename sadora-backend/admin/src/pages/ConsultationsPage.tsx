@@ -400,7 +400,7 @@ function RefundDialog({ row, onClose }: { row: AdminConsultationRow; onClose: ()
         </button>
         <button className="btn primary" disabled={!confirmed || mark.isPending} onClick={submit}>
           {mark.isPending && <Spinner />}
-          {mark.isPending ? 'Yuborilmoqda…' : 'Qaytarildi deb belgilash'}
+          {mark.isPending ? 'Belgilanmoqda…' : 'Qaytarildi deb belgilash'}
         </button>
       </div>
     </Modal>
