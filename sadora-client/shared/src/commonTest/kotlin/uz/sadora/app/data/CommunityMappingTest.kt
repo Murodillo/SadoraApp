@@ -222,7 +222,7 @@ class CommunityMappingTest {
     }
 
     @Test
-    fun `a prescription line carries its card, and a kind this release does not know reads as text`() {
+    fun `a prescription line carries its card — and a kind this release does not know reads as text`() {
         val prescription = uz.sadora.contract.Prescription(
             id = "rx1",
             conversationId = "c1",

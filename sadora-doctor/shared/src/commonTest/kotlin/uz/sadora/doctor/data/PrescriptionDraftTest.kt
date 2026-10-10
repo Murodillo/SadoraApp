@@ -23,7 +23,7 @@ class PrescriptionDraftTest {
     private val filled = ItemDraft(name = "Amoksitsillin", dose = "500", unit = "mg", food = FoodRelation.AFTER, days = "5")
 
     @Test
-    fun `a medicine is not ready until its name, dose, food relation and length are there`() {
+    fun `a medicine is not ready until its name — dose — food relation and length are there`() {
         assertEquals(ItemProblem.entries.toSet(), ItemDraft().problems())
         assertTrue(filled.problems().isEmpty())
         assertTrue(filled.copy(days = "", ongoing = true).problems().isEmpty(), "an ongoing course needs no length")
@@ -43,7 +43,7 @@ class PrescriptionDraftTest {
     }
 
     @Test
-    fun `the request carries the form's unit when she typed none, sorted times and the interval`() {
+    fun `the request carries the form's unit when she typed none — sorted times and the interval`() {
         val request = PrescriptionDraft(
             listOf(
                 ItemDraft(name = " Magniy ", dose = "1", food = FoodRelation.WITH, ongoing = true, minutes = listOf(21 * 60, 9 * 60)),
@@ -64,7 +64,7 @@ class PrescriptionDraftTest {
     }
 
     @Test
-    fun `there are at most ten medicines, at least one, and a sent one copies back into the form`() {
+    fun `there are at most ten medicines — at least one — and a sent one copies back into the form`() {
         var draft = PrescriptionDraft()
         repeat(20) { draft = draft.addItem() }
         assertEquals(Limits.PRESCRIPTION_ITEMS_MAX, draft.items.size)
