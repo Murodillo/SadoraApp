@@ -88,7 +88,7 @@ class PaymentRequestService(
         if (owner.accountKind == AccountKind.PARTNER) throw ForbiddenException(message = "Bu hisobdan so'rov yuborib bo'lmaydi")
         val note = request.note?.trim()?.replace(Regex("\\s+"), " ")?.takeIf { it.isNotEmpty() }
         if (note != null && note.length > PaymentRequestLimits.NOTE_MAX) {
-            throw ValidationException("note", "Eng ko'pi ${PaymentRequestLimits.NOTE_MAX} belgi")
+            throw ValidationException("note", "Izoh eng ko'pi ${PaymentRequestLimits.NOTE_MAX} belgi bo'lsin")
         }
         val at = now()
         expireIfDue(repository.openOf(ownerId), at)
@@ -239,9 +239,9 @@ class PaymentRequestService(
     /** A gift plan, the legendary pet or a paid frame, bought in the payer's own store account. */
     suspend fun payInStore(payerId: Uuid, id: String, purchase: PaymentRequestStorePurchase): PaymentRequest {
         val record = asked(payerId, id, requireOpen = false)
-        if (record.kind == PaymentRequestKind.CONSULTATION) throw ValidationException("kind", "Konsultatsiya store orqali to'lanmaydi")
+        if (record.kind == PaymentRequestKind.CONSULTATION) throw ValidationException("kind", "Konsultatsiya App Store yoki Google Play orqali to'lanmaydi")
         if (purchase.provider != PaymentProvider.APP_STORE && purchase.provider != PaymentProvider.GOOGLE_PLAY) {
-            throw ValidationException("provider", "Bu provayder store emas")
+            throw ValidationException("provider", "Bu to'lov usuli App Store yoki Google Play emas")
         }
         fun matches(appStore: String?, googlePlay: String?) = when (purchase.provider) {
             PaymentProvider.APP_STORE -> appStore == purchase.productId

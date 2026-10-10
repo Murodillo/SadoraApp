@@ -303,9 +303,9 @@ class UserService(
      * longer than the column and a birthday in 1815.
      */
     private fun validateName(raw: String) {
-        if (raw.isBlank()) throw ValidationException("name", "Bo'sh bo'lishi mumkin emas")
+        if (raw.isBlank()) throw ValidationException("name", "Ismni yozing")
         if (raw.trim().length > Limits.NAME_MAX) {
-            throw ValidationException("name", "Eng ko'pi ${Limits.NAME_MAX} belgi")
+            throw ValidationException("name", "Ism eng ko'pi ${Limits.NAME_MAX} belgi bo'lsin")
         }
     }
 

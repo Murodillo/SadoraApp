@@ -121,6 +121,6 @@ fun Route.adminWearableRoutes(
 private fun io.ktor.server.application.ApplicationCall.dateParameter(name: String): LocalDate? {
     val raw = request.queryParameters[name] ?: return null
     return runCatching { LocalDate.parse(raw) }.getOrElse {
-        throw ValidationException(name, "YYYY-MM-DD formatida bo'lishi kerak")
+        throw ValidationException(name, "Sana noto'g'ri")
     }
 }

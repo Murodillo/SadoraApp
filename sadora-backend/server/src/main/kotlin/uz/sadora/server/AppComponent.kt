@@ -497,6 +497,7 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
         messages = messagingRepository,
         notifications = notificationRepository,
         audit = auditService,
+        users = userRepository,
     )
     val paymeGateway = PaymeGateway(billingRepository, billingService, config.billing.payme)
     val clickGateway = ClickGateway(billingRepository, billingService, config.billing.click)

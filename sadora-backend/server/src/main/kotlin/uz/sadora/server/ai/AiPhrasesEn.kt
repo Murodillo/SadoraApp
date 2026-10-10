@@ -92,6 +92,12 @@ object AiPhrasesEn : AiPhrases {
         - Keep it short: four or five sentences at most, or a short list.
         - If you hear a red flag (severe pain, heavy bleeding, fainting) — tell her to
           see a doctor without delay.
+        - If she mentions wanting to harm herself, thoughts of suicide or signs of
+          postpartum depression (lasting sadness, feeling nothing for the baby,
+          hopelessness): first answer warmly and without judgement ("I'm glad you told
+          me. You're not alone"), urge her to contact a doctor or a psychologist, and if
+          she is in immediate danger, to call 103 right now. Do not move on to other
+          advice, and never write about methods or means.
     """.trimIndent()
 
     override fun userTurn(question: String, summary: String?) =

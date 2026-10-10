@@ -103,7 +103,7 @@ class BillingService(
             // A store purchase happens inside the platform's own sheet; there is no URL
             // to send her to, and the receipt comes back to /store/verify afterwards.
             PaymentProvider.APP_STORE, PaymentProvider.GOOGLE_PLAY ->
-                throw ValidationException("provider", "Store xaridi ilova ichida bo'ladi")
+                throw ValidationException("provider", "App Store yoki Google Play xaridi ilova ichida bo'ladi")
         }
 
         return CheckoutSession(
@@ -319,7 +319,7 @@ class BillingService(
         frame: String? = null,
     ): CheckoutSession {
         if (provider != PaymentProvider.PAYME && provider != PaymentProvider.CLICK) {
-            throw ValidationException("provider", "Store xaridi ilova ichida bo'ladi")
+            throw ValidationException("provider", "App Store yoki Google Play xaridi ilova ichida bo'ladi")
         }
         if (provider !in consultationProviders(beneficiaryId)) throw FeatureDisabledException(provider.name.lowercase())
         val transaction = repository.createTransaction(

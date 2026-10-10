@@ -57,9 +57,9 @@ class AiService(
     suspend fun chat(userId: Uuid, request: AiChatRequest): AiChatReply {
         val user = users.findById(userId) ?: throw NotFoundException("Foydalanuvchi topilmadi")
         val question = request.question.trim()
-        if (question.isEmpty()) throw ValidationException("question", "Bo'sh bo'lishi mumkin emas")
+        if (question.isEmpty()) throw ValidationException("question", "Savolni yozing")
         if (question.length > MAX_QUESTION_LENGTH) {
-            throw ValidationException("question", "Eng ko'pi $MAX_QUESTION_LENGTH belgi")
+            throw ValidationException("question", "Savol eng ko'pi $MAX_QUESTION_LENGTH belgi bo'lsin")
         }
         if (!flagOn(userId, user)) throw FeatureDisabledException(CHAT_FLAG)
 

@@ -74,7 +74,7 @@ class PrescriptionService(
         val reason = request.reason.trim()
         if (reason.isEmpty()) throw ValidationException("reason", "Sababini yozing")
         if (reason.length > Limits.PRESCRIPTION_CANCEL_REASON_MAX) {
-            throw ValidationException("reason", "Eng ko'pi ${Limits.PRESCRIPTION_CANCEL_REASON_MAX} belgi")
+            throw ValidationException("reason", "Sabab eng ko'pi ${Limits.PRESCRIPTION_CANCEL_REASON_MAX} belgi bo'lsin")
         }
         val at = clock.now()
         if (!prescriptions.cancel(id, reason, at)) throw ConflictException("Retsept allaqachon bekor qilingan")
@@ -82,11 +82,15 @@ class PrescriptionService(
         val patient = users.findById(record.patientId)
         val today = at.dayIn(patient?.timezone ?: uz.sadora.server.core.DEFAULT_TIMEZONE)
         medications.archivePrescribed(id, today)
+        val words = uz.sadora.server.consultation.ConsultationPhrases.prescriptionCancelled(
+            doctor.fullName,
+            patient?.language ?: uz.sadora.contract.Language.UZ,
+        )
         notifications.enqueue(
             userId = record.patientId,
             category = NotificationCategory.SYSTEM,
-            title = "${doctor.fullName} ✓: retsept bekor qilindi",
-            body = reason.take(PUSH_PREVIEW),
+            title = words.title,
+            body = words.body,
             scheduledFor = at,
             dedupeKey = "rx-cancel:$id",
             status = NotificationStatus.QUEUED,
@@ -124,7 +128,7 @@ class PrescriptionService(
             val item = record.items.getOrNull(chosen.index) ?: throw ValidationException("items", "Bunday dori yo'q")
             val times = chosen.times.sorted()
             if (times.size != item.schedule.times.size || times.distinct().size != times.size) {
-                throw ValidationException(PrescriptionRules.itemField(chosen.index, "times"), "Shifokor kuniga ${item.schedule.times.size} marta yozgan")
+                throw ValidationException(PrescriptionRules.itemField(chosen.index, "times"), "Shifokor kuniga ${item.schedule.times.size} marta yozgan — shuncha vaqt tanlang")
             }
             val startedOn = request.startOn.plus(item.startDay - 1, DateTimeUnit.DAY)
             val endedOn = item.days?.let { startedOn.plus(it - 1, DateTimeUnit.DAY) }
@@ -171,7 +175,6 @@ class PrescriptionService(
 
     private companion object {
         const val LIST_MAX = 100
-        const val PUSH_PREVIEW = 80
         const val START_AHEAD_DAYS = 30
     }
 }

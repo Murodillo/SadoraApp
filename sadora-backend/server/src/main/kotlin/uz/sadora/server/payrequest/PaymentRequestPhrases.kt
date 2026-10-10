@@ -15,27 +15,27 @@ internal object PaymentRequestPhrases {
     /** To the person she asked. */
     fun asked(name: String, kind: PaymentRequestKind, period: BillingPeriod?, language: Language) = when (language) {
         Language.UZ -> Text(
-            "$name sizdan yordam so'rayapti 💝",
+            "$name sizdan sovg'a so'rayapti 💝",
             when (kind) {
-                PaymentRequestKind.PREMIUM -> "U Sadora Premium (${period.uz()}) olmoqchi. Ilovada ko'ring"
+                PaymentRequestKind.PREMIUM -> "U SADORA Premium (${period.uz()}) olmoqchi. Ilovada ko'ring"
                 PaymentRequestKind.CONSULTATION -> "U shifokor bilan konsultatsiya olmoqchi. Ilovada ko'ring"
                 PaymentRequestKind.PET -> "U Humo — legendar AI hamrohni olmoqchi. Ilovada ko'ring"
                 PaymentRequestKind.FRAME -> "U profil rasmi uchun yangi ramka olmoqchi. Ilovada ko'ring"
             },
         )
         Language.RU -> Text(
-            "$name просит вас о помощи 💝",
+            "$name просит у вас подарок 💝",
             when (kind) {
-                PaymentRequestKind.PREMIUM -> "Она хочет Sadora Premium (${period.ru()}). Посмотрите в приложении"
+                PaymentRequestKind.PREMIUM -> "Она хочет SADORA Premium (${period.ru()}). Посмотрите в приложении"
                 PaymentRequestKind.CONSULTATION -> "Она хочет консультацию врача. Посмотрите в приложении"
                 PaymentRequestKind.PET -> "Она хочет Хумо — легендарного AI-компаньона. Посмотрите в приложении"
                 PaymentRequestKind.FRAME -> "Она хочет новую рамку для фото профиля. Посмотрите в приложении"
             },
         )
         Language.EN -> Text(
-            "$name is asking for your help 💝",
+            "$name is asking you for a gift 💝",
             when (kind) {
-                PaymentRequestKind.PREMIUM -> "She'd like Sadora Premium (${period.en()}). See it in the app"
+                PaymentRequestKind.PREMIUM -> "She'd like SADORA Premium (${period.en()}). See it in the app"
                 PaymentRequestKind.CONSULTATION -> "She'd like a doctor consultation. See it in the app"
                 PaymentRequestKind.PET -> "She'd like Humo, the legendary AI companion. See it in the app"
                 PaymentRequestKind.FRAME -> "She'd like a new frame for her profile photo. See it in the app"
@@ -46,7 +46,7 @@ internal object PaymentRequestPhrases {
     /** To the same person, once, two days on. */
     fun reminder(name: String, language: Language) = when (language) {
         Language.UZ -> Text("$name so'rovi hali ochiq", "Ilovada ko'rib chiqing")
-        Language.RU -> Text("Просьба от $name всё ещё ждёт", "Посмотрите в приложении")
+        Language.RU -> Text("$name: просьба всё ещё ждёт ответа", "Посмотрите в приложении")
         Language.EN -> Text("$name's request is still open", "Take a look in the app")
     }
 
@@ -64,10 +64,10 @@ internal object PaymentRequestPhrases {
         Language.RU -> {
             val who = payer ?: "Близкий человек"
             when (kind) {
-                PaymentRequestKind.PREMIUM -> Text("$who подарил(а) вам Premium (${period.ru()}) 💝", "Premium уже открыт")
-                PaymentRequestKind.CONSULTATION -> Text("$who оплатил(а) консультацию 💝", "Чат с врачом открыт")
-                PaymentRequestKind.PET -> Text("$who подарил(а) вам Хумо 💝", "Птица счастья теперь ваша")
-                PaymentRequestKind.FRAME -> Text("$who подарил(а) вам рамку 💝", "Она уже на вашем фото")
+                PaymentRequestKind.PREMIUM -> Text("$who — подарок для вас: Premium ${period.ru()} 💝", "Premium уже открыт")
+                PaymentRequestKind.CONSULTATION -> Text("$who — консультация оплачена 💝", "Чат с врачом открыт")
+                PaymentRequestKind.PET -> Text("$who — подарок для вас: Хумо 💝", "Птица счастья теперь ваша")
+                PaymentRequestKind.FRAME -> Text("$who — подарок для вас: рамка 💝", "Она уже на вашем фото")
             }
         }
         Language.EN -> {

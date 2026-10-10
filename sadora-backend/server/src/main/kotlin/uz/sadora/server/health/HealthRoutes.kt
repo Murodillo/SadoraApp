@@ -113,13 +113,13 @@ fun Route.healthRoutes(health: HealthService) {
 private fun io.ktor.server.application.ApplicationCall.dateParameter(name: String): LocalDate? {
     val raw = request.queryParameters[name] ?: return null
     return runCatching { LocalDate.parse(raw) }.getOrElse {
-        throw ValidationException(name, "YYYY-MM-DD formatida bo'lishi kerak")
+        throw ValidationException(name, "Sana noto'g'ri")
     }
 }
 
 private fun io.ktor.server.application.ApplicationCall.pathDate(): LocalDate {
     val raw = parameters["date"].orEmpty()
     return runCatching { LocalDate.parse(raw) }.getOrElse {
-        throw ValidationException("date", "YYYY-MM-DD formatida bo'lishi kerak")
+        throw ValidationException("date", "Sana noto'g'ri")
     }
 }

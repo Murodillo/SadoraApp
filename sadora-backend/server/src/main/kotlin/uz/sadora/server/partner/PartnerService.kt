@@ -151,9 +151,9 @@ class PartnerService(
         if (link.status != PartnerLinkStatus.ACTIVE) throw ConflictException("Ulanish hozir faol emas")
         val text = if (request.kind == PartnerMessageKind.CUSTOM) {
             val trimmed = request.text?.trim()?.replace(Regex("\\s+"), " ").orEmpty()
-            if (trimmed.isEmpty()) throw ValidationException("text", "Bo'sh bo'lishi mumkin emas")
+            if (trimmed.isEmpty()) throw ValidationException("text", "Xabarni yozing")
             if (trimmed.length > Limits.PARTNER_MESSAGE_MAX) {
-                throw ValidationException("text", "Eng ko'pi ${Limits.PARTNER_MESSAGE_MAX} belgi")
+                throw ValidationException("text", "Xabar eng ko'pi ${Limits.PARTNER_MESSAGE_MAX} belgi bo'lsin")
             }
             trimmed
         } else {
@@ -161,7 +161,7 @@ class PartnerService(
         }
         val at = now()
         if (messages.sentSince(link.id, userId, at - 1.days) >= Limits.PARTNER_MESSAGES_PER_DAY) {
-            throw uz.sadora.server.core.RateLimitedException("Bugun juda ko'p xabar yuborildi")
+            throw uz.sadora.server.core.RateLimitedException("Bugun juda ko'p xabar yuborildi. Ertaga yana yozishingiz mumkin.")
         }
         val sender = requireActive(userId)
         val saved = messages.add(link.id, userId, request.kind, text, at)
@@ -171,7 +171,7 @@ class PartnerService(
             notify(
                 recipient.id,
                 "partner_msg:${saved.id}",
-                PartnerPhrases.message(sender.firstName(), request.kind, text, recipient.language),
+                PartnerPhrases.message(sender.firstName(), request.kind, recipient.language),
                 NotificationCategory.SYSTEM,
             )
         }
@@ -361,14 +361,14 @@ class PartnerService(
     suspend fun accept(partnerId: Uuid, request: AcceptPartnerInviteRequest, ip: String?): FollowedPerson {
         val partner = requireActive(partnerId)
         val code = normaliseCode(request.code)
-        if (code.length != Limits.PARTNER_CODE_LENGTH) throw ValidationException("code", "Kod noto'g'ri")
+        if (code.length != Limits.PARTNER_CODE_LENGTH) throw ValidationException("code", "Kodni to'liq kiriting — ${Limits.PARTNER_CODE_LENGTH} ta belgi")
         val name = request.name?.trim()?.replace(Regex("\\s+"), " ")?.takeIf { it.isNotEmpty() }
         if (name != null && name.length > Limits.PARTNER_NAME_MAX) {
-            throw ValidationException("name", "Eng ko'pi ${Limits.PARTNER_NAME_MAX} belgi")
+            throw ValidationException("name", "Ism eng ko'pi ${Limits.PARTNER_NAME_MAX} belgi bo'lsin")
         }
         val becomesPartner = request.asPartnerAccount && !partner.onboardingCompleted
         if (becomesPartner && name == null && partner.name.isBlank()) {
-            throw ValidationException("name", "Bo'sh bo'lishi mumkin emas")
+            throw ValidationException("name", "Ismni yozing")
         }
 
         val at = now()
@@ -378,7 +378,7 @@ class PartnerService(
         val owner = users.findById(invite.ownerId)?.takeIf { it.status == AccountStatus.ACTIVE }
             ?: throw NotFoundException(CODE_GONE)
         if (links.followingOf(partnerId).size >= Limits.PARTNER_MAX_FOLLOWING) {
-            throw ConflictException("Ko'pi bilan ${Limits.PARTNER_MAX_FOLLOWING} kishini kuzatish mumkin")
+            throw ConflictException("Ko'pi bilan ${Limits.PARTNER_MAX_FOLLOWING} kishining holatini ko'ra olasiz")
         }
         if (!links.accept(invite.id, partnerId, at)) throw NotFoundException(CODE_GONE)
 
@@ -612,7 +612,7 @@ class PartnerService(
                             partner,
                             NotificationCategory.CYCLE,
                             "partner_period_soon:${link.id}:$next",
-                            PartnerPhrases.periodSoon(name, PERIOD_NOTICE_DAYS, partner.language),
+                            PartnerPhrases.periodSoon(name, partner.language),
                         )
                     }
                 }
@@ -621,12 +621,11 @@ class PartnerService(
                     appointments.list(owner.id)
                         .filter { !it.isDone && it.scheduledOn == tomorrow }
                         .forEach { visit ->
-                            val title = visit.scheduledAt?.let { "${visit.title} · $it" } ?: visit.title
                             deliver(
                                 partner,
                                 NotificationCategory.CYCLE,
                                 "partner_appointment:${link.id}:${visit.id}:$tomorrow",
-                                PartnerPhrases.appointmentTomorrow(name, title, partner.language),
+                                PartnerPhrases.appointmentTomorrow(name, partner.language),
                             )
                         }
                 }

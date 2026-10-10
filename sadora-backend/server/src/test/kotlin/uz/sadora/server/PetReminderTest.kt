@@ -9,11 +9,11 @@ import uz.sadora.server.pet.PetPhrases
 
 class PetReminderTest {
     @Test
-    fun theMedicineAndTimeAreAlwaysInTheReminder() {
+    fun theTimeIsAlwaysInTheReminder() {
         Language.entries.forEach { language ->
             PetKind.entries.forEach { pet ->
-                val text = PetPhrases.medReminder(language, pet, "Folat kislota", "08:30")
-                assertTrue("Folat kislota" in text && "08:30" in text, "$language/$pet: $text")
+                val text = PetPhrases.medReminder(language, pet, "08:30")
+                assertTrue("08:30" in text, "$language/$pet: $text")
             }
         }
     }

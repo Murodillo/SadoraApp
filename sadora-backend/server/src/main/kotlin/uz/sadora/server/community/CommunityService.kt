@@ -4,6 +4,7 @@ import kotlin.random.Random
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.hours
 import kotlin.uuid.Uuid
+import kotlinx.datetime.toLocalDateTime
 import uz.sadora.contract.AccountStatus
 import uz.sadora.contract.BlockState
 import uz.sadora.contract.CommunityComment
@@ -96,7 +97,7 @@ class CommunityService(
         requireOpen(userId)
         ensureIdentity(userId)
         val bio = request.bio?.trim()
-        if (bio != null && bio.length > Limits.BIO_MAX) throw ValidationException("bio", "Eng ko'pi ${Limits.BIO_MAX} belgi")
+        if (bio != null && bio.length > Limits.BIO_MAX) throw ValidationException("bio", "O'zingiz haqingizda eng ko'pi ${Limits.BIO_MAX} belgi bo'lsin")
         repository.updateIdentity(
             userId = userId,
             bio = bio?.takeIf { it.isNotEmpty() },
@@ -322,11 +323,16 @@ class CommunityService(
         val outbox = notifications ?: return
         val settings = outbox.settingsOf(post.userId)
         if (!settings.enabled || !settings.isCategoryEnabled(NotificationCategory.SYSTEM)) return
+        // Who answered, never the answer: a push is read on the lock screen.
+        val words = uz.sadora.server.consultation.ConsultationPhrases.doctorAnswered(
+            doctor.fullName,
+            users.findById(post.userId)?.language ?: uz.sadora.contract.Language.UZ,
+        )
         outbox.enqueue(
             userId = post.userId,
             category = NotificationCategory.SYSTEM,
-            title = "Shifokor javob berdi",
-            body = "${doctor.fullName}: ${comment.body.take(PUSH_PREVIEW)}",
+            title = words.title,
+            body = words.body,
             scheduledFor = comment.createdAt,
             dedupeKey = "doctor_answer:${comment.id}",
             status = NotificationStatus.QUEUED,
@@ -473,8 +479,11 @@ class CommunityService(
     private suspend fun requireNotRestricted(userId: Uuid) {
         val restriction = repository.restrictionOf(userId) ?: return
         val until = restriction.until
-        if (until == null || until > now()) {
-            throw ForbiddenException(message = "Chatda yozish vaqtincha cheklangan")
+        if (until == null) throw ForbiddenException(message = "Qoidalar buzilgani uchun chatda yozish cheklangan")
+        if (until > now()) {
+            val day = until.toLocalDateTime(kotlinx.datetime.TimeZone.of(uz.sadora.server.core.DEFAULT_TIMEZONE)).date
+            val shown = "${day.dayOfMonth.toString().padStart(2, '0')}.${day.monthNumber.toString().padStart(2, '0')}.${day.year}"
+            throw ForbiddenException(message = "Qoidalar buzilgani uchun chatda yozish ${shown}gacha cheklangan")
         }
     }
 
@@ -482,8 +491,8 @@ class CommunityService(
         repository.readablePostById(postId) ?: throw NotFoundException("Post topilmadi")
 
     private fun validateBody(body: String, max: Int) {
-        if (body.length < MIN_BODY_LENGTH) throw ValidationException("body", "Kamida $MIN_BODY_LENGTH ta belgi")
-        if (body.length > max) throw ValidationException("body", "Eng ko'pi $max belgi")
+        if (body.length < MIN_BODY_LENGTH) throw ValidationException("body", "Matn kamida $MIN_BODY_LENGTH ta belgi bo'lsin")
+        if (body.length > max) throw ValidationException("body", "Matn eng ko'pi $max belgi bo'lsin")
         // The feed is anonymous: a phone number in a post undoes that for whoever wrote
         // it, and "menga yozing +998…" is how strangers get pulled off the app. Private
         // messages are the way to talk one to one.
@@ -543,7 +552,6 @@ class CommunityService(
         /** One page of comments; also what a phone that sends no limit gets. */
         const val MAX_COMMENTS = 200
         const val QUESTION_WINDOW_DAYS = 30
-        const val PUSH_PREVIEW = 120
         const val AUTO_HIDE_REPORTS = 5
         const val AUTO_HIDE_REASON = "auto_reports"
         const val FALLBACK_ALIAS = "Anonim"

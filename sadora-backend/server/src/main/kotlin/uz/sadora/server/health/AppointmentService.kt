@@ -61,12 +61,12 @@ class AppointmentService(
 
     private fun validate(request: SaveAppointmentRequest) {
         if (request.title.isBlank()) {
-            throw ValidationException("title", "Nomi bo'sh bo'lishi mumkin emas")
+            throw ValidationException("title", "Ko'rik nomini yozing")
         }
         if (request.title.length > Limits.APPOINTMENT_TITLE_MAX) {
             throw ValidationException(
                 "title",
-                "Nomi ${Limits.APPOINTMENT_TITLE_MAX} ta belgidan oshmasligi kerak",
+                "Ko'rik nomi eng ko'pi ${Limits.APPOINTMENT_TITLE_MAX} belgi bo'lsin",
             )
         }
         // The place was unbounded, which is a free text column open to anything.
@@ -74,7 +74,7 @@ class AppointmentService(
         if (place != null && place.length > Limits.APPOINTMENT_PLACE_MAX) {
             throw ValidationException(
                 "place",
-                "Joyi ${Limits.APPOINTMENT_PLACE_MAX} ta belgidan oshmasligi kerak",
+                "Ko'rik joyi eng ko'pi ${Limits.APPOINTMENT_PLACE_MAX} belgi bo'lsin",
             )
         }
         val remind = request.remindHoursBefore
@@ -87,7 +87,7 @@ class AppointmentService(
         }
     }
 
-    private fun notFound() = NotFoundException("Tadbir topilmadi")
+    private fun notFound() = NotFoundException("Ko'rik topilmadi")
 
     private companion object {
         /** A week. Reminding someone a month early about a scan is not a reminder. */

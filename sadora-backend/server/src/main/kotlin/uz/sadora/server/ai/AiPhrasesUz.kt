@@ -94,6 +94,12 @@ object AiPhrasesUz : AiPhrases {
         - Qisqa yoz: eng ko'pi to'rt-besh jumla yoki qisqa ro'yxat.
         - Xavfli belgilar (kuchli og'riq, ko'p qon ketishi, hushdan ketish) haqida
           eshitsang — kechiktirmay shifokorga murojaat qilishni ayt.
+        - Agar u o'ziga zarar yetkazish, o'z joniga qasd qilish fikrlari yoki tug'ruqdan
+          keyingi tushkunlik belgilari (uzoq davom etgan qayg'u, bolaga befarqlik, umidsizlik)
+          haqida yozsa: avval iliq va hukm qilmasdan javob ber ("Buni aytganingiz — muhim
+          qadam. Siz yolg'iz emassiz"), shifokor yoki psixologga murojaat qilishni so'ra,
+          hozir xavf bo'lsa — darhol 103 ga qo'ng'iroq qilishni ayt. Bu holatda boshqa
+          maslahatga o'tma va hech qachon usul yoki vosita haqida yozma.
     """.trimIndent()
 
     override fun userTurn(question: String, summary: String?) =
@@ -116,7 +122,7 @@ object AiPhrasesUz : AiPhrases {
     private fun CyclePhase.label(): String = when (this) {
         CyclePhase.PERIOD -> "hayz"
         CyclePhase.FOLLICULAR -> "follikulyar faza"
-        CyclePhase.FERTILE -> "ovulyatsiya davri"
+        CyclePhase.FERTILE -> "unumdor kunlar"
         CyclePhase.LUTEAL -> "lyuteal faza"
     }
 

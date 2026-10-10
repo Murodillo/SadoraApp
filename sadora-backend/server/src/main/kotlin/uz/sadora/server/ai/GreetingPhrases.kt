@@ -376,7 +376,7 @@ object GreetingPhrases {
     }
 
     private fun streakWord(language: Language, days: Int): String =
-        word(language, "$days kun ketma-ket ochgan", "заходит $days дней подряд", "$days-day streak")
+        word(language, "$days kun ketma-ket ochgan", "заходит $days ${uz.sadora.server.i18n.Plural.ru(days, "день", "дня", "дней")} подряд", "$days-day streak")
 
     private fun phaseWord(language: Language, phase: CyclePhase): String = when (phase) {
         CyclePhase.PERIOD -> word(language, "hayz kunlari", "дни менструации", "period days")

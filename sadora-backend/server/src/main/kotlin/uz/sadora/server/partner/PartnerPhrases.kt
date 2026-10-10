@@ -39,25 +39,28 @@ internal object PartnerPhrases {
         Language.EN -> Text("$name is sharing how she is with you", "See what would help her today")
     }
 
-    /** To them: her period started today. */
+    /**
+     * To them: her period started today. Said without the word: his phone shows this on
+     * the lock screen to whoever is near it, and the app says the rest once he opens it.
+     */
     fun periodStarted(name: String, language: Language) = when (language) {
-        Language.UZ -> Text("$name: hayz boshlandi", "Bugun unga ko'proq e'tibor va iliqlik kerak bo'lishi mumkin")
-        Language.RU -> Text("$name: начались месячные", "Сегодня ей может понадобиться больше внимания и тепла")
-        Language.EN -> Text("$name: her period started", "She may need a little more care and warmth today")
+        Language.UZ -> Text("Yaqinim: yangi holat", "$name bugun ko'proq e'tibor va iliqlikka muhtoj bo'lishi mumkin")
+        Language.RU -> Text("Yaqinim: новое обновление", "$name: сегодня ей может понадобиться больше внимания и тепла")
+        Language.EN -> Text("Yaqinim: new update", "$name may need a little more care and warmth today")
     }
 
-    /** To them: her period is due in a couple of days. */
-    fun periodSoon(name: String, days: Int, language: Language) = when (language) {
-        Language.UZ -> Text("$name: $days kundan keyin hayz", "Charchoq va kayfiyat o'zgarishi bo'lishi mumkin — sabrli bo'ling")
-        Language.RU -> Text("$name: месячные через $days дн.", "Возможны усталость и перепады настроения — будьте терпеливы")
-        Language.EN -> Text("$name: period in $days days", "Tiredness and mood changes are common — be patient")
+    /** To them: her period is due in a couple of days — as quiet on the lock screen as the above. */
+    fun periodSoon(name: String, language: Language) = when (language) {
+        Language.UZ -> Text("Yaqinim: yangi holat", "Yaqin kunlarda $name uchun sabr va g'amxo'rlik muhim bo'ladi")
+        Language.RU -> Text("Yaqinim: новое обновление", "$name: в ближайшие дни ей особенно важны терпение и забота")
+        Language.EN -> Text("Yaqinim: new update", "Patience and care will matter to $name over the next few days")
     }
 
-    /** To them: a doctor visit tomorrow. */
-    fun appointmentTomorrow(name: String, title: String, language: Language) = when (language) {
-        Language.UZ -> Text("$name ertaga shifokorga boradi", title)
-        Language.RU -> Text("$name завтра идёт к врачу", title)
-        Language.EN -> Text("$name sees a doctor tomorrow", title)
+    /** To them: a doctor visit tomorrow. Her own title for it stays in the app. */
+    fun appointmentTomorrow(name: String, language: Language) = when (language) {
+        Language.UZ -> Text("Yaqinim: yangi holat", "$name ertaga shifokor ko'rigiga boradi — ochib ko'ring")
+        Language.RU -> Text("Yaqinim: новое обновление", "$name завтра идёт к врачу — откройте, чтобы узнать больше")
+        Language.EN -> Text("Yaqinim: new update", "$name has a doctor's visit tomorrow — open the app for more")
     }
 
     /** To them: she pressed "labour has started". */
@@ -69,9 +72,10 @@ internal object PartnerPhrases {
 
     /**
      * One of the small messages between them. The title is the whole message for a preset;
-     * a line of their own goes in the body, as the other phone would show a text.
+     * a line of their own is not previewed — like any private message, it is read in the
+     * app, not on a lock screen.
      */
-    fun message(name: String, kind: PartnerMessageKind, text: String?, language: Language): Text {
+    fun message(name: String, kind: PartnerMessageKind, language: Language): Text {
         val title = when (language) {
             Language.UZ -> when (kind) {
                 HEART -> "$name sizga ❤️ yubordi"
@@ -84,10 +88,10 @@ internal object PartnerPhrases {
                 REST -> "$name: bugun dam olishim kerak 😴"
                 CALL -> "$name: qo'ng'iroq qiling 📞"
                 QUIET -> "$name: biroz tinchlik kerak 🤫"
-                CUSTOM -> "$name yozdi"
+                CUSTOM -> "$name: yangi xabar"
             }
             Language.RU -> when (kind) {
-                HEART -> "$name отправил(а) вам ❤️"
+                HEART -> "$name: ❤️ для вас"
                 HUG -> "$name обнимает вас 🤗"
                 THINKING -> "$name думает о вас 💭"
                 ON_IT -> "$name: Уже иду! 🏃"
@@ -97,7 +101,7 @@ internal object PartnerPhrases {
                 REST -> "$name: мне сегодня нужен отдых 😴"
                 CALL -> "$name: позвони мне 📞"
                 QUIET -> "$name: мне нужно немного тишины 🤫"
-                CUSTOM -> "$name пишет"
+                CUSTOM -> "$name: новое сообщение"
             }
             Language.EN -> when (kind) {
                 HEART -> "$name sent you ❤️"
@@ -110,16 +114,14 @@ internal object PartnerPhrases {
                 REST -> "$name: I need to rest today 😴"
                 CALL -> "$name: please call me 📞"
                 QUIET -> "$name: I need a little quiet 🤫"
-                CUSTOM -> "$name wrote"
+                CUSTOM -> "$name: new message"
             }
         }
-        val body = text ?: when (language) {
+        val body = when (language) {
             Language.UZ -> "Javob berish uchun oching"
             Language.RU -> "Откройте, чтобы ответить"
             Language.EN -> "Open to reply"
         }
-        return Text(title, body.take(PREVIEW))
+        return Text(title, body)
     }
-
-    private const val PREVIEW = 140
 }

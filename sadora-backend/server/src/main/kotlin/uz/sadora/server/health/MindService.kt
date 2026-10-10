@@ -137,9 +137,9 @@ class MindService(
     }
 
     private fun validateBody(body: String) {
-        if (body.isBlank()) throw ValidationException("body", "Bo'sh bo'lishi mumkin emas")
+        if (body.isBlank()) throw ValidationException("body", "Kundalik yozuvini yozing")
         if (body.length > MAX_BODY_LENGTH) {
-            throw ValidationException("body", "Eng ko'pi $MAX_BODY_LENGTH belgi")
+            throw ValidationException("body", "Kundalik yozuvi eng ko'pi $MAX_BODY_LENGTH belgi bo'lsin")
         }
     }
 

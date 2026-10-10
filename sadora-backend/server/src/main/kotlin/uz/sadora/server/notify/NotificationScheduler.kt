@@ -178,7 +178,7 @@ class NotificationScheduler(
                     template?.title.orEmpty().render(medication.name, dueAt.toString())
                 }
                 val body = if (pet != null) {
-                    uz.sadora.server.pet.PetPhrases.medReminder(user.language, pet, medication.name, dueAt.toString())
+                    uz.sadora.server.pet.PetPhrases.medReminder(user.language, pet, dueAt.toString())
                 } else {
                     template?.body.orEmpty().render(medication.name, dueAt.toString())
                 }
@@ -186,8 +186,9 @@ class NotificationScheduler(
                 val queued = notifications.enqueue(
                     userId = userId,
                     category = NotificationCategory.MED_REMINDER,
-                    title = title.ifBlank { medication.name },
-                    body = body.ifBlank { "Qabul vaqti — $dueAt" },
+                    // Never the medicine's name: a push is read on the lock screen.
+                    title = title.ifBlank { MedReminderFallback.title(user.language) },
+                    body = body.ifBlank { MedReminderFallback.body(user.language, dueAt.toString()) },
                     scheduledFor = dueInstant,
                     dedupeKey = dedupeKey,
                     status = if (decision is DeliveryDecision.Send) {
@@ -239,5 +240,20 @@ class NotificationScheduler(
 
         /** How late a missed dose reminder may still go out; later than this it is noise. */
         val CATCH_UP = 30.minutes
+    }
+}
+
+/** What a medication reminder says when its template row is missing or blank. */
+internal object MedReminderFallback {
+    fun title(language: uz.sadora.contract.Language): String = when (language) {
+        uz.sadora.contract.Language.UZ -> "Dori vaqti"
+        uz.sadora.contract.Language.RU -> "Время лекарства"
+        uz.sadora.contract.Language.EN -> "Medication time"
+    }
+
+    fun body(language: uz.sadora.contract.Language, time: String): String = when (language) {
+        uz.sadora.contract.Language.UZ -> "Qabul vaqti — $time"
+        uz.sadora.contract.Language.RU -> "Время приёма — $time"
+        uz.sadora.contract.Language.EN -> "Time to take it — $time"
     }
 }

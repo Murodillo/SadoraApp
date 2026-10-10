@@ -241,7 +241,7 @@ class MessagingService(
             throw ForbiddenException(message = "Konsultatsiyani faqat shifokor yopadi")
         }
         val advice = summary?.trim()?.takeIf { it.isNotEmpty() }
-        if (advice != null && advice.length > SUMMARY_MAX) throw ValidationException("summary", "Eng ko'pi $SUMMARY_MAX belgi")
+        if (advice != null && advice.length > SUMMARY_MAX) throw ValidationException("summary", "Tavsiya eng ko'pi $SUMMARY_MAX belgi bo'lsin")
         val at = clock.now()
         val session = consultations?.currentSession(thread.id)
         if (thread.isOpen(at)) {
@@ -273,7 +273,7 @@ class MessagingService(
             request.attachRecord -> {
                 val doctor = thread.doctorId?.let { doctors?.byId(it) }
                 if (doctor == null || doctor.userId == userId) {
-                    throw ValidationException("attachRecord", "Tibbiy kartani faqat bemor shifokoriga biriktiradi")
+                    throw ValidationException("attachRecord", "Bemor kartasini faqat bemorning o'zi shifokoriga biriktiradi")
                 }
                 Triple(MessageKind.RECORD, "", null)
             }
@@ -357,14 +357,14 @@ class MessagingService(
 
     private fun validateText(rawBody: String): String {
         val body = rawBody.trim()
-        if (body.isEmpty()) throw ValidationException("body", "Xabar bo'sh bo'lishi mumkin emas")
-        if (body.length > Limits.MESSAGE_MAX) throw ValidationException("body", "Eng ko'pi ${Limits.MESSAGE_MAX} belgi")
+        if (body.isEmpty()) throw ValidationException("body", "Xabarni yozing")
+        if (body.length > Limits.MESSAGE_MAX) throw ValidationException("body", "Xabar eng ko'pi ${Limits.MESSAGE_MAX} belgi bo'lsin")
         return body
     }
 
     private fun validateCaption(rawBody: String): String {
         val body = rawBody.trim()
-        if (body.length > Limits.MESSAGE_MAX) throw ValidationException("body", "Eng ko'pi ${Limits.MESSAGE_MAX} belgi")
+        if (body.length > Limits.MESSAGE_MAX) throw ValidationException("body", "Xabar eng ko'pi ${Limits.MESSAGE_MAX} belgi bo'lsin")
         return body
     }
 
@@ -405,15 +405,15 @@ class MessagingService(
         val thread = requireParticipant(userId, conversationId)
         val message = messages.messageById(messageId)
             ?.takeIf { it.conversationId == thread.id && it.status == ContentStatus.VISIBLE && it.kind == MessageKind.RECORD }
-            ?: throw NotFoundException("Tibbiy karta topilmadi")
+            ?: throw NotFoundException("Bemor kartasi topilmadi")
         val patient = message.senderId
         val readingOwn = patient == userId
         if (!readingOwn && !thread.isOpen(clock.now())) {
-            throw ForbiddenException(message = "Konsultatsiya yopilgan — karta endi ko'rinmaydi")
+            throw ForbiddenException(message = "Konsultatsiya yopilgan — bemor kartasi endi ko'rinmaydi")
         }
-        val provider = records ?: throw NotFoundException("Tibbiy karta topilmadi")
+        val provider = records ?: throw NotFoundException("Bemor kartasi topilmadi")
         val owner = users?.findById(patient)
-        if (owner == null || owner.status != AccountStatus.ACTIVE) throw NotFoundException("Tibbiy karta topilmadi")
+        if (owner == null || owner.status != AccountStatus.ACTIVE) throw NotFoundException("Bemor kartasi topilmadi")
         if (!readingOwn) {
             audit?.record(
                 AuditEntry(
@@ -453,22 +453,21 @@ class MessagingService(
         val settings = notifications.settingsOf(recipient)
         if (!settings.enabled || !settings.isCategoryEnabled(NotificationCategory.SYSTEM)) return
         val doctor = thread.doctorId?.let { doctors?.byId(it) }
+        val language = users?.findById(recipient)?.language ?: uz.sadora.contract.Language.UZ
         val name = when {
             doctor != null && doctor.userId == sender -> "${doctor.fullName} ✓"
-            doctor != null -> users?.findById(sender)?.name?.takeIf { it.isNotBlank() } ?: PATIENT_FALLBACK
+            doctor != null -> users?.findById(sender)?.name?.takeIf { it.isNotBlank() }
+                ?: uz.sadora.server.consultation.ConsultationPhrases.patientFallback(language)
             else -> identities.identitiesFor(listOf(sender))[sender]?.alias ?: CommunityService.FALLBACK_ALIAS
         }
-        val preview = when (message.kind) {
-            MessageKind.TEXT -> message.body
-            MessageKind.IMAGE -> "📷 Rasm" + message.body.takeIf { it.isNotEmpty() }?.let { ": $it" }.orEmpty()
-            MessageKind.RECORD -> "📋 Tibbiy karta biriktirildi"
-            MessageKind.PRESCRIPTION -> "💊 Sizga retsept yozildi"
-        }
+        // Who wrote, never what, nor whether it was a photo, a record or a prescription:
+        // a push is read on the lock screen by whoever holds the phone.
+        val words = uz.sadora.server.consultation.ConsultationPhrases.message(name, language)
         notifications.enqueue(
             userId = recipient,
             category = NotificationCategory.SYSTEM,
-            title = "$name: yangi xabar",
-            body = preview.take(PUSH_PREVIEW),
+            title = words.title,
+            body = words.body,
             scheduledFor = message.createdAt,
             dedupeKey = "dm:${message.id}",
             status = NotificationStatus.QUEUED,
@@ -655,7 +654,6 @@ class MessagingService(
         const val MAX_MESSAGES = 200
         const val MAX_MESSAGES_PER_DAY = 200
         const val PREVIEW_LENGTH = 120
-        const val PUSH_PREVIEW = 80
         const val UNAVAILABLE = "Bu taxallusga xabar yozib bo'lmaydi"
         const val DOCTOR_UNAVAILABLE = "Shifokor hozir konsultatsiya qabul qilmayapti"
         const val CONSULTATION_CLOSED = "Konsultatsiya yopilgan — yangisini oching"

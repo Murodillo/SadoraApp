@@ -49,6 +49,8 @@ class PhotoService(
     private val messages: MessagingRepository,
     private val notifications: NotificationRepository,
     private val audit: AuditService,
+    /** For the language of the doctor a removal notice reaches; Uzbek without it. */
+    private val users: uz.sadora.server.user.UserRepository? = null,
 ) {
 
     // ---------------------------------------------------------------- hers
@@ -138,11 +140,13 @@ class PhotoService(
         )
         val settings = notifications.settingsOf(doctor.userId)
         if (settings.enabled && settings.isCategoryEnabled(NotificationCategory.SYSTEM)) {
+            val language = users?.findById(doctor.userId)?.language ?: uz.sadora.contract.Language.UZ
+            val words = uz.sadora.server.doctor.DoctorPhrases.photoRemoved(reason, language)
             notifications.enqueue(
                 userId = doctor.userId,
                 category = NotificationCategory.SYSTEM,
-                title = "Rasmingiz olib tashlandi",
-                body = reason ?: "Iltimos, yuzingiz aniq ko'rinadigan rasm qo'ying.",
+                title = words.title,
+                body = words.body,
                 scheduledFor = now(),
                 dedupeKey = "doctor_photo_removed:$doctorId:${now().toEpochMilliseconds()}",
                 status = NotificationStatus.QUEUED,

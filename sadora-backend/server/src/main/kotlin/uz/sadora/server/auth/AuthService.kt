@@ -200,7 +200,7 @@ class AuthService(
 
             AccountStatus.DELETION_PENDING -> throw ForbiddenException(
                 ErrorCodes.ACCOUNT_BLOCKED,
-                "Hisobni o'chirish so'rovi yuborilgan",
+                "Hisobni o'chirish so'rovi yuborilgan. Bekor qilish uchun qo'llab-quvvatlash xizmatiga yozing.",
             )
         }
     }

@@ -72,7 +72,7 @@ class RuleBasedAnswererTest {
         assertTrue("800" in RuleBasedAnswerer.answer("Сколько воды мне пить?", context, Language.RU))
         assertTrue("800" in RuleBasedAnswerer.answer("Should I drink more water?", context, Language.EN))
 
-        assertTrue("овуляц" in RuleBasedAnswerer.answer("Когда месячные?", context, Language.RU))
+        assertTrue("фертильное окно" in RuleBasedAnswerer.answer("Когда месячные?", context, Language.RU))
         assertTrue("fertile window" in RuleBasedAnswerer.answer("When is my period?", context, Language.EN))
     }
 
@@ -96,7 +96,7 @@ class RuleBasedAnswererTest {
     fun `the cycle answer follows the phase in the context`() {
         val answer = RuleBasedAnswerer.answer("Hayzim qachon?", context, Language.UZ)
         assertTrue("14-kuni" in answer, answer)
-        assertTrue("ovulyatsiya davri" in answer, answer)
+        assertTrue("unumdor kunlar" in answer, answer)
         assertTrue("15 kundan keyin" in answer, answer)
     }
 

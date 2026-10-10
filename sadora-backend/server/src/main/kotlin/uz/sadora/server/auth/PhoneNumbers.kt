@@ -17,7 +17,7 @@ import uz.sadora.server.core.ValidationException
 object PhoneNumbers {
 
     fun normalize(raw: String): String = UzbekPhone.toE164(raw)
-        ?: throw ValidationException("phone", "O'zbekiston raqami formatida bo'lishi kerak")
+        ?: throw ValidationException("phone", "Raqamni +998 va yana 9 ta raqam bilan kiriting")
 
     /**
      * Masked for logs and error messages: `+998 ** *** ** 67`.

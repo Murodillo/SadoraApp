@@ -139,7 +139,7 @@ class MedicationService(
     private fun lockPrescribed(stored: MedicationRecord, request: SaveMedicationRequest): SaveMedicationRequest {
         if (stored.prescriptionId == null) return request
         if (request.schedule.times.size != stored.times.size) {
-            throw ValidationException("schedule.times", "Shifokor kuniga ${stored.times.size} marta yozgan")
+            throw ValidationException("schedule.times", "Shifokor kuniga ${stored.times.size} marta yozgan — shuncha vaqt tanlang")
         }
         return request.copy(
             name = stored.name,
@@ -261,8 +261,8 @@ class MedicationService(
     }
 
     private fun validate(request: SaveMedicationRequest) {
-        if (request.name.isBlank()) throw ValidationException("name", "Bo'sh bo'lishi mumkin emas")
-        if (request.name.length > MAX_NAME) throw ValidationException("name", "Eng ko'pi $MAX_NAME belgi")
+        if (request.name.isBlank()) throw ValidationException("name", "Dori nomini yozing")
+        if (request.name.length > MAX_NAME) throw ValidationException("name", "Dori nomi eng ko'pi $MAX_NAME belgi bo'lsin")
         validateSchedule(request.schedule)
         request.stockUnits?.let {
             if (it < 0) throw ValidationException("stockUnits", "Manfiy bo'lishi mumkin emas")
