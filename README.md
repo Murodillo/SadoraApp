@@ -521,6 +521,22 @@ energiya, vazn. Bugun — salomatlik ko'rsatkichi (qadam o'rniga strain), Balans
 ekrani (bosqichlar va samara), Sikl — "Tana signallari" kartasi (o'tgan haftaga nisbatan
 puls/HRV/harorat/tiklanish), shifokor sahifasi. WHOOP qadam sanamaydi — ilova buni aytadi.
 
+### Garmin
+
+Garmin ham xuddi shu yo'ldan ulanadi (`/v1/wearables/garmin/connect|callback|sync`), faqat
+OAuth 2.0 PKCE bilan va ma'lumotni o'zi yuboradi: yangi kun, uyqu, HRV, SpO₂, nafas, vazn
+`POST /v1/wearables/garmin/webhook/<GARMIN_WEBHOOK_TOKEN>` ga keladi. Garmin so'rovni
+imzolamaydi, shuning uchun sir — manzilning oxirgi bo'lagi. Fon sinxroni faqat tayanch:
+oxirgi yuklangan ma'lumotni kunlik bo'laklarda tortadi, birinchi ulanishda esa 30 kunlik
+tarixni Garmin'dan so'raydi (backfill) va u ham webhook orqali keladi.
+
+Sozlash: developerportal.garmin.com'da Connect Developer Program ilovasi (Health API),
+redirect — `PUBLIC_BASE_URL/v1/wearables/garmin/callback`; portaldagi "Endpoint
+Configuration"da har bir summary turi (dailies, sleeps, hrv, pulseox, respiration,
+bodyComps, userMetrics, deregistration, userPermissionsChange) uchun yuqoridagi webhook
+manzili. `.env`: `GARMIN_CLIENT_ID`, `GARMIN_CLIENT_SECRET`, `GARMIN_WEBHOOK_TOKEN`
+(`openssl rand -hex 24`). Stress va Body Battery olinmaydi — bizda bunday ko'rsatkich yo'q.
+
 Soat yo'q bo'lsa uyqu Uyqu ekranidan qo'lda kiritiladi (`manual` provayder,
 `sleep_minutes` → `sleep_duration`).
 

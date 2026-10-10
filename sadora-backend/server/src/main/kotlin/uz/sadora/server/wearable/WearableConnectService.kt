@@ -29,15 +29,17 @@ import uz.sadora.server.core.ValidationException
 import uz.sadora.server.core.now
 import uz.sadora.server.core.randomToken
 import uz.sadora.server.health.HealthAccess
+import uz.sadora.server.wearable.garmin.GarminClient
 import uz.sadora.server.wearable.oura.OuraClient
 import uz.sadora.server.wearable.whoop.WhoopClient
 
 /**
  * Connecting a cloud wearable, and pulling from it.
  *
- * WHOOP and Oura so far. A provider is an OAuth grant and a [CloudProviderClient] that
- * pages through its collections and maps them to [HealthSampleInput]; Garmin would be
- * the same pieces again, not a new design. Everything provider-specific stops at the
+ * WHOOP, Oura and Garmin so far. A provider is an OAuth grant and a [CloudProviderClient]
+ * that pages through its collections and maps them to [HealthSampleInput]. Garmin differs
+ * in one thing: it sends the data itself, so most of hers arrives through [ingestPushed]
+ * and the pull is only the floor under it. Everything provider-specific stops at the
  * client; from there the samples go through the same [WearableService.ingest] the phone
  * uses, under the same consent gate and the same mapping table.
  */
@@ -50,10 +52,12 @@ class WearableConnectService(
     private val whoopConfig: WhoopConfig,
     private val whoop: WhoopClient?,
     private val oura: OuraClient? = null,
+    private val garmin: GarminClient? = null,
+    private val garminWebhookToken: String? = null,
 ) {
     /** The clients this server has credentials for. A provider missing here is "not configured". */
     private val clients: Map<HealthProvider, CloudProviderClient> =
-        listOfNotNull<CloudProviderClient>(whoop, oura).associateBy { it.provider }
+        listOfNotNull<CloudProviderClient>(whoop, oura, garmin).associateBy { it.provider }
 
     private val logger = LoggerFactory.getLogger(WearableConnectService::class.java)
 
@@ -100,7 +104,14 @@ class WearableConnectService(
                 metrics = RING_METRICS,
                 connection = connected[HealthProvider.OURA]?.toDto(),
             ),
-            ProviderInfo(HealthProvider.GARMIN, ProviderKind.CLOUD, false, ProviderUnavailable.PLANNED, WATCH_METRICS),
+            ProviderInfo(
+                provider = HealthProvider.GARMIN,
+                kind = ProviderKind.CLOUD,
+                available = garmin != null,
+                unavailableReason = if (garmin == null) ProviderUnavailable.NOT_CONFIGURED else null,
+                metrics = GARMIN_METRICS,
+                connection = connected[HealthProvider.GARMIN]?.toDto(),
+            ),
             ProviderInfo(HealthProvider.FITBIT, ProviderKind.CLOUD, false, ProviderUnavailable.PLANNED, WATCH_METRICS),
             // Samsung Health writes into Health Connect, and that is how the app reads it;
             // the app shows it on Android phones only.
@@ -147,7 +158,7 @@ class WearableConnectService(
             throw ValidationException("state", "Bu ulanish boshqa hisob uchun boshlangan")
         }
         val tokens = try {
-            client.exchange(code)
+            client.exchange(code, state)
         } catch (e: ProviderUnauthorizedException) {
             throw ValidationException("code", "Ruxsat kodi qabul qilinmadi")
         }
@@ -207,13 +218,13 @@ class WearableConnectService(
 
     /**
      * One pull for one connection: refresh the token if it is about to lapse, fetch the
-     * window since the last sync, map, ingest. Two days of overlap on every run, because
-     * WHOOP rescores a night after the fact and the overwrite is the point.
+     * window since the last sync, map, ingest. Every run overlaps the last by the
+     * client's [CloudProviderClient.resyncOverlap].
      */
     suspend fun sync(record: ConnectionRecord): SyncResult {
         val client = clientFor(record.provider)
         val at = now()
-        val from = record.lastSyncAt?.minus(RESYNC_OVERLAP) ?: (at - FIRST_SYNC_WINDOW)
+        val from = record.lastSyncAt?.minus(client.resyncOverlap) ?: (at - FIRST_SYNC_WINDOW)
 
         val accessToken = try {
             freshAccessToken(record, client)
@@ -252,6 +263,34 @@ class WearableConnectService(
         runCatching { sync(record) }.onFailure { logger.warn("Webhook sync failed for {}", record.userId, it) }
     }
 
+    /**
+     * Garmin sent her data rather than waiting to be asked. Unknown users are ignored:
+     * a push can outlive the connection it was for.
+     */
+    suspend fun ingestPushed(provider: HealthProvider, externalUserId: String, samples: List<HealthSampleInput>) {
+        val record = connections.findByExternalUser(provider, externalUserId) ?: return
+        if (samples.isEmpty()) return
+        runCatching {
+            samples.chunked(PUSH_BATCH).forEach { wearables.ingest(record.userId, IngestSamplesRequest(it)) }
+            connections.markSynced(record.userId, provider, now())
+        }.onFailure { logger.warn("Pushed {} samples for {} were not taken: {}", provider, record.userId, it.message) }
+    }
+
+    /**
+     * She withdrew the consent on the provider's side. The row stays, marked as needing
+     * a reconnect, so the screen says what happened instead of the device vanishing.
+     */
+    suspend fun revokedByExternalUser(provider: HealthProvider, externalUserId: String) {
+        val record = connections.findByExternalUser(provider, externalUserId) ?: return
+        connections.markFailed(record.userId, provider, ConnectionStatus.EXPIRED, "revoked")
+    }
+
+    /** Whether [token] is the secret path segment Garmin's webhooks were registered with. */
+    fun isGarminWebhookToken(token: String): Boolean? {
+        val expected = garminWebhookToken ?: return null
+        return java.security.MessageDigest.isEqual(expected.toByteArray(), token.toByteArray())
+    }
+
     private suspend fun freshAccessToken(record: ConnectionRecord, client: CloudProviderClient): String {
         val current = runCatching { cipher.decrypt(record.accessTokenEnc) }.getOrNull()
         if (current != null && record.tokenExpiresAt - now() > REFRESH_MARGIN) return current
@@ -263,7 +302,7 @@ class WearableConnectService(
             record.provider,
             GrantedTokens(
                 accessTokenEnc = cipher.encrypt(tokens.accessToken),
-                // Oura's refresh tokens are single-use and come back new; WHOOP's may not.
+                // Oura's and Garmin's refresh tokens are single-use and come back new; WHOOP's may not.
                 refreshTokenEnc = (tokens.refreshToken ?: refreshToken).let(cipher::encrypt),
                 expiresAt = now() + tokens.expiresIn.seconds,
                 scopes = tokens.scope.split(' ').filter { it.isNotBlank() },
@@ -290,10 +329,11 @@ class WearableConnectService(
         private const val STATE_BYTES = 24
         private val STATE_TTL = 15.minutes
         private val FIRST_SYNC_WINDOW = 30.days
-        private val RESYNC_OVERLAP = 2.days
         private val REFRESH_MARGIN = 5.minutes
         private val MANUAL_SYNC_COOLDOWN = 3.minutes
         val SYNC_INTERVAL = 30.minutes
+        /** Under the ingest's own cap; a backfilled month can arrive in one post. */
+        private const val PUSH_BATCH = 1_000
 
         val WHOOP_METRICS = listOf(
             HealthMetric.RECOVERY, HealthMetric.STRAIN, HealthMetric.HRV, HealthMetric.RESTING_HEART_RATE,
@@ -311,6 +351,13 @@ class WearableConnectService(
         val RING_METRICS = listOf(
             HealthMetric.RECOVERY, HealthMetric.HRV, HealthMetric.RESTING_HEART_RATE, HealthMetric.SKIN_TEMPERATURE,
             HealthMetric.SLEEP_DURATION, HealthMetric.SLEEP_DEEP, HealthMetric.SLEEP_REM, HealthMetric.STEPS,
+        )
+        val GARMIN_METRICS = listOf(
+            HealthMetric.STEPS, HealthMetric.DISTANCE, HealthMetric.ACTIVE_ENERGY, HealthMetric.FLOORS,
+            HealthMetric.HEART_RATE, HealthMetric.RESTING_HEART_RATE, HealthMetric.HRV,
+            HealthMetric.SLEEP_DURATION, HealthMetric.SLEEP_DEEP, HealthMetric.SLEEP_REM, HealthMetric.SLEEP_LIGHT,
+            HealthMetric.SLEEP_AWAKE, HealthMetric.SLEEP_PERFORMANCE, HealthMetric.SPO2, HealthMetric.RESPIRATORY_RATE,
+            HealthMetric.WEIGHT, HealthMetric.BODY_FAT, HealthMetric.VO2_MAX,
         )
         val WATCH_METRICS = listOf(
             HealthMetric.STEPS, HealthMetric.HEART_RATE, HealthMetric.RESTING_HEART_RATE, HealthMetric.HRV,

@@ -1,5 +1,7 @@
 package uz.sadora.server.wearable
 
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.days
 import kotlin.time.Instant
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -18,7 +20,8 @@ interface CloudProviderClient {
 
     fun authorizeUrl(state: String): String
 
-    suspend fun exchange(code: String): OAuthTokens
+    /** [state] is the one [authorizeUrl] was built with; Garmin's PKCE verifier is made from it. */
+    suspend fun exchange(code: String, state: String): OAuthTokens
 
     suspend fun refresh(refreshToken: String): OAuthTokens
 
@@ -28,11 +31,17 @@ interface CloudProviderClient {
     /** Best effort: the vendor forgets the grant on its side too. */
     suspend fun revoke(accessToken: String)
 
+    /**
+     * How far behind the last sync each pull reaches back. Two days by default, because
+     * WHOOP and Oura rescore a night after the fact and the overwrite is the point.
+     */
+    val resyncOverlap: Duration get() = 2.days
+
     /** Everything between [from] and [to], already mapped to samples. */
     suspend fun pull(accessToken: String, from: Instant, to: Instant, externalUserId: String?): List<HealthSampleInput>
 }
 
-/** The token endpoint's answer. WHOOP and Oura both speak plain RFC 6749 here. */
+/** The token endpoint's answer. WHOOP, Oura and Garmin all speak plain RFC 6749 here. */
 @Serializable
 data class OAuthTokens(
     @SerialName("access_token") val accessToken: String,

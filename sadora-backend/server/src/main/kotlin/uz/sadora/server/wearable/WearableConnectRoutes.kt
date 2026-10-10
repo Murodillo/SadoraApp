@@ -25,6 +25,8 @@ import uz.sadora.server.api.requireUserId
 import uz.sadora.server.core.ValidationException
 import uz.sadora.server.plugins.RateLimits
 import uz.sadora.server.plugins.USER_AUTH
+import uz.sadora.server.wearable.garmin.GarminMapper
+import uz.sadora.server.wearable.garmin.GarminPush
 import uz.sadora.server.wearable.whoop.WhoopWebhookEvent
 
 /** Where the browser is sent after the provider's consent page: back into the app. */
@@ -81,7 +83,7 @@ fun Route.wearablePublicRoutes(service: WearableConnectService, job: WearableSyn
     rateLimit(RateLimits.WEARABLE) {
         // The browser only carries the code back to the app. Exchanging it here would
         // save the grant to whoever started the flow, not whoever is holding the phone.
-        listOf("whoop", "oura").forEach { provider ->
+        listOf("whoop", "oura", "garmin").forEach { provider ->
             get("/wearables/$provider/callback") {
                 val error = call.request.queryParameters["error"]
                 val code = call.request.queryParameters["code"]
@@ -113,6 +115,26 @@ fun Route.wearablePublicRoutes(service: WearableConnectService, job: WearableSyn
                 }
                 call.respond(Ack())
             }
+        }
+
+        // Garmin signs nothing; the secret is the last segment of the address it was given.
+        post("/wearables/garmin/webhook/{token}") {
+            when (service.isGarminWebhookToken(call.parameters["token"].orEmpty())) {
+                null -> return@post call.respond(HttpStatusCode.ServiceUnavailable, Ack(false))
+                false -> return@post call.respond(HttpStatusCode.Unauthorized, Ack(false))
+                true -> Unit
+            }
+            val push = GarminPush.parse(call.receiveText())
+                ?: return@post call.respond(HttpStatusCode.BadRequest, Ack(false))
+            // Acknowledge first: Garmin counts anything slower than half a minute as a failure.
+            job.syncInBackground {
+                GarminMapper.fromPush(push).forEach { (userId, samples) ->
+                    if (userId != null) service.ingestPushed(HealthProvider.GARMIN, userId, samples)
+                }
+                push.pingedUsers().forEach { service.syncByExternalUser(HealthProvider.GARMIN, it) }
+                push.revokedUsers().forEach { service.revokedByExternalUser(HealthProvider.GARMIN, it) }
+            }
+            call.respond(Ack())
         }
     }
 }

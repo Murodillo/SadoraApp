@@ -674,6 +674,13 @@ class ApiIntegrationTest {
         assertEquals(HttpStatusCode.BadRequest, client.get("/v1/wearables/whoop/callback?error=access_denied").status)
         assertEquals(HttpStatusCode.ServiceUnavailable, client.post("/v1/wearables/whoop/webhook") { setBody("{}") }.status)
 
+        // Garmin is the same until its keys are in: listed, not connectable, and its webhook shut.
+        val garmin = assertNotNull(providers.firstOrNull { it.provider == HealthProvider.GARMIN })
+        assertEquals(ProviderUnavailable.NOT_CONFIGURED, garmin.unavailableReason)
+        assertEquals(HttpStatusCode.ServiceUnavailable, client.post("/v1/wearables/garmin/connect") { auth(user.token) }.status)
+        assertEquals(HttpStatusCode.BadRequest, client.get("/v1/wearables/garmin/callback?error=access_denied").status)
+        assertEquals(HttpStatusCode.ServiceUnavailable, client.post("/v1/wearables/garmin/webhook/guess") { setBody("{}") }.status)
+
         assertTrue(get<List<WearableConnection>>("/v1/wearables/connections", user.token).isEmpty())
     }
 
@@ -3129,6 +3136,70 @@ class ApiIntegrationTest {
         }
         assertEquals(null, component.connectionRepository.find(starter, HealthProvider.WHOOP))
         assertEquals(null, component.connectionRepository.find(other, HealthProvider.WHOOP))
+    }
+
+    /**
+     * Garmin sends rather than waits to be asked. What it posts for a user it names must
+     * land in her account with every metric mapped, and a consent withdrawn on Garmin's
+     * side must show as a connection to renew rather than keep looking alive.
+     */
+    @Test
+    fun `a Garmin push lands in the account its user id belongs to, and a deregistration ends it`() = api {
+        val user = signUp().also { onboard(it) }
+        val userId = Uuid.parse(user.userId)
+        val garminId = "g-${Uuid.random()}"
+        val garmin = uz.sadora.server.config.GarminConfig("id", "secret", "http://localhost/cb", "http://127.0.0.1:1", "http://127.0.0.1:1", "http://127.0.0.1:1", "hook")
+        val service = uz.sadora.server.wearable.WearableConnectService(
+            connections = component.connectionRepository,
+            wearables = component.wearableService,
+            access = component.healthAccess,
+            audit = component.auditService,
+            cipher = uz.sadora.server.core.TokenCipher.from(null, fallbackSecret = "x".repeat(40)),
+            whoopConfig = uz.sadora.server.config.WhoopConfig(null, null, "", ""),
+            whoop = null,
+            garmin = uz.sadora.server.wearable.garmin.GarminClient(io.ktor.client.HttpClient(), garmin),
+            garminWebhookToken = garmin.webhookToken,
+        )
+        assertEquals(true, service.isGarminWebhookToken("hook"))
+        assertEquals(false, service.isGarminWebhookToken("guess"))
+        component.connectionRepository.save(
+            userId,
+            HealthProvider.GARMIN,
+            uz.sadora.server.wearable.GrantedTokens("enc", null, now() + 10.minutes, emptyList(), externalUserId = garminId),
+        )
+
+        val today = now().toString().take(10)
+        val woke = now().epochSeconds - 3_600
+        val push = uz.sadora.server.wearable.garmin.GarminPush.parse(
+            """
+            {"dailies":[{"userId":"$garminId","calendarDate":"$today","steps":4200,"distanceInMeters":3000.0,"activeKilocalories":180,
+                         "floorsClimbed":4,"restingHeartRateInBeatsPerMinute":57,"averageHeartRateInBeatsPerMinute":71}],
+             "sleeps":[{"userId":"$garminId","calendarDate":"$today","startTimeInSeconds":${woke - 28_800},"durationInSeconds":27000,
+                        "deepSleepDurationInSeconds":5400,"lightSleepDurationInSeconds":15600,"remSleepInSeconds":6000,
+                        "awakeDurationInSeconds":1800,"overallSleepScore":{"value":84}}],
+             "hrv":[{"userId":"$garminId","calendarDate":"$today","lastNightAvg":52}],
+             "pulseox":[{"userId":"$garminId","calendarDate":"$today","timeOffsetSpo2Values":{"0":96}}],
+             "allDayRespiration":[{"userId":"$garminId","startTimeInSeconds":${woke - 7_200},"durationInSeconds":900,"timeOffsetEpochToBreaths":{"0":14.0}}],
+             "bodyComps":[{"userId":"$garminId","measurementTimeInSeconds":$woke,"weightInGrams":61500,"bodyFatInPercent":24.5}],
+             "userMetrics":[{"userId":"$garminId","calendarDate":"$today","vo2Max":38.0}]}
+            """,
+        )!!
+        val samples = uz.sadora.server.wearable.garmin.GarminMapper.fromPush(push).getValue(garminId)
+
+        // Straight through the ingest first: every name the mapper uses has a mapping row.
+        val result = component.wearableService.ingest(userId, uz.sadora.contract.IngestSamplesRequest(samples))
+        assertTrue(result.unmapped.isEmpty(), "unmapped: ${result.unmapped}")
+        assertEquals(samples.size, result.accepted)
+
+        service.ingestPushed(HealthProvider.GARMIN, garminId, samples)
+        service.ingestPushed(HealthProvider.GARMIN, "nobody", samples)
+        val synced = assertNotNull(component.connectionRepository.find(userId, HealthProvider.GARMIN))
+        assertNotNull(synced.lastSyncAt)
+
+        service.revokedByExternalUser(HealthProvider.GARMIN, garminId)
+        val revoked = assertNotNull(component.connectionRepository.find(userId, HealthProvider.GARMIN))
+        assertEquals(uz.sadora.contract.ConnectionStatus.EXPIRED, revoked.status)
+        assertEquals("revoked", revoked.lastError)
     }
 
     // ---------------------------------------------------------------- doctors

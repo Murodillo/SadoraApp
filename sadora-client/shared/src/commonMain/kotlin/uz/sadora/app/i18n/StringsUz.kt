@@ -1841,9 +1841,9 @@ object StringsUz : Strings {
                 listOf("Uyqu ekrani", "Bugun — salomatlik ko'rsatkichi", "Balans", "Sikl — hayz kunlari va tana harorati", "Tahlillar")
             else -> listOf("Uyqu ekrani", "Bugun — salomatlik ko'rsatkichi", "Balans", "Tahlillar")
         }
-        override val openBrowserNote = "Brauzerda WHOOP sahifasi ochiladi. Ruxsat bergach, ilovaga qaytasiz — birinchi yuklab olish 30 kunlik va bir necha daqiqa oladi."
-        override val returnedOk = "WHOOP ulandi — ma'lumotlar kelmoqda"
-        override val returnedError = "WHOOP ulanmadi. Qaytadan urinib ko'ring."
+        override val openBrowserNote = "Brauzerda qurilmaning o'z sahifasi ochiladi. Ruxsat bergach, ilovaga qaytasiz — birinchi yuklab olish 30 kunlik va bir necha daqiqa oladi."
+        override val returnedOk = "Ulandi — ma'lumotlar kelmoqda"
+        override val returnedError = "Ulanmadi. Qaytadan urinib ko'ring."
         override val noStepsNote = "WHOOP qadam sanamaydi — buning o'rniga yuklama (strain) ko'rsatiladi."
         override val manualTitle = "Soat yo'qmi?"
         override val manualBody = "Uyquni Uyqu ekranidan qo'lda kiriting — Balans va tahlillar shuni ishlatadi."

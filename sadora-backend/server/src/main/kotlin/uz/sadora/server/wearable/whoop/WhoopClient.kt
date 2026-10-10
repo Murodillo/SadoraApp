@@ -54,7 +54,7 @@ class WhoopClient(
         parameters.append("state", state)
     }.buildString()
 
-    override suspend fun exchange(code: String): WhoopTokens = token(
+    override suspend fun exchange(code: String, state: String): WhoopTokens = token(
         Parameters.build {
             append("grant_type", "authorization_code")
             append("code", code)

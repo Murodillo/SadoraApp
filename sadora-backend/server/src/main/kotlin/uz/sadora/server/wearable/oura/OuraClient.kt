@@ -51,7 +51,7 @@ class OuraClient(
         parameters.append("state", state)
     }.buildString()
 
-    override suspend fun exchange(code: String): OAuthTokens = token(
+    override suspend fun exchange(code: String, state: String): OAuthTokens = token(
         Parameters.build {
             append("grant_type", "authorization_code")
             append("code", code)

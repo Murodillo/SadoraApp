@@ -1839,9 +1839,9 @@ object StringsEn : Strings {
                 listOf("Sleep screen", "Today — health score", "Balance", "Cycle — period days and body temperature", "Insights")
             else -> listOf("Sleep screen", "Today — health score", "Balance", "Insights")
         }
-        override val openBrowserNote = "WHOOP's page opens in the browser. Once you allow access you return to the app — the first pull covers 30 days and takes a few minutes."
-        override val returnedOk = "WHOOP connected — data is on its way"
-        override val returnedError = "WHOOP did not connect. Try again."
+        override val openBrowserNote = "The device's own page opens in the browser. Once you allow access you return to the app — the first pull covers 30 days and takes a few minutes."
+        override val returnedOk = "Connected — data is on its way"
+        override val returnedError = "It did not connect. Try again."
         override val noStepsNote = "WHOOP doesn't count steps — strain is shown instead."
         override val manualTitle = "No watch?"
         override val manualBody = "Enter sleep by hand on the Sleep screen — Balance and Insights will use it."

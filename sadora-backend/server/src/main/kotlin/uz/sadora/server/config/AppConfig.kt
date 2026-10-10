@@ -175,6 +175,15 @@ data class AppConfig(
                         authorizeUrl = env("OURA_AUTHORIZE_URL", "https://cloud.ouraring.com/oauth/authorize"),
                         apiBaseUrl = env("OURA_API_BASE_URL", "https://api.ouraring.com"),
                     ),
+                    garmin = GarminConfig(
+                        clientId = envOrNull("GARMIN_CLIENT_ID"),
+                        clientSecret = envOrNull("GARMIN_CLIENT_SECRET"),
+                        redirectUri = env("GARMIN_REDIRECT_URI", "$publicBaseUrl/v1/wearables/garmin/callback"),
+                        authorizeUrl = env("GARMIN_AUTHORIZE_URL", "https://connect.garmin.com/oauth2Confirm"),
+                        tokenUrl = env("GARMIN_TOKEN_URL", "https://connectapi.garmin.com/di-oauth2-service/oauth/token"),
+                        apiBaseUrl = env("GARMIN_API_BASE_URL", "https://apis.garmin.com"),
+                        webhookToken = envOrNull("GARMIN_WEBHOOK_TOKEN"),
+                    ),
                 ),
                 accountErasureGracePeriod = env("ACCOUNT_ERASURE_GRACE_DAYS", "30").toInt().days,
                 adminRequireTotp = env("ADMIN_REQUIRE_TOTP", (environment != Environment.DEV).toString()).toBoolean(),
@@ -209,7 +218,7 @@ data class AppConfig(
             require(otp.eskiz.isConfigured) { "ESKIZ_EMAIL and ESKIZ_PASSWORD must be set in production." }
             require("{code}" in otp.smsText) { "OTP_SMS_TEXT must contain {code}." }
             require(publicBaseUrl.startsWith("https://")) { "PUBLIC_BASE_URL must be an https URL in production." }
-            if (wearables.whoop.isConfigured || wearables.oura.isConfigured) {
+            if (wearables.whoop.isConfigured || wearables.oura.isConfigured || wearables.garmin.isConfigured) {
                 require(wearables.tokenKey != null) { "WEARABLE_TOKEN_KEY must be set when a cloud wearable is configured." }
             }
         }
@@ -390,6 +399,7 @@ data class WearableConfig(
     val tokenKey: String?,
     val whoop: WhoopConfig,
     val oura: OuraConfig = OuraConfig(null, null, "", "", ""),
+    val garmin: GarminConfig = GarminConfig(null, null, "", "", "", "", null),
 )
 
 /**
@@ -415,6 +425,26 @@ data class OuraConfig(
     val redirectUri: String,
     val authorizeUrl: String,
     val apiBaseUrl: String,
+) {
+    val isConfigured: Boolean get() = clientId != null && clientSecret != null
+}
+
+/**
+ * Garmin's Connect Developer Program app, on the same terms as [WhoopConfig].
+ *
+ * Garmin does not sign what it posts, so the webhook is registered in its portal under a
+ * path that ends in [webhookToken], and a post to any other path is refused. Without the
+ * token she can still connect, and her data is pulled on the schedule instead of pushed.
+ */
+data class GarminConfig(
+    val clientId: String?,
+    val clientSecret: String?,
+    /** Must match a redirect URI registered on the Garmin app, character for character. */
+    val redirectUri: String,
+    val authorizeUrl: String,
+    val tokenUrl: String,
+    val apiBaseUrl: String,
+    val webhookToken: String?,
 ) {
     val isConfigured: Boolean get() = clientId != null && clientSecret != null
 }
