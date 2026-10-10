@@ -71,7 +71,12 @@ interface PremiumStrings {
     /** "300 gul = 30 kun · sizda 1 250 gul" — what the coin route costs, and what she has. */
     fun coinsFor(cost: String, days: Int, balance: String): String
     val faqTitle: String
-    val faq: List<Pair<String, String>>
+    /**
+     * Questions and answers. [appStore] is true on iPhone, where the answer about paying
+     * may name only the App Store (App Review 3.1.1); on Android it names Google Play,
+     * Payme and Click.
+     */
+    fun faq(appStore: Boolean): List<Pair<String, String>>
     val freeStays: String
 }
 

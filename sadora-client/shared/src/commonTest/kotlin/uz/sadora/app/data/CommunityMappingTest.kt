@@ -135,7 +135,7 @@ class CommunityMappingTest {
     fun `the same post ages in every language`() {
         val at = TestNow - 3.hours
         assertEquals("3 soat oldin", StringsUz.dates.ago(at, TestNow))
-        assertEquals("3 ч. назад", StringsRu.dates.ago(at, TestNow))
+        assertEquals("3 ч назад", StringsRu.dates.ago(at, TestNow))
         assertEquals("3 h ago", StringsEn.dates.ago(at, TestNow))
     }
 

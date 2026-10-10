@@ -69,7 +69,7 @@ object PregnancyWeeksEn : PregnancyWeekStrings {
         // 7
         "The brain is growing very fast. Hands and feet look like tiny paddles, and the kidneys are forming.",
         // 8
-        "Fingers and toes are forming, still webbed for now. The embryo has started to move, though you cannot feel it yet.",
+        "Fingers and toes are forming, still webbed for now. The embryo has started to move, though you can't feel it yet.",
         // 9
         "Every major organ has begun to form. Eyelids cover the eyes, and the ears are taking shape.",
         // 10
@@ -121,7 +121,7 @@ object PregnancyWeeksEn : PregnancyWeekStrings {
         // 33
         "The bones are hardening — only the skull stays soft for birth. Protective antibodies are passing to your baby from you.",
         // 34
-        "The central nervous system is maturing. The lungs keep maturing but are not fully ready yet.",
+        "The central nervous system is maturing. The lungs keep maturing but aren't fully ready yet.",
         // 35
         "The kidneys are fully developed and the liver is maturing. Your baby is gaining weight quickly.",
         // 36
@@ -138,7 +138,7 @@ object PregnancyWeeksEn : PregnancyWeekStrings {
 
     override val mother = listOf(
         // 4
-        "Your period is late and a test may be positive. Doctors usually recommend 400 mcg of folic acid a day — if you have not started it yet, talk to your doctor.",
+        "Your period is late and a test may be positive. Doctors usually recommend 400 mcg of folic acid a day — if you haven't started it yet, talk to your doctor.",
         // 5
         "Tiredness, tender breasts and nausea may begin. They are common signs of the hormonal changes.",
         // 6
@@ -160,7 +160,7 @@ object PregnancyWeeksEn : PregnancyWeekStrings {
         // 14
         "The second trimester — for many, the easiest stretch. Your appetite may grow.",
         // 15
-        "Small nosebleeds or bleeding gums can happen as your blood volume rises. Tell your doctor if there is a lot.",
+        "Small nosebleeds or bleeding gums can happen as your blood volume rises. Tell your doctor if there's a lot.",
         // 16
         "Some women, especially in a second pregnancy, start to feel the first gentle flutters.",
         // 17
@@ -170,7 +170,7 @@ object PregnancyWeeksEn : PregnancyWeekStrings {
         // 19
         "Sharp pains at the sides of the bump can happen as the ligaments of the uterus stretch.",
         // 20
-        "The top of the uterus has reached your navel. Movements are easier to feel.",
+        "The top of the uterus has reached your navel. Movements are easier to feel. If you bleed, have strong tummy pain or leak fluid, see a doctor straight away.",
         // 21
         "Your baby's movements are more regular now. Notice when they are active.",
         // 22
@@ -186,13 +186,14 @@ object PregnancyWeeksEn : PregnancyWeekStrings {
         // 27
         "The second trimester is over. Leg cramps can happen.",
         // 28
-        "The third trimester. Notice your baby's movements every day. If you are Rh-negative, your doctor will talk about the injection.",
+        "The third trimester. Notice your baby's movements every day. If you're Rh-negative, your doctor will talk about the injection.",
         // 29
         "Shortness of breath and constipation are common. Fibre and water help.",
         // 30
-        "Tiredness may come back. Practice contractions (Braxton Hicks) — painless, irregular tightenings — can happen.",
+        "Tiredness may come back. Practice contractions (Braxton Hicks) — painless, irregular tightenings — can happen. " +
+            "If they become regular or painful, or you leak fluid or bleed, it may be early labour: contact your maternity unit straight away.",
         // 31
-        "A little early milk (colostrum) may leak from your breasts — that is normal.",
+        "A little early milk (colostrum) may leak from your breasts — that's normal.",
         // 32
         "Needing to pee often is back. Your visits will get more frequent.",
         // 33
@@ -202,14 +203,15 @@ object PregnancyWeeksEn : PregnancyWeekStrings {
         // 35
         "When your baby drops, breathing gets easier but pressure on the pelvis grows. Some clinics test for group B strep (GBS) at 36–37 weeks.",
         // 36
-        "Visits may now be weekly. If movements become fewer, do not wait — tell your doctor.",
+        "Visits may now be weekly. If movements become fewer, don't wait — tell your doctor.",
         // 37
-        "Learn the signs of labour: regular contractions, waters breaking, a bloody show.",
+        "Learn the signs of labour: regular contractions, waters breaking, a show (mucus with a little blood). " +
+            "Heavy bleeding isn't a show — go to the maternity unit straight away.",
         // 38
         "The urge to get the home ready may grow. Remember to rest too.",
         // 39
         "If contractions become regular or your waters break, do what your doctor told you to.",
         // 40
-        "If labour has not started, your doctor will talk through the next steps. Keep noticing the movements.",
+        "If labour hasn't started, your doctor will talk through the next steps. Keep noticing the movements.",
     )
 }

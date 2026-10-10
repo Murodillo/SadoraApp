@@ -70,12 +70,17 @@ class DeviceHealthSync(
         prefs.load().takeIf { it.userId == userId } ?: HealthSyncState(userId = userId)
 
     suspend fun enable(userId: String) = mutex.withLock {
-        prefs.save(HealthSyncState(userId = userId, enabled = true, lastSyncAt = null))
+        prefs.save(HealthSyncState(userId = userId, enabled = true, lastSyncAt = null, gatePassed = state(userId).gatePassed))
+    }
+
+    /** She answered the gate before the app; it is not asked again on this phone for her. */
+    suspend fun passGate(userId: String) = mutex.withLock {
+        prefs.save(state(userId).copy(gatePassed = true))
     }
 
     /** Stops reading. What was sent stays on the server, as the disconnect dialog says. */
     suspend fun disable(userId: String) = mutex.withLock {
-        prefs.save(HealthSyncState(userId = userId, enabled = false, lastSyncAt = null))
+        prefs.save(HealthSyncState(userId = userId, enabled = false, lastSyncAt = null, gatePassed = state(userId).gatePassed))
         platform.revokeAccess()
     }
 

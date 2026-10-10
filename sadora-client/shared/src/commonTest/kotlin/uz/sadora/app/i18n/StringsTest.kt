@@ -202,7 +202,7 @@ class StringsTest {
                     journalTitle, journalPrivate, journalLabel, journalPrompt, journalEmpty,
                     journalEmptyBody, journalDeleteTitle, journalDeleteBody, journalDeleteAction,
                     sourcesTitle, sourcesConnected(2), lastSample("x"), noSampleYet, sourcesEmpty,
-                    sourcesEmptyBody, sourcesNote, connected, notConnected, samples("12"),
+                    sourcesEmptyBody, sourcesNote, connected, notConnected, samples(12),
                     sleepManualBody, sleepHours, sleepMinutesLabel, sleepSaved, bodySignalsTitle,
                     bodySignalsNote, vsLastWeek("+3"), strain, recovery,
                 ),
@@ -446,14 +446,14 @@ class StringsTest {
                     benefitDevicesBody, compareTitle, seePlans, manage, buyWithCoins("Gul"), faqTitle, freeStays,
                 ),
             )
-            faq.forEach { (question, answer) -> add(question); add(answer) }
+            (faq(appStore = true) + faq(appStore = false)).forEach { (question, answer) -> add(question); add(answer) }
         }
         with(t.healthGate) {
             addAll(kinds)
             addAll(
                 listOf(
                     title("Health Connect"), body("Health Connect"), privacy, allow, partial(12, 40), partialBody,
-                    openSettings, install("Health Connect"), installBody("Health Connect"), installButton,
+                    continueWith, skip, openSettings, install("Health Connect"), installBody("Health Connect"), installButton,
                     importing, importingBody, importPercent(40), importFailed, retry, later,
                 ),
             )
@@ -490,14 +490,15 @@ class StringsTest {
                     fertileTodayTitle, fertileTodayBody("x"), fertileInDays(1), fertileInDays(5),
                     fertileWindow("a", "b", "c"), fertilePassedTitle, fertilePassedBody("x"), periodLate(3),
                     periodLateBody, periodLateCycleBody, pregnantButton, periodStartedButton, dueFromPeriod("x"),
-                    birthPromptTitle, birthPromptBody, birthPromptButton, cycleBackTitle, cycleBackBody,
+                    birthPromptTitle, birthPromptBody, birthPromptButton, lossButton, lossTitle, lossBody, lossConfirm,
+                    lossLater, cycleBackTitle, cycleBackBody,
                     cycleBackButton, flagsTitle, shortCycles(19), longCycles(40), irregularCycles(9),
                     longPeriods(9), bleedingAfterMenopause, flagsNote, menopauseBleedingTitle,
                     menopauseBleedingBody, menopauseBleedingButton, feedingTitle, feedingIntro,
                     lastFeed("1h", "x"), feedsToday(3), noFeedsToday, startFeed, stopFeed, feedRunning("x"),
                     bottleTitle, millilitres, saveBottle, nothingToday, screenTitle,
                     screenCardTitle, screenCardBody, lastScreen("x", 9), screenIntro, screenSubmit,
-                    screenScore(9), screenLow, screenPossible, screenLikely, screenSelfHarm, askDoctor,
+                    screenScore(9), screenLow, screenPossible, screenLikely, screenSelfHarm, call103, askDoctor,
                     screenSource, answeredOf(3, 10), kicksTitle, kicksCardBody, kicksIntro, kickTap,
                     kicksCount(3, 10), kicksFinish, kicksResult(10, "40 min"), kicksSlow, previousCounts,
                     contractionsTitle, contractionsCardBody, contractionsIntro, contractionStart,
@@ -773,5 +774,79 @@ class StringsTest {
         assertEquals("Осталось 23 ч", StringsRu.doctors.timeLeft(23.hours))
         assertEquals("1 hour left", StringsEn.doctors.timeLeft(61.minutes))
         assertEquals("5 minutes left", StringsEn.doctors.timeLeft(5.minutes))
+    }
+
+    /** "1 days" read wrong on twenty screens; the helper picks the form, the strings use it. */
+    @Test
+    fun `an English count of one is singular`() {
+        assertEquals("day", en(1, "day", "days"))
+        assertEquals("days", en(0, "day", "days"))
+        assertEquals("days", en(2, "day", "days"))
+        assertEquals("1 day", StringsEn.common.days(1))
+        assertEquals("2 days", StringsEn.common.days(2))
+        assertEquals("1 day", StringsEn.rewards.days(1))
+        assertEquals("Next period in 1 day", StringsEn.journey.daysToNextPeriod(1))
+        assertEquals("Opened 1 time", StringsEn.share.viewedTimes(1))
+        assertEquals("1 kun", StringsUz.common.days(1))
+    }
+
+    /** Russian never abbreviates a count to "дн." — 1 день, 2 дня, 5 дней, 11 дней. */
+    @Test
+    fun `a Russian count of days takes its plural form`() {
+        assertEquals("1 день", StringsRu.common.days(1))
+        assertEquals("3 дня", StringsRu.common.days(3))
+        assertEquals("5 дней", StringsRu.common.days(5))
+        assertEquals("11 дней", StringsRu.common.days(11))
+        assertEquals("21 день", StringsRu.rewards.days(21))
+        languages.forEach { t ->
+            listOf(t.common.days(2), t.journey.windowDays(7), t.modules.lastDays(30), t.share.days(3))
+                .forEach { assertTrue("дн." !in it, "abbreviated count: $it") }
+        }
+    }
+
+    /** The bleeding category must say bleeding: "Discharge" alone hid it. */
+    @Test
+    fun `the bleeding category names blood in every language`() {
+        assertTrue("Qon" in StringsUz.journey.categoryName(SymptomCategory.BLEEDING))
+        assertTrue("Кровотечение" in StringsRu.journey.categoryName(SymptomCategory.BLEEDING))
+        assertTrue("Bleeding" in StringsEn.journey.categoryName(SymptomCategory.BLEEDING))
+    }
+
+    /** "Any time" told her the dose could be taken whenever; it means food doesn't matter. */
+    @Test
+    fun `a dose that ignores food says so rather than any time`() {
+        assertEquals("Ovqatdan qat'i nazar", StringsUz.modules.doseCaption(null, FoodRelation.ANY))
+        assertEquals("Независимо от еды", StringsRu.modules.doseCaption(null, FoodRelation.ANY))
+        assertEquals("With or without food", StringsEn.modules.doseCaption(null, FoodRelation.ANY))
+    }
+
+    /** App Review 3.1.1: on iPhone the paying answer names the App Store and nothing else. */
+    @Test
+    fun `the paying answer on iPhone names only the App Store`() {
+        languages.forEach { t ->
+            val ios = t.premium.faq(appStore = true).joinToString { it.second }
+            val android = t.premium.faq(appStore = false).joinToString { it.second }
+            assertTrue("App Store" in ios)
+            assertTrue("Payme" !in ios && "Click" !in ios && "Google Play" !in ios, ios)
+            assertTrue("Google Play" in android && "Payme" in android)
+        }
+    }
+
+    /**
+     * The glossary, held: words the copy review retired. Only fixed keys are checked —
+     * the string objects are mostly functions, so a full sweep is not possible here.
+     */
+    @Test
+    fun `retired words stay retired`() {
+        val forbidden = listOf("Tadbir", "Play Market", "Ortga", "Sessiya", "Prognoz", "Jurnal", "Разум", "периодов", "гул")
+        languages.forEach { t ->
+            val sample = listOf(
+                t.tabs.mind, t.onboarding.back, t.common.back, t.errors.sessionExpired, t.today.notEnoughForPrediction,
+                t.today.journal, t.mind.journal, t.modules.journalCardTitle, t.journey.appointmentsTitle,
+                t.journey.addAppointment, t.devices.healthConnectMissing, t.devices.periodsImported(2),
+                t.shop.notEnough, t.rewards.coins("5"), t.community.badgesTitle,
+            )
+            sample.forEach { text -> forbidden.forEach { assertTrue(it !in text, "«$it» in: $text") } }
+        }
     }
 }

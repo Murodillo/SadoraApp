@@ -5,7 +5,7 @@ import uz.sadora.contract.PartnerMessageKind
 import uz.sadora.contract.PartnerRelation
 
 object PartnerRu : PartnerStrings {
-    override val title = "Мой близкий"
+    override val title = "Yaqinim"
     override val profileRowNote = "Делитесь своим состоянием с мужем или близким человеком"
     override val joinEntry = "Меня пригласил близкий"
 
@@ -26,11 +26,11 @@ object PartnerRu : PartnerStrings {
     override val creating = "Создаём…"
     override val codeTitle = "Отправьте этот код близкому"
     override val codeSteps =
-        "Он(а) устанавливает Sadora, нажимает «Меня пригласил близкий» и вводит код. Затем вы даёте разрешение."
+        "Он(а) устанавливает SADORA, нажимает «Меня пригласил близкий» и вводит код. Затем вы даёте разрешение."
     override fun codeExpires(date: String) = "Код действует до $date"
     override val shareCode = "Отправить код"
     override fun shareMessage(code: String, url: String?) =
-        "Привет! Хочу делиться с тобой своим состоянием в приложении Sadora. Установи приложение, " +
+        "Привет! Хочу делиться с тобой своим состоянием в приложении SADORA. Установи приложение, " +
             "нажми «Меня пригласил близкий» и введи код: $code" + (url?.let { "\n$it" } ?: "")
     override val inviteOut = "Приглашение отправлено"
     override fun inviteOutBody(date: String) =
@@ -51,9 +51,9 @@ object PartnerRu : PartnerStrings {
     override val permFertile = "Фертильные дни"
     override val permFertileNote = "Овуляция и фертильное окно"
     override val permMood = "Настроение и энергия"
-    override val permMoodNote = "Настроение, которое вы отметили сегодня"
+    override val permMoodNote = "Настроение и энергия, которые вы отметили сегодня"
     override val permSymptoms = "Симптомы"
-    override val permSymptomsNote = "Названия сегодняшних симптомов"
+    override val permSymptomsNote = "Названия всех симптомов, отмеченных сегодня, — включая интимные"
     override val permPregnancy = "Беременность"
     override val permPregnancyNote = "Неделя и дата родов, потом возраст малыша"
     override val permAppointments = "Визиты к врачу"
@@ -73,7 +73,7 @@ object PartnerRu : PartnerStrings {
     override val disconnect = "Отключить"
     override val disconnectConfirmTitle = "Отключить близкого?"
     override fun disconnectConfirmBody(name: String) =
-        "$name больше не увидит ваше состояние. Позже можно подключить снова новым кодом."
+        "$name больше не увидит ваше состояние. Уведомление об этом не придёт. Позже можно подключить снова новым кодом."
     override val disconnected = "Отключено"
     override val approved = "Разрешено"
     override val followingTitle = "За кем я слежу"
@@ -98,7 +98,7 @@ object PartnerRu : PartnerStrings {
     override fun periodIn(days: Int) = when {
         days <= 0 -> "Месячные ожидаются сегодня"
         days == 1 -> "Месячные ожидаются завтра"
-        else -> "До месячных $days дн."
+        else -> "До месячных $days ${ru(days, "день", "дня", "дней")}"
     }
     override fun periodAround(date: String) = "Примерно $date"
     override fun phaseTitle(phase: CyclePhase) = when (phase) {
@@ -143,7 +143,8 @@ object PartnerRu : PartnerStrings {
     override val energyLabel = "Энергия"
     override val symptomsLabel = "Что она чувствует сегодня"
     override fun pregnancyWeek(week: Int) = "$week-я неделя беременности"
-    override fun daysToGo(days: Int) = if (days <= 0) "Дата родов наступила" else "До родов $days дн."
+    override fun daysToGo(days: Int) =
+        if (days <= 0) "Предполагаемая дата родов наступила" else "До предполагаемой даты родов $days ${ru(days, "день", "дня", "дней")}"
     override fun babySize(fruit: String) = "Малыш сейчас размером с $fruit"
     override fun pregnancyTips(week: Int) = when {
         week <= 13 -> listOf(
@@ -163,12 +164,18 @@ object PartnerRu : PartnerStrings {
             "Заранее узнайте дорогу до роддома",
         )
     }
-    override fun babyAge(days: Int) = if (days < 14) "Малышу $days дн." else "Малышу ${days / 7} нед."
+    override fun babyAge(days: Int) = if (days < 14) {
+        "Малышу $days ${ru(days, "день", "дня", "дней")}"
+    } else {
+        val weeks = days / 7
+        "Малышу $weeks ${ru(weeks, "неделя", "недели", "недель")}"
+    }
     override val postpartumTips = listOf(
         "Вставайте к малышу ночью по очереди — ей нужен сон",
         "Возьмите на себя еду и домашние дела",
         "Если ей грустно, выслушайте и не оставляйте одну",
         "Ограничьте гостей — восстановлению нужно время",
+        "При сильном кровотечении, температуре или если она говорит о том, чтобы причинить себе вред, — сразу к врачу или звоните 103",
     )
     override val menopauseTips = listOf(
         "Держите в комнате прохладу — приливы переносятся легче",
@@ -201,7 +208,7 @@ object PartnerRu : PartnerStrings {
 
     override val labourButton = "Сообщить близкому: начались роды"
     override val labourConfirmTitle = "Отправить сообщение близкому?"
-    override val labourConfirmBody = "Он(а) сразу получит уведомление «Начались роды!»."
+    override val labourConfirmBody = "Он(а) сразу получит уведомление «Начались роды!». Это не вызов скорой — если нужно, звоните 103."
     override val labourSend = "Отправить"
     override val labourSent = "Сообщение отправлено"
 
@@ -232,24 +239,25 @@ object PartnerRu : PartnerStrings {
 
     override val webTitle = "Ссылка для тех, у кого нет приложения"
     override val webBody =
-        "Близкий человек без приложения увидит ваше состояние в браузере. Ссылка работает несколько дней, её можно отозвать в любой момент."
+        "Близкий человек без приложения увидит ваше состояние в браузере. Открыть ссылку может любой, у кого она есть, — отправляйте только тому, кому доверяете. " +
+            "Ссылка работает выбранное число дней, её можно отозвать в любой момент."
     override val webShows = "Ссылка показывает:"
     override val webCreate = "Создать ссылку"
     override fun webExpires(date: String) = "Работает до $date"
-    override fun webViews(count: Int) = "Открыта раз: $count"
+    override fun webViews(count: Int) = "Открыта $count ${ru(count, "раз", "раза", "раз")}"
     override val webNever = "Ещё не открывали"
     override val webShare = "Отправить ссылку"
     override val webRevoke = "Отозвать"
     override val webNew = "Новая ссылка"
-    override fun webShareMessage(url: String) = "Моё состояние можно посмотреть по этой ссылке (Sadora):\n$url"
+    override fun webShareMessage(url: String) = "Моё состояние можно посмотреть по этой ссылке (SADORA):\n$url"
     override val webRevoked = "Ссылка отозвана"
-    override fun webDays(days: Int) = "$days дн."
+    override fun webDays(days: Int) = "$days ${ru(days, "день", "дня", "дней")}"
     override val webOutBody = "Чтобы показать ссылку снова, создайте новую — старая перестанет работать."
 
     override val askPartner = "Попросить близкого 💝"
     override val askTitle = "Попросить близкого"
-    override val askBodyPremium = "Близкому придёт уведомление. Когда он оплатит, Premium откроется у вас автоматически."
-    override val askBodyConsultation = "Близкому придёт уведомление. Когда он оплатит, чат с врачом откроется у вас автоматически."
+    override val askBodyPremium = "Близкому человеку придёт уведомление. Когда он(а) оплатит, Premium откроется у вас автоматически. Разовый платёж — без автопродления."
+    override val askBodyConsultation = "Близкому человеку придёт уведомление. Когда он(а) оплатит, консультация откроется у вас автоматически. Разовый платёж."
     override val askPeriod = "Срок"
     override fun period(year: Boolean) = if (year) "1 год" else "1 месяц"
     override val askNoteHint = "Короткая записка (необязательно)"
@@ -260,7 +268,7 @@ object PartnerRu : PartnerStrings {
     override val shareHint = "Ссылку можно отправить и другому близкому. Он сможет оплатить через Payme или Click без приложения."
     override val shareLink = "Поделиться ссылкой"
     override fun shareRequestMessage(what: String, url: String) =
-        "Здравствуйте! Хочу $what в Sadora — поможете? 💝\n$url"
+        "Привет! Хочу $what в SADORA — подаришь? 💝\n$url"
     override fun requestStatus(status: uz.sadora.contract.PaymentRequestStatus) = when (status) {
         uz.sadora.contract.PaymentRequestStatus.OPEN -> "Ждём ответа"
         uz.sadora.contract.PaymentRequestStatus.PAID -> "Оплачено 💝"
@@ -270,8 +278,8 @@ object PartnerRu : PartnerStrings {
     override val cancelRequest = "Отменить просьбу"
     override val requestCancelled = "Просьба отменена"
 
-    override fun incomingTitle(name: String) = "$name просит вас о помощи 💝"
-    override val incomingBody = "После оплаты всё откроется у неё автоматически."
+    override fun incomingTitle(name: String) = "$name просит у вас подарок 💝"
+    override val incomingBody = "Разовый платёж, без автопродления. После оплаты подарок сразу откроется у неё."
     override fun giveGift(price: String) = if (price.isBlank()) "Подарить" else "Подарить · $price"
     override fun payWith(provider: String) = "Оплатить через $provider"
     override val payWaiting = "Ждём оплату…"

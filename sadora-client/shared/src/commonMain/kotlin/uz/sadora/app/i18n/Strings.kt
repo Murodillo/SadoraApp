@@ -1442,7 +1442,7 @@ interface ModuleStrings {
     val sourcesNote: String
     val connected: String
     val notConnected: String
-    fun samples(count: String): String
+    fun samples(count: Int): String
     fun metric(metric: HealthMetric): String
 
     // ---- balance

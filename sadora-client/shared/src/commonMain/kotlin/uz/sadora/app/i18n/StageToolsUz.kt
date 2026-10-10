@@ -28,6 +28,12 @@ object StageToolsUz : StageToolsStrings {
     override val birthPromptBody =
         "Tug'ruqdan keyingi bosqichga o'tsangiz, tiklanish, emizish va kayfiyat kuzatuvi ochiladi."
     override val birthPromptButton = "Tug'ruqdan keyingi bosqichga o'tish"
+    override val lossButton = "Homiladorligim boshqacha yakunlandi"
+    override val lossTitle = "Juda afsusdamiz"
+    override val lossBody =
+        "Juda afsusdamiz. Xohlasangiz, sikl kuzatuviga qaytamiz va homiladorlik eslatmalarini o'chiramiz. Shifokor bilan gaplashish ham yordam beradi."
+    override val lossConfirm = "Sikl kuzatuviga qaytish"
+    override val lossLater = "Hozircha emas"
     override val cycleBackTitle = "Sikl kuzatuviga qaytasizmi?"
     override val cycleBackBody =
         "Hayz qaytgan bo'lsa, sikl kuzatuvi keyingi hayzni va unumdor kunlarni hisoblaydi."
@@ -39,7 +45,7 @@ object StageToolsUz : StageToolsStrings {
     override fun irregularCycles(spread: Int) = "Sikllaringiz uzunligi bir-biridan $spread kungacha farq qiladi."
     override fun longPeriods(days: Int) = "Hayz o'rtacha $days kun davom etadi — 7 kundan uzun."
     override val bleedingAfterMenopause =
-        "So'nggi 12 oyda qon ketish qayd etilgan. Menopauzada har qanday qon ketishni shifokor ko'rishi kerak."
+        "Menopauzadan keyin qon ketish qayd etilgan (so'nggi 12 oyda). Bunday har qanday qon ketishni shifokor ko'rishi kerak."
     override val flagsNote = "Bu tashxis emas — yozuvlaringizda ko'ringan belgi."
     override val menopauseBleedingTitle = "Qon ketish"
     override val menopauseBleedingBody =
@@ -80,15 +86,15 @@ object StageToolsUz : StageToolsStrings {
     override val screenIntro =
         "So'nggi 7 kun ichida o'zingizni qanday his qildingiz? Har bir savolga eng yaqin javobni tanlang."
     override val questions = listOf(
-        "Kulish va narsalarning kulgili tomonini ko'ra olish",
-        "Biror narsani zavq bilan kutish",
-        "Ishlar yomon ketganda o'zimni behuda ayblash",
-        "Sababsiz xavotirlanish yoki tashvishlanish",
-        "Sababsiz qo'rquv yoki vahima",
-        "Ishlar ustimdan bosib ketayotgandek tuyulishi",
-        "Shunchalik baxtsizmanki, uxlashim qiyinlashdi",
+        "Kula oldim va narsalarning kulgili tomonini ko'ra oldim",
+        "Biror narsani zavq bilan kutdim",
+        "Ishlar yomon ketganda o'zimni behuda aybladim",
+        "Sababsiz xavotirlandim yoki tashvishlandim",
+        "Sababsiz qo'rquv yoki vahimaga tushdim",
+        "Ishlar ustimdan bosib ketayotgandek tuyuldi",
+        "Shunchalik baxtsiz edimki, uxlashim qiyinlashdi",
         "O'zimni g'amgin yoki baxtsiz his qildim",
-        "Shunchalik baxtsizmanki, yig'lab yubordim",
+        "Shunchalik baxtsiz edimki, yig'lab yubordim",
         "O'zimga zarar yetkazish fikri xayolimga keldi",
     )
     override val options = listOf(
@@ -104,20 +110,22 @@ object StageToolsUz : StageToolsStrings {
             "Yo'q, har doimgidek uddaladim",
         ),
         listOf("Ha, ko'pincha", "Ha, ba'zan", "Unchalik emas", "Yo'q, umuman"),
-        listOf("Ha, ko'pincha", "Ha, ancha tez-tez", "Unchalik emas", "Yo'q, umuman"),
-        listOf("Ha, ko'pincha", "Ha, ancha tez-tez", "Faqat ba'zan", "Yo'q, hech qachon"),
+        listOf("Ha, deyarli doim", "Ha, ancha tez-tez", "Unchalik emas", "Yo'q, umuman"),
+        listOf("Ha, deyarli doim", "Ha, ancha tez-tez", "Faqat ba'zan", "Yo'q, hech qachon"),
         listOf("Ha, ancha tez-tez", "Ba'zan", "Deyarli yo'q", "Hech qachon"),
     )
     override val screenSubmit = "Natijani ko'rish"
     override fun screenScore(score: Int) = "Ball: $score / 30"
     override val screenLow =
-        "Hozircha tushkunlik belgilari kam. Kayfiyatingiz o'zgarsa, 2–4 haftadan keyin yana o'tib ko'ring."
+        "Hozircha tushkunlik belgilari kam. Kayfiyatingiz yomonlashsa — istalgan vaqtda qayta o'ting yoki shifokorga yozing."
     override val screenPossible =
         "Tushkunlik belgilari bo'lishi mumkin. Shifokoringiz bilan gaplashing va 2 haftadan keyin qayta o'ting."
     override val screenLikely =
-        "Tug'ruqdan keyingi depressiya ehtimoli yuqori. Iloji boricha tezroq shifokor yoki psixologga murojaat qiling — bu davolanadi."
+        "Javoblaringiz tug'ruqdan keyingi depressiya belgilariga mos keladi. Iloji boricha tezroq shifokor yoki psixologga murojaat qiling — bu davolanadi."
     override val screenSelfHarm =
-        "Siz o'zingizga zarar yetkazish fikrlari haqida javob berdingiz. Bu jiddiy: hoziroq yaqinlaringizdan biriga ayting va shifokorga murojaat qiling. Xavf bo'lsa, 103 ga qo'ng'iroq qiling."
+        "Aytganingiz — muhim qadam. Siz yolg'iz emassiz: hoziroq ishongan yaqin odamingizga ayting va shifokor yoki psixologga murojaat qiling. " +
+            "O'zingizni xavf ostida his qilsangiz — darhol 103 ga qo'ng'iroq qiling."
+    override val call103 = "103 ga qo'ng'iroq qilish"
     override val askDoctor = "Shifokordan so'rash"
     override val screenSource =
         "Edinburg tug'ruqdan keyingi depressiya shkalasi (EPDS; Cox, Holden, Sagovsky, 1987). Tashxis emas — skrining vositasi."
@@ -144,15 +152,15 @@ object StageToolsUz : StageToolsStrings {
     override fun contractionLasted(duration: String) = "$duration davom etdi"
     override fun contractionApart(interval: String) = "oldingisidan $interval keyin"
     override fun contractionsSummary(count: Int, duration: String, interval: String) =
-        "Oxirgi soatda $count ta: o'rtacha $duration davom etadi, har $interval da"
+        "Oxirgi soatda $count ta: o'rtacha $duration davom etadi, har $interval"
     override val contractionsGo =
-        "To'lg'oqlar 5 daqiqadan tez-tez, 1 daqiqadan uzun va bir soatdan beri davom etmoqda — tug'ruqxonaga borish vaqti."
+        "To'lg'oqlar kamida har 5 daqiqada kelmoqda, har biri kamida 1 daqiqa davom etmoqda va bu bir soatdan beri shunday — tug'ruqxonaga borish vaqti."
     override val contractionsUrgent =
         "Suv ketsa, qon ketsa yoki bola harakati kamaysa — to'lg'oqni kutmasdan darhol tug'ruqxonaga boring."
     override fun minutesSeconds(minutes: Int, seconds: Int) =
-        if (minutes == 0) "$seconds soniya" else "$minutes daq ${seconds.toString().padStart(2, '0')} son"
+        if (minutes == 0) "$seconds sek" else "$minutes daq ${seconds.toString().padStart(2, '0')} sek"
 
-    override val hotFlushTitle = "Issiqlik to'lqinlari"
+    override val hotFlushTitle = "Issiq toshishlar"
     override val hotFlushLog = "Qayd etish"
     override fun intensity(level: Int) = when (level) {
         1 -> "Yengil"

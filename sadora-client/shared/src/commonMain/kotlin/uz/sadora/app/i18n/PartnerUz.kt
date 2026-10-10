@@ -26,15 +26,15 @@ object PartnerUz : PartnerStrings {
     override val creating = "Yaratilmoqda…"
     override val codeTitle = "Shu kodni yaqiningizga yuboring"
     override val codeSteps =
-        "U Sadora ilovasini o'rnatadi, «Yaqinim taklif qildi»ni bosadi va kodni kiritadi. Keyin siz ruxsat berasiz."
-    override fun codeExpires(date: String) = "Kod $date gacha amal qiladi"
+        "U SADORA ilovasini o'rnatadi, «Yaqinim taklif qildi»ni bosadi va kodni kiritadi. Keyin siz ruxsat berasiz."
+    override fun codeExpires(date: String) = "Kod ${date}gacha amal qiladi"
     override val shareCode = "Kodni yuborish"
     override fun shareMessage(code: String, url: String?) =
-        "Salom! Sadora ilovasida holatimni siz bilan ulashmoqchiman. Ilovani o'rnating, " +
+        "Salom! SADORA ilovasida holatimni siz bilan ulashmoqchiman. Ilovani o'rnating, " +
             "«Yaqinim taklif qildi»ni bosing va shu kodni kiriting: $code" + (url?.let { "\n$it" } ?: "")
     override val inviteOut = "Taklif yuborilgan"
     override fun inviteOutBody(date: String) =
-        "Kod $date gacha amal qiladi. Kodni qayta ko'rsatish uchun yangisini yarating — eskisi bekor bo'ladi."
+        "Kod ${date}gacha amal qiladi. Kodni qayta ko'rsatish uchun yangisini yarating — eskisi bekor bo'ladi."
     override val newCode = "Yangi kod"
     override val cancelInvite = "Bekor qilish"
     override fun requestTitle(name: String) = "$name holatingizni ko'rmoqchi"
@@ -51,12 +51,12 @@ object PartnerUz : PartnerStrings {
     override val permFertile = "Unumdor kunlar"
     override val permFertileNote = "Ovulyatsiya va unumdor oyna"
     override val permMood = "Kayfiyat va energiya"
-    override val permMoodNote = "Bugun belgilagan kayfiyatingiz"
-    override val permSymptoms = "Simptomlar"
-    override val permSymptomsNote = "Bugungi simptomlaringiz nomi"
+    override val permMoodNote = "Bugun belgilagan kayfiyatingiz va energiyangiz"
+    override val permSymptoms = "Alomatlar"
+    override val permSymptomsNote = "Bugun belgilagan barcha alomatlaringiz nomi — intim alomatlar ham"
     override val permPregnancy = "Homiladorlik"
     override val permPregnancyNote = "Hafta va tug'ish sanasi, keyin chaqaloq yoshi"
-    override val permAppointments = "Shifokor uchrashuvlari"
+    override val permAppointments = "Shifokor ko'riklari"
     override val permAppointmentsNote = "Sana, vaqt va joy — izohingiz emas"
     override val permCare = "Bosqich parvarishi"
     override val permCareNote = "Emizishlar soni yoki issiq toshishlar"
@@ -73,7 +73,7 @@ object PartnerUz : PartnerStrings {
     override val disconnect = "Ulanishni uzish"
     override val disconnectConfirmTitle = "Ulanishni uzasizmi?"
     override fun disconnectConfirmBody(name: String) =
-        "$name endi holatingizni ko'rmaydi. Keyinroq yangi kod bilan qayta ulash mumkin."
+        "$name endi holatingizni ko'rmaydi. Unga bu haqda xabar yuborilmaydi. Keyinroq yangi kod bilan qayta ulash mumkin."
     override val disconnected = "Ulanish uzildi"
     override val approved = "Ruxsat berildi"
     override val followingTitle = "Men kuzatayotganlar"
@@ -127,13 +127,13 @@ object PartnerUz : PartnerStrings {
         )
         CyclePhase.Fertile -> listOf(
             "Birga vaqt o'tkazing — uchrashuv yoki kechki ovqat",
-            "Unga e'tibor va iliq so'zlar ayting",
+            "Unga e'tibor bering va iliq so'zlar ayting",
         )
         CyclePhase.Luteal -> listOf(
             "Ko'proq tinglang, kamroq maslahat bering",
             "Tinch kechqurun va yaxshi uyqu uchun sharoit yarating",
             "Kichik g'amxo'rlik katta ahamiyatga ega",
-            "Jahl chiqsa, buni shaxsan qabul qilmang",
+            "U jahl qilsa, buni o'zingizga olmang",
         )
     }
     override fun fertileWindow(from: String, to: String) = "Unumdor kunlar: $from – $to"
@@ -143,7 +143,7 @@ object PartnerUz : PartnerStrings {
     override val energyLabel = "Energiyasi"
     override val symptomsLabel = "Bugun sezayotgani"
     override fun pregnancyWeek(week: Int) = "Homiladorlikning $week-haftasi"
-    override fun daysToGo(days: Int) = if (days <= 0) "Tug'ish sanasi yetib keldi" else "Tug'ilishga $days kun qoldi"
+    override fun daysToGo(days: Int) = if (days <= 0) "Taxminiy tug'ish sanasi keldi" else "Taxminiy tug'ish sanasiga $days kun qoldi"
     override fun babySize(fruit: String) = "Chaqaloq hozir $fruit kattaligida"
     override fun pregnancyTips(week: Int) = when {
         week <= 13 -> listOf(
@@ -169,6 +169,7 @@ object PartnerUz : PartnerStrings {
         "Ovqat va uy ishlarini o'z zimmangizga oling",
         "Kayfiyati tushsa, gapini tinglang va yolg'iz qoldirmang",
         "Mehmonlarni cheklang — tiklanish vaqt talab qiladi",
+        "Kuchli qon ketish yoki isitma bo'lsa, yoki u o'ziga zarar yetkazish haqida gapirsa — darhol shifokorga yoki 103 ga murojaat qiling",
     )
     override val menopauseTips = listOf(
         "Xonani salqin tuting — issiq toshishlar yengilroq o'tadi",
@@ -176,7 +177,7 @@ object PartnerUz : PartnerStrings {
         "Kayfiyat o'zgarishlariga sabr bilan qarang",
         "Birga sayr va harakat ikkovingizga ham foydali",
     )
-    override val appointmentsTitle = "Shifokor uchrashuvlari"
+    override val appointmentsTitle = "Shifokor ko'riklari"
     override fun feedsToday(count: Int) = "Bugun $count marta emizdi"
     override fun lastFeed(ago: String) = "Oxirgisi $ago"
     override fun hotFlushesToday(count: Int) = "Bugun $count ta issiq toshish"
@@ -201,7 +202,7 @@ object PartnerUz : PartnerStrings {
 
     override val labourButton = "Yaqinimga xabar berish: tug'ruq boshlandi"
     override val labourConfirmTitle = "Yaqiningizga xabar yuborilsinmi?"
-    override val labourConfirmBody = "U darhol «Tug'ruq boshlandi!» degan xabar oladi."
+    override val labourConfirmBody = "U darhol «Tug'ruq boshlandi!» degan xabar oladi. Bu tez yordam chaqirmaydi — kerak bo'lsa, 103 ga qo'ng'iroq qiling."
     override val labourSend = "Yuborish"
     override val labourSent = "Xabar yuborildi"
 
@@ -232,24 +233,25 @@ object PartnerUz : PartnerStrings {
 
     override val webTitle = "Ilovasi yo'qlar uchun havola"
     override val webBody =
-        "Ilova o'rnatmaydigan yaqiningiz holatingizni brauzerda ko'radi. Havola bir necha kun ishlaydi va istalgan payt bekor qilinadi."
+        "Ilova o'rnatmaydigan yaqiningiz holatingizni brauzerda ko'radi. Havolani olgan har kim ko'ra oladi — faqat ishongan odamingizga yuboring. " +
+            "Havola tanlagan kunlaringiz davomida ishlaydi, istalgan payt o'chirasiz."
     override val webShows = "Havola ko'rsatadi:"
     override val webCreate = "Havola yaratish"
-    override fun webExpires(date: String) = "$date gacha ishlaydi"
+    override fun webExpires(date: String) = "${date}gacha ishlaydi"
     override fun webViews(count: Int) = "$count marta ochildi"
     override val webNever = "Hali ochilmagan"
     override val webShare = "Havolani yuborish"
     override val webRevoke = "Bekor qilish"
     override val webNew = "Yangi havola"
-    override fun webShareMessage(url: String) = "Holatimni shu havolada ko'rishingiz mumkin (Sadora):\n$url"
+    override fun webShareMessage(url: String) = "Holatimni shu havolada ko'rishingiz mumkin (SADORA):\n$url"
     override val webRevoked = "Havola bekor qilindi"
     override fun webDays(days: Int) = "$days kun"
     override val webOutBody = "Havolani qayta ko'rsatish uchun yangisini yarating — eskisi ishlamay qoladi."
 
     override val askPartner = "Yaqinimdan so'rash 💝"
     override val askTitle = "Yaqinimdan so'rash"
-    override val askBodyPremium = "Yaqiningizga xabar boradi. U to'lasa, Premium sizga avtomatik ochiladi."
-    override val askBodyConsultation = "Yaqiningizga xabar boradi. U to'lasa, shifokor bilan suhbat sizga avtomatik ochiladi."
+    override val askBodyPremium = "Yaqiningizga xabar boradi. U to'lasa, Premium sizga avtomatik ochiladi. Bir martalik to'lov — avtomatik yangilanmaydi."
+    override val askBodyConsultation = "Yaqiningizga xabar boradi. U to'lasa, konsultatsiya sizga avtomatik ochiladi. Bir martalik to'lov."
     override val askPeriod = "Muddat"
     override fun period(year: Boolean) = if (year) "1 yil" else "1 oy"
     override val askNoteHint = "Qisqa izoh (ixtiyoriy)"
@@ -260,18 +262,18 @@ object PartnerUz : PartnerStrings {
     override val shareHint = "Havolani boshqa yaqiningizga ham yuborishingiz mumkin. U ilovasiz, Payme yoki Click orqali to'lay oladi."
     override val shareLink = "Havolani ulashish"
     override fun shareRequestMessage(what: String, url: String) =
-        "Assalomu alaykum! Sadora'da $what olmoqchiman, yordam bera olasizmi? 💝\n$url"
+        "Assalomu alaykum! SADORA'da $what olmoqchiman — sovg'a qila olasizmi? 💝\n$url"
     override fun requestStatus(status: uz.sadora.contract.PaymentRequestStatus) = when (status) {
         uz.sadora.contract.PaymentRequestStatus.OPEN -> "Javob kutilmoqda"
         uz.sadora.contract.PaymentRequestStatus.PAID -> "To'landi 💝"
         else -> "So'rov yopildi"
     }
-    override fun requestExpires(date: String) = "$date gacha amal qiladi"
+    override fun requestExpires(date: String) = "${date}gacha amal qiladi"
     override val cancelRequest = "So'rovni bekor qilish"
     override val requestCancelled = "So'rov bekor qilindi"
 
-    override fun incomingTitle(name: String) = "$name sizdan yordam so'rayapti 💝"
-    override val incomingBody = "To'lasangiz, u avtomatik ravishda unga ochiladi."
+    override fun incomingTitle(name: String) = "$name sizdan sovg'a so'rayapti 💝"
+    override val incomingBody = "Bir martalik to'lov, avtomatik yangilanmaydi. To'lasangiz, sovg'a unga darhol ochiladi."
     override fun giveGift(price: String) = if (price.isBlank()) "Sovg'a qilish" else "Sovg'a qilish · $price"
     override fun payWith(provider: String) = "$provider orqali to'lash"
     override val payWaiting = "To'lov kutilmoqda…"

@@ -53,9 +53,9 @@ object PrescriptionStringsUz : PrescriptionStrings {
     override fun byline(doctor: String, date: String) = "$doctor · $date"
     override fun summary(item: PrescriptionItem) = listOfNotNull(
         listOfNotNull(item.dose, item.unit).joinToString(" "),
-        schedule(item, "kuniga ${item.schedule.times.size} marta", "har ${item.schedule.intervalDays} kunda"),
+        schedule(item, "kuniga ${item.schedule.times.size} marta", item.schedule.intervalDays?.takeIf { it > 1 }?.let { "har $it kunda" } ?: "har kuni"),
         food(item.foodRelation).lowercase(),
-        (if (item.startDay > 1) "${item.startDay}-kundan " else "") + (item.days?.let { "$it kun" } ?: "doimiy"),
+        (if (item.startDay > 1) "${item.startDay}-kundan boshlab, " else "") + (item.days?.let { "$it kun" } ?: "doimiy"),
     ).joinToString(" · ")
     override fun food(relation: FoodRelation) = when (relation) {
         FoodRelation.BEFORE -> "Ovqatdan oldin"
@@ -63,15 +63,15 @@ object PrescriptionStringsUz : PrescriptionStrings {
         FoodRelation.AFTER -> "Ovqatdan keyin"
         FoodRelation.ANY -> "Ovqatdan qat'i nazar"
     }
-    override val addToPills = "Tabletkalarimga qo'shish"
-    override val added = "Tabletkalaringizga qo'shilgan"
+    override val addToPills = "Dorilarimga qo'shish"
+    override val added = "Dorilaringizga qo'shilgan"
     override val cancelled = "Shifokor bekor qilgan"
     override fun cancelReason(reason: String) = "Sabab: $reason"
     override val shareImage = "Rasm sifatida ulashish"
     override val lastLine = "Retsept"
 
-    override val addTitle = "Tabletkalarimga qo'shish"
-    override val addBody = "Kerakli dorilarni belgilang va ichish vaqtini kuningizga moslang. Doza va davomiylikni shifokor belgilagan."
+    override val addTitle = "Dorilarimga qo'shish"
+    override val addBody = "Kerakli dorilarni belgilang va ichish vaqtini kuningizga moslang. Doza va davomiylikni shifokor belgilagan — dozani o'zingiz o'zgartirmang."
     override val startOn = "Qachondan boshlaysiz"
     override val today = "Bugun"
     override val tomorrow = "Ertaga"
@@ -80,11 +80,11 @@ object PrescriptionStringsUz : PrescriptionStrings {
     override val nothingChosen = "Kamida bitta dorini belgilang"
     override val adding = "Qo'shilmoqda…"
     override val addConfirm = "Qo'shish va eslatmalarni yoqish"
-    override val addedToast = "Dorilar tabletkalaringizga qo'shildi"
+    override val addedToast = "Dorilar «Dorilarim»ga qo'shildi"
 
     override val fromDoctor = "Shifokor retseptlari"
     override fun prescribedBy(doctor: String) = "$doctor retsepti"
-    override val lockedNote = "Nomi, dozasi va davomiyligini shifokor belgilagan. Ichish vaqti va eslatmalarni o'zgartirishingiz mumkin."
+    override val lockedNote = "Nomi, dozasi va davomiyligini shifokor belgilagan — dozani o'zingiz o'zgartirmang. Ichish vaqti va eslatmalarni o'zgartirishingiz mumkin."
     override val listTitle = "Shifokor retseptlari"
 }
 
@@ -94,11 +94,15 @@ object PrescriptionStringsRu : PrescriptionStrings {
     override fun byline(doctor: String, date: String) = "$doctor · $date"
     override fun summary(item: PrescriptionItem) = listOfNotNull(
         listOfNotNull(item.dose, item.unit).joinToString(" "),
-        schedule(item, timesPerDay(item.schedule.times.size), "раз в ${item.schedule.intervalDays} дн."),
+        schedule(item, timesPerDay(item.schedule.times.size), everyDays(item.schedule.intervalDays)),
         food(item.foodRelation).lowercase(),
-        (if (item.startDay > 1) "с ${item.startDay}-го дня " else "") + (item.days?.let { "$it дн." } ?: "постоянно"),
+        (if (item.startDay > 1) "с ${item.startDay}-го дня, " else "") + (item.days?.let { "$it ${ru(it, "день", "дня", "дней")}" } ?: "постоянно"),
     ).joinToString(" · ")
-    private fun timesPerDay(count: Int) = "$count раз${if (count in 2..4) "а" else ""} в день"
+    private fun timesPerDay(count: Int) = "$count ${ru(count, "раз", "раза", "раз")} в день"
+    private fun everyDays(days: Int?) = when (days) {
+        null, 1 -> "каждый день"
+        else -> "раз в $days ${ru(days, "день", "дня", "дней")}"
+    }
     override fun food(relation: FoodRelation) = when (relation) {
         FoodRelation.BEFORE -> "До еды"
         FoodRelation.WITH -> "Во время еды"
@@ -113,20 +117,20 @@ object PrescriptionStringsRu : PrescriptionStrings {
     override val lastLine = "Рецепт"
 
     override val addTitle = "Добавить в мои лекарства"
-    override val addBody = "Отметьте нужные препараты и подстройте время приёма под свой день. Дозу и длительность назначил врач."
+    override val addBody = "Отметьте нужные лекарства и подстройте время приёма под свой день. Дозу и длительность назначил врач — не меняйте дозу сами."
     override val startOn = "Когда начинаете"
     override val today = "Сегодня"
     override val tomorrow = "Завтра"
     override val earlier = "раньше"
     override val later = "позже"
-    override val nothingChosen = "Отметьте хотя бы один препарат"
+    override val nothingChosen = "Отметьте хотя бы одно лекарство"
     override val adding = "Добавляем…"
     override val addConfirm = "Добавить и включить напоминания"
-    override val addedToast = "Препараты добавлены в ваши лекарства"
+    override val addedToast = "Лекарства добавлены в «Мои лекарства»"
 
     override val fromDoctor = "Рецепты врачей"
     override fun prescribedBy(doctor: String) = "Рецепт: $doctor"
-    override val lockedNote = "Название, дозу и длительность назначил врач. Время приёма и напоминания можно менять."
+    override val lockedNote = "Название, дозу и длительность назначил врач — не меняйте дозу сами. Время приёма и напоминания можно менять."
     override val listTitle = "Рецепты врачей"
 }
 
@@ -136,10 +140,19 @@ object PrescriptionStringsEn : PrescriptionStrings {
     override fun byline(doctor: String, date: String) = "$doctor · $date"
     override fun summary(item: PrescriptionItem) = listOfNotNull(
         listOfNotNull(item.dose, item.unit).joinToString(" "),
-        schedule(item, if (item.schedule.times.size == 1) "once a day" else "${item.schedule.times.size} times a day", "every ${item.schedule.intervalDays} days"),
+        schedule(item, timesPerDay(item.schedule.times.size), everyDays(item.schedule.intervalDays)),
         food(item.foodRelation).lowercase(),
-        (if (item.startDay > 1) "from day ${item.startDay}, " else "") + (item.days?.let { "$it days" } ?: "ongoing"),
+        (if (item.startDay > 1) "from day ${item.startDay}, " else "") + (item.days?.let { "$it ${en(it, "day", "days")}" } ?: "ongoing"),
     ).joinToString(" · ")
+    private fun timesPerDay(count: Int) = when (count) {
+        1 -> "once a day"
+        2 -> "twice a day"
+        else -> "$count times a day"
+    }
+    private fun everyDays(days: Int?) = when (days) {
+        null, 1 -> "every day"
+        else -> "every $days days"
+    }
     override fun food(relation: FoodRelation) = when (relation) {
         FoodRelation.BEFORE -> "Before food"
         FoodRelation.WITH -> "With food"
@@ -154,20 +167,20 @@ object PrescriptionStringsEn : PrescriptionStrings {
     override val lastLine = "Prescription"
 
     override val addTitle = "Add to my medications"
-    override val addBody = "Tick the medicines you need and fit the times to your day. The dose and duration are the doctor's."
+    override val addBody = "Tick the medications you need and fit the times to your day. The dose and duration are the doctor's — don't change the dose yourself."
     override val startOn = "When do you start"
     override val today = "Today"
     override val tomorrow = "Tomorrow"
     override val earlier = "earlier"
     override val later = "later"
-    override val nothingChosen = "Tick at least one medicine"
+    override val nothingChosen = "Tick at least one medication"
     override val adding = "Adding…"
     override val addConfirm = "Add and turn on reminders"
     override val addedToast = "Added to your medications"
 
     override val fromDoctor = "Doctors' prescriptions"
     override fun prescribedBy(doctor: String) = "Prescribed by $doctor"
-    override val lockedNote = "The name, dose and duration are the doctor's. You can change the times and reminders."
+    override val lockedNote = "The name, dose and duration are the doctor's — don't change the dose yourself. You can change the times and reminders."
     override val listTitle = "Doctors' prescriptions"
 }
 

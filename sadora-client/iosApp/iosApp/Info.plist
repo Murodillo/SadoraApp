@@ -37,16 +37,24 @@
 			</array>
 		</dict>
 	</array>
-	<!-- The food scanner. iOS terminates the app on present without these. -->
+	<!-- The food scanner, the profile photo and photos in messages. iOS terminates the app
+	     on present without these. -->
 	<key>NSCameraUsageDescription</key>
-	<string>SADORA ovqat suratini o'qib, taxminiy kaloriya va makrolarni ko'rsatadi.</string>
+	<string>SADORA ovqat suratini o'qib, taxminiy kaloriya, oqsil, yog' va uglevodni ko'rsatadi. Profil rasmingizni ham suratga olishingiz mumkin.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Galereyadan ovqat suratini tanlab, uni skanerdan o'tkazishingiz mumkin.</string>
-	<!-- HealthKit. SADORA only reads; the update string is there because App Review
-	     rejects a HealthKit app that lacks it, whether or not it writes. -->
+	<string>Galereyadan surat tanlaysiz: ovqatni skanerlash, profil rasmi yoki xabarga qo'shish uchun.</string>
+	<!-- HealthKit. SADORA only reads: HealthKitPlatform asks for read types and no share
+	     types, so there is no NSHealthUpdateUsageDescription. Add it back, in every
+	     .lproj/InfoPlist.strings too, the day the app starts writing samples. -->
 	<key>NSHealthShareUsageDescription</key>
-	<string>SADORA uyqu, qadam, puls, harorat va hayz kunlarini o'qib, sikl prognozi, Balans va Uyqu ekranlarini to'ldiradi. Ma'lumotlar sotilmaydi.</string>
-	<key>NSHealthUpdateUsageDescription</key>
-	<string>SADORA Salomatlik ilovasiga hech narsa yozmaydi; faqat siz ruxsat bergan ko'rsatkichlarni o'qiydi.</string>
+	<string>SADORA uyqu, qadam, puls, harorat va hayz kunlarini o'qib, sikl bashorati, Balans va Uyqu ekranlarini to'ldiradi. Ma'lumotlaringiz sotilmaydi va reklama uchun berilmaydi.</string>
+	<!-- The languages the app speaks. The permission texts above are the Uzbek fallback;
+	     uz/ru/en.lproj/InfoPlist.strings translate them. -->
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>uz</string>
+		<string>ru</string>
+		<string>en</string>
+	</array>
 </dict>
 </plist>

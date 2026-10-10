@@ -194,4 +194,18 @@ class DeviceHealthSyncTest {
         assertFalse(prefs.state.enabled)
         assertNull(prefs.state.lastSyncAt)
     }
+
+    @Test
+    fun `the gate once answered stays answered through switching on and off`() = runTest {
+        prefs.state = HealthSyncState(userId = "u1", enabled = false)
+        assertFalse(sync.state("u1").gatePassed)
+        sync.passGate("u1")
+        assertTrue(prefs.state.gatePassed)
+        sync.enable("u1")
+        assertTrue(prefs.state.gatePassed)
+        sync.disable("u1")
+        assertTrue(prefs.state.gatePassed)
+        // Another account on the same phone has not answered it.
+        assertFalse(sync.state("u2").gatePassed)
+    }
 }

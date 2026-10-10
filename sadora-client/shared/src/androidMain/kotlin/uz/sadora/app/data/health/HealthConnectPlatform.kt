@@ -452,6 +452,7 @@ class AndroidHealthSyncPrefs(context: Context) : HealthSyncPrefs {
             userId = preferences.getString(KeyUser, null),
             enabled = preferences.getBoolean(KeyEnabled, false),
             lastSyncAt = preferences.getLong(KeyLastSync, 0L).takeIf { it > 0 }?.let(Instant::fromEpochMilliseconds),
+            gatePassed = preferences.getBoolean(KeyGatePassed, false),
         )
     }
 
@@ -460,6 +461,7 @@ class AndroidHealthSyncPrefs(context: Context) : HealthSyncPrefs {
             .putString(KeyUser, state.userId)
             .putBoolean(KeyEnabled, state.enabled)
             .putLong(KeyLastSync, state.lastSyncAt?.toEpochMilliseconds() ?: 0L)
+            .putBoolean(KeyGatePassed, state.gatePassed)
             .apply()
     }
 
@@ -467,5 +469,6 @@ class AndroidHealthSyncPrefs(context: Context) : HealthSyncPrefs {
         const val KeyUser = "user_id"
         const val KeyEnabled = "enabled"
         const val KeyLastSync = "last_sync_ms"
+        const val KeyGatePassed = "gate_passed"
     }
 }

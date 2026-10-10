@@ -148,7 +148,7 @@ class InsightsControllerTest {
 
     @Test
     fun `an hour or more reads as hours and minutes like everywhere else in the app`() {
-        assertEquals("7s 0d", sleepTrend(listOf(420.0)).averageLabel(StringsUz.modules, StringsUz.common))
+        assertEquals("7 s 0 daq", sleepTrend(listOf(420.0)).averageLabel(StringsUz.modules, StringsUz.common))
         assertNull(sleepTrend(listOf(null)).averageLabel(StringsUz.modules, StringsUz.common), "an average of nothing is not zero")
     }
 

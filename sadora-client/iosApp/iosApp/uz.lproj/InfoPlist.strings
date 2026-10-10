@@ -1,0 +1,4 @@
+/* Ruxsat so'rovlari — Info.plist bilan bir xil bo'lsin. */
+"NSCameraUsageDescription" = "SADORA ovqat suratini o'qib, taxminiy kaloriya, oqsil, yog' va uglevodni ko'rsatadi. Profil rasmingizni ham suratga olishingiz mumkin.";
+"NSPhotoLibraryUsageDescription" = "Galereyadan surat tanlaysiz: ovqatni skanerlash, profil rasmi yoki xabarga qo'shish uchun.";
+"NSHealthShareUsageDescription" = "SADORA uyqu, qadam, puls, harorat va hayz kunlarini o'qib, sikl bashorati, Balans va Uyqu ekranlarini to'ldiradi. Ma'lumotlaringiz sotilmaydi va reklama uchun berilmaydi.";

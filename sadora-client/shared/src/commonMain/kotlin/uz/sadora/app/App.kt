@@ -51,6 +51,7 @@ import uz.sadora.app.data.PetSyncTap
 import uz.sadora.app.data.SadoraGraph
 import uz.sadora.app.data.SessionState
 import uz.sadora.app.ui.modules.HealthGate
+import uz.sadora.app.ui.journey.PregnancyEndedSheet
 import uz.sadora.app.ui.modules.WearablePromptSheet
 import uz.sadora.app.ui.modules.wearableQuestionDue
 import uz.sadora.app.ui.modules.wearableSnoozedUntil
@@ -370,6 +371,8 @@ private class ShellOverlays {
     var openBadge by mutableStateOf<uz.sadora.contract.BadgeState?>(null)
     /** Her profile photo sheet: at shell level so it covers the tab bar, like every sheet here. */
     var showPhotoSheet by mutableStateOf(false)
+    /** "My pregnancy ended differently": the gentle sheet back to cycle tracking. */
+    var showPregnancyEnded by mutableStateOf(false)
 
     /** The day the symptom sheet writes; null is today. Set by the calendar's day page. */
     var symptomSheetDate by mutableStateOf<kotlinx.datetime.LocalDate?>(null)
@@ -380,7 +383,8 @@ private class ShellOverlays {
 
     val anyOpen: Boolean
         get() = showWaterSheet || showSymptomSheet || menuFor != null || showCompose || showCommunityRules || showCommunityFilters ||
-            showEditBio || showConversationMenu || consultWith != null || payFor != null || showPhotoSheet
+            showEditBio || showConversationMenu || consultWith != null || payFor != null || showPhotoSheet ||
+            showPregnancyEnded
 
     /** Closes the topmost sheet. False when none was open. */
     fun closeTop(): Boolean = when {
@@ -395,6 +399,7 @@ private class ShellOverlays {
         consultWith != null -> { consultWith = null; true }
         payFor != null -> { payFor = null; true }
         showPhotoSheet -> { showPhotoSheet = false; true }
+        showPregnancyEnded -> { showPregnancyEnded = false; true }
         else -> false
     }
 }
@@ -847,6 +852,13 @@ private fun MainShell(
 
         ProfilePhotoSheets(state, controllers.photos, visible = overlays.showPhotoSheet, onDismiss = { overlays.showPhotoSheet = false })
 
+        PregnancyEndedSheet(
+            visible = overlays.showPregnancyEnded,
+            state = state,
+            controller = controllers.account,
+            onDismiss = { overlays.showPregnancyEnded = false },
+        )
+
         // Kept mounted through the exit animation so the sheet does not blank as it closes.
         val lastMenu = remember { mutableStateOf<CommunityPost?>(null) }
         overlays.menuFor?.let { lastMenu.value = it }
@@ -1079,7 +1091,13 @@ private fun RootTab(
             onOpenFilters = { overlays.showCommunityFilters = true },
         )
 
-        Tab.Journey -> JourneyScreen(state = state, health = controllers.health, tools = controllers.stageEvents, onOpen = navigator::push)
+        Tab.Journey -> JourneyScreen(
+            state = state,
+            health = controllers.health,
+            tools = controllers.stageEvents,
+            onOpen = navigator::push,
+            onPregnancyEnded = { overlays.showPregnancyEnded = true },
+        )
 
         Tab.Nutrition -> NutritionScreen(
             state = state,
