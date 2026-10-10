@@ -45,7 +45,6 @@ import uz.sadora.doctor.data.photoNudgeDue
 import uz.sadora.doctor.data.WorkController
 import uz.sadora.doctor.data.SessionState
 import uz.sadora.doctor.design.Sadora
-import uz.sadora.doctor.design.SadoraIcons
 import uz.sadora.doctor.design.SadoraTheme
 import uz.sadora.doctor.design.Spacing
 import uz.sadora.doctor.i18n.AppLanguage
@@ -56,6 +55,8 @@ import uz.sadora.doctor.nav.Navigator
 import uz.sadora.doctor.nav.PushLinks
 import uz.sadora.doctor.nav.Route
 import uz.sadora.doctor.nav.Tab
+import uz.sadora.doctor.ui.AccountSettings
+import uz.sadora.doctor.ui.SettingsCard
 import uz.sadora.doctor.ui.SettingsSheet
 import uz.sadora.doctor.ui.SplashScreen
 import uz.sadora.doctor.ui.auth.SignInScreen
@@ -67,7 +68,6 @@ import uz.sadora.doctor.resources.ic3d_profile
 import uz.sadora.doctor.resources.ic3d_qr
 import uz.sadora.doctor.ui.components.BadgeDetailSheet
 import uz.sadora.doctor.ui.components.BadgeUnlockOverlay
-import uz.sadora.doctor.ui.components.CircleIconButton
 import uz.sadora.doctor.ui.components.LocalReduceMotion
 import uz.sadora.doctor.ui.components.LocalRemoteImages
 import uz.sadora.doctor.ui.components.Motion
@@ -180,6 +180,12 @@ fun App(graph: DoctorGraph? = null) {
                                 doctors = doctors,
                                 work = work,
                                 onOpenSettings = { settingsOpen = true },
+                                settings = AccountSettings(
+                                    phone = phone,
+                                    language = language,
+                                    onLanguage = chooseLanguage,
+                                    onSignOut = { confirmSignOut = true },
+                                ),
                                 onToast = { toast = it },
                             )
                         }
@@ -244,7 +250,10 @@ private fun MainContent(
     navigator: Navigator,
     doctors: DoctorController,
     work: WorkController,
+    /** The gear's sheet, on the panel before she is approved. */
     onOpenSettings: () -> Unit,
+    /** The same settings, inline on the Profile tab once she is. */
+    settings: AccountSettings,
     onToast: (String) -> Unit,
 ) {
     val words = strings
@@ -327,7 +336,7 @@ private fun MainContent(
                     saved.SaveableStateProvider(if (root && tabbed) "tab:$tab" else "${screen.depth}:${screen.route}") {
                         when (val route = screen.route) {
                             Route.Panel -> if (approved != null) {
-                                TabRoot(tab, approved.account, navigator, doctors, work, onOpenSettings, onToast)
+                                TabRoot(tab, approved.account, navigator, doctors, work, settings, onToast)
                             } else {
                                 DoctorPanelScreen(
                                     doctors = doctors,
@@ -485,7 +494,7 @@ private fun TabRoot(
     navigator: Navigator,
     doctors: DoctorController,
     work: WorkController,
-    onOpenSettings: () -> Unit,
+    settings: AccountSettings,
     onToast: (String) -> Unit,
 ) {
     val openQuestion: (String) -> Unit = { navigator.push(Route.Question(it)) }
@@ -500,7 +509,6 @@ private fun TabRoot(
             onScan = { navigator.select(Tab.Scan) },
             onMessages = { navigator.select(Tab.Messages) },
             onProfile = { navigator.select(Tab.Profile) },
-            onOpenSettings = onOpenSettings,
             onOpenWork = { navigator.push(Route.WorkSettings) },
             onOpenEarnings = { navigator.push(Route.Earnings) },
             onOpenBadges = { navigator.push(Route.Badges) },
@@ -529,7 +537,7 @@ private fun TabRoot(
                     onOpenPost = openQuestion,
                     onNewPost = newPost,
                     onClose = null,
-                    onOpenSettings = onOpenSettings,
+                    settings = settings,
                     account = account,
                     onSaved = { onToast(savedText) },
                     onOpenWork = { navigator.push(Route.WorkSettings) },
@@ -541,12 +549,10 @@ private fun TabRoot(
             } else {
                 // Approved but without a page yet — a moment the server should never show.
                 Column {
-                    SadoraTopBar(
-                        strings.doctors.profileTitle,
-                        trailing = { CircleIconButton(SadoraIcons.Settings, contentDescription = strings.settings.title, onClick = onOpenSettings) },
-                    )
+                    SadoraTopBar(strings.doctors.profileTitle)
                     ScreenContent {
                         item { EditDoctorCard(account, doctors, onSaved = { onToast(savedText) }) }
+                        item { SettingsCard(settings) }
                     }
                 }
             }

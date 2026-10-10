@@ -52,7 +52,6 @@ import uz.sadora.doctor.design.SadoraIcons
 import uz.sadora.doctor.design.Spacing
 import uz.sadora.doctor.i18n.strings
 import uz.sadora.doctor.ui.components.ChipFlowRow
-import uz.sadora.doctor.ui.components.CircleIconButton
 import uz.sadora.doctor.ui.components.EmptyState
 import uz.sadora.doctor.ui.components.ErrorStrip
 import uz.sadora.doctor.ui.components.LoadMoreRow
@@ -77,7 +76,6 @@ fun DoctorHomeScreen(
     onScan: () -> Unit,
     onMessages: () -> Unit,
     onProfile: () -> Unit,
-    onOpenSettings: () -> Unit,
     onOpenWork: () -> Unit,
     onOpenEarnings: () -> Unit,
     modifier: Modifier = Modifier,
@@ -120,7 +118,6 @@ fun DoctorHomeScreen(
         SadoraTopBar(
             t.greeting(hour),
             subtitle = t.homeSubtitle,
-            trailing = { CircleIconButton(SadoraIcons.Settings, contentDescription = strings.settings.title, onClick = onOpenSettings) },
         )
         ScreenContent(animateItems = true) {
             doctors.error?.let { failure ->

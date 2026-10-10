@@ -87,6 +87,8 @@ import uz.sadora.doctor.ui.components.SectionHeader
 import uz.sadora.doctor.ui.components.SelectChip
 import uz.sadora.doctor.ui.components.Skeleton
 import uz.sadora.doctor.ui.components.SuccessCheck
+import uz.sadora.doctor.ui.AccountSettings
+import uz.sadora.doctor.ui.SettingsCard
 import uz.sadora.doctor.ui.components.SystemBackHandler
 import uz.sadora.doctor.ui.components.acceptText
 import uz.sadora.doctor.ui.components.rememberPhotoCapture
@@ -101,8 +103,8 @@ import uz.sadora.doctor.ui.components.rememberPhotoCapture
  * Her page as readers see it: name, specialty, where she works, how long, her own words,
  * and what she has written — so she can check how she appears before anyone else does.
  *
- * As the Profile tab it has no back arrow ([onClose] is null), carries the settings
- * button, and puts the details she may change under the header ([account] and [onSaved]).
+ * As the Profile tab it has no back arrow ([onClose] is null), puts the details she may
+ * change under the header ([account] and [onSaved]), and ends them with the settings.
  */
 @Composable
 fun DoctorProfileScreen(
@@ -112,7 +114,8 @@ fun DoctorProfileScreen(
     onNewPost: () -> Unit,
     onClose: (() -> Unit)?,
     modifier: Modifier = Modifier,
-    onOpenSettings: (() -> Unit)? = null,
+    /** Language and sign-out, shown inline; only on her own Profile tab. */
+    settings: AccountSettings? = null,
     account: DoctorAccount? = null,
     onSaved: (() -> Unit)? = null,
     /** Her price, hours and busy switch; only on her own Profile tab. */
@@ -144,9 +147,6 @@ fun DoctorProfileScreen(
                         if (profile?.isMe == true) {
                             CircleIconButton(SadoraIcons.Plus, contentDescription = strings.community.newPost, onClick = onNewPost)
                         }
-                        onOpenSettings?.let {
-                            CircleIconButton(SadoraIcons.Settings, contentDescription = strings.settings.title, onClick = it)
-                        }
                     }
                 },
             )
@@ -156,6 +156,12 @@ fun DoctorProfileScreen(
                 }
                 if (profile == null) {
                     if (error == null) item { DoctorSkeleton() }
+                    // Sign-out and language live only here since the gear left the top bar,
+                    // so they stay reachable while her profile is loading or failed to load.
+                    settings?.let {
+                        item { SectionHeader(strings.settings.title) }
+                        item { SettingsCard(it) }
+                    }
                     return@ScreenContent
                 }
                 item { DoctorHeader(profile) }
@@ -197,6 +203,10 @@ fun DoctorProfileScreen(
                         item { NavCard(Res.drawable.ic3d_bulb, title = strings.work.quickReplies, subtitle = null, onClick = open, tint = c.secondary) }
                     }
                     item { EditDoctorCard(account, doctors, onSaved = onSaved) }
+                }
+                settings?.let {
+                    item { SectionHeader(strings.settings.title) }
+                    item { SettingsCard(it) }
                 }
                 item { Text(d.disclaimer, style = Sadora.type.caption.copy(letterSpacing = TextUnit.Unspecified), color = c.muted2) }
                 item { SectionHeader(d.herPosts) }

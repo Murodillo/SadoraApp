@@ -18,7 +18,37 @@ import uz.sadora.doctor.ui.components.ButtonTone
 import uz.sadora.doctor.ui.components.ChipFlowRow
 import uz.sadora.doctor.ui.components.SadoraBottomSheet
 import uz.sadora.doctor.ui.components.SadoraButton
+import uz.sadora.doctor.ui.components.SadoraCard
 import uz.sadora.doctor.ui.components.SelectChip
+
+/**
+ * What the settings hold, handed down to the Profile tab, which shows them inline once
+ * she is approved — the gear survives only on the panel, before there is a profile.
+ */
+class AccountSettings(
+    /** `+998901234567`, from the signed-in profile; null before it is known. */
+    val phone: String?,
+    val language: AppLanguage,
+    val onLanguage: (AppLanguage) -> Unit,
+    /** Asks first; the dialog lives with the app. */
+    val onSignOut: () -> Unit,
+)
+
+/** The settings as a card at the foot of her profile: the language, then the account. */
+@Composable
+fun SettingsCard(settings: AccountSettings) {
+    val c = Sadora.colors
+    val t = strings.settings
+    SadoraCard {
+        Text(t.language.uppercase(), style = Sadora.type.caption, color = c.muted)
+        LanguageOptions(current = settings.language, onSelect = settings.onLanguage)
+        Text(t.account.uppercase(), style = Sadora.type.caption, color = c.muted)
+        settings.phone?.let {
+            Text(t.signedInAs("+${UzbekPhone.COUNTRY_CODE} ${UzbekPhone.format(it)}"), style = Sadora.type.body, color = c.text)
+        }
+        SadoraButton(t.signOut, onClick = settings.onSignOut, tone = ButtonTone.Destructive)
+    }
+}
 
 /**
  * Behind the gear on the panel: the language, and the account she is signed in with.
