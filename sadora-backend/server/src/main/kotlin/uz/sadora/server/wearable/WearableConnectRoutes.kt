@@ -16,6 +16,7 @@ import io.ktor.server.routing.get
 import io.ktor.server.routing.post
 import io.ktor.server.routing.route
 import java.util.Base64
+import kotlin.time.Duration.Companion.minutes
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
 import kotlinx.serialization.json.Json
@@ -25,6 +26,7 @@ import uz.sadora.server.api.requireUserId
 import uz.sadora.server.core.ValidationException
 import uz.sadora.server.plugins.RateLimits
 import uz.sadora.server.plugins.USER_AUTH
+import uz.sadora.server.wearable.fitbit.GoogleHealthNotifications
 import uz.sadora.server.wearable.garmin.GarminMapper
 import uz.sadora.server.wearable.garmin.GarminPush
 import uz.sadora.server.wearable.whoop.WhoopWebhookEvent
@@ -83,7 +85,7 @@ fun Route.wearablePublicRoutes(service: WearableConnectService, job: WearableSyn
     rateLimit(RateLimits.WEARABLE) {
         // The browser only carries the code back to the app. Exchanging it here would
         // save the grant to whoever started the flow, not whoever is holding the phone.
-        listOf("whoop", "oura", "garmin").forEach { provider ->
+        listOf("whoop", "oura", "garmin", "fitbit").forEach { provider ->
             get("/wearables/$provider/callback") {
                 val error = call.request.queryParameters["error"]
                 val code = call.request.queryParameters["code"]
@@ -136,8 +138,30 @@ fun Route.wearablePublicRoutes(service: WearableConnectService, job: WearableSyn
             }
             call.respond(Ack())
         }
+
+        // Google Health says who changed and what kind of data, never the data itself.
+        // It proves itself with the Authorization value the subscriber was created with,
+        // and checks the endpoint first with one post that has it and one that does not.
+        post("/wearables/fitbit/webhook") {
+            when (service.isFitbitWebhookSecret(call.request.header("Authorization"))) {
+                null -> return@post call.respond(HttpStatusCode.ServiceUnavailable, Ack(false))
+                false -> return@post call.respond(HttpStatusCode.Unauthorized, Ack(false))
+                true -> Unit
+            }
+            val users = GoogleHealthNotifications.users(call.receiveText())
+                ?: return@post call.respond(HttpStatusCode.BadRequest, Ack(false))
+            // The handshake names nobody and wants a 200; a notification wants a 204, at once.
+            if (users.isEmpty()) return@post call.respond(Ack())
+            job.syncInBackground {
+                users.forEach { service.syncByExternalUser(HealthProvider.FITBIT, it, minGap = FITBIT_PUSH_GAP) }
+            }
+            call.respond(HttpStatusCode.NoContent)
+        }
     }
 }
+
+/** Google Health announces each data type on its own; one pull answers the burst. */
+private val FITBIT_PUSH_GAP = 5.minutes
 
 private val webhookJson = Json { ignoreUnknownKeys = true }
 

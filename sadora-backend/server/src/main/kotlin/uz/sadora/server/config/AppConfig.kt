@@ -184,6 +184,16 @@ data class AppConfig(
                         apiBaseUrl = env("GARMIN_API_BASE_URL", "https://apis.garmin.com"),
                         webhookToken = envOrNull("GARMIN_WEBHOOK_TOKEN"),
                     ),
+                    fitbit = FitbitConfig(
+                        clientId = envOrNull("FITBIT_CLIENT_ID"),
+                        clientSecret = envOrNull("FITBIT_CLIENT_SECRET"),
+                        redirectUri = env("FITBIT_REDIRECT_URI", "$publicBaseUrl/v1/wearables/fitbit/callback"),
+                        authorizeUrl = env("FITBIT_AUTHORIZE_URL", "https://accounts.google.com/o/oauth2/v2/auth"),
+                        tokenUrl = env("FITBIT_TOKEN_URL", "https://oauth2.googleapis.com/token"),
+                        revokeUrl = env("FITBIT_REVOKE_URL", "https://oauth2.googleapis.com/revoke"),
+                        apiBaseUrl = env("FITBIT_API_BASE_URL", "https://health.googleapis.com"),
+                        webhookSecret = envOrNull("FITBIT_WEBHOOK_SECRET"),
+                    ),
                 ),
                 accountErasureGracePeriod = env("ACCOUNT_ERASURE_GRACE_DAYS", "30").toInt().days,
                 adminRequireTotp = env("ADMIN_REQUIRE_TOTP", (environment != Environment.DEV).toString()).toBoolean(),
@@ -218,7 +228,7 @@ data class AppConfig(
             require(otp.eskiz.isConfigured) { "ESKIZ_EMAIL and ESKIZ_PASSWORD must be set in production." }
             require("{code}" in otp.smsText) { "OTP_SMS_TEXT must contain {code}." }
             require(publicBaseUrl.startsWith("https://")) { "PUBLIC_BASE_URL must be an https URL in production." }
-            if (wearables.whoop.isConfigured || wearables.oura.isConfigured || wearables.garmin.isConfigured) {
+            if (wearables.whoop.isConfigured || wearables.oura.isConfigured || wearables.garmin.isConfigured || wearables.fitbit.isConfigured) {
                 require(wearables.tokenKey != null) { "WEARABLE_TOKEN_KEY must be set when a cloud wearable is configured." }
             }
         }
@@ -400,6 +410,7 @@ data class WearableConfig(
     val whoop: WhoopConfig,
     val oura: OuraConfig = OuraConfig(null, null, "", "", ""),
     val garmin: GarminConfig = GarminConfig(null, null, "", "", "", "", null),
+    val fitbit: FitbitConfig = FitbitConfig(null, null, "", "", "", "", "", null),
 )
 
 /**
@@ -445,6 +456,28 @@ data class GarminConfig(
     val tokenUrl: String,
     val apiBaseUrl: String,
     val webhookToken: String?,
+) {
+    val isConfigured: Boolean get() = clientId != null && clientSecret != null
+}
+
+/**
+ * Fitbit, which since Fitbit's own Web API was retired means an OAuth client in a Google
+ * Cloud project with the Google Health API enabled. On the same terms as [WhoopConfig].
+ *
+ * [webhookSecret] is the whole `Authorization` value Google Health was told to send with
+ * its notifications ("Bearer …"); a post without it is refused. Without the secret she
+ * can still connect, and her data is pulled on the schedule alone.
+ */
+data class FitbitConfig(
+    val clientId: String?,
+    val clientSecret: String?,
+    /** Must match a redirect URI on the Google OAuth client, character for character. */
+    val redirectUri: String,
+    val authorizeUrl: String,
+    val tokenUrl: String,
+    val revokeUrl: String,
+    val apiBaseUrl: String,
+    val webhookSecret: String?,
 ) {
     val isConfigured: Boolean get() = clientId != null && clientSecret != null
 }

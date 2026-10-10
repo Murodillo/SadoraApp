@@ -681,6 +681,13 @@ class ApiIntegrationTest {
         assertEquals(HttpStatusCode.BadRequest, client.get("/v1/wearables/garmin/callback?error=access_denied").status)
         assertEquals(HttpStatusCode.ServiceUnavailable, client.post("/v1/wearables/garmin/webhook/guess") { setBody("{}") }.status)
 
+        // And Fitbit, which is read through Google Health.
+        val fitbit = assertNotNull(providers.firstOrNull { it.provider == HealthProvider.FITBIT })
+        assertEquals(ProviderUnavailable.NOT_CONFIGURED, fitbit.unavailableReason)
+        assertEquals(HttpStatusCode.ServiceUnavailable, client.post("/v1/wearables/fitbit/connect") { auth(user.token) }.status)
+        assertEquals(HttpStatusCode.BadRequest, client.get("/v1/wearables/fitbit/callback?error=access_denied").status)
+        assertEquals(HttpStatusCode.ServiceUnavailable, client.post("/v1/wearables/fitbit/webhook") { setBody("{}") }.status)
+
         assertTrue(get<List<WearableConnection>>("/v1/wearables/connections", user.token).isEmpty())
     }
 
@@ -3144,7 +3151,7 @@ class ApiIntegrationTest {
      * side must show as a connection to renew rather than keep looking alive.
      */
     @Test
-    fun `a Garmin push lands in the account its user id belongs to, and a deregistration ends it`() = api {
+    fun `a Garmin push lands in the account its user id belongs to, a deregistration ends it, and Fitbit's names are mapped`() = api {
         val user = signUp().also { onboard(it) }
         val userId = Uuid.parse(user.userId)
         val garminId = "g-${Uuid.random()}"
@@ -3195,6 +3202,32 @@ class ApiIntegrationTest {
         service.ingestPushed(HealthProvider.GARMIN, "nobody", samples)
         val synced = assertNotNull(component.connectionRepository.find(userId, HealthProvider.GARMIN))
         assertNotNull(synced.lastSyncAt)
+
+        // Fitbit's names go through the same table: every one the mapper uses has a row.
+        val fitbit = uz.sadora.server.wearable.fitbit.FitbitMapper
+        val json = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
+        val (y, m, d) = today.split("-").map { it.toInt() }
+        val civil = """{"year":$y,"month":$m,"day":$d}"""
+        val fitbitSamples = json.decodeFromString<uz.sadora.server.wearable.fitbit.GoogleHealthRollupPage>(
+            """{"rollupDataPoints":[{"civilStartTime":{"date":$civil},"steps":{"countSum":"800"},"floors":{"countSum":"3"},
+                 "distance":{"millimetersSum":"600000"},"activeEnergyBurned":{"kcalSum":90.0},"heartRate":{"beatsPerMinuteAvg":70.0}}]}""",
+        ).rollupDataPoints.flatMap(fitbit::fromRollup) + json.decodeFromString<uz.sadora.server.wearable.fitbit.GoogleHealthPage>(
+            """{"dataPoints":[
+                 {"dailyRestingHeartRate":{"date":$civil,"beatsPerMinute":"57"}},
+                 {"dailyHeartRateVariability":{"date":$civil,"averageHeartRateVariabilityMilliseconds":48.5}},
+                 {"dailyOxygenSaturation":{"date":$civil,"averagePercentage":96.2}},
+                 {"dailyRespiratoryRate":{"date":$civil,"breathsPerMinute":14.6}},
+                 {"dailyVo2Max":{"date":$civil,"vo2Max":38.0}},
+                 {"weight":{"sampleTime":{"physicalTime":"${now() - 10.minutes}"},"weightGrams":61500}},
+                 {"bodyFat":{"sampleTime":{"physicalTime":"${now() - 10.minutes}"},"percentage":24.5}},
+                 {"sleep":{"interval":{"startTime":"${now() - 600.minutes}","endTime":"${now() - 60.minutes}"},"metadata":{"mainSleep":true},
+                           "summary":{"minutesAsleep":"450","minutesAwake":"30","stagesSummary":[
+                             {"type":"DEEP","minutes":"90"},{"type":"REM","minutes":"100"},{"type":"LIGHT","minutes":"260"}]}}}]}""",
+        ).dataPoints.flatMap(fitbit::fromDataPoint)
+        assertEquals(17, fitbitSamples.size)
+        val fitbitResult = component.wearableService.ingest(userId, uz.sadora.contract.IngestSamplesRequest(fitbitSamples))
+        assertTrue(fitbitResult.unmapped.isEmpty(), "unmapped: ${fitbitResult.unmapped}")
+        assertEquals(17, fitbitResult.accepted)
 
         service.revokedByExternalUser(HealthProvider.GARMIN, garminId)
         val revoked = assertNotNull(component.connectionRepository.find(userId, HealthProvider.GARMIN))

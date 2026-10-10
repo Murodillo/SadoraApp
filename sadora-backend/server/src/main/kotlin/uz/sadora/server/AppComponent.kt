@@ -96,6 +96,7 @@ import uz.sadora.server.wearable.WearableService
 import uz.sadora.server.wearable.ConnectionRepository
 import uz.sadora.server.wearable.WearableConnectService
 import uz.sadora.server.wearable.WearableSyncJob
+import uz.sadora.server.wearable.fitbit.FitbitClient
 import uz.sadora.server.wearable.garmin.GarminClient
 import uz.sadora.server.wearable.oura.OuraClient
 import uz.sadora.server.wearable.whoop.WhoopClient
@@ -253,6 +254,8 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
         oura = if (config.wearables.oura.isConfigured) OuraClient(outboundHttpClient, config.wearables.oura) else null,
         garmin = if (config.wearables.garmin.isConfigured) GarminClient(outboundHttpClient, config.wearables.garmin) else null,
         garminWebhookToken = config.wearables.garmin.webhookToken,
+        fitbit = if (config.wearables.fitbit.isConfigured) FitbitClient(outboundHttpClient, config.wearables.fitbit) else null,
+        fitbitWebhookSecret = config.wearables.fitbit.webhookSecret,
     )
     val wearableSyncJob = WearableSyncJob(wearableConnectService)
 

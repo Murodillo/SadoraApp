@@ -1,5 +1,6 @@
 package uz.sadora.server.wearable
 
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
@@ -29,6 +30,7 @@ import uz.sadora.server.core.ValidationException
 import uz.sadora.server.core.now
 import uz.sadora.server.core.randomToken
 import uz.sadora.server.health.HealthAccess
+import uz.sadora.server.wearable.fitbit.FitbitClient
 import uz.sadora.server.wearable.garmin.GarminClient
 import uz.sadora.server.wearable.oura.OuraClient
 import uz.sadora.server.wearable.whoop.WhoopClient
@@ -36,7 +38,7 @@ import uz.sadora.server.wearable.whoop.WhoopClient
 /**
  * Connecting a cloud wearable, and pulling from it.
  *
- * WHOOP, Oura and Garmin so far. A provider is an OAuth grant and a [CloudProviderClient]
+ * WHOOP, Oura, Garmin and Fitbit so far. A provider is an OAuth grant and a [CloudProviderClient]
  * that pages through its collections and maps them to [HealthSampleInput]. Garmin differs
  * in one thing: it sends the data itself, so most of hers arrives through [ingestPushed]
  * and the pull is only the floor under it. Everything provider-specific stops at the
@@ -54,10 +56,12 @@ class WearableConnectService(
     private val oura: OuraClient? = null,
     private val garmin: GarminClient? = null,
     private val garminWebhookToken: String? = null,
+    private val fitbit: FitbitClient? = null,
+    private val fitbitWebhookSecret: String? = null,
 ) {
     /** The clients this server has credentials for. A provider missing here is "not configured". */
     private val clients: Map<HealthProvider, CloudProviderClient> =
-        listOfNotNull<CloudProviderClient>(whoop, oura, garmin).associateBy { it.provider }
+        listOfNotNull<CloudProviderClient>(whoop, oura, garmin, fitbit).associateBy { it.provider }
 
     private val logger = LoggerFactory.getLogger(WearableConnectService::class.java)
 
@@ -112,7 +116,14 @@ class WearableConnectService(
                 metrics = GARMIN_METRICS,
                 connection = connected[HealthProvider.GARMIN]?.toDto(),
             ),
-            ProviderInfo(HealthProvider.FITBIT, ProviderKind.CLOUD, false, ProviderUnavailable.PLANNED, WATCH_METRICS),
+            ProviderInfo(
+                provider = HealthProvider.FITBIT,
+                kind = ProviderKind.CLOUD,
+                available = fitbit != null,
+                unavailableReason = if (fitbit == null) ProviderUnavailable.NOT_CONFIGURED else null,
+                metrics = FITBIT_METRICS,
+                connection = connected[HealthProvider.FITBIT]?.toDto(),
+            ),
             // Samsung Health writes into Health Connect, and that is how the app reads it;
             // the app shows it on Android phones only.
             ProviderInfo(
@@ -257,9 +268,14 @@ class WearableConnectService(
         return SyncResult(record.provider, result.accepted, result.updated, result.daysAffected)
     }
 
-    /** A webhook named a WHOOP user; find her and pull. Unknown users are ignored, not errors. */
-    suspend fun syncByExternalUser(provider: HealthProvider, externalUserId: String) {
+    /**
+     * A webhook named a provider's user; find her and pull. Unknown users are ignored, not
+     * errors. [minGap] is for a provider that announces every data type separately: a
+     * pull that has only just run is not run again, and the scheduled one picks up the rest.
+     */
+    suspend fun syncByExternalUser(provider: HealthProvider, externalUserId: String, minGap: Duration = Duration.ZERO) {
         val record = connections.findByExternalUser(provider, externalUserId) ?: return
+        if (record.lastSyncAt?.let { now() - it < minGap } == true) return
         runCatching { sync(record) }.onFailure { logger.warn("Webhook sync failed for {}", record.userId, it) }
     }
 
@@ -291,6 +307,12 @@ class WearableConnectService(
         return java.security.MessageDigest.isEqual(expected.toByteArray(), token.toByteArray())
     }
 
+    /** Whether [authorization] is the header value Google Health was told to send. Null when none is set. */
+    fun isFitbitWebhookSecret(authorization: String?): Boolean? {
+        val expected = fitbitWebhookSecret ?: return null
+        return java.security.MessageDigest.isEqual(expected.toByteArray(), authorization.orEmpty().toByteArray())
+    }
+
     private suspend fun freshAccessToken(record: ConnectionRecord, client: CloudProviderClient): String {
         val current = runCatching { cipher.decrypt(record.accessTokenEnc) }.getOrNull()
         if (current != null && record.tokenExpiresAt - now() > REFRESH_MARGIN) return current
@@ -302,7 +324,8 @@ class WearableConnectService(
             record.provider,
             GrantedTokens(
                 accessTokenEnc = cipher.encrypt(tokens.accessToken),
-                // Oura's and Garmin's refresh tokens are single-use and come back new; WHOOP's may not.
+                // Oura's and Garmin's refresh tokens are single-use and come back new; WHOOP's
+                // may not, and Google's never does: the first one stays good.
                 refreshTokenEnc = (tokens.refreshToken ?: refreshToken).let(cipher::encrypt),
                 expiresAt = now() + tokens.expiresIn.seconds,
                 scopes = tokens.scope.split(' ').filter { it.isNotBlank() },
@@ -359,9 +382,12 @@ class WearableConnectService(
             HealthMetric.SLEEP_AWAKE, HealthMetric.SLEEP_PERFORMANCE, HealthMetric.SPO2, HealthMetric.RESPIRATORY_RATE,
             HealthMetric.WEIGHT, HealthMetric.BODY_FAT, HealthMetric.VO2_MAX,
         )
-        val WATCH_METRICS = listOf(
-            HealthMetric.STEPS, HealthMetric.HEART_RATE, HealthMetric.RESTING_HEART_RATE, HealthMetric.HRV,
-            HealthMetric.SLEEP_DURATION, HealthMetric.SLEEP_DEEP, HealthMetric.SLEEP_REM, HealthMetric.ACTIVE_ENERGY,
+        val FITBIT_METRICS = listOf(
+            HealthMetric.STEPS, HealthMetric.DISTANCE, HealthMetric.ACTIVE_ENERGY, HealthMetric.FLOORS,
+            HealthMetric.HEART_RATE, HealthMetric.RESTING_HEART_RATE, HealthMetric.HRV,
+            HealthMetric.SLEEP_DURATION, HealthMetric.SLEEP_DEEP, HealthMetric.SLEEP_REM, HealthMetric.SLEEP_LIGHT,
+            HealthMetric.SLEEP_AWAKE, HealthMetric.SPO2, HealthMetric.RESPIRATORY_RATE,
+            HealthMetric.WEIGHT, HealthMetric.BODY_FAT, HealthMetric.VO2_MAX,
         )
     }
 }

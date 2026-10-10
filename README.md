@@ -537,6 +537,34 @@ bodyComps, userMetrics, deregistration, userPermissionsChange) uchun yuqoridagi 
 manzili. `.env`: `GARMIN_CLIENT_ID`, `GARMIN_CLIENT_SECRET`, `GARMIN_WEBHOOK_TOKEN`
 (`openssl rand -hex 24`). Stress va Body Battery olinmaydi — bizda bunday ko'rsatkich yo'q.
 
+### Fitbit (Google Health API)
+
+Fitbit'ning o'z Web API'si 2026-10-30 da o'chiriladi; Fitbit hisobi endi Google hisobi va
+ma'lumot `health.googleapis.com/v4` dan Google OAuth orqali o'qiladi. Ulanish yo'li o'sha
+(`/v1/wearables/fitbit/connect|callback|sync`). Kunlik jamlar (qadam, masofa, qavat, faol
+kaloriya, o'rtacha puls) `dailyRollUp` bilan, tungi ko'rsatkichlar (tinch puls, HRV, SpO₂,
+nafas, VO₂ max) sana bo'yicha, uyqu va vazn yozuvlar sifatida olinadi — faqat uning Fitbit
+va Pixel qurilmalaridan (`google-wearables`), telefon Health Connect orqali yozgani emas.
+
+Webhook: Google Health ma'lumotni emas, faqat "kimda nima o'zgardi"ni yuboradi —
+`POST /v1/wearables/fitbit/webhook`, `Authorization` sarlavhasi `FITBIT_WEBHOOK_SECRET`
+bilan bir xil bo'lishi kerak; keyin server o'zi tortadi (bir foydalanuvchi uchun 5
+daqiqada ko'pi bilan bir marta).
+
+Sozlash: Google Cloud loyihasida Google Health API'ni yoqing, OAuth client (Web) yarating,
+redirect — `PUBLIC_BASE_URL/v1/wearables/fitbit/callback`; `.env`: `FITBIT_CLIENT_ID`,
+`FITBIT_CLIENT_SECRET`, `FITBIT_WEBHOOK_SECRET` (`Bearer <openssl rand -hex 24>`).
+Subscriber bir marta yaratiladi (loyiha *raqami* bilan):
+
+```bash
+curl -X POST "https://health.googleapis.com/v4/projects/<PROJECT_NUMBER>/subscribers?subscriberId=sadora-api" \
+  -H "Authorization: Bearer $(gcloud auth print-access-token)" -H "Content-Type: application/json" \
+  -d '{"endpointUri":"<PUBLIC_BASE_URL>/v1/wearables/fitbit/webhook",
+       "endpointAuthorization":{"secret":"<FITBIT_WEBHOOK_SECRET>"},
+       "subscriberConfigs":[{"dataTypes":["steps","sleep","weight","daily-resting-heart-rate","daily-heart-rate-variability"],
+                             "subscriptionCreatePolicy":"AUTOMATIC"}]}'
+```
+
 Soat yo'q bo'lsa uyqu Uyqu ekranidan qo'lda kiritiladi (`manual` provayder,
 `sleep_minutes` → `sleep_duration`).
 
