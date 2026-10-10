@@ -284,11 +284,12 @@ class ConsultationService(
         if (!repository.markPaid(sessionId, at, at + Limits.CONSULTATION_HOURS.hours)) return
         val doctor = doctors.byId(session.doctorId) ?: return
         messages.openConsultation(session.patientId, doctor.userId, doctor.id, Limits.CONSULTATION_HOURS.hours)
-        val patient = users.findById(session.patientId)?.name?.takeIf { it.isNotBlank() } ?: "Bemor"
+        val patientName = users.findById(session.patientId)?.name?.takeIf { it.isNotBlank() }
         push(
             userId = doctor.userId,
-            title = "Yangi pullik konsultatsiya",
-            body = "$patient to'lov qildi — 24 soat ichida javob bering",
+            text = { language ->
+                ConsultationPhrases.paid(patientName ?: ConsultationPhrases.patientFallback(language), Limits.CONSULTATION_HOURS, language)
+            },
             dedupeKey = "consultation_paid:$sessionId",
             target = TARGET_DOCTOR,
             conversationId = session.conversationId,
@@ -316,16 +317,14 @@ class ConsultationService(
         when {
             session.payment == ConsultationPayment.REFUND_DUE -> push(
                 userId = session.patientId,
-                title = "Shifokor javob bermadi",
-                body = "To'lovingiz qaytariladi — 3 ish kuni ichida",
+                text = ConsultationPhrases::refundDue,
                 dedupeKey = "consultation_refund:${session.id}",
                 target = TARGET_CLIENT,
                 conversationId = session.conversationId,
             )
             session.firstReplyAt != null && session.rating == null -> push(
                 userId = session.patientId,
-                title = if (session.summary != null) "Shifokor tavsiyasi tayyor" else "Konsultatsiya tugadi",
-                body = "Shifokorni baholang — bu boshqalarga yordam beradi",
+                text = { language -> ConsultationPhrases.rate(session.summary != null, language) },
                 dedupeKey = "consultation_rate:${session.id}",
                 target = TARGET_CLIENT,
                 conversationId = session.conversationId,
@@ -340,10 +339,10 @@ class ConsultationService(
         if (doctor.userId == userId) throw ForbiddenException(message = "Konsultatsiyani bemor baholaydi")
         if (request.rating !in 1..5) throw ValidationException("rating", "1 dan 5 gacha")
         val review = request.review?.trim()?.takeIf { it.isNotEmpty() }
-        if (review != null && review.length > REVIEW_MAX) throw ValidationException("review", "Eng ko'pi $REVIEW_MAX belgi")
+        if (review != null && review.length > REVIEW_MAX) throw ValidationException("review", "Sharh eng ko'pi $REVIEW_MAX belgi bo'lsin")
         val session = repository.currentSession(thread.id) ?: throw ValidationException("rating", "Baholanadigan konsultatsiya yo'q")
         if (session.firstReplyAt == null) throw ValidationException("rating", "Shifokor hali javob bermagan")
-        if (!repository.rate(session.id, request.rating, review)) throw ConflictException("Allaqachon baholangansiz")
+        if (!repository.rate(session.id, request.rating, review)) throw ConflictException("Siz bu konsultatsiyaga baho qo'ygansiz")
     }
 
     // ---------------------------------------------------------------- quick replies
@@ -391,7 +390,7 @@ class ConsultationService(
     suspend fun saveNote(userId: Uuid, conversationId: Uuid, request: SavePatientNoteRequest): PatientNote {
         val (doctor, thread) = requireOwnConsultation(userId, conversationId)
         val body = request.body.trim()
-        if (body.length > NOTE_MAX) throw ValidationException("body", "Eng ko'pi $NOTE_MAX belgi")
+        if (body.length > NOTE_MAX) throw ValidationException("body", "Izoh eng ko'pi $NOTE_MAX belgi bo'lsin")
         val at = repository.saveNote(doctor.id, thread.other(userId), body)
         return PatientNote(body, at.takeIf { body.isNotEmpty() })
     }
@@ -562,7 +561,7 @@ class ConsultationService(
     suspend fun markRefunded(sessionId: Uuid, admin: AdminPrincipal, context: RequestContext) {
         val session = repository.session(sessionId) ?: throw NotFoundException("Konsultatsiya topilmadi")
         if (!repository.markRefunded(sessionId, admin.adminId)) {
-            throw ConflictException("Bu holatda (${session.payment.name.lowercase()}) qaytarib bo'lmaydi")
+            throw ConflictException("To'lov holati «${session.payment.uzWord()}» — qaytarildi deb belgilab bo'lmaydi")
         }
         audit.record(
             AuditEntry(
@@ -660,7 +659,7 @@ class ConsultationService(
         doctors.byId(doctorId) ?: throw NotFoundException("Shifokor topilmadi")
         if (request.amountMinor <= 0) throw ValidationException("amountMinor", "Summa musbat bo'lsin")
         val note = request.note?.trim()?.takeIf { it.isNotEmpty() }
-        if (note != null && note.length > 500) throw ValidationException("note", "Eng ko'pi 500 belgi")
+        if (note != null && note.length > 500) throw ValidationException("note", "Izoh eng ko'pi 500 belgi bo'lsin")
         val payout = repository.addPayout(doctorId, request.amountMinor, note, admin.adminId)
         audit.record(
             AuditEntry(
@@ -692,21 +691,22 @@ class ConsultationService(
         return doctor to thread
     }
 
+    /** A push in the language of the person it reaches. */
     private suspend fun push(
         userId: Uuid,
-        title: String,
-        body: String,
+        text: (uz.sadora.contract.Language) -> ConsultationPhrases.Text,
         dedupeKey: String,
         target: String,
         conversationId: Uuid,
     ) {
         val settings = notifications.settingsOf(userId)
         if (!settings.enabled || !settings.isCategoryEnabled(NotificationCategory.SYSTEM)) return
+        val words = text(users.findById(userId)?.language ?: uz.sadora.contract.Language.UZ)
         notifications.enqueue(
             userId = userId,
             category = NotificationCategory.SYSTEM,
-            title = title,
-            body = body,
+            title = words.title,
+            body = words.body,
             scheduledFor = clock.now(),
             dedupeKey = dedupeKey,
             status = NotificationStatus.QUEUED,
@@ -714,6 +714,15 @@ class ConsultationService(
             targetApp = target,
             link = conversationLink(conversationId),
         )
+    }
+
+    /** The payment's state as the staff panel reads it, in Uzbek. */
+    private fun ConsultationPayment.uzWord(): String = when (this) {
+        ConsultationPayment.FREE -> "bepul"
+        ConsultationPayment.PENDING -> "to'lanmagan"
+        ConsultationPayment.PAID -> "to'langan"
+        ConsultationPayment.REFUND_DUE -> "qaytarilishi kerak"
+        ConsultationPayment.REFUNDED -> "qaytarilgan"
     }
 
     private fun QuickReplyRecord.toDto() = QuickReply(id.toString(), title, body, position)

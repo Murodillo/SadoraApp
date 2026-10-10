@@ -48,6 +48,9 @@ import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
+import org.jetbrains.exposed.v1.jdbc.update
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Assumptions.assumeTrue
 import org.junit.jupiter.api.BeforeAll
@@ -100,6 +103,7 @@ import kotlinx.datetime.minus
 import kotlinx.datetime.plus
 import kotlinx.datetime.todayIn
 import kotlinx.datetime.toInstant
+import kotlinx.datetime.toLocalDateTime
 import uz.sadora.contract.StageBaseline
 import uz.sadora.contract.AuthSession
 import uz.sadora.contract.BillingCatalogue
@@ -188,6 +192,7 @@ import uz.sadora.contract.PartnerWebLink
 import uz.sadora.contract.SendPartnerMessageRequest
 import uz.sadora.contract.UzbekPhone
 import uz.sadora.server.admin.AdminSession
+import uz.sadora.server.admin.AdminPasswordChangeRequest
 import uz.sadora.server.admin.AdminMe
 import uz.sadora.server.admin.AdminSignInRequest
 import uz.sadora.server.admin.Totp
@@ -1542,6 +1547,128 @@ class ApiIntegrationTest {
             json(AdminSignInRequest(admin.email, admin.password, currentCodeFor(enrolment.secret)))
         }
         assertEquals(HttpStatusCode.OK, withCode.status, withCode.bodyAsTextSafe())
+
+        // The same code a second time is a replay: someone who saw it over her shoulder
+        // or phished it gets nothing for the rest of its 90 seconds.
+        val replayed = client.post("/v1/admin/auth/login") {
+            json(AdminSignInRequest(admin.email, admin.password, currentCodeFor(enrolment.secret)))
+        }
+        assertEquals(HttpStatusCode.Unauthorized, replayed.status, replayed.bodyAsTextSafe())
+    }
+
+    @Test
+    fun `a dose the last tick missed, and one just past midnight, are both reminded`() = api {
+        val her = signUp()
+        val userId = Uuid.parse(her.userId)
+        val zone = kotlinx.datetime.TimeZone.of(component.userRepository.findById(userId)!!.timezone)
+        val local = now().toLocalDateTime(zone)
+        // Ten minutes late (a slow tick, a restart) and three minutes ahead — either may sit
+        // on another day's schedule when the test runs near midnight.
+        val late = (now() - 10.minutes).toLocalDateTime(zone).time.let { kotlinx.datetime.LocalTime(it.hour, it.minute) }
+        val soon = (now() + 3.minutes).toLocalDateTime(zone).time.let { kotlinx.datetime.LocalTime(it.hour, it.minute) }
+        val id = component.medicationRepository.add(
+            userId,
+            uz.sadora.contract.SaveMedicationRequest(
+                name = "Test",
+                schedule = uz.sadora.contract.MedicationSchedule(times = listOf(late, soon)),
+            ),
+            startedOn = local.date.minus(2, kotlinx.datetime.DateTimeUnit.DAY),
+        )
+        dbQuery { exec("UPDATE medications SET created_at = now() - interval '2 days' WHERE id = '$id'") }
+
+        component.notificationScheduler.tick()
+
+        val queued = dbQuery {
+            exec("SELECT count(*) FROM notification_outbox WHERE user_id = '$userId' AND dedupe_key LIKE 'med:$id:%'") { rows ->
+                rows.next()
+                rows.getInt(1)
+            } ?: 0
+        }
+        assertEquals(2, queued, "the late dose and the coming one")
+    }
+
+    @Test
+    fun `two extensions landing together both count`() = api {
+        val her = Uuid.parse(signUp().userId)
+        val repo = component.subscriptionRepository
+        coroutineScope {
+            repeat(2) { launch { repo.extend(her, SubscriptionSource.PAYME, 30.days, reason = "test") } }
+        }
+        val ends = component.entitlementService.subscriptionStatus(her).expiresAt!!
+        assertTrue(ends > now() + 59.days, "two months, not one: $ends")
+    }
+
+    @Test
+    fun `a payment granted once is not granted again on the provider's retry`() = api {
+        val her = Uuid.parse(signUp().userId)
+        val repo = component.subscriptionRepository
+        val first = repo.extend(her, SubscriptionSource.PAYME, 30.days, onceFor = "payment $her")
+        val second = repo.extend(her, SubscriptionSource.PAYME, 30.days, onceFor = "payment $her")
+        assertEquals(first, second)
+        val ends = component.entitlementService.subscriptionStatus(her).expiresAt!!
+        assertTrue(ends < now() + 31.days, "one month: $ends")
+    }
+
+    @Test
+    fun `a store subscription keeps the time she already paid for elsewhere`() = api {
+        val her = Uuid.parse(signUp().userId)
+        val repo = component.subscriptionRepository
+        repo.extend(her, SubscriptionSource.PAYME, 300.days, reason = "yearly, mostly left")
+        repo.grantStore(her, SubscriptionSource.APP_STORE, now() + 30.days, "premium_month", "tx-${Uuid.random()}", "store receipt")
+        val afterPurchase = component.entitlementService.subscriptionStatus(her).expiresAt!!
+        assertTrue(afterPurchase > now() + 329.days, "a month on top of 300 days: $afterPurchase")
+
+        // The store's own renewal says a month from now; what is running is longer and stays.
+        repo.grantStore(her, SubscriptionSource.APP_STORE, now() + 60.days, "premium_month", "tx-${Uuid.random()}", "store receipt")
+        val afterRenewal = component.entitlementService.subscriptionStatus(her).expiresAt!!
+        assertTrue(afterRenewal >= afterPurchase, "a renewal never shortens: $afterRenewal < $afterPurchase")
+    }
+
+    @Test
+    fun `an operator changes her own password, and only with the current one`() = api {
+        val admin = adminAccount()
+        val wrongCurrent = client.post("/v1/admin/me/password") {
+            auth(admin.token)
+            json(AdminPasswordChangeRequest(currentPassword = "Wrong12345", newPassword = "NewPass12345"))
+        }
+        assertEquals(HttpStatusCode.BadRequest, wrongCurrent.status)
+
+        val published = client.post("/v1/admin/me/password") {
+            auth(admin.token)
+            json(AdminPasswordChangeRequest(currentPassword = admin.password, newPassword = "changeme123"))
+        }
+        assertEquals(HttpStatusCode.BadRequest, published.status, "a password in the repository is refused")
+
+        val changed = client.post("/v1/admin/me/password") {
+            auth(admin.token)
+            json(AdminPasswordChangeRequest(currentPassword = admin.password, newPassword = "NewPass12345"))
+        }
+        assertEquals(HttpStatusCode.OK, changed.status, changed.bodyAsTextSafe())
+
+        val old = client.post("/v1/admin/auth/login") { json(AdminSignInRequest(admin.email, admin.password)) }
+        assertEquals(HttpStatusCode.Unauthorized, old.status)
+        val new = client.post("/v1/admin/auth/login") { json(AdminSignInRequest(admin.email, "NewPass12345")) }
+        assertEquals(HttpStatusCode.OK, new.status, new.bodyAsTextSafe())
+    }
+
+    @Test
+    fun `parallel wrong passwords still lock the account`() = api {
+        val admin = adminAccount()
+        coroutineScope {
+            repeat(10) {
+                launch { client.post("/v1/admin/auth/login") { json(AdminSignInRequest(admin.email, "Wrong12345")) } }
+            }
+        }
+        val right = client.post("/v1/admin/auth/login") { json(AdminSignInRequest(admin.email, admin.password)) }
+        assertEquals(HttpStatusCode.Forbidden, right.status, "locked after five failures, however they arrived")
+    }
+
+    @Test
+    fun `a disabled operator's token stops working at once`() = api {
+        val admin = adminAccount()
+        assertEquals(HttpStatusCode.OK, client.get("/v1/admin/me") { auth(admin.token) }.status)
+        dbQuery { AdminUsers.update({ AdminUsers.email eq admin.email }) { it[status] = "disabled" } }
+        assertEquals(HttpStatusCode.Unauthorized, client.get("/v1/admin/me") { auth(admin.token) }.status)
     }
 
     @Test
@@ -4061,6 +4188,9 @@ class ApiIntegrationTest {
                 secretKey = "test_click_secret",
                 checkoutUrl = "https://my.click.uz/services/pay",
             ),
+            // The suite pays consultations, pets and frames through the instant page.
+            devPay = true,
+            allowTestPurchases = true,
         ),
         policyVersion = "2026-08-01",
         minimumAppVersion = null,

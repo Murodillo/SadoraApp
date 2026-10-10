@@ -27,9 +27,25 @@ function CountedValue({ value }: { value: number }) {
   return <>{shown.toLocaleString('ru-RU')}</>
 }
 
-export function Stat({ label, value, hint, art }: { label: string; value: ReactNode; hint?: ReactNode; art?: ArtName }) {
+/**
+ * One number on a stat row. `alert` marks the one that asks something of her — a
+ * question that ran out unanswered — so it does not sit among the others at equal weight.
+ */
+export function Stat({
+  label,
+  value,
+  hint,
+  art,
+  alert = false,
+}: {
+  label: string
+  value: ReactNode
+  hint?: ReactNode
+  art?: ArtName
+  alert?: boolean
+}) {
   return (
-    <div className={`card stat${art ? ' with-art' : ''}`}>
+    <div className={`card stat${art ? ' with-art' : ''}${alert ? ' alert' : ''}`}>
       {art && <ArtTile name={art} size={44} />}
       <div className="label">{label}</div>
       <div className={`value${typeof value === 'number' ? '' : ' text'}`}>

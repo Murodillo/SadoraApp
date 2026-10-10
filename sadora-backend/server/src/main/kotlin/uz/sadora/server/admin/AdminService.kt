@@ -123,7 +123,7 @@ class AdminService(
         context: RequestContext,
     ) {
         if (request.reason.isBlank()) {
-            throw ValidationException("reason", "Sabab ko'rsatilishi shart")
+            throw ValidationException("reason", "Sababini yozing")
         }
         users.findById(userId) ?: throw NotFoundException("Foydalanuvchi topilmadi")
 
@@ -157,7 +157,7 @@ class AdminService(
         context: RequestContext,
     ) {
         if (request.reason.isBlank()) {
-            throw ValidationException("reason", "Sabab ko'rsatilishi shart")
+            throw ValidationException("reason", "Sababini yozing")
         }
         users.findById(userId) ?: throw NotFoundException("Foydalanuvchi topilmadi")
         // A grant supersedes whatever is active. Two dates it must not carry: one already
@@ -250,7 +250,7 @@ class AdminService(
         context: RequestContext,
     ) {
         if (request.reason.isBlank()) {
-            throw ValidationException("reason", "Sabab ko'rsatilishi shart")
+            throw ValidationException("reason", "Sababini yozing")
         }
         entitlementRepository.setOverride(
             userId = userId,

@@ -135,10 +135,10 @@ class NutritionService(
     suspend fun addMeal(userId: Uuid, request: LogMealRequest): Meal {
         val user = access.requireWritable(userId, FeatureKeys.NUTRITION_LOG)
         if (request.description.isBlank()) {
-            throw ValidationException("description", "Bo'sh bo'lishi mumkin emas")
+            throw ValidationException("description", "Taom tavsifini yozing")
         }
         if (request.description.length > MAX_DESCRIPTION) {
-            throw ValidationException("description", "Eng ko'pi $MAX_DESCRIPTION belgi")
+            throw ValidationException("description", "Taom tavsifi eng ko'pi $MAX_DESCRIPTION belgi bo'lsin")
         }
         if (request.date > now().dayIn(user.timezone)) {
             throw ValidationException("date", "Kelajakdagi kun uchun ovqat qo'shib bo'lmaydi")

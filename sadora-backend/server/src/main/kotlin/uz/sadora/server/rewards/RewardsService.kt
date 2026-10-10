@@ -409,7 +409,7 @@ class RewardsService(
     /** An operator's manual correction. The note is required and lands on the row. */
     suspend fun adjust(userId: Uuid, amount: Int, note: String): CoinBalance {
         if (amount == 0) throw ValidationException("amount", "Nol bo'lishi mumkin emas")
-        if (note.isBlank()) throw ValidationException("note", "Sabab yozilishi shart")
+        if (note.isBlank()) throw ValidationException("note", "Sababini yozing")
         // The balance check and the row share the wallet lock, as a redemption does.
         return repository.adjust(userId, amount, note.trim())
             ?: throw ValidationException("amount", "Balansdan ko'p ayirib bo'lmaydi")

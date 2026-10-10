@@ -559,6 +559,12 @@ export const useDisableTotp = () =>
     request('/v1/admin/me/totp/disable', { method: 'POST', body: input }),
   )
 
+export const useChangePassword = () =>
+  useMutation({
+    mutationFn: (input: { currentPassword: string; newPassword: string; totpCode?: string }) =>
+      request('/v1/admin/me/password', { method: 'POST', body: input }),
+  })
+
 // ---------------------------------------------------------------- Gul
 
 // Both are Owner/Admin/Analyst on the server; Support reaches the page for the

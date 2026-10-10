@@ -1,0 +1,4 @@
+/* Permission prompts. */
+"NSCameraUsageDescription" = "SADORA reads a photo of your meal and shows estimated calories, protein, fat and carbs. You can also take your profile photo.";
+"NSPhotoLibraryUsageDescription" = "You choose a photo from your gallery: to scan a meal, set your profile photo or add it to a message.";
+"NSHealthShareUsageDescription" = "SADORA reads sleep, steps, heart rate, temperature and period days to fill in your cycle forecast and the Balance and Sleep screens. Your data is never sold or shared for advertising.";

@@ -155,7 +155,7 @@ class FrameService(
     suspend fun checkout(userId: Uuid, request: FrameCheckoutRequest, origin: String): CheckoutSession {
         val product = forSale(userId, request.key)
         if (request.provider != PaymentProvider.PAYME && request.provider != PaymentProvider.CLICK) {
-            throw ValidationException("provider", "Store xaridi ilova ichida bo'ladi")
+            throw ValidationException("provider", "App Store yoki Google Play xaridi ilova ichida bo'ladi")
         }
         return billing.frameCheckout(userId, product.frame, product.priceMinor!!, request.provider, origin)
     }
@@ -335,7 +335,7 @@ class FrameService(
             when (provider) {
                 PaymentProvider.APP_STORE -> it.appStoreProductId == productId
                 PaymentProvider.GOOGLE_PLAY -> it.googlePlayProductId == productId
-                else -> throw ValidationException("provider", "Bu provayder store emas")
+                else -> throw ValidationException("provider", "Bu to'lov usuli App Store yoki Google Play emas")
             }
         }
 

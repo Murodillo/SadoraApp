@@ -104,9 +104,17 @@
             MainActivity keeps the MAIN action so that `am start` and the IDE's run
             button still work, but without LAUNCHER it draws no second home-screen entry.
         -->
+        <!--
+            configChanges: the activity owns the whole data graph (MainActivity.graph), and a
+            recreation built a second one — back to the splash, and a second refresh that
+            spent the token the first was still using, which the server reads as a replay and
+            signs her out. Compose follows rotation, dark mode, font size and resizing on its
+            own through LocalConfiguration, so none of these needs a new activity.
+        -->
         <activity
             android:exported="true"
             android:launchMode="singleTop"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboard|keyboardHidden|navigation|uiMode|density|fontScale|fontWeightAdjustment|locale|layoutDirection"
             android:name=".MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

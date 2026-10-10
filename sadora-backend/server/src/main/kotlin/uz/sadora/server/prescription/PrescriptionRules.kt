@@ -22,7 +22,7 @@ object PrescriptionRules {
         }
         val note = request.note?.trim()?.takeIf { it.isNotEmpty() }
         if (note != null && note.length > Limits.PRESCRIPTION_NOTE_MAX) {
-            throw ValidationException("note", "Eng ko'pi ${Limits.PRESCRIPTION_NOTE_MAX} belgi")
+            throw ValidationException("note", "Izoh eng ko'pi ${Limits.PRESCRIPTION_NOTE_MAX} belgi bo'lsin")
         }
         return SendPrescriptionRequest(request.items.mapIndexed { index, item -> clean(index, item) }, note)
     }
@@ -31,17 +31,17 @@ object PrescriptionRules {
         fun at(name: String) = itemField(index, name)
         val name = item.name.trim()
         if (name.isEmpty()) throw ValidationException(at("name"), "Dori nomi kerak")
-        if (name.length > Limits.MEDICATION_NAME_MAX) throw ValidationException(at("name"), "Eng ko'pi ${Limits.MEDICATION_NAME_MAX} belgi")
+        if (name.length > Limits.MEDICATION_NAME_MAX) throw ValidationException(at("name"), "Dori nomi eng ko'pi ${Limits.MEDICATION_NAME_MAX} belgi bo'lsin")
         val dose = item.dose.trim()
         if (dose.isEmpty()) throw ValidationException(at("dose"), "Doza kerak")
-        if (dose.length > Limits.PRESCRIPTION_DOSE_MAX) throw ValidationException(at("dose"), "Eng ko'pi ${Limits.PRESCRIPTION_DOSE_MAX} belgi")
+        if (dose.length > Limits.PRESCRIPTION_DOSE_MAX) throw ValidationException(at("dose"), "Doza eng ko'pi ${Limits.PRESCRIPTION_DOSE_MAX} belgi bo'lsin")
         val unit = item.unit?.trim()?.takeIf { it.isNotEmpty() }
         if (unit != null && unit.length > Limits.PRESCRIPTION_UNIT_MAX) {
-            throw ValidationException(at("unit"), "Eng ko'pi ${Limits.PRESCRIPTION_UNIT_MAX} belgi")
+            throw ValidationException(at("unit"), "Birlik eng ko'pi ${Limits.PRESCRIPTION_UNIT_MAX} belgi bo'lsin")
         }
         val note = item.note?.trim()?.takeIf { it.isNotEmpty() }
         if (note != null && note.length > Limits.PRESCRIPTION_ITEM_NOTE_MAX) {
-            throw ValidationException(at("note"), "Eng ko'pi ${Limits.PRESCRIPTION_ITEM_NOTE_MAX} belgi")
+            throw ValidationException(at("note"), "Izoh eng ko'pi ${Limits.PRESCRIPTION_ITEM_NOTE_MAX} belgi bo'lsin")
         }
 
         val schedule = item.schedule

@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
-import { logout, request, SESSION_EXPIRED_EVENT, tokenStore } from '../api/client'
+import { logout, panelLanguage, request, SESSION_EXPIRED_EVENT, tokenStore } from '../api/client'
 import { deviceInfo } from '../api/device'
 import type { AuthSession, OtpChallenge } from '../api/types'
 
@@ -53,7 +53,7 @@ export function AuthProvider({
       request<OtpChallenge>('/v1/auth/otp/request', {
         method: 'POST',
         anonymous: true,
-        body: { phone, language: 'uz' },
+        body: { phone, language: panelLanguage() },
       }),
     [],
   )

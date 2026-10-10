@@ -118,6 +118,12 @@ data class HealthSyncState(
     val userId: String? = null,
     val enabled: Boolean = false,
     val lastSyncAt: Instant? = null,
+    /**
+     * She has answered the gate before the app once — with every type, some or none. The
+     * permissions are hers to give: after that the gate never stands in front again, and
+     * the devices screen is where she adds more.
+     */
+    val gatePassed: Boolean = false,
 )
 
 /** Plain preferences, not the keychain: nothing here is a secret. */

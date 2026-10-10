@@ -234,17 +234,31 @@ class WearableController(
 
     /**
      * Whether the gate before the app has anything to ask. Nothing where the phone has no
-     * store at all; otherwise until every type is allowed and her history has come up once.
+     * store at all, nor once she has answered it — with every type, some or none; otherwise
+     * until every type is allowed and her history has come up once.
      */
     suspend fun gateNeeded(): Boolean {
         val device = device ?: return false
         val userId = currentUserId() ?: return false
         refreshDevice()
+        if (device.state(userId).gatePassed) return false
         return when (deviceAvailability) {
             HealthAvailability.UNSUPPORTED -> false
             HealthAvailability.NOT_INSTALLED, HealthAvailability.UPDATE_REQUIRED -> true
             HealthAvailability.AVAILABLE -> !deviceFullAccess || device.state(userId).lastSyncAt == null
         }
+    }
+
+    /**
+     * She goes on with what she allowed — every type, some or none. The gate is not asked
+     * again; true when something was allowed, so the caller brings that much history up.
+     */
+    suspend fun passGate(): Boolean {
+        val device = device ?: return false
+        val userId = currentUserId() ?: return false
+        device.passGate(userId)
+        refreshDevice()
+        return deviceAccess && deviceAvailability == HealthAvailability.AVAILABLE
     }
 
     /**

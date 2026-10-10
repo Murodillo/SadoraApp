@@ -103,21 +103,21 @@ class OtpService(
         // Checked before anything is looked up or hashed: the keypad can only produce
         // six digits, so anything else is not a wrong code, it is not a code.
         if (code.length != config.codeLength || code.any { !it.isDigit() }) {
-            throw ValidationException("code", "${config.codeLength} xonali raqam bo'lishi kerak")
+            throw ValidationException("code", "SMSdagi ${config.codeLength} xonali kodni kiriting")
         }
         val id = runCatching { Uuid.parse(challengeId) }.getOrNull()
-            ?: throw ValidationException("challengeId", "Noto'g'ri format")
+            ?: throw ValidationException("challengeId", "Kod topilmadi. Yangi kod so'rang.")
 
         val challenge = dbQuery {
             OtpChallenges.selectAll().where { OtpChallenges.id eq id }.singleOrNull()
-        } ?: throw ValidationException("challengeId", "Kod topilmadi")
+        } ?: throw ValidationException("challengeId", "Kod topilmadi. Yangi kod so'rang.")
 
         val expiresAt = challenge[OtpChallenges.expiresAt].toKotlinInstant()
         if (challenge[OtpChallenges.consumedAt] != null) {
-            throw ApiOtpException(ErrorCodes.OTP_EXPIRED, "Bu kod allaqachon ishlatilgan")
+            throw ApiOtpException(ErrorCodes.OTP_EXPIRED, "Bu kod allaqachon ishlatilgan. Yangi kod so'rang.")
         }
         if (expiresAt <= now()) {
-            throw ApiOtpException(ErrorCodes.OTP_EXPIRED, "Kod muddati tugadi")
+            throw ApiOtpException(ErrorCodes.OTP_EXPIRED, "Kod muddati tugadi. Yangi kod so'rang.")
         }
 
         // Spend the attempt before looking at the code, in one conditional UPDATE. Read,
@@ -141,7 +141,7 @@ class OtpService(
         }
 
         if (challenge[OtpChallenges.codeHash] != sha256(code)) {
-            throw ApiOtpException(ErrorCodes.OTP_INVALID, "Kod noto'g'ri")
+            throw ApiOtpException(ErrorCodes.OTP_INVALID, "Kod noto'g'ri — SMSni tekshirib, qayta kiriting")
         }
 
         // The same for spending the code: of two requests carrying it at once, one
@@ -152,7 +152,7 @@ class OtpService(
             }
         }
         if (consumed == 0) {
-            throw ApiOtpException(ErrorCodes.OTP_EXPIRED, "Bu kod allaqachon ishlatilgan")
+            throw ApiOtpException(ErrorCodes.OTP_EXPIRED, "Bu kod allaqachon ishlatilgan. Yangi kod so'rang.")
         }
         return challenge[OtpChallenges.phone]
     }

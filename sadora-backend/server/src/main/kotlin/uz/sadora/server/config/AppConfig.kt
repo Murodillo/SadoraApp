@@ -51,6 +51,12 @@ data class AppConfig(
      * misplaced tap is unrecoverable, lengthen it and the promise stops being true.
      */
     val accountErasureGracePeriod: Duration,
+    /**
+     * Whether an admin must enrol an authenticator before the panel opens. Until she
+     * does, her token reaches only her own account page, where enrolment lives. Off on a
+     * laptop only; staging and production are both on the internet.
+     */
+    val adminRequireTotp: Boolean = false,
 ) {
     companion object {
         fun fromEnvironment(): AppConfig {
@@ -134,6 +140,18 @@ data class AppConfig(
                         packageName = env("GOOGLE_PLAY_PACKAGE_NAME", "uz.sadora.app"),
                         serviceAccountFile = envOrNull("GOOGLE_PLAY_SERVICE_ACCOUNT_FILE"),
                     ),
+                    // Each switch is named rather than read off SADORA_ENV: production runs
+                    // as STAGE until the release, and "not PROD" there meant a public page
+                    // that marked any pending payment paid.
+                    devPay = env("BILLING_DEV_PAY", (environment == Environment.DEV).toString()).toBoolean(),
+                    allowTestPurchases = env(
+                        "STORE_ALLOW_TEST_PURCHASES",
+                        (environment == Environment.DEV).toString(),
+                    ).toBoolean(),
+                    // App Review buys in the sandbox against the production server, so
+                    // refusing sandbox receipts there gets the build rejected. Only the
+                    // people invited to TestFlight can make one.
+                    appStoreAllowSandbox = env("APPSTORE_ALLOW_SANDBOX", "true").toBoolean(),
                 ),
                 // The day the copy in the app's LegalScreen took effect. The consent row records
                 // this string, so a screen dated later than the version stored against it
@@ -159,6 +177,7 @@ data class AppConfig(
                     ),
                 ),
                 accountErasureGracePeriod = env("ACCOUNT_ERASURE_GRACE_DAYS", "30").toInt().days,
+                adminRequireTotp = env("ADMIN_REQUIRE_TOTP", (environment != Environment.DEV).toString()).toBoolean(),
             )
             config.verifyProductionSafety()
             return config
@@ -181,6 +200,9 @@ data class AppConfig(
             require(jwt.secret.length >= 32) { "JWT_SECRET must be at least 32 characters." }
             if (!environment.isProduction) return
             require(!otp.exposeCode) { "OTP_EXPOSE_CODE must be false in production." }
+            require(adminRequireTotp) { "ADMIN_REQUIRE_TOTP must be true in production." }
+            require(!billing.devPay) { "BILLING_DEV_PAY must be false in production." }
+            require(!billing.allowTestPurchases) { "STORE_ALLOW_TEST_PURCHASES must be false in production." }
             require(otp.fixedCode == null) { "OTP_FIXED_CODE must not be set in production." }
             // Without a sender every code goes nowhere and nobody can sign in — better a
             // server that refuses to start than one that looks up and locks everyone out.
@@ -316,6 +338,15 @@ data class BillingConfig(
     val payme: PaymeConfig,
     val click: ClickConfig,
     val googlePlay: GooglePlayConfig = GooglePlayConfig(packageName = "uz.sadora.app", serviceAccountFile = null),
+    /**
+     * The page at /v1/billing/dev-pay that pays a pending payment at once, with no login.
+     * On only where nobody can buy anything real: a laptop and staging.
+     */
+    val devPay: Boolean = false,
+    /** Whether a Play licence tester's free purchase grants anything. */
+    val allowTestPurchases: Boolean = false,
+    /** Whether an App Store sandbox (TestFlight, App Review) receipt grants anything. */
+    val appStoreAllowSandbox: Boolean = true,
 )
 
 /** Play Developer API access: the app's package and a service account Play Console trusts. */

@@ -8,6 +8,7 @@ import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.greaterEq
+import org.jetbrains.exposed.v1.core.inList
 import org.jetbrains.exposed.v1.core.less
 import org.jetbrains.exposed.v1.core.lessEq
 import org.jetbrains.exposed.v1.core.like
@@ -59,6 +60,11 @@ class UserRepository {
 
     suspend fun findById(id: Uuid): UserRecord? = dbQuery {
         Users.selectAll().where { Users.id eq id }.singleOrNull()?.toUserRecord()
+    }
+
+    /** Many at once, for a pass over everyone's schedules; absent ids are simply missing. */
+    suspend fun findByIds(ids: Collection<Uuid>): Map<Uuid, UserRecord> = if (ids.isEmpty()) emptyMap() else dbQuery {
+        Users.selectAll().where { Users.id inList ids }.associate { it[Users.id] to it.toUserRecord() }
     }
 
     /** Only the status column, for the gate that runs on every authenticated request. */

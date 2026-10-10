@@ -66,7 +66,7 @@ class SocialVerifier(private val config: SocialConfig) {
 
         else -> throw uz.sadora.server.core.ValidationException(
             "provider",
-            "Faqat apple yoki google qo'llab-quvvatlanadi",
+            "Faqat Apple yoki Google orqali kirish mumkin",
         )
     }
 
@@ -80,15 +80,17 @@ class SocialVerifier(private val config: SocialConfig) {
     ): SocialIdentity {
         if (audiences.isEmpty()) {
             // A misconfigured server must not silently accept any audience.
+            // The setting's name is for the log; she is only told to use her phone number.
+            logger.error("{} sign-in is not configured: set {}", provider, configHint)
             throw ApiException(
                 io.ktor.http.HttpStatusCode.ServiceUnavailable,
                 ErrorCodes.INTERNAL_ERROR,
-                "$provider kirish sozlanmagan ($configHint)",
+                "${provider.displayName()} orqali kirish hozircha ishlamayapti. Telefon raqam bilan kiring.",
             )
         }
 
         val decoded = runCatching { JWT.decode(idToken) }.getOrElse {
-            throw UnauthorizedException(ErrorCodes.SOCIAL_TOKEN_INVALID, "Token o'qib bo'lmadi")
+            throw UnauthorizedException(ErrorCodes.SOCIAL_TOKEN_INVALID, "Kirish ma'lumotini o'qib bo'lmadi. Qaytadan kiring.")
         }
 
         val verified = withContext(Dispatchers.IO) {
@@ -104,13 +106,13 @@ class SocialVerifier(private val config: SocialConfig) {
                 logger.warn("{} id_token rejected: {}", provider, failure.message)
                 throw UnauthorizedException(
                     ErrorCodes.SOCIAL_TOKEN_INVALID,
-                    "Token tekshiruvdan o'tmadi",
+                    "Kirishni tasdiqlab bo'lmadi. Qaytadan kiring.",
                 )
             }
         }
 
         if (verified.issuer !in issuers) {
-            throw UnauthorizedException(ErrorCodes.SOCIAL_TOKEN_INVALID, "Token manbasi noto'g'ri")
+            throw UnauthorizedException(ErrorCodes.SOCIAL_TOKEN_INVALID, "Kirish boshqa ilova uchun berilgan. Qaytadan kiring.")
         }
 
         val emailVerified = verified.getClaim("email_verified").let { claim ->
@@ -132,4 +134,11 @@ class SocialVerifier(private val config: SocialConfig) {
         val APPLE_ISSUERS = listOf("https://appleid.apple.com")
         val GOOGLE_ISSUERS = listOf("https://accounts.google.com", "accounts.google.com")
     }
+}
+
+/** The provider as a person reads it in a sentence. */
+private fun AuthProvider.displayName(): String = when (this) {
+    AuthProvider.APPLE -> "Apple"
+    AuthProvider.GOOGLE -> "Google"
+    AuthProvider.PHONE -> "Telefon"
 }

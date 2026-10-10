@@ -372,7 +372,7 @@ function AnswerComposer({
           </span>
           <button className="btn primary" type="submit" disabled={!ready || answer.isPending}>
             {answer.isPending && <Spinner />}
-            {answer.isPending ? 'Yuborilmoqda…' : 'Javob berish'}
+            {answer.isPending ? 'Javob yuborilmoqda…' : 'Javob berish'}
           </button>
         </span>
       </div>

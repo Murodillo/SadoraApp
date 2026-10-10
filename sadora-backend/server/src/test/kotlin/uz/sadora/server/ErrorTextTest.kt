@@ -29,7 +29,47 @@ class ErrorTextTest {
             ErrorText.translate("Bir kunda 20 tadan ko'p post yozib bo'lmaydi", Language.RU),
         )
         assertEquals("Must be between 80 and 250", ErrorText.translate("80–250 oralig'ida bo'lishi kerak", Language.EN))
-        assertEquals("Вход через apple не настроен (APPLE_ID)", ErrorText.translate("apple kirish sozlanmagan (APPLE_ID)", Language.RU))
+        assertEquals(
+            "Вход через Apple пока не работает. Войдите по номеру телефона.",
+            ErrorText.translate("Apple orqali kirish hozircha ishlamayapti. Telefon raqam bilan kiring.", Language.RU),
+        )
+        assertEquals("Недостаточно Gul", ErrorText.translate("Gul yetarli emas", Language.RU))
+    }
+
+    @Test
+    fun `a field-aware rule names the field in every language`() {
+        assertEquals("Заполните поле «Название лекарства»", ErrorText.translate("Dori nomini yozing", Language.RU))
+        assertEquals("Medication name is required", ErrorText.translate("Dori nomini yozing", Language.EN))
+        assertEquals("Поле «Имя»: не больше 60 символов", ErrorText.translate("Ism eng ko'pi 60 belgi bo'lsin", Language.RU))
+        assertEquals("Text: at least 3 characters", ErrorText.translate("Matn kamida 3 ta belgi bo'lsin", Language.EN))
+        // An exact sentence that happens to fit the shape still wins.
+        assertEquals("Please give a reason", ErrorText.translate("Sababini yozing", Language.EN))
+    }
+
+    @Test
+    fun `a field nobody named is not translated and fails the source check`() {
+        assertEquals("Pasport raqamini yozing", ErrorText.translate("Pasport raqamini yozing", Language.RU))
+        assertTrue(!ErrorText.covers("Pasport raqamini yozing"))
+        assertTrue(ErrorText.covers("Ism-familiya kamida 7 ta belgi bo'lsin"))
+    }
+
+    @Test
+    fun `every field name is translated and listed once`() {
+        val repeated = ErrorText.labels.groupBy { it.uz }.filterValues { it.size > 1 }.keys
+        assertTrue(repeated.isEmpty(), "listed twice: $repeated")
+        ErrorText.labels.forEach {
+            assertTrue(it.ru.isNotBlank() && it.en.isNotBlank() && it.ru != it.uz, it.uz)
+        }
+    }
+
+    @Test
+    fun `no refusal tells her about the server's insides`() {
+        val jargon = listOf("UUID", "YYYY", "endpoint", "token", "Token", "токен", "Store xarid", "гул", "({0})")
+        ErrorText.entries.forEach { entry ->
+            listOf(entry.uz, entry.ru, entry.en).forEach { text ->
+                jargon.forEach { word -> assertTrue(word !in text, "\"$word\" in: $text") }
+            }
+        }
     }
 
     @Test

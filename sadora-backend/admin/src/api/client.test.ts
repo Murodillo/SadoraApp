@@ -65,7 +65,7 @@ describe('request', () => {
 
     expect(failure.status).toBe(403)
     expect(failure.code).toBe('unexpected')
-    expect(failure.message).toBe('Server xatosi (403)')
+    expect(failure.message).toBe("So'rov bajarilmadi. Sahifani yangilab, qayta urinib ko'ring. (xato 403)")
     expect(failure.isUnauthorized).toBe(false)
   })
 
@@ -85,7 +85,7 @@ describe('request', () => {
   it('does not choke on a non-JSON error page from a proxy', async () => {
     stubFetch(reply(502, '<html>Bad gateway</html>'))
     const failure = await failureOf(request('/v1/admin/stats'))
-    expect(failure.message).toBe('Server xatosi (502)')
+    expect(failure.message).toBe("Server hozir javob bermadi. Birozdan keyin qayta urinib ko'ring. (xato 502)")
   })
 
   it.each(['unauthorized', 'token_expired', 'token_revoked'])('signs the operator out on %s', async (code) => {

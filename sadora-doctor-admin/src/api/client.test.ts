@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Mock } from 'vitest'
 import { apiError, json, mockApi } from '../test/http'
-import { ApiFailure, fieldsOf, logout, messageOf, query, request, requestBlob, SESSION_EXPIRED_EVENT, tokenStore } from './client'
+import { ApiFailure, fieldsOf, logout, messageOf, panelLanguage, query, request, requestBlob, SESSION_EXPIRED_EVENT, tokenStore } from './client'
 import { deviceId } from './device'
 
 const REFRESH = 'POST /v1/auth/refresh'
@@ -108,7 +108,7 @@ describe('request', () => {
   it('does not choke on a non-JSON error page from a proxy', async () => {
     mockApi({ 'GET /v1/doctor/me': () => new Response('<html>Bad gateway</html>', { status: 502 }) })
     const failure = await failureOf(request('/v1/doctor/me'))
-    expect(failure.message).toBe('Server xatosi (502)')
+    expect(failure.message).toBe("Server hozir javob bermadi. Birozdan keyin qayta urinib ko'ring. (xato 502)")
     expect(failure.code).toBe('unexpected')
   })
 
@@ -346,5 +346,21 @@ describe('query', () => {
 
   it('is empty when nothing is set', () => {
     expect(query({ topic: undefined })).toBe('')
+  })
+})
+
+describe('panelLanguage', () => {
+  it('stays Uzbek whenever the browser lists Uzbek at all', () => {
+    expect(panelLanguage(['ru-RU', 'uz-Latn-UZ'])).toBe('uz')
+  })
+
+  it('answers a Russian or English browser in its own language', () => {
+    expect(panelLanguage(['ru-RU', 'en'])).toBe('ru')
+    expect(panelLanguage(['en-GB'])).toBe('en')
+  })
+
+  it('falls back to Uzbek for anything else', () => {
+    expect(panelLanguage(['de-DE'])).toBe('uz')
+    expect(panelLanguage([])).toBe('uz')
   })
 })

@@ -18,13 +18,12 @@ object StringsRu : Strings {
         override val unread = "Есть новые сообщения"
         override val expanded = "Развёрнуто"
         override val collapsed = "Свёрнуто"
-        override fun rated(stars: Int, of: Int) = "Оценка $stars из $of"
         override val errorPrefix = "Ошибка"
     }
 
     override val auth = object : AuthStrings {
-        override val title = "Sadora для врачей"
-        override val subtitle = "Войдите с тем же номером, что и в приложении Sadora. Подайте заявку, " +
+        override val title = "SADORA для врачей"
+        override val subtitle = "Войдите с тем же номером, что и в приложении SADORA. Подайте заявку, " +
             "а после проверки отвечайте на вопросы женщин."
         override val phoneLabel = "Номер телефона"
         override val phoneNote = "Номер нужен только для входа. Мы отправим на него одноразовый код по SMS."
@@ -37,19 +36,19 @@ object StringsRu : Strings {
         override fun resendIn(seconds: Int) = "Отправить снова · $seconds с"
         override val resend = "Отправить код снова"
         override val changeNumber = "Изменить номер"
-        override val codeSecrecy = "Никому не сообщайте код. Сотрудники Sadora его не спрашивают."
+        override val codeSecrecy = "Никому не сообщайте код. Сотрудники SADORA его не спрашивают."
         override val devCodeFilled = "Тестовый сервер вернул код — он подставлен автоматически."
         override fun otpEntered(entered: Int, length: Int) = "Код подтверждения: введено $entered из $length"
         override val deleteDigit = "Удалить последнюю цифру"
     }
 
     override val errors = object : ErrorStrings {
-        override val phoneInvalid = "Номер неполный или такого кода оператора нет"
+        override val phoneInvalid = "Номер неполный или такого кода оператора нет. Введите 9 цифр номера с кодом оператора."
         override val network = "Не удалось подключиться к интернету. Попробуйте ещё раз."
-        override val validation = "Введённые данные неверны."
+        override val validation = "Некоторые данные введены неверно. Проверьте их и отправьте снова."
         override val sessionExpired = "Сеанс закончился. Войдите снова."
-        override val blocked = "Аккаунт заблокирован. Свяжитесь с Sadora."
-        override val forbidden = "У вас нет доступа к этому действию."
+        override val blocked = "Аккаунт заблокирован. Свяжитесь с SADORA."
+        override val forbidden = "У вас нет доступа к этому действию. Если это ошибка, свяжитесь с SADORA."
         override val notFound = "Не найдено: возможно, это уже удалено."
         override fun retryAfter(seconds: Int) = "Слишком много попыток. Повторите через $seconds с."
         override val retrySoon = "Слишком много попыток. Повторите чуть позже."
@@ -74,9 +73,9 @@ object StringsRu : Strings {
 
         override val yesterday = "Вчера"
         override val justNow = "только что"
-        override fun minutesAgo(minutes: Int) = "$minutes мин. назад"
-        override fun hoursAgo(hours: Int) = "$hours ч. назад"
-        override fun daysAgo(days: Int) = "$days дн. назад"
+        override fun minutesAgo(minutes: Int) = "$minutes мин назад"
+        override fun hoursAgo(hours: Int) = "$hours ч назад"
+        override fun daysAgo(days: Int) = "$days ${ru(days, "день", "дня", "дней")} назад"
     }
 
     override val community = object : CommunityStrings {
@@ -89,7 +88,7 @@ object StringsRu : Strings {
         override val you = "вы"
         override val readMore = "…ещё"
         override fun commentsCount(count: Int) = if (count == 0) "Комментарии" else "Комментариев: $count"
-        override val noComments = "Комментариев пока нет. Ответьте первой."
+        override val noComments = "Комментариев пока нет. Ваш ответ будет первым."
         override val questionTitle = "Вопрос"
         override val postTitle = "Пост"
         override val postMissing = "Этот пост удалён или скрыт."

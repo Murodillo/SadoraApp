@@ -2,6 +2,7 @@ package uz.sadora.app.ui.core
 
 import uz.sadora.app.ui.modules.sumLabel
 import uz.sadora.app.model.Fmt
+import uz.sadora.app.getPlatform
 import uz.sadora.contract.BillingPeriod
 import uz.sadora.contract.ShopKind
 import uz.sadora.app.data.RewardsController
@@ -157,7 +158,9 @@ fun PremiumScreen(
             item {
                 SadoraCard {
                     Text(t.faqTitle, style = Sadora.type.h3, color = c.text)
-                    t.faq.forEachIndexed { index, (question, answer) ->
+                    // iPhone may only mention the App Store; Android adds Payme and Click.
+                    val onIos = remember { !getPlatform().name.startsWith("Android") }
+                    t.faq(appStore = onIos).forEachIndexed { index, (question, answer) ->
                         if (index > 0) SadoraDivider()
                         FaqRow(question, answer)
                     }

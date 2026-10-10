@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Sadora Doctor</string>
+    <string name="app_name" translatable="false">Sadora Doctor</string>
     <!-- Named once here for both the manifest's FCM default and PushNotifications. Not the
          women's app's channel id: the two apps are separate packages with their own. -->
     <string name="push_channel_id" translatable="false">sadora_doctor_messages</string>

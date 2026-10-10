@@ -28,14 +28,50 @@ object ErrorText {
         exact[text]?.let { return it.pick(language) }
         for (template in templated) {
             val match = template.pattern.matchEntire(text) ?: continue
-            return template.fill(language, match.groupValues.drop(1))
+            val captured = match.groupValues.drop(1)
+            if (!template.labelled) return template.fill(language, captured)
+            // `{0}` names the field; a name nobody translated is not this template.
+            val label = labelsByUz[captured[template.labelGroup]] ?: continue
+            return template.fill(language, captured, label.pick(language))
         }
         return text
     }
 
     /** Whether [text] is known in every language — the guard the source test uses. */
     internal fun covers(text: String): Boolean =
-        exact.containsKey(text) || templated.any { it.pattern.matches(text) }
+        exact.containsKey(text) || templated.any { template ->
+            val match = template.pattern.matchEntire(text) ?: return@any false
+            !template.labelled || match.groupValues.drop(1)[template.labelGroup] in labelsByUz
+        }
+
+    /**
+     * What a field is called, for the field-aware rules below: "Dori nomini yozing"
+     * says which box is wrong, where "Bo'sh bo'lishi mumkin emas" under a toast did not.
+     * A throw site writes the Uzbek name; a name missing here fails the source test.
+     */
+    internal val labels: List<Entry> = listOf(
+        Entry("Ism", "Имя", "Name"),
+        Entry("Ism-familiya", "Имя и фамилия", "Full name"),
+        Entry("Dori nomi", "Название лекарства", "Medication name"),
+        Entry("Doza", "Доза", "Dose"),
+        Entry("Birlik", "Единица", "Unit"),
+        Entry("Izoh", "Заметка", "Note"),
+        Entry("Sabab", "Причина", "Reason"),
+        Entry("Xabar", "Сообщение", "Message"),
+        Entry("Matn", "Текст", "Text"),
+        Entry("Savol", "Вопрос", "Question"),
+        Entry("Kundalik yozuvi", "Запись в дневнике", "Journal entry"),
+        Entry("Taom tavsifi", "Описание блюда", "Meal description"),
+        Entry("Ko'rik nomi", "Название визита", "Visit name"),
+        Entry("Ko'rik joyi", "Место визита", "Visit place"),
+        Entry("O'zingiz haqingizda", "О себе", "About you"),
+        Entry("Ish joyi", "Место работы", "Workplace"),
+        Entry("Litsenziya raqami", "Номер лицензии", "Licence number"),
+        Entry("Sharh", "Отзыв", "Review"),
+        Entry("Tavsiya", "Рекомендация", "Advice"),
+    )
+
+    private val labelsByUz: Map<String, Entry> = labels.associateBy { it.uz }
 
     internal val entries: List<Entry> = listOf(
         // ---------------------------------------------------------------- the envelope
@@ -45,7 +81,7 @@ object ErrorText {
         Entry("So'rov hajmi juda katta", "Запрос слишком большой", "The request is too large"),
         Entry("So'rov JSON formatida bo'lishi kerak", "Запрос должен быть в формате JSON", "The request must be JSON"),
         Entry("Serverda kutilmagan xatolik", "Непредвиденная ошибка на сервере", "Unexpected server error"),
-        Entry("Bunday endpoint yo'q", "Такого адреса нет", "No such endpoint"),
+        Entry("Bunday sahifa yo'q", "Такой страницы нет", "No such page"),
         Entry("Avtorizatsiya talab qilinadi", "Требуется авторизация", "Sign-in required"),
         Entry("Ruxsat yo'q", "Нет доступа", "Access denied"),
         Entry("Bu amal uchun ruxsat yo'q", "Нет доступа к этому действию", "You are not allowed to do this"),
@@ -62,6 +98,11 @@ object ErrorText {
         ),
         Entry("{0} hozircha ulanmaydi", "{0} пока нельзя подключить", "{0} cannot be connected yet"),
 
+        // ---------------------------------------------------------------- field-aware rules ({0} is a label above)
+        Entry("{0}ni yozing", "Заполните поле «{0}»", "{0} is required", labelled = true),
+        Entry("{0} eng ko'pi {1} belgi bo'lsin", "Поле «{0}»: не больше {1} символов", "{0}: {1} characters at most", labelled = true),
+        Entry("{0} kamida {1} ta belgi bo'lsin", "Поле «{0}»: не меньше {1} символов", "{0}: at least {1} characters", labelled = true),
+
         // ---------------------------------------------------------------- shared field rules
         Entry("Bo'sh bo'lishi mumkin emas", "Не может быть пустым", "Cannot be empty"),
         Entry("Ko'rsatilishi shart", "Обязательное поле", "Required"),
@@ -70,8 +111,7 @@ object ErrorText {
         Entry("Nol yoki noaniq bo'lishi mumkin emas", "Не может быть нулём или неопределённым", "Cannot be zero or undefined"),
         Entry("Noldan katta bo'lishi kerak", "Должно быть больше нуля", "Must be greater than zero"),
         Entry("Butun son bo'lishi kerak", "Должно быть целым числом", "Must be a whole number"),
-        Entry("UUID formatida bo'lishi kerak", "Должно быть в формате UUID", "Must be a UUID"),
-        Entry("YYYY-MM-DD formatida bo'lishi kerak", "Должно быть в формате ГГГГ-ММ-ДД", "Must be in YYYY-MM-DD format"),
+        Entry("Identifikator noto'g'ri — havolani qaytadan oching", "Неверный идентификатор — откройте ссылку заново", "Invalid ID — open the link again"),
         Entry("Noto'g'ri format", "Неверный формат", "Invalid format"),
         Entry("Noma'lum qiymat: {0}", "Неизвестное значение: {0}", "Unknown value: {0}"),
         Entry("Sana noto'g'ri", "Неверная дата", "Invalid date"),
@@ -80,6 +120,11 @@ object ErrorText {
         Entry("Eng ko'pi {0} belgi", "Не больше {0} символов", "At most {0} characters"),
         Entry("Eng ko'pi {0}", "Не больше {0}", "At most {0}"),
         Entry("Kamida {0} ta belgi", "Не меньше {0} символов", "At least {0} characters"),
+        Entry(
+            "Chatda telefon raqam yozib bo'lmaydi — shaxsiy xabar orqali yozing",
+            "В чате нельзя писать номер телефона — напишите в личные сообщения",
+            "Phone numbers can't be posted in the chat — send a private message instead",
+        ),
         Entry("Kamida {0} ta belgi bo'lishi kerak", "Должно быть не меньше {0} символов", "Must be at least {0} characters"),
         Entry("{0}–{1} oralig'ida bo'lishi kerak", "Должно быть от {0} до {1}", "Must be between {0} and {1}"),
         Entry("{0}–{1} oralig'ida", "От {0} до {1}", "Between {0} and {1}"),
@@ -90,7 +135,7 @@ object ErrorText {
         Entry("{0} dan {1} gacha", "От {0} до {1}", "Between {0} and {1}"),
         Entry("Eng ko'pi {0} kunlik oraliq", "Период не больше {0} дней", "A range of at most {0} days"),
         Entry("Eng ko'pi {0} kun", "Не больше {0} дней", "At most {0} days"),
-        Entry("Faqat {0} kun", "Только {0} дн.", "Only {0} days"),
+        Entry("Faqat {0} kun", "Только {0} дней", "Only {0} days"),
         Entry("Faqat JPEG yoki PNG", "Только JPEG или PNG", "JPEG or PNG only"),
         Entry("Faqat JPEG yoki PNG rasm", "Только изображение JPEG или PNG", "A JPEG or PNG image only"),
         Entry("Faqat JPEG, PNG yoki WEBP", "Только JPEG, PNG или WEBP", "JPEG, PNG or WEBP only"),
@@ -110,27 +155,31 @@ object ErrorText {
         Entry("Boshlanishdan oldin tugashi mumkin emas", "Не может закончиться раньше начала", "Cannot end before it starts"),
 
         // ---------------------------------------------------------------- sign-in and account
-        Entry("O'zbekiston raqami formatida bo'lishi kerak", "Должен быть номер Узбекистана", "Must be an Uzbekistan phone number"),
-        Entry("{0} xonali raqam bo'lishi kerak", "Должно быть {0}-значное число", "Must be a {0}-digit number"),
+        Entry("Raqamni +998 va yana 9 ta raqam bilan kiriting", "Введите номер: +998 и ещё 9 цифр", "Enter the number as +998 followed by 9 digits"),
+        Entry("SMSdagi {0} xonali kodni kiriting", "Введите {0}-значный код из SMS", "Enter the {0}-digit code from the SMS"),
         Entry("Harf va raqamdan iborat bo'lishi kerak", "Должно состоять из букв и цифр", "Must contain letters and digits"),
         Entry("Juda ko'p kod so'raldi. Birozdan keyin urinib ko'ring.", "Запрошено слишком много кодов. Попробуйте чуть позже.", "Too many codes requested. Try again a little later."),
         Entry("SMS yuborib bo'lmadi. Birozdan keyin urinib ko'ring.", "Не удалось отправить SMS. Попробуйте чуть позже.", "The SMS could not be sent. Try again a little later."),
         Entry("Juda ko'p urinish. Yangi kod so'rang.", "Слишком много попыток. Запросите новый код.", "Too many attempts. Request a new code."),
-        Entry("Kod noto'g'ri", "Неверный код", "Wrong code"),
-        Entry("Kod muddati tugadi", "Срок действия кода истёк", "The code has expired"),
-        Entry("Kod topilmadi", "Код не найден", "Code not found"),
-        Entry("Bu kod allaqachon ishlatilgan", "Этот код уже использован", "This code has already been used"),
-        Entry("Sessiya muddati tugadi", "Срок сессии истёк", "The session has expired"),
-        Entry("Sessiya topilmadi", "Сессия не найдена", "Session not found"),
-        Entry("Sessiya bekor qilindi. Qaytadan kiring.", "Сессия отменена. Войдите снова.", "The session was revoked. Please sign in again."),
+        Entry("Kod noto'g'ri — SMSni tekshirib, qayta kiriting", "Неверный код — проверьте SMS и введите снова", "Wrong code — check the SMS and enter it again"),
+        Entry("Kod muddati tugadi. Yangi kod so'rang.", "Срок действия кода истёк. Запросите новый код.", "The code has expired. Request a new one."),
+        Entry("Kod topilmadi. Yangi kod so'rang.", "Код не найден. Запросите новый код.", "Code not found. Request a new one."),
+        Entry("Bu kod allaqachon ishlatilgan. Yangi kod so'rang.", "Этот код уже использован. Запросите новый код.", "This code has already been used. Request a new one."),
+        Entry("Seans muddati tugadi. Qaytadan kiring.", "Сеанс истёк. Войдите снова.", "Your session has expired. Please sign in again."),
+        Entry("Seans topilmadi. Qaytadan kiring.", "Сеанс не найден. Войдите снова.", "Session not found. Please sign in again."),
+        Entry("Seans bekor qilindi. Qaytadan kiring.", "Сеанс завершён. Войдите снова.", "The session was ended. Please sign in again."),
         Entry("Hisob bloklangan", "Аккаунт заблокирован", "The account is blocked"),
-        Entry("Hisobni o'chirish so'rovi yuborilgan", "Запрошено удаление аккаунта", "Account deletion has been requested"),
+        Entry(
+            "Hisobni o'chirish so'rovi yuborilgan. Bekor qilish uchun qo'llab-quvvatlash xizmatiga yozing.",
+            "Запрошено удаление аккаунта. Чтобы отменить, напишите в поддержку.",
+            "Account deletion has been requested. To cancel it, contact support.",
+        ),
         Entry("Foydalanuvchi topilmadi", "Пользователь не найден", "User not found"),
-        Entry("Token o'qib bo'lmadi", "Не удалось прочитать токен", "The token could not be read"),
-        Entry("Token manbasi noto'g'ri", "Неверный источник токена", "The token comes from the wrong issuer"),
-        Entry("Token tekshiruvdan o'tmadi", "Токен не прошёл проверку", "The token failed verification"),
-        Entry("Faqat apple yoki google qo'llab-quvvatlanadi", "Поддерживаются только apple и google", "Only apple or google are supported"),
-        Entry("{0} kirish sozlanmagan ({1})", "Вход через {0} не настроен ({1})", "{0} sign-in is not configured ({1})"),
+        Entry("Kirish ma'lumotini o'qib bo'lmadi. Qaytadan kiring.", "Не удалось прочитать данные входа. Войдите снова.", "Couldn't read the sign-in details. Please sign in again."),
+        Entry("Kirish boshqa ilova uchun berilgan. Qaytadan kiring.", "Данные входа выданы другому приложению. Войдите снова.", "This sign-in was issued for another app. Please sign in again."),
+        Entry("Kirishni tasdiqlab bo'lmadi. Qaytadan kiring.", "Не удалось подтвердить вход. Войдите снова.", "Couldn't verify the sign-in. Please sign in again."),
+        Entry("Faqat Apple yoki Google orqali kirish mumkin", "Войти можно только через Apple или Google", "Only Apple or Google sign-in is supported"),
+        Entry("{0} orqali kirish hozircha ishlamayapti. Telefon raqam bilan kiring.", "Вход через {0} пока не работает. Войдите по номеру телефона.", "{0} sign-in isn't available right now. Sign in with your phone number."),
         Entry("'{0}' deb yozing", "Напишите «{0}»", "Type '{0}'"),
         Entry("Noma'lum vaqt mintaqasi", "Неизвестный часовой пояс", "Unknown time zone"),
         Entry("Tug'ilgan yil noto'g'ri", "Неверный год рождения", "Invalid year of birth"),
@@ -142,27 +191,26 @@ object ErrorText {
         Entry("Bu kunlar boshqa hayz yozuvi bilan ustma-ust tushadi", "Эти дни пересекаются с другой записью о месячных", "These days overlap another period you recorded"),
         Entry("Yozuv topilmadi", "Запись не найдена", "Entry not found"),
         Entry("Ovqat topilmadi", "Блюдо не найдено", "Meal not found"),
-        Entry("Tadbir topilmadi", "Событие не найдено", "Event not found"),
+        Entry("Ko'rik topilmadi", "Визит не найден", "Visit not found"),
         Entry("Dori topilmadi", "Лекарство не найдено", "Medication not found"),
-        Entry("Shifokor kuniga {0} marta yozgan", "Врач назначил {0} раз в день", "The doctor prescribed {0} times a day"),
+        Entry("Shifokor kuniga {0} marta yozgan — shuncha vaqt tanlang", "Врач назначил {0} раз в день — выберите столько же времени приёма", "The doctor prescribed {0} times a day — choose that many times"),
         Entry("Retsept topilmadi", "Рецепт не найден", "Prescription not found"),
         Entry("Retseptni faqat shifokor yozadi", "Рецепт выписывает только врач", "Only the doctor writes a prescription"),
         Entry("Retseptni faqat uni yozgan shifokor bekor qiladi", "Отменить рецепт может только выписавший его врач", "Only the doctor who wrote it can cancel a prescription"),
-        Entry("Sababini yozing", "Укажите причину", "Write the reason"),
+        Entry("Sababini yozing", "Укажите причину", "Please give a reason"),
         Entry("Retsept allaqachon bekor qilingan", "Рецепт уже отменён", "The prescription is already cancelled"),
         Entry("Retsept bekor qilingan", "Рецепт отменён", "The prescription was cancelled"),
         Entry("Retsept allaqachon qo'shilgan", "Рецепт уже добавлен", "The prescription is already added"),
-        Entry("Kamida bitta dorini tanlang", "Выберите хотя бы один препарат", "Choose at least one medicine"),
-        Entry("Dorilar takrorlanmasligi kerak", "Препараты не должны повторяться", "Medicines must not repeat"),
+        Entry("Kamida bitta dorini tanlang", "Выберите хотя бы одно лекарство", "Choose at least one medication"),
+        Entry("Dorilar takrorlanmasligi kerak", "Лекарства не должны повторяться", "Medications must not repeat"),
         Entry("Bugundan {0} kun ichida", "В течение {0} дней от сегодня", "Within {0} days from today"),
-        Entry("Bunday dori yo'q", "Такого препарата нет", "There is no such medicine"),
-        Entry("Kamida bitta dori kerak", "Нужен хотя бы один препарат", "At least one medicine is needed"),
-        Entry("Dori nomi kerak", "Нужно название препарата", "The medicine name is needed"),
+        Entry("Bunday dori yo'q", "Такого лекарства нет", "There is no such medication"),
+        Entry("Kamida bitta dori kerak", "Нужно хотя бы одно лекарство", "At least one medication is needed"),
+        Entry("Dori nomi kerak", "Нужно название лекарства", "The medication name is needed"),
         Entry("Doza kerak", "Нужна доза", "The dose is needed"),
         Entry("Har kuni yoki har N kunda", "Каждый день или раз в N дней", "Every day or every N days"),
-        Entry("Nomi bo'sh bo'lishi mumkin emas", "Название не может быть пустым", "The name cannot be empty"),
+                // The staff panel's shop form.
         Entry("Nomi {0} ta belgidan oshmasligi kerak", "Название не должно превышать {0} символов", "The name must be at most {0} characters"),
-        Entry("Joyi {0} ta belgidan oshmasligi kerak", "Место не должно превышать {0} символов", "The place must be at most {0} characters"),
         Entry("Kamida bitta kun tanlanishi kerak", "Выберите хотя бы один день", "Choose at least one day"),
         Entry("Kamida bitta qabul vaqti kerak", "Нужно хотя бы одно время приёма", "At least one dose time is needed"),
         Entry("Vaqtlar takrorlanmasligi kerak", "Время не должно повторяться", "Times must not repeat"),
@@ -173,7 +221,7 @@ object ErrorText {
         Entry("Kelajakdagi kun uchun yozuv qo'shib bo'lmaydi", "Нельзя добавить запись на будущий день", "An entry cannot be added for a future day"),
         Entry("Kelajakdagi qabulni belgilab bo'lmaydi", "Нельзя отметить приём в будущем", "A future dose cannot be marked"),
         Entry("Bu vaqtda qabul rejalashtirilmagan", "На это время приём не запланирован", "No dose is scheduled at this time"),
-        Entry("Noma'lum simptom: {0}", "Неизвестный симптом: {0}", "Unknown symptom: {0}"),
+        Entry("Noma'lum alomat: {0}", "Неизвестный симптом: {0}", "Unknown symptom: {0}"),
         Entry("Sokin vaqtning ikkala chegarasi ham kerak", "Нужны обе границы тихого времени", "Quiet hours need both a start and an end"),
         Entry("Kunlik chegaradan kichik bo'lishi mumkin emas", "Не может быть меньше дневного лимита", "Cannot be lower than the daily limit"),
         Entry("Bildirishnoma topilmadi", "Уведомление не найдено", "Notification not found"),
@@ -193,11 +241,12 @@ object ErrorText {
         ),
         Entry("So'rov topilmadi", "Запрос не найден", "Request not found"),
         Entry("Yaqin topilmadi", "Близкий не найден", "No one is connected"),
+        Entry("Kodni to'liq kiriting — {0} ta belgi", "Введите код полностью — {0} символов", "Enter the full code — {0} characters"),
         Entry("Kod topilmadi yoki muddati o'tgan", "Код не найден или устарел", "The code was not found or has expired"),
         Entry("O'zingizning kodingizni kirita olmaysiz", "Нельзя ввести собственный код", "You cannot enter your own code"),
         Entry("Ulanish hozir faol emas", "Связь сейчас не активна", "The connection is not active right now"),
-        Entry("Bugun juda ko'p xabar yuborildi", "Сегодня отправлено слишком много сообщений", "Too many messages sent today"),
-        Entry("Ko'pi bilan {0} kishini kuzatish mumkin", "Можно следить не больше чем за {0} людьми", "You can follow at most {0} people"),
+        Entry("Bugun juda ko'p xabar yuborildi. Ertaga yana yozishingiz mumkin.", "Сегодня отправлено слишком много сообщений. Завтра можно снова.", "Too many messages today. You can write again tomorrow."),
+        Entry("Ko'pi bilan {0} kishining holatini ko'ra olasiz", "Можно видеть состояние не больше {0} человек", "You can see updates from up to {0} people"),
         Entry("Hisob faol emas", "Аккаунт не активен", "The account is not active"),
 
         // ---------------------------------------------------------------- wearables
@@ -208,7 +257,8 @@ object ErrorText {
         Entry("Ulanish topilmadi", "Подключение не найдено", "Connection not found"),
 
         // ---------------------------------------------------------------- chat
-        Entry("Chatda yozish vaqtincha cheklangan", "Писать в чате временно нельзя", "Writing in the chat is temporarily restricted"),
+        Entry("Qoidalar buzilgani uchun chatda yozish cheklangan", "Из-за нарушения правил писать в чате нельзя", "Because the rules were broken, writing in the chat is restricted"),
+        Entry("Qoidalar buzilgani uchun chatda yozish {0}gacha cheklangan", "Из-за нарушения правил писать в чате нельзя до {0}", "Because the rules were broken, you can't write in the chat until {0}"),
         Entry("Bir kunda {0} tadan ko'p post yozib bo'lmaydi", "Нельзя написать больше {0} постов в день", "You cannot write more than {0} posts a day"),
         Entry("Bir kunda {0} tadan ko'p izoh yozib bo'lmaydi", "Нельзя написать больше {0} комментариев в день", "You cannot write more than {0} comments a day"),
         Entry("Bir kunda {0} tadan ko'p xabar yozib bo'lmaydi", "Нельзя написать больше {0} сообщений в день", "You cannot write more than {0} messages a day"),
@@ -219,7 +269,6 @@ object ErrorText {
         Entry("Taxallus topilmadi", "Псевдоним не найден", "Alias not found"),
         Entry("Taxallus noto'g'ri", "Неверный псевдоним", "Invalid alias"),
         Entry("Taxallus tanlab bo'lmadi, qayta urinib ko'ring", "Не удалось подобрать псевдоним, попробуйте ещё раз", "Could not pick an alias, please try again"),
-        Entry("Xabar bo'sh bo'lishi mumkin emas", "Сообщение не может быть пустым", "The message cannot be empty"),
         Entry("O'zingizga xabar yozib bo'lmaydi", "Нельзя написать сообщение самой себе", "You cannot message yourself"),
         Entry("O'zingizga yozib bo'lmaydi", "Нельзя написать самой себе", "You cannot write to yourself"),
         Entry("O'zingizni bloklab bo'lmaydi", "Нельзя заблокировать саму себя", "You cannot block yourself"),
@@ -232,7 +281,6 @@ object ErrorText {
         Entry("Shikoyat topilmadi", "Жалоба не найдена", "Report not found"),
         Entry("Xabar shikoyati topilmadi", "Жалоба на сообщение не найдена", "Message report not found"),
         Entry("Bu shikoyat allaqachon ko'rib chiqilgan", "Эта жалоба уже рассмотрена", "This report has already been reviewed"),
-        Entry("Sabab ko'rsatilishi shart", "Укажите причину", "A reason is required"),
         Entry("dismiss yoki hide", "dismiss или hide", "dismiss or hide"),
 
         // ---------------------------------------------------------------- doctors and consultations
@@ -247,31 +295,31 @@ object ErrorText {
         Entry("Eng ko'pi {0} ta hujjat", "Не больше {0} документов", "At most {0} documents"),
         Entry("Hujjat topilmadi", "Документ не найден", "Document not found"),
         Entry("Sababini yozing — shifokor uni o'qiydi", "Напишите причину — врач её прочитает", "Write the reason — the doctor will read it"),
-        Entry("Bu holatda ({0}) bu amal bajarilmaydi", "В этом состоянии ({0}) это действие недоступно", "This cannot be done in this state ({0})"),
+        Entry("Ariza holati «{0}» — bu amal bajarilmaydi", "Статус заявки «{0}» — это действие недоступно", "The application is «{0}» — this can't be done"),
         Entry("approve, reject, suspend yoki reinstate", "approve, reject, suspend или reinstate", "approve, reject, suspend or reinstate"),
         Entry("Konsultatsiya topilmadi", "Консультация не найдена", "Consultation not found"),
         Entry("Konsultatsiya allaqachon ochiq", "Консультация уже открыта", "The consultation is already open"),
-        Entry("Konsultatsiya yopilgan — karta endi ko'rinmaydi", "Консультация закрыта — карта больше не видна", "The consultation is closed — the record is no longer visible"),
+        Entry("Konsultatsiya yopilgan — bemor kartasi endi ko'rinmaydi", "Консультация закрыта — карта пациентки больше не видна", "The consultation is closed — the patient record is no longer visible"),
         Entry("Konsultatsiyani faqat shifokor yopadi", "Закрыть консультацию может только врач", "Only the doctor can close a consultation"),
         Entry("Konsultatsiyani bemor baholaydi", "Консультацию оценивает пациентка", "The patient rates the consultation"),
         Entry("Baholanadigan konsultatsiya yo'q", "Нет консультации для оценки", "There is no consultation to rate"),
-        Entry("Allaqachon baholangansiz", "Вы уже поставили оценку", "You have already rated this"),
+        Entry("Siz bu konsultatsiyaga baho qo'ygansiz", "Вы уже оценили эту консультацию", "You've already rated this consultation"),
         Entry("Bu shifokor bilan konsultatsiya bepul", "Консультация с этим врачом бесплатна", "Consultations with this doctor are free"),
         Entry("Shifokor hozir konsultatsiya qabul qilmayapti", "Врач сейчас не принимает консультации", "The doctor is not taking consultations right now"),
         Entry("Shifokor hali javob bermagan", "Врач ещё не ответил", "The doctor has not replied yet"),
-        Entry("Tibbiy karta topilmadi", "Медицинская карта не найдена", "Medical record not found"),
-        Entry("Tibbiy kartani faqat bemor shifokoriga biriktiradi", "Медкарту прикрепляет только пациентка своему врачу", "Only the patient attaches her record for her doctor"),
-        Entry("Bu holatda ({0}) qaytarib bo'lmaydi", "В этом состоянии ({0}) возврат невозможен", "It cannot be refunded in this state ({0})"),
-        Entry("Narx 0 (bepul) yoki {0}–{1} so'm oralig'ida bo'lsin", "Цена — 0 (бесплатно) или от {0} до {1} сум", "The price must be 0 (free) or between {0} and {1} so'm"),
+        Entry("Bemor kartasi topilmadi", "Карта пациентки не найдена", "Patient record not found"),
+        Entry("Bemor kartasini faqat bemorning o'zi shifokoriga biriktiradi", "Карту пациентки прикрепляет своему врачу только она сама", "Only the patient can attach her record for her doctor"),
+        Entry("To'lov holati «{0}» — qaytarildi deb belgilab bo'lmaydi", "Статус оплаты «{0}» — нельзя отметить возврат", "The payment is «{0}» — it can't be marked refunded"),
+        Entry("Narx 0 (bepul) yoki {0}–{1} so'm oralig'ida bo'lsin", "Цена — 0 (бесплатно) или от {0} до {1} сум", "The price must be 0 (free) or between {0} and {1} UZS"),
         Entry("Summa musbat bo'lsin", "Сумма должна быть положительной", "The amount must be positive"),
         Entry("Matn 1–{0} belgi", "Текст от 1 до {0} символов", "Text of 1 to {0} characters"),
         Entry("Sarlavha 1–60 belgi", "Заголовок от 1 до 60 символов", "A title of 1 to 60 characters"),
-        Entry("Eng ko'pi {0} ta tayyor javob", "Не больше {0} готовых ответов", "At most {0} quick replies"),
+        Entry("Eng ko'pi {0} ta tayyor javob", "Не больше {0} быстрых ответов", "At most {0} quick replies"),
         Entry("Hafta kuni 1–7", "День недели от 1 до 7", "Weekday from 1 to 7"),
         Entry("Har kun bir marta", "Каждый день — один раз", "Each day only once"),
 
         // ---------------------------------------------------------------- rewards, shop and billing
-        Entry("Gul yetarli emas", "Недостаточно гулей", "Not enough Gul"),
+        Entry("Gul yetarli emas", "Недостаточно Gul", "Not enough Gul"),
         Entry("Mahsulot topilmadi", "Товар не найден", "Product not found"),
         Entry("Mahsulot tugadi", "Товар закончился", "The product is sold out"),
         Entry("Xarid topilmadi", "Покупка не найдена", "Purchase not found"),
@@ -291,7 +339,6 @@ object ErrorText {
         Entry("Narx kerak — chegirma nimadan hisoblanadi", "Нужна цена — от неё считается скидка", "A price is needed — the discount is taken from it"),
         Entry("Nomi bo'sh", "Название пустое", "The name is empty"),
         Entry("Premium uchun kunlar soni kerak", "Для Premium нужно число дней", "Premium needs a number of days"),
-        Entry("Sabab yozilishi shart", "Нужно указать причину", "A reason must be written"),
         Entry("To'lov topilmadi", "Платёж не найден", "Payment not found"),
         Entry("Chek tasdiqlanmadi", "Чек не подтверждён", "The receipt was not confirmed"),
         Entry("Bu chek allaqachon qayd etilgan", "Этот чек уже учтён", "This receipt has already been recorded"),
@@ -299,7 +346,7 @@ object ErrorText {
         Entry("Bu hisobdan so'rov yuborib bo'lmaydi", "С этого аккаунта нельзя отправить просьбу", "This account cannot send a request"),
         Entry("Sizda ochiq so'rov bor", "У вас уже есть открытая просьба", "You already have an open request"),
         Entry("So'rov yopilgan", "Просьба закрыта", "The request is closed"),
-        Entry("Konsultatsiya store orqali to'lanmaydi", "Консультация не оплачивается через магазин", "A consultation is not paid through the store"),
+        Entry("Konsultatsiya App Store yoki Google Play orqali to'lanmaydi", "Консультация не оплачивается через App Store или Google Play", "A consultation can't be paid through the App Store or Google Play"),
         Entry("Faqat to'langan sovg'ani qaytarish mumkin", "Вернуть можно только оплаченный подарок", "Only a paid gift can be refunded"),
         Entry(
             "Konsultatsiya narxi o'zgargan yoki allaqachon to'langan",
@@ -307,13 +354,13 @@ object ErrorText {
             "The consultation's price changed or it is already paid",
         ),
         Entry("Bu xarid boshqa hisobga tegishli", "Эта покупка принадлежит другому аккаунту", "This purchase belongs to another account"),
-        Entry("Bu provayder store emas", "Этот провайдер — не магазин приложений", "This provider is not an app store"),
-        Entry("Store xaridi ilova ichida bo'ladi", "Покупка в магазине делается внутри приложения", "Store purchases happen inside the app"),
+        Entry("Bu to'lov usuli App Store yoki Google Play emas", "Этот способ оплаты — не App Store и не Google Play", "This payment method isn't the App Store or Google Play"),
+        Entry("App Store yoki Google Play xaridi ilova ichida bo'ladi", "Покупка через App Store или Google Play делается в приложении", "App Store and Google Play purchases are made in the app"),
         Entry("Bu hamroh sotib olinmagan", "Этот компаньон не куплен", "This companion has not been bought"),
         Entry("Bu hamroh allaqachon sizniki", "Этот компаньон уже ваш", "This companion is already yours"),
         Entry("Narx juda past", "Цена слишком низкая", "The price is too low"),
         Entry("Bunday ramka yo'q", "Такой рамки нет", "No such frame"),
-        Entry("Bu ramka Gulga sotilmaydi", "Эта рамка не продаётся за гули", "This frame is not sold for Gul"),
+        Entry("Bu ramka Gulga sotilmaydi", "Эта рамка не продаётся за Gul", "This frame is not sold for Gul"),
         Entry("Bu ramka allaqachon sizniki", "Эта рамка уже ваша", "This frame is already yours"),
         Entry("Bu ramka hali sizniki emas", "Эта рамка ещё не ваша", "This frame is not yours yet"),
         Entry("Nishon ramkasi faqat nishon bilan beriladi", "Рамку значка даёт только сам значок", "A badge frame comes only with its badge"),
@@ -336,8 +383,11 @@ object ErrorText {
         .filter { it.isTemplate }
         .sortedByDescending { it.uz.replace(Placeholder, "").length }
 
-    internal class Entry(val uz: String, val ru: String, val en: String) {
+    internal class Entry(val uz: String, val ru: String, val en: String, val labelled: Boolean = false) {
         val isTemplate: Boolean get() = Placeholder.containsMatchIn(uz)
+
+        /** Which captured group holds `{0}`, the field's name, in a [labelled] entry. */
+        val labelGroup: Int get() = order.indexOf(0)
 
         val pattern: Regex by lazy {
             val parts = uz.split(Placeholder)
@@ -345,7 +395,7 @@ object ErrorText {
         }
 
         /** Which captured group feeds each `{n}`, in the order the Uzbek wrote them. */
-        private val order: List<Int> by lazy {
+        val order: List<Int> by lazy {
             Placeholder.findAll(uz).map { it.groupValues[1].toInt() }.toList()
         }
 
@@ -355,8 +405,8 @@ object ErrorText {
             Language.UZ -> uz
         }
 
-        fun fill(language: Language, captured: List<String>): String {
-            val byIndex = order.zip(captured).toMap()
+        fun fill(language: Language, captured: List<String>, label: String? = null): String {
+            val byIndex = order.zip(captured).toMap().let { if (label != null) it + (0 to label) else it }
             return Placeholder.replace(pick(language)) { byIndex[it.groupValues[1].toInt()].orEmpty() }
         }
     }

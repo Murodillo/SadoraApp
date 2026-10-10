@@ -129,10 +129,10 @@ class RefreshTokenService(
 
         return when (outcome) {
             RotationOutcome.Unknown ->
-                throw UnauthorizedException(ErrorCodes.TOKEN_REVOKED, "Sessiya topilmadi")
+                throw UnauthorizedException(ErrorCodes.TOKEN_REVOKED, "Seans topilmadi. Qaytadan kiring.")
 
             RotationOutcome.Expired ->
-                throw UnauthorizedException(ErrorCodes.TOKEN_EXPIRED, "Sessiya muddati tugadi")
+                throw UnauthorizedException(ErrorCodes.TOKEN_EXPIRED, "Seans muddati tugadi. Qaytadan kiring.")
 
             is RotationOutcome.Reused -> {
                 logger.warn("Refresh token reuse detected for user {}", outcome.userId)
@@ -149,7 +149,7 @@ class RefreshTokenService(
                 )
                 throw UnauthorizedException(
                     ErrorCodes.TOKEN_REVOKED,
-                    "Sessiya bekor qilindi. Qaytadan kiring.",
+                    "Seans bekor qilindi. Qaytadan kiring.",
                 )
             }
 

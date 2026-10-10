@@ -2,7 +2,13 @@ package uz.sadora.server.admin
 
 import kotlin.time.Duration.Companion.minutes
 import kotlin.uuid.Uuid
+import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.greaterEq
+import org.jetbrains.exposed.v1.core.isNull
+import org.jetbrains.exposed.v1.core.less
+import org.jetbrains.exposed.v1.core.or
+import org.jetbrains.exposed.v1.core.plus
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.update
 import uz.sadora.server.audit.ActorType
@@ -35,6 +41,8 @@ import uz.sadora.server.plugins.AdminRole
 class AdminAuthService(
     private val jwt: JwtService,
     private val audit: AuditService,
+    /** [uz.sadora.server.config.AppConfig.adminRequireTotp]: enrolment is not optional. */
+    private val requireTotp: Boolean = false,
 ) {
 
     suspend fun signIn(request: AdminSignInRequest, context: RequestContext): AdminSession {
@@ -61,7 +69,7 @@ class AdminAuthService(
         }
 
         if (!PasswordHasher.verify(request.password, row[AdminUsers.passwordHash])) {
-            registerFailedAttempt(adminId, row[AdminUsers.failedAttempts] + 1)
+            registerFailedAttempt(adminId)
             recordFailure(email, "bad_password", context)
             throw UnauthorizedException(message = "Email yoki parol noto'g'ri")
         }
@@ -75,9 +83,22 @@ class AdminAuthService(
             if (code.isNullOrBlank()) {
                 throw UnauthorizedException(ErrorCodes.TOTP_REQUIRED, "2FA kodi kerak")
             }
-            if (secret == null || !Totp.verify(secret, code)) {
-                registerFailedAttempt(adminId, row[AdminUsers.failedAttempts] + 1)
+            val step = secret?.let { Totp.matchedStep(it, code) }
+            if (step == null) {
+                registerFailedAttempt(adminId)
                 recordFailure(email, "bad_totp", context)
+                throw UnauthorizedException(message = "2FA kodi noto'g'ri")
+            }
+            // A code signs in once. The conditional update is the check, so two requests
+            // racing with the same code cannot both pass it.
+            val fresh = dbQuery {
+                AdminUsers.update({
+                    (AdminUsers.id eq adminId) and
+                        (AdminUsers.totpLastStep.isNull() or (AdminUsers.totpLastStep less step))
+                }) { it[totpLastStep] = step }
+            }
+            if (fresh == 0) {
+                recordFailure(email, "reused_totp", context)
                 throw UnauthorizedException(message = "2FA kodi noto'g'ri")
             }
         }
@@ -130,7 +151,39 @@ class AdminAuthService(
                 .firstOrNull { it.name.equals(row[AdminUsers.role], ignoreCase = true) }
                 ?: AdminRole.ANALYST,
             totpEnabled = row[AdminUsers.totpEnabled],
+            totpSetupRequired = requireTotp && !row[AdminUsers.totpEnabled],
         )
+    }
+
+    /**
+     * Replaces her password. Asks for the current one, and her 2FA code when she has it
+     * on: a session left open on someone's laptop must not be enough to take the account.
+     */
+    suspend fun changePassword(adminId: Uuid, request: AdminPasswordChangeRequest, context: RequestContext) {
+        val row = requireAdmin(adminId)
+        if (!PasswordHasher.verify(request.currentPassword, row[AdminUsers.passwordHash])) {
+            throw ValidationException("currentPassword", "Parol noto'g'ri")
+        }
+        if (row[AdminUsers.totpEnabled]) {
+            val secret = row[AdminUsers.totpSecret]
+            if (secret == null || !Totp.verify(secret, request.totpCode.orEmpty())) {
+                throw ValidationException("totpCode", "2FA kodi noto'g'ri")
+            }
+        }
+        if (request.newPassword == request.currentPassword) {
+            throw ValidationException("newPassword", "Yangi parol eskisidan farq qilishi kerak")
+        }
+        if (request.newPassword.lowercase() in KNOWN_DEFAULTS) {
+            throw ValidationException("newPassword", "Bu parol hammaga ma'lum")
+        }
+        val hash = PasswordHasher.hash(request.newPassword)
+        dbQuery {
+            AdminUsers.update({ AdminUsers.id eq adminId }) {
+                it[passwordHash] = hash
+                it[updatedAt] = now().toOffsetDateTime()
+            }
+        }
+        recordTotpChange(adminId, row[AdminUsers.email], AuditActions.ADMIN_PASSWORD_CHANGED, context)
     }
 
     /**
@@ -187,6 +240,7 @@ class AdminAuthService(
     suspend fun disableTotp(adminId: Uuid, request: TotpDisableRequest, context: RequestContext) {
         val row = requireAdmin(adminId)
         if (!row[AdminUsers.totpEnabled]) return
+        if (requireTotp) throw ForbiddenException(message = "2FA majburiy, uni o'chirib bo'lmaydi")
         val secret = row[AdminUsers.totpSecret]
         if (!PasswordHasher.verify(request.password, row[AdminUsers.passwordHash])) {
             throw ValidationException("password", "Parol noto'g'ri")
@@ -228,13 +282,18 @@ class AdminAuthService(
         )
     }
 
-    private suspend fun registerFailedAttempt(adminId: Uuid, attempts: Int) {
+    /**
+     * Counts a failed attempt in the database rather than writing back a number read
+     * earlier: a burst of parallel guesses used to all read 0 and all write 1, and the
+     * lock never came.
+     */
+    private suspend fun registerFailedAttempt(adminId: Uuid) {
         dbQuery {
             AdminUsers.update({ AdminUsers.id eq adminId }) {
-                it[failedAttempts] = attempts
-                if (attempts >= MAX_FAILED_ATTEMPTS) {
-                    it[lockedUntil] = (now() + LOCKOUT).toOffsetDateTime()
-                }
+                it.update(failedAttempts, failedAttempts + 1)
+            }
+            AdminUsers.update({ (AdminUsers.id eq adminId) and (AdminUsers.failedAttempts greaterEq MAX_FAILED_ATTEMPTS) }) {
+                it[lockedUntil] = (now() + LOCKOUT).toOffsetDateTime()
             }
         }
     }
@@ -253,8 +312,10 @@ class AdminAuthService(
         )
     }
 
-    private companion object {
+    internal companion object {
         const val MAX_FAILED_ATTEMPTS = 5
+        /** Passwords that sit in this repository or its docs. */
+        val KNOWN_DEFAULTS = setOf("changeme123", "test12345")
         val LOCKOUT = 15.minutes
         const val DUMMY_HASH =
             "\$2a\$12\$C6UzMDM.H6dfI/f/IKcEe.3Xxq0hEfLGqE.pB6oPLM2NLpQ2ZLZ0W"

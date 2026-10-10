@@ -302,6 +302,28 @@ class PetController(
         }
     }
 
+    /**
+     * A legendary pet bought in the store whose verification never landed: posted again,
+     * and finished once the server has it. Nothing when nothing is unfinished.
+     */
+    suspend fun reconcileStore() {
+        val api = api ?: return
+        val store = store ?: return
+        val receipts = runCatching { store.unfinishedKeepsakes() }.getOrDefault(emptyList())
+        if (receipts.isEmpty()) return
+        if (forSale == null) load()
+        val product = forSale ?: return
+        val productId = storeProductId(product) ?: return
+        receipts.filter { it.productId == productId }.forEach { receipt ->
+            val next = calls.run(silent = true) {
+                api.buyInStore(PetStorePurchase(product.pet, store.provider, receipt.productId, receipt.token))
+            } ?: return@forEach
+            runCatching { store.finish(receipt) }
+            storePending = false
+            apply(next)
+        }
+    }
+
     private companion object {
         const val TeaseEveryDays = 3
         const val PollAttempts = 60

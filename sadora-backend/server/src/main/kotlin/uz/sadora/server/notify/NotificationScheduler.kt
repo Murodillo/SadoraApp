@@ -14,7 +14,10 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.minus
+import kotlinx.datetime.plus
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toInstant
 import kotlinx.datetime.toLocalDateTime
@@ -112,31 +115,48 @@ class NotificationScheduler(
         // tick's queries.
         val caps = notifications.caps()
 
-        medications.withRemindersEnabled().forEach { (userId, medication) ->
-            // One medication that cannot be scheduled — a template that fails to render,
-            // a row the database refuses — must not stop the loop before the next user's
-            // reminders; it used to abort the whole tick, every minute, until fixed.
-            runCatching { queueRemindersFor(userId, medication, currentTime, horizon, caps) }
-                .onFailure { logger.error("Could not queue reminders for medication {}", medication.id, it) }
+        // Her row once for all her medicines, and everyone's in one query: reading it per
+        // medication made the tick one query per course, every minute.
+        val courses = medications.withRemindersEnabled().groupBy({ it.first }, { it.second })
+        val people = users.findByIds(courses.keys)
+        courses.forEach { (userId, list) ->
+            val user = people[userId] ?: return@forEach
+            list.forEach { medication ->
+                // One medication that cannot be scheduled — a template that fails to render,
+                // a row the database refuses — must not stop the loop before the next user's
+                // reminders; it used to abort the whole tick, every minute, until fixed.
+                runCatching { queueRemindersFor(user, medication, currentTime, horizon, caps) }
+                    .onFailure { logger.error("Could not queue reminders for medication {}", medication.id, it) }
+            }
         }
     }
 
     private suspend fun queueRemindersFor(
-        userId: Uuid,
+        user: uz.sadora.server.user.UserRecord,
         medication: uz.sadora.server.health.MedicationRecord,
         currentTime: kotlin.time.Instant,
         horizon: kotlin.time.Instant,
         caps: uz.sadora.contract.FrequencyCaps,
     ) {
-        val user = users.findById(userId) ?: return
+        val userId = user.id
         val zone = resolveTimeZone(user.timezone)
         val today = currentTime.dayIn(user.timezone)
 
-        DoseSchedule.dosesOn(medication, today).forEach { dueAt ->
-                val dueInstant = LocalDateTime(today, dueAt).toInstant(zone)
-                if (dueInstant < currentTime || dueInstant > horizon) return@forEach
+        // Yesterday and tomorrow too: a dose at 00:02 is inside the 23:58 look-ahead but on
+        // tomorrow's schedule, and one the last tick missed may sit on yesterday's.
+        val candidates = listOf(today.minus(1, DateTimeUnit.DAY), today, today.plus(1, DateTimeUnit.DAY))
+            .flatMap { day -> DoseSchedule.dosesOn(medication, day).map { day to it } }
 
-                val dedupeKey = "med:${medication.id}:$today:$dueAt"
+        candidates.forEach { (day, dueAt) ->
+                val dueInstant = LocalDateTime(day, dueAt).toInstant(zone)
+                // A dose whose moment passed while a tick ran late, or the server was
+                // restarting, is still sent a little late rather than never. The dedupe key
+                // keeps it to once.
+                if (dueInstant < currentTime - CATCH_UP || dueInstant > horizon) return@forEach
+                // Not a dose she missed: one that fell due before she added the medicine.
+                if (dueInstant < currentTime && dueInstant < medication.createdAt) return@forEach
+
+                val dedupeKey = "med:${medication.id}:$day:$dueAt"
                 val settings = notifications.settingsOf(userId)
                 val localTime = currentTime.toLocalDateTime(zone).time
 
@@ -158,7 +178,7 @@ class NotificationScheduler(
                     template?.title.orEmpty().render(medication.name, dueAt.toString())
                 }
                 val body = if (pet != null) {
-                    uz.sadora.server.pet.PetPhrases.medReminder(user.language, pet, medication.name, dueAt.toString())
+                    uz.sadora.server.pet.PetPhrases.medReminder(user.language, pet, dueAt.toString())
                 } else {
                     template?.body.orEmpty().render(medication.name, dueAt.toString())
                 }
@@ -166,8 +186,9 @@ class NotificationScheduler(
                 val queued = notifications.enqueue(
                     userId = userId,
                     category = NotificationCategory.MED_REMINDER,
-                    title = title.ifBlank { medication.name },
-                    body = body.ifBlank { "Qabul vaqti — $dueAt" },
+                    // Never the medicine's name: a push is read on the lock screen.
+                    title = title.ifBlank { MedReminderFallback.title(user.language) },
+                    body = body.ifBlank { MedReminderFallback.body(user.language, dueAt.toString()) },
                     scheduledFor = dueInstant,
                     dedupeKey = dedupeKey,
                     status = if (decision is DeliveryDecision.Send) {
@@ -216,5 +237,23 @@ class NotificationScheduler(
 
     private companion object {
         const val DELIVERY_BATCH = 100
+
+        /** How late a missed dose reminder may still go out; later than this it is noise. */
+        val CATCH_UP = 30.minutes
+    }
+}
+
+/** What a medication reminder says when its template row is missing or blank. */
+internal object MedReminderFallback {
+    fun title(language: uz.sadora.contract.Language): String = when (language) {
+        uz.sadora.contract.Language.UZ -> "Dori vaqti"
+        uz.sadora.contract.Language.RU -> "Время лекарства"
+        uz.sadora.contract.Language.EN -> "Medication time"
+    }
+
+    fun body(language: uz.sadora.contract.Language, time: String): String = when (language) {
+        uz.sadora.contract.Language.UZ -> "Qabul vaqti — $time"
+        uz.sadora.contract.Language.RU -> "Время приёма — $time"
+        uz.sadora.contract.Language.EN -> "Time to take it — $time"
     }
 }

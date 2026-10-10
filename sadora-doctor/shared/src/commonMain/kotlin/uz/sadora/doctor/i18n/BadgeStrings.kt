@@ -84,9 +84,9 @@ object BadgeStringsUz : BadgeStrings {
     }
 
     override fun goal(key: String, target: Int): String = when (key) {
-        DoctorBadges.VERIFIED -> "Sadora sizni shifokor sifatida tasdiqladi"
+        DoctorBadges.VERIFIED -> "SADORA sizni shifokor sifatida tasdiqladi"
         DoctorBadges.PHOTO -> "Sahifangizga rasm qo'ying"
-        DoctorBadges.ANSWERS -> "Chatda $target ta savolga javob bering"
+        DoctorBadges.ANSWERS -> "Hamjamiyatda $target ta savolga javob bering"
         DoctorBadges.POSTS -> "$target ta post yozing"
         DoctorBadges.CONSULTS -> "$target ta konsultatsiya o'tkazing"
         DoctorBadges.PATIENTS -> "$target nafar bemor bilan ishlang"
@@ -94,17 +94,17 @@ object BadgeStringsUz : BadgeStrings {
         DoctorBadges.MESSAGES -> "Konsultatsiyalarda $target ta xabar yozing"
         DoctorBadges.RATED -> "Bemorlardan $target ta baho oling"
         DoctorBadges.FIVE_STARS -> "$target ta 5 yulduzli baho oling"
-        DoctorBadges.RECORDS -> "Bemorlarning $target ta yozuvini oching"
+        DoctorBadges.RECORDS -> "$target ta bemor kartasini oching"
         DoctorBadges.NOTES -> "$target nafar bemorga eslatma yozing"
         DoctorBadges.QUICK_REPLIES -> "$target ta tayyor javob saqlang"
         DoctorBadges.THANKED -> "Postlaringiz $target ta yoqtirish olsin"
-        DoctorBadges.TENURE -> "Sadorada $target kun"
+        DoctorBadges.TENURE -> "SADORA bilan $target kun"
         else -> ""
     }
 }
 
 object BadgeStringsRu : BadgeStrings {
-    override val title = "Награды"
+    override val title = "Значки"
     override val subtitle = "За то, что вы делаете, — не за доход"
     override fun earnedOf(earned: Int, total: Int) = "$earned / $total"
     override fun tierName(tier: Int, maxTier: Int) = when {
@@ -113,15 +113,15 @@ object BadgeStringsRu : BadgeStrings {
         tier == 2 -> "Серебро"
         else -> "Золото"
     }
-    override val locked = "Ещё не открыта"
+    override val locked = "Ещё не открыт"
     override fun next(tierName: String, progress: Int, target: Int) = "Следующая: $tierName — $progress / $target"
     override val allDone = "Все ступени пройдены!"
     override val principle =
-        "Награды даются за работу — ответы, консультации, заботу о пациентах. Наград за доход или цену нет."
-    override val newBadge = "Новая награда!"
+        "Значки даются за работу — ответы, консультации, заботу о пациентках. Значков за доход или цену нет."
+    override val newBadge = "Новый значок!"
     override fun tierReached(tierName: String) = "Ступень: $tierName"
     override val continueLabel = "Отлично!"
-    override fun more(count: Int) = "Ещё ${plural(count, "награда", "награды", "наград")}"
+    override fun more(count: Int) = "Ещё ${plural(count, "значок", "значка", "значков")}"
     override val skipAll = "Закрыть все"
     override val earnedSection = "Получены"
     override val lockedSection = "Следующие цели"
@@ -132,49 +132,40 @@ object BadgeStringsRu : BadgeStrings {
         DoctorBadges.ANSWERS -> "Ответы на вопросы"
         DoctorBadges.POSTS -> "Автор"
         DoctorBadges.CONSULTS -> "Консультант"
-        DoctorBadges.PATIENTS -> "Доверие пациентов"
+        DoctorBadges.PATIENTS -> "Доверие пациенток"
         DoctorBadges.FAST_REPLY -> "Быстрый ответ"
         DoctorBadges.MESSAGES -> "Собеседник"
-        DoctorBadges.RATED -> "Есть отзывы"
+        DoctorBadges.RATED -> "Есть оценки"
         DoctorBadges.FIVE_STARS -> "Пять звёзд"
         DoctorBadges.RECORDS -> "Внимательный врач"
         DoctorBadges.NOTES -> "Заметки"
-        DoctorBadges.QUICK_REPLIES -> "Готовые ответы"
+        DoctorBadges.QUICK_REPLIES -> "Быстрые ответы"
         DoctorBadges.THANKED -> "Благодарность"
         DoctorBadges.TENURE -> "Верность"
         else -> null
     }
 
     override fun goal(key: String, target: Int): String = when (key) {
-        DoctorBadges.VERIFIED -> "Sadora подтвердила вас как врача"
+        DoctorBadges.VERIFIED -> "SADORA подтвердила вас как врача"
         DoctorBadges.PHOTO -> "Поставьте фото на свою страницу"
-        DoctorBadges.ANSWERS -> "Ответьте в чате на ${plural(target, "вопрос", "вопроса", "вопросов")}"
+        DoctorBadges.ANSWERS -> "Ответьте в сообществе на ${plural(target, "вопрос", "вопроса", "вопросов")}"
         DoctorBadges.POSTS -> "Напишите ${plural(target, "пост", "поста", "постов")}"
         DoctorBadges.CONSULTS -> "Проведите ${plural(target, "консультацию", "консультации", "консультаций")}"
-        DoctorBadges.PATIENTS -> "Примите ${plural(target, "пациента", "пациентов", "пациентов")}"
+        DoctorBadges.PATIENTS -> "Помогите ${plural(target, "пациентке", "пациенткам", "пациенткам")}"
         DoctorBadges.FAST_REPLY -> "Ответьте в течение часа в ${plural(target, "консультации", "консультациях", "консультациях")}"
         DoctorBadges.MESSAGES -> "Напишите в консультациях ${plural(target, "сообщение", "сообщения", "сообщений")}"
-        DoctorBadges.RATED -> "Получите ${plural(target, "отзыв", "отзыва", "отзывов")} от пациентов"
+        DoctorBadges.RATED -> "Получите ${plural(target, "оценку", "оценки", "оценок")} от пациенток"
         DoctorBadges.FIVE_STARS -> "Получите ${plural(target, "оценку", "оценки", "оценок")} «5»"
-        DoctorBadges.RECORDS -> "Откройте ${plural(target, "медкарту", "медкарты", "медкарт")} пациентов"
-        DoctorBadges.NOTES -> "Ведите заметки о ${plural(target, "пациенте", "пациентах", "пациентах")}"
-        DoctorBadges.QUICK_REPLIES -> "Сохраните ${plural(target, "готовый ответ", "готовых ответа", "готовых ответов")}"
+        DoctorBadges.RECORDS -> "Откройте ${plural(target, "карту", "карты", "карт")} пациенток"
+        DoctorBadges.NOTES -> "Ведите заметки о ${plural(target, "пациентке", "пациентках", "пациентках")}"
+        DoctorBadges.QUICK_REPLIES -> "Сохраните ${plural(target, "быстрый ответ", "быстрых ответа", "быстрых ответов")}"
         DoctorBadges.THANKED -> "Соберите ${plural(target, "отметку", "отметки", "отметок")} «нравится» на постах"
-        DoctorBadges.TENURE -> "${plural(target, "день", "дня", "дней")} в Sadora"
+        DoctorBadges.TENURE -> "${plural(target, "день", "дня", "дней")} в SADORA"
         else -> ""
     }
 
     /** "5 вопросов", "21 вопрос", "23 вопроса". */
-    private fun plural(n: Int, one: String, few: String, many: String): String {
-        val tens = n % 100
-        val word = when {
-            tens in 11..14 -> many
-            n % 10 == 1 -> one
-            n % 10 in 2..4 -> few
-            else -> many
-        }
-        return "$n $word"
-    }
+    private fun plural(n: Int, one: String, few: String, many: String): String = "$n ${ru(n, one, few, many)}"
 }
 
 object BadgeStringsEn : BadgeStrings {
@@ -209,32 +200,32 @@ object BadgeStringsEn : BadgeStrings {
         DoctorBadges.PATIENTS -> "Patients' trust"
         DoctorBadges.FAST_REPLY -> "Quick to answer"
         DoctorBadges.MESSAGES -> "In conversation"
-        DoctorBadges.RATED -> "Reviewed"
+        DoctorBadges.RATED -> "Rated"
         DoctorBadges.FIVE_STARS -> "Five stars"
         DoctorBadges.RECORDS -> "Attentive"
         DoctorBadges.NOTES -> "Note keeper"
-        DoctorBadges.QUICK_REPLIES -> "Ready answers"
+        DoctorBadges.QUICK_REPLIES -> "Quick replies"
         DoctorBadges.THANKED -> "Thanked"
-        DoctorBadges.TENURE -> "With Sadora"
+        DoctorBadges.TENURE -> "With SADORA"
         else -> null
     }
 
     override fun goal(key: String, target: Int): String = when (key) {
-        DoctorBadges.VERIFIED -> "Sadora verified you as a doctor"
+        DoctorBadges.VERIFIED -> "SADORA verified you as a doctor"
         DoctorBadges.PHOTO -> "Put a photo on your page"
-        DoctorBadges.ANSWERS -> "Answer $target questions in the Chat"
+        DoctorBadges.ANSWERS -> en(target, "Answer a question in the community", "Answer $target questions in the community")
         DoctorBadges.POSTS -> if (target == 1) "Write your first post" else "Write $target posts"
         DoctorBadges.CONSULTS -> if (target == 1) "Hold your first consultation" else "Hold $target consultations"
-        DoctorBadges.PATIENTS -> "See $target patients"
-        DoctorBadges.FAST_REPLY -> "Reply within an hour in $target consultations"
-        DoctorBadges.MESSAGES -> "Write $target messages in consultations"
-        DoctorBadges.RATED -> "Receive $target reviews from patients"
-        DoctorBadges.FIVE_STARS -> "Receive $target five-star ratings"
+        DoctorBadges.PATIENTS -> en(target, "Help your first patient", "Help $target patients")
+        DoctorBadges.FAST_REPLY -> en(target, "Reply within an hour in a consultation", "Reply within an hour in $target consultations")
+        DoctorBadges.MESSAGES -> en(target, "Write a message in a consultation", "Write $target messages in consultations")
+        DoctorBadges.RATED -> en(target, "Get your first rating from a patient", "Get $target ratings from patients")
+        DoctorBadges.FIVE_STARS -> en(target, "Get a five-star rating", "Get $target five-star ratings")
         DoctorBadges.RECORDS -> if (target == 1) "Open a patient's record" else "Open $target patient records"
-        DoctorBadges.NOTES -> "Keep notes on $target patients"
+        DoctorBadges.NOTES -> en(target, "Keep a note on a patient", "Keep notes on $target patients")
         DoctorBadges.QUICK_REPLIES -> if (target == 1) "Save a quick reply" else "Save $target quick replies"
-        DoctorBadges.THANKED -> "Get $target likes on your posts"
-        DoctorBadges.TENURE -> "$target days with Sadora"
+        DoctorBadges.THANKED -> en(target, "Get a like on your posts", "Get $target likes on your posts")
+        DoctorBadges.TENURE -> "$target ${en(target, "day", "days")} with SADORA"
         else -> ""
     }
 }

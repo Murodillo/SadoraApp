@@ -62,7 +62,7 @@ object StringsEn : Strings {
         override fun subtitle(stage: LifeStage) = when (stage) {
             LifeStage.Cycle -> "Periods, ovulation, symptoms"
             LifeStage.TryingToConceive -> "Fertile days, getting ready"
-            LifeStage.Pregnancy -> "Week, growth, appointments"
+            LifeStage.Pregnancy -> "Week, growth, visits"
             LifeStage.Postpartum -> "Recovery, sleep, mood"
             LifeStage.Perimenopause -> "Regularity, symptoms"
             LifeStage.Menopause -> "Health and mood"
@@ -86,7 +86,7 @@ object StringsEn : Strings {
 
     override val onboarding = object : OnboardingStrings {
         override fun otpEntered(entered: Int, length: Int) = "Verification code: $entered of $length digits entered"
-        override val deleteDigit = "Delete the last digit"
+        override val deleteDigit = "Delete last digit"
         override val languageTitle = "Choose your language"
         override val languageSubtitle = "You can change this later in settings."
         override val continueLabel = "Continue"
@@ -98,23 +98,23 @@ object StringsEn : Strings {
         override val nameSubtitle = "Let's get acquainted. You can change this name later."
         override val nameLabel = "Name"
         override val nameHint = "Your name"
-        override val nameNote = "Your data stays inside SADORA. It is never passed to anyone " +
-            "else, and you can delete it whenever you like."
+        override val nameNote = "We don't sell your data or share it for advertising. " +
+            "You can delete it whenever you like."
 
         override val birthYearTitle = "What year were you born?"
-        override val birthYearSubtitle = "Your age makes the predictions more accurate."
+        override val birthYearSubtitle = "Your age makes the forecasts more accurate."
 
         override val goalsTitle = "What would you like help with?"
         override val goalsSubtitle = "Choose as many as you like."
 
-        override val stageTitle = "Where are you right now?"
+        override val stageTitle = "Which stage of life are you in?"
         override val stageSubtitle = "The next questions, and the app itself, follow this choice."
         override fun stagePromise(stage: LifeStage) = when (stage) {
-            LifeStage.Cycle -> "We will follow your cycle and tell you when the next period is due."
-            LifeStage.TryingToConceive -> "We will mark your fertile days and be with you through the preparation."
-            LifeStage.Pregnancy -> "We will follow each week's changes and your check-ups."
+            LifeStage.Cycle -> "We'll follow your cycle and tell you when the next period is due."
+            LifeStage.TryingToConceive -> "We'll mark your fertile days and be with you through the preparation."
+            LifeStage.Pregnancy -> "We'll follow each week's changes and your check-ups."
             LifeStage.Postpartum -> "Recovery, feeding and mood get particular attention."
-            LifeStage.Perimenopause -> "We will follow symptoms, sleep and energy together."
+            LifeStage.Perimenopause -> "We'll follow symptoms, sleep and energy together."
             LifeStage.Menopause -> "Everyday support aimed at your health goals."
         }
 
@@ -123,22 +123,22 @@ object StringsEn : Strings {
 
         override val cycleLengthTitle = "How many days does your cycle usually last?"
         override fun cycleLengthDerived(days: Int) =
-            "Your dates work out to $days days. Correct it if that is wrong."
-        override val cycleLengthHint = "If you are not sure, an approximate number is enough — it settles by itself."
+            "Your dates work out to $days ${en(days, "day", "days")}. Correct it if that's wrong."
+        override val cycleLengthHint = "If you're not sure, a rough number is enough — the app will refine it later."
         override val periodLengthTitle = "How many days does your period last?"
 
         override fun feelingTitle(name: String) =
             if (name.isBlank()) "How are you feeling?" else "$name, how are you feeling?"
         override val feelingSubtitle = "Say it honestly — where we start depends on your answer."
         override val feelings = listOf(
-            FeelingOption("Good — all is well 🙂", 4, "Wonderful. We will help you keep it that way."),
-            FeelingOption("Tired 😴", 2, "We will put sleep and energy first."),
-            FeelingOption("Anxious 😟", 2, "We will start slowly. You only ever write what you want to."),
-            FeelingOption("I want to understand my body ✨", 3, "That is exactly what SADORA is for."),
+            FeelingOption("Good — all is well 🙂", 4, "Wonderful. We'll help you keep it that way."),
+            FeelingOption("Tired 😴", 2, "We'll put sleep and energy first."),
+            FeelingOption("Anxious 😟", 2, "We'll start slowly. You only ever write what you want to."),
+            FeelingOption("I want to understand my body ✨", 3, "That's exactly what SADORA is for."),
         )
 
         override val bodyTitle = "Your height and weight"
-        override val bodySubtitle = "Optional. Never shown to anyone, and deleted whenever you like."
+        override val bodySubtitle = "Optional. Never shown to anyone, and you can delete it whenever you like."
         override val height = "Height"
         override val weight = "Weight"
 
@@ -146,22 +146,22 @@ object StringsEn : Strings {
         override val inviteSubtitle = "If not, just skip this step."
         override val inviteLabel = "Invite code"
         override val inviteHint = "For example, K7M2QP"
-        override fun inviteReward(coins: String) = "With a code you start with $coins gul"
+        override fun inviteReward(coins: String) = "With a code you start with $coins Gul"
         override val inviteFromLink = "Taken from your link"
 
         override val permissionsTitle = "What will you allow?"
         override val permissionsSubtitle = "Each of these can be changed later in Profile."
         override val permissionReminders = "Reminders"
-        override val permissionRemindersNote = "We will remind you about periods, medication and check-ups."
+        override val permissionRemindersNote = "We'll remind you about periods, medication and check-ups."
         override val permissionHealth = "Health data"
         override val permissionHealthNote = "We read steps and sleep from your watch."
         override val permissionCamera = "Camera"
         override val permissionCameraNote = "To photograph food and work out what is in it."
 
         override val phoneTitle = "Enter your number"
-        override val phoneSubtitle = "We will send a one-time code so your answers are saved."
+        override val phoneSubtitle = "We'll send a one-time code so your answers are saved."
         override val sending = "Sending…"
-        override val sendCode = "Send the code"
+        override val sendCode = "Send code"
         override val haveAccount = "I have an account · Sign in"
         override val phoneLabel = "Phone number"
         override val phoneNote = "The number is only used to sign in and is never sold for advertising."
@@ -169,42 +169,42 @@ object StringsEn : Strings {
         override fun codeSubtitle(phone: String) = "We sent a 6-digit code to +998 $phone."
         override val checking = "Checking…"
         override val confirm = "Confirm"
-        override fun resendIn(seconds: Int) = "Send again · ${seconds}s"
-        override val resend = "Send the code again"
-        override val codeSecrecy = "Never share the code. SADORA staff will not ask for it."
+        override fun resendIn(seconds: Int) = "Send again · $seconds s"
+        override val resend = "Send code again"
+        override val codeSecrecy = "Never share the code. SADORA staff won't ask for it."
 
         override val periodsTitle = "When were your last periods?"
         override fun periodsSubtitle(periodLength: Int) =
-            "Tap the day it started — the other $periodLength days fill themselves in. " +
+            "Tap the day it started — the other $periodLength ${en(periodLength, "day", "days")} fill themselves in. " +
                 "After that you can add or remove days one at a time."
         override val markMore = "Mark another?"
         override fun markMoreBody(marked: Int) =
             "You have marked $marked so far. With three we can measure the length of your " +
-                "cycle, and the prediction gets a great deal more accurate."
+                "cycle, and the forecast gets a great deal more accurate."
         override val iWillMark = "I will mark one"
         override fun markedWithAverage(filled: Int, total: Int, averageCycle: Int) =
-            "$filled/$total marked · average cycle $averageCycle days"
+            "$filled/$total marked · average cycle $averageCycle ${en(averageCycle, "day", "days")}"
         override fun markedMoreNeeded(filled: Int, total: Int) = "$filled/$total marked · mark another"
         override val markAPeriodStart = "Mark the day a period started"
 
         override val regularityTitle = "Is your cycle regular?"
         override val regularitySubtitle = "Does it arrive on roughly the same day each month?"
         override val regularYes = "Yes, regular"
-        override val regularYesNote = "Good — the predictions will be more accurate from the start."
+        override val regularYesNote = "Good — the forecasts will be more accurate from the start."
         override val regularNo = "No, it varies"
-        override val regularNoNote = "We will take that into account and show how sure a prediction is."
-        override val regularUnknown = "I do not know"
-        override val regularUnknownNote = "That is fine. After a couple of months it becomes clear on its own."
+        override val regularNoNote = "We'll take that into account and show how sure a forecast is."
+        override val regularUnknown = "I don't know"
+        override val regularUnknownNote = "That's fine. After a couple of months it becomes clear on its own."
 
         override val sensitiveTitle = "The next questions are personal"
-        override val sensitiveBody = "We will ask about contraception and trying to conceive. " +
-            "They make the predictions more accurate, but answering is entirely optional."
+        override val sensitiveBody = "We'll ask about contraception and trying to conceive. " +
+            "They make the forecasts more accurate, but answering is entirely optional."
 
         override val birthControlTitle = "Have you used contraception in the last 6 months?"
         override val birthControlSubtitle = "Some methods affect the cycle, which is why we ask."
         override fun birthControl(option: BirthControl) = when (option) {
             BirthControl.None -> "No"
-            BirthControl.StillUsing -> "I am still using it"
+            BirthControl.StillUsing -> "I'm still using it"
             BirthControl.Pill -> "Yes, the pill"
             BirthControl.Iud -> "Yes, an IUD"
             BirthControl.Barrier -> "Yes, condoms or another non-hormonal method"
@@ -213,18 +213,18 @@ object StringsEn : Strings {
         }
         override fun birthControlNote(option: BirthControl) = when (option) {
             BirthControl.Pill, BirthControl.Iud ->
-                "After the pill or an IUD a cycle can take a few months to settle — we will be careful with predictions."
+                "After the pill or an IUD a cycle can take a few months to settle — we'll be careful with forecasts."
             BirthControl.StillUsing ->
-                "Fertile-day predictions are not reliable while you use contraception, so we do not show them."
+                "Fertile-day forecasts aren't reliable while you use contraception, so we don't show them."
             else -> null
         }
 
         override val conceptionTitle = "How long have you been trying to conceive?"
         override fun conceptionNote(window: ConceptionWindow) = when (window) {
             ConceptionWindow.JustStarted ->
-                "The beginning of the road — there will be many questions, and we will be there for each."
+                "The beginning of the road — there will be many questions, and we'll be there for each."
             ConceptionWindow.OverAYear ->
-                "After a year it is worth seeing a doctor. We will remind you of that too."
+                "After a year (or after 6 months if you're over 35) it's worth seeing a doctor. We'll remind you of that too."
             else -> null
         }
 
@@ -236,8 +236,8 @@ object StringsEn : Strings {
         override fun symptomsTitle(name: String) =
             if (name.isBlank()) "What are you noticing today?" else "$name, what are you noticing today?"
         override val symptomsSubtitle = "You can pick several. If there is nothing — skip it."
-        override val saveSymptoms = "Save these"
-        override val notAloneTitle = "You are not alone"
+        override val saveSymptoms = "Save symptoms"
+        override val notAloneTitle = "You're not alone"
         override val proofs = listOf(
             Proof("Chosen by women", "Thousands of women in Uzbekistan follow their cycle with SADORA."),
             Proof("With doctors", "The questions and the articles are prepared with gynaecologists."),
@@ -258,23 +258,23 @@ object StringsEn : Strings {
         override val saving = "Saving…"
         override val startSadora = "Start with SADORA"
         override fun cycleSummary(cycleLength: Int, periodLength: Int) =
-            "Cycle $cycleLength days · period $periodLength days"
+            "Cycle $cycleLength ${en(cycleLength, "day", "days")} · period $periodLength ${en(periodLength, "day", "days")}"
         override val remindersOn = "Reminders are on"
         override val healthDataOn = "Health data will be connected"
-        override fun goalsChosen(count: Int) = "$count goals chosen"
+        override fun goalsChosen(count: Int) = "$count ${en(count, "goal", "goals")} chosen"
 
         override val signInTitle = "Welcome back"
-        override val signInSubtitle = "We will send a code to your number"
+        override val signInSubtitle = "We'll send a code to your number"
         override val noAccount = "No account yet? "
         override val signUp = "Sign up"
-        override val notRegisteredTitle = "This number is not registered"
-        override fun notRegisteredBody(phone: String) = "There is no Sadora account for +998 $phone yet. Sign up and make the app yours in a few questions — your number is already confirmed, so no second SMS."
+        override val notRegisteredTitle = "This number isn't registered"
+        override fun notRegisteredBody(phone: String) = "There is no SADORA account for +998 $phone yet. Sign up and make the app yours in a few questions — your number is already confirmed, so no second SMS."
         override val registerNow = "Sign up"
         override val otherNumber = "Another number"
 
         override val consentTitle = "Your body. Your data."
-        override val consentBody = "Your health data never leaves SADORA for anyone else, " +
-            "and you can delete it whenever you like."
+        override val consentBody = "We don't sell your health data or share it for " +
+            "advertising. You can delete it whenever you like."
         override val consentHealth = "I agree to my health data being processed so the app can work. "
         override val consentHealthMore = "More in the "
         override val consentTermsPrefix = "I accept the "
@@ -284,7 +284,7 @@ object StringsEn : Strings {
         override val privacyPolicy = "Privacy policy"
         override val consentAnalytics = "I agree to anonymous analysis of what I do in the " +
             "app. This is optional and is used to make SADORA better."
-        override val consentAll = "Agree to everything"
+        override val consentAll = "Agree to all"
 
         override val starterSymptoms = listOf(
             StarterSymptom("cramps", "Cramps"),
@@ -364,7 +364,7 @@ object StringsEn : Strings {
         override val languageTitle = "Language"
         override val languageNote = "The app changes language straight away. AI answers, " +
             "insights and the food scanner reply in it too."
-        override val languageSaveFailed = "The language was not saved — try again later."
+        override val languageSaveFailed = "The language wasn't saved — try again later."
         override val personalTitle = "Personal details"
         override val name = "Name"
         override val birthDate = "Date of birth"
@@ -372,24 +372,24 @@ object StringsEn : Strings {
         override val weight = "Weight"
         override val centimetres = "cm"
         override val kilograms = "kg"
-        override val weightNote = "Weight is optional, and it is never shown to anyone else."
+        override val weightNote = "Weight is optional, and it's never shown to anyone else."
 
         override val goalsTitle = "Goals"
         override fun goalsChosen(count: Int) = "$count chosen"
 
         override val lifeStageTitle = "Life stage"
         override fun chosenDate(date: String) = "Chosen date: $date"
-        override val lifeStageNote = "Changing the stage rebuilds the Journey tab and the " +
-            "screens that belong to it. Everything you have recorded stays."
+        override val lifeStageNote = "If you change the stage, the stage tab updates. " +
+            "Everything you've recorded stays."
 
         override val notificationsTitle = "Notifications"
         override val inboxDueToday = "Due today"
-        override val inboxEarlier = "Sent"
+        override val inboxEarlier = "Earlier"
         override val inboxEmpty = "No notifications yet"
         override val inboxEmptyBody = "Reminders and summaries will show up here. Choose which ones you get in settings."
         override val inboxSettings = "Notification settings"
         override fun inboxDoseDue(name: String, time: String) = "$name · $time"
-        override val inboxDoseAction = "Open the medication plan"
+        override val inboxDoseAction = "Open medication plan"
         override val notificationSettingsTitle = "Notification settings"
         override val medReminder = "Medication reminders"
         override val medReminderNote = "10 minutes before each dose"
@@ -422,7 +422,7 @@ object StringsEn : Strings {
         override val deleteAccountBody = "Your data will be deleted for good. " +
             "We suggest exporting it first."
 
-        override val medicalDisclaimer = "SADORA does not diagnose. If something worries " +
+        override val medicalDisclaimer = "SADORA doesn't diagnose. If something worries " +
             "you, see a doctor."
     }
 
@@ -443,21 +443,22 @@ object StringsEn : Strings {
 
         override fun moodCaption(mood: Mood) = when (mood) {
             Mood.Bad -> "Be kind to yourself today."
-            Mood.Low -> "A slower day — that is normal too."
-            Mood.Ok -> "An ordinary day for balance."
-            Mood.Good -> "A good day for balance."
+            Mood.Low -> "A slower day — that's normal too."
+            Mood.Ok -> "An ordinary day — that's good too."
+            Mood.Good -> "A good day — hold on to it."
             Mood.Great -> "Your energy is high — make the most of it!"
         }
 
         override fun phase(phase: CyclePhase) = when (phase) {
             CyclePhase.Period -> "Period"
             CyclePhase.Follicular -> "Follicular"
-            CyclePhase.Fertile -> "Ovulation"
+            CyclePhase.Fertile -> "Fertile window"
             CyclePhase.Luteal -> "Luteal"
         }
 
         override fun phaseFertility(phase: CyclePhase) = when (phase) {
-            CyclePhase.Period -> "Chance of conceiving is low"
+            CyclePhase.Period -> "Chance of conceiving is lower (not zero)"
+
             CyclePhase.Follicular -> "Chance of conceiving is rising"
             CyclePhase.Fertile -> "Chance of conceiving is high"
             CyclePhase.Luteal -> "Chance of conceiving is falling"
@@ -504,14 +505,14 @@ object StringsEn : Strings {
         override val edit = "Edit"
         override val done = "Done"
 
-        override fun hoursMinutes(hours: Int, minutes: Int) = "${hours}h ${minutes}m"
+        override fun hoursMinutes(hours: Int, minutes: Int) = "$hours h $minutes min"
         override val litres = "l"
         override val millilitres = "ml"
         override val kcal = "kcal"
         override val steps = "steps"
         override val minutesShort = "min"
         override val daysWord = "days"
-        override fun days(count: Int) = if (count == 1) "1 day" else "$count days"
+        override fun days(count: Int) = "$count ${en(count, "day", "days")}"
     }
 
     override val dates = object : DateStrings {
@@ -549,13 +550,13 @@ object StringsEn : Strings {
             "answer is built from your own data."
         override fun basis(cycleDay: Int, sleep: String, water: String) =
             "Based on: cycle day $cycleDay · slept $sleep · water $water l"
-        override fun questionsLeft(left: Int, limit: Int) = " · $left/$limit questions left"
+        override fun questionsLeft(left: Int, limit: Int) = " · $left/$limit ${en(limit, "question", "questions")} left"
         override val answerFailed = "That could not be answered. Try again."
         override val sessionOnly = "The conversation lives in this session only and is never " +
-            "written to the server. It is gone when you leave the app."
-        override val clearChat = "Clear the conversation"
+            "written to the server. It's gone when you leave the app."
+        override val clearChat = "Clear conversation"
         override val medicalDisclaimer =
-            "SADORA is a health companion. It does not diagnose or prescribe."
+            "SADORA is a health companion. It doesn't diagnose or prescribe."
 
         override val topics = listOf(
             "Energy" to "How do I keep my energy steady?",
@@ -601,7 +602,7 @@ object StringsEn : Strings {
             CommunityTopic.Body -> "Body"
         }
         override fun filter(filter: CommunityFilter) = when (filter) {
-            CommunityFilter.Feed -> "Feed"
+            CommunityFilter.Feed -> "Posts"
             CommunityFilter.Saved -> "Saved"
             CommunityFilter.Mine -> "Mine"
         }
@@ -609,14 +610,14 @@ object StringsEn : Strings {
             CommunitySort.Newest -> "New"
             CommunitySort.Active -> "Active"
         }
-        override fun anonymousAs(alias: String) = "Anonymous · you: $alias"
-        override val anonymous = "Anonymous — nobody sees your name"
+        override fun anonymousAs(alias: String) = "Under your alias · you: $alias"
+        override val anonymous = "Under your alias — your name isn't shown"
         override val rulesTitle = "How the chat works"
         override val rulesIntro = "Everyone here writes under an alias. Others see your posts under your alias only — your profile, phone number and name are never shown."
         override val rules = listOf(
             "Be kind — everyone here came with a question of her own.",
             "Leave no personal details: names, numbers, addresses, photos.",
-            "This is not medical advice. Pain, bleeding or fever means a doctor.",
+            "This isn't medical advice. If you have severe pain, heavy bleeding or a fever, see a doctor.",
             "No advertising or selling.",
             "Flag a post that breaks a rule — it will be reviewed.",
         )
@@ -672,7 +673,7 @@ object StringsEn : Strings {
         override val profileTitle = "Profile"
         override val myProfileTitle = "My alias"
         override val noBio = "Nothing written about herself yet"
-        override val editBio = "Edit bio"
+        override val editBio = "About me"
         override val bioHint = "One line about you — age, stage, what you care about. No names or numbers."
         override val acceptMessages = "Accept messages"
         override val acceptMessagesHint = "Off, and nobody can send you a private message"
@@ -691,23 +692,25 @@ object StringsEn : Strings {
         override val block = "Block"
         override val unblock = "Unblock"
         override val blockConfirmTitle = "Block this alias?"
-        override val blockConfirmBody = "Neither of you can message the other. Her posts stay in the feed. You can unblock at any time."
+        override val blockConfirmBody = "Neither of you can message the other. Her posts stay in the chat. You can unblock at any time."
         override val blocked = "Blocked"
         override val unblocked = "Unblocked"
         override val viewProfile = "View profile"
+        override val doctorsLink = "Doctors"
+        override val rulesLink = "Rules"
         override val messagesTitle = "Messages"
         override val messagesSubtitle = "Between the two of you only — under an alias, or with a doctor"
         override val noMessages = "No messages yet"
-        override val noMessagesBody = "Tap a post's author in the feed — you can message her from her profile."
+        override val noMessagesBody = "Tap a post's author in the chat — you can message her from her profile."
         override val messageHint = "Write a message"
-        override val conversationBlocked = "This conversation is closed — messages cannot be sent"
+        override val conversationBlocked = "This conversation is closed — messages can't be sent"
         override val conversationMenu = "Conversation"
         override val reportConversation = "Report conversation"
         override val newConversation = "New conversation"
         override fun unreadCount(count: Int) = if (count == 1) "1 unread" else "$count unread"
         override val photo = "Photo"
         override val photoNote = "Choose from your gallery"
-        override val record = "Health record"
+        override val record = "Patient record"
         override val attach = "Attach"
         override val photoCaptionHint = "Add a caption (optional)"
         override val sendPhoto = "Send photo"
@@ -717,17 +720,17 @@ object StringsEn : Strings {
         override val tickRead = "Read"
         override fun typing(name: String) = "$name is typing…"
         override val typingShort = "typing…"
-        override val recordAttached = "Health record attached"
+        override val recordAttached = "Patient record attached"
         override val recordAttachedNote = "The doctor can see it while the consultation is open"
-        override val attachRecord = "Attach my health record"
+        override val attachRecord = "Attach my patient record"
         override val attachRecordNote = "Cycle, symptoms, medications — the last 90 days"
-        override val attachRecordConfirmTitle = "Send your health record?"
+        override val attachRecordConfirmTitle = "Send your patient record?"
         override val attachRecordConfirmBody = "While the consultation is open, the doctor can see your record: cycle, symptoms, mood, medications and the last 90 days of entries. Once it closes, the doctor can no longer open it."
         override val attachRecordConfirm = "Yes, attach it"
         override val recordTitle = "The record you sent"
         override val recordNote = "This is exactly what the doctor sees — and only while the consultation is open."
         override fun recordAge(age: Int) = "Age $age"
-        override fun recordDays(days: Int) = "Last 90 days: $days days of entries"
+        override fun recordDays(days: Int) = "Last 90 days: entries on $days ${en(days, "day", "days")}"
         override fun recordCycleDay(day: Int) = "Cycle day $day"
         override fun recordPregnancyWeek(week: Int) = "Pregnancy: week $week"
         override val recordSymptoms = "Most frequent symptoms"
@@ -741,7 +744,7 @@ object StringsEn : Strings {
         override val commentHint = "Write a reply"
         override val send = "Send"
         override val whatIsOnYourMind = "What would you like to ask?"
-        override fun postsAs(alias: String) = "This goes out as \"$alias\" — your name is never shown."
+        override fun postsAs(alias: String) = "This goes out as “$alias” — your name is never shown."
         override val postsAnonymously = "This goes out under an alias — your name is never shown."
         override val yourOwnPost = "This is your post."
         override val deletePost = "Delete this post"
@@ -753,53 +756,53 @@ object StringsEn : Strings {
         override val postDeleted = "The post was deleted"
         override val reportReasonTitle = "Why are you reporting this?"
         override val reportNote = "The report goes to a moderator. Who sent it is never shown."
-        override val sendReport = "Send the report"
+        override val sendReport = "Send report"
         override val reportSent = "The report was sent"
         override val shareSuffix = "SADORA — Chat"
     }
 
     override val errors = object : ErrorStrings {
         override val phoneInvalid = "That number is incomplete, or no operator uses that code"
-        override val nameRequired = "A name cannot be empty"
+        override val nameRequired = "A name can't be empty"
         override fun tooLong(max: Int) = "At most $max characters"
         override fun outOfRange(min: Int, max: Int) = "Must be between $min and $max"
-        override val dateFormat = "The date as day.month.year"
-        override val dateInFuture = "The date cannot be in the future"
-        override val timeFormat = "The time as 20:00"
+        override val dateFormat = "Enter the date as day.month.year, e.g. 27.08.2026"
+        override val dateInFuture = "The date can't be in the future"
+        override val timeFormat = "Enter the time as 20:00"
         override val wholeNumber = "Digits only"
 
         override val network = "Could not reach the internet. Try again."
-        override val validation = "Something you entered is not right."
+        override val validation = "Please check what you entered and try again."
         override val sessionExpired = "Your session has ended. Please sign in again."
-        override val blocked = "This account is blocked. Please contact support."
-        override val forbidden = "You cannot do this."
+        override val blocked = "This account is blocked. Contact us from Profile → About SADORA."
+        override val forbidden = "This action isn't available for your account."
         override val premiumRequired = "This opens with Premium."
-        override val monthlyLimit = "The monthly limit is used up."
-        override val dailyLimit = "Today's limit is used up."
+        override val monthlyLimit = "This month's limit is used up. It resets on the 1st."
+        override val dailyLimit = "Today's limit is used up. You can continue tomorrow."
         override fun retryAfter(seconds: Int) = "Too many attempts. Try again in $seconds s."
         override val retrySoon = "Too many attempts. Try again shortly."
         override val otpInvalid = "That code is wrong or has expired."
         override val featureClosed = "This section is closed for now."
         override val consentRequired = "Give consent in Privacy to use this."
         override val paymentFailed = "The payment did not go through. Try again."
-        override val paymentRequired = "This doctor's consultations are paid — pay first."
+        override val paymentRequired = "This consultation is paid. Pay to start the chat."
         override val unexpected = "Something went wrong. Try again."
     }
 
     override val today = object : TodayStrings {
         override fun greetingLine(greeting: String) =
-            "$greeting — a lovely day to take care of yourself 🌸"
+            "$greeting! Take a minute for yourself 🌸"
 
         override fun hello(name: String) = if (name.isBlank()) "Hello!" else "Hello, $name!"
         override val aiFootnote = "Based on your data · written by AI"
         override val aiFreePrompt = "Ask anything about your health and how you feel"
 
         override val cycleCard = "Cycle"
-        override val notEnoughForPrediction = "Not enough data to predict yet"
+        override val notEnoughForPrediction = "Not enough data for a forecast yet"
         override fun cycleDayOf(day: Int, length: Int) = "Day $day / $length"
         override fun pregnancyWeek(week: Int) = "Week $week"
 
-        override val customise = "Customise the home screen"
+        override val customise = "Customise home screen"
         override val quickActions = "Quick actions"
         override val journal = "Journal"
         override val meditation = "Meditation"
@@ -836,11 +839,11 @@ object StringsEn : Strings {
 
         override val emptySummaryTitle = "Today in short"
         override val emptySummaryBody =
-            "Nothing recorded yet. Add your first entry and the daily summary and charts " +
+            "Nothing recorded yet. Log how you are today and the daily summary and charts " +
                 "will appear here."
         override val startTitle = "Shall we start with today?"
         override val startBody = "Mood, water or food — whichever is easiest to begin with."
-        override val startAction = "Add your first entry"
+        override val startAction = "Log today"
     }
 
     override val mind = object : MindStrings {
@@ -872,7 +875,7 @@ object StringsEn : Strings {
         override val meditationSubtitle = "A quiet mind"
         override val meditationPurpose = "Rest"
         override val fourSevenEight = "4-7-8"
-        override fun practiceMeta(minutes: Int, purpose: String) = "$minutes min • $purpose"
+        override fun practiceMeta(minutes: Int, purpose: String) = "$minutes min · $purpose"
         override val start = "Start"
 
         override val breathIn = "Breathe in"
@@ -885,13 +888,14 @@ object StringsEn : Strings {
     }
 
     override val nutrition = object : NutritionStrings {
-        override val title = "Nutrition"
+        override val title = "Food"
         override val insights = "Insights"
         override val meals = "Meals"
         override val addMeal = "Add a meal"
-        override val emptyTitle = "Nothing eaten recorded today"
-        override val emptyBody = "Add your first dish — calories and macros will add up here."
-        override val deleteMealTitle = "Delete this meal"
+        override val emptyTitle = "No meals logged today"
+        override val emptyBody = "Add your first dish — calories, protein, fat and carbs will add up here."
+
+        override val deleteMealTitle = "Delete this meal?"
         override val deleteMealBody = "It will be taken out of today's totals."
         override val nothingLoggedNote = "Nothing logged yet today. After the first meal, what is running short will show here."
 
@@ -905,7 +909,7 @@ object StringsEn : Strings {
         override val aiAnalysis = "AI analysis"
         override val aiBasis = "Worked out from today's numbers"
         override val scanner = "Food scanner"
-        override val scannerHint = "Point the camera — the dish, portion and macros are estimated"
+        override val scannerHint = "Point the camera — the dish, portion, protein, fat and carbs are estimated"
         override val balance = "Balance"
         override val balanceHint = "Food, water, activity and sleep — four directions"
 
@@ -925,9 +929,9 @@ object StringsEn : Strings {
         override val carbsInline = "carbohydrate"
 
         override fun balanced(kcalLeft: Int) =
-            "Macros are balanced today. A light dish covers the remaining $kcalLeft kcal."
+            "Protein, fat and carbs are balanced today. A light dish covers the remaining $kcalLeft kcal."
         override fun shortOf(macro: String) =
-            "Today is shortest on $macro. Keep that in mind at your next meal."
+            "You're lowest on $macro today. Keep that in mind at your next meal."
         override fun kcal(value: Int) = "$value kcal"
         override fun grams(value: Int) = "$value g"
     }
@@ -936,19 +940,19 @@ object StringsEn : Strings {
         override val cycleTitle = "My cycle"
         override val info = "Info"
         override val calendar = "Calendar"
-        override val noPredictionTitle = "Not enough data to predict yet"
+        override val noPredictionTitle = "Not enough data for a forecast yet"
         override val noPredictionBody =
             "Once two periods are recorded, the phases of your cycle and an estimate " +
                 "for the next one appear here."
         override val markPeriod = "Mark a period"
         override val today = "Today"
-        override fun daysToNextPeriod(days: Int) = "Next period in $days days"
+        override fun daysToNextPeriod(days: Int) = "Next period in $days ${en(days, "day", "days")}"
         override val symptoms = "Symptoms"
         override val change = "Change"
         override val averageCycle = "Average cycle"
         override val averagePeriod = "Average period"
         override val day = "Day"
-        override fun daysValue(days: Int) = if (days == 1) "1 day" else "$days days"
+        override fun daysValue(days: Int) = "$days ${en(days, "day", "days")}"
 
         override val calendarTitle = "Calendar"
         override val history = "History"
@@ -956,7 +960,7 @@ object StringsEn : Strings {
         override val markPeriodDay = "Mark a period day"
         override val periodCardTitle = "Period"
         override val periodCardBodyNoForecast = "Mark it if your period started on this day — it shows how long your cycles run."
-        override val periodCardBody = "Mark it if your period started on this day — the next cycle's prediction is counted from it."
+        override val periodCardBody = "Mark it if your period started on this day — the next cycle's forecast is counted from it."
         override fun periodRunningSince(date: String) = "Your period started on $date and is still running."
         override val periodStartedThisDay = "My period started this day"
         override val periodEndedThisDay = "My period ended this day"
@@ -972,15 +976,15 @@ object StringsEn : Strings {
         override val statsNote = "These figures rest on the cycles you have entered. The more " +
             "there are, the more accurate they get."
         override val regularity = "Regularity"
-        override val regularSteady = "Steady"
+        override val regularSteady = "Regular"
         override val regularVaries = "Varies"
         override val cycleLength = "Cycle length"
-        override fun lastNCycles(count: Int) = "last $count cycles"
+        override fun lastNCycles(count: Int) = "last $count ${en(count, "cycle", "cycles")}"
         override val previousCycles = "Previous cycles"
         override val noHistoryYet = "No cycle history yet"
         override val noHistoryYetBody = "Once a second period date is in, the length and the " +
             "regularity are worked out here."
-        override fun periodOfDays(days: Int) = "period $days days"
+        override fun periodOfDays(days: Int) = "period $days ${en(days, "day", "days")}"
         override val currentCycle = "Current"
 
         override fun cycleDayOrdinal(day: Int) = "Cycle day $day"
@@ -1000,15 +1004,15 @@ object StringsEn : Strings {
         override val severity = "How strong"
         override val severityWords = listOf(
             "Barely there",
-            "Mild — it does not get in the way",
+            "Mild — it doesn't get in the way",
             "Moderate — distracting at times",
             "Strong — it makes work hard",
-            "Very strong — I cannot do my usual things",
+            "Very strong — I can't do my usual things",
         )
         override val notePlaceholder = "Add a note…"
         override fun categoryName(category: SymptomCategory) = when (category) {
             SymptomCategory.PAIN -> "Pain"
-            SymptomCategory.BLEEDING -> "Discharge"
+            SymptomCategory.BLEEDING -> "Bleeding & discharge"
             SymptomCategory.MOOD -> "Mood"
             SymptomCategory.SLEEP -> "Sleep"
             SymptomCategory.ENERGY -> "Energy"
@@ -1023,18 +1027,18 @@ object StringsEn : Strings {
             week <= 27 -> "2nd trimester"
             else -> "3rd trimester"
         }
-        override val weekCaps = "  WEEK"
+        override val weekCaps = "WEEK"
         override fun weekAndDay(week: Int, day: Int) =
-            "$week ${if (week == 1) "week" else "weeks"} $day ${if (day == 1) "day" else "days"}"
-        override fun weekOnly(week: Int) = "$week ${if (week == 1) "week" else "weeks"}"
-        override fun dueOn(date: String, daysLeft: Int) = "Due $date · $daysLeft days to go"
+            "$week ${en(week, "week", "weeks")} $day ${en(day, "day", "days")}"
+        override fun weekOnly(week: Int) = "$week ${en(week, "week", "weeks")}"
+        override fun dueOn(date: String, daysLeft: Int) = "Due $date · $daysLeft ${en(daysLeft, "day", "days")} to go"
         override fun dueOnPast(date: String) = "Due $date"
         override val babyDevelopment = "Your baby's development"
         override val todaysSymptoms = "Today's symptoms"
         override val addSymptom = "+ Add"
-        override val upcomingAppointments = "Upcoming appointments"
+        override val upcomingAppointments = "Upcoming visits"
         override val all = "All"
-        override val noAppointments = "No appointments yet"
+        override val noAppointments = "No visits yet"
         override val noAppointmentsBody =
             "Write down the date of a check-up or a test — a reminder will follow."
         override val logToday = "Record how today feels"
@@ -1051,20 +1055,20 @@ object StringsEn : Strings {
         }
         override val aiBadge = "General advice"
 
-        override val appointmentsTitle = "Appointments"
+        override val appointmentsTitle = "Visits"
         override val filterUpcoming = "Upcoming"
         override val filterPast = "Past"
         override val filterAll = "All"
-        override val listEmpty = "Nothing here yet"
-        override val nothingInThisFilter = "Nothing in this filter"
+        override val listEmpty = "No visits yet — add your first one."
+        override val nothingInThisFilter = "No visits in this filter"
         override val appointmentsEmptyBody = "Write down the date of a check-up, a scan or a " +
             "test — the reminder is set from here too."
-        override val addAppointment = "Add an appointment"
+        override val addAppointment = "Add visit"
         override val nextCaps = "NEXT"
         override val todayCaps = "TODAY"
         override val tomorrowCaps = "TOMORROW"
         override fun inDaysCaps(days: Int) = "IN $days DAYS"
-        override val appointmentsNote = "You fill this list in yourself. SADORA does not " +
+        override val appointmentsNote = "You fill this list in yourself. SADORA doesn't " +
             "prescribe a screening schedule."
         override val appointmentDone = "Done"
         override fun reminderSet(offset: String) = "Reminder $offset"
@@ -1073,18 +1077,18 @@ object StringsEn : Strings {
             in 3..24 -> "a day before"
             else -> "2 days before"
         }
-        override val noReminder = "None"
-        override val editAppointment = "Edit appointment"
+        override val noReminder = "No reminder"
+        override val editAppointment = "Edit visit"
         override val appointmentName = "Name"
         override val appointmentNameHint = "Screening scan"
         override val appointmentDate = "Date"
-        override val appointmentDateHint = "27.8.2026"
-        override val appointmentDateInvalid = "Date as day.month.year"
+        override val appointmentDateHint = "27.08.2026"
+        override val appointmentDateInvalid = "Enter the date as day.month.year, e.g. 27.08.2026"
         override val appointmentTime = "Time (optional)"
         override val appointmentPlace = "Place (optional)"
-        override val appointmentPlaceHint = "Republican centre"
+        override val appointmentPlaceHint = "City maternity clinic"
         override val reminder = "Reminder"
-        override val appointmentDateNote = "Write the date as day.month.year, for example 27.8.2026."
+        override val appointmentDateNote = "Write the date as day.month.year, for example 27.08.2026."
 
         override val checkInTitle = "How are you feeling?"
         override val todaysSymptomsLabel = "Symptoms today"
@@ -1100,8 +1104,8 @@ object StringsEn : Strings {
         override val privateNoteHint = "Write it down…"
         override val checkInSaved = "Today's check-in is saved"
 
-        override val postpartumTitle = "After birth"
-        override val recoveryWeeks = "  weeks · recovery"
+        override val postpartumTitle = "Recovery"
+        override val recoveryWeeks = "wk · recovery"
         override val recoveryNote =
             "Recovery goes differently for every woman. This scale is only a guide."
         override val mood = "Mood"
@@ -1115,23 +1119,24 @@ object StringsEn : Strings {
         override val calories = "Calories"
         override val moodWatch = "Keeping an eye on mood"
         override val moodWatchBody =
-            "If low mood or anxiety lasts, it is worth seeing a professional. SADORA " +
-                "does not diagnose."
+            "If low mood or anxiety lasts more than two weeks, see a doctor or a psychologist. " +
+                "If you have thoughts of harming yourself, call 103 straight away. " +
+                "SADORA doesn't diagnose."
         override val postpartumLibrary = "Knowledge — after birth"
         override val postpartumLibraryBody = "Reading on the postpartum period"
 
         override val perimenopauseTitle = "Perimenopause"
         override val cycleRegularity = "Cycle regularity"
         override val noData = "no data"
-        override fun lastCycles(count: Int) = "last $count cycles"
+        override fun lastCycles(count: Int) = "last $count ${en(count, "cycle", "cycles")}"
         override val regularityEmpty =
             "Once you start marking periods, your cycle length appears here. No " +
-                "prediction is shown at this stage."
+                "forecast is shown at this stage."
         override fun regularitySpread(shortest: Int, longest: Int) =
-            "Your cycle has run between $shortest and $longest days — expected at this " +
-                "stage. No prediction is shown."
+            "Your cycle has run between $shortest and $longest ${en(longest, "day", "days")} — expected at this " +
+                "stage. No forecast is shown."
         override fun regularitySteady(shortest: Int, longest: Int) =
-            "Your cycle runs between $shortest and $longest days. No prediction is " +
+            "Your cycle runs between $shortest and $longest ${en(longest, "day", "days")}. No forecast is " +
                 "shown at this stage."
         override val energy = "Energy"
         override val observation = "Observation"
@@ -1139,20 +1144,20 @@ object StringsEn : Strings {
             "See how sleep, mood and symptoms line up."
         override val seeSymptoms = "See symptoms"
 
-        override val menopauseTitle = "Wellbeing"
+        override val menopauseTitle = "Health"
         override val balanceEmpty = "Log water, food, sleep or steps and your score appears here."
         override val scoreNote =
-            "Based on sleep, activity, food and mood. This score is not a medical " +
+            "Based on sleep, activity, food and mood. This score isn't a medical " +
                 "measure."
         override val activity = "Activity"
 
         override val stageSymptomsTitle = "Symptoms"
         override val noRecordsYet = "Nothing recorded yet"
-        override val noRecordsYetBody = "Mark today's signs below. After a few days you will " +
+        override val noRecordsYetBody = "Pick today's symptoms below. After a few days you'll " +
             "see here which of them comes up most often."
-        override fun windowDays(days: Int) = "$days days"
+        override fun windowDays(days: Int) = "$days ${en(days, "day", "days")}"
         override fun weekNumber(week: Int) = "Week $week"
-        override fun recordedOnDays(window: Int, days: Int) = "Recorded on $days of $window days."
+        override fun recordedOnDays(window: Int, days: Int) = "Recorded on $days of $window ${en(window, "day", "days")}."
         override val logToday2 = "Log today"
         override val mostFrequent = "Most frequent"
         override val symptomsDisclaimer = "This list is for keeping track. If something is new " +
@@ -1175,8 +1180,8 @@ object StringsEn : Strings {
         override val balanceCaps = "BALANCE"
         override val premiumCaps = "PREMIUM"
         override val libraryCaps = "LIBRARY"
-        override val predictionDisclaimer = "The prediction rests on what you have entered " +
-            "and is not a medical conclusion."
+        override val predictionDisclaimer = "The forecast rests on what you have entered " +
+            "and isn't a medical conclusion."
     }
 
     override val modules = object : ModuleStrings {
@@ -1186,7 +1191,7 @@ object StringsEn : Strings {
             "Once a watch or phone syncs, your sleep length and its stages appear here."
         override val sleepWeek = "Length over 7 days"
         override fun average(value: String) = "Average $value"
-        override fun daysRecorded(withData: Int, total: Int) = "$withData / $total days recorded"
+        override fun daysRecorded(withData: Int, total: Int) = "$withData / $total ${en(total, "day", "days")} recorded"
         override val sleepManual = "Enter sleep by hand"
         override val sleepManualBody = "No watch? Enter last night by hand — Balance and Insights will use it."
         override val sleepHours = "Hours"
@@ -1197,7 +1202,7 @@ object StringsEn : Strings {
         override fun vsLastWeek(delta: String) = "$delta vs last week"
         override val strain = "Strain"
         override val recovery = "Recovery"
-        override fun goalFrom(hours: Int) = "from $hours hours"
+        override fun goalFrom(hours: Int) = "from $hours ${en(hours, "hour", "hours")}"
         override val lastNight = "Last night"
         override fun restingPulse(bpm: Int) = "Resting pulse $bpm bpm"
         override val deep = "Deep"
@@ -1205,13 +1210,13 @@ object StringsEn : Strings {
         override val stages = "Stages"
 
         override val insightsTitle = "Insights"
-        override fun windowDays(days: Int) = "$days days"
+        override fun windowDays(days: Int) = "$days ${en(days, "day", "days")}"
         override val windowPremium = "This window opens with Premium"
         override val insightsEmptyTitle = "No insights yet"
         override val loadFailed = "Could not load. Check your connection and try again."
         override val noRecordsInWindow = "Nothing recorded in this window"
         override val noRecordsBody =
-            "Record sleep, mood, water or food and the trends are drawn here. We do not " +
+            "Record sleep, mood, water or food and the trends are drawn here. We don't " +
                 "show a number nobody measured."
         override val sleepTrend = "Sleep trend"
         override val activityTrend = "Activity"
@@ -1227,7 +1232,7 @@ object StringsEn : Strings {
                 "clear — otherwise we write nothing."
         override val averagePrefix = "Average — "
         override val correlationDisclaimer =
-            "A link is not a cause. It means \"often seen together\"."
+            "A link isn't a cause. It means “often seen together”."
 
         override val all = "All"
         override val knowledgeTitle = "Knowledge"
@@ -1237,15 +1242,15 @@ object StringsEn : Strings {
         override val libraryEmptyBody = "New articles will appear here as they are written."
         override val nothingFound = "Nothing found"
         override val nothingFoundBody = "Try another word or a different category."
-        override val clearFilters = "Clear the filters"
+        override val clearFilters = "Clear filters"
         override fun readMinutes(minutes: Int) = "$minutes MIN"
 
-        override val medsTitle = "Medications"
+        override val medsTitle = "My medications"
         override val today = "Today"
         override val history = "History"
         override val nextDose = "Next dose"
         override fun oneTabletWith(note: String) = "1 tablet · $note"
-        override val take = "Taken"
+        override val take = "Mark as taken"
         override val later = "Later"
         override val skip = "Skip"
         override val medsEmpty = "No medications added yet"
@@ -1254,8 +1259,8 @@ object StringsEn : Strings {
         override val medsDisclaimer =
             "SADORA gives no instruction about a missed dose. Follow the medicine's own " +
                 "instructions, or your doctor's or pharmacist's advice."
-        override fun stockLeft(name: String, days: Int) = "$name stock lasts $days more days"
-        override fun stockDays(days: Int) = "Stock $days days"
+        override fun stockLeft(name: String, days: Int) = "$name stock lasts $days more ${en(days, "day", "days")}"
+        override fun stockDays(days: Int) = "Stock $days ${en(days, "day", "days")}"
         override val pending = "Pending"
         override val skipped = "Skipped"
 
@@ -1282,9 +1287,9 @@ object StringsEn : Strings {
             "The subscription renews automatically at the end of each period and is charged to your $store account. " +
                 "Cancel any time in your $store settings."
         override val nothingToRestore = "No purchases to restore on this account"
-        override fun storePlansUnavailable(store: String) = "The plans are not available in $store yet. Try again a little later."
+        override fun storePlansUnavailable(store: String) = "The plans aren't available in $store yet. Try again a little later."
         override val cancelAnytime = "Cancel at any time"
-        override val restorePurchase = "Restore a purchase"
+        override val restorePurchase = "Restore purchase"
         override fun priceFor(sum: String, monthly: Boolean) =
             "$sum UZS / " + (if (monthly) "month" else "year")
         override fun perMonth(sum: String) = "$sum UZS/month"
@@ -1299,12 +1304,12 @@ object StringsEn : Strings {
         override val searchTabFrequent = "Frequent"
         override val searchTabRecipes = "Recipes"
         override val typeADishName = "Type a dish name"
-        override fun nothingFoundFor(query: String) = "Nothing found for \"$query\""
-        override val catalogueNote = "The catalogue comes from the server — Uzbek dishes come first."
+        override fun nothingFoundFor(query: String) = "Nothing found for “$query”"
+        override val catalogueNote = "Uzbek dishes are at the top of the list."
         override val portionLabel = "Portion"
         override val pieces = "pieces"
         override val grams = "grams"
-        override fun bowls(count: Int) = "$count bowls"
+        override fun bowls(count: Int) = "$count ${en(count, "bowl", "bowls")}"
         override val total = "Total"
         override val addToDiary = "Add to the diary"
         override val perPiece = "piece"
@@ -1318,7 +1323,7 @@ object StringsEn : Strings {
         override fun readMinutesCaps(minutes: Int) = "$minutes MIN"
         override val premiumCaps = "PREMIUM"
         override val author = "Author"
-        override val reviewed = "✓ Reviewed"
+        override val reviewed = "✓ Reviewed by a doctor"
         override val restIsPremium = "The rest of the article opens with Premium"
 
         override fun stepsValue(steps: String) = "$steps steps"
@@ -1331,8 +1336,8 @@ object StringsEn : Strings {
             "On days with more walking, mood averaged $high; on days with less, $low."
         override fun waterHeadacheFinding(high: String, low: String) =
             "On days with more water, a headache was logged $high of the time; with less, $low."
-        override fun basedOnDays(days: Int) = "Based on $days days · seen together"
-        override fun minutesOnly(minutes: Int) = "$minutes minutes"
+        override fun basedOnDays(days: Int) = "Based on $days ${en(days, "day", "days")} · seen together"
+        override fun minutesOnly(minutes: Int) = "$minutes ${en(minutes, "minute", "minutes")}"
 
         override val addMedTitle = "Add a medication"
         override val medName = "Name"
@@ -1340,12 +1345,12 @@ object StringsEn : Strings {
         override val medDose = "Dose"
         override val medUnit = "Unit"
         override val medTime = "Time"
-        override val medTimeInvalid = "Time as 20:00"
+        override val medTimeInvalid = "Enter the time as 20:00"
         override val addTime = "+ Time"
         override val medDays = "Days"
         override val medFoodRelation = "With food"
         override fun foodRelation(relation: FoodRelation) = when (relation) {
-            FoodRelation.ANY -> "Any time"
+            FoodRelation.ANY -> "Doesn't matter"
             FoodRelation.BEFORE -> "Before"
             FoodRelation.WITH -> "With"
             FoodRelation.AFTER -> "After"
@@ -1358,7 +1363,7 @@ object StringsEn : Strings {
 
         override fun doseCaption(note: String?, relation: FoodRelation) =
             note?.takeIf { it.isNotBlank() } ?: when (relation) {
-                FoodRelation.ANY -> "Any time"
+                FoodRelation.ANY -> "With or without food"
                 FoodRelation.BEFORE -> "Before food"
                 FoodRelation.WITH -> "With food"
                 FoodRelation.AFTER -> "After food"
@@ -1378,14 +1383,14 @@ object StringsEn : Strings {
         override val doseHistoryTitle = "Dose history"
         override val takenCount = "Taken"
         override val skippedCount = "Skipped"
-        override fun adherenceOver(days: Int) = "$days days"
-        override fun lastDays(days: Int) = "Last $days days"
+        override fun adherenceOver(days: Int) = "$days ${en(days, "day", "days")}"
+        override fun lastDays(days: Int) = "Last $days ${en(days, "day", "days")}"
         override val noDoseHistory = "No history yet"
         override val noDoseHistoryBody = "Add a medication and start marking doses — this is " +
-            "where you will see how many were on time."
+            "where you'll see how many were on time."
         override fun doseStatus(status: DoseStatus) = when (status) {
             DoseStatus.TAKEN -> "Taken"
-            DoseStatus.PENDING -> "Postponed"
+            DoseStatus.PENDING -> "Pending"
             DoseStatus.SKIPPED -> "Skipped"
         }
 
@@ -1400,7 +1405,7 @@ object StringsEn : Strings {
         override val cameraOpenSettings = "Open settings"
         override val cameraMissing = "The camera did not open. Pick a photo from the gallery or enter it by hand."
         override val scannerPremium = "The scanner works on a Premium subscription."
-        override val scannerUnavailable = "The scanner is not available"
+        override val scannerUnavailable = "The scanner isn't available"
         override val scannerUnavailableBody = "You can search for the dish and add it by hand."
         override val analysing = "Reading the photo…"
         override val analysingWait = "This usually takes a few seconds"
@@ -1410,7 +1415,7 @@ object StringsEn : Strings {
         override val scanResult = "Scan result"
         override fun scanConfidence(percent: Int) = "Confidence $percent%"
         override fun portionAndKcal(portion: String, kcal: String) =
-            "$portion portion • $kcal kcal • estimate"
+            "$portion portion · $kcal kcal · estimate"
         override val nutrients = "Nutrition"
         override val fibre = "Fibre"
         override val sugar = "Sugar"
@@ -1421,30 +1426,30 @@ object StringsEn : Strings {
         override val portionMore = "Larger portion"
         override val didYouEatIt = "Did you eat this?"
         override val yesIAte = "Yes, I ate it"
-        override val planningToEat = "I am planning to eat it"
+        override val planningToEat = "I'll eat it later"
 
-        override val journalTitle = "Journal and practice"
+        override val journalTitle = "Journal and exercises"
         override val journalPrivate = "ONLY YOU SEE THIS"
         override val journalLabel = "Journal"
         override val journalPrompt = "How are you feeling today?"
         override val journalEmpty = "The journal is still empty"
         override val journalEmptyBody = "Write your first entry. Nobody but you will see it."
-        override val journalDeleteTitle = "Delete this entry"
+        override val journalDeleteTitle = "Delete this entry?"
         override val journalDeleteBody = "The entry will be deleted for good."
         override val journalDeleteAction = "Delete this entry"
 
         override val sourcesTitle = "Data sources"
-        override fun sourcesConnected(count: Int) = "$count sources connected"
-        override fun lastSample(ago: String) = "Last sample $ago"
-        override val noSampleYet = "No samples yet"
+        override fun sourcesConnected(count: Int) = "$count ${en(count, "source", "sources")} connected"
+        override fun lastSample(ago: String) = "Last data $ago"
+        override val noSampleYet = "No data yet"
         override val sourcesEmpty = "Nothing connected"
-        override val sourcesEmptyBody = "Once you allow HealthKit or Health Connect, the " +
-            "samples that arrive and their times will show up here."
+        override val sourcesEmptyBody = "Once you allow Apple Health or Health Connect, the " +
+            "data that arrives and its time will show up here."
         override val sourcesNote = "Every figure carries its source and a timestamp. When the " +
-            "same figure arrives from more than one source, your priority settings decide."
+            "same figure arrives from more than one source, each shows where it came from."
         override val connected = "Connected"
         override val notConnected = "Not connected"
-        override fun samples(count: String) = "$count samples"
+        override fun samples(count: Int) = "$count ${en(count, "entry", "entries")}"
         override fun metric(metric: HealthMetric) = when (metric) {
             HealthMetric.STEPS -> "Steps"
             HealthMetric.ACTIVE_ENERGY -> "Active calories"
@@ -1500,15 +1505,15 @@ object StringsEn : Strings {
         override val balanceTitle = "Balance"
         override val fourDirections = "Four directions"
         override val balanceDisclaimer =
-            "The balance score is measured against your own goals. It is not a medical " +
+            "The balance score is measured against your own goals. It isn't a medical " +
                 "measure."
         override val balanced =
-            "All four directions are in balance today. Food is not a debt to be burned off."
+            "All four directions are in balance today. Food isn't a debt to be burned off."
         override fun someRoomIn(direction: String) =
-            "The day is going well. There is some room in \"$direction\" — give it a " +
+            "The day is going well. You could add a little to “$direction” — give it a " +
                 "thought if you like."
         override fun fallingBehind(direction: String) =
-            "\"$direction\" is behind today. The day is not over — no rush."
+            "“$direction” is behind today. The day isn't over — no rush."
         override val food = "Food"
         override val water = "Water"
         override val activity = "Activity"
@@ -1516,7 +1521,7 @@ object StringsEn : Strings {
         override fun ofKcal(eaten: String, goal: String) = "$eaten / $goal kcal"
         override fun ofLitres(drunk: String, goal: String) = "$drunk / $goal l"
         override fun ofSteps(walked: String, goal: String) = "$walked / $goal steps"
-        override fun ofSleep(slept: String) = "$slept / 8h"
+        override fun ofSleep(slept: String) = "$slept / 8 h"
         override val balanceCapsWord = "BALANCE"
         override fun articleKind(kind: ArticleKind) = when (kind) {
             ArticleKind.ARTICLE -> "ARTICLE"
@@ -1541,15 +1546,15 @@ object StringsEn : Strings {
 
     override val rewards = object : RewardStrings {
         override val coinName = "Gul"
-        override fun coins(amount: String) = "$amount gul"
-        override fun coinsGained(amount: String) = "+$amount gul"
+        override fun coins(amount: String) = "$amount Gul"
+        override fun coinsGained(amount: String) = "+$amount Gul"
 
-        override fun streakDays(days: Int) = "$days days running"
+        override fun streakDays(days: Int) = "$days ${en(days, "day", "days")} running"
         override val streakStarted = "Streak started"
         override val streakSubtitle = "You came back today 🌸"
-        override fun milestoneReached(days: Int) = "$days days! 🎉"
+        override fun milestoneReached(days: Int) = "$days ${en(days, "day", "days")}! 🎉"
         override fun daysToMilestone(days: Int, milestone: Int) =
-            "$days more days — the $milestone-day mark"
+            "$days more ${en(days, "day", "days")} — the $milestone-day mark"
         override val streakBeyondMilestones = "Every milestone is behind you"
 
         override val walletTitle = "Gul wallet"
@@ -1558,11 +1563,11 @@ object StringsEn : Strings {
         override val spent = "Spent"
         override val currentStreak = "Current streak"
         override val longestStreak = "Longest"
-        override fun days(count: Int) = "$count days"
+        override fun days(count: Int) = "$count ${en(count, "day", "days")}"
         override val history = "Activity"
-        override val historyEmpty = "Nothing yet. Use the app and gul will add up."
-        override val howToEarn = "How gul is earned"
-        override fun perDay(times: Int) = "up to $times a day"
+        override val historyEmpty = "Nothing yet. Use the app and Gul will add up."
+        override val howToEarn = "How Gul is earned"
+        override fun perDay(times: Int) = "up to $times ${en(times, "time", "times")} a day"
         override fun earnReason(reason: String) = when (reason) {
             CoinReasons.DAILY_OPEN -> "First open of the day"
             CoinReasons.STREAK_MILESTONE -> "Streak milestone"
@@ -1577,7 +1582,8 @@ object StringsEn : Strings {
             CoinReasons.REFERRAL_WELCOME -> "Arriving with an invite code"
             CoinReasons.REDEMPTION -> "Shop purchase"
             CoinReasons.ADMIN_ADJUSTMENT -> "Manual adjustment"
-            CoinReasons.PARTNER_LINKED -> "Your person connected"
+            CoinReasons.PARTNER_LINKED -> "Yaqinim connected"
+
             CoinReasons.BADGE_EARNED -> "New badge"
             else -> reason
         }
@@ -1586,17 +1592,17 @@ object StringsEn : Strings {
 
         override val referralTitle = "Invite your friends"
         override val referralSubtitle =
-            "For every friend who joins through your link, you both get gul."
+            "For every friend who joins through your link, you both get Gul."
         override val yourCode = "Your code"
         override val copyCode = "Copy"
         override val codeCopied = "Code copied"
-        override val shareLink = "Share the link"
+        override val shareLink = "Share link"
         override fun shareMessage(link: String) =
             "SADORA — a women's health app. Join through my link: $link"
-        override fun invitedCount(count: Int) = "$count friends joined"
-        override fun referralEarned(amount: String) = "$amount gul from invites"
-        override fun rewardPerJoin(amount: String) = "$amount gul per friend"
-        override fun welcomeReward(amount: String) = "Your friend starts with $amount gul"
+        override fun invitedCount(count: Int) = "$count ${en(count, "friend", "friends")} joined"
+        override fun referralEarned(amount: String) = "$amount Gul from invites"
+        override fun rewardPerJoin(amount: String) = "$amount Gul per friend"
+        override fun welcomeReward(amount: String) = "Your friend starts with $amount Gul"
         override val referralHowTitle = "How it works"
         override val referralSteps = listOf(
             "Send the link to a friend",
@@ -1609,7 +1615,7 @@ object StringsEn : Strings {
 
     override val shop = object : ShopStrings {
         override val title = "Gul shop"
-        override val subtitle = "Turn the gul you've earned into Premium, vitamins and devices"
+        override val subtitle = "Turn the Gul you've earned into Premium, vitamins and devices"
         override fun tab(kind: ShopKind) = when (kind) {
             ShopKind.PREMIUM -> "Premium"
             ShopKind.VITAMIN -> "Vitamins"
@@ -1622,18 +1628,18 @@ object StringsEn : Strings {
         override fun priceWas(price: String) = price
         override fun priceNow(price: String) = price
         override fun saving(amount: String) = "saves $amount"
-        override fun premiumDays(days: Int) = "$days days of Premium"
+        override fun premiumDays(days: Int) = "$days ${en(days, "day", "days")} of Premium"
         override val outOfStock = "Out of stock"
         override fun stockLeft(count: Int) = "$count left"
-        override val notEnough = "Not enough gul"
-        override fun shortBy(amount: String) = "$amount gul short"
+        override val notEnough = "Not enough Gul"
+        override fun shortBy(amount: String) = "$amount Gul short"
 
         override val redeem = "Redeem"
         override val redeeming = "Redeeming…"
         override fun confirmTitle(product: String) = product
         override fun confirmBody(cost: String) =
-            "$cost gul will be taken and you'll get a discount code."
-        override val confirmPremiumBody = "The gul is taken and Premium opens straight away."
+            "$cost Gul will be taken and you'll get a discount code."
+        override val confirmPremiumBody = "The Gul is taken and Premium opens straight away."
         override val cancel = "Cancel"
 
         override val issuedTitle = "Your code is ready"
@@ -1664,12 +1670,12 @@ object StringsEn : Strings {
         override val hidden = "Hidden"
         override val moveUp = "Up"
         override val moveDown = "Down"
-        override val reset = "Restore the default order"
+        override val reset = "Restore default order"
         override val alwaysOn = "Always shown"
         override fun widget(key: String) = when (key) {
             HomeWidgets.AI -> "AI summary"
             HomeWidgets.SCORE -> "Health score"
-            HomeWidgets.STREAK -> "Streak and gul"
+            HomeWidgets.STREAK -> "Streak and Gul"
             HomeWidgets.STAGE -> "Cycle / stage"
             HomeWidgets.PLAN -> "Today's plan"
             HomeWidgets.SLEEP -> "Sleep"
@@ -1699,25 +1705,25 @@ object StringsEn : Strings {
     override val share = object : ShareStrings {
         override val title = "Show my doctor"
         override val subtitle = "A QR code opens your records on the doctor's screen"
-        override val intro = "At the appointment, show the QR code on your phone. The doctor scans it with a camera and sees " +
-            "your cycle, symptoms, mood, medications, appointments and device readings on one page. The link is " +
+        override val intro = "At your visit, show the QR code on your phone. The doctor scans it with a camera and sees " +
+            "your cycle, symptoms, mood, medications, visits and device readings on one page. The link is " +
             "temporary and disappears after the time you choose."
         override val create = "Create QR code"
         override val creating = "Preparing…"
-        override val regenerate = "New code"
-        override val revoke = "Revoke"
+        override val regenerate = "Create new code"
+        override val revoke = "Revoke link"
         override val revoked = "Link revoked"
         override val copyLink = "Copy link"
         override val linkCopied = "Link copied"
-        override val shareLink = "Send"
+        override val shareLink = "Send link"
         override fun shareMessage(link: String) = "SADORA — my health records (temporary link): $link"
         override val showToDoctor = "Show this code to your doctor"
         override val validFor = "Valid for"
         override fun hours(count: Int) = "$count h"
-        override fun days(count: Int) = "$count days"
+        override fun days(count: Int) = "$count ${en(count, "day", "days")}"
         override fun expiresAt(at: String) = "Valid until $at"
         override val expired = "Expired"
-        override fun viewedTimes(count: Int) = "Opened $count times"
+        override fun viewedTimes(count: Int) = "Opened $count ${en(count, "time", "times")}"
         override val neverViewed = "Not opened yet"
         override fun lastViewed(ago: String) = "Last opened $ago"
         override val includesTitle = "What the page shows"
@@ -1746,9 +1752,9 @@ object StringsEn : Strings {
         override val activeTitle = "Premium is active"
         override val activeBody = "Everything is open: AI chat, the food scanner, long-range insights and the whole library."
         override val inactiveTitle = "To understand more"
-        override val inactiveBody = "Nothing is taken from the free plan. Premium adds deeper insights and an AI assistant."
+        override val inactiveBody = "Nothing is taken from the free plan. Premium adds deeper insights and AI chat."
         override val benefitsTitle = "What Premium gives you"
-        override val benefitAiTitle = "AI assistant"
+        override val benefitAiTitle = "AI chat"
         override val benefitAiBody = "Up to 20 questions a day, answered with your cycle, sleep and food in mind."
         override val benefitScannerTitle = "Food scanner"
         override val benefitScannerBody = "30 photos a month: snap a dish for an estimate of its calories and nutrients, which you can correct."
@@ -1762,14 +1768,16 @@ object StringsEn : Strings {
         override val seePlans = "See plans"
         override val manage = "Manage subscription"
         override fun buyWithCoins(coinName: String) = "Get it with $coinName"
-        override fun fromPerMonth(sum: String) = "From $sum so'm a month"
-        override fun coinsFor(cost: String, days: Int, balance: String) = "$cost = $days days of Premium · you have $balance"
+        override fun fromPerMonth(sum: String) = "From $sum UZS a month"
+        override fun coinsFor(cost: String, days: Int, balance: String) = "$cost = $days ${en(days, "day", "days")} of Premium · you have $balance"
         override val faqTitle = "Common questions"
-        override val faq = listOf(
-            "What stays free?" to "Everything: cycle, mood, food diary, medications, appointments and 7-day insights. Premium only adds.",
+        override fun faq(appStore: Boolean) = listOf(
+            "What stays free?" to "Everything: cycle, mood, food diary, medications, visits and 7-day insights. Premium only adds.",
             "Can I cancel any time?" to "Yes. Premium stays open until the paid period ends, then you return to the free plan — your data stays.",
-            "How do I pay?" to "Through Payme or Click. The server confirms the payment and Premium opens immediately.",
-            "Can I get it with gul?" to "Yes — the shop offers 7 and 30 days of Premium for gul. Gul is earned by opening the app and logging.",
+            "How do I pay?" to
+                if (appStore) "Through the App Store, with your Apple account. Once the payment is confirmed, Premium opens straight away."
+                else "Through Google Play, or with Payme or Click. Once the payment is confirmed, Premium opens straight away.",
+            "Can I get it with Gul?" to "Yes — the shop offers 7 and 30 days of Premium for Gul. Gul is earned by opening the app and logging.",
         )
         override val freeStays = "Everything on the free plan stays"
     }
@@ -1822,7 +1830,7 @@ object StringsEn : Strings {
             else -> "Coming soon"
         }
         override val givesTitle = "What it brings"
-        override val usedInTitle = "Where it is used"
+        override val usedInTitle = "Where it's used"
         override fun usedIn(provider: HealthProvider) = when (provider) {
             HealthProvider.WHOOP -> listOf("Sleep screen", "Today — health score", "Balance", "Cycle — body signals", "Doctor page")
             HealthProvider.APPLE_HEALTH, HealthProvider.HEALTH_CONNECT ->
@@ -1832,7 +1840,7 @@ object StringsEn : Strings {
         override val openBrowserNote = "WHOOP's page opens in the browser. Once you allow access you return to the app — the first pull covers 30 days and takes a few minutes."
         override val returnedOk = "WHOOP connected — data is on its way"
         override val returnedError = "WHOOP did not connect. Try again."
-        override val noStepsNote = "WHOOP does not count steps — strain is shown instead."
+        override val noStepsNote = "WHOOP doesn't count steps — strain is shown instead."
         override val manualTitle = "No watch?"
         override val manualBody = "Enter sleep by hand on the Sleep screen — Balance and Insights will use it."
         override val note = "SADORA takes only the readings listed from a device and never sells them. You can disconnect at any time."
@@ -1847,8 +1855,8 @@ object StringsEn : Strings {
         override val samsungSyncHint = "Let Samsung Health write to Health Connect: on the page that opens, turn on “Allow all”."
         override val openSamsungHealth = "Samsung permissions"
         override fun deviceConnected(name: String) = "$name connected — data is on its way"
-        override val accessDenied = "Access was not given — nothing was read"
-        override fun periodsImported(count: Int) = if (count == 1) "1 period added" else "$count periods added"
+        override val accessDenied = "Access wasn't given — nothing was read"
+        override fun periodsImported(count: Int) = "$count ${en(count, "period", "periods")} added"
         override val appleHealthManage = "Change what is read in the Health app: Profile → Apps → SADORA."
 
         override val askTitle = "Do you wear a smart watch or band?"
@@ -1858,6 +1866,13 @@ object StringsEn : Strings {
         override val askBrands = "Apple Watch, Galaxy Watch, Mi Band, Garmin, Fitbit, WHOOP, Oura and more"
         override val askYes = "Yes — let's connect it"
         override val askNo = "No, I don't"
-        override val askLater = "Ask me later"
+        override val askLater = "Remind me later"
+
     }
 }
+
+/**
+ * English plural form for [n]: "1 day", "2 days", "0 days". The number is left to the
+ * caller, so `"$n ${en(n, "day", "days")}"` — a fixed "days" read "1 days".
+ */
+internal fun en(n: Int, one: String, other: String): String = if (n == 1) one else other

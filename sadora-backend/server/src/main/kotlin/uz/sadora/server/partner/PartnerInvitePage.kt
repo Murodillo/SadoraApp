@@ -31,11 +31,20 @@ internal object PartnerInvitePage {
             <p>${t.lead}</p>
             <div class="code">$shown</div>
             <a class="btn" href="sadora://yaqinim/$code">${t.open}</a>
-            <a class="btn alt" href="https://play.google.com/store/apps/details?id=uz.sadora.app">Google Play</a>
+            <a class="btn alt" href="$PLAY_URL">Google Play</a>
+            ${if (APP_STORE_URL.isNotEmpty()) "<a class=\"btn alt\" href=\"$APP_STORE_URL\">App Store</a>" else ""}
             <p>${t.steps}</p>
             </main></body></html>
         """.trimIndent()
     }
+
+    private const val PLAY_URL = "https://play.google.com/store/apps/details?id=uz.sadora.app"
+
+    /**
+     * App Store Connect app "Sadora", id 6811085950. Until the first public release the
+     * page answers "not available"; leave this empty to hide the button instead.
+     */
+    private const val APP_STORE_URL = "https://apps.apple.com/app/id6811085950"
 
     private class Words(private val language: Language) {
         private fun pick(uz: String, ru: String, en: String) = when (language) {
@@ -44,11 +53,11 @@ internal object PartnerInvitePage {
             Language.EN -> en
         }
 
-        val title get() = pick("Sizni Yaqinim sifatida taklif qilishdi", "Вас пригласили как близкого", "You are invited as her person")
+        val title get() = pick("Sizni Yaqinim sifatida taklif qilishdi", "Вас пригласили в Yaqinim", "You've been invited to Yaqinim")
         val lead get() = pick(
-            "Sadora ilovasini o'rnating va shu kodni kiriting — u holatini siz bilan ulashadi.",
-            "Установите приложение Sadora и введите этот код — она поделится с вами своим состоянием.",
-            "Install the Sadora app and enter this code — she will share how she is with you.",
+            "SADORA ilovasini o'rnating va shu kodni kiriting — u holatini siz bilan ulashadi.",
+            "Установите приложение SADORA и введите этот код — она поделится с вами своим состоянием.",
+            "Install the SADORA app and enter this code — she will share how she is with you.",
         )
         val open get() = pick("Ilovada ochish", "Открыть в приложении", "Open in the app")
         val steps get() = pick(

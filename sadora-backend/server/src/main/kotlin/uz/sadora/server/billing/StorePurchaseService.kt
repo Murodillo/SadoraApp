@@ -30,7 +30,7 @@ class StorePurchaseService(
 
     suspend fun verifyAndGrant(userId: Uuid, request: StorePurchaseRequest): SubscriptionStatus {
         if (request.provider != PaymentProvider.APP_STORE && request.provider != PaymentProvider.GOOGLE_PLAY) {
-            throw ValidationException("provider", "Bu provayder store emas")
+            throw ValidationException("provider", "Bu to'lov usuli App Store yoki Google Play emas")
         }
         if (request.token.isBlank()) throw ValidationException("token", "Bo'sh bo'lishi mumkin emas")
 
@@ -71,10 +71,10 @@ class StorePurchaseService(
             }
         }
 
-        val subscriptionId = subscriptions.grant(
+        val subscriptionId = subscriptions.grantStore(
             userId = userId,
             source = request.provider.asSubscriptionSource(),
-            expiresAt = verified.expiresAt,
+            storeExpiresAt = verified.expiresAt,
             productId = plan.id,
             externalId = verified.transactionId,
             reason = "store receipt",

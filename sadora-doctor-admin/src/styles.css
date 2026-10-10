@@ -4083,3 +4083,24 @@ textarea {
 .chat-plus-menu button:focus-visible {
   background: var(--surface-2);
 }
+
+/* Money reads as "100 000 so'm" and needs the width: three to a row, not six, so the
+   figure never breaks between the number and the currency. */
+.stat-row.money {
+  /* Never narrower than 240px, never more than three across (two 12px gaps). */
+  grid-template-columns: repeat(auto-fit, minmax(max(240px, calc((100% - 24px) / 3)), 1fr));
+}
+
+.stat-row.money .stat .value.text {
+  white-space: nowrap;
+}
+
+/* The one number that asks for something — unanswered questions — in the danger tone. */
+.card.stat.alert {
+  border-color: color-mix(in srgb, var(--danger) 45%, var(--border));
+}
+
+.card.stat.alert .value {
+  background: none;
+  color: var(--danger);
+}

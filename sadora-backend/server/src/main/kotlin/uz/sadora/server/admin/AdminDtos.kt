@@ -25,6 +25,16 @@ data class AdminMe(
     val email: String,
     val role: AdminRole,
     val totpEnabled: Boolean,
+    /** 2FA is mandatory here and she has not enrolled: the panel shows only enrolment. */
+    val totpSetupRequired: Boolean = false,
+)
+
+/** [totpCode] is required once she has 2FA on. */
+@Serializable
+data class AdminPasswordChangeRequest(
+    val currentPassword: String,
+    val newPassword: String,
+    val totpCode: String? = null,
 )
 
 /** The secret to type into an authenticator, and the QR the app would rather scan. */

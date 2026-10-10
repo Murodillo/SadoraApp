@@ -13,10 +13,9 @@
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
-	<!-- iOS asks before an app talks to the local network; a debug build pointed at the
-	     development machine by SADORA_DEV_HOST does. -->
-	<key>NSLocalNetworkUsageDescription</key>
-	<string>Sadora Doctor ishlab chiqish nusxasi shu tarmoqdagi dasturchi serveriga ulanadi.</string>
+	<!-- NSLocalNetworkUsageDescription is not here on purpose: only a Debug build talks to a
+	     developer's machine, so the Debug configuration adds it through
+	     INFOPLIST_KEY_NSLocalNetworkUsageDescription and a Release build never shows it. -->
 	<!-- Only the system's HTTPS, which is exempt; without this every build waits on the
 	     export-compliance question in App Store Connect before testers can install it. -->
 	<key>ITSAppUsesNonExemptEncryption</key>
@@ -35,6 +34,14 @@
 	<!-- The Scan tab and the profile photo: iOS terminates the app on opening the camera
 	     without this. -->
 	<key>NSCameraUsageDescription</key>
-	<string>Bemor ko'rsatgan Sadora QR kodini skanerlaysiz va profil rasmingizni suratga olasiz.</string>
+	<string>Bemor ko'rsatgan SADORA QR kodini skanerlaysiz va profil rasmingizni suratga olasiz.</string>
+	<!-- The languages the app speaks. The permission texts above are the Uzbek fallback;
+	     uz/ru/en.lproj/InfoPlist.strings translate them. -->
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>uz</string>
+		<string>ru</string>
+		<string>en</string>
+	</array>
 </dict>
 </plist>

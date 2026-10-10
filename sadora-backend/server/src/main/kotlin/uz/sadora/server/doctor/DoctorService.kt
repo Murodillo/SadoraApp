@@ -169,10 +169,10 @@ class DoctorService(
         val record = doctors.byUser(userId)?.takeIf { it.status == DoctorStatus.APPROVED }
             ?: throw ForbiddenException(message = "Faqat tasdiqlangan shifokorlar uchun")
         val workplace = request.workplace?.trim()
-        if (workplace != null) requireLength("workplace", workplace, 1, Limits.DOCTOR_WORKPLACE_MAX)
+        if (workplace != null) checkWorkplace(workplace)
         val bio = request.bio?.trim()
         if (bio != null && bio.length > Limits.DOCTOR_BIO_MAX) {
-            throw ValidationException("bio", "Eng ko'pi ${Limits.DOCTOR_BIO_MAX} belgi")
+            throw ValidationException("bio", "O'zingiz haqingizda eng ko'pi ${Limits.DOCTOR_BIO_MAX} belgi bo'lsin")
         }
         doctors.updateProfile(
             record.id,
@@ -260,7 +260,7 @@ class DoctorService(
         val record = doctors.byId(id) ?: throw NotFoundException("Shifokor topilmadi")
         val note = request.note?.trim()?.takeIf { it.isNotEmpty() }
         if (note != null && note.length > Limits.DOCTOR_REVIEW_NOTE_MAX) {
-            throw ValidationException("note", "Eng ko'pi ${Limits.DOCTOR_REVIEW_NOTE_MAX} belgi")
+            throw ValidationException("note", "Izoh eng ko'pi ${Limits.DOCTOR_REVIEW_NOTE_MAX} belgi bo'lsin")
         }
         val (from, to, action) = when (request.action) {
             ACTION_APPROVE -> Triple(setOf(DoctorStatus.PENDING), DoctorStatus.APPROVED, AuditActions.DOCTOR_APPROVED)
@@ -270,7 +270,7 @@ class DoctorService(
             else -> throw ValidationException("action", "approve, reject, suspend yoki reinstate")
         }
         if (record.status !in from) {
-            throw ConflictException("Bu holatda (${record.status.name.lowercase()}) bu amal bajarilmaydi")
+            throw ConflictException("Ariza holati «${record.status.uzWord()}» — bu amal bajarilmaydi")
         }
         if ((to == DoctorStatus.REJECTED || to == DoctorStatus.SUSPENDED) && note == null) {
             throw ValidationException("note", "Sababini yozing — shifokor uni o'qiydi")
@@ -295,17 +295,13 @@ class DoctorService(
     private suspend fun notifyDecision(record: DoctorRecord, status: DoctorStatus, note: String?) {
         val settings = notifications.settingsOf(record.userId)
         if (!settings.enabled || !settings.isCategoryEnabled(NotificationCategory.SYSTEM)) return
-        val (title, body) = when (status) {
-            DoctorStatus.APPROVED -> "Tasdiqlandingiz ✓" to "Endi Chatda shifokor sifatida yozishingiz mumkin."
-            DoctorStatus.REJECTED -> "Arizangiz qaytarildi" to (note ?: "Tafsilotlarni ilovada ko'ring.")
-            DoctorStatus.SUSPENDED -> "Shifokor hisobingiz to'xtatildi" to (note ?: "Tafsilotlarni ilovada ko'ring.")
-            else -> return
-        }
+        val language = users.findById(record.userId)?.language ?: uz.sadora.contract.Language.UZ
+        val words = DoctorPhrases.decision(status, note, language) ?: return
         notifications.enqueue(
             userId = record.userId,
             category = NotificationCategory.SYSTEM,
-            title = title,
-            body = body.take(PUSH_PREVIEW),
+            title = words.title,
+            body = words.body.take(PUSH_PREVIEW),
             scheduledFor = now(),
             dedupeKey = "doctor_review:${record.id}:${status.name.lowercase()}:${now().toEpochMilliseconds()}",
             status = NotificationStatus.QUEUED,
@@ -322,17 +318,25 @@ class DoctorService(
 
     private fun validate(request: DoctorApplicationRequest): DoctorApplication {
         val name = request.fullName.trim().replace(Regex("\\s+"), " ")
-        requireLength("fullName", name, Limits.DOCTOR_NAME_MIN, Limits.DOCTOR_NAME_MAX)
+        if (name.length < Limits.DOCTOR_NAME_MIN) {
+            throw ValidationException("fullName", "Ism-familiya kamida ${Limits.DOCTOR_NAME_MIN} ta belgi bo'lsin")
+        }
+        if (name.length > Limits.DOCTOR_NAME_MAX) {
+            throw ValidationException("fullName", "Ism-familiya eng ko'pi ${Limits.DOCTOR_NAME_MAX} belgi bo'lsin")
+        }
         val workplace = request.workplace.trim()
-        requireLength("workplace", workplace, 1, Limits.DOCTOR_WORKPLACE_MAX)
+        checkWorkplace(workplace)
         val license = request.licenseNumber.trim()
-        requireLength("licenseNumber", license, 1, Limits.DOCTOR_LICENSE_MAX)
+        if (license.isEmpty()) throw ValidationException("licenseNumber", "Litsenziya raqamini yozing")
+        if (license.length > Limits.DOCTOR_LICENSE_MAX) {
+            throw ValidationException("licenseNumber", "Litsenziya raqami eng ko'pi ${Limits.DOCTOR_LICENSE_MAX} belgi bo'lsin")
+        }
         if (request.experienceYears !in Limits.DOCTOR_EXPERIENCE_YEARS) {
             throw ValidationException("experienceYears", "0 dan 70 gacha")
         }
         val bio = request.bio?.trim()?.takeIf { it.isNotEmpty() }
         if (bio != null && bio.length > Limits.DOCTOR_BIO_MAX) {
-            throw ValidationException("bio", "Eng ko'pi ${Limits.DOCTOR_BIO_MAX} belgi")
+            throw ValidationException("bio", "O'zingiz haqingizda eng ko'pi ${Limits.DOCTOR_BIO_MAX} belgi bo'lsin")
         }
         return DoctorApplication(name, request.specialty, workplace, request.experienceYears, license, bio)
     }
@@ -354,9 +358,20 @@ class DoctorService(
         }
     }
 
-    private fun requireLength(field: String, value: String, min: Int, max: Int) {
-        if (value.length < min) throw ValidationException(field, "Kamida $min ta belgi")
-        if (value.length > max) throw ValidationException(field, "Eng ko'pi $max belgi")
+    private fun checkWorkplace(workplace: String) {
+        if (workplace.isEmpty()) throw ValidationException("workplace", "Ish joyini yozing")
+        if (workplace.length > Limits.DOCTOR_WORKPLACE_MAX) {
+            throw ValidationException("workplace", "Ish joyi eng ko'pi ${Limits.DOCTOR_WORKPLACE_MAX} belgi bo'lsin")
+        }
+    }
+
+    /** The application's state as the staff panel reads it, in Uzbek. */
+    private fun DoctorStatus.uzWord(): String = when (this) {
+        DoctorStatus.NONE -> "ariza yo'q"
+        DoctorStatus.PENDING -> "ko'rib chiqilmoqda"
+        DoctorStatus.APPROVED -> "tasdiqlangan"
+        DoctorStatus.REJECTED -> "qaytarilgan"
+        DoctorStatus.SUSPENDED -> "to'xtatilgan"
     }
 
     private fun DoctorRecord.toAccount(documents: Int) = DoctorAccount(

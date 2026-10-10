@@ -332,7 +332,7 @@ export function CancelPrescriptionDialog({
   const ready = reason.trim().length > 0 && !cancel.isPending
 
   return (
-    <Modal title="Retseptni bekor qilish" onClose={onClose}>
+    <Modal title="Retsept bekor qilinsinmi?" onClose={onClose}>
       <form
         className="grid"
         style={{ gap: 12 }}
@@ -352,9 +352,9 @@ export function CancelPrescriptionDialog({
         }}
       >
         <p className="muted" style={{ margin: 0 }}>
-          Bemor xabar oladi, retseptdan qo'shgan dorilari to'xtatiladi.
+          Bemorga xabar boradi va shu retseptdagi dorilar to'xtatiladi. Buni qaytarib bo'lmaydi.
         </p>
-        <Field label="Sababi (bemor ko'radi)" hint={<Counter length={reason.length} max={limits.prescriptionCancelReasonMax} />}>
+        <Field label="Sabab (majburiy, bemor ko'radi)" hint={<Counter length={reason.length} max={limits.prescriptionCancelReasonMax} />}>
           <textarea
             rows={3}
             value={reason}
@@ -365,11 +365,11 @@ export function CancelPrescriptionDialog({
         </Field>
         <div className="row" style={{ justifyContent: 'flex-end' }}>
           <button type="button" className="btn ghost" onClick={onClose} disabled={cancel.isPending}>
-            Ortga
+            Yopish
           </button>
           <button type="submit" className="btn danger" disabled={!ready}>
             {cancel.isPending && <Spinner />}
-            Bekor qilish
+            {cancel.isPending ? 'Bekor qilinmoqda…' : 'Retseptni bekor qilish'}
           </button>
         </div>
       </form>

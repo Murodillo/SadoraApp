@@ -172,7 +172,7 @@ object DoctorStringsUz : DoctorStrings {
     override fun writingAs(name: String) = "Siz shifokor sifatida yozasiz: $name ✓"
 
     override val profileTitle = "Shifokor"
-    override fun verifiedSince(date: String) = "$date dan beri tasdiqlangan"
+    override fun verifiedSince(date: String) = "${date}dan beri tasdiqlangan"
     override val statPosts = "post"
     override val statAnswers = "javob"
     override val statExperience = "yil tajriba"
@@ -180,15 +180,15 @@ object DoctorStringsUz : DoctorStrings {
     override val noPosts = "Hali post yozmagan."
 
     override val messageDoctor = "Shifokorga yozish"
-    override val openConsultation = "Suhbatni ochish"
-    override val viewHistory = "Oldingi suhbatni ko'rish"
+    override val openConsultation = "Konsultatsiyani ochish"
+    override val viewHistory = "Oldingi konsultatsiyani ko'rish"
     override val messageDoctorNote = "Bepul · konsultatsiya 24 soat ochiq turadi"
     override val cannotMessage = "Shifokor hozir konsultatsiya qabul qilmayapti."
     override val consentTitle = "Shifokor bilan konsultatsiya"
     override val consentPoints = listOf(
         "Bepul. Konsultatsiya 24 soat ochiq turadi — keyin yangisini ochishingiz mumkin.",
         "Bu yerda taxallus yo'q: shifokor ismingiz va yoshingizni ko'radi.",
-        "Shifokorning javobi tashxis emas. To'liq tekshiruv uchun qabulga boring.",
+        "Shifokorning javobi tashxis emas. To'liq tekshiruv uchun ko'rikka boring.",
         "Shoshilinch holatda kutmang — 103 ga qo'ng'iroq qiling.",
     )
     override val consentConfirm = "Tushundim, yozaman"
@@ -218,11 +218,11 @@ object DoctorStringsUz : DoctorStrings {
     override val anonymousPatient = "Anonim bemor"
     override fun paidNote(price: String) = "$price · to'lovdan so'ng 24 soat ochiq turadi"
     override fun consentPaidPoint(price: String) =
-        "Narxi $price. To'lovdan so'ng konsultatsiya 24 soat ochiq turadi. Shifokor javob bermasa, pul qaytariladi."
+        "Narxi $price. To'lovdan so'ng konsultatsiya 24 soat ochiq turadi. Shifokor 24 soat ichida javob bermasa, pul 3 ish kuni ichida to'lagan usulingizga qaytadi."
     override val consentToPay = "Tushundim, to'lovga o'tish"
 
     override val payTitle = "Konsultatsiya uchun to'lov"
-    override val payWindow = "24 soat davomida shifokor bilan yozishma"
+    override val payWindow = "24 soatlik konsultatsiya"
     override val payProvider = "To'lov usuli"
     override val pay = "To'lash"
     override val payWaiting = "To'lov kutilmoqda…"
@@ -241,7 +241,7 @@ object DoctorStringsUz : DoctorStrings {
     override val reviewPlaceholder = "Fikringiz (ixtiyoriy)"
     override val rateSend = "Yuborish"
     override val rateThanks = "Rahmat! Bahoingiz qabul qilindi."
-    override val refundDue = "Shifokor javob bermadi — to'lov qaytariladi"
+    override val refundDue = "Shifokor javob bermadi — to'lov 3 ish kuni ichida qaytariladi"
     override val refunded = "To'lov qaytarildi"
     override val consultationClosedBodyPaid = "Yozishni davom ettirish uchun yangi konsultatsiya oching — yana 24 soat, to'lovdan so'ng."
 
@@ -265,7 +265,7 @@ object DoctorStringsUz : DoctorStrings {
     override val resetFilters = "Filtrni tozalash"
     override val seeAll = "Hammasi"
     override val askDoctorTitle = "Shifokordan so'rang"
-    override val askDoctorBody = "Tasdiqlangan shifokorlar 24 soat ichida javob beradi"
+    override val askDoctorBody = "Tasdiqlangan shifokorlar · konsultatsiya 24 soat ochiq turadi"
 }
 
 object DoctorStringsRu : DoctorStrings {
@@ -300,15 +300,15 @@ object DoctorStringsRu : DoctorStrings {
     override val noPosts = "Пока нет постов."
 
     override val messageDoctor = "Написать врачу"
-    override val openConsultation = "Открыть переписку"
-    override val viewHistory = "Посмотреть прошлую переписку"
+    override val openConsultation = "Открыть консультацию"
+    override val viewHistory = "Посмотреть прошлую консультацию"
     override val messageDoctorNote = "Бесплатно · консультация открыта 24 часа"
     override val cannotMessage = "Врач сейчас не принимает консультации."
     override val consentTitle = "Консультация с врачом"
     override val consentPoints = listOf(
         "Бесплатно. Консультация открыта 24 часа — потом можно открыть новую.",
         "Здесь нет псевдонима: врач увидит ваше имя и возраст.",
-        "Ответ врача — не диагноз. Для полного обследования запишитесь на приём.",
+        "Ответ врача — не диагноз. Для полного обследования запишитесь на очный визит.",
         "В экстренном случае не ждите — звоните 103.",
     )
     override val consentConfirm = "Понятно, написать"
@@ -333,16 +333,16 @@ object DoctorStringsRu : DoctorStrings {
     override val onlineNow = "Сейчас онлайн"
     override val busy = "Перерыв"
     override val offlineNow = "Сейчас не отвечает"
-    override fun nextAvailable(day: String, time: String) = "Следующий приём: $day $time"
+    override fun nextAvailable(day: String, time: String) = "Снова на связи: $day $time"
     override val reviewsTitle = "Оценки"
     override val anonymousPatient = "Анонимная пациентка"
     override fun paidNote(price: String) = "$price · после оплаты открыта 24 часа"
     override fun consentPaidPoint(price: String) =
-        "Стоимость $price. После оплаты консультация открыта 24 часа. Если врач не ответит, деньги вернутся."
+        "Стоимость $price. После оплаты консультация открыта 24 часа. Если врач не ответит за 24 часа, деньги вернутся тем же способом оплаты в течение 3 рабочих дней."
     override val consentToPay = "Понятно, к оплате"
 
     override val payTitle = "Оплата консультации"
-    override val payWindow = "24 часа переписки с врачом"
+    override val payWindow = "Консультация на 24 часа"
     override val payProvider = "Способ оплаты"
     override val pay = "Оплатить"
     override val payWaiting = "Ожидаем оплату…"
@@ -361,7 +361,7 @@ object DoctorStringsRu : DoctorStrings {
     override val reviewPlaceholder = "Ваш отзыв (необязательно)"
     override val rateSend = "Отправить"
     override val rateThanks = "Спасибо! Оценка принята."
-    override val refundDue = "Врач не ответил — оплата будет возвращена"
+    override val refundDue = "Врач не ответил — оплата вернётся в течение 3 рабочих дней"
     override val refunded = "Оплата возвращена"
     override val consultationClosedBodyPaid = "Чтобы продолжить, откройте новую консультацию — ещё 24 часа, после оплаты."
 
@@ -385,19 +385,19 @@ object DoctorStringsRu : DoctorStrings {
     override val resetFilters = "Сбросить фильтр"
     override val seeAll = "Все"
     override val askDoctorTitle = "Спросите врача"
-    override val askDoctorBody = "Подтверждённые врачи отвечают в течение 24 часов"
+    override val askDoctorBody = "Подтверждённые врачи · консультация открыта 24 часа"
 }
 
 object DoctorStringsEn : DoctorStrings {
     override fun specialty(specialty: DoctorSpecialty) = when (specialty) {
-        DoctorSpecialty.GYNECOLOGIST -> "Gynecologist"
+        DoctorSpecialty.GYNECOLOGIST -> "Gynaecologist"
         DoctorSpecialty.OBSTETRICIAN -> "Obstetrician"
         DoctorSpecialty.REPRODUCTOLOGIST -> "Fertility specialist"
         DoctorSpecialty.ENDOCRINOLOGIST -> "Endocrinologist"
         DoctorSpecialty.MAMMOLOGIST -> "Breast specialist"
         DoctorSpecialty.PSYCHOLOGIST -> "Psychologist"
         DoctorSpecialty.NUTRITIONIST -> "Nutritionist"
-        DoctorSpecialty.PEDIATRICIAN -> "Pediatrician"
+        DoctorSpecialty.PEDIATRICIAN -> "Paediatrician"
         DoctorSpecialty.GENERAL -> "General practitioner"
         DoctorSpecialty.OTHER -> "Other specialist"
     }
@@ -409,7 +409,7 @@ object DoctorStringsEn : DoctorStrings {
     override val nothingYet = "No posts from doctors yet"
     override val nothingYetBody = "When verified doctors write, their posts show up here."
     override val disclaimer = "A doctor's answer in the chat is general advice, not a diagnosis. In an emergency, call 103."
-    override fun writingAs(name: String) = "You are writing as a doctor: $name ✓"
+    override fun writingAs(name: String) = "You're writing as a doctor: $name ✓"
 
     override val profileTitle = "Doctor"
     override fun verifiedSince(date: String) = "Verified since $date"
@@ -419,19 +419,19 @@ object DoctorStringsEn : DoctorStrings {
     override val herPosts = "Posts"
     override val noPosts = "No posts yet."
 
-    override val messageDoctor = "Message the doctor"
-    override val openConsultation = "Open the conversation"
-    override val viewHistory = "See the earlier conversation"
+    override val messageDoctor = "Message doctor"
+    override val openConsultation = "Open consultation"
+    override val viewHistory = "See earlier consultation"
     override val messageDoctorNote = "Free · a consultation stays open for 24 hours"
-    override val cannotMessage = "The doctor is not taking consultations right now."
+    override val cannotMessage = "The doctor isn't taking consultations right now."
     override val consentTitle = "A consultation with a doctor"
     override val consentPoints = listOf(
         "Free. A consultation stays open for 24 hours — after that you can open a new one.",
-        "There is no alias here: the doctor sees your name and age.",
-        "A doctor's answer is not a diagnosis. For a full examination, book an appointment.",
-        "In an emergency, do not wait — call 103.",
+        "There's no alias here: the doctor sees your name and age.",
+        "A doctor's answer isn't a diagnosis. For a full examination, book an in-person visit.",
+        "In an emergency, don't wait — call 103.",
     )
-    override val consentConfirm = "Understood, write"
+    override val consentConfirm = "Got it, start writing"
     override val consultationOpen = "Consultation open"
     override fun hoursLeft(hours: Int) = if (hours == 1) "1 hour left" else "$hours hours left"
     override fun minutesLeft(minutes: Int) = if (minutes == 1) "1 minute left" else "$minutes minutes left"
@@ -442,7 +442,7 @@ object DoctorStringsEn : DoctorStrings {
     override val composerClosed = "The consultation is closed — open a new one"
     override val chipOpen = "Open"
     override val chipClosed = "Closed"
-    override val threadNote = "The doctor sees your name and age. An answer is not a diagnosis; in an emergency, call 103."
+    override val threadNote = "The doctor sees your name and age. An answer isn't a diagnosis; in an emergency, call 103."
     override val doctorPage = "Doctor's page"
 
     override val free = "Free"
@@ -459,17 +459,17 @@ object DoctorStringsEn : DoctorStrings {
     override val anonymousPatient = "Anonymous patient"
     override fun paidNote(price: String) = "$price · open for 24 hours after payment"
     override fun consentPaidPoint(price: String) =
-        "It costs $price. After payment the consultation stays open for 24 hours. If the doctor does not answer, the money is returned."
-    override val consentToPay = "Understood, go to payment"
+        "It costs $price. After payment the consultation stays open for 24 hours. If the doctor doesn't answer within 24 hours, the money goes back to the way you paid within 3 working days."
+    override val consentToPay = "Got it, go to payment"
 
     override val payTitle = "Pay for the consultation"
-    override val payWindow = "24 hours of messages with the doctor"
+    override val payWindow = "A 24-hour consultation"
     override val payProvider = "Payment method"
     override val pay = "Pay"
     override val payWaiting = "Waiting for the payment…"
     override val payWaitingBody = "Pay on the payment page and come back to the app — the consultation opens by itself."
-    override val payReopenPage = "Open the payment page again"
-    override val payNoProvider = "Payments are not available right now. Try again later."
+    override val payReopenPage = "Open payment page again"
+    override val payNoProvider = "Payments aren't available right now. Try again later."
     override val paidToast = "Payment received — the consultation is open"
 
     override val paidChip = "Paid"
@@ -482,7 +482,7 @@ object DoctorStringsEn : DoctorStrings {
     override val reviewPlaceholder = "Your review (optional)"
     override val rateSend = "Send"
     override val rateThanks = "Thank you! Your rating was received."
-    override val refundDue = "The doctor did not answer — the payment will be returned"
+    override val refundDue = "The doctor didn't answer — your payment will be refunded within 3 working days"
     override val refunded = "The payment was returned"
     override val consultationClosedBodyPaid = "To keep writing, open a new consultation — another 24 hours, after payment."
 
@@ -506,5 +506,5 @@ object DoctorStringsEn : DoctorStrings {
     override val resetFilters = "Clear filters"
     override val seeAll = "See all"
     override val askDoctorTitle = "Ask a doctor"
-    override val askDoctorBody = "Verified doctors reply within 24 hours"
+    override val askDoctorBody = "Verified doctors · a consultation stays open for 24 hours"
 }

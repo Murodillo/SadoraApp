@@ -331,6 +331,56 @@ export function Modal({
   )
 }
 
+/**
+ * A yes/no question in the panel's own Modal, in place of the browser's `confirm()`,
+ * whose OK/Cancel come in the browser's language and cannot say what the button does.
+ * The confirm button names the action; the dialog stays open while it runs.
+ */
+export function ConfirmDialog({
+  title,
+  children,
+  confirmLabel,
+  pendingLabel,
+  cancelLabel = 'Bekor qilish',
+  danger = false,
+  pending = false,
+  disabled = false,
+  onConfirm,
+  onClose,
+}: {
+  title: string
+  children?: ReactNode
+  confirmLabel: string
+  /** What the button says while the request runs, e.g. "O'chirilmoqda…". */
+  pendingLabel?: string
+  cancelLabel?: string
+  danger?: boolean
+  pending?: boolean
+  disabled?: boolean
+  onConfirm: () => void
+  onClose: () => void
+}) {
+  return (
+    <Modal title={title} onClose={onClose}>
+      {children}
+      <div className="row" style={{ justifyContent: 'flex-end' }}>
+        <button className="btn ghost" type="button" onClick={onClose}>
+          {cancelLabel}
+        </button>
+        <button
+          className={`btn ${danger ? 'danger' : 'primary'}`}
+          type="button"
+          disabled={pending || disabled}
+          onClick={onConfirm}
+        >
+          {pending && <Spinner />}
+          {pending ? pendingLabel ?? confirmLabel : confirmLabel}
+        </button>
+      </div>
+    </Modal>
+  )
+}
+
 /** `2026-08-27T09:15:00Z` -> `27.08.2026 14:15` in the operator's own timezone. */
 export function formatDateTime(iso?: string | null): string {
   if (!iso) return '—'

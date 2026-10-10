@@ -20,9 +20,11 @@ import urllib.error
 import urllib.request
 from datetime import date, timedelta
 
-BASE = (sys.argv[1] if len(sys.argv) > 1 else "http://localhost:8080").rstrip("/") + "/v1"
+from dev_target import ADMIN_EMAIL, admin_password, base_url
+
+BASE = base_url() + "/v1"
 OTP_CODE = "123456"
-ADMIN = ("owner@sadora.uz", "changeme123")
+ADMIN = (ADMIN_EMAIL, admin_password())
 TODAY = date.today()
 
 

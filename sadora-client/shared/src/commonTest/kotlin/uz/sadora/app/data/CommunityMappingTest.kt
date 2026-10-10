@@ -135,7 +135,7 @@ class CommunityMappingTest {
     fun `the same post ages in every language`() {
         val at = TestNow - 3.hours
         assertEquals("3 soat oldin", StringsUz.dates.ago(at, TestNow))
-        assertEquals("3 ч. назад", StringsRu.dates.ago(at, TestNow))
+        assertEquals("3 ч назад", StringsRu.dates.ago(at, TestNow))
         assertEquals("3 h ago", StringsEn.dates.ago(at, TestNow))
     }
 
@@ -222,7 +222,7 @@ class CommunityMappingTest {
     }
 
     @Test
-    fun `a prescription line carries its card, and a kind this release does not know reads as text`() {
+    fun `a prescription line carries its card — and a kind this release does not know reads as text`() {
         val prescription = uz.sadora.contract.Prescription(
             id = "rx1",
             conversationId = "c1",

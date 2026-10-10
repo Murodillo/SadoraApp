@@ -41,7 +41,7 @@ object PetPhrases {
         )
         Language.RU -> listOf(
             PetLine("Знаете? Сфотографируйте еду — я посчитаю её состав.", PetPose.THINK, PetAction.FOOD_SCANNER),
-            PetLine("Подключите близкого через «Яқиним» — он тоже будет знать, когда нужна забота.", PetPose.THINK, PetAction.PARTNER),
+            PetLine("Подключите близкого человека через Yaqinim — он тоже будет знать, когда нужна забота.", PetPose.THINK, PetAction.PARTNER),
             PetLine("Загляните в значки — до некоторых совсем чуть-чуть!", PetPose.IDLE, PetAction.BADGES),
             PetLine("Идёте к врачу? Поделитесь данными по QR за секунду.", PetPose.THINK, PetAction.DOCTOR_SHARE),
             PetLine("Есть вопрос? Спросите в AI-чате в любое время.", PetPose.IDLE, PetAction.AI_CHAT),
@@ -84,15 +84,16 @@ object PetPhrases {
     }
 
     /**
-     * A medication reminder in her companion's voice. The medicine and the time stay
-     * first and exact — the voice is a word around them, never instead of them.
+     * A medication reminder in her companion's voice. The time stays exact; the medicine
+     * itself is left out, because a push is read on the lock screen by whoever holds
+     * the phone — the app shows which dose it is once she opens it.
      */
-    fun medReminder(language: Language, pet: PetKind, medicine: String, time: String): String {
+    fun medReminder(language: Language, pet: PetKind, time: String): String {
         val opener = opener(language, pet)
         return when (language) {
-            Language.UZ -> "$opener$medicine ichish vaqti keldi — $time. Unutmang, men shu yerdaman 💊"
-            Language.RU -> "$opener${medicine}: время приёма — $time. Не забудьте, я рядом 💊"
-            Language.EN -> "$opener$medicine is due at $time. Don't forget — I'm right here 💊"
+            Language.UZ -> "${opener}Dori ichish vaqti keldi — $time. Unutmang, men shu yerdaman 💊"
+            Language.RU -> "${opener}Время приёма лекарства — $time. Не забудьте, я рядом 💊"
+            Language.EN -> "${opener}Time for your medication — $time. Don't forget, I'm right here 💊"
         }
     }
 
@@ -140,7 +141,7 @@ object PetPhrases {
      * code. The character is a voice, not a licence to be cute about symptoms.
      */
     fun chatPersona(pet: PetKind): String = """
-        You are ${persona(pet)}, her personal companion in Sadora (the app calls you SADORA AI).
+        You are ${persona(pet)}, her personal companion in SADORA (the app calls you SADORA AI).
         Speak in first person, warmly, in your own character, but keep the character to a light
         touch: at most one short in-character phrase per answer, and none at all when she
         describes pain, bleeding, low mood or anything worrying — then be plainly calm and kind.
@@ -150,7 +151,7 @@ object PetPhrases {
     """.trimIndent()
 
     fun instruction(language: Language, pet: PetKind): String = """
-        You are ${persona(pet)} — the companion mascot in Sadora, a women's health app.
+        You are ${persona(pet)} — the companion mascot in SADORA, a women's health app.
         Write ONE short speech-bubble line in ${languageName(language)}, at most 140 characters,
         addressing the user politely (in Uzbek use "siz", in Russian "вы").
         General wellness only: no diagnosis, no medicine names or doses, no numbers,

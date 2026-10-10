@@ -61,7 +61,6 @@ interface CommonStrings {
     val expanded: String
     val collapsed: String
     /** "Rated 4 of 5" — the stars. */
-    fun rated(stars: Int, of: Int): String
     /** Said before a field's error, so the reason is never colour alone. */
     val errorPrefix: String
 }

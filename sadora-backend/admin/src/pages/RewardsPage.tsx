@@ -64,10 +64,10 @@ export function RewardsPage() {
   return (
     <div className="grid" style={{ gap: 16 }}>
       <div className="notice">
-        Bu yerdagi o‘zgarish ilovani yangilamasdan kuchga kiradi va faqat keyingi
-        mukofotlarga ta’sir qiladi — allaqachon berilgan gul qayta hisoblanmaydi. Gul
-        faqat <b>harakat</b> uchun beriladi: ilovani ochish, belgilash, o‘qish. Uyqu yoki
-        boshqa salomatlik ko‘rsatkichi uchun gul berilmaydi.
+        Bu yerdagi o'zgarish ilovani yangilamasdan kuchga kiradi va faqat keyingi
+        mukofotlarga ta'sir qiladi — allaqachon berilgan Gul qayta hisoblanmaydi. Gul
+        faqat <b>harakat</b> uchun beriladi: ilovani ochish, belgilash, o'qish. Uyqu yoki
+        boshqa salomatlik ko'rsatkichi uchun Gul berilmaydi.
       </div>
 
       {save.error && <ErrorNotice error={save.error} />}
@@ -76,14 +76,14 @@ export function RewardsPage() {
       <>
       <div className="grid stat-row">
         <Stat
-          label="Muomaladagi gul"
+          label="Muomaladagi Gul"
           value={(totals?.coinsOutstanding ?? 0).toLocaleString('ru-RU')}
           hint="Berilgan, lekin hali sarflanmagan"
         />
         <Stat label="Jami berilgan" value={(totals?.coinsEarnedTotal ?? 0).toLocaleString('ru-RU')} />
         <Stat label="Jami sarflangan" value={(totals?.coinsSpentTotal ?? 0).toLocaleString('ru-RU')} />
-        <Stat label="Faol streaklar" value={totals?.activeStreaks ?? 0} hint={`Eng uzun — ${totals?.longestStreak ?? 0} kun`} />
-        <Stat label="Taklif bo‘yicha kelganlar" value={totals?.referralsAccepted ?? 0} />
+        <Stat label="Faol ketma-ketliklar" value={totals?.activeStreaks ?? 0} hint={`Eng uzun — ${totals?.longestStreak ?? 0} kun`} />
+        <Stat label="Taklif bo'yicha kelganlar" value={totals?.referralsAccepted ?? 0} />
         <Stat label="Berilgan kodlar" value={totals?.redemptionsIssued ?? 0} />
       </div>
 
@@ -140,7 +140,7 @@ export function RewardsPage() {
                       <button
                         className="btn small"
                         disabled={!editable || !isDirty(rule) || save.isPending}
-                        onClick={() => save.mutate(current, { onSuccess: () => notify(`${rule.reason}: endi ${current.amount} gul`) })}
+                        onClick={() => save.mutate(current, { onSuccess: () => notify(`${rule.reason}: endi ${current.amount} Gul`) })}
                       >
                         Saqlash
                       </button>
@@ -259,17 +259,17 @@ export function UserRewardsCard({ userId, card }: { userId: string; card: AdminR
   if (!card) return null
 
   return (
-    <Card title="Gul va streak">
+    <Card title="Gul va ketma-ketlik">
       <div className="grid stat-row">
         <Stat label="Balans" value={card.coins.balance.toLocaleString('ru-RU')} />
-        <Stat label="Streak" value={`${card.streak.current} kun`} hint={`Eng uzun — ${card.streak.longest}`} />
+        <Stat label="Ketma-ketlik" value={`${card.streak.current} kun`} hint={`Eng uzun — ${card.streak.longest}`} />
         {card.referral && <Stat label="Taklif qilganlari" value={card.referral.invited} />}
       </div>
 
       {can(['OWNER', 'ADMIN']) && (
         <div className="row" style={{ gap: 8, alignItems: 'flex-end' }}>
           <label style={{ flex: '0 0 120px' }}>
-            <span className="faint">Miqdor (± gul)</span>
+            <span className="faint">Miqdor (± Gul)</span>
             <input
               type="number"
               value={amount}
@@ -279,7 +279,7 @@ export function UserRewardsCard({ userId, card }: { userId: string; card: AdminR
           </label>
           <label style={{ flex: 1 }}>
             <span className="faint">Sabab (audit logga tushadi)</span>
-            <input value={note} onChange={(event) => setNote(event.target.value)} placeholder="Qo‘llab-quvvatlash so‘rovi" />
+            <input value={note} onChange={(event) => setNote(event.target.value)} placeholder="Qo'llab-quvvatlash so'rovi" />
           </label>
           <button
             className="btn small"
@@ -289,7 +289,7 @@ export function UserRewardsCard({ userId, card }: { userId: string; card: AdminR
                 { amount: Number(amount), note: note.trim() },
                 {
                   onSuccess: () => {
-                    notify(`${Number(amount) >= 0 ? '+' : ''}${Number(amount)} gul qo‘llandi`)
+                    notify(`${Number(amount) >= 0 ? '+' : ''}${Number(amount)} Gul qo'llandi`)
                     setAmount('')
                     setNote('')
                   },
@@ -297,7 +297,7 @@ export function UserRewardsCard({ userId, card }: { userId: string; card: AdminR
               )
             }
           >
-            Qo‘llash
+            Qo'llash
           </button>
         </div>
       )}
@@ -318,7 +318,7 @@ export function UserRewardsCard({ userId, card }: { userId: string; card: AdminR
             ))}
             {!card.history.length && (
               <tr>
-                <td className="faint">Harakat yo‘q</td>
+                <td className="faint">Harakat yo'q</td>
               </tr>
             )}
           </tbody>

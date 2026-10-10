@@ -128,7 +128,7 @@ function copyFor(account: DoctorAccount, phone: string | null): { title: string;
             <ReviewNote note={account.reviewNote} />
             <p className="muted" style={{ margin: 0 }}>
               Hisob to'xtatilgan paytda postlaringiz chatda ko'rinmaydi va savollarga javob bera olmaysiz. Savollar
-              bo'lsa, Sadora jamoasiga murojaat qiling.
+              bo'lsa, bizga yozing: <SupportLink />.
             </p>
           </>
         ),
@@ -138,11 +138,19 @@ function copyFor(account: DoctorAccount, phone: string | null): { title: string;
         title: 'Panel hozircha yopiq',
         body: (
           <p className="muted" style={{ margin: 0 }}>
-            Shifokor hisobingiz holati: {account.status}. Batafsil ma'lumot uchun Sadora jamoasiga murojaat qiling.
+            Shifokor hisobingiz holati: {statusLabels[account.status]?.text ?? account.status}. Batafsil ma'lumot uchun bizga
+            yozing: <SupportLink />.
           </p>
         ),
       }
   }
+}
+
+/** The address the public terms give for questions (landing/terms.html). */
+const SUPPORT_EMAIL = 'support@sadora.app'
+
+function SupportLink() {
+  return <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>
 }
 
 function ReviewNote({ note }: { note?: string | null }) {

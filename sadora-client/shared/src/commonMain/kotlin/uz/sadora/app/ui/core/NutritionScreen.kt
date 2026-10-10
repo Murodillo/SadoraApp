@@ -25,6 +25,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.TextUnit
 import uz.sadora.app.design.IconSize
 import uz.sadora.app.design.Radius
 import uz.sadora.app.design.Sadora
@@ -79,7 +80,6 @@ fun NutritionScreen(
     Column {
         SadoraTopBar(
             t.title,
-            centered = true,
             trailing = {
                 CircleIconButton(SadoraIcons.Calendar, contentDescription = t.insights) { onOpen(Route.Insights) }
             },
@@ -244,14 +244,17 @@ private fun TodayRingCard(state: AppState) {
             Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(Spacing.xxs),
         ) {
+            // The gram sign in her language ("g", "г"), taken from the same string the
+            // meal cards use, so the rings and the cards never disagree.
+            val gram = t.grams(0).removePrefix("0").trim()
             MacroRing(strings.common.kcal, state.caloriesEaten, state.calorieGoal, c.primary, Modifier.weight(1f), delayMillis = 0)
-            MacroRing(t.protein, state.proteinG, state.proteinGoalG, c.protein, Modifier.weight(1f), unit = "g", delayMillis = 90)
-            MacroRing(t.fat, state.fatG, state.fatGoalG, c.fat, Modifier.weight(1f), unit = "g", delayMillis = 180)
-            MacroRing(t.carbs, state.carbsG, state.carbsGoalG, c.carbs, Modifier.weight(1f), unit = "g", delayMillis = 270)
+            MacroRing(t.protein, state.proteinG, state.proteinGoalG, c.protein, Modifier.weight(1f), unit = gram, delayMillis = 90)
+            MacroRing(t.fat, state.fatG, state.fatGoalG, c.fat, Modifier.weight(1f), unit = gram, delayMillis = 180)
+            MacroRing(t.carbs, state.carbsG, state.carbsGoalG, c.carbs, Modifier.weight(1f), unit = gram, delayMillis = 270)
         }
         // Higher than the plain defaults because of her stage — said, so a third-trimester
         // 2300 kcal does not read as a number the app made up.
-        state.goalsBasis?.let { Text(strings.tools.goalsBasis(it), style = Sadora.type.caption, color = c.muted) }
+        state.goalsBasis?.let { Text(strings.tools.goalsBasis(it), style = Sadora.type.caption.copy(letterSpacing = TextUnit.Unspecified), color = c.muted) }
     }
 }
 

@@ -60,6 +60,25 @@ class FcmPushSenderTest {
     }
 
     @Test
+    fun `a person writing to her rings the messages channel and a reminder the reminders one`() = runTest {
+        val seen = mutableListOf<HttpRequestData>()
+        val sender = sender(seen) { HttpStatusCode.OK to """{"name":"projects/p/messages/1"}""" }
+        suspend fun channelOf(push: OutboxRecord): String? {
+            seen.clear()
+            sender.send(push, listOf("device-a"))
+            val body = (seen.last().body as io.ktor.http.content.TextContent).text
+            return Regex(""""channel_id"\s*:\s*"([^"]+)"""").find(body)?.groupValues?.get(1)
+        }
+
+        assertEquals(FcmPushSender.CHANNEL_REMINDERS, channelOf(record))
+        assertEquals(FcmPushSender.CHANNEL_MESSAGES, channelOf(record.copy(category = NotificationCategory.SYSTEM, link = "sadora://conversation/abc")))
+        assertEquals(FcmPushSender.CHANNEL_MESSAGES, channelOf(record.copy(category = NotificationCategory.CYCLE, link = "sadora://yaqinim")))
+        assertEquals(FcmPushSender.CHANNEL_MESSAGES, channelOf(record.copy(category = NotificationCategory.PARTNER)))
+        // The doctor app keeps its own single channel.
+        assertEquals(null, channelOf(record.copy(targetApp = "doctor", link = "sadora://conversation/abc")))
+    }
+
+    @Test
     fun `a token FCM says is gone is forgotten rather than retried forever`() = runTest {
         val forgotten = mutableListOf<String>()
         val sender = sender(mutableListOf(), onRejected = { forgotten += it }) {

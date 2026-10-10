@@ -135,28 +135,6 @@ fun DoctorHomeScreen(
                     AskForPhotoCard(account, doctors, onSaved = { onToast(saved) })
                 }
             }
-            item(key = "me") { WhoCard(account, onClick = onProfile) }
-            item(key = "busy") {
-                val settings = work.settings
-                if (settings == null) {
-                    Skeleton(Modifier.fillMaxWidth().height(76.dp), shape = Radius.card)
-                } else {
-                    SwitchCard(
-                        title = w.busyTitle,
-                        body = w.busyBody.takeIf { settings.busy },
-                        on = settings.busy,
-                        enabled = !switching,
-                        tint = c.warning,
-                        onToggle = { wanted ->
-                            switching = true
-                            scope.launch {
-                                work.setBusy(wanted)
-                                switching = false
-                            }
-                        },
-                    )
-                }
-            }
             item(key = "stats") {
                 Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                     Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
@@ -199,6 +177,27 @@ fun DoctorHomeScreen(
                     }
                 }
             }
+            item(key = "busy") {
+                val settings = work.settings
+                if (settings == null) {
+                    Skeleton(Modifier.fillMaxWidth().height(76.dp), shape = Radius.card)
+                } else {
+                    SwitchCard(
+                        title = w.busyTitle,
+                        body = w.busyBody.takeIf { settings.busy },
+                        on = settings.busy,
+                        enabled = !switching,
+                        tint = c.warning,
+                        onToggle = { wanted ->
+                            switching = true
+                            scope.launch {
+                                work.setBusy(wanted)
+                                switching = false
+                            }
+                        },
+                    )
+                }
+            }
             // Her latest medals, once she has one; the page itself is on her profile too.
             work.badges?.takeIf { board -> board.badges.any { it.tier > 0 } }?.let { board ->
                 item(key = "badges") { BadgeStrip(board, onOpen = onOpenBadges) }
@@ -217,6 +216,9 @@ fun DoctorHomeScreen(
                 )
             }
             item(key = "scan") { ScanCard(onScan) }
+            // Her own card sits with the settings rather than first: under "who is waiting
+            // for you" the top of the screen belongs to the patients' numbers.
+            item(key = "me") { WhoCard(account, onClick = onProfile) }
             item(key = "questions-title") { SectionHeader(d.questionsTitle) }
             item(key = "questions-hint") { Text(d.questionsHint, style = Sadora.type.body, color = c.muted) }
             if (!doctors.questionsLoaded && doctors.error == null) {

@@ -52,6 +52,6 @@ class AccountGate(
     suspend fun blockedMessage(userId: Uuid): String? = when (statusOf(userId)) {
         null, AccountStatus.ACTIVE -> null
         AccountStatus.BLOCKED -> "Hisob bloklangan"
-        AccountStatus.DELETION_PENDING -> "Hisobni o'chirish so'rovi yuborilgan"
+        AccountStatus.DELETION_PENDING -> "Hisobni o'chirish so'rovi yuborilgan. Bekor qilish uchun qo'llab-quvvatlash xizmatiga yozing."
     }
 }

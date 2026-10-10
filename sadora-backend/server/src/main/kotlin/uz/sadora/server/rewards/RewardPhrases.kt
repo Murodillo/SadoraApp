@@ -22,7 +22,7 @@ object RewardPhrases {
 
     private fun uz(reason: String, milestone: Int?): String = when (reason) {
         CoinReasons.DAILY_OPEN -> "Kunlik kirish"
-        CoinReasons.STREAK_MILESTONE -> milestone?.let { "$it kunlik streak" } ?: "Streak bosqichi"
+        CoinReasons.STREAK_MILESTONE -> milestone?.let { "$it kunlik ketma-ketlik" } ?: "Ketma-ketlik bosqichi"
         CoinReasons.CHECK_IN -> "Kayfiyat belgisi"
         CoinReasons.WATER_GOAL -> "Suv maqsadi bajarildi"
         CoinReasons.DOSE_TAKEN -> "Dori qabul qilindi"
@@ -41,7 +41,7 @@ object RewardPhrases {
 
     private fun ru(reason: String, milestone: Int?): String = when (reason) {
         CoinReasons.DAILY_OPEN -> "Ежедневный вход"
-        CoinReasons.STREAK_MILESTONE -> milestone?.let { "Серия $it дней" } ?: "Рубеж серии"
+        CoinReasons.STREAK_MILESTONE -> milestone?.let { "Серия $it ${uz.sadora.server.i18n.Plural.ru(it, "день", "дня", "дней")}" } ?: "Рубеж серии"
         CoinReasons.CHECK_IN -> "Отметка настроения"
         CoinReasons.WATER_GOAL -> "Цель по воде выполнена"
         CoinReasons.DOSE_TAKEN -> "Приём отмечен"
@@ -51,7 +51,7 @@ object RewardPhrases {
         CoinReasons.ARTICLE_READ -> "Статья прочитана"
         CoinReasons.REFERRAL_JOINED -> "Подруга присоединилась"
         CoinReasons.REFERRAL_WELCOME -> "Подарок за приглашение"
-        CoinReasons.PARTNER_LINKED -> "Близкий подключён"
+        CoinReasons.PARTNER_LINKED -> "Yaqinim подключён"
         CoinReasons.BADGE_EARNED -> "Новый значок"
         CoinReasons.REDEMPTION -> "Покупка в магазине"
         CoinReasons.ADMIN_ADJUSTMENT -> "Ручная корректировка"
@@ -70,7 +70,7 @@ object RewardPhrases {
         CoinReasons.ARTICLE_READ -> "Article read"
         CoinReasons.REFERRAL_JOINED -> "A friend joined"
         CoinReasons.REFERRAL_WELCOME -> "Invite welcome"
-        CoinReasons.PARTNER_LINKED -> "Your person is connected"
+        CoinReasons.PARTNER_LINKED -> "Yaqinim connected"
         CoinReasons.BADGE_EARNED -> "New badge"
         CoinReasons.REDEMPTION -> "Shop purchase"
         CoinReasons.ADMIN_ADJUSTMENT -> "Manual adjustment"

@@ -114,7 +114,7 @@ export function UserCardPage() {
               <Row label="Tarif" value={<TierBadge tier={data.subscription.tier} />} />
               <Row label="Manba" value={data.subscription.source ?? '—'} />
               <Row label="Tugash sanasi" value={formatExpiry(data.subscription.expiresAt)} />
-              <Row label="Grace period" value={data.subscription.inGracePeriod ? 'Ha' : "Yo'q"} />
+              <Row label="Imtiyozli muddat" value={data.subscription.inGracePeriod ? 'Ha' : "Yo'q"} />
             </tbody>
           </table>
 
@@ -341,7 +341,7 @@ function GrantPremiumDialog({ userId, onClose }: { userId: string; onClose: () =
           }
         >
           {grant.isPending && <Spinner />}
-          {grant.isPending ? 'Yuborilmoqda…' : 'Berish'}
+          {grant.isPending ? 'Berilmoqda…' : 'Berish'}
         </button>
       </div>
     </Modal>
@@ -365,7 +365,7 @@ function BlockDialog({ userId, blocked, onClose }: { userId: string; blocked: bo
       </Field>
       {!blocked && (
         <p className="faint" style={{ margin: 0 }}>
-          Bloklash barcha qurilmalardagi sessiyalarni darhol bekor qiladi.
+          Bloklash barcha qurilmalardagi seanslarni darhol bekor qiladi.
         </p>
       )}
       {setBlocked.error && <ErrorNotice error={setBlocked.error} />}
@@ -389,7 +389,7 @@ function BlockDialog({ userId, blocked, onClose }: { userId: string; blocked: bo
           }
         >
           {setBlocked.isPending && <Spinner />}
-          {setBlocked.isPending ? 'Yuborilmoqda…' : blocked ? 'Blokdan chiqarish' : 'Bloklash'}
+          {setBlocked.isPending ? (blocked ? 'Blokdan chiqarilmoqda…' : 'Bloklanmoqda…') : blocked ? 'Blokdan chiqarish' : 'Bloklash'}
         </button>
       </div>
     </Modal>

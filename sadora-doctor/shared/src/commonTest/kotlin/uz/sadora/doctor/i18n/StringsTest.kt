@@ -106,7 +106,7 @@ class StringsTest {
                     home, messages, scan, community, profile, homeSubtitle, statWaiting, statUnread,
                     scanPatient, scanPatientBody, seeAll, messagesEmpty, messagesEmptyBody, messageHint,
                     conversationClosed, unread(3), scanTitle, scanHint, cameraStarting, cameraDenied,
-                    openSettings, cameraMissing, notPatientCode, pasteLabel, open, recentTitle, recentNote,
+                    openSettings, cameraMissing, notPatientCode, pasteLabel, pastePlaceholder, open, recentTitle, recentNote,
                     communityTitle, filterAll, filterDoctors, feedEmpty, feedEmptyBody, recordTitle,
                     recordGone, recordGoneBody, recordDisclaimer, generatedAt("4-sentabr, 09:00"), age(31),
                     heightLabel, weightLabel, cm(165), kg(58), days(28), memberSince("Sentabr 2026"),
@@ -131,9 +131,9 @@ class StringsTest {
                 listOf(
                     som("50 000"), free, settingsTitle, priceTitle, priceLabel, priceNote, priceTooLow,
                     priceTooHigh, commission(20), youGet("40 000"), busyTitle, busyBody, hoursTitle, hoursNote,
-                    dayOff, hoursFrom, hoursTo, earlier, later, timezone("Asia/Tashkent"), hoursInvalid,
+                    dayOff, hoursFrom, hoursTo, stepEarlier(hoursFrom, "09:00"), stepLater(hoursFrom, "09:00"), timezone("Asia/Tashkent"), hoursInvalid,
                     workDays(1), workDays(5), noHours, statsTitle, statWeek, statMonth, statTotal, openNow,
-                    avgReply, duration(12), duration(65), unanswered, rating, ratingValue("4.8", 12), noRating,
+                    avgReply, duration(12), duration(65), unanswered, rating, ratingValue("4.8", 12), stars(4), noRating,
                     topTopics, noValue, earningsTitle, balance, gross, commissionLine, net, paidOut, refundDue,
                     earningsNote, linesTitle, linesEmpty, linesEmptyBody, payoutsTitle, payoutsEmpty, details,
                     quickReplies, quickRepliesBody, quickRepliesEmpty, quickRepliesEmptyBody, manageReplies,
@@ -236,6 +236,54 @@ class StringsTest {
         assertEquals("23 года", t.age(23))
         assertEquals("25 лет", t.age(25))
         assertEquals("11 лет", t.age(11))
+    }
+
+    @Test
+    fun `russian counts agree with their number and never fall back to дн`() {
+        assertEquals("1 день", StringsRu.tabs.days(1))
+        assertEquals("3 дня", StringsRu.tabs.days(3))
+        assertEquals("28 дней", StringsRu.tabs.days(28))
+        assertEquals("Последний 1 день", StringsRu.tabs.lastDays(1))
+        assertEquals("Последние 7 дней", StringsRu.tabs.lastDays(7))
+        assertEquals("2 дня назад", StringsRu.dates.daysAgo(2))
+        assertEquals("Ещё 2 значка", StringsRu.badges.more(2))
+    }
+
+    @Test
+    fun `english never says one of something in the plural`() {
+        val t = StringsEn
+        val ones = listOf(
+            t.tabs.days(1), t.tabs.age(1), t.tabs.lastDays(1), t.tabs.lastHours(1), t.tabs.symptomsWindow(1),
+            t.tabs.kicksResult(1, "5 min"), t.work.workDays(1), t.work.ratingValue("5", 1), t.dates.daysAgo(1),
+            t.prescriptions.everyDays(1), t.prescriptions.timesPerDay(1), t.badges.more(1),
+        ) + uz.sadora.contract.DoctorBadges.catalogue.map { (key, _) -> t.badges.goal(key, 1) }
+        val plural = Regex("""\b1 (days|hours|years|times|posts|patients|ratings|movements|questions|messages|likes|badges)\b""")
+        ones.forEach { assertTrue(!plural.containsMatchIn(it), "'$it' says one in the plural") }
+        assertEquals("1 day", t.tabs.days(1))
+        assertEquals("Last 1 day", t.tabs.lastDays(1))
+    }
+
+    @Test
+    fun `the doctor app uses the agreed words`() {
+        // Glossary: patient record, quick replies, rating, busy, hot flushes, UK spelling.
+        assertEquals("Bemor kartasi", StringsUz.tabs.recordTitle)
+        assertEquals("Bemor kartasi", StringsUz.tabs.record)
+        assertEquals("Карта пациентки", StringsRu.tabs.recordTitle)
+        assertEquals("Карта пациентки", StringsRu.tabs.record)
+        assertEquals("Patient record", StringsEn.tabs.record)
+        assertEquals(listOf("Tayyor javoblar", "Быстрые ответы", "Quick replies"), languages.map { it.work.quickReplies })
+        assertEquals(listOf("Baho", "Оценка", "Rating"), languages.map { it.work.rating })
+        assertTrue(StringsRu.work.busyTitle.startsWith("Перерыв"))
+        assertEquals("Issiq toshishlar", StringsUz.tabs.hotFlushTitle)
+        assertEquals("Hot flushes", StringsEn.tabs.hotFlushTitle)
+        assertEquals("Gynaecologist", StringsEn.doctors.specialty(DoctorSpecialty.GYNECOLOGIST))
+        assertEquals("Paediatrician", StringsEn.doctors.specialty(DoctorSpecialty.PEDIATRICIAN))
+        assertEquals("5 dan 4 yulduz", StringsUz.work.stars(4))
+        languages.forEach { t ->
+            everything(t).forEach { text ->
+                assertTrue("Ortga" !in text && "Sessiya" !in text && "Tibbiy karta" !in text && "Занята" !in text && " дн." !in text, "${t.language}: '$text'")
+            }
+        }
     }
 
     @Test

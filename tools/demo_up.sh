@@ -50,13 +50,41 @@ OLD=$(lsof -ti:8080 -sTCP:LISTEN 2>/dev/null || true)
 [[ -n "$OLD" ]] && kill "$OLD" 2>/dev/null && sleep 3
 # Everything but the tunnel origins comes from the dev environment file; the tunnel
 # hostnames are only known a moment ago, so they are appended rather than written there.
-CORS_EXTRA="$ADMIN,$API" ./tools/server_run.sh dev > "$RUN/server.log" 2>&1 &
+#
+# The tunnel puts this server on the internet, so it does not run as DEV: DEV signs
+# tokens with the key committed in .env.dev, and anyone holding the URL could mint an
+# Owner token. STAGE refuses that key, so the demo gets its own, kept between runs so
+# the phones stay signed in. The fixed code 123456 stays — the demo accounts need it —
+# and so does the instant payment page; 2FA is not forced on the owner, whose password
+# is made private below instead.
+JWT_FILE=$RUN/jwt_secret
+[[ -s $JWT_FILE ]] || openssl rand -hex 32 > "$JWT_FILE"
+SADORA_ENV=STAGE JWT_SECRET=$(cat "$JWT_FILE") BILLING_DEV_PAY=true STORE_ALLOW_TEST_PURCHASES=true \
+  ADMIN_REQUIRE_TOTP=false CORS_EXTRA="$ADMIN,$API" \
+  ./tools/server_run.sh dev > "$RUN/server.log" 2>&1 &
 
 for i in {1..90}; do
   curl -sf localhost:8080/health/ready >/dev/null && break
   sleep 2
 done
 curl -sf localhost:8080/health/ready >/dev/null || { echo "backend did not start; see $RUN/server.log"; exit 1; }
+
+echo "==> admin password"
+# The owner's password on a laptop is changeme123, which sits in this repository. Once
+# the tunnel is up that is a public Owner login, so it is replaced by a random one,
+# saved where seed_demo.py and api_audit.py read it.
+PASS_FILE=$RUN/admin_password
+OWNER=owner@sadora.uz
+TOKEN=$(curl -s localhost:8080/v1/admin/auth/login -H 'Content-Type: application/json' \
+  -d "{\"email\":\"$OWNER\",\"password\":\"changeme123\"}" | sed -n 's/.*"accessToken":"\([^"]*\)".*/\1/p')
+if [[ -n $TOKEN ]]; then
+  NEW="Demo$(openssl rand -hex 8)"
+  curl -sf localhost:8080/v1/admin/me/password -H 'Content-Type: application/json' -H "Authorization: Bearer $TOKEN" \
+    -d "{\"currentPassword\":\"changeme123\",\"newPassword\":\"$NEW\"}" >/dev/null \
+    || { echo "could not replace the published owner password; stopping"; pkill -f "cloudflared tunnel --url"; exit 1; }
+  echo "$NEW" > "$PASS_FILE"
+  chmod 600 "$PASS_FILE"
+fi
 
 echo "==> admin panel"
 OLD=$(lsof -ti:4173 -sTCP:LISTEN 2>/dev/null || true)
@@ -73,6 +101,7 @@ pgrep -x caffeinate >/dev/null || (caffeinate -dimsu >/dev/null 2>&1 &)
 
 {
   echo "Admin panel: $ADMIN"
+  echo "Admin login: owner@sadora.uz / $(cat "$PASS_FILE" 2>/dev/null || echo '(your own password)')"
   echo "API:         $API"
   echo "APK:         $RUN/sadora-online.apk"
 } | tee "$RUN/urls.txt"

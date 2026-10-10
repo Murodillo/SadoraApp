@@ -23,7 +23,7 @@ class PrescriptionDraftTest {
     private val filled = ItemDraft(name = "Amoksitsillin", dose = "500", unit = "mg", food = FoodRelation.AFTER, days = "5")
 
     @Test
-    fun `a medicine is not ready until its name, dose, food relation and length are there`() {
+    fun `a medicine is not ready until its name — dose — food relation and length are there`() {
         assertEquals(ItemProblem.entries.toSet(), ItemDraft().problems())
         assertTrue(filled.problems().isEmpty())
         assertTrue(filled.copy(days = "", ongoing = true).problems().isEmpty(), "an ongoing course needs no length")
@@ -43,7 +43,7 @@ class PrescriptionDraftTest {
     }
 
     @Test
-    fun `the request carries the form's unit when she typed none, sorted times and the interval`() {
+    fun `the request carries the form's unit when she typed none — sorted times and the interval`() {
         val request = PrescriptionDraft(
             listOf(
                 ItemDraft(name = " Magniy ", dose = "1", food = FoodRelation.WITH, ongoing = true, minutes = listOf(21 * 60, 9 * 60)),
@@ -64,7 +64,7 @@ class PrescriptionDraftTest {
     }
 
     @Test
-    fun `there are at most ten medicines, at least one, and a sent one copies back into the form`() {
+    fun `there are at most ten medicines — at least one — and a sent one copies back into the form`() {
         var draft = PrescriptionDraft()
         repeat(20) { draft = draft.addItem() }
         assertEquals(Limits.PRESCRIPTION_ITEMS_MAX, draft.items.size)
@@ -91,7 +91,22 @@ class PrescriptionDraftTest {
     fun `the card's summary line is worded in each language`() {
         val item = PrescriptionDraft(listOf(filled)).toRequest { "" }.items.single()
         assertEquals("500 mg · kuniga 2 marta: 09:00, 21:00 · ovqatdan keyin · 5 kun", PrescriptionStringsUz.summary(item))
-        assertEquals("500 mg · 2 раза в день: 09:00, 21:00 · после еды · 5 дн.", PrescriptionStringsRu.summary(item))
-        assertEquals("500 mg · 2 times a day: 09:00, 21:00 · after food · 5 days", PrescriptionStringsEn.summary(item))
+        assertEquals("500 mg · 2 раза в день: 09:00, 21:00 · после еды · 5 дней", PrescriptionStringsRu.summary(item))
+        assertEquals("500 mg · 2 times a day: 09:00, 21:00 · after food · for 5 days", PrescriptionStringsEn.summary(item))
+    }
+
+    @Test
+    fun `a course that starts later says from which day — and food any reads the same as the patient's card`() {
+        val later = filled.copy(startDay = 3, food = FoodRelation.ANY, minutes = listOf(9 * 60))
+        val item = PrescriptionDraft(listOf(later)).toRequest { "" }.items.single()
+        assertEquals("500 mg · kuniga 1 marta: 09:00 · ovqatdan qat'i nazar · 3-kundan boshlab, 5 kun", PrescriptionStringsUz.summary(item))
+        assertEquals("500 mg · 1 раз в день: 09:00 · независимо от еды · с 3-го дня, 5 дней", PrescriptionStringsRu.summary(item))
+        assertEquals("500 mg · once a day: 09:00 · with or without food · from day 3, for 5 days", PrescriptionStringsEn.summary(item))
+        assertEquals("Ovqatdan qat'i nazar", PrescriptionStringsUz.food(FoodRelation.ANY))
+        assertEquals("Независимо от еды", PrescriptionStringsRu.food(FoodRelation.ANY))
+        assertEquals("With or without food", PrescriptionStringsEn.food(FoodRelation.ANY))
+        assertEquals("1 день", "1 ${uz.sadora.doctor.i18n.ru(1, "день", "дня", "дней")}")
+        assertEquals("Every day", PrescriptionStringsEn.everyDays(1))
+        assertEquals("Раз в 2 дня", PrescriptionStringsRu.everyDays(2))
     }
 }

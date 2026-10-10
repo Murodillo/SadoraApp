@@ -144,7 +144,7 @@ object PregnancyWeeksUz : PregnancyWeekStrings {
         // 6
         "Ko'ngil aynishi va tez-tez siyish ko'p uchraydi. Oz-ozdan, tez-tez ovqatlanish yengillik berishi mumkin. Qon ketsa yoki qorinning bir tomonida kuchli og'riq bo'lsa, darhol shifokorga murojaat qiling.",
         // 7
-        "Ba'zi hidlar va ovqatlar yoqmay qolishi mumkin. Birinchi tashrifni rejalashtirish vaqti keldi.",
+        "Ba'zi hidlar va ovqatlar yoqmay qolishi mumkin. Shifokorga birinchi ko'rikni rejalashtirish vaqti keldi.",
         // 8
         "Bachadon kattalashmoqda. Birinchi ko'rik odatda shu haftalarda bo'ladi — savollaringizni yozib boring.",
         // 9
@@ -170,7 +170,7 @@ object PregnancyWeeksUz : PregnancyWeekStrings {
         // 19
         "Qorin yon tomonlarida sanchiq og'riq bo'lishi mumkin — bachadon boylamlari cho'zilmoqda.",
         // 20
-        "Bachadon tubi kindik darajasiga yetdi. Qimirlashlar aniqroq seziladi.",
+        "Bachadon tubi kindik darajasiga yetdi. Qimirlashlar aniqroq seziladi. Qindan qon ketsa, qorin qattiq og'risa yoki suv ketsa — darhol shifokorga murojaat qiling.",
         // 21
         "Bolaning harakatlari muntazamroq bo'lib qoldi. Uning qachon faol ekanini kuzatib boring.",
         // 22
@@ -182,7 +182,7 @@ object PregnancyWeeksUz : PregnancyWeekStrings {
         // 25
         "Jig'ildon qaynashi va uyqu qiyinlashishi mumkin. Kechki ovqatni ertaroq va yengilroq qiling.",
         // 26
-        "Qon bosimi har tashrifda tekshiriladi. Kuchli bosh og'rig'i, ko'z oldi qorong'ilashishi yoki yuz va qo'llar shishsa, darhol shifokorga ayting.",
+        "Qon bosimi har ko'rikda tekshiriladi. Kuchli bosh og'rig'i, ko'z oldi qorong'ilashishi yoki yuz va qo'llar shishsa, darhol shifokorga ayting.",
         // 27
         "Ikkinchi trimestr tugadi. Oyoqlarda tomir tortishishi bo'lishi mumkin.",
         // 28
@@ -190,11 +190,12 @@ object PregnancyWeeksUz : PregnancyWeekStrings {
         // 29
         "Nafas qisishi va ich qotishi ko'p uchraydi. Tolali ovqat va suv yordam beradi.",
         // 30
-        "Charchoq qaytishi mumkin. Mashq to'lg'oqlari (Brekston-Hiks) — og'riqsiz, notekis qisqarishlar bo'lishi mumkin.",
+        "Charchoq qaytishi mumkin. Mashq to'lg'oqlari (Brekston-Hiks) — og'riqsiz, notekis qisqarishlar bo'lishi mumkin. " +
+            "Qisqarishlar muntazam yoki og'riqli bo'lib qolsa, suv yoki qon ketsa — bu muddatidan oldingi tug'ruq belgisi bo'lishi mumkin: darhol tug'ruqxonaga murojaat qiling.",
         // 31
         "Ko'krakdan ozgina og'iz suti chiqishi mumkin — bu normal holat.",
         // 32
-        "Tez-tez siyishga borish yana boshlandi. Tashriflar ko'proq bo'ladi.",
+        "Tez-tez siyishga borish yana boshlandi. Ko'riklar tez-tez bo'ladi.",
         // 33
         "Uyqu qiyinlashishi mumkin. Tizzalar orasiga yostiq qo'yib, yonboshlab yotish yordam beradi.",
         // 34
@@ -202,9 +203,10 @@ object PregnancyWeeksUz : PregnancyWeekStrings {
         // 35
         "Bola pastga tushganda nafas olish yengillashadi, lekin kichik chanoqqa bosim ortadi. Ba'zi klinikalar 36–37-haftada B guruh streptokokiga (GBS) tahlil oladi.",
         // 36
-        "Endi tashriflar har hafta bo'lishi mumkin. Qimirlashlar kamaysa, kutmasdan shifokorga ayting.",
+        "Endi ko'riklar har hafta bo'lishi mumkin. Qimirlashlar kamaysa, kutmasdan shifokorga ayting.",
         // 37
-        "Tug'ruq belgilarini bilib oling: muntazam to'lg'oqlar, suv ketishi, qonli ajralma.",
+        "Tug'ruq belgilarini bilib oling: muntazam to'lg'oqlar, suv ketishi, shilliq tiqin ko'chishi (ozgina qon aralash shilliq). " +
+            "Qon ko'p ketsa — bu tiqin emas: darhol tug'ruqxonaga boring.",
         // 38
         "Uyni tayyorlash istagi kuchayishi mumkin. Dam olishni ham unutmang.",
         // 39

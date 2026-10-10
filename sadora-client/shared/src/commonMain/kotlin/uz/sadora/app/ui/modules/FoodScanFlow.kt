@@ -170,7 +170,7 @@ private fun Viewfinder(
     val live = access == CameraAccess.Live
 
     Column(modifier.fillMaxSize().navigationBarsPadding()) {
-        SadoraTopBar(t.scannerTitle, onBack = onClose, centered = true)
+        SadoraTopBar(t.scannerTitle, onBack = onClose)
 
         Column(
             Modifier.weight(1f).padding(horizontal = Spacing.screen),
@@ -350,7 +350,7 @@ private fun ScanProblem(
 ) {
     val t = strings.modules
     Column(modifier.fillMaxSize().navigationBarsPadding()) {
-        SadoraTopBar(t.scannerTitle, onBack = onClose, centered = true)
+        SadoraTopBar(t.scannerTitle, onBack = onClose)
 
         Column(
             Modifier.weight(1f).fillMaxWidth().padding(horizontal = Spacing.screen),

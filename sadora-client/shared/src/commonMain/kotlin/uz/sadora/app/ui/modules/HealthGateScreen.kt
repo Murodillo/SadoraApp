@@ -60,10 +60,10 @@ private enum class GateStep {
     /** The ask: what is read, and the button into the store's own sheet. */
     Ask,
 
-    /** Some types allowed, not all: the count, and the way into the store's settings. */
+    /** Some types allowed, not all: the count, going on with them, or the store's settings. */
     Partial,
 
-    /** Health Connect is missing or too old: the Play listing. */
+    /** Health Connect is missing or too old: the Google Play listing, or going on without it. */
     Install,
 
     /** Everything allowed; her history on its way up. */
@@ -80,11 +80,11 @@ private enum class GateStep {
  * The page before the app: every type the phone's health store holds, asked for, and her
  * whole history brought up once.
  *
- * It stands in front of [content] for as long as a type is still refused — the choice
- * was made to make it required — and is checked again each time she comes back from the
- * store's settings. A phone with no store at all goes straight in; so does one whose
- * upload failed, when she chooses to, because the data is already allowed and the next
- * launch picks the import up again.
+ * Asked, never required: she can go on with every type, some or none, and once she has
+ * answered the gate does not stand in front again — the devices screen is where she adds
+ * more later. It is checked again each time she comes back from the store's settings. A
+ * phone with no store at all goes straight in; so does one whose upload failed, when she
+ * chooses to, because the data is already allowed and the next launch picks it up again.
  */
 @Composable
 fun HealthGate(wearables: WearableController, content: @Composable () -> Unit) {
@@ -115,6 +115,11 @@ fun HealthGate(wearables: WearableController, content: @Composable () -> Unit) {
             else -> GateStep.Ask
         }
         if (step == GateStep.Importing) import()
+    }
+
+    /** She goes on with what she allowed; whatever that is comes up now. */
+    suspend fun goOn() {
+        if (wearables.passGate()) import() else step = GateStep.Open
     }
 
     LaunchedEffect(Unit) { recheck() }
@@ -158,6 +163,7 @@ fun HealthGate(wearables: WearableController, content: @Composable () -> Unit) {
                     GateStep.Install -> {
                         Heading(t.install(store), t.installBody(store))
                         SadoraButton(t.installButton, onClick = platform::openStore)
+                        SadoraButton(t.skip, onClick = { scope.launch { goOn() } }, tone = ButtonTone.Secondary)
                     }
                     GateStep.Importing -> {
                         Heading(t.importing, t.importingBody)
@@ -187,14 +193,15 @@ fun HealthGate(wearables: WearableController, content: @Composable () -> Unit) {
                         if (current == GateStep.Partial) {
                             val (granted, total) = counts ?: (0 to 0)
                             SadoraCard {
-                                Text(t.partial(granted, total), style = Sadora.type.h3, color = c.dangerText)
+                                Text(t.partial(granted, total), style = Sadora.type.h3, color = c.textAccent)
                                 Text(t.partialBody, style = Sadora.type.body, color = c.muted)
                             }
-                            SadoraButton(t.openSettings, onClick = platform::openPermissionSettings)
-                            // The sheet again: Health Connect shows it until the second refusal.
-                            SadoraButton(t.allow, onClick = ask, tone = ButtonTone.Secondary)
+                            SadoraButton(t.continueWith, onClick = { scope.launch { goOn() } })
+                            SadoraButton(t.openSettings, onClick = platform::openPermissionSettings, tone = ButtonTone.Secondary)
                         } else {
+                            Text(t.partialBody, style = Sadora.type.body, color = c.muted, textAlign = TextAlign.Center)
                             SadoraButton(t.allow, onClick = ask)
+                            SadoraButton(t.skip, onClick = { scope.launch { goOn() } }, tone = ButtonTone.Secondary)
                         }
                     }
                 }

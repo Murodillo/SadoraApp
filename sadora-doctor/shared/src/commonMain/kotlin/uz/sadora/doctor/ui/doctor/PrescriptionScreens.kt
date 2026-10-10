@@ -446,9 +446,9 @@ private fun TimeRow(minute: Int, onEarlier: () -> Unit, onLater: () -> Unit) {
     ) {
         ArtIcon(Res.drawable.ic3d_clock, 22.dp)
         Box(Modifier.weight(1f))
-        CircleIconButton(SadoraIcons.ChevronLeft, contentDescription = "${clockOf(minute)}: ${p.earlier}", onClick = onEarlier)
+        CircleIconButton(SadoraIcons.ChevronLeft, contentDescription = strings.work.stepEarlier(p.when_, clockOf(minute)), onClick = onEarlier)
         Text(clockOf(minute), style = Sadora.type.h3, color = c.text, textAlign = TextAlign.Center, modifier = Modifier.widthIn(min = 64.dp))
-        CircleIconButton(SadoraIcons.ChevronRight, contentDescription = "${clockOf(minute)}: ${p.later}", onClick = onLater)
+        CircleIconButton(SadoraIcons.ChevronRight, contentDescription = strings.work.stepLater(p.when_, clockOf(minute)), onClick = onLater)
     }
 }
 

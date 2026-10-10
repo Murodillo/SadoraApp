@@ -10,9 +10,10 @@ import uz.sadora.app.model.PregnancyWeeks
  * `StringsTest` checks every list is exactly that long, so a missing week is a failing
  * test rather than a blank card. The numbers live in [uz.sadora.app.model.PregnancyWeeks].
  *
- * The texts are general and deliberately cautious: they describe what is typical, and
- * nothing in them tells her something is wrong. That stays the doctor's, and the
- * check-in's foetal-movement question, which escalates.
+ * The texts are general and deliberately cautious: they describe what is typical and
+ * diagnose nothing. Where a week has a sign that must not wait — bleeding, early labour,
+ * fewer movements — the line says to go to the doctor or the maternity unit; the rest
+ * stays the doctor's, and the check-in's foetal-movement question, which escalates.
  */
 interface PregnancyWeekStrings {
     /** "Bolangiz hozir kivi kattaligida" — [fruit] is already the right form. */

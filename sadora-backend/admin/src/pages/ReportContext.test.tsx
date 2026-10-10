@@ -104,8 +104,8 @@ describe('ReportContextModal', () => {
     stubServer({ '/v1/admin/community/reports/r1/context': () => json(view) })
     wrap(<ReportContextModal report={report} moderate={false} onClose={() => undefined} />)
     await screen.findByRole('list', { name: 'Suhbat parchasi' })
-    expect(screen.queryByRole('button', { name: 'Yashirish' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Rad etish' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Xabarni yashirish' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Shikoyatni yopish (xabar qoladi)' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Yuboruvchini cheklash' })).not.toBeInTheDocument()
   })
 
@@ -118,7 +118,7 @@ describe('ReportContextModal', () => {
     wrap(<ReportContextModal report={report} moderate onClose={onClose} />)
     await screen.findByRole('list', { name: 'Suhbat parchasi' })
 
-    await userEvent.click(screen.getByRole('button', { name: 'Yashirish' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Xabarni yashirish' }))
     await waitFor(() => expect(onClose).toHaveBeenCalled())
     const [path, init] = fetchMock.mock.calls.at(-1) as unknown as [string, RequestInit]
     expect(path).toBe('/v1/admin/community/reports/r1/resolve')

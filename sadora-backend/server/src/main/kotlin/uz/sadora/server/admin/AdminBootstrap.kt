@@ -22,7 +22,8 @@ object AdminBootstrap {
 
     private val logger = LoggerFactory.getLogger(AdminBootstrap::class.java)
 
-    suspend fun run() {
+    /** [strict] outside a laptop: a password that sits in this repository is refused. */
+    suspend fun run(strict: Boolean = false) {
         val email = System.getenv("ADMIN_BOOTSTRAP_EMAIL")?.trim()?.lowercase()
         val password = System.getenv("ADMIN_BOOTSTRAP_PASSWORD")
 
@@ -37,6 +38,13 @@ object AdminBootstrap {
             return
         }
 
+        if (strict && password.lowercase() in AdminAuthService.KNOWN_DEFAULTS) {
+            logger.error(
+                "ADMIN_BOOTSTRAP_PASSWORD is a password published in the repository; the first " +
+                    "admin account was not created. Set a random one.",
+            )
+            return
+        }
         PasswordHasher.validate(password)
         dbQuery {
             AdminUsers.insert {
@@ -45,8 +53,8 @@ object AdminBootstrap {
                 it[passwordHash] = PasswordHasher.hash(password)
                 it[name] = "Owner"
                 it[role] = AdminRole.OWNER.name.lowercase()
-                // 2FA is switched on per account once the operator has enrolled an
-                // authenticator; the enrolment screen is sprint 1 admin work.
+                // Off until she enrols an authenticator on the Security page; where 2FA
+                // is mandatory, that page is all the panel shows her until then.
                 it[totpEnabled] = false
                 it[status] = "active"
                 it[failedAttempts] = 0

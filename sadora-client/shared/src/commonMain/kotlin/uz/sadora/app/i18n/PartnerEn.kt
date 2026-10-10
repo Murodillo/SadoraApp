@@ -5,7 +5,7 @@ import uz.sadora.contract.PartnerMessageKind
 import uz.sadora.contract.PartnerRelation
 
 object PartnerEn : PartnerStrings {
-    override val title = "My person"
+    override val title = "Yaqinim"
     override val profileRowNote = "Share how you are with your husband or someone close"
     override val joinEntry = "I have an invite"
 
@@ -24,13 +24,13 @@ object PartnerEn : PartnerStrings {
     }
     override val createInvite = "Create an invite code"
     override val creating = "Creating…"
-    override val codeTitle = "Send this code to your person"
+    override val codeTitle = "Send this code to someone close"
     override val codeSteps =
-        "They install Sadora, tap “I have an invite” and enter the code. Then you say yes."
+        "They install SADORA, tap “I have an invite” and enter the code. Then you say yes."
     override fun codeExpires(date: String) = "The code works until $date"
-    override val shareCode = "Send the code"
+    override val shareCode = "Send code"
     override fun shareMessage(code: String, url: String?) =
-        "Hi! I'd like to share how I am with you in the Sadora app. Install it, " +
+        "Hi! I'd like to share how I am with you in the SADORA app. Install it, " +
             "tap “I have an invite” and enter this code: $code" + (url?.let { "\n$it" } ?: "")
     override val inviteOut = "Invite sent"
     override fun inviteOutBody(date: String) =
@@ -51,9 +51,9 @@ object PartnerEn : PartnerStrings {
     override val permFertile = "Fertile days"
     override val permFertileNote = "Ovulation and the fertile window"
     override val permMood = "Mood and energy"
-    override val permMoodNote = "The mood you marked today"
+    override val permMoodNote = "The mood and energy you marked today"
     override val permSymptoms = "Symptoms"
-    override val permSymptomsNote = "The names of today's symptoms"
+    override val permSymptomsNote = "The names of every symptom you marked today — intimate ones too"
     override val permPregnancy = "Pregnancy"
     override val permPregnancyNote = "Week and due date, then the baby's age"
     override val permAppointments = "Doctor visits"
@@ -69,11 +69,11 @@ object PartnerEn : PartnerStrings {
         "AI chats, the Chat and doctor consultations",
     )
     override val pause = "Pause for now"
-    override val pauseNote = "They only see that it is paused"
+    override val pauseNote = "They only see that it's paused"
     override val disconnect = "Disconnect"
     override val disconnectConfirmTitle = "Disconnect?"
     override fun disconnectConfirmBody(name: String) =
-        "$name will no longer see how you are. You can connect again later with a new code."
+        "$name will no longer see how you are. They won't be notified. You can connect again later with a new code."
     override val disconnected = "Disconnected"
     override val approved = "Allowed"
     override val followingTitle = "People I follow"
@@ -87,11 +87,11 @@ object PartnerEn : PartnerStrings {
     override val statusActive = "Active"
     override fun requestSent(name: String) = "Request sent — $name needs to allow it"
 
-    override fun pendingTitle(name: String) = "$name has not allowed it yet"
+    override fun pendingTitle(name: String) = "$name hasn't allowed it yet"
     override val pendingBody = "As soon as she does, how she is will show here — we'll let you know."
     override fun pausedViewTitle(name: String) = "$name has paused sharing for now"
     override val pausedViewBody = "When she turns it back on, it will show here again."
-    override fun nothingShared(name: String) = "$name is not sharing anything yet"
+    override fun nothingShared(name: String) = "$name isn't sharing anything yet"
     override val todayHeading = "Today"
     override fun cycleDay(day: Int) = "Cycle day $day"
     override fun periodDay(day: Int) = "Period day $day"
@@ -143,7 +143,7 @@ object PartnerEn : PartnerStrings {
     override val energyLabel = "Energy"
     override val symptomsLabel = "What she feels today"
     override fun pregnancyWeek(week: Int) = "Week $week of pregnancy"
-    override fun daysToGo(days: Int) = if (days <= 0) "The due date has come" else "$days days to go"
+    override fun daysToGo(days: Int) = if (days <= 0) "The due date has come" else "$days ${en(days, "day", "days")} to the due date"
     override fun babySize(fruit: String) = "The baby is about the size of $fruit"
     override fun pregnancyTips(week: Int) = when {
         week <= 13 -> listOf(
@@ -163,12 +163,17 @@ object PartnerEn : PartnerStrings {
             "Know the way to the maternity hospital in advance",
         )
     }
-    override fun babyAge(days: Int) = if (days < 14) "The baby is $days days old" else "The baby is ${days / 7} weeks old"
+    override fun babyAge(days: Int) = if (days < 14) {
+        "The baby is $days ${en(days, "day", "days")} old"
+    } else {
+        "The baby is ${days / 7} weeks old"
+    }
     override val postpartumTips = listOf(
         "Take turns with the baby at night — she needs sleep",
         "Take over meals and housework",
         "If she feels low, listen and don't leave her alone",
         "Keep visitors few — recovery takes time",
+        "If she bleeds heavily, has a fever or talks about harming herself — get a doctor or call 103 straight away",
     )
     override val menopauseTips = listOf(
         "Keep the room cool — hot flushes are easier",
@@ -177,16 +182,16 @@ object PartnerEn : PartnerStrings {
         "Walks together are good for you both",
     )
     override val appointmentsTitle = "Doctor visits"
-    override fun feedsToday(count: Int) = "$count feeds today"
+    override fun feedsToday(count: Int) = "$count ${en(count, "feed", "feeds")} today"
     override fun lastFeed(ago: String) = "Last one $ago"
-    override fun hotFlushesToday(count: Int) = "$count hot flushes today"
+    override fun hotFlushesToday(count: Int) = "$count ${en(count, "hot flush", "hot flushes")} today"
     override val helpTitle = "What would help her today"
     override val leave = "Stop following"
     override fun leaveConfirmBody(name: String) =
-        "You will no longer see how $name is. To connect again you will need a new code."
+        "You'll no longer see how $name is. To connect again you'll need a new code."
 
-    override val emptyFollowingTitle = "You are not following anyone yet"
-    override val emptyFollowingBody = "Enter the invite code your person sent you."
+    override val emptyFollowingTitle = "You're not following anyone yet"
+    override val emptyFollowingBody = "Enter the invite code someone close sent you."
     override val settingsTitle = "Settings"
     override val followAnother = "Enter another code"
 
@@ -199,9 +204,9 @@ object PartnerEn : PartnerStrings {
     override val termsLink = "Terms of use"
     override val privacyLink = "Privacy policy"
 
-    override val labourButton = "Tell my person: labour has started"
-    override val labourConfirmTitle = "Send the message?"
-    override val labourConfirmBody = "They get a “Labour has started!” notification right away."
+    override val labourButton = "Tell Yaqinim: labour has started"
+    override val labourConfirmTitle = "Send this message?"
+    override val labourConfirmBody = "They get a “Labour has started!” notification right away. This doesn't call an ambulance — if you need one, call 103."
     override val labourSend = "Send"
     override val labourSent = "Message sent"
 
@@ -228,28 +233,29 @@ object PartnerEn : PartnerStrings {
     override val customHint = "For example, a walk together tonight?"
     override val send = "Send"
     override val sent = "Sent"
-    override fun unreadCount(count: Int) = "$count new messages"
+    override fun unreadCount(count: Int) = "$count new ${en(count, "message", "messages")}"
 
     override val webTitle = "A link for someone without the app"
     override val webBody =
-        "Someone close who won't install the app sees how you are in a browser. The link works for a few days and you can take it back at any time."
+        "Someone close who won't install the app sees how you are in a browser. Anyone who has the link can open it — only send it to someone you trust. " +
+            "It works for the number of days you choose, and you can take it back at any time."
     override val webShows = "The link shows:"
     override val webCreate = "Create a link"
     override fun webExpires(date: String) = "Works until $date"
-    override fun webViews(count: Int) = "Opened $count times"
+    override fun webViews(count: Int) = if (count == 1) "Opened once" else "Opened $count times"
     override val webNever = "Not opened yet"
-    override val webShare = "Send the link"
+    override val webShare = "Send link"
     override val webRevoke = "Take it back"
     override val webNew = "New link"
-    override fun webShareMessage(url: String) = "You can see how I am at this link (Sadora):\n$url"
+    override fun webShareMessage(url: String) = "You can see how I am at this link (SADORA):\n$url"
     override val webRevoked = "Link taken back"
-    override fun webDays(days: Int) = "$days days"
+    override fun webDays(days: Int) = "$days ${en(days, "day", "days")}"
     override val webOutBody = "To show the link again, create a new one — the old one stops working."
 
     override val askPartner = "Ask Yaqinim 💝"
-    override val askTitle = "Ask someone close"
-    override val askBodyPremium = "They get a notification. Once they pay, Premium opens for you automatically."
-    override val askBodyConsultation = "They get a notification. Once they pay, your chat with the doctor opens automatically."
+    override val askTitle = "Ask Yaqinim"
+    override val askBodyPremium = "They get a notification. Once they pay, Premium opens for you automatically. It's a one-off payment that doesn't renew."
+    override val askBodyConsultation = "They get a notification. Once they pay, your consultation opens automatically. It's a one-off payment."
     override val askPeriod = "Length"
     override fun period(year: Boolean) = if (year) "1 year" else "1 month"
     override val askNoteHint = "A short note (optional)"
@@ -260,7 +266,7 @@ object PartnerEn : PartnerStrings {
     override val shareHint = "You can send the link to someone else too. They can pay with Payme or Click, no app needed."
     override val shareLink = "Share link"
     override fun shareRequestMessage(what: String, url: String) =
-        "Hi! I'd like $what on Sadora — could you help? 💝\n$url"
+        "Hi! I'd like $what on SADORA — would you gift it to me? 💝\n$url"
     override fun requestStatus(status: uz.sadora.contract.PaymentRequestStatus) = when (status) {
         uz.sadora.contract.PaymentRequestStatus.OPEN -> "Waiting for an answer"
         uz.sadora.contract.PaymentRequestStatus.PAID -> "Paid 💝"
@@ -270,12 +276,12 @@ object PartnerEn : PartnerStrings {
     override val cancelRequest = "Cancel request"
     override val requestCancelled = "Request cancelled"
 
-    override fun incomingTitle(name: String) = "$name is asking for your help 💝"
-    override val incomingBody = "Once you pay, it opens for her automatically."
+    override fun incomingTitle(name: String) = "$name is asking you for a gift 💝"
+    override val incomingBody = "A one-off payment that doesn't renew. Once you pay, the gift opens for her straight away."
     override fun giveGift(price: String) = if (price.isBlank()) "Give it" else "Give it · $price"
     override fun payWith(provider: String) = "Pay with $provider"
     override val payWaiting = "Waiting for payment…"
-    override val payReopen = "Open the payment page again"
+    override val payReopen = "Open payment page again"
     override val notNow = "Not now"
     override val giftThanks = "Thank you! Your gift arrived 💝"
     override val giftStorePending = "Waiting for the payment to clear"

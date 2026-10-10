@@ -155,7 +155,7 @@ export function DashboardPage() {
                 data.communityOpenReports > 0 ? (
                   <Link to="/community">Moderatsiya sahifasida →</Link>
                 ) : (
-                  'Navbat bo‘sh'
+                  "Navbat bo'sh"
                 )
               }
             />
@@ -213,7 +213,7 @@ export function DashboardPage() {
           action={
             can(['OWNER']) ? (
               <Link to="/audit" className="faint">
-                Audit log →
+                Audit jurnali →
               </Link>
             ) : undefined
           }

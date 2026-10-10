@@ -20,7 +20,9 @@ import urllib.error
 import urllib.request
 from datetime import date, timedelta
 
-BASE = (sys.argv[1] if len(sys.argv) > 1 else "http://localhost:8080").rstrip("/")
+from dev_target import ADMIN_EMAIL, admin_password, base_url
+
+BASE = base_url()
 V1 = BASE + "/v1"
 TODAY = date.today()
 RESULTS = []
@@ -568,7 +570,7 @@ print("== admin")
 call("admin login wrong", "POST", "/admin/auth/login", (400, 401), {"email": "owner@sadora.uz", "password": "wrong-pass-1"})
 call("admin login unknown", "POST", "/admin/auth/login", (400, 401), {"email": "nobody@sadora.uz", "password": "wrong-pass-1"})
 call("admin login sqli", "POST", "/admin/auth/login", (400, 401), {"email": "' OR 1=1--", "password": "x"})
-s, adm, _ = call("admin login", "POST", "/admin/auth/login", (200, 401, 423), {"email": "owner@sadora.uz", "password": "changeme123"}, note="may be locked after wrong attempts")
+s, adm, _ = call("admin login", "POST", "/admin/auth/login", (200, 401, 423), {"email": ADMIN_EMAIL, "password": admin_password()}, note="may be locked after wrong attempts")
 atok = adm.get("accessToken") if isinstance(adm, dict) else None
 if atok:
     call("admin me", "GET", "/admin/me", 200, token=atok)

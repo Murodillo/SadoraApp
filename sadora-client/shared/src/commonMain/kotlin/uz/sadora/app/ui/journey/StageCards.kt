@@ -5,13 +5,18 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import kotlin.time.Duration.Companion.seconds
+import kotlinx.coroutines.launch
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.daysUntil
 import kotlinx.datetime.plus
 import uz.sadora.app.data.HealthController
+import uz.sadora.app.data.SadoraController
+import uz.sadora.app.data.readable
+import uz.sadora.app.data.recountStageWeeks
 import uz.sadora.app.data.StageEventsController
 import uz.sadora.app.design.Sadora
 import uz.sadora.app.design.Spacing
@@ -22,6 +27,8 @@ import uz.sadora.app.model.LifeStage
 import uz.sadora.app.nav.Route
 import uz.sadora.app.ui.components.ButtonTone
 import uz.sadora.app.ui.components.CardLabel
+import uz.sadora.app.ui.components.ErrorStrip
+import uz.sadora.app.ui.components.SadoraBottomSheet
 import uz.sadora.app.ui.components.SadoraButton
 import uz.sadora.app.ui.components.SadoraCard
 import uz.sadora.contract.CycleStatus
@@ -150,9 +157,13 @@ internal fun DoctorFlagsCard(flags: List<String>, onOpen: (Route) -> Unit) {
 
 // ---------------------------------------------------------------- moving on
 
-/** From week 37, or once the due date has passed: has the baby come? */
+/**
+ * From week 37, or once the due date has passed: has the baby come? Under it, quietly,
+ * the way out for a pregnancy that ended otherwise — [onEndedDifferently] raises the
+ * shell's [PregnancyEndedSheet].
+ */
 @Composable
-internal fun BirthPromptCard(state: AppState, onOpen: (Route) -> Unit) {
+internal fun BirthPromptCard(state: AppState, onOpen: (Route) -> Unit, onEndedDifferently: () -> Unit) {
     val t = strings.tools
     val c = Sadora.colors
     SadoraCard {
@@ -162,6 +173,42 @@ internal fun BirthPromptCard(state: AppState, onOpen: (Route) -> Unit) {
             state.pendingStage = LifeStage.Postpartum
             onOpen(Route.LifeStageSettings)
         })
+        SadoraButton(t.lossButton, onClick = onEndedDifferently, tone = ButtonTone.Ghost)
+    }
+}
+
+/**
+ * A pregnancy that did not end in a birth: a gentle word, and — only if she wants it —
+ * back to cycle tracking through the same save the stage settings use, which also stops
+ * the pregnancy reminders. Nothing here celebrates: no badge, no confetti, no toast.
+ */
+@Composable
+fun PregnancyEndedSheet(visible: Boolean, state: AppState, controller: SadoraController, onDismiss: () -> Unit) {
+    val t = strings.tools
+    val c = Sadora.colors
+    val scope = rememberCoroutineScope()
+    SadoraBottomSheet(visible = visible, title = t.lossTitle, onDismiss = onDismiss) {
+        Text(t.lossBody, style = Sadora.type.body, color = c.muted)
+        controller.error?.let { ErrorStrip(it.readable()) }
+        SadoraButton(
+            if (controller.busy) strings.common.saving else t.lossConfirm,
+            enabled = !controller.busy,
+            onClick = {
+                val previous = state.lifeStage
+                state.lifeStage = LifeStage.Cycle
+                scope.launch {
+                    if (controller.saveProfile(withStageDate = true)) {
+                        state.recountStageWeeks()
+                        state.stageRevision++
+                        onDismiss()
+                    } else {
+                        // Refused: the app stays on the stage the server still has.
+                        state.lifeStage = previous
+                    }
+                }
+            },
+        )
+        SadoraButton(t.lossLater, onClick = onDismiss, tone = ButtonTone.Secondary)
     }
 }
 

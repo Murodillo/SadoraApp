@@ -4,7 +4,7 @@ import type { AdminDoctorQuality, DoctorPayoutView, EarningLine } from '../api/t
 import { useAuth } from '../auth/AuthContext'
 import { Avatar } from '../components/Avatar'
 import { useToast } from '../components/toast'
-import { Card, Empty, ErrorNotice, Field, formatDate, formatDateTime, Loading, Spinner } from '../components/ui'
+import { Card, ConfirmDialog, Empty, ErrorNotice, Field, formatDate, formatDateTime, Loading, Spinner } from '../components/ui'
 import {
   canManageMoney,
   formatMinutes,
@@ -384,6 +384,7 @@ function PayoutForm({ doctorId, balanceMinor }: { doctorId: string; balanceMinor
   const [open, setOpen] = useState(false)
   const [amount, setAmount] = useState('')
   const [note, setNote] = useState('')
+  const [confirming, setConfirming] = useState(false)
   const amountMinor = parseSomToMinor(amount)
   const overBalance = amountMinor !== null && amountMinor > balanceMinor
 
@@ -391,11 +392,17 @@ function PayoutForm({ doctorId, balanceMinor }: { doctorId: string; balanceMinor
     setOpen(false)
     setAmount('')
     setNote('')
+    setConfirming(false)
     add.reset()
   }
 
   function submit(event: React.FormEvent) {
     event.preventDefault()
+    if (amountMinor === null || overBalance) return
+    setConfirming(true)
+  }
+
+  function record() {
     if (amountMinor === null) return
     add.mutate(
       { id: doctorId, amountMinor, note: note.trim() || undefined },
@@ -404,7 +411,10 @@ function PayoutForm({ doctorId, balanceMinor }: { doctorId: string; balanceMinor
           notify(`To'lov qo'shildi: ${formatSom(amountMinor)}`, 'ok')
           reset()
         },
-        onError: (error) => notify(error instanceof Error ? error.message : String(error), 'error'),
+        onError: (error) => {
+          setConfirming(false)
+          notify(error instanceof Error ? error.message : String(error), 'error')
+        },
       },
     )
   }
@@ -438,7 +448,9 @@ function PayoutForm({ doctorId, balanceMinor }: { doctorId: string; balanceMinor
         <div className="notice error">Musbat summa kiriting, masalan 150 000.</div>
       )}
       {overBalance && (
-        <div className="notice">Summa qoldiqdan ({formatSom(balanceMinor)}) katta — shunday bo'lishi kerakmi?</div>
+        <div className="notice error" id="payout-over-balance">
+          Summa qoldiqdan ({formatSom(balanceMinor)}) katta. Qoldiqdan ko'p to'lov yozib bo'lmaydi — summani tekshiring.
+        </div>
       )}
       <Field label={`Izoh (ixtiyoriy, ${note.trim().length}/${NOTE_MAX})`}>
         <input value={note} maxLength={NOTE_MAX} onChange={(event) => setNote(event.target.value)} placeholder="Masalan: sentyabr, karta orqali" />
@@ -448,11 +460,30 @@ function PayoutForm({ doctorId, balanceMinor }: { doctorId: string; balanceMinor
         <button type="button" className="btn ghost" onClick={reset}>
           Bekor qilish
         </button>
-        <button type="submit" className="btn primary" disabled={amountMinor === null || add.isPending}>
-          {add.isPending && <Spinner />}
-          {add.isPending ? 'Saqlanmoqda…' : amountMinor !== null ? `${formatSom(amountMinor)} qo'shish` : "To'lov qo'shish"}
+        <button
+          type="submit"
+          className="btn primary"
+          disabled={amountMinor === null || overBalance || add.isPending}
+          aria-describedby={overBalance ? 'payout-over-balance' : undefined}
+        >
+          {amountMinor !== null ? `${formatSom(amountMinor)} qo'shish` : "To'lov qo'shish"}
         </button>
       </div>
+      {confirming && amountMinor !== null && (
+        <ConfirmDialog
+          title="To'lov yozilsinmi?"
+          confirmLabel="To'lovni yozish"
+          pendingLabel="Yozilmoqda…"
+          pending={add.isPending}
+          onClose={() => setConfirming(false)}
+          onConfirm={record}
+        >
+          <p className="muted" style={{ margin: 0 }}>
+            Shifokorga <strong>{formatSom(amountMinor)}</strong> o'tkazilgan deb yoziladi va qoldiqdan ayriladi. Pulni
+            bank yoki karta orqali avval o'zingiz o'tkazgan bo'lishingiz kerak — panel pul yubormaydi.
+          </p>
+        </ConfirmDialog>
+      )}
     </form>
   )
 }

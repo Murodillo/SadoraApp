@@ -103,7 +103,7 @@ class BillingService(
             // A store purchase happens inside the platform's own sheet; there is no URL
             // to send her to, and the receipt comes back to /store/verify afterwards.
             PaymentProvider.APP_STORE, PaymentProvider.GOOGLE_PLAY ->
-                throw ValidationException("provider", "Store xaridi ilova ichida bo'ladi")
+                throw ValidationException("provider", "App Store yoki Google Play xaridi ilova ichida bo'ladi")
         }
 
         return CheckoutSession(
@@ -205,17 +205,16 @@ class BillingService(
         }
 
         val subscriptionId = try {
-            val current = entitlements.subscriptionStatus(transaction.userId)
             // Renewing before the old one lapses extends it rather than throwing the rest
-            // away; anything expired starts from now.
-            val startsFrom = current.expiresAt?.takeIf { it > now() } ?: now()
-            subscriptions.grant(
+            // away. Keyed by this payment: a provider's retry that arrives after the claim
+            // but before the subscription is attached finds it granted and adds nothing.
+            subscriptions.extend(
                 userId = transaction.userId,
                 source = transaction.provider.asSubscriptionSource(),
-                expiresAt = startsFrom + plan.period.duration(),
+                by = plan.period.duration(),
                 productId = plan.id,
                 externalId = transaction.externalId,
-                reason = "payment ${transaction.id}",
+                onceFor = "payment ${transaction.id}",
             )
         } catch (e: Throwable) {
             repository.releasePaid(transaction.id, transaction.state)
@@ -228,13 +227,13 @@ class BillingService(
     // ---------------------------------------------------------------- consultations
 
     /**
-     * The providers a consultation can be paid with. Outside production, with no provider
+     * The providers a consultation can be paid with. With [BillingConfig.devPay] on and no provider
      * configured, both are offered and the link goes to [DEV_PAY_PATH] — a page on this
      * server that pays at once — so the whole flow can be tried without merchant keys.
      */
     suspend fun consultationProviders(userId: Uuid): List<PaymentProvider> {
         val live = catalogue(userId).providers.filter { it == PaymentProvider.PAYME || it == PaymentProvider.CLICK }
-        if (live.isNotEmpty() || environment == Environment.PROD) return live
+        if (live.isNotEmpty() || !config.devPay) return live
         return listOf(PaymentProvider.PAYME, PaymentProvider.CLICK)
     }
 
@@ -320,7 +319,7 @@ class BillingService(
         frame: String? = null,
     ): CheckoutSession {
         if (provider != PaymentProvider.PAYME && provider != PaymentProvider.CLICK) {
-            throw ValidationException("provider", "Store xaridi ilova ichida bo'ladi")
+            throw ValidationException("provider", "App Store yoki Google Play xaridi ilova ichida bo'ladi")
         }
         if (provider !in consultationProviders(beneficiaryId)) throw FeatureDisabledException(provider.name.lowercase())
         val transaction = repository.createTransaction(
@@ -351,12 +350,12 @@ class BillingService(
     }
 
     /**
-     * The development page's payment: refused in production, and only for a consultation,
+     * The development page's payment: refused unless [BillingConfig.devPay] is on, and only for a consultation,
      * a pet, a frame, or someone else's payment still pending. Everything after it is the same path a real
      * provider's callback takes.
      */
     suspend fun devPay(transactionId: Uuid): Boolean {
-        if (environment == Environment.PROD) return false
+        if (!config.devPay) return false
         val transaction = repository.transaction(transactionId) ?: return false
         if (transaction.consultationSessionId == null && transaction.paymentRequestId == null &&
             transaction.pet == null && transaction.frame == null

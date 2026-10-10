@@ -275,17 +275,20 @@ class IosHealthSyncPrefs : HealthSyncPrefs {
         userId = defaults.stringForKey(KeyUser),
         enabled = defaults.boolForKey(KeyEnabled),
         lastSyncAt = defaults.doubleForKey(KeyLastSync).takeIf { it > 0 }?.let { Instant.fromEpochMilliseconds(it.toLong()) },
+        gatePassed = defaults.boolForKey(KeyGatePassed),
     )
 
     override suspend fun save(state: HealthSyncState) {
         if (state.userId != null) defaults.setObject(state.userId, KeyUser) else defaults.removeObjectForKey(KeyUser)
         defaults.setBool(state.enabled, KeyEnabled)
         defaults.setDouble(state.lastSyncAt?.toEpochMilliseconds()?.toDouble() ?: 0.0, KeyLastSync)
+        defaults.setBool(state.gatePassed, KeyGatePassed)
     }
 
     private companion object {
         const val KeyUser = "sadora.health.user"
         const val KeyEnabled = "sadora.health.enabled"
         const val KeyLastSync = "sadora.health.lastSyncMs"
+        const val KeyGatePassed = "sadora.health.gatePassed"
     }
 }

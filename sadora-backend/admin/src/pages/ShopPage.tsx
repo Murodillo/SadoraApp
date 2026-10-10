@@ -9,7 +9,7 @@ import type { AdminShopProduct, SaveShopProductBody, ShopKind } from '../api/typ
 import { useAuth } from '../auth/AuthContext'
 import { acceptSlug, slugPattern } from '../api/limits'
 import { useToast } from '../components/toast'
-import { Card, ErrorNotice, Field, Loading, Modal, Spinner, Switch, TabPanel, Tabs } from '../components/ui'
+import { Card, ConfirmDialog, ErrorNotice, Field, Loading, Modal, Spinner, Switch, TabPanel, Tabs } from '../components/ui'
 
 const KINDS: { value: ShopKind; label: string }[] = [
   { value: 'premium', label: 'Obuna (Premium)' },
@@ -31,14 +31,14 @@ const TABS: { kind: ShopKind; label: string; title: string; add: string; notice:
     label: 'Qurilmalar',
     title: 'Qurilmalar',
     add: 'Yangi qurilma',
-    notice: 'Soat, bilaguzuk va uzuklar hamkor do‘konlarda sotiladi — bu yerda faqat chegirma foizi va u qancha gul turishi belgilanadi.',
+    notice: "Soat, bilaguzuk va uzuklar hamkor do'konlarda sotiladi — bu yerda faqat chegirma foizi va u qancha Gul turishi belgilanadi.",
   },
   {
     kind: 'vitamin',
     label: 'Dorilar',
     title: 'Dorilar va vitaminlar',
     add: 'Yangi dori',
-    notice: 'Vitamin va dorilar hamkor dorixonalarda sotiladi — bu yerda faqat chegirma foizi va u qancha gul turishi belgilanadi.',
+    notice: 'Vitamin va dorilar hamkor dorixonalarda sotiladi — bu yerda faqat chegirma foizi va u qancha Gul turishi belgilanadi.',
   },
 ]
 
@@ -83,6 +83,7 @@ export function ShopPage() {
   const [slug, setSlug] = useState('')
   const [form, setForm] = useState<SaveShopProductBody>(EMPTY)
   const [tab, setTab] = useState<ShopKind>('premium')
+  const [removing, setRemoving] = useState<AdminShopProduct | null>(null)
 
   if (products.isLoading) return <Loading rows={8} />
   if (products.error) return <ErrorNotice error={products.error} />
@@ -143,7 +144,7 @@ export function ShopPage() {
         { slug: acceptSlug(slug), product: body },
         {
           onSuccess: () => {
-            notify(`${body.title} katalogga qo‘shildi`)
+            notify(`${body.title} katalogga qo'shildi`)
             setCreating(false)
           },
         },
@@ -234,28 +235,15 @@ export function ShopPage() {
                       <td>{product.coinCost.toLocaleString('ru-RU')}</td>
                       <td>{product.stock ?? '∞'}</td>
                       <td>{product.redeemed}</td>
-                      <td>{product.active ? 'ha' : 'yo‘q'}</td>
+                      <td>{product.active ? 'ha' : "yo'q"}</td>
                       <td style={{ whiteSpace: 'nowrap' }}>
                         {editable && (
                           <>
                             <button className="btn ghost small" onClick={() => openEdit(product)}>
                               Tahrirlash
                             </button>{' '}
-                            <button
-                              className="btn ghost small"
-                              onClick={() => {
-                                const warning = product.redeemed
-                                  ? `${product.title}: ${product.redeemed} ta kod berilgan, shuning uchun o‘chirilmaydi — faqat yashiriladi. Davom etamizmi?`
-                                  : `${product.title} o‘chirilsinmi?`
-                                if (confirm(warning)) {
-                                  remove.mutate(product.id, {
-                                    onSuccess: () =>
-                                      notify(product.redeemed ? `${product.title} yashirildi` : `${product.title} o‘chirildi`, 'info'),
-                                  })
-                                }
-                              }}
-                            >
-                              O‘chirish
+                            <button className="btn ghost small" onClick={() => setRemoving(product)}>
+                              O'chirish
                             </button>
                           </>
                         )}
@@ -265,7 +253,7 @@ export function ShopPage() {
                   {!rows.length && (
                     <tr>
                       <td colSpan={premium ? 7 : 8} className="faint">
-                        Bu bo‘limda hozircha mahsulot yo‘q
+                        Bu bo'limda hozircha mahsulot yo'q
                       </td>
                     </tr>
                   )}
@@ -275,6 +263,32 @@ export function ShopPage() {
           </Card>
         </div>
       </TabPanel>
+
+      {removing && (
+        <ConfirmDialog
+          title={removing.redeemed ? `«${removing.title}» yashirilsinmi?` : `«${removing.title}» o'chirilsinmi?`}
+          confirmLabel={removing.redeemed ? 'Yashirish' : "O'chirish"}
+          pendingLabel={removing.redeemed ? 'Yashirilmoqda…' : "O'chirilmoqda…"}
+          danger
+          pending={remove.isPending}
+          onClose={() => setRemoving(null)}
+          onConfirm={() =>
+            remove.mutate(removing.id, {
+              onSuccess: () => {
+                notify(removing.redeemed ? `«${removing.title}» yashirildi` : `«${removing.title}» o'chirildi`, 'info')
+                setRemoving(null)
+              },
+            })
+          }
+        >
+          <p className="muted" style={{ margin: 0 }}>
+            {removing.redeemed
+              ? `Bu mahsulot uchun ${removing.redeemed} ta kod berilgan, shuning uchun u o'chirilmaydi — faqat ilovada ko'rinmay qoladi.`
+              : "Mahsulot katalogdan butunlay o'chiriladi. Buni qaytarib bo'lmaydi."}
+          </p>
+          {remove.error && <ErrorNotice error={remove.error} />}
+        </ConfirmDialog>
+      )}
 
       {open && (
       <Modal
@@ -287,7 +301,7 @@ export function ShopPage() {
       >
         <div className="grid" style={{ gap: 12 }}>
           {!editing && (
-            <Field label="Slug (o‘zgarmaydi)">
+            <Field label="Havoladagi nomi (lotincha, keyin o'zgarmaydi)">
               <input
                 value={slug}
                 onChange={(event) => setSlug(acceptSlug(event.target.value))}
@@ -332,7 +346,7 @@ export function ShopPage() {
                   placeholder="Solgar"
                 />
               </Field>
-              <Field label="Narxi (so‘m)">
+              <Field label="Narxi (so'm)">
                 <input
                   type="number"
                   min={0}
@@ -351,7 +365,7 @@ export function ShopPage() {
                   onChange={(event) => setForm({ ...form, discountPercent: Number(event.target.value) })}
                 />
               </Field>
-              <Field label="Zaxira (bo‘sh — cheksiz)">
+              <Field label="Zaxira (bo'sh — cheksiz)">
                 <input
                   type="number"
                   min={0}
@@ -378,7 +392,7 @@ export function ShopPage() {
             </Field>
           )}
 
-          <Field label="Narxi (gul)">
+          <Field label="Narxi (Gul)">
             <input
               type="number"
               min={0}
@@ -403,7 +417,7 @@ export function ShopPage() {
             />
           </Field>
 
-          <Switch label="Ilovada ko‘rinsin" checked={form.active} onChange={(active) => setForm({ ...form, active })} />
+          <Switch label="Ilovada ko'rinsin" checked={form.active} onChange={(active) => setForm({ ...form, active })} />
 
           {/* What the user will actually see, computed the same way the app computes it.
               A discount is easy to mistype as a coin price, and this line catches it. */}
@@ -411,10 +425,10 @@ export function ShopPage() {
             <div className="notice">
               Ilovada:{' '}
               <b>
-                {Math.round(form.priceUzs - (form.priceUzs * form.discountPercent) / 100).toLocaleString('ru-RU')} so‘m
+                {Math.round(form.priceUzs - (form.priceUzs * form.discountPercent) / 100).toLocaleString('ru-RU')} so'm
               </b>{' '}
-              <span className="faint">({form.priceUzs.toLocaleString('ru-RU')} so‘m o‘rniga)</span> ·{' '}
-              {form.coinCost.toLocaleString('ru-RU')} gul
+              <span className="faint">({form.priceUzs.toLocaleString('ru-RU')} so'm o'rniga)</span> ·{' '}
+              {form.coinCost.toLocaleString('ru-RU')} Gul
             </div>
           ) : null}
 

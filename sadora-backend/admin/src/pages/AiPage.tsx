@@ -82,12 +82,12 @@ export function AiPage() {
             <Stat
               label="Model yozgan"
               value={report.modelCalls}
-              hint={report.model ?? 'model yo‘q'}
+              hint={report.model ?? "model yo'q"}
             />
             <Stat
               label="Qoidalarga tushgan"
               value={report.fallbacks}
-              hint={report.fallbacks > 0 ? 'model javob bera olmadi' : 'nosozlik yo‘q'}
+              hint={report.fallbacks > 0 ? 'model javob bera olmadi' : "nosozlik yo'q"}
             />
             <Stat label="Xarajat" value={money(report.costMicros)} hint={`${report.promptTokens + report.completionTokens} token`} />
             <Stat
@@ -125,7 +125,7 @@ export function AiPage() {
                   flag &&
                   updateFlag.mutate(
                     { key: MODEL_FLAG, enabled, defaultValue: flag.defaultValue },
-                    { onSuccess: () => notify(enabled ? 'Model javob yozmoqda' : 'Model o‘chirildi — qoidalar javob beradi', enabled ? 'ok' : 'info') },
+                    { onSuccess: () => notify(enabled ? 'Model javob yozmoqda' : "Model o'chirildi — qoidalar javob beradi", enabled ? 'ok' : 'info') },
                   )
                 }
               />

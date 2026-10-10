@@ -282,7 +282,7 @@ class CommunityModerationService(
     /** Silences the sender of a reported message, named by the report and never by account. */
     suspend fun restrictSender(reportId: Uuid, request: RestrictAuthorRequest, admin: AdminPrincipal, context: RequestContext) {
         val reason = request.reason.trim()
-        if (reason.isEmpty()) throw ValidationException("reason", "Sabab ko'rsatilishi shart")
+        if (reason.isEmpty()) throw ValidationException("reason", "Sababini yozing")
         request.days?.let { if (it !in 1..365) throw ValidationException("days", "1–365 kun oralig'ida") }
         val (_, messageId) = messaging.messageReport(reportId) ?: throw NotFoundException("Xabar shikoyati topilmadi")
         val until = request.days?.let { now() + it.days }
@@ -367,7 +367,7 @@ class CommunityModerationService(
      */
     suspend fun restrictAuthor(postId: Uuid, request: RestrictAuthorRequest, admin: AdminPrincipal, context: RequestContext) {
         val reason = request.reason.trim()
-        if (reason.isEmpty()) throw ValidationException("reason", "Sabab ko'rsatilishi shart")
+        if (reason.isEmpty()) throw ValidationException("reason", "Sababini yozing")
         request.days?.let { if (it !in 1..365) throw ValidationException("days", "1–365 kun oralig'ida") }
         val until = request.days?.let { now() + it.days }
         if (!repository.restrictAuthorOf(postId, reason, until, admin.adminId)) throw NotFoundException("Post topilmadi")
@@ -385,7 +385,7 @@ class CommunityModerationService(
 
     private fun HideRequest.reasonOrThrow(): String? {
         val trimmed = reason?.trim()?.takeIf { it.isNotEmpty() }
-        if (hidden && trimmed == null) throw ValidationException("reason", "Sabab ko'rsatilishi shart")
+        if (hidden && trimmed == null) throw ValidationException("reason", "Sababini yozing")
         return trimmed
     }
 

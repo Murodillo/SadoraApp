@@ -129,7 +129,7 @@ fun Application.configureStatusPages() {
                 ApiErrorResponse(
                     ApiError(
                         code = ErrorCodes.NOT_FOUND,
-                        message = "Bunday endpoint yo'q",
+                        message = "Bunday sahifa yo'q",
                         requestId = call.callId,
                     ),
                 ),

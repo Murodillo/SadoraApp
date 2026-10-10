@@ -21,6 +21,7 @@ class SadoraMessagingService : FirebaseMessagingService() {
             body = notification.body,
             notificationId = message.data["notificationId"],
             link = message.data[PushNotifications.EXTRA_LINK],
+            category = message.data[PushNotifications.EXTRA_CATEGORY],
         )
     }
 }

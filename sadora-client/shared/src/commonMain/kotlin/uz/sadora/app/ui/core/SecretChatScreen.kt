@@ -164,20 +164,15 @@ fun SecretChatScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(Spacing.xxs),
                     ) {
-                        RoundIconButton(SadoraIcons.Info, onClick = onOpenRules, filled = false, contentDescription = t.rulesTitle)
+                        // Three, not five: the rules and the doctors' directory are named
+                        // links under the bar, where nobody has to guess what a glyph means.
                         FilterIconButton(active = state.communityFiltered, onClick = onOpenFilters, contentDescription = t.filtersTitle)
-                        RoundIconButton(
-                            SadoraIcons.Stethoscope,
-                            onClick = onOpenDoctors,
-                            filled = false,
-                            contentDescription = strings.doctors.directoryTitle,
-                        )
                         UnreadIconButton(count = state.communityUnread, onClick = onOpenMessages, contentDescription = t.messagesTitle)
                         RoundIconButton(SadoraIcons.Pencil, onClick = onCompose, contentDescription = t.compose)
                     }
                 },
             )
-            // Under the bar rather than in it: beside five buttons the line had a third
+            // Under the bar rather than in it: beside the buttons the line had a third
             // of the width and broke into four.
             // A verified doctor is not anonymous here, and the header says so.
             Text(
@@ -187,21 +182,41 @@ fun SecretChatScreen(
                 color = c.muted,
                 modifier = Modifier.padding(horizontal = Spacing.screen).padding(bottom = Spacing.xxs),
             )
-            // Her alias is the door to her own page: the bio, the badges, the door switch.
-            state.communityAlias?.let { alias ->
-                Row(
-                    Modifier
-                        .padding(horizontal = Spacing.screen)
-                        .clip(Radius.chip)
-                        .noRippleClickable { onOpenProfile(alias) }
-                        .padding(vertical = 2.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
-                ) {
-                    WornBadgeMark(state.wornBadge, size = 24.dp)
-                    BadgeRow(state.communityBadges, max = 3)
-                    Text(t.viewProfile, style = Sadora.type.caption.copy(letterSpacing = TextUnit.Unspecified), color = c.textAccent)
+            val link = Sadora.type.caption.copy(letterSpacing = TextUnit.Unspecified)
+            Row(
+                Modifier.padding(horizontal = Spacing.screen),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+            ) {
+                // Her alias is the door to her own page: the bio, the badges, the door switch.
+                state.communityAlias?.let { alias ->
+                    Row(
+                        Modifier
+                            .clip(Radius.chip)
+                            .noRippleClickable { onOpenProfile(alias) }
+                            .padding(vertical = 2.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+                    ) {
+                        WornBadgeMark(state.wornBadge, size = 24.dp)
+                        BadgeRow(state.communityBadges, max = 3)
+                        Text(t.viewProfile, style = link, color = c.textAccent)
+                    }
+                    Text("·", style = link, color = c.muted)
                 }
+                Text(
+                    t.doctorsLink,
+                    style = link,
+                    color = c.textAccent,
+                    modifier = Modifier.clip(Radius.chip).noRippleClickable(role = Role.Button, onClick = onOpenDoctors).padding(vertical = 2.dp),
+                )
+                Text("·", style = link, color = c.muted)
+                Text(
+                    t.rulesLink,
+                    style = link,
+                    color = c.textAccent,
+                    modifier = Modifier.clip(Radius.chip).noRippleClickable(role = Role.Button, onClick = onOpenRules).padding(vertical = 2.dp),
+                )
             }
 
             // Over a feed that is showing; with no feed the error is the state below.

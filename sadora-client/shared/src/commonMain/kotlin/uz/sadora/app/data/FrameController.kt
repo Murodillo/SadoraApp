@@ -145,6 +145,28 @@ class FrameController(
         }
     }
 
+    /**
+     * Paid frames bought in the store whose verification never landed: posted again, and
+     * finished once the server has them. Nothing when nothing is unfinished.
+     */
+    suspend fun reconcileStore() {
+        val api = api ?: return
+        val store = store ?: return
+        val receipts = runCatching { store.unfinishedKeepsakes() }.getOrDefault(emptyList())
+        if (receipts.isEmpty()) return
+        if (board == null) load()
+        val products = board?.frames?.mapNotNull { it.product }.orEmpty()
+        receipts.forEach { receipt ->
+            val product = products.firstOrNull { storeProductId(it) == receipt.productId } ?: return@forEach
+            val next = calls.run(silent = true) {
+                api.buyInStore(FrameStorePurchase(product.key, store.provider, receipt.productId, receipt.token))
+            } ?: return@forEach
+            runCatching { store.finish(receipt) }
+            storePending = false
+            apply(next)
+        }
+    }
+
     fun storeProductId(product: FrameProduct): String? = when (store?.provider) {
         PaymentProvider.GOOGLE_PLAY -> product.googlePlayProductId
         PaymentProvider.APP_STORE -> product.appStoreProductId

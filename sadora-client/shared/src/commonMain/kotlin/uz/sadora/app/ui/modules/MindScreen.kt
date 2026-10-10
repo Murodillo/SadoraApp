@@ -120,7 +120,7 @@ fun MindScreen(
 
     Box(modifier) {
         Column {
-            SadoraTopBar(t.title, onBack = onClose, centered = true)
+            SadoraTopBar(t.title, onBack = onClose)
             underBar?.invoke()
 
             ScreenContent {
@@ -129,8 +129,6 @@ fun MindScreen(
                         t.todayIs(strings.dates.dayMonth(state.today)),
                         style = Sadora.type.body,
                         color = c.muted,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.fillMaxWidth(),
                     )
                 }
 
@@ -370,13 +368,23 @@ private fun DialCard(
                         .semantics { contentDescription = "$label: $word" },
                     contentAlignment = Alignment.Center,
                 ) {
+                    // Numbered steps rather than 6dp dashes: a row of thin lines under
+                    // "Tanlang" did not read as something to tap.
+                    val on = level != null && step <= level
                     Box(
                         Modifier
                             .fillMaxWidth()
-                            .height(6.dp)
+                            .height(30.dp)
                             .clip(Radius.chip)
-                            .background(if (level != null && step <= level) color else c.surface2),
-                    )
+                            .background(if (on) color else c.surface2),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            "$step",
+                            style = Sadora.type.caption.copy(letterSpacing = TextUnit.Unspecified),
+                            color = if (on) c.onPrimary else c.muted,
+                        )
+                    }
                 }
             }
         }

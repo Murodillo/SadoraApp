@@ -78,6 +78,7 @@ class FcmPushSender(
                                 // Where a tap lands: the app routes it like any link of its own.
                                 record.link?.let { put("link", it) }
                             },
+                            android = channelFor(record)?.let { FcmAndroid(FcmAndroidNotification(it)) },
                         ),
                     ),
                 )
@@ -106,6 +107,26 @@ class FcmPushSender(
 
     companion object {
         const val SCOPE = "https://www.googleapis.com/auth/firebase.messaging"
+
+        /** The women's app's channels; its manifest names the reminders one as the default. */
+        const val CHANNEL_MESSAGES = "sadora_messages"
+        const val CHANNEL_REMINDERS = "sadora_reminders"
+
+        /**
+         * Which Android channel shows [record] while the app is in the background, when
+         * the system and not the app posts it. A person writing to her — a private
+         * message, a doctor, Yaqinim — rings on its own channel, so she can silence
+         * reminders without missing them. The doctor app has one channel of its own and
+         * is left to its default.
+         */
+        internal fun channelFor(record: OutboxRecord): String? {
+            if (record.targetApp != TARGET_CLIENT) return null
+            val link = record.link.orEmpty()
+            val message = record.category == uz.sadora.contract.NotificationCategory.PARTNER ||
+                link.startsWith("sadora://conversation") ||
+                link.startsWith("sadora://yaqinim")
+            return if (message) CHANNEL_MESSAGES else CHANNEL_REMINDERS
+        }
     }
 }
 
@@ -117,7 +138,14 @@ private data class FcmMessage(
     val token: String,
     val notification: FcmNotification,
     val data: Map<String, String>,
+    val android: FcmAndroid? = null,
 )
+
+@Serializable
+private data class FcmAndroid(val notification: FcmAndroidNotification)
+
+@Serializable
+private data class FcmAndroidNotification(@kotlinx.serialization.SerialName("channel_id") val channelId: String)
 
 @Serializable
 private data class FcmNotification(val title: String, val body: String)

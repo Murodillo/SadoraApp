@@ -62,7 +62,7 @@ export function EarningsPage() {
   if (earnings.isPending) {
     return (
       <div className="grid" style={{ gap: 16 }}>
-        <div className="grid stat-row">
+        <div className="grid stat-row money">
           {Array.from({ length: 6 }, (_, index) => (
             <div key={index} className="card stat">
               <Loading rows={2} height={20} />
@@ -80,7 +80,7 @@ export function EarningsPage() {
   const data = earnings.data
   return (
     <div className="grid" style={{ gap: 16 }}>
-      <div className="grid stat-row">
+      <div className="grid stat-row money">
         <Stat art="ic3d_gem" label="Jami tushum" value={formatSom(data.grossMinor)} hint="to'langan konsultatsiyalar" />
         <Stat art="ic3d_heart" label="Sadora ulushi" value={formatSom(data.commissionMinor)} hint="komissiya" />
         <Stat art="ic3d_trophy" label="Sizning daromadingiz" value={formatSom(data.netMinor)} hint="komissiyadan keyin" />

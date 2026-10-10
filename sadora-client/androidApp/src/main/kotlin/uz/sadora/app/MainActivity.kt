@@ -110,7 +110,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
 
-        PushNotifications.ensureChannel(this)
+        PushNotifications.ensureChannels(this)
         followSessionForPush()
 
         // The link the app was opened with, if any. Offered to the shared code rather

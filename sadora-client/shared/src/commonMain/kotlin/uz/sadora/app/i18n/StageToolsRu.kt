@@ -9,13 +9,14 @@ object StageToolsRu : StageToolsStrings {
     override val fertileTodayTitle = "Сегодня фертильные дни"
     override fun fertileTodayBody(ovulation: String) =
         "Овуляция примерно $ovulation. В эти дни вероятность забеременеть самая высокая."
-    override fun fertileInDays(days: Int) = if (days == 1) "Фертильное окно завтра" else "Фертильное окно через $days дн."
+    override fun fertileInDays(days: Int) =
+        if (days == 1) "Фертильное окно завтра" else "Фертильное окно через $days ${ru(days, "день", "дня", "дней")}"
     override fun fertileWindow(from: String, to: String, ovulation: String) =
         "$from – $to, овуляция примерно $ovulation"
     override val fertilePassedTitle = "Фертильное окно прошло"
     override fun fertilePassedBody(nextPeriod: String) =
         "Следующие месячные ожидаются около $nextPeriod. Если задержатся — сделайте тест на беременность."
-    override fun periodLate(days: Int) = "Задержка $days дн."
+    override fun periodLate(days: Int) = "Задержка $days ${ru(days, "день", "дня", "дней")}"
     override val periodLateBody =
         "Время сделать тест на беременность — по первой утренней моче результат точнее."
     override val periodLateCycleBody =
@@ -28,18 +29,24 @@ object StageToolsRu : StageToolsStrings {
     override val birthPromptBody =
         "Перейдите на этап после родов — откроются восстановление, кормление и наблюдение за настроением."
     override val birthPromptButton = "Перейти на этап после родов"
+    override val lossButton = "Беременность завершилась иначе"
+    override val lossTitle = "Нам очень жаль"
+    override val lossBody =
+        "Нам очень жаль. Если хотите, вернёмся к отслеживанию цикла и отключим напоминания о беременности. Разговор с врачом тоже может помочь."
+    override val lossConfirm = "Вернуться к отслеживанию цикла"
+    override val lossLater = "Не сейчас"
     override val cycleBackTitle = "Вернуться к отслеживанию цикла?"
     override val cycleBackBody =
         "Если месячные вернулись, отслеживание цикла рассчитает следующие месячные и фертильные дни."
     override val cycleBackButton = "Перейти к отслеживанию цикла"
 
     override val flagsTitle = "Стоит обсудить с врачом"
-    override fun shortCycles(days: Int) = "Ваш цикл в среднем $days дн. — короче 21 дня."
-    override fun longCycles(days: Int) = "Ваш цикл в среднем $days дн. — длиннее 35 дней."
-    override fun irregularCycles(spread: Int) = "Длина ваших циклов различается до $spread дн."
-    override fun longPeriods(days: Int) = "Месячные длятся в среднем $days дн. — дольше 7 дней."
+    override fun shortCycles(days: Int) = "Ваш цикл в среднем $days ${ru(days, "день", "дня", "дней")} — короче 21 дня."
+    override fun longCycles(days: Int) = "Ваш цикл в среднем $days ${ru(days, "день", "дня", "дней")} — длиннее 35 дней."
+    override fun irregularCycles(spread: Int) = "Длина ваших циклов различается до $spread ${ru(spread, "дня", "дней", "дней")}."
+    override fun longPeriods(days: Int) = "Месячные длятся в среднем $days ${ru(days, "день", "дня", "дней")} — дольше 7 дней."
     override val bleedingAfterMenopause =
-        "За последние 12 месяцев отмечено кровотечение. В менопаузе любое кровотечение должен оценить врач."
+        "Отмечено кровотечение после менопаузы (за последние 12 месяцев). Любое такое кровотечение должен оценить врач."
     override val flagsNote = "Это не диагноз — лишь признак в ваших записях."
     override val menopauseBleedingTitle = "Кровотечение"
     override val menopauseBleedingBody =
@@ -104,20 +111,22 @@ object StageToolsRu : StageToolsStrings {
             "Нет, справлялась как всегда",
         ),
         listOf("Да, большую часть времени", "Да, иногда", "Не очень часто", "Нет, совсем нет"),
-        listOf("Да, большую часть времени", "Да, довольно часто", "Не очень часто", "Нет, совсем нет"),
-        listOf("Да, большую часть времени", "Да, довольно часто", "Только иногда", "Нет, никогда"),
+        listOf("Да, почти всё время", "Да, довольно часто", "Не очень часто", "Нет, совсем нет"),
+        listOf("Да, почти всё время", "Да, довольно часто", "Только иногда", "Нет, никогда"),
         listOf("Да, довольно часто", "Иногда", "Почти никогда", "Никогда"),
     )
     override val screenSubmit = "Посмотреть результат"
     override fun screenScore(score: Int) = "Балл: $score / 30"
     override val screenLow =
-        "Признаков депрессии пока мало. Если настроение изменится, пройдите опросник снова через 2–4 недели."
+        "Признаков депрессии пока мало. Если настроение ухудшится — пройдите опросник снова в любой момент или напишите врачу."
     override val screenPossible =
         "Возможны признаки депрессии. Поговорите с врачом и пройдите опросник снова через 2 недели."
     override val screenLikely =
-        "Высокая вероятность послеродовой депрессии. Как можно скорее обратитесь к врачу или психологу — это лечится."
+        "Ваши ответы совпадают с признаками послеродовой депрессии. Как можно скорее обратитесь к врачу или психологу — это лечится."
     override val screenSelfHarm =
-        "Вы ответили, что у вас бывают мысли причинить себе вред. Это серьёзно: прямо сейчас расскажите кому-то из близких и обратитесь к врачу. Если есть опасность, звоните 103."
+        "Хорошо, что вы об этом сказали. Вы не одна: прямо сейчас расскажите тому, кому доверяете, и обратитесь к врачу или психологу. " +
+            "Если чувствуете, что вы в опасности, — сразу звоните 103."
+    override val call103 = "Позвонить 103"
     override val askDoctor = "Спросить врача"
     override val screenSource =
         "Эдинбургская шкала послеродовой депрессии (EPDS; Cox, Holden, Sagovsky, 1987). Не диагноз — инструмент скрининга."
@@ -146,7 +155,7 @@ object StageToolsRu : StageToolsStrings {
     override fun contractionsSummary(count: Int, duration: String, interval: String) =
         "За последний час $count: в среднем $duration, каждые $interval"
     override val contractionsGo =
-        "Схватки чаще чем раз в 5 минут, длятся дольше минуты и продолжаются уже час — пора в роддом."
+        "Схватки приходят каждые 5 минут или чаще, каждая длится минуту или дольше, и так уже час — пора в роддом."
     override val contractionsUrgent =
         "Если отошли воды, началось кровотечение или малыш стал меньше шевелиться — сразу в роддом, не дожидаясь схваток."
     override fun minutesSeconds(minutes: Int, seconds: Int) =

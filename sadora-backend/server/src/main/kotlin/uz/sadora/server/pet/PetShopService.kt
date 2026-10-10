@@ -83,7 +83,7 @@ class PetShopService(
     suspend fun checkout(userId: Uuid, request: PetCheckoutRequest, origin: String): CheckoutSession {
         val product = forSale(userId, request.pet)
         if (request.provider != PaymentProvider.PAYME && request.provider != PaymentProvider.CLICK) {
-            throw ValidationException("provider", "Store xaridi ilova ichida bo'ladi")
+            throw ValidationException("provider", "App Store yoki Google Play xaridi ilova ichida bo'ladi")
         }
         return billing.petCheckout(userId, product.pet.wireKey, product.priceMinor, request.provider, origin)
     }
@@ -201,7 +201,7 @@ class PetShopService(
             when (provider) {
                 PaymentProvider.APP_STORE -> it.appStoreProductId == productId
                 PaymentProvider.GOOGLE_PLAY -> it.googlePlayProductId == productId
-                else -> throw ValidationException("provider", "Bu provayder store emas")
+                else -> throw ValidationException("provider", "Bu to'lov usuli App Store yoki Google Play emas")
             }
         }
 

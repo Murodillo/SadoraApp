@@ -46,13 +46,12 @@ class GiftService(
             return null
         }
 
-        val startsFrom = current.expiresAt?.takeIf { it > now() } ?: now()
-        val subscriptionId = subscriptions.grant(
+        val subscriptionId = subscriptions.extend(
             userId = userId,
             source = SubscriptionSource.MANUAL,
-            expiresAt = startsFrom + days.days,
+            by = days.days,
             productId = planId,
-            reason = "gift $transactionId",
+            onceFor = "gift $transactionId",
         )
         insertCredit(userId, days, transactionId, subscriptionId)
         return subscriptionId

@@ -110,12 +110,13 @@ fun JourneyScreen(
     tools: StageEventsController,
     onOpen: (Route) -> Unit,
     modifier: Modifier = Modifier,
+    onPregnancyEnded: () -> Unit = {},
 ) {
     val t = strings.journey
     Column(modifier) {
         when (state.lifeStage) {
             LifeStage.Cycle, LifeStage.TryingToConceive -> CycleJourney(state, health, onOpen)
-            LifeStage.Pregnancy -> PregnancyJourney(state, health, tools, onOpen)
+            LifeStage.Pregnancy -> PregnancyJourney(state, health, tools, onOpen, onPregnancyEnded)
             LifeStage.Postpartum -> PostpartumJourney(state, health, tools, onOpen)
             LifeStage.Perimenopause -> PerimenopauseJourney(state, health, tools, onOpen)
             LifeStage.Menopause -> MenopauseJourney(state, health, tools, onOpen)
@@ -606,7 +607,13 @@ private fun StatCard(label: String, value: String, modifier: Modifier = Modifier
 // ---------------------------------------------------------------- pregnancy
 
 @Composable
-private fun PregnancyJourney(state: AppState, health: HealthController, tools: StageEventsController, onOpen: (Route) -> Unit) {
+private fun PregnancyJourney(
+    state: AppState,
+    health: HealthController,
+    tools: StageEventsController,
+    onOpen: (Route) -> Unit,
+    onPregnancyEnded: () -> Unit,
+) {
     val t = strings.journey
     LaunchedEffect(Unit) { health.loadAppointments() }
     val c = Sadora.colors
@@ -637,7 +644,7 @@ private fun PregnancyJourney(state: AppState, health: HealthController, tools: S
                         t.weekCaps,
                         style = Sadora.type.caption,
                         color = onWarm.copy(alpha = 0.8f),
-                        modifier = Modifier.padding(bottom = 10.dp),
+                        modifier = Modifier.padding(start = 6.dp, bottom = 10.dp),
                     )
                 }
                 // The day within the week, counted from the same anchor as the week.
@@ -674,7 +681,7 @@ private fun PregnancyJourney(state: AppState, health: HealthController, tools: S
         // Term, or past the date: the way on to the next stage.
         val dueReached = state.dueDate?.let { it <= state.today } ?: false
         if (state.pregnancyWeek >= TermWeek || dueReached) {
-            item { BirthPromptCard(state, onOpen) }
+            item { BirthPromptCard(state, onOpen, onPregnancyEnded) }
         }
 
         item {
@@ -767,7 +774,6 @@ private fun PregnancyJourney(state: AppState, health: HealthController, tools: S
             SadoraButton(
                 t.logToday,
                 onClick = { onOpen(Route.PregnancyCheckIn) },
-                tone = ButtonTone.Secondary,
             )
         }
 
@@ -814,7 +820,7 @@ private fun PostpartumJourney(state: AppState, health: HealthController, tools: 
                         t.recoveryWeeks,
                         style = Sadora.type.body,
                         color = c.muted,
-                        modifier = Modifier.padding(bottom = 10.dp),
+                        modifier = Modifier.padding(start = 6.dp, bottom = 10.dp),
                     )
                 }
                 // No prediction here at all — recovery is not forecast.

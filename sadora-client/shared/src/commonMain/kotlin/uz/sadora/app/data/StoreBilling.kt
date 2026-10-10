@@ -51,6 +51,14 @@ interface StoreBilling {
     suspend fun keepsakePrices(productIds: List<String>): Map<String, String> = giftPrices(productIds)
 
     suspend fun purchaseKeepsake(productId: String, accountId: String): StoreOutcome = purchaseGift(productId, accountId)
+
+    /**
+     * One-off purchases bought but never finished — the server was out of reach, the app
+     * died before it answered, or a pending payment cleared while nobody was waiting. Play
+     * refunds them after three days unless they are delivered and acknowledged; the
+     * controllers that sell them post these again each time the app comes forward.
+     */
+    suspend fun unfinishedKeepsakes(): List<StoreReceipt> = emptyList()
 }
 
 /** Gift plans are never restored to the buyer: they were delivered to someone else. */

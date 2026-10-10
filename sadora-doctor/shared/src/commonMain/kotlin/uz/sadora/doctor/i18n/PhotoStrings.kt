@@ -35,7 +35,7 @@ object PhotoStringsUz : PhotoStrings {
     override val askTitle = "Rasmingizni qo'ying"
     override val askBody = "Bemorlar rasmli shifokorga ko'proq ishonadi va yozadi."
     override val guidance =
-        "Yuzingiz aniq ko'rinadigan, professional rasm. Sadora xodimlari mos bo'lmagan rasmni olib tashlashi mumkin."
+        "Yuzingiz aniq ko'rinadigan, professional rasm. SADORA xodimlari mos bo'lmagan rasmni olib tashlashi mumkin."
     override val choose = "Rasm tanlash"
     override val change = "Rasmni o'zgartirish"
     override val remove = "O'chirish"
@@ -57,9 +57,9 @@ object PhotoStringsUz : PhotoStrings {
 
 object PhotoStringsRu : PhotoStrings {
     override val askTitle = "Добавьте своё фото"
-    override val askBody = "Пациенты больше доверяют врачу с фото и чаще ему пишут."
+    override val askBody = "Пациентки больше доверяют врачу с фото и чаще ему пишут."
     override val guidance =
-        "Профессиональное фото, на котором хорошо видно лицо. Сотрудники Sadora могут удалить неподходящее фото."
+        "Профессиональное фото, на котором хорошо видно лицо. Сотрудники SADORA могут удалить неподходящее фото."
     override val choose = "Выбрать фото"
     override val change = "Изменить фото"
     override val remove = "Удалить"
@@ -74,16 +74,16 @@ object PhotoStringsRu : PhotoStrings {
     override val sectionTitle = "Ваше фото"
     override val afterApplyTitle = "Заявка отправлена"
     override val afterApplyBody =
-        "Теперь добавьте фото: после одобрения пациенты увидят его на вашей странице и рядом с вашими ответами."
+        "Теперь добавьте фото: после одобрения пациентки увидят его на вашей странице и рядом с вашими ответами."
     override val done = "Готово"
     override fun photoOf(name: String) = "Фото: $name"
 }
 
 object PhotoStringsEn : PhotoStrings {
     override val askTitle = "Add your photo"
-    override val askBody = "Patients trust a doctor with a photo more, and write to her more often."
+    override val askBody = "Patients trust a doctor with a photo more, and write more often."
     override val guidance =
-        "A professional photo with your face clearly visible. Sadora staff may remove a photo that is not suitable."
+        "A professional photo with your face clearly visible. SADORA staff may remove a photo that is not suitable."
     override val choose = "Choose a photo"
     override val change = "Change photo"
     override val remove = "Remove"

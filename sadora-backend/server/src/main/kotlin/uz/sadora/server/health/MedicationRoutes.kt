@@ -41,7 +41,7 @@ fun Route.medicationRoutes(meds: MedicationService) {
 
             get("/days/{date}") {
                 val date = runCatching { LocalDate.parse(call.parameters["date"].orEmpty()) }
-                    .getOrElse { throw ValidationException("date", "YYYY-MM-DD formatida bo'lishi kerak") }
+                    .getOrElse { throw ValidationException("date", "Sana noto'g'ri") }
                 call.respond(meds.day(call.requireUserId(), date))
             }
 

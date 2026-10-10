@@ -113,6 +113,9 @@ fun TodayScreen(
             state = state,
             greeting = greeting,
             onOpen = onOpen,
+            // The streak card already shows both numbers; the header carries them only
+            // when she has hidden that card, so they are never on screen twice.
+            showCounters = HomeWidgets.STREAK !in state.homeWidgets(),
         )
 
         if (isLoading) {
@@ -232,6 +235,7 @@ private fun TodayHeader(
     state: AppState,
     greeting: String?,
     onOpen: (Route) -> Unit,
+    showCounters: Boolean = true,
 ) {
     val t = strings.today
     // Until the server's line arrives, the app's own greeting stands in — the same
@@ -270,8 +274,10 @@ private fun TodayHeader(
             ) { shown ->
                 Text(shown, style = Sadora.type.body, color = Sadora.colors.muted)
             }
-            StreakBadge(state.streakDays, onClick = { onOpen(Route.Rewards) })
-            CoinPill(state.coins, onClick = { onOpen(Route.Rewards) })
+            if (showCounters) {
+                StreakBadge(state.streakDays, onClick = { onOpen(Route.Rewards) })
+                CoinPill(state.coins, onClick = { onOpen(Route.Rewards) })
+            }
         }
     }
 }
@@ -596,10 +602,12 @@ private fun HealthScoreCard(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
         ) {
+            // Until two signals are in, the ring is small: an empty 104dp circle was the
+            // biggest thing on the screen and said nothing.
             ProgressRing(
                 progress = (score ?: 0) / 100f,
-                size = 104.dp,
-                strokeWidth = 9.dp,
+                size = if (score == null) 64.dp else 104.dp,
+                strokeWidth = if (score == null) 6.dp else 9.dp,
                 color = tint,
                 glow = score != null,
             ) {
@@ -608,7 +616,7 @@ private fun HealthScoreCard(
                         AnimatedNumber(score, Sadora.type.h1, c.text)
                         Text(t.scoreWord(score), style = Sadora.type.body, color = c.muted, maxLines = 1)
                     } else {
-                        Text("—", style = Sadora.type.h1, color = c.muted)
+                        Text("—", style = Sadora.type.h3, color = c.muted)
                     }
                 }
             }

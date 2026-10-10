@@ -342,6 +342,10 @@ interface CommunityStrings {
     val blocked: String
     val unblocked: String
     val viewProfile: String
+    /** The text link under the header that opens the doctors' directory. */
+    val doctorsLink: String
+    /** The text link under the header that opens how the chat works. */
+    val rulesLink: String
 
     // ---- private messages
     val messagesTitle: String
@@ -1444,7 +1448,7 @@ interface ModuleStrings {
     val sourcesNote: String
     val connected: String
     val notConnected: String
-    fun samples(count: String): String
+    fun samples(count: Int): String
     fun metric(metric: HealthMetric): String
 
     // ---- balance

@@ -18,8 +18,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
@@ -263,16 +263,16 @@ private fun SessionCard(session: ConsultationSession, onOpenRecord: (String) -> 
     }
 }
 
-/** "★★★★☆", read out as "Rated 4 of 5". */
+/** "★★★★☆", read out as words — "5 dan 4 yulduz" — rather than the glyphs. */
 @Composable
 internal fun Stars(rating: Int, modifier: Modifier = Modifier) {
     val c = Sadora.colors
     val filled = rating.coerceIn(0, 5)
-    val rated = strings.common.rated(filled, 5)
+    val spoken = strings.work.stars(filled)
     Text(
         "★".repeat(filled) + "☆".repeat(5 - filled),
         style = Sadora.type.h3,
         color = c.warning,
-        modifier = modifier.semantics { contentDescription = rated },
+        modifier = modifier.clearAndSetSemantics { contentDescription = spoken },
     )
 }

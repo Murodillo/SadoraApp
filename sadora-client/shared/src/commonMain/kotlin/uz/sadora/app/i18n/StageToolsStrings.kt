@@ -34,6 +34,12 @@ interface StageToolsStrings {
     val birthPromptTitle: String
     val birthPromptBody: String
     val birthPromptButton: String
+    /** The quiet way out of pregnancy that did not end in a birth. */
+    val lossButton: String
+    val lossTitle: String
+    val lossBody: String
+    val lossConfirm: String
+    val lossLater: String
     val cycleBackTitle: String
     val cycleBackBody: String
     val cycleBackButton: String
@@ -83,6 +89,8 @@ interface StageToolsStrings {
     val screenPossible: String
     val screenLikely: String
     val screenSelfHarm: String
+    /** The button under [screenSelfHarm] that dials the emergency number. */
+    val call103: String
     val askDoctor: String
     val screenSource: String
     fun answeredOf(answered: Int, total: Int): String

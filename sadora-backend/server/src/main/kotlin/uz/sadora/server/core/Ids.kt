@@ -32,4 +32,4 @@ fun sha256(value: String): String =
 fun parseUuidOrNull(value: String): Uuid? = runCatching { Uuid.parse(value) }.getOrNull()
 
 fun parseUuid(value: String, field: String = "id"): Uuid =
-    parseUuidOrNull(value) ?: throw ValidationException(field, "UUID formatida bo'lishi kerak")
+    parseUuidOrNull(value) ?: throw ValidationException(field, "Identifikator noto'g'ri — havolani qaytadan oching")

@@ -135,7 +135,7 @@ export function LoginPage() {
 
             <button className="btn primary" type="submit" disabled={busy || !isValid(phone)}>
               {busy && <Spinner />}
-              {busy ? 'Yuborilmoqda…' : 'Kod olish'}
+              {busy ? 'Kod yuborilmoqda…' : 'Kod olish'}
             </button>
 
             <p className="faint" style={{ margin: 0 }}>

@@ -23,6 +23,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -635,7 +636,16 @@ internal fun EpdsResult(screen: StageEvent, onAskDoctor: () -> Unit) {
     val answers = screen.detail?.split(",")?.mapNotNull { it.toIntOrNull() }.orEmpty()
     SadoraCard {
         Text(t.screenScore(score), style = Sadora.type.h2, color = c.text)
-        if (Epds.selfHarm(answers)) Warning(t.screenSelfHarm)
+        if (Epds.selfHarm(answers)) {
+            Warning(t.screenSelfHarm)
+            // The dialler, number filled in: one tap from the words to the call.
+            val uriHandler = LocalUriHandler.current
+            SadoraButton(
+                t.call103,
+                onClick = { runCatching { uriHandler.openUri("tel:103") } },
+                tone = ButtonTone.Destructive,
+            )
+        }
         when {
             score >= Epds.LIKELY -> Warning(t.screenLikely)
             score >= Epds.POSSIBLE -> Text(t.screenPossible, style = Sadora.type.body, color = c.text)

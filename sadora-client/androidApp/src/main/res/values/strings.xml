@@ -3,4 +3,10 @@
     <!-- Named once here for both the manifest's FCM default and PushNotifications. -->
     <string name="push_channel_id" translatable="false">sadora_reminders</string>
     <string name="push_channel_name">Reminders</string>
+    <string name="push_channel_description">Medication, cycle and daily reminders</string>
+    <!-- Messages from Yaqinim, a doctor or a chat, so she can mute reminders without
+         missing a person who wrote to her, and the other way round. -->
+    <string name="push_messages_channel_id" translatable="false">sadora_messages</string>
+    <string name="push_messages_channel_name">Messages</string>
+    <string name="push_messages_channel_description">Messages from Yaqinim, your doctor and chats</string>
 </resources>

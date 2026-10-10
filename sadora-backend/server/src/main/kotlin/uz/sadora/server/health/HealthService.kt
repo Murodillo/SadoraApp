@@ -239,14 +239,14 @@ class HealthService(
         }
         request.note?.let {
             if (it.length > MAX_NOTE_LENGTH) {
-                throw ValidationException("note", "Eng ko'pi $MAX_NOTE_LENGTH belgi")
+                throw ValidationException("note", "Izoh eng ko'pi $MAX_NOTE_LENGTH belgi bo'lsin")
             }
         }
 
         val known = repository.knownSymptomKeys()
         val unknown = request.symptoms.map { it.key }.filterNot { it in known }
         if (unknown.isNotEmpty()) {
-            throw ValidationException("symptoms", "Noma'lum simptom: ${unknown.joinToString()}")
+            throw ValidationException("symptoms", "Noma'lum alomat: ${unknown.joinToString()}")
         }
 
         // An empty day is a removal, not a row full of nulls — of the sheet's own fields.

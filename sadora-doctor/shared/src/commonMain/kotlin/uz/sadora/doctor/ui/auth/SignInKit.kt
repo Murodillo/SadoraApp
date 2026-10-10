@@ -39,6 +39,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -55,6 +57,7 @@ import uz.sadora.doctor.design.Radius
 import uz.sadora.doctor.design.Sadora
 import uz.sadora.doctor.design.SadoraIcons
 import uz.sadora.doctor.design.Spacing
+import uz.sadora.doctor.ui.components.BrandNameSpoken
 import uz.sadora.doctor.ui.components.SadoraMark
 import uz.sadora.doctor.ui.components.drawBloom
 import uz.sadora.doctor.ui.components.noRippleClickable
@@ -155,6 +158,8 @@ private fun QuestionBrand(modifier: Modifier = Modifier) {
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             SadoraMark(size = 56.dp)
+            // The wordmark is logo text, never translated; a screen reader hears the name
+            // spoken, not "S-A-D-O-R-A D-O-C-T-O-R" spelled out in capitals.
             Text(
                 "SADORA DOCTOR",
                 style = Sadora.type.caption.copy(
@@ -162,6 +167,7 @@ private fun QuestionBrand(modifier: Modifier = Modifier) {
                     fontWeight = FontWeight.Medium,
                 ),
                 color = c.muted,
+                modifier = Modifier.clearAndSetSemantics { contentDescription = BrandNameSpoken },
             )
         }
     }
