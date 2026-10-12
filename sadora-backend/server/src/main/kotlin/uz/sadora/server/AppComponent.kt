@@ -159,7 +159,9 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
     val otpService = OtpService(
         config.otp,
         cache,
-        if (config.otp.playMobile.isConfigured) {
+        // A fixed code is known without an SMS, and the numbers testers and store reviewers
+        // sign in with are not theirs: with OTP_FIXED_CODE set nothing is sent, login or not.
+        if (config.otp.playMobile.isConfigured && config.otp.fixedCode == null) {
             PlayMobileOtpSender(outboundHttpClient, config.otp.playMobile, config.otp.smsText)
         } else {
             LoggingOtpSender(showCode = config.environment == Environment.DEV)
