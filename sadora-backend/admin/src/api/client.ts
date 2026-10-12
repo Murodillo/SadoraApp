@@ -53,6 +53,8 @@ export const SESSION_EXPIRED_EVENT = 'sadora:session-expired'
 interface RequestOptions {
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
   body?: unknown
+  /** Raw bytes instead of JSON — one piece of an uploaded file. */
+  bytes?: Blob
   signal?: AbortSignal
   /** Sign-in itself must not trigger the global sign-out handler. */
   anonymous?: boolean
@@ -66,7 +68,7 @@ interface RequestOptions {
 const UZBEK = { 'Accept-Language': 'uz' }
 
 export async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const { method = 'GET', body, signal, anonymous = false } = options
+  const { method = 'GET', body, bytes, signal, anonymous = false } = options
   const token = tokenStore.read()
 
   let response: Response
@@ -75,11 +77,11 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
       method,
       signal,
       headers: {
-        'Content-Type': 'application/json',
+        'Content-Type': bytes ? 'application/octet-stream' : 'application/json',
         ...UZBEK,
         ...(token && !anonymous ? { Authorization: `Bearer ${token}` } : {}),
       },
-      body: body === undefined ? undefined : JSON.stringify(body),
+      body: bytes ?? (body === undefined ? undefined : JSON.stringify(body)),
     })
   } catch (cause) {
     if (signal?.aborted) throw cause

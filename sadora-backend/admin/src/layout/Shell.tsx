@@ -45,6 +45,7 @@ const groups: NavGroup[] = [
       { to: '/ai', label: 'AI xarajati', art: 'ic3d_ai', roles: ['OWNER', 'ADMIN', 'ANALYST'] },
       { to: '/notifications', label: 'Bildirishnomalar', art: 'ic3d_bell', roles: ['OWNER', 'ADMIN', 'ANALYST'] },
       { to: '/wearables', label: 'Taqiladigan qurilmalar', art: 'ic3d_watch', roles: ['OWNER', 'ADMIN', 'ANALYST'] },
+      { to: '/promo-video', label: 'Reklama videosi', art: 'ic3d_globe', roles: ALL },
     ],
   },
   {
@@ -85,6 +86,7 @@ const titles: Record<string, string> = {
   '/billing': "Obunalar va to'lovlar",
   '/notifications': 'Bildirishnomalar',
   '/wearables': 'Taqiladigan qurilmalar',
+  '/promo-video': 'Reklama videosi',
   '/rewards': 'Gul — mukofotlar va ketma-ketlik',
   '/shop': "Gul do'koni — mahsulot va chegirmalar",
   '/features': 'Obuna huquqlari va limitlar',

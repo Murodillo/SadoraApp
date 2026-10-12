@@ -57,6 +57,14 @@ data class AppConfig(
      * laptop only; staging and production are both on the internet.
      */
     val adminRequireTotp: Boolean = false,
+    /**
+     * Where files an operator uploads are kept — today the promo video. A directory on
+     * disk rather than a table: the landing page's nginx serves the same directory, so a
+     * video reaches a browser without passing through this process.
+     */
+    val mediaDir: String = "build/media",
+    /** The page the promo video plays on, as the panel shows it to the operator. */
+    val promoVideoPageUrl: String = "https://sadora.app/video/",
 ) {
     companion object {
         fun fromEnvironment(): AppConfig {
@@ -197,6 +205,8 @@ data class AppConfig(
                 ),
                 accountErasureGracePeriod = env("ACCOUNT_ERASURE_GRACE_DAYS", "30").toInt().days,
                 adminRequireTotp = env("ADMIN_REQUIRE_TOTP", (environment != Environment.DEV).toString()).toBoolean(),
+                mediaDir = env("MEDIA_DIR", "build/media"),
+                promoVideoPageUrl = env("PROMO_VIDEO_PAGE_URL", "https://sadora.app/video/"),
             )
             config.verifyProductionSafety()
             return config

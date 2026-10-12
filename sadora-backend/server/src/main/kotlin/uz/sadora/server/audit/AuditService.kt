@@ -100,6 +100,10 @@ object AuditActions {
     // A cloud wearable is a standing grant to pull data from a third party.
     const val WEARABLE_CONNECTED = "wearable.connected"
     const val WEARABLE_DISCONNECTED = "wearable.disconnected"
+
+    // The promo video is what sadora.app/video shows the public.
+    const val PROMO_VIDEO_UPLOADED = "promo.video_uploaded"
+    const val PROMO_VIDEO_REMOVED = "promo.video_removed"
 }
 
 data class AuditEntry(

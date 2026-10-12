@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SADORA — video</title>
+<meta name="description" content="SADORA — ayollar salomatligi ilovasi haqida video.">
+<meta property="og:title" content="SADORA — video">
+<meta property="og:description" content="Ayollar salomatligi ilovasi haqida qisqa video.">
+<meta property="og:type" content="video.other">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Figtree:wght@400;500;600&display=swap">
+<style>
+/* ============================================================
+   The promo video.
+   Reads video/media/current.json, which the API writes beside the file when staff
+   upload one in the admin panel (Reklama videosi); nginx serves that directory. Where
+   there is no such file — GitHub Pages, or before the first upload — the page says the
+   video is on its way.
+   Tokens match download.html and the app (design/Colors.kt).
+   ============================================================ */
+:root {
+  --bg: #F7F5FF; --surface: #FFFFFF; --surface-2: #F1EDFF; --ink: #6247E0;
+  --text: #1A1630; --muted: #6F6A8A; --muted-2: #9590AD; --line: #EAE6FA;
+  --shadow: rgba(123,97,255,.16); --b1: #B06CFF; --b2: #8A8CFF; --b3: #F68CCB;
+  --r-md: 16px; --r-xl: 28px; --ease: cubic-bezier(.2, 0, 0, 1);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0F0C1F; --surface: #19152E; --surface-2: #231D40; --ink: #B9A8FF;
+    --text: #F3F0FF; --muted: #B3ADCF; --muted-2: #8A84A8; --line: #2A2447;
+    --shadow: rgba(0,0,0,.4);
+  }
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--bg); color: var(--text); min-height: 100svh;
+  font-family: Figtree, -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  display: grid; place-items: center; padding: 24px 16px; line-height: 1.55;
+}
+.card {
+  width: min(880px, 100%); background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--r-xl); box-shadow: 0 24px 60px var(--shadow);
+  padding: 22px 22px 20px; animation: rise .5s var(--ease) both;
+}
+@keyframes rise { from { opacity: 0; transform: translateY(16px); } }
+@media (prefers-reduced-motion: reduce) { .card { animation: none; } }
+.head { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+.mark { width: 44px; height: 44px; flex: none; }
+h1 {
+  font-family: 'Bricolage Grotesque', Figtree, sans-serif; font-size: clamp(20px, 5vw, 26px);
+  line-height: 1.15; margin: 0; letter-spacing: -.01em;
+}
+.lede { margin: 2px 0 0; color: var(--muted); font-size: 14.5px; }
+/* The frame takes the video's own shape: an ad may be upright or wide. */
+.frame { background: #000; border-radius: var(--r-md); overflow: hidden; display: grid; place-items: center; }
+video { display: block; width: 100%; max-height: 74svh; background: #000; }
+.empty {
+  background: var(--surface-2); border-radius: var(--r-md); color: var(--muted);
+  padding: 56px 20px; text-align: center;
+}
+.foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-top: 16px; }
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+  padding: 13px 22px; border-radius: 999px; font-weight: 600; text-decoration: none;
+  background: linear-gradient(120deg, var(--b1), var(--b2) 45%, var(--b3)); color: #fff;
+  transition: transform .16s var(--ease); box-shadow: 0 14px 30px -14px var(--b2);
+}
+.btn:hover { transform: translateY(-2px); }
+.btn:active { transform: scale(.975); }
+.langs { display: flex; gap: 6px; }
+.langs button {
+  background: none; border: 0; font: inherit; font-size: 14px; color: var(--muted-2);
+  cursor: pointer; padding: 4px 8px; border-radius: 999px;
+}
+.langs button[aria-current='true'] { color: var(--ink); background: var(--surface-2); font-weight: 600; }
+@media (max-width: 520px) {
+  .card { padding: 16px 14px; }
+  .foot { justify-content: center; }
+  .btn { width: 100%; }
+}
+[hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<main class="card">
+  <div class="head">
+    <svg class="mark" viewBox="0 0 108 108" aria-label="SADORA" role="img">
+      <defs>
+        <linearGradient id="s" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#B06CFF"/><stop offset=".45" stop-color="#8A8CFF"/><stop offset="1" stop-color="#F68CCB"/>
+        </linearGradient>
+      </defs>
+      <rect width="108" height="108" rx="26" fill="#1A1630"/>
+      <text x="54" y="74" font-family="'Bricolage Grotesque', sans-serif" font-size="62" font-weight="700" text-anchor="middle" fill="url(#s)">S</text>
+    </svg>
+    <div>
+      <h1>SADORA</h1>
+      <p class="lede" id="lede"></p>
+    </div>
+  </div>
+
+  <div class="frame" id="frame" hidden>
+    <video id="video" controls playsinline preload="metadata"></video>
+  </div>
+  <p class="empty" id="empty" aria-live="polite"></p>
+
+  <div class="foot">
+    <a class="btn" href="../" id="home"></a>
+    <div class="langs" role="group">
+      <button type="button" data-lang="uz">O‘zbekcha</button>
+      <button type="button" data-lang="ru">Русский</button>
+      <button type="button" data-lang="en">English</button>
+    </div>
+  </div>
+</main>
+<script>
+const COPY = {
+  uz: { lede: 'Ayollar salomatligi uchun ilova', loading: 'Yuklanmoqda…', none: 'Video tez orada shu yerda bo‘ladi.', home: 'SADORA bilan tanishing', label: 'SADORA haqida video' },
+  ru: { lede: 'Приложение для женского здоровья', loading: 'Загружаем…', none: 'Видео скоро появится здесь.', home: 'Познакомьтесь с SADORA', label: 'Видео о SADORA' },
+  en: { lede: 'The app for women’s health', loading: 'Loading…', none: 'The video will be here soon.', home: 'Meet SADORA', label: 'A video about SADORA' },
+};
+
+let lang = (navigator.language || 'uz').slice(0, 2).toLowerCase();
+if (!COPY[lang]) lang = 'uz';
+let video = null;      // current.json once loaded; false when there is none
+const $ = (id) => document.getElementById(id);
+
+function render() {
+  const t = COPY[lang];
+  document.documentElement.lang = lang;
+  $('lede').textContent = t.lede;
+  $('home').textContent = t.home;
+  $('video').setAttribute('aria-label', t.label);
+  $('frame').hidden = !video;
+  $('empty').hidden = Boolean(video);
+  $('empty').textContent = video === null ? t.loading : t.none;
+  for (const button of document.querySelectorAll('.langs button')) {
+    button.setAttribute('aria-current', String(button.dataset.lang === lang));
+  }
+}
+
+for (const button of document.querySelectorAll('.langs button')) {
+  button.addEventListener('click', () => { lang = button.dataset.lang; render(); });
+}
+render();
+
+// Only a name the server itself would have written is ever used as an address.
+const SAFE_NAME = /^sadora-\d+\.(mp4|webm)$/;
+fetch('media/current.json', { cache: 'no-store' })
+  .then((response) => (response.ok ? response.json() : null))
+  .then((manifest) => {
+    video = manifest && SAFE_NAME.test(manifest.file) ? manifest : false;
+    if (video) $('video').src = 'media/' + video.file;
+    render();
+  })
+  .catch(() => { video = false; render(); });
+</script>
+</body>
+</html>

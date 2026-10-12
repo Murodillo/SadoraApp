@@ -47,3 +47,7 @@ sadora-backend/deploy/stage/hosts.env
 sadora-backend/admin/coverage/
 sadora-doctor-admin/coverage/
 __pycache__/
+
+# What staff upload through the admin panel when the production compose file is run
+# from a checkout — the promo video.
+sadora-backend/media/

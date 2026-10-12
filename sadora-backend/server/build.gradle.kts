@@ -37,6 +37,7 @@ dependencies {
     implementation(libs.ktor.server.forwardedHeader)
     implementation(libs.ktor.server.defaultHeaders)
     implementation(libs.ktor.server.compression)
+    implementation(libs.ktor.server.partialContent)
     implementation(libs.ktor.server.requestValidation)
     implementation(libs.ktor.server.configYaml)
     implementation(libs.ktor.server.swagger)

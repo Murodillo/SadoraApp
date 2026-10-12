@@ -90,6 +90,7 @@ COPYFILE_DISABLE=1 tar -czf - \
   --exclude='./server/.env.prod' --exclude='./server/.env.stage' \
   --exclude='./deploy/stage/hosts.env' --exclude='local.properties' --exclude='.DS_Store' \
   --exclude='./downloads' --exclude='./releases' --exclude='./backups' --exclude='./.release.env' \
+  --exclude='./media' \
   --exclude='*/coverage' \
   -C sadora-backend . -C .. landing | remote "tar -xzf - -C $DIR"
 # The doctors' panel is its own project; only its build goes, as $DIR/doctor-admin/dist.
@@ -116,7 +117,7 @@ else
 fi
 
 echo "==> deploy gate"
-remote "install -m 755 $DIR/deploy/stage/sadora-ci /usr/local/bin/sadora-ci && mkdir -p $DIR/downloads $DIR/releases && touch $DIR/.release.env"
+remote "install -m 755 $DIR/deploy/stage/sadora-ci /usr/local/bin/sadora-ci && mkdir -p $DIR/downloads $DIR/releases $DIR/media/video && touch $DIR/.release.env"
 
 if [[ -f $CI_PUB ]]; then
   echo "==> CI key ($(ssh-keygen -lf "$CI_PUB" | awk '{print $2}'))"

@@ -19,6 +19,7 @@ import { DoctorsPage } from './pages/DoctorsPage'
 import { FeaturesPage } from './pages/FeaturesPage'
 import { FlagsPage } from './pages/FlagsPage'
 import { NotificationsPage } from './pages/NotificationsPage'
+import { PromoVideoPage } from './pages/PromoVideoPage'
 import { RewardsPage } from './pages/RewardsPage'
 import { ShopPage } from './pages/ShopPage'
 import { SecurityPage } from './pages/SecurityPage'
@@ -123,6 +124,7 @@ function SignedInRoutes() {
           path="shop"
           element={can(['OWNER', 'ADMIN', 'ANALYST']) ? <ShopPage /> : <Navigate to="/" replace />}
         />
+        <Route path="promo-video" element={<PromoVideoPage />} />
         <Route path="features" element={<FeaturesPage />} />
         <Route path="flags" element={<FlagsPage />} />
         <Route path="security" element={<SecurityPage />} />

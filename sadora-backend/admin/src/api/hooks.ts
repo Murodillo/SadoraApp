@@ -2,6 +2,7 @@ import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tansta
 import { query, request, requestBlob } from './client'
 import { adminPhotoPath } from './photos'
 import type {
+  PromoVideoView,
   AdminAnalytics,
   AdminArticle,
   AdminRedemption,
@@ -861,5 +862,22 @@ export const useAddDoctorPayout = () => {
       void client.invalidateQueries({ queryKey: ['doctor-earnings', id] })
       void client.invalidateQueries({ queryKey: ['doctor-quality'] })
     },
+  })
+}
+
+// ------------------------------------------------------------------ promo video
+
+export function usePromoVideo() {
+  return useQuery({
+    queryKey: ['promo-video'],
+    queryFn: ({ signal }) => request<PromoVideoView>('/v1/admin/promo-video', { signal }),
+  })
+}
+
+export function useRemovePromoVideo() {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: () => request<PromoVideoView>('/v1/admin/promo-video', { method: 'DELETE' }),
+    onSuccess: (view) => client.setQueryData(['promo-video'], view),
   })
 }

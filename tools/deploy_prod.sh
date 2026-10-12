@@ -83,11 +83,12 @@ COPYFILE_DISABLE=1 tar -czf - \
   --exclude='./server/.env.prod' --exclude='./server/.env.stage' --exclude='./server/.env.dev' \
   --exclude='./deploy/stage/hosts.env' --exclude='local.properties' --exclude='.DS_Store' \
   --exclude='./downloads' --exclude='./releases' --exclude='./backups' --exclude='./.release.env' \
+  --exclude='./media' \
   --exclude='*/coverage' \
   -C sadora-backend . -C .. landing | remote "tar -xzf - -C $DIR"
 COPYFILE_DISABLE=1 tar -czf - -C sadora-doctor-admin dist \
   | remote "rm -rf $DIR/doctor-admin/dist && mkdir -p $DIR/doctor-admin && tar -xzf - -C $DIR/doctor-admin"
-remote "mkdir -p $DIR/downloads $DIR/backups $DIR/server/secrets && chmod 700 $DIR/backups"
+remote "mkdir -p $DIR/downloads $DIR/media/video $DIR/backups $DIR/server/secrets && chmod 700 $DIR/backups"
 printf 'SADORA_API_IMAGE=%s\nSADORA_RELEASE=%s\n' "$IMAGE" "$SHA" | remote "cat > $DIR/.release.env"
 
 echo "==> environment"

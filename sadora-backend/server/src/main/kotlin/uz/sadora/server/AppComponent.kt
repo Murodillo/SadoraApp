@@ -89,6 +89,7 @@ import uz.sadora.server.consultation.ConsultationJob
 import uz.sadora.server.consultation.ConsultationRepository
 import uz.sadora.server.consultation.ConsultationService
 import uz.sadora.server.photo.PhotoService
+import uz.sadora.server.promo.PromoVideoStore
 import uz.sadora.server.user.AccountErasureJob
 import uz.sadora.server.user.UserRepository
 import uz.sadora.server.wearable.WearableRepository
@@ -128,6 +129,7 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
     val cache: Cache = Caches.create(config.redis)
 
     val auditService = AuditService()
+    val promoVideoStore = PromoVideoStore(File(config.mediaDir))
     val auditRepository = AuditRepository()
     val statsRepository = AdminStatsRepository()
     val analyticsRepository = AdminAnalyticsRepository()

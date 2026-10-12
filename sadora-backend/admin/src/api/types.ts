@@ -852,3 +852,26 @@ export interface DoctorEarnings {
   linesTotal?: number
   payoutsTotal?: number
 }
+
+/** The video the public page plays, as the panel sees it. */
+export interface PromoVideoFile {
+  /** A path on the API, for the preview. */
+  url: string
+  mimeType: string
+  sizeBytes: number
+  updatedAt: string
+}
+
+export interface PromoVideoView {
+  /** The public page, e.g. https://sadora.app/video/. */
+  pageUrl: string
+  video?: PromoVideoFile | null
+  maxBytes: number
+  /** How large a piece the server takes in one request. */
+  chunkBytes: number
+}
+
+export interface PromoUploadProgress {
+  uploadId: string
+  receivedBytes: number
+}

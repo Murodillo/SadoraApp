@@ -49,6 +49,8 @@ import uz.sadora.server.config.AppConfig
 import uz.sadora.server.health.healthRoutes
 import uz.sadora.server.health.medicationRoutes
 import uz.sadora.server.prescription.prescriptionRoutes
+import uz.sadora.server.promo.adminPromoVideoRoutes
+import uz.sadora.server.promo.promoVideoRoutes
 import uz.sadora.server.health.appointmentRoutes
 import uz.sadora.server.health.stageEventRoutes
 import uz.sadora.server.health.mindRoutes
@@ -190,6 +192,8 @@ fun Application.apiModule(component: AppComponent) {
             adminPaymentRequestRoutes(component.paymentRequestService, component.petShopService, component.frameService)
             adminPetRoutes(component.petShopService)
             adminFrameRoutes(component.frameService)
+            promoVideoRoutes(component.promoVideoStore)
+            adminPromoVideoRoutes(component.promoVideoStore, component.auditService, config.promoVideoPageUrl)
             // The providers' own protocols; not behind the app's auth or its error envelope.
             paymeWebhook(component.paymeGateway, component.billingRepository)
             clickWebhook(component.clickGateway, component.billingRepository)

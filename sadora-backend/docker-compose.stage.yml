@@ -40,3 +40,5 @@ services:
     environment:
       BILLING_DEV_PAY: "true"
       STORE_ALLOW_TEST_PURCHASES: "true"
+      # The page the panel names as where the promo video plays.
+      PROMO_VIDEO_PAGE_URL: https://dev.sadora.app/video/

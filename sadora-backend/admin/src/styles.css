@@ -2370,3 +2370,35 @@ textarea {
     inset 0 1px 0 var(--clay-rim),
     0 24px 60px rgb(20 10 60 / 0.25);
 }
+
+/* ------------------------------------------------------------------ promo video */
+
+.promo-player {
+  display: block;
+  width: 100%;
+  max-height: 60vh;
+  background: #000;
+  border-radius: var(--radius-sm);
+}
+
+.progress {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.progress > span {
+  display: block;
+  height: 100%;
+  background: var(--primary);
+  border-radius: inherit;
+  transition: width 0.2s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .progress > span {
+    transition: none;
+  }
+}

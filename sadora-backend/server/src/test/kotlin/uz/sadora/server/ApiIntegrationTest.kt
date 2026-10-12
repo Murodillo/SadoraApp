@@ -1351,6 +1351,58 @@ class ApiIntegrationTest {
     }
 
     /**
+     * The promo video: staff with the right role put it up in pieces, anybody plays it,
+     * and a browser that asks for a range gets that range.
+     */
+    @Test
+    fun `an operator uploads the promo video in pieces and the public plays it`() = api {
+        val owner = adminToken()
+        val analyst = adminAccount("analyst").token
+        val base = "/v1/admin/promo-video"
+        client.delete(base) { auth(owner) }
+        assertEquals(HttpStatusCode.NotFound, client.get("/v1/promo-video/file").status)
+
+        val bytes = ByteArray(3000) { (it % 251).toByte() }.also { "\u0000\u0000\u0000\u0018ftypmp42".toByteArray(Charsets.ISO_8859_1).copyInto(it) }
+        val start = uz.sadora.server.promo.StartPromoUploadRequest("reklama.mp4", bytes.size.toLong())
+
+        assertEquals(HttpStatusCode.Unauthorized, client.post("$base/uploads") { json(start) }.status)
+        assertEquals(HttpStatusCode.Forbidden, client.post("$base/uploads") { auth(analyst); json(start) }.status)
+        val refused = client.post("$base/uploads") { auth(owner); json(start.copy(fileName = "reklama.mov")) }
+        assertEquals(HttpStatusCode.BadRequest, refused.status, refused.bodyAsTextSafe())
+
+        val id = post<uz.sadora.server.promo.PromoUploadProgress>("$base/uploads", owner, start).uploadId
+        for (offset in bytes.indices step 1024) {
+            val piece = client.put("$base/uploads/$id?offset=$offset") {
+                auth(owner)
+                setBody(io.ktor.http.content.ByteArrayContent(bytes.copyOfRange(offset, minOf(offset + 1024, bytes.size)), ContentType.Application.OctetStream))
+            }
+            assertEquals(HttpStatusCode.OK, piece.status, piece.bodyAsTextSafe())
+        }
+        val done = client.post("$base/uploads/$id/complete") { auth(owner) }
+        assertEquals(HttpStatusCode.OK, done.status, done.bodyAsTextSafe())
+        val view = done.body<uz.sadora.server.promo.PromoVideoView>()
+        assertEquals("https://sadora.app/video/", view.pageUrl)
+        assertEquals(3000, view.video?.sizeBytes)
+        // Every role sees what is up, including the ones that may not change it.
+        assertEquals(view.video, get<uz.sadora.server.promo.PromoVideoView>(base, analyst).video)
+
+        val whole = client.get(view.video!!.url)
+        assertEquals("video/mp4", whole.headers[HttpHeaders.ContentType])
+        assertTrue(whole.readRawBytes().contentEquals(bytes))
+        val part = client.get(view.video!!.url) { header(HttpHeaders.Range, "bytes=100-199") }
+        assertEquals(HttpStatusCode.PartialContent, part.status)
+        assertTrue(part.readRawBytes().contentEquals(bytes.copyOfRange(100, 200)))
+
+        assertEquals(HttpStatusCode.Forbidden, client.delete(base) { auth(analyst) }.status)
+        assertNull(client.delete(base) { auth(owner) }.body<uz.sadora.server.promo.PromoVideoView>().video)
+        assertEquals(HttpStatusCode.NotFound, client.get("/v1/promo-video/file").status)
+        val actions = dbQuery {
+            AuditLog.selectAll().where { AuditLog.entityType eq "promo_video" }.map { it[AuditLog.action] }
+        }
+        assertTrue(actions.containsAll(listOf("promo.video_uploaded", "promo.video_removed")), actions.toString())
+    }
+
+    /**
      * The invite pays both sides exactly once, and never for a code somebody typed at
      * their own account. A referral scheme that can be pointed at itself is a mint.
      */
@@ -4434,5 +4486,6 @@ class ApiIntegrationTest {
         ),
         // Zero, so the erasure test can tick the job instead of waiting thirty days.
         accountErasureGracePeriod = Duration.ZERO,
+        mediaDir = java.nio.file.Files.createTempDirectory("sadora-test-media").toString(),
     )
 }

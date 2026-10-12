@@ -80,6 +80,7 @@ services:
       REDIS_URL: redis://redis:6379
       HOST: 0.0.0.0
       PORT: 8080
+      MEDIA_DIR: /srv/media
     depends_on:
       postgres:
         condition: service_healthy
@@ -95,6 +96,9 @@ services:
     # still starts: FCM_SERVICE_ACCOUNT_FILE stays blank there and push goes to the log.
     volumes:
       - ${SADORA_SECRETS_DIR:-./server/secrets}:/run/secrets/sadora:ro
+      # What staff upload in the admin panel — the promo video. On the server's disk, not
+      # in the container, so it outlives a deploy; the landing container serves it.
+      - ./media:/srv/media
 
   # The static sites. nginx serves files and nothing else — it proxies nothing; each
   # directory is put in place by a deploy, and the container is restarted to see it.
@@ -107,6 +111,8 @@ services:
       # APKs published by CI (`sadora-ci publish-apk`). Outside the source tree, so a
       # deploy that replaces the landing page never takes the download with it.
       - ./downloads:/srv/download:ro
+      # The promo video the API keeps in ./media/video, served as /video/media/.
+      - ./media/video:/srv/promo/video/media:ro
     ports:
       - "8091:80"
 
