@@ -521,7 +521,7 @@ class CommunityService(
         // The feed is anonymous: a phone number in a post undoes that for whoever wrote
         // it, and "menga yozing +998…" is how strangers get pulled off the app. Private
         // messages are the way to talk one to one.
-        if (PHONE_NUMBER.containsMatchIn(body)) {
+        if (containsPhoneNumber(body)) {
             throw ValidationException("body", "Chatda telefon raqam yozib bo'lmaydi — shaxsiy xabar orqali yozing")
         }
     }
@@ -589,6 +589,13 @@ class CommunityService(
          * A year or a dose ("2026", "500 mg") is far shorter than that.
          */
         val PHONE_NUMBER = Regex("""\+?\d(?:[\s\-().]*\d){8,}""")
+
+        /** A hyphenated hex id, "3f2a9c1e-8b47-4d05-9123-456789012abc": its digit runs are not a number to ring. */
+        private val HEX_ID = Regex("""\b[0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}\b""")
+
+        /** Whether [body] holds a phone number; a pasted id is set aside before looking. */
+        fun containsPhoneNumber(body: String): Boolean =
+            PHONE_NUMBER.containsMatchIn(body.replace(HEX_ID, "#"))
         /** The most one page of a profile's posts may hold. */
         const val MAX_PROFILE_POSTS = 50
         /**
