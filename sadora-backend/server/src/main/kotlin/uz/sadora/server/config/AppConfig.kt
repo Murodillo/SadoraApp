@@ -4,6 +4,7 @@ import kotlin.time.Duration
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
+import uz.sadora.contract.UzbekPhone
 
 /**
  * Configuration is read straight from the environment rather than through Ktor's config
@@ -103,6 +104,11 @@ data class AppConfig(
                     maxPerPhonePerHour = env("OTP_MAX_PER_HOUR", "5").toInt(),
                     exposeCode = env("OTP_EXPOSE_CODE", "true").toBoolean(),
                     fixedCode = envOrNull("OTP_FIXED_CODE"),
+                    demoPhones = envOrNull("OTP_DEMO_PHONES")
+                        ?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() }
+                        ?.map { requireNotNull(UzbekPhone.toE164(it)) { "OTP_DEMO_PHONES holds a number that is not an Uzbek phone: $it" } }
+                        ?.toSet().orEmpty(),
+                    demoCode = envOrNull("OTP_DEMO_CODE"),
                     playMobile = PlayMobileConfig(
                         login = envOrNull("PLAYMOBILE_LOGIN"),
                         password = envOrNull("PLAYMOBILE_PASSWORD"),
@@ -218,6 +224,18 @@ data class AppConfig(
          * a fixed OTP code.
          */
         private fun AppConfig.verifyProductionSafety() {
+            // Checked everywhere: a demo number without a usable code is an account nobody
+            // can open, and the mistake should not wait for a reviewer to find it.
+            if (otp.demoPhones.isNotEmpty()) {
+                val code = otp.demoCode
+                require(code != null && code.length == otp.codeLength && code.all { it.isDigit() }) {
+                    "OTP_DEMO_CODE must be ${otp.codeLength} digits when OTP_DEMO_PHONES is set."
+                }
+                // The demo accounts are the only ones a guess can open, so not the first guess.
+                require(environment == Environment.DEV || (code != "123456" && code.toSet().size > 1)) {
+                    "OTP_DEMO_CODE must not be 123456 or one repeated digit outside development."
+                }
+            }
             if (environment == Environment.DEV) return
             // Staging is reachable from the internet too. A token signed with the key that
             // sits in the public repository is a token anybody can mint, so the signing key
@@ -294,6 +312,14 @@ data class OtpConfig(
      * [AppConfig]; [codeLength] is ignored while it is set.
      */
     val fixedCode: String? = null,
+    /**
+     * Numbers of the demo accounts, in E.164. A code asked for one of them is [demoCode]
+     * and no SMS is sent: the people who sign in to them do not hold the SIM. Allowed in
+     * production — it is how a store reviewer gets in — so the code is a secret of the
+     * deployment, and the accounts behind these numbers hold nothing real.
+     */
+    val demoPhones: Set<String> = emptySet(),
+    val demoCode: String? = null,
     val playMobile: PlayMobileConfig = PlayMobileConfig(null, null, originator = "3700", baseUrl = "https://send.smsxabar.uz"),
     /** The SMS, with `{code}` where the digits go. */
     val smsText: String = "{code}",

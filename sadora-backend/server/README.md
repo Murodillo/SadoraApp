@@ -127,6 +127,8 @@ bo'lardi. Admin panelning o'z paroli bor — alohida realm, 2FA ortida.
 `send.smsxabar.uz/broker-api/send` ga bitta so'rov yuboradi — HTTP Basic, token yo'q.
 Jo'natuvchi (`PLAYMOBILE_ORIGINATOR`, hozir `3700`) va matn (`OTP_SMS_TEXT`) shartnomaga
 bog'liq, shuning uchun ikkalasi ham kodda emas, sozlamada.
+Demo akkauntlar bundan mustasno: `OTP_DEMO_PHONES`dagi raqamga so'ralgan kod har doim
+`OTP_DEMO_CODE` bo'ladi va SMS ketmaydi — store tekshiruvchisida u raqamning SIM'i yo'q.
 Yuborib bo'lmasa (Play Mobile javob bermadi, so'rovni rad etdi, login noto'g'ri) challenge
 o'chiriladi va mijoz 503 `upstream_unavailable` oladi — kod kelmaganini u kutib o'tirmaydi,
 qayta so'raydi. Login sozlanmagan mashinada kod faqat log'ga yoziladi.

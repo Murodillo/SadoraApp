@@ -2097,6 +2097,28 @@ class ApiIntegrationTest {
         assertEquals(HttpStatusCode.OK, session.status, session.bodyAsTextSafe())
     }
 
+    /**
+     * A reviewer does not hold the demo number's SIM: its code is the one they were
+     * given, every time, and it opens nobody else's account.
+     */
+    @Test
+    fun `a demo number signs in with the code it was given and no other number does`() = api {
+        repeat(2) {
+            val challenge = client.post("/v1/auth/otp/request") { json(OtpRequest(DEMO_PHONE)) }.body<OtpChallenge>()
+            val session = client.post("/v1/auth/otp/verify") {
+                json(OtpVerifyRequest(challenge.challengeId, "271828", DeviceInfo("test-device", Platform.ANDROID)))
+            }
+            assertEquals(HttpStatusCode.OK, session.status, session.bodyAsTextSafe())
+        }
+
+        val other = client.post("/v1/auth/otp/request") { json(OtpRequest(randomPhone())) }.body<OtpChallenge>()
+        assertNotEquals("271828", other.devCode)
+        val refused = client.post("/v1/auth/otp/verify") {
+            json(OtpVerifyRequest(other.challengeId, "271828", DeviceInfo("test-device", Platform.ANDROID)))
+        }
+        assertNotEquals(HttpStatusCode.OK, refused.status)
+    }
+
     /** An appointment's place had no limit, which is a free text column open to anything. */
     @Test
     fun `an appointment refuses a title or a place longer than its column`() = api {
@@ -4438,6 +4460,8 @@ class ApiIntegrationTest {
             resendAfter = 60.seconds,
             maxPerPhonePerHour = 100,
             exposeCode = true,
+            demoPhones = setOf(DEMO_PHONE),
+            demoCode = "271828",
         ),
         social = SocialConfig(appleBundleIds = listOf("uz.sadora.app"), googleClientIds = emptyList()),
         // No API key, so the test never reaches a network: the gateway answers from the
@@ -4489,3 +4513,6 @@ class ApiIntegrationTest {
         mediaDir = java.nio.file.Files.createTempDirectory("sadora-test-media").toString(),
     )
 }
+
+/** A demo account's number, as OTP_DEMO_PHONES would name it. */
+private const val DEMO_PHONE = "+998900000099"

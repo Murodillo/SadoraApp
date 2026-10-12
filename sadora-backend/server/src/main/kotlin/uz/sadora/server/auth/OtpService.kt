@@ -44,8 +44,13 @@ class OtpService(
 
     suspend fun request(rawPhone: String, requestIp: String?): OtpChallenge {
         val phone = PhoneNumbers.normalize(rawPhone)
+        // A demo account's number: the person signing in — a store reviewer, a client
+        // being shown the app — does not hold its SIM, so the code is one they were told.
+        val demoCode = config.demoCode?.takeIf { phone in config.demoPhones }
 
-        val sendsThisHour = cache.increment("otp:sends:$phone", 1.hours)
+        // The cap is there for what an SMS costs. A demo code costs nothing, and a
+        // stranger asking five times must not be able to shut the reviewer out for an hour.
+        val sendsThisHour = if (demoCode != null) 0 else cache.increment("otp:sends:$phone", 1.hours)
         if (sendsThisHour > config.maxPerPhonePerHour) {
             logger.warn("OTP send cap hit for {}", PhoneNumbers.mask(phone))
             throw RateLimitedException(
@@ -56,7 +61,7 @@ class OtpService(
 
         // A fixed code is a dev convenience so a tester on a real phone can type the
         // same digits every time; AppConfig refuses it outside development.
-        val code = config.fixedCode ?: randomNumericCode(config.codeLength)
+        val code = demoCode ?: config.fixedCode ?: randomNumericCode(config.codeLength)
         val challengeId = Uuid.random()
         val expiresAt = now() + config.ttl
 
@@ -75,7 +80,9 @@ class OtpService(
         }
 
         try {
-            sender.send(phone, code)
+            // Whoever owns a demo number in real life is not sent a code for an account
+            // that is not theirs.
+            if (demoCode == null) sender.send(phone, code)
         } catch (failure: SmsDeliveryException) {
             // A challenge whose code never left would show as live and hold the resend
             // timer against her; without it she can simply ask again.
