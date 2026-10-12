@@ -43,9 +43,9 @@ import uz.sadora.server.audit.AuditRepository
 import uz.sadora.server.audit.AuditService
 import uz.sadora.server.auth.AuthService
 import uz.sadora.server.auth.JwtService
-import uz.sadora.server.auth.EskizOtpSender
 import uz.sadora.server.auth.LoggingOtpSender
 import uz.sadora.server.auth.OtpService
+import uz.sadora.server.auth.PlayMobileOtpSender
 import uz.sadora.server.auth.RefreshTokenService
 import uz.sadora.server.auth.SocialVerifier
 import uz.sadora.server.cache.Cache
@@ -159,8 +159,8 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
     val otpService = OtpService(
         config.otp,
         cache,
-        if (config.otp.eskiz.isConfigured) {
-            EskizOtpSender(outboundHttpClient, config.otp.eskiz, config.otp.smsText)
+        if (config.otp.playMobile.isConfigured) {
+            PlayMobileOtpSender(outboundHttpClient, config.otp.playMobile, config.otp.smsText)
         } else {
             LoggingOtpSender(showCode = config.environment == Environment.DEV)
         },

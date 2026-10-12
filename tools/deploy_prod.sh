@@ -19,7 +19,7 @@
 #
 # Until the release it runs as SADORA_ENV=STAGE with the fixed sign-in code 123456: no
 # SMS is sent, and payments stay in test mode. At the release a person sets
-# SADORA_ENV=PROD, removes OTP_FIXED_CODE and fills in the Eskiz account on the server —
+# SADORA_ENV=PROD, removes OTP_FIXED_CODE and fills in the Play Mobile login on the server —
 # production refuses to boot without a way to send codes, so this script then waits for
 # that account before it starts the API.
 
@@ -101,7 +101,7 @@ else
     echo
     echo '# ---- production, generated once on this server ----'
     echo '# Until the release: no SMS, every sign-in code is 123456. At the release set'
-    echo '# SADORA_ENV=PROD, delete OTP_FIXED_CODE and fill in ESKIZ_EMAIL / ESKIZ_PASSWORD.'
+    echo '# SADORA_ENV=PROD, delete OTP_FIXED_CODE and fill in PLAYMOBILE_LOGIN / PLAYMOBILE_PASSWORD.'
     echo SADORA_ENV=STAGE
     echo OTP_FIXED_CODE=123456
     echo CORS_ALLOWED_ORIGINS=$ADMIN_URL,$DOCTOR_URL,$LANDING_URL
@@ -130,7 +130,7 @@ fi
 
 echo "==> stack"
 if ! remote "grep -qx 'SADORA_ENV=PROD' $DIR/server/.env.prod" \
-  || remote "grep -qE '^ESKIZ_EMAIL=.+' $DIR/server/.env.prod && grep -qE '^ESKIZ_PASSWORD=.+' $DIR/server/.env.prod"; then
+  || remote "grep -qE '^PLAYMOBILE_LOGIN=.+' $DIR/server/.env.prod && grep -qE '^PLAYMOBILE_PASSWORD=.+' $DIR/server/.env.prod"; then
   remote "cd $DIR && $COMPOSE up -d --no-build --remove-orphans"
   echo "==> waiting for the API"
   health() { remote 'curl -sf http://127.0.0.1:8093/health/ready'; }
@@ -140,9 +140,9 @@ if ! remote "grep -qx 'SADORA_ENV=PROD' $DIR/server/.env.prod" \
 else
   remote "cd $DIR && $COMPOSE up -d --no-build --remove-orphans postgres redis landing admin doctor-admin"
   echo
-  echo "    The API is not started: SADORA_ENV=PROD, but ESKIZ_EMAIL and ESKIZ_PASSWORD are blank in"
+  echo "    The API is not started: SADORA_ENV=PROD, but PLAYMOBILE_LOGIN and PLAYMOBILE_PASSWORD are blank in"
   echo "    $DIR/server/.env.prod, and production refuses to boot without a way to send"
-  echo "    sign-in codes. Fill them in on the server (and OTP_SMS_TEXT, if Eskiz approved"
+  echo "    sign-in codes. Fill them in on the server (and OTP_SMS_TEXT, if Play Mobile agreed"
   echo "    a different wording), then run this script again."
 fi
 

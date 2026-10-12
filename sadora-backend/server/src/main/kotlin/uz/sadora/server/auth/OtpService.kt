@@ -178,7 +178,7 @@ class ApiOtpException(code: String, message: String) :
     uz.sadora.server.core.ApiException(io.ktor.http.HttpStatusCode.BadRequest, code, message)
 
 /**
- * Where a code goes: [EskizOtpSender] when its account is configured, [LoggingOtpSender]
+ * Where a code goes: [PlayMobileOtpSender] when its account is configured, [LoggingOtpSender]
  * on a machine without one.
  */
 interface OtpSender {
