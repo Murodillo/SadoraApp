@@ -28,7 +28,8 @@
 #                               apps to testing tracks" on both apps
 #   PLAY_KEYSTORE_<APP>_B64     sadora-<app>/androidApp/<storeFile>          each app's upload key,
 #   PLAY_KEYSTORE_<APP>_PASSWORD  from its keystore.properties               alias `upload`, one password
-#   GOOGLE_SERVICES_<APP>_JSON  sadora-<app>/androidApp/google-services.json  push in store builds
+#   GOOGLE_SERVICES_<APP>_JSON  sadora-<app>/androidApp/google-services.json  push in the staging APK and store builds
+#   GOOGLE_SERVICE_INFO_<APP>_PLIST  sadora-<app>/iosApp/iosApp/GoogleService-Info.plist  push in TestFlight builds
 #
 # (<APP> is CLIENT or DOCTOR.)
 #
@@ -88,6 +89,8 @@ for app in client doctor; do
     sed -n 's/^storePassword=//p' "$dir/keystore.properties" | tr -d '\n' | set_secret "PLAY_KEYSTORE_${APP}_PASSWORD"
   fi
   [[ -s $dir/google-services.json ]] && set_secret "GOOGLE_SERVICES_${APP}_JSON" < "$dir/google-services.json"
+  plist=sadora-$app/iosApp/iosApp/GoogleService-Info.plist
+  [[ -s $plist ]] && set_secret "GOOGLE_SERVICE_INFO_${APP}_PLIST" < "$plist"
 done
 
 echo "==> done. Re-run the latest CI run of an open pull request into dev to deliver it:"

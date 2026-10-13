@@ -297,6 +297,18 @@ jobs:
           echo "path=$path" >> "$GITHUB_OUTPUT"
           echo "cert=$cert" >> "$GITHUB_OUTPUT"
 
+      # Firebase's file is not in the repository; without it the build still passes and
+      # the app just has no push.
+      - name: Install Firebase's file
+        env:
+          GOOGLE_SERVICES: ${{ secrets.GOOGLE_SERVICES_CLIENT_JSON }}
+        run: |
+          if [[ -z $GOOGLE_SERVICES ]]; then
+            echo "::notice::GOOGLE_SERVICES_CLIENT_JSON is not set (tools/ci_secrets.sh), so this APK has no push."
+            exit 0
+          fi
+          ( umask 077 && printf '%s' "$GOOGLE_SERVICES" > sadora-client/androidApp/google-services.json )
+
       - name: Build
         working-directory: sadora-client
         env:
@@ -354,6 +366,10 @@ jobs:
           path: ${{ steps.verify.outputs.apk }}
           retention-days: 7
 
+      - name: Forget Firebase's file
+        if: always()
+        run: rm -f sadora-client/androidApp/google-services.json
+
   smoke:
     name: Smoke test
     needs: [deploy, apk]
@@ -401,8 +417,8 @@ jobs:
       fail-fast: false
       matrix:
         app:
-          - { name: Sadora, dir: sadora-client, asc_app_id: '6811085950' }
-          - { name: Sadora Doctor, dir: sadora-doctor, asc_app_id: '6817900879' }
+          - { name: Sadora, dir: sadora-client, asc_app_id: '6811085950', key: CLIENT }
+          - { name: Sadora Doctor, dir: sadora-doctor, asc_app_id: '6817900879', key: DOCTOR }
     concurrency:
       group: stage-testflight-${{ matrix.app.dir }}
       cancel-in-progress: false
@@ -459,6 +475,20 @@ jobs:
           build=$(ASC_KEY_PATH=$key python3 tools/ci/asc_next_build.py "$ASC_APP_ID")
           { echo "host=${url#https://}"; echo "key=$key"; echo "build=$build"; } >> "$GITHUB_OUTPUT"
 
+      # Firebase's file is not in the repository. The app folder is a synchronized group,
+      # so a file put there is bundled; without it the app runs and just has no push.
+      - name: Install Firebase's file
+        if: steps.secrets.outputs.ready == 'true'
+        env:
+          GOOGLE_SERVICE_INFO: ${{ secrets[format('GOOGLE_SERVICE_INFO_{0}_PLIST', matrix.app.key)] }}
+        run: |
+          if [[ -z $GOOGLE_SERVICE_INFO ]]; then
+            echo "::notice::No GoogleService-Info.plist for $APP_DIR in the staging environment (tools/ci_secrets.sh), so this build has no push."
+            exit 0
+          fi
+          ( umask 077 && printf '%s' "$GOOGLE_SERVICE_INFO" > "$APP_DIR/iosApp/iosApp/GoogleService-Info.plist" )
+          plutil -lint "$APP_DIR/iosApp/iosApp/GoogleService-Info.plist"
+
       # Archived unsigned, then signed for distribution on export: a distribution profile
       # needs no registered devices, and the key lets Xcode make one on a fresh runner.
       - name: Archive
@@ -501,7 +531,7 @@ jobs:
 
       - name: Forget the key
         if: always()
-        run: rm -rf ~/.appstoreconnect/private_keys
+        run: rm -rf ~/.appstoreconnect/private_keys "$APP_DIR/iosApp/iosApp/GoogleService-Info.plist"
 
   # The Android twin of TestFlight: a signed bundle of each app against the same staging
   # API, on its Play internal testing track. Needs a Play service account and each app's
