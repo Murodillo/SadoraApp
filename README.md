@@ -277,9 +277,10 @@ SADORA_DIRECT=1 ./tools/deploy_prod.sh
 
 `server/.env.prod` serverda bir marta yaratiladi (JWT, Postgres paroli, birinchi owner
 `owner@sadora.app` paroli — hammasi serverda yaratiladi va chiqarilmaydi). Relizgacha u
-`SADORA_ENV=STAGE` va `OTP_FIXED_CODE=123456` bilan ishlaydi: SMS ketmaydi, to'lovlar test
-rejimida. Relizda serverda `SADORA_ENV=PROD` qo'yiladi, `OTP_FIXED_CODE` o'chiriladi va
-`PLAYMOBILE_LOGIN` / `PLAYMOBILE_PASSWORD` yoziladi — ularsiz prod API ko'tarilmaydi.
+`SADORA_ENV=STAGE` bilan ishlaydi: to'lovlar test rejimida, lekin kirish kodi haqiqiy —
+`OTP_FIXED_CODE` qo'yilmaydi va kod Play Mobile orqali SMS bilan keladi (`PLAYMOBILE_LOGIN` /
+`PLAYMOBILE_PASSWORD`). Relizda serverda `SADORA_ENV=PROD` qo'yiladi — Play Mobile logini
+bo'lmasa yoki `OTP_FIXED_CODE` qo'yilgan bo'lsa prod API ko'tarilmaydi.
 
 ### Bir martalik sozlash
 
