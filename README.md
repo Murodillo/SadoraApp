@@ -566,6 +566,33 @@ curl -X POST "https://health.googleapis.com/v4/projects/<PROJECT_NUMBER>/subscri
                              "subscriptionCreatePolicy":"AUTOMATIC"}]}'
 ```
 
+### Huawei (Health Kit)
+
+Huawei soat va bilaguzuklari Huawei Health Kit'ning bulut API'si (`health-api.cloud.huawei.com/healthkit/v2`)
+orqali, HUAWEI ID OAuth bilan o'qiladi. Ulanish yo'li o'sha (`/v1/wearables/huawei/connect|callback|sync`).
+Kunlik statistika (qadam, masofa, faol kaloriya, o'rtacha va tinch puls, SpO₂, teri va tana
+harorati, vazn, VO₂ max) `sampleSet:dailyPolymerize` bilan, uyqu `healthRecords`
+(`com.huawei.health.record.sleep`) dan, HRV esa namunalar sifatida (`sampleSet:polymerize`)
+olinadi va kunlik o'rtachaga keltiriladi. Tush uyqusi (3 soatdan kam) tun hisoblanmaydi.
+
+Huawei ruxsat berilgan kundan oldingi ma'lumotni faqat `historydata.open.*` scope bilan beradi
+(aks holda 403): shu sabab `historydata.open.month` so'raladi, rad etilsa oxirgi kunlar tortiladi.
+Kunlar `HUAWEI_TIME_ZONE` (`+0500`) bo'yicha kesiladi.
+
+Bildirishnoma (faqat enterprise akkaunt): Huawei ma'lumotni emas, "kimda nima o'zgardi"ni yuboradi —
+`POST /v1/wearables/huawei/healthkit/notifications` (manzil albatta `/healthkit/notifications` bilan
+tugashi shart), `x-notification-signature` = `base64(HMAC-SHA256(secret, openId_eventType_eventTime))`.
+Foydalanuvchi ulanganda server uning obunasini o'zi yaratadi (`/healthkit/v2/subscriptions`) va
+`openId`ni o'sha javobdan oladi. Ruxsat bekor qilinsa (`USER_EVENT`) ulanish "qayta ulang"ga o'tadi.
+
+Sozlash: developer.huawei.com (AppGallery Connect)da ilova, HUAWEI ID (Account Kit) va Health
+Service Kit'ni yoqing, kerakli scope'larga ariza bering (step, distance, calories, heartrate, sleep,
+oxygensaturation, bodytemperature, heightweight, pulmonary — `.read`, va `historydata.open.month`),
+callback URL — `PUBLIC_BASE_URL/v1/wearables/huawei/callback`. `.env`: `HUAWEI_CLIENT_ID` (App ID),
+`HUAWEI_CLIENT_SECRET` (App secret); ixtiyoriy: `HUAWEI_SUBSCRIBER_ID`, `HUAWEI_SUBSCRIBER_SECRET`,
+`HUAWEI_SCOPES` (tasdiqlanmagan scope rozilik sahifasini buzadi — ro'yxatni shu bilan toraytiring).
+Foydalanuvchi Huawei Health ilovasida "Ma'lumot almashish"ni yoqmagan bo'lsa javoblar bo'sh keladi.
+
 Soat yo'q bo'lsa uyqu Uyqu ekranidan qo'lda kiritiladi (`manual` provayder,
 `sleep_minutes` → `sleep_duration`).
 

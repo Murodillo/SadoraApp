@@ -29,6 +29,7 @@ import uz.sadora.server.plugins.USER_AUTH
 import uz.sadora.server.wearable.fitbit.GoogleHealthNotifications
 import uz.sadora.server.wearable.garmin.GarminMapper
 import uz.sadora.server.wearable.garmin.GarminPush
+import uz.sadora.server.wearable.huawei.HuaweiNotification
 import uz.sadora.server.wearable.whoop.WhoopWebhookEvent
 
 /** Where the browser is sent after the provider's consent page: back into the app. */
@@ -85,7 +86,7 @@ fun Route.wearablePublicRoutes(service: WearableConnectService, job: WearableSyn
     rateLimit(RateLimits.WEARABLE) {
         // The browser only carries the code back to the app. Exchanging it here would
         // save the grant to whoever started the flow, not whoever is holding the phone.
-        listOf("whoop", "oura", "garmin", "fitbit").forEach { provider ->
+        listOf("whoop", "oura", "garmin", "fitbit", "huawei").forEach { provider ->
             get("/wearables/$provider/callback") {
                 val error = call.request.queryParameters["error"]
                 val code = call.request.queryParameters["code"]
@@ -153,15 +154,39 @@ fun Route.wearablePublicRoutes(service: WearableConnectService, job: WearableSyn
             // The handshake names nobody and wants a 200; a notification wants a 204, at once.
             if (users.isEmpty()) return@post call.respond(Ack())
             job.syncInBackground {
-                users.forEach { service.syncByExternalUser(HealthProvider.FITBIT, it, minGap = FITBIT_PUSH_GAP) }
+                users.forEach { service.syncByExternalUser(HealthProvider.FITBIT, it, minGap = PUSH_GAP) }
+            }
+            call.respond(HttpStatusCode.NoContent)
+        }
+
+        // Huawei, like Google, says who changed and what kind of thing, never the data. It
+        // only takes a callback address that ends in /healthkit/notifications, signs each
+        // post with the subscriber's secret, and wants a 204 — the console's connectivity
+        // test included.
+        post("/wearables/huawei/healthkit/notifications") {
+            val notification = HuaweiNotification.parse(call.receiveText())
+                ?: return@post call.respond(HttpStatusCode.BadRequest, Ack(false))
+            when (service.isHuaweiSignature(notification, call.request.header("x-notification-signature"))) {
+                null -> return@post call.respond(HttpStatusCode.ServiceUnavailable, Ack(false))
+                false -> return@post call.respond(HttpStatusCode.Unauthorized, Ack(false))
+                true -> Unit
+            }
+            val openId = notification.openId
+            if (openId != null) {
+                job.syncInBackground {
+                    when {
+                        notification.isRevocation -> service.revokedByExternalUser(HealthProvider.HUAWEI, openId)
+                        notification.isUpdate -> service.syncByExternalUser(HealthProvider.HUAWEI, openId, minGap = PUSH_GAP)
+                    }
+                }
             }
             call.respond(HttpStatusCode.NoContent)
         }
     }
 }
 
-/** Google Health announces each data type on its own; one pull answers the burst. */
-private val FITBIT_PUSH_GAP = 5.minutes
+/** Google Health and Huawei announce each data type on its own; one pull answers the burst. */
+private val PUSH_GAP = 5.minutes
 
 private val webhookJson = Json { ignoreUnknownKeys = true }
 

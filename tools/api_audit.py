@@ -523,6 +523,7 @@ call("wearable connect bogus", "POST", "/wearables/bogus/connect", (400, 404), t
 call("whoop callback no params", "GET", "/wearables/whoop/callback", (302, 400), token=None)
 call("whoop callback evil state (relay page, url-encoded)", "GET", "/wearables/whoop/callback?state=evil&code=x", (200, 302, 400, 401), token=None)
 call("fitbit webhook no secret", "POST", "/wearables/fitbit/webhook", (401, 503), raw_body='{"type":"verification"}')
+call("huawei notification unsigned", "POST", "/wearables/huawei/healthkit/notifications", (401, 503), raw_body='{"eventType":"USER_EVENT$REVOKE_ALL","openId":"x","eventTime":1}')
 call("garmin webhook wrong token", "POST", "/wearables/garmin/webhook/guess", (401, 503), raw_body='{"dailies":[]}')
 call("whoop webhook unsigned", "POST", "/wearables/whoop/webhook", (401, 403, 400), raw_body='{"type":"x"}')
 

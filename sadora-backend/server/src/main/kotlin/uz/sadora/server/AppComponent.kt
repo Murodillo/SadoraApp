@@ -99,6 +99,7 @@ import uz.sadora.server.wearable.WearableConnectService
 import uz.sadora.server.wearable.WearableSyncJob
 import uz.sadora.server.wearable.fitbit.FitbitClient
 import uz.sadora.server.wearable.garmin.GarminClient
+import uz.sadora.server.wearable.huawei.HuaweiClient
 import uz.sadora.server.wearable.oura.OuraClient
 import uz.sadora.server.wearable.whoop.WhoopClient
 import uz.sadora.server.core.TokenCipher
@@ -260,6 +261,8 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
         garminWebhookToken = config.wearables.garmin.webhookToken,
         fitbit = if (config.wearables.fitbit.isConfigured) FitbitClient(outboundHttpClient, config.wearables.fitbit) else null,
         fitbitWebhookSecret = config.wearables.fitbit.webhookSecret,
+        huawei = if (config.wearables.huawei.isConfigured) HuaweiClient(outboundHttpClient, config.wearables.huawei) else null,
+        huaweiSubscriberSecret = config.wearables.huawei.subscriberSecret,
     )
     val wearableSyncJob = WearableSyncJob(wearableConnectService)
 

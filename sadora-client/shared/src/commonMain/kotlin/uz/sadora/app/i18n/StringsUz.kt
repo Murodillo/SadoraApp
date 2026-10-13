@@ -1799,6 +1799,7 @@ object StringsUz : Strings {
             HealthProvider.GARMIN -> "Garmin"
             HealthProvider.WHOOP -> "WHOOP"
             HealthProvider.FITBIT -> "Fitbit"
+            HealthProvider.HUAWEI -> "Huawei Health"
             HealthProvider.SAMSUNG_HEALTH -> "Samsung Health"
             HealthProvider.MANUAL -> "Qo'lda kiritilgan"
         }
@@ -1809,6 +1810,7 @@ object StringsUz : Strings {
             HealthProvider.OURA -> "Uzuk: uyqu va tiklanish"
             HealthProvider.GARMIN -> "Sport soatlari"
             HealthProvider.FITBIT -> "Bilaguzuk va soatlar"
+            HealthProvider.HUAWEI -> "Huawei soat va bilaguzuklari"
             HealthProvider.SAMSUNG_HEALTH -> "Galaxy Watch"
             HealthProvider.MANUAL -> "O'zingiz yozgan ko'rsatkichlar"
         }
@@ -1867,7 +1869,7 @@ object StringsUz : Strings {
         override val askBody =
             "Bo'lsa, bir marta ulaysiz — keyin uyqu, puls va qadamlar har kuni o'zi tushadi, qo'lda kiritish shart emas."
         override val askReadings = listOf("Uyqu", "Puls", "Qadamlar")
-        override val askBrands = "Apple Watch, Galaxy Watch, Mi Band, Garmin, Fitbit, WHOOP, Oura va boshqalar"
+        override val askBrands = "Apple Watch, Galaxy Watch, Mi Band, Huawei, Garmin, Fitbit, WHOOP, Oura va boshqalar"
         override val askYes = "Ha, bor — ulaymiz"
         override val askNo = "Yo'q, menda yo'q"
         override val askLater = "Keyinroq eslatish"

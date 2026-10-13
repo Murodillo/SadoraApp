@@ -1803,6 +1803,7 @@ object StringsRu : Strings {
             HealthProvider.GARMIN -> "Garmin"
             HealthProvider.WHOOP -> "WHOOP"
             HealthProvider.FITBIT -> "Fitbit"
+            HealthProvider.HUAWEI -> "Huawei Health"
             HealthProvider.SAMSUNG_HEALTH -> "Samsung Health"
             HealthProvider.MANUAL -> "Введено вручную"
         }
@@ -1813,6 +1814,7 @@ object StringsRu : Strings {
             HealthProvider.OURA -> "Кольцо: сон и восстановление"
             HealthProvider.GARMIN -> "Спортивные часы"
             HealthProvider.FITBIT -> "Браслеты и часы"
+            HealthProvider.HUAWEI -> "Часы и браслеты Huawei"
             HealthProvider.SAMSUNG_HEALTH -> "Galaxy Watch"
             HealthProvider.MANUAL -> "Показатели, которые вы записали сами"
         }
@@ -1871,7 +1873,7 @@ object StringsRu : Strings {
         override val askBody =
             "Если да, подключите один раз — сон, пульс и шаги будут приходить сами каждый день, вводить вручную не придётся."
         override val askReadings = listOf("Сон", "Пульс", "Шаги")
-        override val askBrands = "Apple Watch, Galaxy Watch, Mi Band, Garmin, Fitbit, WHOOP, Oura и другие"
+        override val askBrands = "Apple Watch, Galaxy Watch, Mi Band, Huawei, Garmin, Fitbit, WHOOP, Oura и другие"
         override val askYes = "Да, есть — подключить"
         override val askNo = "Нет, у меня нет"
         override val askLater = "Напомнить позже"

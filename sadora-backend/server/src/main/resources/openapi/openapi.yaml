@@ -3395,7 +3395,7 @@ components:
 
     HealthProvider:
       type: string
-      enum: [apple_health, health_connect, oura, garmin, whoop, fitbit, samsung_health, manual]
+      enum: [apple_health, health_connect, oura, garmin, whoop, fitbit, huawei, samsung_health, manual]
     HealthMetric:
       type: string
       enum:

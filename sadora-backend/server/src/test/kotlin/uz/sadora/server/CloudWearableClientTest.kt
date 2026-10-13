@@ -21,11 +21,13 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import uz.sadora.server.config.FitbitConfig
 import uz.sadora.server.config.GarminConfig
+import uz.sadora.server.config.HuaweiConfig
 import uz.sadora.server.wearable.fitbit.FitbitClient
 import uz.sadora.server.wearable.garmin.GarminClient
 import uz.sadora.server.wearable.garmin.Pkce
+import uz.sadora.server.wearable.huawei.HuaweiClient
 
-/** What the Garmin and Fitbit clients actually put on the wire, against a stand-in for the vendor. */
+/** What the Garmin, Fitbit and Huawei clients actually put on the wire, against a stand-in for the vendor. */
 class CloudWearableClientTest {
 
     private class Recorded(val request: HttpRequestData, val body: String)
@@ -48,6 +50,12 @@ class CloudWearableClientTest {
         clientId = "fid", clientSecret = "fsecret", redirectUri = "https://api.test/v1/wearables/fitbit/callback",
         authorizeUrl = "https://accounts.google.test/auth", tokenUrl = "https://oauth2.google.test/token",
         revokeUrl = "https://oauth2.google.test/revoke", apiBaseUrl = "https://health.google.test", webhookSecret = null,
+    )
+    private val huawei = HuaweiConfig(
+        clientId = "hid", clientSecret = "hsecret", redirectUri = "https://api.test/v1/wearables/huawei/callback",
+        authorizeUrl = "https://oauth.huawei.test/authorize", tokenUrl = "https://oauth.huawei.test/token",
+        apiBaseUrl = "https://health.huawei.test", scopes = HuaweiClient.DEFAULT_SCOPES, timeZone = "+0500",
+        subscriberId = "sub-1", subscriberSecret = null,
     )
     private val to = Instant.parse("2026-09-04T10:00:00Z")
 
@@ -146,5 +154,60 @@ class CloudWearableClientTest {
         assertEquals("25", sleep.request.url.parameters["pageSize"])
         val weight = seen.first { it.request.url.encodedPath.endsWith("/weight/dataPoints") }
         assertEquals("""weight.sample_time.physical_time >= "2026-09-01T10:00:00Z"""", weight.request.url.parameters["filter"])
+    }
+
+    @Test
+    fun `Huawei is asked in her own days, and a window it refuses is asked again for the last days`() = runBlocking {
+        val seen = mutableListOf<Recorded>()
+        val client = HuaweiClient(
+            client(seen) { request ->
+                val path = request.url.encodedPath
+                val body = seen.last().body
+                when {
+                    path.endsWith("/subscriptions") && body.count { it == '$' } > 2 -> HttpStatusCode.Forbidden to "{}"
+                    path.endsWith("/subscriptions") -> HttpStatusCode.OK to """[{"openId":"open-1","subscriptionId":"s"}]"""
+                    // No history scope: only the last days are answered.
+                    path.endsWith(":dailyPolymerize") && "\"startDay\":\"20260903\"" !in body -> HttpStatusCode.Forbidden to "{}"
+                    path.endsWith(":dailyPolymerize") && "steps.delta" in body -> HttpStatusCode.OK to
+                        """{"group":[{"startTime":1788462000000,"endTime":1788548399999,"sampleSet":[{"samplePoints":[
+                            {"dataTypeName":"com.huawei.continuous.steps.total","value":[{"fieldName":"steps","integerValue":9000}]}]}]}]}"""
+                    path.endsWith(":dailyPolymerize") && "vo2max" in body -> HttpStatusCode.Forbidden to "{}"
+                    path.endsWith(":dailyPolymerize") -> HttpStatusCode.OK to """{"group":[]}"""
+                    path.endsWith("/healthRecords") -> HttpStatusCode.OK to """{"healthRecords":[]}"""
+                    else -> HttpStatusCode.OK to """{"group":[]}"""
+                }
+            },
+            huawei,
+        )
+        val link = Url(client.authorizeUrl("state-1"))
+        assertEquals("offline", link.parameters["access_type"])
+        assertEquals("hid", link.parameters["client_id"])
+        val scopes = link.parameters["scope"]!!.split(" ")
+        assertEquals("openid", scopes.first())
+        assertTrue("https://www.huawei.com/healthkit/sleep.read" in scopes)
+        assertTrue("https://www.huawei.com/healthkit/historydata.open.month" in scopes)
+
+        // The events together were refused, so they are asked for one by one; any answer names her.
+        assertEquals("open-1", client.externalUserId("token"))
+        assertTrue(seen.all { it.request.headers["x-client-id"] == "hid" && "\"subscriberId\":\"sub-1\"" in it.body })
+
+        seen.clear()
+        val samples = client.pull("token", to - 30.days, to, externalUserId = "open-1")
+        assertEquals(listOf("day:2026-09-04:steps" to 9000.0), samples.map { it.externalId to it.value })
+
+        val dailies = seen.filter { it.request.url.encodedPath.endsWith(":dailyPolymerize") }
+        // The first type is asked twice (the month, then the last days); the other nine once.
+        assertEquals(11, dailies.size)
+        assertTrue(""""startDay":"20260805","endDay":"20260904","timeZone":"+0500"""" in dailies.first().body, dailies.first().body)
+        assertTrue(dailies.drop(1).all { """"startDay":"20260903"""" in it.body })
+        assertEquals("Bearer token", dailies.first().request.headers["Authorization"])
+
+        val sleep = seen.single { it.request.url.encodedPath.endsWith("/healthRecords") }
+        assertEquals("com.huawei.health.record.sleep", sleep.request.url.parameters["dataType"])
+        // Midnight of 3 September in Tashkent, in nanoseconds.
+        assertEquals("1788375600000000000", sleep.request.url.parameters["startTime"])
+        assertEquals("${to.toEpochMilliseconds()}000000", sleep.request.url.parameters["endTime"])
+        val hrv = seen.single { it.request.url.encodedPath.endsWith("/sampleSet:polymerize") }
+        assertTrue("com.huawei.heart_rate_variability" in hrv.body && "\"startTime\":1788375600000" in hrv.body, hrv.body)
     }
 }

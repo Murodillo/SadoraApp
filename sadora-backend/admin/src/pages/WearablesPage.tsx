@@ -12,6 +12,7 @@ const providers: HealthProvider[] = [
   'garmin',
   'whoop',
   'fitbit',
+  'huawei',
   'samsung_health',
   'manual',
 ]

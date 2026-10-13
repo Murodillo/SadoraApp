@@ -165,6 +165,7 @@ object SampleNormalizer {
         HealthProvider.WHOOP,
         HealthProvider.GARMIN,
         HealthProvider.FITBIT,
+        HealthProvider.HUAWEI,
         HealthProvider.APPLE_HEALTH,
         HealthProvider.HEALTH_CONNECT,
         HealthProvider.SAMSUNG_HEALTH,

@@ -32,13 +32,15 @@ import uz.sadora.server.core.randomToken
 import uz.sadora.server.health.HealthAccess
 import uz.sadora.server.wearable.fitbit.FitbitClient
 import uz.sadora.server.wearable.garmin.GarminClient
+import uz.sadora.server.wearable.huawei.HuaweiClient
+import uz.sadora.server.wearable.huawei.HuaweiNotification
 import uz.sadora.server.wearable.oura.OuraClient
 import uz.sadora.server.wearable.whoop.WhoopClient
 
 /**
  * Connecting a cloud wearable, and pulling from it.
  *
- * WHOOP, Oura, Garmin and Fitbit so far. A provider is an OAuth grant and a [CloudProviderClient]
+ * WHOOP, Oura, Garmin, Fitbit and Huawei so far. A provider is an OAuth grant and a [CloudProviderClient]
  * that pages through its collections and maps them to [HealthSampleInput]. Garmin differs
  * in one thing: it sends the data itself, so most of hers arrives through [ingestPushed]
  * and the pull is only the floor under it. Everything provider-specific stops at the
@@ -58,10 +60,12 @@ class WearableConnectService(
     private val garminWebhookToken: String? = null,
     private val fitbit: FitbitClient? = null,
     private val fitbitWebhookSecret: String? = null,
+    private val huawei: HuaweiClient? = null,
+    private val huaweiSubscriberSecret: String? = null,
 ) {
     /** The clients this server has credentials for. A provider missing here is "not configured". */
     private val clients: Map<HealthProvider, CloudProviderClient> =
-        listOfNotNull<CloudProviderClient>(whoop, oura, garmin, fitbit).associateBy { it.provider }
+        listOfNotNull<CloudProviderClient>(whoop, oura, garmin, fitbit, huawei).associateBy { it.provider }
 
     private val logger = LoggerFactory.getLogger(WearableConnectService::class.java)
 
@@ -123,6 +127,14 @@ class WearableConnectService(
                 unavailableReason = if (fitbit == null) ProviderUnavailable.NOT_CONFIGURED else null,
                 metrics = FITBIT_METRICS,
                 connection = connected[HealthProvider.FITBIT]?.toDto(),
+            ),
+            ProviderInfo(
+                provider = HealthProvider.HUAWEI,
+                kind = ProviderKind.CLOUD,
+                available = huawei != null,
+                unavailableReason = if (huawei == null) ProviderUnavailable.NOT_CONFIGURED else null,
+                metrics = HUAWEI_METRICS,
+                connection = connected[HealthProvider.HUAWEI]?.toDto(),
             ),
             // Samsung Health writes into Health Connect, and that is how the app reads it;
             // the app shows it on Android phones only.
@@ -313,6 +325,15 @@ class WearableConnectService(
         return java.security.MessageDigest.isEqual(expected.toByteArray(), authorization.orEmpty().toByteArray())
     }
 
+    /**
+     * Whether [signature] is Huawei's over [notification], made with the subscriber's secret.
+     * Null when no subscriber is registered here.
+     */
+    fun isHuaweiSignature(notification: HuaweiNotification, signature: String?): Boolean? {
+        val secret = huaweiSubscriberSecret ?: return null
+        return notification.signedWith(secret, signature.orEmpty())
+    }
+
     private suspend fun freshAccessToken(record: ConnectionRecord, client: CloudProviderClient): String {
         val current = runCatching { cipher.decrypt(record.accessTokenEnc) }.getOrNull()
         if (current != null && record.tokenExpiresAt - now() > REFRESH_MARGIN) return current
@@ -325,7 +346,7 @@ class WearableConnectService(
             GrantedTokens(
                 accessTokenEnc = cipher.encrypt(tokens.accessToken),
                 // Oura's and Garmin's refresh tokens are single-use and come back new; WHOOP's
-                // may not, and Google's never does: the first one stays good.
+                // may not, and Google's and Huawei's never do: the first one stays good.
                 refreshTokenEnc = (tokens.refreshToken ?: refreshToken).let(cipher::encrypt),
                 expiresAt = now() + tokens.expiresIn.seconds,
                 scopes = tokens.scope.split(' ').filter { it.isNotBlank() },
@@ -387,6 +408,14 @@ class WearableConnectService(
             HealthMetric.HEART_RATE, HealthMetric.RESTING_HEART_RATE, HealthMetric.HRV,
             HealthMetric.SLEEP_DURATION, HealthMetric.SLEEP_DEEP, HealthMetric.SLEEP_REM, HealthMetric.SLEEP_LIGHT,
             HealthMetric.SLEEP_AWAKE, HealthMetric.SPO2, HealthMetric.RESPIRATORY_RATE,
+            HealthMetric.WEIGHT, HealthMetric.BODY_FAT, HealthMetric.VO2_MAX,
+        )
+        val HUAWEI_METRICS = listOf(
+            HealthMetric.STEPS, HealthMetric.DISTANCE, HealthMetric.ACTIVE_ENERGY,
+            HealthMetric.HEART_RATE, HealthMetric.RESTING_HEART_RATE, HealthMetric.HRV,
+            HealthMetric.SLEEP_DURATION, HealthMetric.SLEEP_DEEP, HealthMetric.SLEEP_REM, HealthMetric.SLEEP_LIGHT,
+            HealthMetric.SLEEP_AWAKE, HealthMetric.SLEEP_PERFORMANCE, HealthMetric.SPO2,
+            HealthMetric.SKIN_TEMPERATURE, HealthMetric.BODY_TEMPERATURE,
             HealthMetric.WEIGHT, HealthMetric.BODY_FAT, HealthMetric.VO2_MAX,
         )
     }

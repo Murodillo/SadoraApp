@@ -688,6 +688,16 @@ class ApiIntegrationTest {
         assertEquals(HttpStatusCode.BadRequest, client.get("/v1/wearables/fitbit/callback?error=access_denied").status)
         assertEquals(HttpStatusCode.ServiceUnavailable, client.post("/v1/wearables/fitbit/webhook") { setBody("{}") }.status)
 
+        // And Huawei, through Health Kit.
+        val huawei = assertNotNull(providers.firstOrNull { it.provider == HealthProvider.HUAWEI })
+        assertEquals(ProviderUnavailable.NOT_CONFIGURED, huawei.unavailableReason)
+        assertEquals(HttpStatusCode.ServiceUnavailable, client.post("/v1/wearables/huawei/connect") { auth(user.token) }.status)
+        assertEquals(HttpStatusCode.BadRequest, client.get("/v1/wearables/huawei/callback?error=access_denied").status)
+        assertEquals(
+            HttpStatusCode.ServiceUnavailable,
+            client.post("/v1/wearables/huawei/healthkit/notifications") { setBody("""{"eventType":"USER_EVENT${'$'}REVOKE_ALL","openId":"x","eventTime":1}""") }.status,
+        )
+
         assertTrue(get<List<WearableConnection>>("/v1/wearables/connections", user.token).isEmpty())
     }
 
@@ -3302,6 +3312,42 @@ class ApiIntegrationTest {
         val fitbitResult = component.wearableService.ingest(userId, uz.sadora.contract.IngestSamplesRequest(fitbitSamples))
         assertTrue(fitbitResult.unmapped.isEmpty(), "unmapped: ${fitbitResult.unmapped}")
         assertEquals(17, fitbitResult.accepted)
+
+        // And Huawei's: the day's statistics, the night and the HRV average.
+        val huawei = uz.sadora.server.wearable.huawei.HuaweiMapper
+        val zone = kotlinx.datetime.TimeZone.UTC
+        val dayStart = kotlin.time.Instant.parse("${today}T00:00:00Z").toEpochMilliseconds()
+        fun stat(type: String, vararg fields: Pair<String, Number>) =
+            """{"dataTypeName":"com.huawei.$type","value":[${fields.joinToString(",") { (name, value) ->
+                """{"fieldName":"$name","${if (value is Int) "integerValue" else "floatValue"}":$value}"""
+            }}]}"""
+        val huaweiSamples = json.decodeFromString<uz.sadora.server.wearable.huawei.HuaweiGroups>(
+            """{"group":[{"startTime":$dayStart,"sampleSet":[{"samplePoints":[
+                 ${stat("continuous.steps.total", "steps" to 700)}, ${stat("continuous.distance.total", "distance" to 520.5)},
+                 ${stat("continuous.calories.burnt.total", "calories_total" to 80.5)}, ${stat("continuous.heart_rate.statistics", "avg" to 71.5)},
+                 ${stat("continuous.resting_heart_rate.statistics", "avg" to 58.5)}, ${stat("continuous.spo2.statistics", "saturation_avg" to 96.5)},
+                 ${stat("continuous.skin.temperature.statistics", "avg" to 35.5)}, ${stat("continuous.body.temperature.statistics", "avg" to 36.5)},
+                 ${stat("continuous.body_weight.statistics", "last" to 61.5, "avg_body_fat_rate" to 24.5)}, ${stat("vo2max.statistics", "last" to 38)}]}]}]}""",
+        ).group.flatMap { huawei.fromDay(it, zone) } + json.decodeFromString<uz.sadora.server.wearable.huawei.HuaweiHealthRecords>(
+            """{"healthRecords":[{"value":[
+                 {"fieldName":"fall_asleep_time","longValue":${(now() - 600.minutes).toEpochMilliseconds()}},
+                 {"fieldName":"wakeup_time","longValue":${(now() - 60.minutes).toEpochMilliseconds()}},
+                 {"fieldName":"all_sleep_time","integerValue":450},{"fieldName":"deep_sleep_time","integerValue":90},
+                 {"fieldName":"dream_time","integerValue":100},{"fieldName":"light_sleep_time","integerValue":260},
+                 {"fieldName":"awake_time","integerValue":30},{"fieldName":"sleep_score","integerValue":82},{"fieldName":"sleep_type","integerValue":1}]}]}""",
+        ).healthRecords.flatMap { huawei.fromSleep(it, zone) } + huawei.fromHrv(
+            listOf(
+                uz.sadora.server.wearable.huawei.HuaweiSamplePoint(
+                    startTime = (dayStart + 3_600_000) * 1_000_000,
+                    value = listOf(uz.sadora.server.wearable.huawei.HuaweiField("heartRateVariabilityRMSSD", integerValue = 44)),
+                ),
+            ),
+            zone,
+        )
+        assertEquals(18, huaweiSamples.size)
+        val huaweiResult = component.wearableService.ingest(userId, uz.sadora.contract.IngestSamplesRequest(huaweiSamples))
+        assertTrue(huaweiResult.unmapped.isEmpty(), "unmapped: ${huaweiResult.unmapped}")
+        assertEquals(18, huaweiResult.accepted)
 
         service.revokedByExternalUser(HealthProvider.GARMIN, garminId)
         val revoked = assertNotNull(component.connectionRepository.find(userId, HealthProvider.GARMIN))

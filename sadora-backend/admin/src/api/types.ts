@@ -290,6 +290,7 @@ export type HealthProvider =
   | 'garmin'
   | 'whoop'
   | 'fitbit'
+  | 'huawei'
   | 'samsung_health'
   | 'manual'
 

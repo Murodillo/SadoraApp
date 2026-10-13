@@ -46,6 +46,7 @@ private fun brandOf(provider: HealthProvider): Pair<Color, String> = when (provi
     HealthProvider.OURA -> Color(0xFF2B2B2E) to "O"
     HealthProvider.GARMIN -> Color(0xFF007CC3) to "G"
     HealthProvider.FITBIT -> Color(0xFF00B0B9) to "F"
+    HealthProvider.HUAWEI -> Color(0xFFCF0A2C) to "H"
     HealthProvider.SAMSUNG_HEALTH -> Color(0xFF1428A0) to "S"
     HealthProvider.APPLE_HEALTH -> Color(0xFFFF2D55) to "♥"
     HealthProvider.HEALTH_CONNECT -> Color(0xFF3A7BEA) to "H"

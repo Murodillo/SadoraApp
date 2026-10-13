@@ -38,10 +38,10 @@ fi
 
 # Push the same way: the service account key sits in server/secrets/ (gitignored) and the
 # untracked .env names it, so a clone without the key still boots and only logs. The
-# WHOOP, Oura, Garmin and Fitbit secrets and the token key live there too; without them a provider shows as not set up.
+# WHOOP, Oura, Garmin, Fitbit and Huawei secrets and the token key live there too; without them a provider shows as not set up.
 # So does the Play Mobile login; without it sign-in codes are only logged.
 for name in FCM_PROJECT_ID FCM_SERVICE_ACCOUNT_FILE GOOGLE_PLAY_SERVICE_ACCOUNT_FILE \
-    WHOOP_CLIENT_SECRET OURA_CLIENT_SECRET GARMIN_CLIENT_SECRET GARMIN_WEBHOOK_TOKEN FITBIT_CLIENT_SECRET FITBIT_WEBHOOK_SECRET WEARABLE_TOKEN_KEY PLAYMOBILE_LOGIN PLAYMOBILE_PASSWORD PLAYMOBILE_ORIGINATOR; do
+    WHOOP_CLIENT_SECRET OURA_CLIENT_SECRET GARMIN_CLIENT_SECRET GARMIN_WEBHOOK_TOKEN FITBIT_CLIENT_SECRET FITBIT_WEBHOOK_SECRET HUAWEI_CLIENT_SECRET HUAWEI_SUBSCRIBER_SECRET WEARABLE_TOKEN_KEY PLAYMOBILE_LOGIN PLAYMOBILE_PASSWORD PLAYMOBILE_ORIGINATOR; do
   if [[ -z ${(P)name} && -f $SECRETS ]]; then
     export $name="$(grep "^$name=" $SECRETS | tail -1 | cut -d= -f2-)"
   fi

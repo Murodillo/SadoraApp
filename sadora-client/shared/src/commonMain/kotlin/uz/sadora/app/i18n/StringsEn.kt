@@ -1797,6 +1797,7 @@ object StringsEn : Strings {
             HealthProvider.GARMIN -> "Garmin"
             HealthProvider.WHOOP -> "WHOOP"
             HealthProvider.FITBIT -> "Fitbit"
+            HealthProvider.HUAWEI -> "Huawei Health"
             HealthProvider.SAMSUNG_HEALTH -> "Samsung Health"
             HealthProvider.MANUAL -> "Entered by hand"
         }
@@ -1807,6 +1808,7 @@ object StringsEn : Strings {
             HealthProvider.OURA -> "A ring: sleep and recovery"
             HealthProvider.GARMIN -> "Sports watches"
             HealthProvider.FITBIT -> "Bands and watches"
+            HealthProvider.HUAWEI -> "Huawei watches and bands"
             HealthProvider.SAMSUNG_HEALTH -> "Galaxy Watch"
             HealthProvider.MANUAL -> "Readings you typed yourself"
         }
@@ -1865,7 +1867,7 @@ object StringsEn : Strings {
         override val askBody =
             "If you do, connect it once — sleep, heart rate and steps then arrive on their own every day, with nothing to type."
         override val askReadings = listOf("Sleep", "Heart rate", "Steps")
-        override val askBrands = "Apple Watch, Galaxy Watch, Mi Band, Garmin, Fitbit, WHOOP, Oura and more"
+        override val askBrands = "Apple Watch, Galaxy Watch, Mi Band, Huawei, Garmin, Fitbit, WHOOP, Oura and more"
         override val askYes = "Yes — let's connect it"
         override val askNo = "No, I don't"
         override val askLater = "Remind me later"

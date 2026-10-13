@@ -20,6 +20,7 @@ enum class HealthProvider {
     @SerialName("garmin") GARMIN,
     @SerialName("whoop") WHOOP,
     @SerialName("fitbit") FITBIT,
+    @SerialName("huawei") HUAWEI,
     @SerialName("samsung_health") SAMSUNG_HEALTH,
     @SerialName("manual") MANUAL,
 }
@@ -222,7 +223,7 @@ data class MetricMapping(
 enum class ProviderKind {
     /** HealthKit, Health Connect — the phone reads them and posts samples. */
     @SerialName("on_device") ON_DEVICE,
-    /** WHOOP, Oura, Garmin, Fitbit — an OAuth grant, then the server syncs. */
+    /** WHOOP, Oura, Garmin, Fitbit, Huawei — an OAuth grant, then the server syncs. */
     @SerialName("cloud") CLOUD,
     @SerialName("manual") MANUAL,
 }

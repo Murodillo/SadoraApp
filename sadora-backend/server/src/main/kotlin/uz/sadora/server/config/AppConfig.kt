@@ -208,6 +208,19 @@ data class AppConfig(
                         apiBaseUrl = env("FITBIT_API_BASE_URL", "https://health.googleapis.com"),
                         webhookSecret = envOrNull("FITBIT_WEBHOOK_SECRET"),
                     ),
+                    huawei = HuaweiConfig(
+                        clientId = envOrNull("HUAWEI_CLIENT_ID"),
+                        clientSecret = envOrNull("HUAWEI_CLIENT_SECRET"),
+                        redirectUri = env("HUAWEI_REDIRECT_URI", "$publicBaseUrl/v1/wearables/huawei/callback"),
+                        authorizeUrl = env("HUAWEI_AUTHORIZE_URL", "https://oauth-login.cloud.huawei.com/oauth2/v3/authorize"),
+                        tokenUrl = env("HUAWEI_TOKEN_URL", "https://oauth-login.cloud.huawei.com/oauth2/v3/token"),
+                        apiBaseUrl = env("HUAWEI_API_BASE_URL", "https://health-api.cloud.huawei.com"),
+                        scopes = envOrNull("HUAWEI_SCOPES")?.split(' ', ',')?.filter { it.isNotBlank() }
+                            ?: uz.sadora.server.wearable.huawei.HuaweiClient.DEFAULT_SCOPES,
+                        timeZone = env("HUAWEI_TIME_ZONE", "+0500"),
+                        subscriberId = envOrNull("HUAWEI_SUBSCRIBER_ID"),
+                        subscriberSecret = envOrNull("HUAWEI_SUBSCRIBER_SECRET"),
+                    ),
                 ),
                 accountErasureGracePeriod = env("ACCOUNT_ERASURE_GRACE_DAYS", "30").toInt().days,
                 adminRequireTotp = env("ADMIN_REQUIRE_TOTP", (environment != Environment.DEV).toString()).toBoolean(),
@@ -256,7 +269,9 @@ data class AppConfig(
             require(otp.playMobile.isConfigured) { "PLAYMOBILE_LOGIN and PLAYMOBILE_PASSWORD must be set in production." }
             require("{code}" in otp.smsText) { "OTP_SMS_TEXT must contain {code}." }
             require(publicBaseUrl.startsWith("https://")) { "PUBLIC_BASE_URL must be an https URL in production." }
-            if (wearables.whoop.isConfigured || wearables.oura.isConfigured || wearables.garmin.isConfigured || wearables.fitbit.isConfigured) {
+            if (wearables.whoop.isConfigured || wearables.oura.isConfigured || wearables.garmin.isConfigured || wearables.fitbit.isConfigured ||
+                wearables.huawei.isConfigured
+            ) {
                 require(wearables.tokenKey != null) { "WEARABLE_TOKEN_KEY must be set when a cloud wearable is configured." }
             }
         }
@@ -446,6 +461,7 @@ data class WearableConfig(
     val oura: OuraConfig = OuraConfig(null, null, "", "", ""),
     val garmin: GarminConfig = GarminConfig(null, null, "", "", "", "", null),
     val fitbit: FitbitConfig = FitbitConfig(null, null, "", "", "", "", "", null),
+    val huawei: HuaweiConfig = HuaweiConfig(null, null, "", "", "", "", emptyList(), "+0500", null, null),
 )
 
 /**
@@ -513,6 +529,34 @@ data class FitbitConfig(
     val revokeUrl: String,
     val apiBaseUrl: String,
     val webhookSecret: String?,
+) {
+    val isConfigured: Boolean get() = clientId != null && clientSecret != null
+}
+
+/**
+ * Huawei watches and bands, which means an app on HUAWEI Developers (AppGallery Connect)
+ * with the HUAWEI ID service and Health Service Kit enabled. On the same terms as [WhoopConfig].
+ *
+ * [clientId] is the app's App ID and [clientSecret] its App secret. [subscriberId] and
+ * [subscriberSecret] come from registering the subscription notification capability on
+ * the Health Service Kit card; without them she can still connect, and her data is pulled
+ * on the schedule alone.
+ */
+data class HuaweiConfig(
+    val clientId: String?,
+    val clientSecret: String?,
+    /** Must match the callback URL on the HUAWEI ID service, character for character. */
+    val redirectUri: String,
+    val authorizeUrl: String,
+    val tokenUrl: String,
+    val apiBaseUrl: String,
+    /** The last segment of each Health Kit scope asked of her, e.g. `sleep.read`. */
+    val scopes: List<String>,
+    /** The zone Huawei cuts her days in, as it wants it written: `+0500`. */
+    val timeZone: String,
+    val subscriberId: String?,
+    /** Base64, as the console shows it. Signs every notification. */
+    val subscriberSecret: String?,
 ) {
     val isConfigured: Boolean get() = clientId != null && clientSecret != null
 }
