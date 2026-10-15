@@ -45,6 +45,11 @@ import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.minus
 import kotlinx.datetime.plus
 import uz.sadora.app.data.HealthController
+import uz.sadora.contract.HealthProvider
+import uz.sadora.contract.HealthMetric
+import uz.sadora.app.data.DeviceProfiles
+import uz.sadora.app.ui.core.BodySignalTiles
+import uz.sadora.app.ui.core.bodySignalReadings
 import uz.sadora.app.data.StageEventsController
 import uz.sadora.app.design.IconSize
 import uz.sadora.app.design.PhaseColors
@@ -307,12 +312,17 @@ private fun CycleJourney(state: AppState, health: HealthController, onOpen: (Rou
 }
 
 /**
- * What the wearable says beside the cycle: resting pulse, HRV, skin temperature and
- * recovery today, each against the previous seven days.
+ * What the wearable says beside the cycle, each signal against the previous seven days.
+ *
+ * Which signals, in what order and under what name follows her device
+ * ([DeviceProfiles]): a WHOOP leads with recovery and strain, an Oura with readiness, a
+ * Garmin with resting pulse, SpO₂ and VO₂max, a phone with its temperatures. The card
+ * used to show the same four for everyone, so most devices filled half of it.
  *
  * The deltas are the reason the card exists. A resting pulse of 58 means little on its
  * own; "+3 against last week", in the luteal phase, is the kind of thing she and her
- * doctor can talk about. The note says what is commonly observed and stops there.
+ * doctor can talk about. A delta is only taken over days the same device measured — an
+ * iPhone's SDNN against a ring's RMSSD is a difference of method, not of her body.
  */
 @Composable
 private fun BodySignalsCard(state: AppState, health: HealthController) {
@@ -320,52 +330,38 @@ private fun BodySignalsCard(state: AppState, health: HealthController) {
     val c = Sadora.colors
     LaunchedEffect(Unit) { health.loadWearableRange(14) }
     val range = health.wearableRange?.days.orEmpty()
+    val day = health.wearableToday
     val today = state.today
-    fun weekAverage(metric: uz.sadora.contract.HealthMetric, daysBack: IntRange): Double? =
-        range.filter { day -> today.daysUntil(day.date).let { -it in daysBack } }
+    fun weekAverage(metric: HealthMetric, source: HealthProvider?, daysBack: IntRange): Double? =
+        range.filter { d -> today.daysUntil(d.date).let { -it in daysBack } }
+            .filter { d -> source == null || DeviceProfiles.sourceOf(d, metric) == source }
             .mapNotNull { it.value(metric) }
             .takeIf { it.isNotEmpty() }
             ?.average()
-    fun delta(metric: uz.sadora.contract.HealthMetric, decimals: Int): String? {
-        val recent = weekAverage(metric, 0..6) ?: return null
-        val before = weekAverage(metric, 7..13) ?: return null
+    fun delta(metric: HealthMetric, source: HealthProvider?): String? {
+        val recent = weekAverage(metric, source, 0..6) ?: return null
+        val before = weekAverage(metric, source, 7..13) ?: return null
         val diff = recent - before
         val sign = if (diff >= 0) "+" else "−"
-        val magnitude = if (decimals == 0) kotlin.math.abs(diff).roundToInt().toString() else Fmt.oneDecimal(kotlin.math.abs(diff).toFloat())
+        val magnitude = if (DeviceProfiles.deltaDecimals(metric) == 0) {
+            kotlin.math.abs(diff).roundToInt().toString()
+        } else {
+            Fmt.oneDecimal(kotlin.math.abs(diff).toFloat())
+        }
         return m.vsLastWeek(sign + magnitude)
     }
+
+    val signals = bodySignalReadings(day, m).map { it.copy(change = delta(it.metric, it.source)) }
+    if (signals.isEmpty()) return
 
     SadoraCard {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
             Text(m.bodySignalsTitle, style = Sadora.type.h3, color = c.text)
-            SadoraBadge(strings.journey.estimatedCaps, BadgeTone.Estimated, icon = SadoraIcons.Clock)
+            // Whose numbers these are: the same tile reads differently from a ring and a phone.
+            DeviceProfiles.primary(day)?.let { SadoraBadge(strings.devices.provider(it), BadgeTone.Connected) }
+                ?: SadoraBadge(strings.journey.estimatedCaps, BadgeTone.Estimated, icon = SadoraIcons.Clock)
         }
-        val signals = listOfNotNull(
-            // The number. This cut the sentence "Tinch puls 58 bpm" at its first space and showed "Tinch".
-            state.restingHeartRate?.let { Triple("$it", m.metric(uz.sadora.contract.HealthMetric.RESTING_HEART_RATE), delta(uz.sadora.contract.HealthMetric.RESTING_HEART_RATE, 0)) },
-            state.hrvMs?.let { Triple("$it ms", "HRV", delta(uz.sadora.contract.HealthMetric.HRV, 0)) },
-            state.skinTemperature?.let { Triple("${Fmt.oneDecimal(it.toFloat())} °C", m.metric(uz.sadora.contract.HealthMetric.SKIN_TEMPERATURE), delta(uz.sadora.contract.HealthMetric.SKIN_TEMPERATURE, 1)) },
-            state.recovery?.let { Triple("$it%", m.recovery, delta(uz.sadora.contract.HealthMetric.RECOVERY, 0)) },
-        )
-        signals.chunked(2).forEach { pair ->
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-                pair.forEach { (value, label, change) ->
-                    Column(
-                        Modifier
-                            .weight(1f)
-                            .clip(Radius.cardSmall)
-                            .background(c.surface2)
-                            .padding(Spacing.sm),
-                        verticalArrangement = Arrangement.spacedBy(2.dp),
-                    ) {
-                        Text(label, style = Sadora.type.caption, color = c.muted)
-                        Text(value, style = Sadora.type.h3, color = c.text)
-                        change?.let { Text(it, style = Sadora.type.caption, color = c.muted2) }
-                    }
-                }
-                if (pair.size == 1) androidx.compose.foundation.layout.Spacer(Modifier.weight(1f))
-            }
-        }
+        BodySignalTiles(signals)
         Text(m.bodySignalsNote, style = Sadora.type.caption, color = c.muted)
     }
 }

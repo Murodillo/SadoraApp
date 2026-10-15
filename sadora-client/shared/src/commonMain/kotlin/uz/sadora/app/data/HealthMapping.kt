@@ -159,6 +159,7 @@ fun AppState.applyWearables(daily: DailyHealth) {
         ?.key
         ?.name
         ?.lowercase()
+    primaryDevice = DeviceProfiles.primary(daily)
 }
 
 private fun WirePhase.toAppPhase(): CyclePhase = when (this) {

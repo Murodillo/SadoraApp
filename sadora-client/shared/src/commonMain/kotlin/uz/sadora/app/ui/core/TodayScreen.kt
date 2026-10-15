@@ -154,6 +154,16 @@ fun TodayScreen(
                             onOpenBalance = { onOpen(Route.Balance) },
                             onOpenSleep = { onOpen(Route.Sleep) },
                         )
+                        // Into the week behind the numbers: Journey holds it for a cycle;
+                        // the other stages have no such card, so they go to her devices.
+                        HomeWidgets.BODY_SIGNALS -> if (health != null) {
+                            BodySignalsWidget(
+                                health,
+                                onOpen = {
+                                    if (state.lifeStage.predictsCycle) onSelectTab(Tab.Journey) else onOpen(Route.DataSources)
+                                },
+                            )
+                        }
                         HomeWidgets.STREAK -> StreakWidget(state, onOpen)
                         HomeWidgets.STAGE -> StageCard(state, onOpen = { onSelectTab(Tab.Journey) })
                         // Water and doses are ticked off here, so her companion cheers them here.
@@ -635,9 +645,10 @@ private fun HealthScoreCard(
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
                     SignalTile(t.water, "${Fmt.litres(state.waterMl)} ${strings.common.litres}", Modifier.weight(1f), onClick = onAddWater)
-                    // A strap that counts no steps shows its strain instead; a phone with
-                    // no device at all shows a dash rather than a number nobody measured.
-                    if (state.steps == null && state.strain != null) {
+                    // A WHOOP owner reads her day as strain, even when her phone counts
+                    // steps too; anyone else sees steps, or a dash rather than a number
+                    // nobody measured.
+                    if (state.showsStrain) {
                         SignalTile(strings.modules.strain, Fmt.oneDecimal(state.strain!!.toFloat()), Modifier.weight(1f), onClick = onOpenBalance)
                     } else {
                         SignalTile(t.steps, state.stepsLabel(), Modifier.weight(1f), onClick = onOpenBalance)

@@ -1,5 +1,6 @@
 package uz.sadora.app.ui.journey
 
+import uz.sadora.app.data.DeviceProfiles
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -264,13 +265,29 @@ fun StageSleepMoodScreen(
                                 strokeWidth = 11.dp,
                                 color = c.chartAccent,
                             ) {
+                                // The device's own score when it gives one — Garmin's sleep
+                                // score, WHOOP's performance, Oura's efficiency — under its
+                                // name; otherwise the night against the goal.
+                                val scoreMetric = DeviceProfiles.sleepScore(today)
+                                val scoreSource = scoreMetric?.let { DeviceProfiles.sourceOf(today, it) }
+                                val deviceScore = scoreMetric?.let { today?.value(it) }
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                     Text(
-                                        "${(minutes * 100 / goal).coerceIn(0, 100)}",
+                                        if (scoreMetric != null && deviceScore != null) {
+                                            DeviceProfiles.format(scoreMetric, deviceScore, scoreSource)
+                                        } else {
+                                            "${(minutes * 100 / goal).coerceIn(0, 100)}"
+                                        },
                                         style = Sadora.type.data,
                                         color = c.text,
                                     )
-                                    Text(t.scoreCaps, style = Sadora.type.caption, color = c.muted)
+                                    Text(
+                                        if (scoreMetric != null && deviceScore != null) modules.deviceMetric(scoreMetric, scoreSource) else t.scoreCaps,
+                                        style = Sadora.type.caption,
+                                        color = c.muted,
+                                        maxLines = 2,
+                                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                    )
                                 }
                             }
                             Column(
@@ -369,8 +386,8 @@ fun StageSleepMoodScreen(
 /**
  * Deep, REM and light in minutes, or null when the source did not break the night down.
  *
- * Light is what the night has left after the two measured stages, the same way the Sleep
- * screen derives it — a provider reports deep and REM, not all three.
+ * Light is what the device reported, or what the night has left after the two measured
+ * stages — the same way the Sleep screen draws it.
  */
 private fun sleepStages(
     day: uz.sadora.contract.DailyHealth,
@@ -379,7 +396,8 @@ private fun sleepStages(
 ): List<Pair<String, Int>>? {
     val deep = day.value(HealthMetric.SLEEP_DEEP)?.roundToInt() ?: return null
     val rem = day.value(HealthMetric.SLEEP_REM)?.roundToInt() ?: return null
-    val light = totalMinutes - deep - rem
+    // A device that reports light sleep itself is believed, as on the Sleep screen.
+    val light = day.value(HealthMetric.SLEEP_LIGHT)?.roundToInt() ?: (totalMinutes - deep - rem)
     if (light < 0) return null
     return listOf(modules.deep to deep, "REM" to rem, modules.light to light)
 }

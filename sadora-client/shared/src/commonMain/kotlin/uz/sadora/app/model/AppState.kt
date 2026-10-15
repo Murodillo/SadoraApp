@@ -381,6 +381,15 @@ class AppState {
     var spo2 by mutableStateOf<Int?>(null)
     /** Which device today's numbers came from, worded by the screen. Null when none did. */
     var wearableSource by mutableStateOf<String?>(null)
+    /**
+     * The device whose words today is drawn in — the wearable before the phone. Decides,
+     * for one, whether activity is her steps or a WHOOP's strain.
+     */
+    var primaryDevice by mutableStateOf<uz.sadora.contract.HealthProvider?>(null)
+
+    /** Strain is how her device tells the day's activity, and it has sent one. */
+    val showsStrain: Boolean
+        get() = strain != null && (steps == null || uz.sadora.app.data.DeviceProfiles.leadsWithStrain(primaryDevice))
 
     /** True once anything above has arrived from a device. */
     val hasDeviceData: Boolean
@@ -923,8 +932,11 @@ class AppState {
      * WHOOP's strain against a moderate day. Null when neither was measured.
      */
     fun activityRatio(): Float? =
-        steps?.let { goalRatio(it, DailyStepGoal) }
-            ?: strain?.let { (it / ModerateStrain).toFloat().coerceIn(0f, 1f) }
+        if (showsStrain) {
+            strain?.let { (it / ModerateStrain).toFloat().coerceIn(0f, 1f) }
+        } else {
+            steps?.let { goalRatio(it, DailyStepGoal) }
+        }
 
     /** "6 420" for the tiles, or a dash when no device has counted. */
     fun stepsLabel(): String = steps?.let { Fmt.int(it) } ?: NoValue
@@ -1050,6 +1062,7 @@ class AppState {
         skinTemperature = null
         spo2 = null
         wearableSource = null
+        primaryDevice = null
     }
 }
 

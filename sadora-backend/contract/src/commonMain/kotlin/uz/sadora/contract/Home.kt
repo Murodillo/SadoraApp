@@ -33,6 +33,13 @@ object HomeWidgets {
     /** Last night, as the sleep module has it. */
     const val SLEEP = "sleep"
 
+    /**
+     * What her wearable measured today, in its own words: a WHOOP's recovery and strain,
+     * an Oura's readiness, a Garmin's resting pulse and SpO₂. Draws nothing until a device
+     * has sent something, so it ships on and appears by itself once one is connected.
+     */
+    const val BODY_SIGNALS = "body_signals"
+
     /** Today's doses, with the grid. */
     const val MEDICATIONS = "medications"
 
@@ -60,13 +67,14 @@ object HomeWidgets {
         HomeWidget(STAGE, 1, true),
         HomeWidget(STREAK, 2, true),
         HomeWidget(SCORE, 3, true),
-        HomeWidget(AI, 4, true),
-        HomeWidget(SLEEP, 5, false),
-        HomeWidget(MEDICATIONS, 6, false),
-        HomeWidget(INSIGHTS, 7, false),
-        HomeWidget(KNOWLEDGE, 8, false),
-        HomeWidget(QUICK_ACTIONS, 9, true),
-        HomeWidget(SUMMARY, 10, true),
+        HomeWidget(BODY_SIGNALS, 4, true),
+        HomeWidget(AI, 5, true),
+        HomeWidget(SLEEP, 6, false),
+        HomeWidget(MEDICATIONS, 7, false),
+        HomeWidget(INSIGHTS, 8, false),
+        HomeWidget(KNOWLEDGE, 9, false),
+        HomeWidget(QUICK_ACTIONS, 10, true),
+        HomeWidget(SUMMARY, 11, true),
     )
 
     /** Widgets that must stay on screen, whatever the layout says. */

@@ -1504,6 +1504,19 @@ object StringsEn : Strings {
             HealthMetric.SEXUAL_ACTIVITY -> "Sexual activity"
         }
 
+        override fun deviceMetric(metric: HealthMetric, provider: HealthProvider?) = when {
+            metric == HealthMetric.RECOVERY && provider == HealthProvider.OURA -> "Readiness"
+            metric == HealthMetric.SLEEP_PERFORMANCE &&
+                (provider == HealthProvider.GARMIN || provider == HealthProvider.HUAWEI) -> "Sleep score"
+            metric == HealthMetric.RESTING_HEART_RATE && provider == HealthProvider.OURA -> "Lowest heart rate"
+            metric == HealthMetric.SKIN_TEMPERATURE && provider == HealthProvider.APPLE_HEALTH -> "Wrist temperature"
+            metric == HealthMetric.VO2_MAX && provider == HealthProvider.FITBIT -> "Cardio fitness"
+            // Apple measures SDNN, the others RMSSD; the two are not on one scale.
+            metric == HealthMetric.HRV && provider == HealthProvider.APPLE_HEALTH -> "HRV · SDNN"
+            metric == HealthMetric.HRV && provider != null && provider != HealthProvider.MANUAL -> "HRV · RMSSD"
+            else -> metric(metric)
+        }
+
         override val balanceTitle = "Balance"
         override val fourDirections = "Four directions"
         override val balanceDisclaimer =
@@ -1677,6 +1690,7 @@ object StringsEn : Strings {
         override fun widget(key: String) = when (key) {
             HomeWidgets.AI -> "AI summary"
             HomeWidgets.SCORE -> "Health score"
+            HomeWidgets.BODY_SIGNALS -> "Body signals"
             HomeWidgets.STREAK -> "Streak and Gul"
             HomeWidgets.STAGE -> "Cycle / stage"
             HomeWidgets.PLAN -> "Today's plan"
@@ -1691,6 +1705,7 @@ object StringsEn : Strings {
         override fun widgetNote(key: String) = when (key) {
             HomeWidgets.AI -> "A short read on the day"
             HomeWidgets.SCORE -> "Sleep, mood, water and steps"
+            HomeWidgets.BODY_SIGNALS -> "What your device measured"
             HomeWidgets.STREAK -> "Days running and your balance"
             HomeWidgets.STAGE -> "Cycle day or week"
             HomeWidgets.PLAN -> "Doses and water"

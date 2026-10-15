@@ -1506,6 +1506,19 @@ object StringsUz : Strings {
             HealthMetric.SEXUAL_ACTIVITY -> "Jinsiy faollik"
         }
 
+        override fun deviceMetric(metric: HealthMetric, provider: HealthProvider?) = when {
+            metric == HealthMetric.RECOVERY && provider == HealthProvider.OURA -> "Tayyorlik"
+            metric == HealthMetric.SLEEP_PERFORMANCE &&
+                (provider == HealthProvider.GARMIN || provider == HealthProvider.HUAWEI) -> "Uyqu bali"
+            metric == HealthMetric.RESTING_HEART_RATE && provider == HealthProvider.OURA -> "Eng past puls"
+            metric == HealthMetric.SKIN_TEMPERATURE && provider == HealthProvider.APPLE_HEALTH -> "Bilak harorati"
+            metric == HealthMetric.VO2_MAX && provider == HealthProvider.FITBIT -> "Kardio forma"
+            // Apple measures SDNN, the others RMSSD; the two are not on one scale.
+            metric == HealthMetric.HRV && provider == HealthProvider.APPLE_HEALTH -> "HRV · SDNN"
+            metric == HealthMetric.HRV && provider != null && provider != HealthProvider.MANUAL -> "HRV · RMSSD"
+            else -> metric(metric)
+        }
+
         override val balanceTitle = "Balans"
         override val fourDirections = "To'rt yo'nalish"
         override val balanceDisclaimer =
@@ -1679,6 +1692,7 @@ object StringsUz : Strings {
         override fun widget(key: String) = when (key) {
             HomeWidgets.AI -> "AI xulosasi"
             HomeWidgets.SCORE -> "Salomatlik ko'rsatkichi"
+            HomeWidgets.BODY_SIGNALS -> "Tana signallari"
             HomeWidgets.STREAK -> "Ketma-ketlik va Gul"
             HomeWidgets.STAGE -> "Sikl / bosqich"
             HomeWidgets.PLAN -> "Bugungi reja"
@@ -1693,6 +1707,7 @@ object StringsUz : Strings {
         override fun widgetNote(key: String) = when (key) {
             HomeWidgets.AI -> "Kunning qisqacha tahlili"
             HomeWidgets.SCORE -> "Uyqu, kayfiyat, suv va qadam"
+            HomeWidgets.BODY_SIGNALS -> "Qurilmangiz o'lchagan ko'rsatkichlar"
             HomeWidgets.STREAK -> "Ketma-ket kunlar va balans"
             HomeWidgets.STAGE -> "Sikl kuni yoki hafta"
             HomeWidgets.PLAN -> "Dorilar va suv"

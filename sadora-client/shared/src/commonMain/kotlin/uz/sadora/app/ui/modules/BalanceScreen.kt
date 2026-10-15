@@ -49,8 +49,8 @@ fun BalanceScreen(
     // nobody measured is drawn empty and left out of the score, never counted as zero.
     val activity = state.activityRatio()
     val activityCaption = when {
+        state.showsStrain -> "${t.strain} ${Fmt.oneDecimal(state.strain!!.toFloat())} / ${Fmt.oneDecimal(uz.sadora.app.model.ModerateStrain.toFloat())}"
         state.steps != null -> t.ofSteps(Fmt.int(state.steps!!), Fmt.int(DailyStepGoal))
-        state.strain != null -> "${t.strain} ${Fmt.oneDecimal(state.strain!!.toFloat())} / ${Fmt.oneDecimal(uz.sadora.app.model.ModerateStrain.toFloat())}"
         else -> t.ofSteps(NoValue, Fmt.int(DailyStepGoal))
     }
     val directions = listOf(

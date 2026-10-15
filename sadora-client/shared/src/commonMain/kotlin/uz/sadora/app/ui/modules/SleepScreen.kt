@@ -264,7 +264,13 @@ private fun stagesCard(today: DailyHealth?, totalMinutes: Int, t: ModuleStrings)
     // total has left after deep and REM.
     val light = today.value(HealthMetric.SLEEP_LIGHT)?.roundToInt() ?: (totalMinutes - deep - rem)
     val awake = today.value(HealthMetric.SLEEP_AWAKE)?.roundToInt()
-    val performance = today.value(HealthMetric.SLEEP_PERFORMANCE)?.roundToInt()
+    // The device's own score for the night, under its own name: WHOOP's performance,
+    // Garmin's and Huawei's score, Oura's efficiency.
+    val scoreMetric = uz.sadora.app.data.DeviceProfiles.sleepScore(today)
+    val scoreSource = scoreMetric?.let { uz.sadora.app.data.DeviceProfiles.sourceOf(today, it) }
+    val score = scoreMetric?.let { metric ->
+        today.value(metric)?.let { "${t.deviceMetric(metric, scoreSource)} ${uz.sadora.app.data.DeviceProfiles.format(metric, it, scoreSource)}" }
+    }
     if (light < 0) return null
 
     return {
@@ -278,7 +284,7 @@ private fun stagesCard(today: DailyHealth?, totalMinutes: Int, t: ModuleStrings)
         SadoraCard {
             CardLabel(
                 t.stages,
-                trailing = performance?.let { { Text("${t.metric(HealthMetric.SLEEP_PERFORMANCE)} $it%", style = Sadora.type.body, color = c.muted) } },
+                trailing = score?.let { { Text(it, style = Sadora.type.body, color = c.muted) } },
             )
             StackedBar(
                 segments = stages.map { (_, value, colour) ->

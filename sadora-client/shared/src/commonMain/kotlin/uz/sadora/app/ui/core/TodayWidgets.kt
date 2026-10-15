@@ -1,6 +1,11 @@
 package uz.sadora.app.ui.core
 
 import androidx.compose.foundation.layout.Arrangement
+import uz.sadora.app.data.DeviceProfiles
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -275,3 +280,78 @@ fun KnowledgeWidget(
  * stating, and the Insights screen's own default is the same.
  */
 private const val INSIGHT_WINDOW_DAYS = 30
+
+/** One body signal as a tile shows it: the reading, its device's name for it, and a change. */
+internal data class SignalReading(
+    val metric: HealthMetric,
+    val source: uz.sadora.contract.HealthProvider?,
+    val value: String,
+    val label: String,
+    val change: String? = null,
+)
+
+/** [day]'s body signals, ordered, named and formatted by the device that sent each. */
+internal fun bodySignalReadings(
+    day: uz.sadora.contract.DailyHealth?,
+    modules: uz.sadora.app.i18n.ModuleStrings,
+    limit: Int = 6,
+): List<SignalReading> = DeviceProfiles.bodySignals(day, limit).mapNotNull { metric ->
+    val value = day?.value(metric) ?: return@mapNotNull null
+    val source = DeviceProfiles.sourceOf(day, metric)
+    SignalReading(metric, source, DeviceProfiles.format(metric, value, source), modules.deviceMetric(metric, source))
+}
+
+/** The two-up tiles both body-signal cards draw — Home's glance and Journey's. */
+@Composable
+internal fun BodySignalTiles(readings: List<SignalReading>) {
+    val c = Sadora.colors
+    readings.chunked(2).forEach { pair ->
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+            pair.forEach { reading ->
+                Column(
+                    Modifier
+                        .weight(1f)
+                        .clip(uz.sadora.app.design.Radius.cardSmall)
+                        .background(c.surface2)
+                        .padding(Spacing.sm),
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                ) {
+                    Text(reading.label, style = Sadora.type.caption, color = c.muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(reading.value, style = Sadora.type.h3, color = c.text, maxLines = 1)
+                    reading.change?.let { Text(it, style = Sadora.type.caption, color = c.muted2) }
+                }
+            }
+            if (pair.size == 1) Spacer(Modifier.weight(1f))
+        }
+    }
+}
+
+/**
+ * Today's body signals on Home, in the words of her device.
+ *
+ * The four a WHOOP or an Oura owner opens her own app for — recovery or readiness, HRV,
+ * resting pulse — were only on the Journey tab, so Home showed a ring owner nothing of
+ * her ring but its sleep. A glance: four tiles, no deltas; the Journey card has the week.
+ * Draws nothing until a device has sent a signal, so it can ship switched on.
+ */
+@Composable
+fun BodySignalsWidget(
+    health: HealthController,
+    onOpen: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val day = health.wearableToday
+    val readings = bodySignalReadings(day, strings.modules, limit = 4)
+    if (readings.isEmpty()) return
+    val c = Sadora.colors
+
+    SadoraCard(modifier, onClick = onOpen) {
+        CardLabel(
+            strings.modules.bodySignalsTitle,
+            trailing = DeviceProfiles.primary(day)?.let { device ->
+                { SadoraBadge(strings.devices.provider(device), BadgeTone.Connected) }
+            },
+        )
+        BodySignalTiles(readings)
+    }
+}

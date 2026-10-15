@@ -1454,6 +1454,11 @@ interface ModuleStrings {
     val notConnected: String
     fun samples(count: Int): String
     fun metric(metric: HealthMetric): String
+    /**
+     * [metric] in the words of the device that sent it: Oura's readiness, Garmin's sleep
+     * score, an iPhone's SDNN. Anything a device does not name differently is [metric].
+     */
+    fun deviceMetric(metric: HealthMetric, provider: uz.sadora.contract.HealthProvider?): String
 
     // ---- balance
     val balanceTitle: String

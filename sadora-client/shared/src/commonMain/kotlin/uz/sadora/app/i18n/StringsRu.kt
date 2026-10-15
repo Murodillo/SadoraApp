@@ -1511,6 +1511,19 @@ object StringsRu : Strings {
             HealthMetric.SEXUAL_ACTIVITY -> "Сексуальная активность"
         }
 
+        override fun deviceMetric(metric: HealthMetric, provider: HealthProvider?) = when {
+            metric == HealthMetric.RECOVERY && provider == HealthProvider.OURA -> "Готовность"
+            metric == HealthMetric.SLEEP_PERFORMANCE &&
+                (provider == HealthProvider.GARMIN || provider == HealthProvider.HUAWEI) -> "Оценка сна"
+            metric == HealthMetric.RESTING_HEART_RATE && provider == HealthProvider.OURA -> "Минимальный пульс"
+            metric == HealthMetric.SKIN_TEMPERATURE && provider == HealthProvider.APPLE_HEALTH -> "Температура запястья"
+            metric == HealthMetric.VO2_MAX && provider == HealthProvider.FITBIT -> "Кардиоформа"
+            // Apple measures SDNN, the others RMSSD; the two are not on one scale.
+            metric == HealthMetric.HRV && provider == HealthProvider.APPLE_HEALTH -> "HRV · SDNN"
+            metric == HealthMetric.HRV && provider != null && provider != HealthProvider.MANUAL -> "HRV · RMSSD"
+            else -> metric(metric)
+        }
+
         override val balanceTitle = "Баланс"
         override val fourDirections = "Четыре направления"
         override val balanceDisclaimer =
@@ -1683,6 +1696,7 @@ object StringsRu : Strings {
         override fun widget(key: String) = when (key) {
             HomeWidgets.AI -> "Сводка ИИ"
             HomeWidgets.SCORE -> "Показатель здоровья"
+            HomeWidgets.BODY_SIGNALS -> "Сигналы тела"
             HomeWidgets.STREAK -> "Серия и Gul"
             HomeWidgets.STAGE -> "Цикл / этап"
             HomeWidgets.PLAN -> "План на сегодня"
@@ -1697,6 +1711,7 @@ object StringsRu : Strings {
         override fun widgetNote(key: String) = when (key) {
             HomeWidgets.AI -> "Краткий разбор дня"
             HomeWidgets.SCORE -> "Сон, настроение, вода и шаги"
+            HomeWidgets.BODY_SIGNALS -> "Показатели вашего устройства"
             HomeWidgets.STREAK -> "Дни подряд и баланс"
             HomeWidgets.STAGE -> "День цикла или неделя"
             HomeWidgets.PLAN -> "Лекарства и вода"
