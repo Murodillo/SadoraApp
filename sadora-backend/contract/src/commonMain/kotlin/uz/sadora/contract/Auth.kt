@@ -101,6 +101,29 @@ data class LogoutRequest(
     val allDevices: Boolean = false,
 )
 
+/** Who a companion session is for. */
+@Serializable
+enum class CompanionKind {
+    /** The iOS widget extension: a process of its own that cannot share the app's tokens. */
+    @SerialName("widget") WIDGET,
+    /** The Apple Watch or Wear OS app, which may reach the server without the phone. */
+    @SerialName("watch") WATCH,
+}
+
+/**
+ * Asks for a session for the widget extension or the watch, made from the app's own.
+ *
+ * Refresh tokens rotate and a spent one presented again ends the session, so two
+ * processes cannot share one: whichever refreshed second would look like a thief. The
+ * companion gets a family of its own, tied to the app's — signing the app out ends it.
+ * [refreshToken] is the app's current one; it is read, not spent.
+ */
+@Serializable
+data class CompanionSessionRequest(
+    val refreshToken: String,
+    val kind: CompanionKind,
+)
+
 @Serializable
 data class TokenPair(
     val accessToken: String,

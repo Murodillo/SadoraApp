@@ -101,6 +101,8 @@ object RefreshTokens : Table("refresh_tokens") {
     val revokedAt = timestampWithTimeZone("revoked_at").nullable()
     val revokedReason = text("revoked_reason").nullable()
     val replacedBy = uuid("replaced_by").nullable()
+    /** A companion (widget, watch) session's app session; revoked with it (V55). */
+    val parentFamilyId = uuid("parent_family_id").nullable()
 
     override val primaryKey = PrimaryKey(id)
 }

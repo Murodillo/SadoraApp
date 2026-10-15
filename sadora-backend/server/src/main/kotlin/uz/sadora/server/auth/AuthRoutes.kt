@@ -52,6 +52,11 @@ fun Route.authRoutes(authService: AuthService, otpService: OtpService) {
         }
 
         authenticate(USER_AUTH) {
+            post("/companion") {
+                val request = call.receive<uz.sadora.contract.CompanionSessionRequest>()
+                call.respond(authService.companion(call.requireUserId(), request))
+            }
+
             post("/logout") {
                 val request = call.receive<LogoutRequest>()
                 authService.logout(

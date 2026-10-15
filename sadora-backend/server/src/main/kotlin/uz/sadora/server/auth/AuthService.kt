@@ -119,6 +119,23 @@ class AuthService(
         )
     }
 
+    /** A widget's or watch's own session; see [RefreshTokenService.issueCompanion]. */
+    suspend fun companion(userId: Uuid, request: uz.sadora.contract.CompanionSessionRequest): TokenPair {
+        val (owner, issued) = refreshTokens.issueCompanion(request.refreshToken, request.kind.name.lowercase())
+        // Another account's token: refused the same way as a dead one, saying nothing more.
+        if (owner != userId) {
+            refreshTokens.revoke(issued.value, "companion_mismatch")
+            throw UnauthorizedException(ErrorCodes.TOKEN_REVOKED, "Seans topilmadi. Qaytadan kiring.")
+        }
+        val access = jwt.issueAccessToken(userId, TokenSubjectType.USER)
+        return TokenPair(
+            accessToken = access.value,
+            refreshToken = issued.value,
+            accessExpiresAt = access.expiresAt,
+            refreshExpiresAt = issued.expiresAt,
+        )
+    }
+
     suspend fun logout(
         userId: Uuid,
         rawRefreshToken: String?,

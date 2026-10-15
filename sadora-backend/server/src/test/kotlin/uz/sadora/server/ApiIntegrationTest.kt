@@ -374,6 +374,46 @@ class ApiIntegrationTest {
         assertEquals(500, another.waterMl)
     }
 
+    /**
+     * The widget extension and the watch hold sessions of their own, children of the app's:
+     * they rotate their own tokens without tripping the app's reuse detection, and signing
+     * the app out ends them too.
+     */
+    @Test
+    fun `a companion session reads like the app, rotates on its own, and ends with the app's`() = api {
+        val her = signUp()
+        onboard(her)
+        val widget = post<uz.sadora.contract.TokenPair>(
+            "/v1/auth/companion",
+            her.token,
+            uz.sadora.contract.CompanionSessionRequest(her.refreshToken, uz.sadora.contract.CompanionKind.WIDGET),
+        )
+        assertEquals(LifeStage.CYCLE, get<uz.sadora.contract.WidgetSummary>("/v1/widget/summary", widget.accessToken).lifeStage)
+
+        val rotated = client.post("/v1/auth/refresh") { json(RefreshRequest(widget.refreshToken)) }
+        assertEquals(HttpStatusCode.OK, rotated.status, rotated.bodyAsTextSafe())
+        val next = rotated.body<AuthSession>().tokens.refreshToken
+        // The app's own token is untouched by the widget's rotation.
+        val app = client.post("/v1/auth/refresh") { json(RefreshRequest(her.refreshToken)) }
+        assertEquals(HttpStatusCode.OK, app.status, app.bodyAsTextSafe())
+        val appSession = app.body<AuthSession>().tokens
+
+        postAck("/v1/auth/logout", appSession.accessToken, uz.sadora.contract.LogoutRequest(appSession.refreshToken))
+        val after = client.post("/v1/auth/refresh") { json(RefreshRequest(next)) }
+        assertEquals(HttpStatusCode.Unauthorized, after.status, "signing the app out ends the widget's session")
+    }
+
+    @Test
+    fun `a companion session needs a live app session`() = api {
+        val her = signUp()
+        onboard(her)
+        val refused = client.post("/v1/auth/companion") {
+            auth(her.token)
+            json(uz.sadora.contract.CompanionSessionRequest("not-a-token", uz.sadora.contract.CompanionKind.WATCH))
+        }
+        assertEquals(HttpStatusCode.Unauthorized, refused.status)
+    }
+
     /** Discreet mode is hers on every device, so it is kept on the profile. */
     @Test
     fun `discreet mode is saved on the profile and comes back in the widget summary`() = api {

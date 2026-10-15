@@ -45,7 +45,44 @@ class RefreshTokenService(
 ) {
     private val logger = LoggerFactory.getLogger(RefreshTokenService::class.java)
 
-    suspend fun issue(userId: Uuid, deviceId: String?, familyId: Uuid = Uuid.random()): IssuedRefreshToken {
+    /**
+     * A session for the widget extension or the watch, made from the app session whose
+     * current token is [appToken]. That token is only read: spending it here would leave
+     * the app holding a spent one. The companion's family is a child of the app's, and a
+     * second request for the same kind replaces the first rather than piling up.
+     */
+    suspend fun issueCompanion(appToken: String, kind: String): Pair<Uuid, IssuedRefreshToken> {
+        val parent = dbQuery {
+            RefreshTokens.selectAll().where { RefreshTokens.tokenHash eq sha256(appToken) }.singleOrNull()
+        }
+        val live = parent != null &&
+            parent[RefreshTokens.revokedAt] == null &&
+            parent[RefreshTokens.parentFamilyId] == null &&
+            parent[RefreshTokens.expiresAt].toKotlinInstant() > now()
+        if (!live) throw UnauthorizedException(ErrorCodes.TOKEN_REVOKED, "Seans topilmadi. Qaytadan kiring.")
+
+        val userId = parent!![RefreshTokens.userId]
+        val parentFamily = parent[RefreshTokens.familyId]
+        val deviceId = "${parent[RefreshTokens.deviceId].orEmpty()}:$kind"
+        dbQuery {
+            RefreshTokens.update({
+                (RefreshTokens.parentFamilyId eq parentFamily) and
+                    (RefreshTokens.deviceId eq deviceId) and
+                    RefreshTokens.revokedAt.isNull()
+            }) {
+                it[revokedAt] = now().toOffsetDateTime()
+                it[revokedReason] = "companion_replaced"
+            }
+        }
+        return userId to issue(userId, deviceId, parentFamily = parentFamily)
+    }
+
+    suspend fun issue(
+        userId: Uuid,
+        deviceId: String?,
+        familyId: Uuid = Uuid.random(),
+        parentFamily: Uuid? = null,
+    ): IssuedRefreshToken {
         val raw = randomToken()
         val expiresAt = now() + config.refreshTokenTtl
         dbQuery {
@@ -57,6 +94,7 @@ class RefreshTokenService(
                 it[RefreshTokens.deviceId] = deviceId
                 it[issuedAt] = now().toOffsetDateTime()
                 it[RefreshTokens.expiresAt] = expiresAt.toOffsetDateTime()
+                it[parentFamilyId] = parentFamily
             }
         }
         return IssuedRefreshToken(raw, expiresAt, familyId)
@@ -110,6 +148,7 @@ class RefreshTokenService(
                     it[RefreshTokens.familyId] = familyId
                     it[tokenHash] = sha256(successorRaw)
                     it[RefreshTokens.deviceId] = deviceId ?: row[RefreshTokens.deviceId]
+                    it[parentFamilyId] = row[RefreshTokens.parentFamilyId]
                     it[issuedAt] = now().toOffsetDateTime()
                     it[RefreshTokens.expiresAt] = successorExpiry.toOffsetDateTime()
                 }
@@ -159,12 +198,16 @@ class RefreshTokenService(
     }
 
     suspend fun revoke(rawToken: String, reason: String = "logout"): Unit = dbQuery {
+        val family = RefreshTokens.selectAll().where { RefreshTokens.tokenHash eq sha256(rawToken) }
+            .singleOrNull()?.get(RefreshTokens.familyId)
         RefreshTokens.update({
             (RefreshTokens.tokenHash eq sha256(rawToken)) and RefreshTokens.revokedAt.isNull()
         }) {
             it[revokedAt] = now().toOffsetDateTime()
             it[revokedReason] = reason
         }
+        // Her widget and watch sign out with the app they came from.
+        family?.let { revokeChildrenOf(it, reason) }
     }
 
     suspend fun revokeAllForUser(userId: Uuid, reason: String): Unit = dbQuery {
@@ -179,6 +222,16 @@ class RefreshTokenService(
     private fun revokeFamilyIn(familyId: Uuid, reason: String) {
         RefreshTokens.update({
             (RefreshTokens.familyId eq familyId) and RefreshTokens.revokedAt.isNull()
+        }) {
+            it[revokedAt] = now().toOffsetDateTime()
+            it[revokedReason] = reason
+        }
+        revokeChildrenOf(familyId, reason)
+    }
+
+    private fun revokeChildrenOf(familyId: Uuid, reason: String) {
+        RefreshTokens.update({
+            (RefreshTokens.parentFamilyId eq familyId) and RefreshTokens.revokedAt.isNull()
         }) {
             it[revokedAt] = now().toOffsetDateTime()
             it[revokedReason] = reason
