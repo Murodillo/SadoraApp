@@ -57,6 +57,18 @@ class SadoraApi internal constructor(
         }
     }
 
+    /**
+     * A session for the widgets or the watch, made from this one; the app's refresh token
+     * is shown to the server, not spent. See `POST /v1/auth/companion`.
+     */
+    suspend fun companionSession(kind: uz.sadora.contract.CompanionKind): ApiResult<uz.sadora.contract.TokenPair> {
+        val refreshToken = session.currentRefreshToken()
+            ?: return ApiResult.Failure(ApiFailure.Unauthorized("no refresh token"))
+        return caller.authenticated("v1/auth/companion", HttpMethodKind.POST) {
+            setBody(uz.sadora.contract.CompanionSessionRequest(refreshToken, kind))
+        }
+    }
+
     // ---------------------------------------------------------------- profile
 
     suspend fun bootstrap(platform: Platform): ApiResult<Bootstrap> =

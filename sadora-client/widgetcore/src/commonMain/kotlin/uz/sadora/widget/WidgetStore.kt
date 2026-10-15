@@ -42,6 +42,11 @@ class WidgetStore(private val values: KeyValues) {
 
     fun removeConfig(widgetId: String) = values.put(CONFIG + widgetId, null)
 
+    /** The API root the app was built against, so a widget asks the same server. */
+    fun baseUrl(): String? = values.get(BASE_URL)
+
+    fun setBaseUrl(url: String) = values.put(BASE_URL, url)
+
     /** Sign-out: nothing of hers stays where a widget could draw it. */
     fun clear() {
         values.keys().filter { it == SNAPSHOT || it.startsWith(CONFIG) }.forEach { values.put(it, null) }
@@ -50,6 +55,7 @@ class WidgetStore(private val values: KeyValues) {
     companion object {
         private const val SNAPSHOT = "widget.snapshot"
         private const val CONFIG = "widget.config."
+        private const val BASE_URL = "widget.baseUrl"
 
         val json = Json {
             ignoreUnknownKeys = true

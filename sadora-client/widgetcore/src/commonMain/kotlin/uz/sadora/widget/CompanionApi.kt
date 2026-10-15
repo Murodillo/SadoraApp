@@ -52,11 +52,12 @@ class CompanionTokens(private val secure: KeyValues) {
  * run outside the app and cannot borrow its tokens (see `POST /v1/auth/companion`).
  */
 class CompanionApi(
-    baseUrl: String,
+    /** Read per call: the app writes it when it hands the widgets their session. */
+    private val baseUrl: () -> String?,
     private val tokens: CompanionTokens,
     private val client: HttpClient,
 ) : WidgetApi {
-    private val base = baseUrl.trimEnd('/') + "/"
+    private val base: String get() = baseUrl().orEmpty().trimEnd('/') + "/"
     private val refreshLock = Mutex()
 
     override suspend fun summary(): WidgetCall<WidgetSummary> =
@@ -80,6 +81,7 @@ class CompanionApi(
         request: suspend (access: String) -> HttpResponse,
     ): WidgetCall<T> {
         val access = tokens.access() ?: return WidgetCall.SignedOut
+        if (baseUrl() == null) return WidgetCall.SignedOut
         val first = attempt(serializer) { request(access) }
         if (first !is Unauthorized) return first.asCall()
         return when (refresh(access)) {

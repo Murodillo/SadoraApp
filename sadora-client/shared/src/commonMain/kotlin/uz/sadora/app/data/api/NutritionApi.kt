@@ -32,8 +32,8 @@ class NutritionApi(private val caller: ApiCaller) {
         caller.authenticated("v1/nutrition/meals/$id", HttpMethodKind.DELETE)
 
     /** A negative amount is the undo the water sheet offers. */
-    suspend fun addWater(ml: Int): ApiResult<WaterState> =
-        caller.authenticated("v1/nutrition/water", HttpMethodKind.POST) { setBody(AddWaterRequest(ml)) }
+    suspend fun addWater(ml: Int, clientId: String? = null): ApiResult<WaterState> =
+        caller.authenticated("v1/nutrition/water", HttpMethodKind.POST) { setBody(AddWaterRequest(ml, clientId)) }
 
     suspend fun goals(): ApiResult<NutritionGoals> =
         caller.authenticated("v1/nutrition/goals", HttpMethodKind.GET)

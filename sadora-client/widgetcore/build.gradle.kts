@@ -48,7 +48,6 @@ kotlin {
         }
         androidMain.dependencies {
             implementation(libs.ktor.client.okhttp)
-            implementation(libs.androidx.core.ktx)
         }
         appleMain.dependencies {
             implementation(libs.ktor.client.darwin)

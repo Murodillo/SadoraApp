@@ -197,6 +197,18 @@ fun App(graph: SadoraGraph? = null) {
         if (sessionState is SessionState.SignedOut && (navigator.phase == AppPhase.Main || navigator.phase == AppPhase.Partner)) {
             navigator.goTo(AppPhase.SignIn)
         }
+        // The home-screen widgets and the watch follow the session: emptied the moment it
+        // ends, handed their own sessions and drawn the moment it begins.
+        when (sessionState) {
+            is SessionState.SignedOut -> graph.widgets.signedOut()
+            is SessionState.SignedIn -> graph.widgets.signedIn()
+            else -> Unit
+        }
+    }
+    // Drawn again whenever she leaves the app, so the home screen she returns to shows
+    // what she just did.
+    LifecycleResumeEffect(graph) {
+        onPauseOrDispose { graph?.widgets?.changed() }
     }
 
     // Analytics follows her consent, and nothing else: off until the box is ticked,

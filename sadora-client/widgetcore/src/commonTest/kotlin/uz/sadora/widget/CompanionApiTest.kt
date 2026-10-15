@@ -32,7 +32,7 @@ class CompanionApiTest {
         respond(body, status, headersOf("Content-Type", "application/json"))
 
     private fun api(secrets: CompanionTokens, handler: suspend MockRequestHandleScope.(HttpRequestData) -> io.ktor.client.request.HttpResponseData): CompanionApi =
-        CompanionApi("https://api.test/", secrets, HttpClient(MockEngine { handler(it) }))
+        CompanionApi({ "https://api.test/" }, secrets, HttpClient(MockEngine { handler(it) }))
 
     @Test
     fun `an expired access token is refreshed once and the call retried`() = runTest {

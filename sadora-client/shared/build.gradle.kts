@@ -63,6 +63,8 @@ kotlin {
             // The wire format is shared with the backend, so a renamed field is a
             // compile error here rather than a null at runtime.
             api("uz.sadora:contract")
+            // What the home-screen widgets and the watches show; the app writes their snapshot.
+            api(project(":widgetcore"))
             implementation(libs.ktor.client.core)
             implementation(libs.ktor.client.contentNegotiation)
             implementation(libs.ktor.client.auth)

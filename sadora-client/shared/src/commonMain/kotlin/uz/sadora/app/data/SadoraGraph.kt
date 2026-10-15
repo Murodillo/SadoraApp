@@ -64,6 +64,8 @@ class SadoraGraph(
      */
     private val storeBilling: StoreBilling? = null,
     healthPrefs: HealthSyncPrefs = InMemoryHealthSyncPrefs(),
+    /** The home-screen widgets and the watch; none in tests and previews. */
+    widgetPlatform: uz.sadora.app.data.widget.WidgetPlatform = uz.sadora.app.data.widget.WidgetPlatform.None,
     engine: HttpClientEngine? = null,
 ) {
     private val client: HttpClient =
@@ -95,7 +97,22 @@ class SadoraGraph(
     val photoApi: PhotoApi = PhotoApi(caller)
     val petApi: PetApi = PetApi(caller)
     val frameApi: uz.sadora.app.data.api.FrameApi = uz.sadora.app.data.api.FrameApi(caller)
+    val widgetSummaryApi: uz.sadora.app.data.api.WidgetSummaryApi = uz.sadora.app.data.api.WidgetSummaryApi(caller)
     val repository: SadoraRepository = SadoraRepository(api, session, device, appVersion)
+
+    private val widgetScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.Default)
+
+    /** The widgets' and the watch's side of the app; see [uz.sadora.app.data.widget.WidgetBridge]. */
+    val widgets: uz.sadora.app.data.widget.WidgetBridge = uz.sadora.app.data.widget.WidgetBridge(
+        platform = widgetPlatform,
+        appApi = uz.sadora.app.data.widget.AppWidgetApi(this),
+        api = api,
+        session = session,
+        baseUrl = environment.baseUrl,
+        scope = widgetScope,
+    ).also { bridge ->
+        caller.onWrite = { path -> if (uz.sadora.app.data.widget.WidgetBridge.affects(path)) bridge.changed() }
+    }
 
     /** One per process: its lock is what keeps a resume and a tap from reading twice at once. */
     val deviceHealth: DeviceHealthSync =

@@ -16,7 +16,7 @@ import platform.Foundation.NSUUID
  * [keychainGroup] is the full access group (`TEAMID.uz.sadora.shared`); the app, the
  * widget extension and the watch app all list it in their entitlements.
  */
-class WidgetHost(appGroup: String, keychainGroup: String?, baseUrl: String) {
+class WidgetHost(appGroup: String, keychainGroup: String?) {
     val store = WidgetStore(AppGroupKeyValues(appGroup))
     val tokens = CompanionTokens(KeychainKeyValues(SERVICE, keychainGroup))
 
@@ -27,7 +27,7 @@ class WidgetHost(appGroup: String, keychainGroup: String?, baseUrl: String) {
             connectTimeoutMillis = 8_000
         }
     }
-    val sync = WidgetSync(CompanionApi(baseUrl, tokens, client), store, { Clock.System.now() }, { NSUUID().UUIDString() })
+    val sync = WidgetSync(CompanionApi(store::baseUrl, tokens, client), store, { Clock.System.now() }, { NSUUID().UUIDString() })
 
     /** What a widget with [config] shows at [epochSeconds], in the phone's own timezone. */
     fun contentAt(config: WidgetConfig, epochSeconds: Long): WidgetContent? {

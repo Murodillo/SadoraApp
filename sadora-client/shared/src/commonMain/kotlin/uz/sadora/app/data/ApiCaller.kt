@@ -42,6 +42,13 @@ class ApiCaller internal constructor(
     private val refreshMutex = Mutex()
 
     /**
+     * Told the path of every write that succeeded. The graph points it at the widgets, so
+     * a glass of water or a dose marked anywhere in the app redraws the home screen without
+     * each screen having to remember to.
+     */
+    var onWrite: ((path: String) -> Unit)? = null
+
+    /**
      * The refresh in flight, if any, run in a scope that outlives the screen that asked.
      *
      * A refresh used to run inside the calling coroutine — a screen's own scope — so
@@ -70,7 +77,7 @@ class ApiCaller internal constructor(
     ): ApiResult<T> {
         val tokenUsed = currentAccessToken()
         val first = execute<T> { send(path, method, tokenUsed, block) }
-        if (first.failureOrNull !is ApiFailure.Unauthorized) return first
+        if (first.failureOrNull !is ApiFailure.Unauthorized) return first.also { wrote(path, method, it) }
 
         val refreshed = refreshIfStillStale(tokenUsed)
         if (refreshed is ApiResult.Failure) {
@@ -79,6 +86,11 @@ class ApiCaller internal constructor(
         }
         return execute<T> { send(path, method, currentAccessToken(), block) }
             .onFailure { if (it is ApiFailure.Unauthorized) clearSession() }
+            .also { wrote(path, method, it) }
+    }
+
+    fun wrote(path: String, method: HttpMethodKind, result: ApiResult<*>) {
+        if (method != HttpMethodKind.GET && result is ApiResult.Success) onWrite?.invoke(path)
     }
 
     suspend fun currentAccessToken(): String? = session.currentAccessToken()
