@@ -19,6 +19,11 @@ group = "uz.sadora"
 kotlin {
     jvm()
 
+    // The watchOS app reads the same summary the widgets do (sadora-client/widgetcore).
+    watchosArm64()
+    watchosDeviceArm64()
+    watchosSimulatorArm64()
+
     listOf(
         iosArm64(),
         iosSimulatorArm64()

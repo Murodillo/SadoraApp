@@ -30,5 +30,6 @@ dependencyResolutionManagement {
 // The API contract, shared with the backend and the doctor app.
 includeBuild("../sadora-backend/contract")
 
+include(":widgetcore")
 include(":shared")
 include(":androidApp")
