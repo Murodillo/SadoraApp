@@ -154,4 +154,23 @@ class HealthReadingRulesTest {
         )
         assertTrue(nights.isEmpty())
     }
+
+    @Test
+    fun `a night only partly inside the read is left out rather than sent as a piece`() {
+        // The read starts at midnight on the 3rd; the night of the 2nd to the 3rd began at
+        // 23:00 the evening before. Read with the lookback it is whole; the night before
+        // it ended on the 2nd and is only a piece, so it is not sent.
+        val segments = listOf(
+            SleepSegment("watch", at("2026-09-01T23:00"), at("2026-09-02T07:00"), SleepStage.ASLEEP),
+            SleepSegment("watch", at("2026-09-02T23:00"), at("2026-09-03T00:00"), SleepStage.DEEP),
+            SleepSegment("watch", at("2026-09-03T00:00"), at("2026-09-03T07:00"), SleepStage.LIGHT),
+        )
+        val readFrom = at("2026-09-03T00:00")
+        val inRead = segments.filter { it.end > SleepNights.readStart(readFrom) }
+
+        val nights = SleepNights.from(inRead, zone, since = day("2026-09-03"))
+
+        assertEquals(listOf(day("2026-09-03")), nights.map { it.date })
+        assertEquals(8 * 3600L, nights.single().asleepSeconds)
+    }
 }

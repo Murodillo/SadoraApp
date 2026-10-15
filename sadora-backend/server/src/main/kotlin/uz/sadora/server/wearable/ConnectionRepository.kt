@@ -140,9 +140,14 @@ class ConnectionRepository {
     suspend fun dueForSync(provider: HealthProvider, before: Instant, limit: Int): List<ConnectionRecord> = dbQuery {
         WearableConnections.selectAll()
             .where {
-                (WearableConnections.provider eq provider.dbValue()) and
-                    (WearableConnections.status eq ConnectionStatus.ACTIVE.dbValue()) and
+                // A failed pull is tried again on the same schedule, counted from the failure:
+                // one 5xx from the provider used to stop her data until she tapped "sync now".
+                // Only an expired grant waits for her, because only she can renew it.
+                val active = (WearableConnections.status eq ConnectionStatus.ACTIVE.dbValue()) and
                     (WearableConnections.lastSyncAt.isNull() or (WearableConnections.lastSyncAt less before.toOffsetDateTime()))
+                val failed = (WearableConnections.status eq ConnectionStatus.ERROR.dbValue()) and
+                    (WearableConnections.updatedAt less before.toOffsetDateTime())
+                (WearableConnections.provider eq provider.dbValue()) and (active or failed)
             }
             .limit(limit)
             .mapNotNull { it.toRecord() }

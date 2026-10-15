@@ -42,10 +42,12 @@ object GarminMapper {
         val at = noonOf(date)
         val id = "daily:$date"
         return listOfNotNull(
-            daily.steps?.let { sample(id, "steps", it.toDouble(), at) },
-            daily.distanceInMeters?.let { sample(id, "distance_in_meters", it, at) },
-            daily.activeKilocalories?.let { sample(id, "active_kilocalories", it.toDouble(), at) },
-            daily.floorsClimbed?.let { sample(id, "floors_climbed", it.toDouble(), at) },
+            // Zero is a day the watch was not worn, left for her phone to answer: Garmin
+            // outranks the phone, so a zero here would wipe out the phone's real count.
+            daily.steps?.takeIf { it > 0 }?.let { sample(id, "steps", it.toDouble(), at) },
+            daily.distanceInMeters?.takeIf { it > 0 }?.let { sample(id, "distance_in_meters", it, at) },
+            daily.activeKilocalories?.takeIf { it > 0 }?.let { sample(id, "active_kilocalories", it.toDouble(), at) },
+            daily.floorsClimbed?.takeIf { it > 0 }?.let { sample(id, "floors_climbed", it.toDouble(), at) },
             daily.restingHeartRateInBeatsPerMinute?.let { sample(id, "resting_heart_rate", it.toDouble(), at) },
             daily.averageHeartRateInBeatsPerMinute?.let { sample(id, "average_heart_rate", it.toDouble(), at) },
         )

@@ -111,4 +111,10 @@ class GarminMapperTest {
         // RFC 7636, appendix B.
         assertEquals("E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM", Pkce.challenge("dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"))
     }
+
+    @Test
+    fun `a day the watch was not worn sends no zero steps but keeps its pulse`() {
+        val off = GarminPush.parse("""{"dailies":[{"userId":"g-1","calendarDate":"2026-09-05","steps":0,"restingHeartRateInBeatsPerMinute":57}]}""")!!
+        assertEquals(listOf("resting_heart_rate"), GarminMapper.fromPush(off).getValue("g-1").map { it.metric })
+    }
 }

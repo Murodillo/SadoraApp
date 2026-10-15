@@ -321,7 +321,7 @@ class HealthConnectPlatform(context: Context) : HealthPlatform {
         }
 
         suspend fun sleep(from: Instant, to: Instant): List<HealthSampleInput> {
-            val segments = records<SleepSessionRecord>(from, to).flatMap { session ->
+            val segments = records<SleepSessionRecord>(SleepNights.readStart(from), to).flatMap { session ->
                 val source = session.metadata.dataOrigin.packageName
                 if (session.stages.isEmpty()) {
                     listOf(SleepSegment(source, session.startTime.kotlin(), session.endTime.kotlin(), SleepStage.ASLEEP))
@@ -342,7 +342,7 @@ class HealthConnectPlatform(context: Context) : HealthPlatform {
                 }
             }
             return SleepNights.samples(
-                SleepNights.from(segments, zone),
+                SleepNights.from(segments, zone, since = from.toLocalDateTime(zone).date),
                 HealthProvider.HEALTH_CONNECT,
                 SleepMetricNames(
                     asleep = "SleepSession",

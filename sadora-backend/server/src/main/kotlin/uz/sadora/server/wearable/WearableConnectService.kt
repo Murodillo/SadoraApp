@@ -379,6 +379,9 @@ class WearableConnectService(
         /** Under the ingest's own cap; a backfilled month can arrive in one post. */
         private const val PUSH_BATCH = 1_000
 
+        // Each list is what that provider's mapper actually produces, in the order the
+        // card names them — the card says what connecting it is for, so a metric the
+        // mapper never takes must not be promised there.
         val WHOOP_METRICS = listOf(
             HealthMetric.RECOVERY, HealthMetric.STRAIN, HealthMetric.HRV, HealthMetric.RESTING_HEART_RATE,
             HealthMetric.SKIN_TEMPERATURE, HealthMetric.SPO2, HealthMetric.RESPIRATORY_RATE,
@@ -386,15 +389,20 @@ class WearableConnectService(
             HealthMetric.SLEEP_AWAKE, HealthMetric.SLEEP_PERFORMANCE, HealthMetric.SLEEP_EFFICIENCY,
             HealthMetric.ACTIVE_ENERGY, HealthMetric.HEART_RATE, HealthMetric.WEIGHT,
         )
+        /** What both phone readers take today; the rest of the mapping table is not read. */
         val PLATFORM_METRICS = listOf(
             HealthMetric.STEPS, HealthMetric.SLEEP_DURATION, HealthMetric.SLEEP_DEEP, HealthMetric.SLEEP_REM,
+            HealthMetric.SLEEP_LIGHT, HealthMetric.SLEEP_AWAKE,
             HealthMetric.HEART_RATE, HealthMetric.RESTING_HEART_RATE, HealthMetric.HRV, HealthMetric.SKIN_TEMPERATURE,
             HealthMetric.BODY_TEMPERATURE, HealthMetric.SPO2, HealthMetric.RESPIRATORY_RATE,
             HealthMetric.ACTIVE_ENERGY, HealthMetric.DISTANCE, HealthMetric.WEIGHT,
         )
+        /** Oura's temperature is a deviation from her baseline, so it is not among these. */
         val RING_METRICS = listOf(
-            HealthMetric.RECOVERY, HealthMetric.HRV, HealthMetric.RESTING_HEART_RATE, HealthMetric.SKIN_TEMPERATURE,
-            HealthMetric.SLEEP_DURATION, HealthMetric.SLEEP_DEEP, HealthMetric.SLEEP_REM, HealthMetric.STEPS,
+            HealthMetric.RECOVERY, HealthMetric.HRV, HealthMetric.RESTING_HEART_RATE, HealthMetric.SPO2,
+            HealthMetric.RESPIRATORY_RATE, HealthMetric.SLEEP_DURATION, HealthMetric.SLEEP_DEEP, HealthMetric.SLEEP_REM,
+            HealthMetric.SLEEP_LIGHT, HealthMetric.SLEEP_AWAKE, HealthMetric.SLEEP_EFFICIENCY,
+            HealthMetric.STEPS, HealthMetric.ACTIVE_ENERGY, HealthMetric.DISTANCE, HealthMetric.WEIGHT,
         )
         val GARMIN_METRICS = listOf(
             HealthMetric.STEPS, HealthMetric.DISTANCE, HealthMetric.ACTIVE_ENERGY, HealthMetric.FLOORS,

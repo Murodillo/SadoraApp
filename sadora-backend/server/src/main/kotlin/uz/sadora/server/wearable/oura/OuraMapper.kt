@@ -45,10 +45,12 @@ object OuraMapper {
     fun fromActivity(activity: OuraActivity): List<HealthSampleInput> {
         val at = Instant.parse(activity.timestamp)
         val id = "activity:${activity.id}"
-        return listOf(
-            sample(id, "steps", activity.steps.toDouble(), at),
-            sample(id, "active_calories", activity.activeCalories.toDouble(), at),
-            sample(id, "equivalent_walking_distance", activity.equivalentWalkingDistance.toDouble(), at),
+        // A day with nothing counted is a day the ring was off, not a day she sat still:
+        // a zero sent here would outrank the phone's real count for that day.
+        return listOfNotNull(
+            activity.steps.takeIf { it > 0 }?.let { sample(id, "steps", it.toDouble(), at) },
+            activity.activeCalories.takeIf { it > 0 }?.let { sample(id, "active_calories", it.toDouble(), at) },
+            activity.equivalentWalkingDistance.takeIf { it > 0 }?.let { sample(id, "equivalent_walking_distance", it.toDouble(), at) },
         )
     }
 

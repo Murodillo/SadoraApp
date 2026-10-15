@@ -192,7 +192,7 @@ class HealthKitPlatform : HealthPlatform {
 
     private suspend fun sleep(from: Instant, to: Instant, zone: TimeZone): List<HealthSampleInput> {
         val type = HKCategoryType.categoryTypeForIdentifier(HKCategoryTypeIdentifierSleepAnalysis) ?: return emptyList()
-        val segments = samplesOf(type, from, to).filterIsInstance<HKCategorySample>().mapNotNull { sample ->
+        val segments = samplesOf(type, SleepNights.readStart(from), to).filterIsInstance<HKCategorySample>().mapNotNull { sample ->
             val stage = when (sample.value) {
                 HKCategoryValueSleepAnalysisAsleepUnspecified -> SleepStage.ASLEEP
                 HKCategoryValueSleepAnalysisAsleepCore -> SleepStage.LIGHT
@@ -209,7 +209,7 @@ class HealthKitPlatform : HealthPlatform {
             )
         }
         return SleepNights.samples(
-            SleepNights.from(segments, zone),
+            SleepNights.from(segments, zone, since = from.toLocalDateTime(zone).date),
             HealthProvider.APPLE_HEALTH,
             SleepMetricNames(
                 asleep = HKCategoryTypeIdentifierSleepAnalysis!!,

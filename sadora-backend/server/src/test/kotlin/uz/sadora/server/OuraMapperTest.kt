@@ -70,4 +70,10 @@ class OuraMapperTest {
         assertEquals(8421.0, steps.value)
         assertEquals("activity:a1:steps", steps.externalId)
     }
+
+    @Test
+    fun `a day the ring was off sends no zeros to outrank the phone`() {
+        val off = OuraActivity(id = "a2", day = "2026-09-05", timestamp = "2026-09-05T04:00:00+05:00")
+        assertTrue(OuraMapper.fromActivity(off).isEmpty())
+    }
 }

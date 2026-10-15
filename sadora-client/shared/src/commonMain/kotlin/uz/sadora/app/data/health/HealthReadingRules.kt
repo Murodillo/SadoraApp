@@ -62,7 +62,26 @@ object SleepNights {
     /** Two stretches further apart than this are two sleeps, not one interrupted one. */
     private val SessionGap: Duration = 2.hours
 
-    fun from(segments: List<SleepSegment>, zone: TimeZone): List<SleepNight> {
+    /**
+     * How far before a read's start the store is asked for sleep.
+     *
+     * A read starts at midnight, and the night that ends on its first morning began the
+     * evening before. Read from midnight, that night arrived without its first hours and
+     * replaced the whole night already on the server — on an iPhone, where every stage is
+     * its own sample, each night lost its pre-midnight sleep two days after it was slept.
+     * The store is asked from the evening before instead, and [from] keeps only the nights
+     * that end inside the read.
+     */
+    val Lookback: Duration = 18.hours
+
+    /** Where a read for [from] should start asking the store for sleep. */
+    fun readStart(from: Instant): Instant = from - Lookback
+
+    /**
+     * [since] drops every night that woke before that day: such a night was only partly
+     * inside the read, and sending it would overwrite the whole one with a piece.
+     */
+    fun from(segments: List<SleepSegment>, zone: TimeZone, since: LocalDate? = null): List<SleepNight> {
         val sessions = segments
             .filter { it.end > it.start }
             .groupBy { it.source }
@@ -92,6 +111,7 @@ object SleepNights {
                 }
             }
             .filter { it.asleepSeconds > 0 }
+            .filter { since == null || it.date >= since }
             .sortedBy { it.date }
     }
 
