@@ -324,6 +324,97 @@ class ApiIntegrationTest {
         assertEquals(due, profile.stage?.dueDate)
     }
 
+    // ---------------------------------------------------------------- widgets
+
+    /**
+     * A home-screen widget and a watch get one answer with everything they draw — the
+     * stage, today's water, today's doses, the wearable's day — because each refresh is
+     * rationed by the OS and four round trips would spend four of them.
+     */
+    @Test
+    fun `the widget summary carries the stage, water, doses and plan in one answer`() = api {
+        val her = signUp()
+        onboard(her)
+        val userId = Uuid.parse(her.userId)
+        component.medicationRepository.add(
+            userId,
+            uz.sadora.contract.SaveMedicationRequest(
+                name = "Folat",
+                schedule = uz.sadora.contract.MedicationSchedule(times = listOf(kotlinx.datetime.LocalTime(8, 0), kotlinx.datetime.LocalTime(21, 0))),
+            ),
+            startedOn = get<CycleStatus>("/v1/cycle/status", her.token).today.minus(1, kotlinx.datetime.DateTimeUnit.DAY),
+        )
+        post<WaterState>("/v1/nutrition/water", her.token, AddWaterRequest(250))
+
+        val summary = get<uz.sadora.contract.WidgetSummary>("/v1/widget/summary", her.token)
+        assertEquals(LifeStage.CYCLE, summary.lifeStage)
+        assertEquals(Language.UZ, summary.language)
+        assertNotNull(summary.cycle, "a cycle account gets its cycle")
+        assertEquals(summary.cycle?.today, summary.today)
+        assertEquals(250, summary.water.waterMl)
+        assertEquals(listOf("Folat", "Folat"), summary.medications.doses.map { it.name })
+        assertFalse(summary.premium)
+        assertFalse(summary.discreet)
+    }
+
+    /**
+     * The widget's "+250 ml" may be sent twice — once from the widget, once more from the
+     * queue when the network comes back and the first answer was lost. The same tap id
+     * counts once.
+     */
+    @Test
+    fun `a water tap retried with the same id counts once`() = api {
+        val her = signUp()
+        onboard(her)
+        val first = post<WaterState>("/v1/nutrition/water", her.token, AddWaterRequest(250, clientId = "tap-1"))
+        val retried = post<WaterState>("/v1/nutrition/water", her.token, AddWaterRequest(250, clientId = "tap-1"))
+        val another = post<WaterState>("/v1/nutrition/water", her.token, AddWaterRequest(250, clientId = "tap-2"))
+        assertEquals(250, first.waterMl)
+        assertEquals(250, retried.waterMl, "the retry is answered with today's total, not added again")
+        assertEquals(500, another.waterMl)
+    }
+
+    /** Discreet mode is hers on every device, so it is kept on the profile. */
+    @Test
+    fun `discreet mode is saved on the profile and comes back in the widget summary`() = api {
+        val her = signUp()
+        onboard(her)
+        val response = client.patch("/v1/me") { auth(her.token); json(UpdateProfileRequest(discreet = true)) }
+        assertEquals(HttpStatusCode.OK, response.status, response.bodyAsTextSafe())
+        assertTrue(get<UserProfile>("/v1/me", her.token).discreet)
+        assertTrue(get<uz.sadora.contract.WidgetSummary>("/v1/widget/summary", her.token).discreet)
+    }
+
+    /** A reminder in discreet mode names no medicine and no body: the lock screen is public. */
+    @Test
+    fun `in discreet mode a reminder goes out in neutral words`() = api {
+        val her = signUp()
+        onboard(her)
+        client.patch("/v1/me") { auth(her.token); json(UpdateProfileRequest(discreet = true)) }
+        val userId = Uuid.parse(her.userId)
+        val key = "test:discreet:${Uuid.random()}"
+        val record = component.notificationRepository.let { repo ->
+            repo.enqueue(
+                userId = userId,
+                category = uz.sadora.contract.NotificationCategory.MED_REMINDER,
+                title = "Folat",
+                body = "Folat ichish vaqti",
+                scheduledFor = now() + 1.days,
+                dedupeKey = key,
+                status = uz.sadora.contract.NotificationStatus.QUEUED,
+                suppressedReason = null,
+            )
+            dbQuery {
+                uz.sadora.server.db.NotificationOutbox.selectAll()
+                    .where { uz.sadora.server.db.NotificationOutbox.dedupeKey eq key }
+                    .single()[uz.sadora.server.db.NotificationOutbox.id]
+            }
+        }
+        val sent = component.notificationScheduler.prepared(record)
+        assertEquals("Sadora", sent.title)
+        assertFalse("Folat" in sent.body, sent.body)
+    }
+
     // ---------------------------------------------------------------- profile share
 
     /**

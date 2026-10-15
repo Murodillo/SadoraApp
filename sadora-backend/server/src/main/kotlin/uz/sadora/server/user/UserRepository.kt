@@ -181,6 +181,14 @@ class UserRepository {
         }
     }
 
+    /** Discreet mode, from Settings → Privacy. */
+    suspend fun setDiscreet(userId: Uuid, discreet: Boolean): Unit = dbQuery {
+        Users.update({ Users.id eq userId }) {
+            it[discreetMode] = discreet
+            it[updatedAt] = now().toOffsetDateTime()
+        }
+    }
+
     /** The smart-device answer, asked in the app after sign-up. */
     suspend fun setHasWearable(userId: Uuid, hasWearable: Boolean): Unit = dbQuery {
         Users.update({ Users.id eq userId }) {
@@ -547,4 +555,5 @@ private fun ResultRow.toUserRecord(): UserRecord = UserRecord(
     referredByDoctor = this[Users.referredByDoctor],
     hasWearable = this[Users.hasWearable],
     accountKind = enumFromDb(this[Users.accountKind], AccountKind.SELF),
+    discreet = this[Users.discreetMode],
 )

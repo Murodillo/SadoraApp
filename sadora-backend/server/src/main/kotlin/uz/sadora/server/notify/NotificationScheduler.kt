@@ -191,6 +191,9 @@ class NotificationScheduler(
                     body = body.ifBlank { MedReminderFallback.body(user.language, dueAt.toString()) },
                     scheduledFor = dueInstant,
                     dedupeKey = dedupeKey,
+                    // The dose itself: the phone and the watch offer "taken" and "skipped"
+                    // on the notification, and need to know which dose they answer for.
+                    link = "sadora://dose/${medication.id}/$day/$dueAt",
                     status = if (decision is DeliveryDecision.Send) {
                         NotificationStatus.QUEUED
                     } else {
@@ -213,7 +216,7 @@ class NotificationScheduler(
                 notifications.markFailed(record.id, uz.sadora.contract.SuppressionReasons.NO_DEVICE)
                 return@forEach
             }
-            val delivered = runCatching { sender.send(record, tokens) }.getOrElse { failure ->
+            val delivered = runCatching { sender.send(prepared(record), tokens) }.getOrElse { failure ->
                 logger.warn("Push delivery failed for {}", record.id, failure)
                 false
             }
@@ -222,10 +225,24 @@ class NotificationScheduler(
         }
     }
 
+    /** What the device is sent for outbox row [id]; see the overload. */
+    suspend fun prepared(id: Uuid): OutboxRecord =
+        prepared(requireNotNull(notifications.byId(id)) { "No outbox row $id" })
+
+    /**
+     * The row as it goes out: in neutral words when she has discreet mode on. The doctor
+     * app is left alone — discretion is about her lock screen, not a clinician's.
+     */
+    private suspend fun prepared(record: OutboxRecord): OutboxRecord {
+        if (record.targetApp != TARGET_CLIENT) return record
+        val user = users.findById(record.userId) ?: return record
+        return if (user.discreet) DiscreetPush.neutral(record, user.language) else record
+    }
+
     private suspend fun hasPushToken(userId: Uuid): Boolean = pushTokens(userId, TARGET_CLIENT).isNotEmpty()
 
     /** The account's devices of one app: a doctor's patients ring her doctor app, not her own. */
-    private suspend fun pushTokens(userId: Uuid, app: String): List<String> = dbQuery {
+    suspend fun pushTokens(userId: Uuid, app: String): List<String> = dbQuery {
         Devices.selectAll()
             .where { (Devices.userId eq userId) and Devices.pushToken.isNotNull() and (Devices.app eq app) }
             .mapNotNull { it[Devices.pushToken] }

@@ -241,6 +241,13 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
         prescribers = prescriptionRepository::prescriberNames,
     )
     val wearableService = WearableService(wearableRepository, healthAccess)
+    val widgetService = uz.sadora.server.widget.WidgetService(
+        users = userService,
+        health = healthService,
+        nutrition = nutritionService,
+        medications = medicationService,
+        wearables = wearableService,
+    )
 
     /**
      * Cloud wearables. WHOOP exists as a client only when its credentials do, the same
@@ -301,6 +308,16 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
         // delivered the moment it is written, not on the next minute's tick.
         notificationRepository.onQueuedNow = scheduler::deliverSoon
     }
+
+    private val widgetScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
+
+    /** Silent "redraw" pushes to her widgets and watch; see [uz.sadora.server.widget.WidgetRefresh]. */
+    val widgetRefresher = uz.sadora.server.widget.WidgetRefresher(
+        tokensOf = { userId -> notificationScheduler.pushTokens(userId, uz.sadora.server.notify.TARGET_CLIENT) },
+        sender = pushSender,
+        window = kotlin.time.Duration.parse("10s"),
+        scope = widgetScope,
+    )
 
     val accountErasureJob = AccountErasureJob(
         users = userRepository,
@@ -610,6 +627,7 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
     )
 
     override fun close() {
+        widgetScope.coroutineContext[kotlinx.coroutines.Job]?.cancel()
         notificationScheduler.stop()
         wearableSyncJob.stop()
         accountErasureJob.stop()

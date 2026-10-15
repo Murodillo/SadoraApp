@@ -123,6 +123,26 @@ class FcmPushSenderTest {
         assertTrue(failure is PushConfigurationException, "was $failure")
     }
 
+    /**
+     * A widget refresh rings nothing: no `notification` block, so the system shows nothing,
+     * and the APNs headers that let iOS wake the app in the background to redraw.
+     */
+    @Test
+    fun `a widget refresh is a silent data message that wakes the app on both platforms`() = runTest {
+        val seen = mutableListOf<HttpRequestData>()
+        val sender = sender(seen) { HttpStatusCode.OK to """{"name":"projects/p/messages/2"}""" }
+
+        assertTrue(sender.sendSilent(mapOf("type" to "widget_refresh"), listOf("device-a")))
+
+        val body = Json.parseToJsonElement((seen.last().body as io.ktor.http.content.TextContent).text)
+            .let { it as kotlinx.serialization.json.JsonObject }["message"] as kotlinx.serialization.json.JsonObject
+        assertFalse("notification" in body, body.toString())
+        assertEquals("\"widget_refresh\"", body["data"].toString().substringAfter("\"type\":").substringBefore("}"))
+        val apns = body["apns"].toString()
+        assertTrue("\"apns-push-type\":\"background\"" in apns, apns)
+        assertTrue("\"content-available\":1" in apns, apns)
+    }
+
     // ---------------------------------------------------------------- harness
 
     private fun sender(

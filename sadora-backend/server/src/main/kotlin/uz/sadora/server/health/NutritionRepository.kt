@@ -7,6 +7,7 @@ import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.greaterEq
+import org.jetbrains.exposed.v1.core.less
 import org.jetbrains.exposed.v1.core.lessEq
 import org.jetbrains.exposed.v1.core.like
 import org.jetbrains.exposed.v1.core.lowerCase
@@ -14,6 +15,7 @@ import org.jetbrains.exposed.v1.core.sum
 import org.jetbrains.exposed.v1.jdbc.andWhere
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insert
+import org.jetbrains.exposed.v1.jdbc.insertIgnore
 import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.upsert
@@ -28,6 +30,7 @@ import uz.sadora.server.core.now
 import uz.sadora.server.core.toKotlinInstant
 import uz.sadora.server.core.toOffsetDateTime
 import uz.sadora.server.db.DailyLogs
+import uz.sadora.server.db.WaterTaps
 import uz.sadora.server.db.FoodItems
 import uz.sadora.server.db.Meals
 import uz.sadora.server.db.NutritionGoalsTable
@@ -101,7 +104,26 @@ class NutritionRepository {
      * screen. The upsert touches only the water column, so it cannot wipe a mood or a
      * symptom recorded on the same day.
      */
-    suspend fun addWater(userId: Uuid, date: LocalDate, deltaMl: Int): Int = dbQuery {
+    suspend fun addWater(userId: Uuid, date: LocalDate, deltaMl: Int, clientId: String? = null): Int = dbQuery {
+        // A tap the device already sent once: answer with the total, add nothing. The
+        // insert is the check, so two copies racing each other still count once.
+        if (clientId != null) {
+            WaterTaps.deleteWhere {
+                (WaterTaps.userId eq userId) and (WaterTaps.createdAt less (now() - TAP_MEMORY).toOffsetDateTime())
+            }
+            val fresh = WaterTaps.insertIgnore {
+                it[WaterTaps.userId] = userId
+                it[WaterTaps.clientId] = clientId
+                it[createdAt] = now().toOffsetDateTime()
+            }.insertedCount > 0
+            if (!fresh) {
+                return@dbQuery DailyLogs.selectAll()
+                    .where { (DailyLogs.userId eq userId) and (DailyLogs.logDate eq date) }
+                    .singleOrNull()
+                    ?.get(DailyLogs.waterMl)
+                    ?: 0
+            }
+        }
         val current = DailyLogs.selectAll()
             .where { (DailyLogs.userId eq userId) and (DailyLogs.logDate eq date) }
             .singleOrNull()
@@ -232,5 +254,8 @@ class NutritionRepository {
     private companion object {
         /** Ten litres is far past any real intake; anything beyond it is a typo. */
         const val MAX_WATER_ML = 10_000
+
+        /** How long a tap id is remembered: an offline queue never holds one for a week. */
+        val TAP_MEMORY = kotlin.time.Duration.parse("7d")
     }
 }

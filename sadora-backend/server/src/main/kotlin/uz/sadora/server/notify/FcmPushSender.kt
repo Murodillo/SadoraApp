@@ -59,29 +59,67 @@ class FcmPushSender(
         return delivered
     }
 
-    private suspend fun sendOne(bearer: String, record: OutboxRecord, token: String): Outcome {
+    override suspend fun sendSilent(data: Map<String, String>, pushTokens: List<String>): Boolean {
+        if (pushTokens.isEmpty()) return false
+        val bearer = try {
+            tokens.token()
+        } catch (failure: Exception) {
+            logger.error("FCM credentials could not produce an access token", failure)
+            return false
+        }
+        var delivered = false
+        pushTokens.forEach { token ->
+            val message = FcmMessage(
+                token = token,
+                data = data,
+                // Normal priority: Android may batch it, which is right for a redraw.
+                android = FcmAndroid(priority = "normal"),
+                // iOS wakes the app in the background only for this exact shape.
+                apns = FcmApns(
+                    headers = mapOf("apns-push-type" to "background", "apns-priority" to "5"),
+                    payload = FcmApnsPayload(FcmAps(contentAvailable = 1)),
+                ),
+            )
+            when (post(bearer, message)) {
+                Outcome.DELIVERED -> delivered = true
+                Outcome.GONE -> onTokenRejected(token)
+                Outcome.FAILED -> Unit
+            }
+        }
+        return delivered
+    }
+
+    private suspend fun sendOne(bearer: String, record: OutboxRecord, token: String): Outcome =
+        post(
+            bearer,
+            FcmMessage(
+                token = token,
+                notification = FcmNotification(record.title, record.body),
+                // The app opens the right screen from these; the visible text
+                // is in `notification` so the system can show it while the app
+                // is not running.
+                data = buildMap {
+                    put("notificationId", record.id.toString())
+                    put("category", record.category.name.lowercase())
+                    // Where a tap lands: the app routes it like any link of its own.
+                    record.link?.let { put("link", it) }
+                },
+                android = channelFor(record)?.let { FcmAndroid(notification = FcmAndroidNotification(it)) },
+                // The dose a reminder is for: iOS shows "taken" and "skipped" on it.
+                apns = if (record.category == uz.sadora.contract.NotificationCategory.MED_REMINDER) {
+                    FcmApns(payload = FcmApnsPayload(FcmAps(category = DOSE_CATEGORY)))
+                } else {
+                    null
+                },
+            ),
+        )
+
+    private suspend fun post(bearer: String, message: FcmMessage): Outcome {
         val response = try {
             client.post("$endpoint/v1/projects/$projectId/messages:send") {
                 header("Authorization", "Bearer $bearer")
                 contentType(ContentType.Application.Json)
-                setBody(
-                    FcmEnvelope(
-                        FcmMessage(
-                            token = token,
-                            notification = FcmNotification(record.title, record.body),
-                            // The app opens the right screen from these; the visible text
-                            // is in `notification` so the system can show it while the app
-                            // is not running.
-                            data = buildMap {
-                                put("notificationId", record.id.toString())
-                                put("category", record.category.name.lowercase())
-                                // Where a tap lands: the app routes it like any link of its own.
-                                record.link?.let { put("link", it) }
-                            },
-                            android = channelFor(record)?.let { FcmAndroid(FcmAndroidNotification(it)) },
-                        ),
-                    ),
-                )
+                setBody(FcmEnvelope(message))
             }
         } catch (cancellation: kotlinx.coroutines.CancellationException) {
             throw cancellation
@@ -112,6 +150,9 @@ class FcmPushSender(
         const val CHANNEL_MESSAGES = "sadora_messages"
         const val CHANNEL_REMINDERS = "sadora_reminders"
 
+        /** The iOS notification category whose actions are "taken" and "skipped". */
+        const val DOSE_CATEGORY = "DOSE"
+
         /**
          * Which Android channel shows [record] while the app is in the background, when
          * the system and not the app posts it. A person writing to her — a private
@@ -136,13 +177,32 @@ private data class FcmEnvelope(val message: FcmMessage)
 @Serializable
 private data class FcmMessage(
     val token: String,
-    val notification: FcmNotification,
+    val notification: FcmNotification? = null,
     val data: Map<String, String>,
     val android: FcmAndroid? = null,
+    val apns: FcmApns? = null,
 )
 
 @Serializable
-private data class FcmAndroid(val notification: FcmAndroidNotification)
+private data class FcmAndroid(
+    val notification: FcmAndroidNotification? = null,
+    val priority: String? = null,
+)
+
+@Serializable
+private data class FcmApns(
+    val headers: Map<String, String> = emptyMap(),
+    val payload: FcmApnsPayload,
+)
+
+@Serializable
+private data class FcmApnsPayload(val aps: FcmAps)
+
+@Serializable
+private data class FcmAps(
+    @kotlinx.serialization.SerialName("content-available") val contentAvailable: Int? = null,
+    val category: String? = null,
+)
 
 @Serializable
 private data class FcmAndroidNotification(@kotlinx.serialization.SerialName("channel_id") val channelId: String)

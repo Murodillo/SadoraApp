@@ -51,6 +51,8 @@ object Users : Table("users") {
     val hasWearable = bool("has_wearable").nullable()
     /** `self` or `partner` (V36): a follower-only account has no tracking of its own. */
     val accountKind = text("account_kind")
+    /** Widgets, the watch and pushes in neutral words (V55). */
+    val discreetMode = bool("discreet_mode")
 
     override val primaryKey = PrimaryKey(id)
 }

@@ -194,6 +194,10 @@ class NotificationRepository {
             .map { it.toOutbox() }
     }
 
+    suspend fun byId(id: Uuid): OutboxRecord? = dbQuery {
+        NotificationOutbox.selectAll().where { NotificationOutbox.id eq id }.singleOrNull()?.toOutbox()
+    }
+
     /** [due], for one account: what the immediate pass after a message reads. */
     suspend fun dueFor(userId: Uuid, limit: Int): List<OutboxRecord> = dbQuery {
         NotificationOutbox.selectAll()

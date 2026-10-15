@@ -122,6 +122,7 @@ class UserService(
         request.goals?.let { users.replaceGoals(userId, it) }
         request.stage?.let { users.mergeStageDates(userId, dueDate = it.dueDate, childBirthDate = it.birthDate) }
         request.hasWearable?.let { users.setHasWearable(userId, it) }
+        request.discreet?.let { users.setDiscreet(userId, it) }
 
         audit.record(
             AuditEntry(

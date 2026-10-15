@@ -169,7 +169,7 @@ class NutritionService(
             throw ValidationException("ml", "Bir marta eng ko'pi $MAX_WATER_STEP ml")
         }
         val today = now().dayIn(user.timezone)
-        val total = nutrition.addWater(userId, today, request.ml)
+        val total = nutrition.addWater(userId, today, request.ml, request.clientId?.takeIf { it.isNotBlank() }?.take(MAX_CLIENT_ID))
         val goal = nutrition.goalsOf(userId).waterGoalMl
         // The coin is for reaching her own goal, once a day — not for each glass, or
         // the reward would be for tapping rather than for drinking.
@@ -230,6 +230,7 @@ class NutritionService(
         const val MAX_KCAL = 10_000
         const val MAX_MACRO = 1_000
         const val MAX_WATER_STEP = Limits.WATER_STEP_MAX_ML
+        const val MAX_CLIENT_ID = 64
         const val FOOD_SEARCH_LIMIT = 50
 
         /** Roughly 4 MB of image once base64 is undone. */

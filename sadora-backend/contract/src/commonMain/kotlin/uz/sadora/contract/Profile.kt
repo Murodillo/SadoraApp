@@ -42,6 +42,12 @@ data class UserProfile(
     val stage: StageBaseline? = null,
     /** A follower-only account opens on the Yaqinim view, not on her own tracking. */
     val accountKind: AccountKind = AccountKind.SELF,
+    /**
+     * Discreet mode: widgets, the watch and push notifications say nothing about her body
+     * — a number and a neutral mark instead of "period in 2 days". Kept here and not on the
+     * device because a lock screen is the same risk on every phone she signs in on.
+     */
+    val discreet: Boolean = false,
 )
 
 /**
@@ -69,6 +75,8 @@ data class UpdateProfileRequest(
      * rather than during it. Only ever sets the answer; null leaves it as it is.
      */
     val hasWearable: Boolean? = null,
+    /** Discreet mode on or off; null leaves it as it is. */
+    val discreet: Boolean? = null,
 )
 
 /** How long she has been trying to conceive, asked once during onboarding. */

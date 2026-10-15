@@ -115,7 +115,15 @@ data class NutritionDay(
  * off, and a running total that cannot go down would need a second endpoint to do it.
  */
 @Serializable
-data class AddWaterRequest(val ml: Int)
+data class AddWaterRequest(
+    val ml: Int,
+    /**
+     * The tap's own id, made on the device. A widget's or a watch's tap may reach the
+     * server twice — once live, once more from the offline queue when the first answer was
+     * lost — and the same id counts once. Null for the app's own taps, which never retry.
+     */
+    val clientId: String? = null,
+)
 
 @Serializable
 data class WaterState(val date: LocalDate, val waterMl: Int, val waterGoalMl: Int)

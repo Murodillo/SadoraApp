@@ -24,6 +24,15 @@ object CyclePeriods : Table("cycle_periods") {
     override val primaryKey = PrimaryKey(id)
 }
 
+/** A widget's or watch's water tap by its device id, so a retried tap counts once (V55). */
+object WaterTaps : Table("water_taps") {
+    val userId = uuid("user_id").references(Users.id)
+    val clientId = text("client_id")
+    val createdAt = timestampWithTimeZone("created_at")
+
+    override val primaryKey = PrimaryKey(userId, clientId)
+}
+
 object DailyLogs : Table("daily_logs") {
     val userId = uuid("user_id").references(Users.id)
     val logDate = date("log_date")

@@ -35,6 +35,7 @@ data class UserRecord(
     val referredByDoctor: Boolean? = null,
     val hasWearable: Boolean? = null,
     val accountKind: AccountKind = AccountKind.SELF,
+    val discreet: Boolean = false,
 ) {
     /**
      * Goals live in their own table, so the caller supplies them. Note what is absent:
@@ -59,6 +60,7 @@ data class UserRecord(
         hasWearable = hasWearable,
         stage = stage,
         accountKind = accountKind,
+        discreet = discreet,
     )
 }
 

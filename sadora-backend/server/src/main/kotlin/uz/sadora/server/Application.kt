@@ -1,6 +1,7 @@
 package uz.sadora.server
 
 import io.ktor.server.application.Application
+import io.ktor.server.application.install
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
 import io.ktor.server.plugins.swagger.swaggerUI
@@ -55,6 +56,7 @@ import uz.sadora.server.health.appointmentRoutes
 import uz.sadora.server.health.stageEventRoutes
 import uz.sadora.server.health.mindRoutes
 import uz.sadora.server.health.nutritionRoutes
+import uz.sadora.server.widget.widgetRoutes
 import uz.sadora.server.content.adminContentRoutes
 import uz.sadora.server.content.contentRoutes
 import uz.sadora.server.insights.insightsRoutes
@@ -127,6 +129,7 @@ fun Application.apiModule(component: AppComponent) {
     configureStatusPages()
     configureRateLimit(config)
     configureSecurity(component.jwtService, component.accountGate, config.adminRequireTotp)
+    install(uz.sadora.server.widget.widgetRefreshPlugin(component.widgetRefresher))
 
     routing {
         healthCheckRoutes(config.environment.name.lowercase(), SERVER_VERSION)
@@ -163,6 +166,7 @@ fun Application.apiModule(component: AppComponent) {
             notificationRoutes(component.notificationService)
             adminNotificationRoutes(component.notificationService, component.auditService)
             wearableRoutes(component.wearableService)
+            widgetRoutes(component.widgetService)
             wearableConnectRoutes(component.wearableConnectService, component.wearableSyncJob)
             // The provider's own doors: an OAuth return and a signed webhook, no app token.
             wearablePublicRoutes(component.wearableConnectService, component.wearableSyncJob)
