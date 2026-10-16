@@ -24,6 +24,14 @@
 	     SADORA_DEV_HOST to the development machine, which the phone can reach. -->
 	<key>SadoraDevHost</key>
 	<string>$(SADORA_DEV_HOST)</string>
+	<!-- The Keychain group the app shares with its widget extension (the widgets' session). -->
+	<key>SadoraKeychainGroup</key>
+	<string>$(AppIdentifierPrefix)uz.sadora.shared</string>
+	<!-- A silent push redraws the widgets. -->
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
 	<!-- The app's own scheme: invite links (sadora://invite/CODE) and the return from a
 	     wearable provider's consent page (sadora://wearables/whoop?status=ok). -->
 	<key>CFBundleURLTypes</key>

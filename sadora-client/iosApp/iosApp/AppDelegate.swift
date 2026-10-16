@@ -23,7 +23,30 @@ final class AppDelegate: NSObject, UIApplicationDelegate, MessagingDelegate, UNU
         FirebaseApp.configure()
         Messaging.messaging().delegate = self
         UNUserNotificationCenter.current().delegate = self
+        registerDoseActions()
         return true
+    }
+
+    /// "Taken" and "Skipped" on a medication reminder (the server sends it with category
+    /// DOSE). A paired Apple Watch shows the same buttons on its copy of the notification.
+    private func registerDoseActions() {
+        let taken = UNNotificationAction(identifier: "DOSE_TAKEN", title: NSLocalizedString("dose.taken", value: "Ichdim", comment: ""))
+        let skipped = UNNotificationAction(identifier: "DOSE_SKIPPED", title: NSLocalizedString("dose.skipped", value: "O'tkazdim", comment: ""))
+        let dose = UNNotificationCategory(identifier: "DOSE", actions: [taken, skipped], intentIdentifiers: [])
+        UNUserNotificationCenter.current().setNotificationCategories([dose])
+    }
+
+    /// A silent push: something a widget shows changed elsewhere. Fetch and redraw.
+    func application(
+        _ application: UIApplication,
+        didReceiveRemoteNotification userInfo: [AnyHashable: Any],
+        fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void
+    ) {
+        guard (userInfo["type"] as? String) == "widget_refresh" else {
+            completionHandler(.noData)
+            return
+        }
+        IosWidgets.shared.refresh { completionHandler(.newData) }
     }
 
     func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
@@ -53,7 +76,13 @@ final class AppDelegate: NSObject, UIApplicationDelegate, MessagingDelegate, UNU
         didReceive response: UNNotificationResponse,
         withCompletionHandler completionHandler: @escaping () -> Void
     ) {
-        if let link = response.notification.request.content.userInfo["link"] as? String {
+        let link = response.notification.request.content.userInfo["link"] as? String
+        // A dose answered from the notification: recorded without opening the app.
+        if let link, response.actionIdentifier == "DOSE_TAKEN" || response.actionIdentifier == "DOSE_SKIPPED" {
+            IosWidgets.shared.answerDose(link: link, taken: response.actionIdentifier == "DOSE_TAKEN") { completionHandler() }
+            return
+        }
+        if let link {
             IosAppLinks.shared.offer(url: link)
         }
         completionHandler()

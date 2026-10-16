@@ -19,6 +19,7 @@ import platform.UIKit.UIViewController
  */
 fun MainViewController(): UIViewController {
     IosPush.follow(iosGraph)
+    IosWidgets.graphOrNull = { iosGraph }
     return ComposeUIViewController {
         App(iosGraph)
     }
@@ -37,6 +38,7 @@ private val iosGraph: SadoraGraph by lazy {
         // Every iOS build is an App Store or TestFlight build, so it always buys through
         // StoreKit — the bridge Swift registered at launch. Payme and Click are never offered.
         storeBilling = IosStore.bridge?.let(::IosStoreBilling),
+        widgetPlatform = IosWidgetPlatform(bundleString("SadoraKeychainGroup")),
     )
 }
 

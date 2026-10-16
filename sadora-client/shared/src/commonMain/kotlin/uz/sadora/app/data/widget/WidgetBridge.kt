@@ -83,6 +83,12 @@ class WidgetBridge(
         }
     }
 
+    /** A dose answered on its notification (phone or watch): queued, sent, redrawn. */
+    suspend fun answerDose(medicationId: String, day: kotlinx.datetime.LocalDate, time: kotlinx.datetime.LocalTime, status: uz.sadora.contract.DoseStatus) {
+        sync.markDose(medicationId, day, time, status)
+        refresh()
+    }
+
     /** Nothing of hers stays on the home screen or the watch. */
     suspend fun signedOut() {
         pending?.cancel()

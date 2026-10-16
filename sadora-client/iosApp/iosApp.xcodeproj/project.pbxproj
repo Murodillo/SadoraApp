@@ -8,10 +8,94 @@
 
 /* Begin PBXBuildFile section */
 		4F1B2C3D5E6A7B8C9D0E1F20 /* FirebaseMessaging in Frameworks */ = {isa = PBXBuildFile; productRef = 4F1B2C3D5E6A7B8C9D0E1F22 /* FirebaseMessaging */; };
+		5B24AB8087981942C2E9F287 /* SadoraWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 618FF67C7A1EA041D85DD3B9 /* SadoraWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		A3C793DCB94CC5A25B533DFE /* SadoraWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = A2E68AC0134815CC9DC9AE97 /* SadoraWatch.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		CF183F3A13F2225E68505F46 /* SadoraWatchWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 6B38B714F2E0AE46983335D3 /* SadoraWatchWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		9D312EC268588922F3C754B4 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 6F1CF7B378EB7EDEF975DB79 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 9C3D04B1269C5FDD1E363236;
+			remoteInfo = SadoraWidgets;
+		};
+		C9935C3270A00A725FDD2852 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 6F1CF7B378EB7EDEF975DB79 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A55C66481E606B70740E4B5A;
+			remoteInfo = SadoraWatch;
+		};
+		5835115C669A5063ACAD503A /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 6F1CF7B378EB7EDEF975DB79 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = ABAF428A1554D26C5510779B;
+			remoteInfo = SadoraWatchWidgets;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXTargetDependency section */
+		889C0C2D6BC2637472D590A6 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 9C3D04B1269C5FDD1E363236 /* SadoraWidgets */;
+			targetProxy = 9D312EC268588922F3C754B4 /* PBXContainerItemProxy */;
+		};
+		4E2398BB54552A46E6A99392 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = A55C66481E606B70740E4B5A /* SadoraWatch */;
+			targetProxy = C9935C3270A00A725FDD2852 /* PBXContainerItemProxy */;
+		};
+		D030264082679EDB803738D2 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = ABAF428A1554D26C5510779B /* SadoraWatchWidgets */;
+			targetProxy = 5835115C669A5063ACAD503A /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		097779A1AF12143577639DD1 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				5B24AB8087981942C2E9F287 /* SadoraWidgets.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A727F22C35D634E4EE13E519 /* Embed Watch Content */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "$(CONTENTS_FOLDER_PATH)/Watch";
+			dstSubfolderSpec = 16;
+			files = (
+				A3C793DCB94CC5A25B533DFE /* SadoraWatch.app in Embed Watch Content */,
+			);
+			name = "Embed Watch Content";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		1FF1A3D7277C23D6A37A19EF /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				CF183F3A13F2225E68505F46 /* SadoraWatchWidgets.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		B031C4DFCBCB55032EC8111D /* Sadora.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Sadora.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		618FF67C7A1EA041D85DD3B9 /* SadoraWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = SadoraWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		6B38B714F2E0AE46983335D3 /* SadoraWatchWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = SadoraWatchWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		A2E68AC0134815CC9DC9AE97 /* SadoraWatch.app */ = {isa = PBXFileReference; explicitFileType = "wrapper.application"; includeInIndex = 0; path = SadoraWatch.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -22,6 +106,30 @@
 				iosApp.entitlements,
 			);
 			target = A756F1F9457B0FAC6C5090BD /* iosApp */;
+		};
+		BAB371ADBAB5FA5304234440 /* Exceptions for "SadoraWidgets" folder in "SadoraWidgets" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+				SadoraWidgets.entitlements,
+			);
+			target = 9C3D04B1269C5FDD1E363236 /* SadoraWidgets */;
+		};
+		417B300B65A51C2149CC14C1 /* Exceptions for "SadoraWatchWidgets" folder in "SadoraWatchWidgets" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+				SadoraWatchWidgets.entitlements,
+			);
+			target = ABAF428A1554D26C5510779B /* SadoraWatchWidgets */;
+		};
+		4EA759254FFF6EF3B1392B4A /* Exceptions for "SadoraWatch" folder in "SadoraWatch" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+				SadoraWatch.entitlements,
+			);
+			target = A55C66481E606B70740E4B5A /* SadoraWatch */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
@@ -39,6 +147,35 @@
 			path = Configuration;
 			sourceTree = "<group>";
 		};
+		847439A098216BDA26CA135F /* WidgetShared */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = WidgetShared;
+			sourceTree = "<group>";
+		};
+		174EA3C2A3811D99C338A644 /* SadoraWidgets */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				BAB371ADBAB5FA5304234440 /* Exceptions for "SadoraWidgets" folder in "SadoraWidgets" target */,
+			);
+			path = SadoraWidgets;
+			sourceTree = "<group>";
+		};
+		439D789F8A6F4F09FADB2D11 /* SadoraWatchWidgets */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				417B300B65A51C2149CC14C1 /* Exceptions for "SadoraWatchWidgets" folder in "SadoraWatchWidgets" target */,
+			);
+			path = SadoraWatchWidgets;
+			sourceTree = "<group>";
+		};
+		82C94B14C9A2C50AE10ACC13 /* SadoraWatch */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				4EA759254FFF6EF3B1392B4A /* Exceptions for "SadoraWatch" folder in "SadoraWatch" target */,
+			);
+			path = SadoraWatch;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -50,6 +187,27 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		F0EB334E0DDF472FC3580A50 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A5EC65CC34377794F3A81500 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B206C1096960AB9D9C960608 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -58,6 +216,10 @@
 			children = (
 				EF66AD1D29893453783ED9D2 /* Configuration */,
 				0A496CF892BE5B18DE612B46 /* iosApp */,
+				847439A098216BDA26CA135F /* WidgetShared */,
+				174EA3C2A3811D99C338A644 /* SadoraWidgets */,
+				82C94B14C9A2C50AE10ACC13 /* SadoraWatch */,
+				439D789F8A6F4F09FADB2D11 /* SadoraWatchWidgets */,
 				91723F44454CFBFA8A17D6D2 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -66,6 +228,9 @@
 			isa = PBXGroup;
 			children = (
 				B031C4DFCBCB55032EC8111D /* Sadora.app */,
+				618FF67C7A1EA041D85DD3B9 /* SadoraWidgets.appex */,
+				A2E68AC0134815CC9DC9AE97 /* SadoraWatch.app */,
+				6B38B714F2E0AE46983335D3 /* SadoraWatchWidgets.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -81,10 +246,14 @@
 				934200F1146374E56266124D /* Sources */,
 				65DA7A0C1F4B6CE32AD81345 /* Frameworks */,
 				2B4AFDDC44A274F7567AAAE0 /* Resources */,
+				097779A1AF12143577639DD1 /* Embed Foundation Extensions */,
+				A727F22C35D634E4EE13E519 /* Embed Watch Content */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				889C0C2D6BC2637472D590A6 /* PBXTargetDependency */,
+				4E2398BB54552A46E6A99392 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				0A496CF892BE5B18DE612B46 /* iosApp */,
@@ -95,6 +264,74 @@
 			);
 			productName = iosApp;
 			productReference = B031C4DFCBCB55032EC8111D /* Sadora.app */;
+			productType = "com.apple.product-type.application";
+		};
+		9C3D04B1269C5FDD1E363236 /* SadoraWidgets */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D36DB1F20B586505BF693D81 /* Build configuration list for PBXNativeTarget "SadoraWidgets" */;
+			buildPhases = (
+				F8F22C66544701579AF558AA /* Compile SadoraKit */,
+				5EF81259BBC2DBB270FD9D83 /* Sources */,
+				F0EB334E0DDF472FC3580A50 /* Frameworks */,
+				4549A5EBDFFF67344C1C0FAC /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				174EA3C2A3811D99C338A644 /* SadoraWidgets */,
+				847439A098216BDA26CA135F /* WidgetShared */,
+			);
+			name = SadoraWidgets;
+			productName = SadoraWidgets;
+			productReference = 618FF67C7A1EA041D85DD3B9 /* SadoraWidgets.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		ABAF428A1554D26C5510779B /* SadoraWatchWidgets */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 4E90CCBF56784C2FFE6B4C0E /* Build configuration list for PBXNativeTarget "SadoraWatchWidgets" */;
+			buildPhases = (
+				7AA43318FC63FA4AB3D53EBB /* Compile SadoraKit */,
+				3D3AD7113C5BCDC31A142418 /* Sources */,
+				A5EC65CC34377794F3A81500 /* Frameworks */,
+				FBBEC051018BBBD63800F0A6 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				439D789F8A6F4F09FADB2D11 /* SadoraWatchWidgets */,
+				847439A098216BDA26CA135F /* WidgetShared */,
+			);
+			name = SadoraWatchWidgets;
+			productName = SadoraWatchWidgets;
+			productReference = 6B38B714F2E0AE46983335D3 /* SadoraWatchWidgets.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		A55C66481E606B70740E4B5A /* SadoraWatch */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 602E28E52016FE19681E030F /* Build configuration list for PBXNativeTarget "SadoraWatch" */;
+			buildPhases = (
+				5A27CD42704893BA6CA92237 /* Compile SadoraKit */,
+				A89917F1166266321F141EB7 /* Sources */,
+				B206C1096960AB9D9C960608 /* Frameworks */,
+				9D09799809D181A5565290AF /* Resources */,
+				1FF1A3D7277C23D6A37A19EF /* Embed Foundation Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				D030264082679EDB803738D2 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				82C94B14C9A2C50AE10ACC13 /* SadoraWatch */,
+				847439A098216BDA26CA135F /* WidgetShared */,
+			);
+			name = SadoraWatch;
+			productName = SadoraWatch;
+			productReference = A2E68AC0134815CC9DC9AE97 /* SadoraWatch.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -109,6 +346,15 @@
 				TargetAttributes = {
 					A756F1F9457B0FAC6C5090BD = {
 						CreatedOnToolsVersion = 16.2;
+					};
+					9C3D04B1269C5FDD1E363236 = {
+						CreatedOnToolsVersion = 27.0;
+					};
+					A55C66481E606B70740E4B5A = {
+						CreatedOnToolsVersion = 27.0;
+					};
+					ABAF428A1554D26C5510779B = {
+						CreatedOnToolsVersion = 27.0;
 					};
 				};
 			};
@@ -132,12 +378,36 @@
 			projectRoot = "";
 			targets = (
 				A756F1F9457B0FAC6C5090BD /* iosApp */,
+				9C3D04B1269C5FDD1E363236 /* SadoraWidgets */,
+				A55C66481E606B70740E4B5A /* SadoraWatch */,
+				ABAF428A1554D26C5510779B /* SadoraWatchWidgets */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		2B4AFDDC44A274F7567AAAE0 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		4549A5EBDFFF67344C1C0FAC /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		FBBEC051018BBBD63800F0A6 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		9D09799809D181A5565290AF /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -166,10 +436,88 @@
 			shellPath = /bin/sh;
 			shellScript = "if [ \"YES\" = \"$OVERRIDE_KOTLIN_BUILD_IDE_SUPPORTED\" ]; then\n  echo \"Skipping Gradle build task invocation due to OVERRIDE_KOTLIN_BUILD_IDE_SUPPORTED environment variable set to \\\"YES\\\"\"\n  exit 0\nfi\ncd \"$SRCROOT/..\"\n./gradlew :shared:embedAndSignAppleFrameworkForXcode\n";
 		};
+		F8F22C66544701579AF558AA /* Compile SadoraKit */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Compile SadoraKit";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "if [ \"YES\" = \"$OVERRIDE_KOTLIN_BUILD_IDE_SUPPORTED\" ]; then\n  exit 0\nfi\ncd \"$SRCROOT/..\"\n./gradlew :widgetcore:embedAndSignAppleFrameworkForXcode\n";
+		};
+		7AA43318FC63FA4AB3D53EBB /* Compile SadoraKit */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Compile SadoraKit";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "if [ \"YES\" = \"$OVERRIDE_KOTLIN_BUILD_IDE_SUPPORTED\" ]; then\n  exit 0\nfi\ncd \"$SRCROOT/..\"\n./gradlew :widgetcore:embedAndSignAppleFrameworkForXcode\n";
+		};
+		5A27CD42704893BA6CA92237 /* Compile SadoraKit */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Compile SadoraKit";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "if [ \"YES\" = \"$OVERRIDE_KOTLIN_BUILD_IDE_SUPPORTED\" ]; then\n  exit 0\nfi\ncd \"$SRCROOT/..\"\n./gradlew :widgetcore:embedAndSignAppleFrameworkForXcode\n";
+		};
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		934200F1146374E56266124D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5EF81259BBC2DBB270FD9D83 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		3D3AD7113C5BCDC31A142418 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A89917F1166266321F141EB7 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -371,6 +719,192 @@
 			};
 			name = Release;
 		};
+		EECB29B9FB9F8F8E71882651 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = arm64;
+				CODE_SIGN_ENTITLEMENTS = SadoraWidgets/SadoraWidgets.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = "$(CURRENT_PROJECT_VERSION)";
+				DEVELOPMENT_TEAM = "${TEAM_ID}";
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = SadoraWidgets/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.2;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				INFOPLIST_KEY_CFBundleDisplayName = Sadora;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				MARKETING_VERSION = "$(MARKETING_VERSION)";
+				PRODUCT_BUNDLE_IDENTIFIER = uz.sadora.app.widgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		C6E0D9F4671B9E80857A1F56 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = arm64;
+				CODE_SIGN_ENTITLEMENTS = SadoraWidgets/SadoraWidgets.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = "$(CURRENT_PROJECT_VERSION)";
+				DEVELOPMENT_TEAM = "${TEAM_ID}";
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = SadoraWidgets/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.2;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				INFOPLIST_KEY_CFBundleDisplayName = Sadora;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				MARKETING_VERSION = "$(MARKETING_VERSION)";
+				PRODUCT_BUNDLE_IDENTIFIER = uz.sadora.app.widgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		0C9E2D8E01FD1DB28D3AF48D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = "$(ARCHS_STANDARD)";
+				"EXCLUDED_ARCHS[sdk=watchsimulator*]" = x86_64;
+				CODE_SIGN_ENTITLEMENTS = SadoraWatchWidgets/SadoraWatchWidgets.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = "$(CURRENT_PROJECT_VERSION)";
+				DEVELOPMENT_TEAM = "${TEAM_ID}";
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = SadoraWatchWidgets/Info.plist;
+				WATCHOS_DEPLOYMENT_TARGET = 11.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				INFOPLIST_KEY_CFBundleDisplayName = Sadora;
+				MARKETING_VERSION = "$(MARKETING_VERSION)";
+				PRODUCT_BUNDLE_IDENTIFIER = uz.sadora.app.watchkitapp.widgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		41D76C73A5054AD716B219D4 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = "$(ARCHS_STANDARD)";
+				"EXCLUDED_ARCHS[sdk=watchsimulator*]" = x86_64;
+				CODE_SIGN_ENTITLEMENTS = SadoraWatchWidgets/SadoraWatchWidgets.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = "$(CURRENT_PROJECT_VERSION)";
+				DEVELOPMENT_TEAM = "${TEAM_ID}";
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = SadoraWatchWidgets/Info.plist;
+				WATCHOS_DEPLOYMENT_TARGET = 11.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				INFOPLIST_KEY_CFBundleDisplayName = Sadora;
+				MARKETING_VERSION = "$(MARKETING_VERSION)";
+				PRODUCT_BUNDLE_IDENTIFIER = uz.sadora.app.watchkitapp.widgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		AF2018506391F0385BD51B13 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = "$(ARCHS_STANDARD)";
+				"EXCLUDED_ARCHS[sdk=watchsimulator*]" = x86_64;
+				CODE_SIGN_ENTITLEMENTS = SadoraWatch/SadoraWatch.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = "$(CURRENT_PROJECT_VERSION)";
+				DEVELOPMENT_TEAM = "${TEAM_ID}";
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = SadoraWatch/Info.plist;
+				WATCHOS_DEPLOYMENT_TARGET = 11.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				INFOPLIST_KEY_CFBundleDisplayName = Sadora;
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = uz.sadora.app;
+				INFOPLIST_KEY_WKRunsIndependentlyOfCompanionApp = NO;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = "$(MARKETING_VERSION)";
+				PRODUCT_BUNDLE_IDENTIFIER = uz.sadora.app.watchkitapp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		38ECAA12EC8B166D2C993C9E /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = "$(ARCHS_STANDARD)";
+				"EXCLUDED_ARCHS[sdk=watchsimulator*]" = x86_64;
+				CODE_SIGN_ENTITLEMENTS = SadoraWatch/SadoraWatch.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = "$(CURRENT_PROJECT_VERSION)";
+				DEVELOPMENT_TEAM = "${TEAM_ID}";
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = SadoraWatch/Info.plist;
+				WATCHOS_DEPLOYMENT_TARGET = 11.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				INFOPLIST_KEY_CFBundleDisplayName = Sadora;
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = uz.sadora.app;
+				INFOPLIST_KEY_WKRunsIndependentlyOfCompanionApp = NO;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = "$(MARKETING_VERSION)";
+				PRODUCT_BUNDLE_IDENTIFIER = uz.sadora.app.watchkitapp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -388,6 +922,33 @@
 			buildConfigurations = (
 				D6C28CA42F718045281C69E5 /* Debug */,
 				558E3BE550B6E7C5B5C8C4CA /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		D36DB1F20B586505BF693D81 /* Build configuration list for PBXNativeTarget "SadoraWidgets" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				EECB29B9FB9F8F8E71882651 /* Debug */,
+				C6E0D9F4671B9E80857A1F56 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		4E90CCBF56784C2FFE6B4C0E /* Build configuration list for PBXNativeTarget "SadoraWatchWidgets" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				0C9E2D8E01FD1DB28D3AF48D /* Debug */,
+				41D76C73A5054AD716B219D4 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		602E28E52016FE19681E030F /* Build configuration list for PBXNativeTarget "SadoraWatch" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AF2018506391F0385BD51B13 /* Debug */,
+				38ECAA12EC8B166D2C993C9E /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

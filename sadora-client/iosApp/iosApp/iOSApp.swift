@@ -11,6 +11,8 @@ struct iOSApp: App {
         // StoreKit for the paywall, registered before the first screen builds the
         // shared graph that reads it. The shared object keeps it alive.
         IosStore.shared.bridge = StoreKitBridgeImpl()
+        // The home-screen widgets and the watch, read by the shared code the same way.
+        IosWidgets.shared.bridge = WidgetKitBridgeImpl()
     }
 
     var body: some Scene {

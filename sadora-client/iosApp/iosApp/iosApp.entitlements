@@ -11,5 +11,17 @@
 	<true/>
 	<key>com.apple.developer.healthkit.access</key>
 	<array/>
+	<!-- The widgets: the App Group holds the snapshot they draw, and the shared Keychain
+	     group the session the widget extension uses. The app's own group comes first so
+	     its refresh token stays where it always was. Both need the App ID capabilities. -->
+	<key>com.apple.security.application-groups</key>
+	<array>
+		<string>group.uz.sadora.app</string>
+	</array>
+	<key>keychain-access-groups</key>
+	<array>
+		<string>$(AppIdentifierPrefix)uz.sadora.app</string>
+		<string>$(AppIdentifierPrefix)uz.sadora.shared</string>
+	</array>
 </dict>
 </plist>

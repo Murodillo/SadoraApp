@@ -25,6 +25,8 @@ kotlin {
         target.binaries.framework {
             baseName = "SadoraKit"
             isStatic = true
+            // WidgetKit calls a timeline provider and an App Intent off the main thread.
+            binaryOption("objcExportSuspendFunctionLaunchThreadRestriction", "none")
         }
     }
 

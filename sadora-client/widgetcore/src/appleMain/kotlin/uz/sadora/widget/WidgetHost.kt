@@ -45,6 +45,78 @@ class WidgetHost(appGroup: String, keychainGroup: String?) {
     fun today(): kotlinx.datetime.LocalDate =
         Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date
 
+    /**
+     * A widget's settings, built from the plain values an App Intent holds. Swift cannot
+     * use Kotlin's default arguments, and a list of Kotlin enums is awkward there.
+     */
+    fun config(
+        size: WidgetSize,
+        water: Boolean,
+        doses: Boolean,
+        health: Boolean,
+        waterStepMl: Int,
+        lockScreen: Boolean,
+        revealOnLockScreen: Boolean,
+    ): WidgetConfig = WidgetConfig(
+        size = size,
+        blocks = buildList {
+            if (water) add(WidgetBlock.WATER)
+            if (doses) add(WidgetBlock.DOSES)
+            if (health) add(WidgetBlock.HEALTH)
+        },
+        waterStepMl = waterStepMl,
+        lockScreen = lockScreen,
+        revealOnLockScreen = revealOnLockScreen,
+    )
+
+    /** A water button: queued and drawn at once, then sent. */
+    suspend fun tapWater(ml: Int): WidgetSync.Outcome {
+        sync.addWater(ml, today())
+        return sync.refresh()
+    }
+
+    /** A dose button or a notification's answer; [day] and [time] as the link carries them. */
+    suspend fun tapDose(medicationId: String, day: String, time: String, taken: Boolean): WidgetSync.Outcome {
+        sync.markDose(
+            medicationId,
+            kotlinx.datetime.LocalDate.parse(day),
+            kotlinx.datetime.LocalTime.parse(time),
+            if (taken) uz.sadora.contract.DoseStatus.TAKEN else uz.sadora.contract.DoseStatus.SKIPPED,
+        )
+        return sync.refresh()
+    }
+
+    /** The snapshot is older than [minutes], or there is none. */
+    fun isStale(minutes: Int): Boolean {
+        val saved = store.snapshot()?.savedAt ?: return true
+        return Clock.System.now() - saved > kotlin.time.Duration.parse("${minutes}m")
+    }
+
+    /** The app's choice for a new widget (the "Widgets and watch" page), when it made one. */
+    fun defaultConfig(): WidgetConfig? = store.config("default")
+
+    /**
+     * What the phone sent the watch over WatchConnectivity. Both JSONs null is sign-out;
+     * a null [tokensJson] alone keeps the session the watch already has.
+     */
+    fun importFromPhone(tokensJson: String?, snapshotJson: String?, baseUrl: String) {
+        if (tokensJson == null && snapshotJson == null) {
+            store.clear()
+            tokens.clear()
+            return
+        }
+        if (baseUrl.isNotBlank()) store.setBaseUrl(baseUrl)
+        tokensJson?.let {
+            val pair = WidgetStore.json.decodeFromString(uz.sadora.contract.TokenPair.serializer(), it)
+            tokens.save(pair.accessToken, pair.refreshToken)
+        }
+        snapshotJson?.let {
+            val incoming = WidgetStore.json.decodeFromString(WidgetSnapshot.serializer(), it)
+            // Taps made on the watch and not yet sent stay queued on top of the phone's picture.
+            store.saveSnapshot(incoming.copy(pending = store.snapshot()?.pending.orEmpty()))
+        }
+    }
+
     companion object {
         const val SERVICE = "uz.sadora.companion"
     }
