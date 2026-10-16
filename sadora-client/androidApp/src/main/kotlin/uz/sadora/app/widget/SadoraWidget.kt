@@ -150,7 +150,7 @@ private fun WidgetBody(content: WidgetContent?, size: WidgetSize, config: Widget
             Column(GlanceModifier.defaultWeight().fillMaxHeight()) { SideBlocks(content, config, compact = true) }
         }
         WidgetSize.LARGE -> Column(root) {
-            StageTile(content, warm, big = 40, GlanceModifier.fillMaxWidth().height(92.dp))
+            WideStageTile(content, warm, GlanceModifier.fillMaxWidth().height(92.dp))
             Spacer(GlanceModifier.height(8.dp))
             SideBlocks(content, config, compact = false)
         }
@@ -186,6 +186,32 @@ private fun StageTile(content: WidgetContent, warm: Boolean, big: Int, modifier:
     }
 }
 
+/** The large widget's banner: the words on the left, the number on the right. */
+@Composable
+private fun WideStageTile(content: WidgetContent, warm: Boolean, modifier: GlanceModifier) {
+    val stage = content.stage
+    val bg = when {
+        warm -> R.drawable.widget_stage_warm_bg
+        stage.phase == CyclePhase.PERIOD -> R.drawable.widget_stage_period_bg
+        else -> R.drawable.widget_stage_bg
+    }
+    val ink = if (warm) WarmInk else White
+    Row(
+        modifier.background(ImageProvider(bg)).cornerRadius(22.dp).padding(horizontal = 14.dp, vertical = 10.dp)
+            .clickable(openApp("journey"))
+            .semantics { contentDescription = listOfNotNull(stage.title, stage.big, stage.unit, stage.line1, stage.line2).joinToString(", ") },
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(GlanceModifier.defaultWeight()) {
+            Text(stage.title, style = TextStyle(color = ink, fontSize = 12.sp, fontWeight = FontWeight.Bold), maxLines = 1)
+            stage.line1?.let { Text(it, style = TextStyle(color = ink, fontSize = 13.sp, fontWeight = FontWeight.Bold), maxLines = 1) }
+            stage.line2?.let { Text(it, style = TextStyle(color = ink, fontSize = 12.sp), maxLines = 1) }
+        }
+        Text(stage.big, style = TextStyle(color = ink, fontSize = 40.sp, fontWeight = FontWeight.Bold))
+        stage.unit?.let { Text(" $it", style = TextStyle(color = ink, fontSize = 13.sp, fontWeight = FontWeight.Bold)) }
+    }
+}
+
 @Composable
 private fun ColumnScope.SideBlocks(content: WidgetContent, config: WidgetConfig, compact: Boolean) {
     if (content.locked) {
@@ -195,7 +221,8 @@ private fun ColumnScope.SideBlocks(content: WidgetContent, config: WidgetConfig,
         return
     }
     content.water?.let { water ->
-        Tile(WaterTint, GlanceModifier.defaultWeight(), openApp("water")) {
+        // Beside the stage the tiles share the height; under it each keeps its own.
+        Tile(WaterTint, if (compact) GlanceModifier.defaultWeight() else GlanceModifier, openApp("water")) {
             Column(GlanceModifier.defaultWeight()) {
                 Text(water.title, style = TextStyle(color = ColorProvider(WaterAccent), fontSize = 11.sp, fontWeight = FontWeight.Bold))
                 Text(water.label, style = TextStyle(color = Ink, fontSize = if (compact) 15.sp else 17.sp, fontWeight = FontWeight.Bold), maxLines = 1)

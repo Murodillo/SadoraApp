@@ -74,102 +74,104 @@ fun WidgetsScreen(
     var showSteps by remember { mutableStateOf(false) }
     val premium = state.isPremium
 
-    SadoraTopBar(t.title, onBack = onClose)
-    ScreenContent {
-        item {
-            Text(t.subtitle, style = Sadora.type.body, color = Sadora.colors.muted)
-        }
-
-        item {
-            SadoraCard {
-                CardLabel(t.look)
-                val sizes = WidgetSize.entries
-                SegmentedControl(
-                    options = listOf(t.small, t.medium, t.large),
-                    selectedIndex = sizes.indexOf(config.size),
-                    onSelect = { widgets.update(config.copy(size = sizes[it])) },
-                    lockedIndices = if (premium) emptySet() else setOf(1, 2),
-                )
-                val content = widgets.preview()
-                if (content == null) {
-                    Text(t.previewEmpty, style = Sadora.type.body, color = Sadora.colors.muted)
-                } else {
-                    WidgetPreview(content, config.size, state.lifeStage.isWarm())
-                }
+    Column {
+        SadoraTopBar(t.title, onBack = onClose)
+        ScreenContent {
+            item {
+                Text(t.subtitle, style = Sadora.type.body, color = Sadora.colors.muted)
             }
-        }
 
-        item {
-            SadoraCard {
-                CardLabel(t.blocks)
-                BlockRow(t.stageBlock, t.stageBlockNote, checked = true, enabled = false) {}
-                BlockRow(t.waterBlock, null, WidgetBlock.WATER in config.blocks, premium) { widgets.toggle(WidgetBlock.WATER) }
-                BlockRow(t.dosesBlock, null, WidgetBlock.DOSES in config.blocks, premium) { widgets.toggle(WidgetBlock.DOSES) }
-                BlockRow(t.healthBlock, null, WidgetBlock.HEALTH in config.blocks, premium) { widgets.toggle(WidgetBlock.HEALTH) }
-                if (premium && WidgetBlock.WATER in config.blocks) {
-                    CardLabel(t.waterStep)
-                    ChipFlowRow {
-                        WidgetConfig.WATER_STEPS.forEach { ml ->
-                            SelectChip("+$ml", config.waterStepMl == ml, { widgets.update(config.copy(waterStepMl = ml)) })
-                        }
-                    }
-                }
-                if (premium && WidgetBlock.HEALTH in config.blocks) {
-                    CardLabel(t.metrics)
-                    ChipFlowRow {
-                        val labels = widgets.preview()?.health?.items?.associate { it.metric to it.label }.orEmpty()
-                        WidgetConfig.METRIC_CHOICES.forEach { metric ->
-                            val picked = metric in config.metrics
-                            SelectChip(labels[metric] ?: metric.name.lowercase().replace('_', ' '), picked, {
-                                val next = if (picked) config.metrics - metric else (config.metrics + metric).take(MAX_METRICS)
-                                if (next.isNotEmpty()) widgets.update(config.copy(metrics = next))
-                            })
-                        }
-                    }
-                }
-            }
-        }
-
-        if (!premium) {
             item {
                 SadoraCard {
-                    Text(t.premiumNote, style = Sadora.type.body, color = Sadora.colors.text)
-                    SadoraButton(t.premiumButton, onPaywall, tone = ButtonTone.Secondary)
-                }
-            }
-        }
-
-        item {
-            SadoraButton(t.addToHome, onClick = {
-                if (widgets.canPin) {
-                    if (widgets.pin()) onToast(t.pinned)
-                } else {
-                    showSteps = !showSteps
-                }
-            })
-        }
-
-        if (showSteps) {
-            item {
-                SadoraCard {
-                    CardLabel(t.howToAddTitle)
-                    t.howToAddSteps.forEachIndexed { index, step ->
-                        Text("${index + 1}. $step", style = Sadora.type.body, color = Sadora.colors.text)
-                    }
-                }
-            }
-        }
-
-        item {
-            SadoraCard {
-                CardLabel(t.watchTitle, trailing = {
-                    Text(
-                        if (widgets.watchPaired) t.watchConnected else t.watchNone,
-                        style = Sadora.type.caption,
-                        color = if (widgets.watchPaired) Sadora.colors.successText else Sadora.colors.muted,
+                    CardLabel(t.look)
+                    val sizes = WidgetSize.entries
+                    SegmentedControl(
+                        options = listOf(t.small, t.medium, t.large),
+                        selectedIndex = sizes.indexOf(config.size),
+                        onSelect = { widgets.update(config.copy(size = sizes[it])) },
+                        lockedIndices = if (premium) emptySet() else setOf(1, 2),
                     )
+                    val content = widgets.preview()
+                    if (content == null) {
+                        Text(t.previewEmpty, style = Sadora.type.body, color = Sadora.colors.muted)
+                    } else {
+                        WidgetPreview(content, config.size, state.lifeStage.isWarm())
+                    }
+                }
+            }
+
+            item {
+                SadoraCard {
+                    CardLabel(t.blocks)
+                    BlockRow(t.stageBlock, t.stageBlockNote, checked = true, enabled = false) {}
+                    BlockRow(t.waterBlock, null, WidgetBlock.WATER in config.blocks, premium) { widgets.toggle(WidgetBlock.WATER) }
+                    BlockRow(t.dosesBlock, null, WidgetBlock.DOSES in config.blocks, premium) { widgets.toggle(WidgetBlock.DOSES) }
+                    BlockRow(t.healthBlock, null, WidgetBlock.HEALTH in config.blocks, premium) { widgets.toggle(WidgetBlock.HEALTH) }
+                    if (premium && WidgetBlock.WATER in config.blocks) {
+                        CardLabel(t.waterStep)
+                        ChipFlowRow {
+                            WidgetConfig.WATER_STEPS.forEach { ml ->
+                                SelectChip("+$ml", config.waterStepMl == ml, { widgets.update(config.copy(waterStepMl = ml)) })
+                            }
+                        }
+                    }
+                    if (premium && WidgetBlock.HEALTH in config.blocks) {
+                        CardLabel(t.metrics)
+                        ChipFlowRow {
+                            val labels = widgets.preview()?.health?.items?.associate { it.metric to it.label }.orEmpty()
+                            WidgetConfig.METRIC_CHOICES.forEach { metric ->
+                                val picked = metric in config.metrics
+                                SelectChip(labels[metric] ?: metric.name.lowercase().replace('_', ' '), picked, {
+                                    val next = if (picked) config.metrics - metric else (config.metrics + metric).take(MAX_METRICS)
+                                    if (next.isNotEmpty()) widgets.update(config.copy(metrics = next))
+                                })
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (!premium) {
+                item {
+                    SadoraCard {
+                        Text(t.premiumNote, style = Sadora.type.body, color = Sadora.colors.text)
+                        SadoraButton(t.premiumButton, onPaywall, tone = ButtonTone.Secondary)
+                    }
+                }
+            }
+
+            item {
+                SadoraButton(t.addToHome, onClick = {
+                    if (widgets.canPin) {
+                        if (widgets.pin()) onToast(t.pinned)
+                    } else {
+                        showSteps = !showSteps
+                    }
                 })
-                Text(t.watchNote, style = Sadora.type.body, color = Sadora.colors.muted)
+            }
+
+            if (showSteps) {
+                item {
+                    SadoraCard {
+                        CardLabel(t.howToAddTitle)
+                        t.howToAddSteps.forEachIndexed { index, step ->
+                            Text("${index + 1}. $step", style = Sadora.type.body, color = Sadora.colors.text)
+                        }
+                    }
+                }
+            }
+
+            item {
+                SadoraCard {
+                    CardLabel(t.watchTitle, trailing = {
+                        Text(
+                            if (widgets.watchPaired) t.watchConnected else t.watchNone,
+                            style = Sadora.type.caption,
+                            color = if (widgets.watchPaired) Sadora.colors.successText else Sadora.colors.muted,
+                        )
+                    })
+                    Text(t.watchNote, style = Sadora.type.body, color = Sadora.colors.muted)
+                }
             }
         }
     }
@@ -221,7 +223,7 @@ fun WidgetPreview(content: WidgetContent, size: WidgetSize, warm: Boolean, modif
                 SideColumn(content)
             }
             WidgetSize.LARGE -> Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                StageTile(content, warm, Modifier.fillMaxWidth().height(96.dp), big = 40)
+                StageTile(content, warm, Modifier.fillMaxWidth().height(96.dp), big = 40, wide = true)
                 content.water?.let { Tile(it.title, it.label, it.stepLabel, Sadora.colors.accent) }
                 content.doses?.let { doses ->
                     doses.rows.take(3).forEach { row ->
@@ -260,7 +262,7 @@ private fun RowScope.SideColumn(content: WidgetContent) {
 }
 
 @Composable
-private fun StageTile(content: WidgetContent, warm: Boolean, modifier: Modifier, big: Int) {
+private fun StageTile(content: WidgetContent, warm: Boolean, modifier: Modifier, big: Int, wide: Boolean = false) {
     val stage = content.stage
     val colors = when {
         warm -> listOf(StagePalettes.pregnancy.start, StagePalettes.pregnancy.end)
@@ -268,6 +270,26 @@ private fun StageTile(content: WidgetContent, warm: Boolean, modifier: Modifier,
         else -> listOf(Color(0xFF6A4FF0), Color(0xFFC93C88))
     }
     val ink = if (warm) StagePalettes.warmInk else Color.White
+    if (wide) {
+        // The large widget's banner: the words on the left, the number on the right.
+        Row(
+            modifier
+                .clip(RoundedCornerShape(20.dp))
+                .background(Brush.linearGradient(colors))
+                .padding(horizontal = 14.dp, vertical = 10.dp)
+                .semantics { contentDescription = listOfNotNull(stage.title, stage.big, stage.unit, stage.line1, stage.line2).joinToString(", ") },
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text(stage.title, color = ink, fontSize = 12.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                stage.line1?.let { Text(it, color = ink, fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1) }
+                stage.line2?.let { Text(it, color = ink.copy(alpha = 0.9f), fontSize = 12.sp, maxLines = 1) }
+            }
+            Text(stage.big, color = ink, fontSize = big.sp, fontWeight = FontWeight.Black)
+            stage.unit?.let { Text(" $it", color = ink, fontSize = 13.sp, fontWeight = FontWeight.Bold) }
+        }
+        return
+    }
     Column(
         modifier
             .clip(RoundedCornerShape(20.dp))

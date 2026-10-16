@@ -105,8 +105,8 @@ struct HomeWidgetView: View {
                     .containerBackground(.white, for: .widget)
                 default:
                     VStack(spacing: 8) {
-                        StageTile(content: content, bigSize: 40)
-                            .padding(12)
+                        WideStageTile(content: content)
+                            .padding(.horizontal, 14).padding(.vertical, 10)
                             .frame(height: 96)
                             .background(SadoraPalette.stageFill(content), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
                         SideBlocks(content: content, compact: false)

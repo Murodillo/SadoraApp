@@ -446,7 +446,7 @@ private fun PrivacySettings(
                 ToggleRow(strings.widgets.discreetTitle, strings.widgets.discreetNote, state.discreet) { on ->
                     scope.launch { controller.setDiscreet(on) }
                 }
-                Text(strings.widgets.lockScreenNote, style = Sadora.type.caption, color = Sadora.colors.muted)
+                Text(strings.widgets.lockScreenNote, style = Sadora.type.body, color = Sadora.colors.muted)
             }
         }
 

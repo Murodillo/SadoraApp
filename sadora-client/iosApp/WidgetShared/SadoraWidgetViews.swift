@@ -60,6 +60,28 @@ struct StageTile: View {
     }
 }
 
+/// The large widget's banner: the words on the left, the number on the right.
+struct WideStageTile: View {
+    let content: WidgetContent
+
+    var body: some View {
+        let stage = content.stage
+        let ink = content.isWarm ? SadoraPalette.warmInk : .white
+        HStack(alignment: .center, spacing: 8) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(stage.title).font(.system(size: 12, weight: .bold)).lineLimit(1)
+                if let line1 = stage.line1 { Text(line1).font(.system(size: 13, weight: .bold)).lineLimit(1) }
+                if let line2 = stage.line2 { Text(line2).font(.system(size: 12)).lineLimit(1) }
+            }
+            Spacer(minLength: 0)
+            Text(stage.big).font(.system(size: 40, weight: .black, design: .rounded))
+            if let unit = stage.unit { Text(unit).font(.system(size: 13, weight: .bold)) }
+        }
+        .foregroundStyle(ink)
+        .accessibilityElement(children: .combine)
+    }
+}
+
 /// A tile with a title, a value and, optionally, the button that changes it.
 struct ValueTile<Action: View>: View {
     let title: String
