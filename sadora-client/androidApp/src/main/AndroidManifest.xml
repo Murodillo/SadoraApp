@@ -160,6 +160,32 @@
             </intent-filter>
         </activity>
 
+        <!-- The home-screen widget (Glance), its settings screen, and nothing exported
+             beyond what the launcher has to reach. -->
+        <receiver
+            android:name=".widget.SadoraWidgetReceiver"
+            android:exported="true"
+            android:label="@string/app_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/sadora_widget_info" />
+        </receiver>
+        <activity
+            android:name=".widget.WidgetConfigureActivity"
+            android:exported="true"
+            android:theme="@style/Theme.Sadora">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
+            </intent-filter>
+        </activity>
+        <!-- "Taken" and "Skipped" on a medication reminder. -->
+        <receiver
+            android:name=".push.DoseActionReceiver"
+            android:exported="false" />
+
         <!-- The privacy policy behind Health Connect's permission screen. Android 13 and
              older open it with the androidx action; 14 and later through the alias below,
              which only the system may start. -->

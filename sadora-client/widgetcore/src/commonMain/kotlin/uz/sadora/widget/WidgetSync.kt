@@ -42,7 +42,7 @@ class WidgetSync(
     enum class Outcome { Updated, Offline, SignedOut }
 
     /** The app, a widget's button and a push may all refresh at once; one at a time. */
-    private val lock = Mutex()
+    private val lock: Mutex get() = store.lock
 
     suspend fun refresh(): Outcome = lock.withLock {
         val drained = drain()

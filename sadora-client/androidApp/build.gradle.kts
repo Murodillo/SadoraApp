@@ -25,6 +25,10 @@ kotlin {
 }
 dependencies {
     implementation(project(":shared"))
+    // The home-screen widgets: Glance draws them from widgetcore's snapshot.
+    implementation(libs.glance.appwidget)
+    // A tap made offline is sent the moment the network is back, app open or not.
+    implementation(libs.work.runtime)
 
     implementation(libs.androidx.activity.compose)
 

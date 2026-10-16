@@ -89,30 +89,42 @@ class FcmPushSender(
         return delivered
     }
 
-    private suspend fun sendOne(bearer: String, record: OutboxRecord, token: String): Outcome =
-        post(
-            bearer,
+    private suspend fun sendOne(bearer: String, record: OutboxRecord, token: String): Outcome {
+        // The app opens the right screen from these; where the system draws the
+        // notification, the visible text is in `notification` so it can be shown while
+        // the app is not running.
+        val data = buildMap {
+            put("notificationId", record.id.toString())
+            put("category", record.category.name.lowercase())
+            // Where a tap lands: the app routes it like any link of its own.
+            record.link?.let { put("link", it) }
+        }
+        val message = if (record.category == uz.sadora.contract.NotificationCategory.MED_REMINDER &&
+            record.targetApp == TARGET_CLIENT
+        ) {
+            // A dose: Android gets data only, so the app draws it with "taken" and
+            // "skipped" — a notification the system draws can carry no actions. iOS
+            // gets the alert under the DOSE category, whose actions the app registered.
+            FcmMessage(
+                token = token,
+                data = data + mapOf("title" to record.title, "body" to record.body),
+                android = FcmAndroid(priority = "high"),
+                apns = FcmApns(
+                    payload = FcmApnsPayload(
+                        FcmAps(alert = FcmAlert(record.title, record.body), category = DOSE_CATEGORY, sound = "default"),
+                    ),
+                ),
+            )
+        } else {
             FcmMessage(
                 token = token,
                 notification = FcmNotification(record.title, record.body),
-                // The app opens the right screen from these; the visible text
-                // is in `notification` so the system can show it while the app
-                // is not running.
-                data = buildMap {
-                    put("notificationId", record.id.toString())
-                    put("category", record.category.name.lowercase())
-                    // Where a tap lands: the app routes it like any link of its own.
-                    record.link?.let { put("link", it) }
-                },
+                data = data,
                 android = channelFor(record)?.let { FcmAndroid(notification = FcmAndroidNotification(it)) },
-                // The dose a reminder is for: iOS shows "taken" and "skipped" on it.
-                apns = if (record.category == uz.sadora.contract.NotificationCategory.MED_REMINDER) {
-                    FcmApns(payload = FcmApnsPayload(FcmAps(category = DOSE_CATEGORY)))
-                } else {
-                    null
-                },
-            ),
-        )
+            )
+        }
+        return post(bearer, message)
+    }
 
     private suspend fun post(bearer: String, message: FcmMessage): Outcome {
         val response = try {
@@ -202,7 +214,12 @@ private data class FcmApnsPayload(val aps: FcmAps)
 private data class FcmAps(
     @kotlinx.serialization.SerialName("content-available") val contentAvailable: Int? = null,
     val category: String? = null,
+    val alert: FcmAlert? = null,
+    val sound: String? = null,
 )
+
+@Serializable
+private data class FcmAlert(val title: String, val body: String)
 
 @Serializable
 private data class FcmAndroidNotification(@kotlinx.serialization.SerialName("channel_id") val channelId: String)

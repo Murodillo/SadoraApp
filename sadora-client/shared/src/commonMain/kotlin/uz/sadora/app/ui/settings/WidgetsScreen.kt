@@ -204,7 +204,7 @@ private const val MAX_METRICS = 2
  */
 @Composable
 fun WidgetPreview(content: WidgetContent, size: WidgetSize, warm: Boolean, modifier: Modifier = Modifier) {
-    val height = if (size == WidgetSize.LARGE) 300.dp else 150.dp
+    val height = if (size == WidgetSize.LARGE) 320.dp else 170.dp
     val shape = RoundedCornerShape(26.dp)
     Box(
         modifier
@@ -350,6 +350,45 @@ fun WidgetPromoCard(state: AppState, onAdd: () -> Unit, onDismiss: () -> Unit) {
         Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
             SadoraButton(t.cardAdd, onAdd, Modifier.weight(1f))
             SadoraButton(t.cardDismiss, onDismiss, Modifier.weight(1f), tone = ButtonTone.Secondary)
+        }
+    }
+}
+
+/**
+ * Android's configure screen for one placed widget: the same page, themed and in the
+ * app's language, without the rest of the app around it. The snapshot supplies what the
+ * app would — her plan and her language — because the app may not be running.
+ */
+@Composable
+fun WidgetConfigureRoot(
+    store: uz.sadora.widget.WidgetStore,
+    widgets: WidgetsController,
+    onDone: () -> Unit,
+    onPaywall: () -> Unit,
+) {
+    val summary = store.snapshot()?.summary
+    val state = remember(summary) {
+        AppState().also { s ->
+            summary?.let {
+                s.isPremium = it.premium
+                s.language = when (it.language) {
+                    uz.sadora.contract.Language.RU -> uz.sadora.app.model.AppLanguage.Ru
+                    uz.sadora.contract.Language.EN -> uz.sadora.app.model.AppLanguage.En
+                    uz.sadora.contract.Language.UZ -> uz.sadora.app.model.AppLanguage.Uz
+                }
+                s.lifeStage = when (it.lifeStage) {
+                    LifeStage.PREGNANCY -> uz.sadora.app.model.LifeStage.Pregnancy
+                    LifeStage.POSTPARTUM -> uz.sadora.app.model.LifeStage.Postpartum
+                    else -> s.lifeStage
+                }
+            }
+        }
+    }
+    uz.sadora.app.design.SadoraTheme(darkTheme = false) {
+        uz.sadora.app.i18n.ProvideStrings(state.language) {
+            Column(Modifier.fillMaxWidth().fillMaxHeight().background(Sadora.colors.bg)) {
+                WidgetsScreen(state, widgets, onClose = onDone, onPaywall = onPaywall, onToast = {})
+            }
         }
     }
 }

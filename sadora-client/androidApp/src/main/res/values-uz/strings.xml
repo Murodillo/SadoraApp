@@ -3,4 +3,7 @@
     <string name="push_channel_description">Dori, sikl va kunlik eslatmalar</string>
     <string name="push_messages_channel_name">Xabarlar</string>
     <string name="push_messages_channel_description">Yaqinim, shifokor va suhbatlardan xabarlar</string>
+    <string name="widget_description">Sikl kuni, suv va dorilar bir qarashda</string>
+    <string name="dose_taken">Ichdim</string>
+    <string name="dose_skipped">O\'tkazdim</string>
 </resources>

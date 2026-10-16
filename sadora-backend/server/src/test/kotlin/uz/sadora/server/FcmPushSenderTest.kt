@@ -70,7 +70,7 @@ class FcmPushSenderTest {
             return Regex(""""channel_id"\s*:\s*"([^"]+)"""").find(body)?.groupValues?.get(1)
         }
 
-        assertEquals(FcmPushSender.CHANNEL_REMINDERS, channelOf(record))
+        assertEquals(FcmPushSender.CHANNEL_REMINDERS, channelOf(record.copy(category = NotificationCategory.CYCLE)))
         assertEquals(FcmPushSender.CHANNEL_MESSAGES, channelOf(record.copy(category = NotificationCategory.SYSTEM, link = "sadora://conversation/abc")))
         assertEquals(FcmPushSender.CHANNEL_MESSAGES, channelOf(record.copy(category = NotificationCategory.CYCLE, link = "sadora://yaqinim")))
         assertEquals(FcmPushSender.CHANNEL_MESSAGES, channelOf(record.copy(category = NotificationCategory.PARTNER)))
@@ -141,6 +141,26 @@ class FcmPushSenderTest {
         val apns = body["apns"].toString()
         assertTrue("\"apns-push-type\":\"background\"" in apns, apns)
         assertTrue("\"content-available\":1" in apns, apns)
+    }
+
+    /**
+     * A medication reminder reaches Android as data only, so the app draws it with "taken"
+     * and "skipped" on it; iOS gets the alert and the DOSE category that carries the same.
+     */
+    @Test
+    fun `a dose reminder is the app's to draw on Android and carries its actions on iOS`() = runTest {
+        val seen = mutableListOf<HttpRequestData>()
+        val sender = sender(seen) { HttpStatusCode.OK to """{"name":"projects/p/messages/3"}""" }
+        sender.send(record.copy(link = "sadora://dose/m/2026-10-16/08:00"), listOf("device-a"))
+
+        val message = Json.parseToJsonElement((seen.last().body as io.ktor.http.content.TextContent).text)
+            .let { it as kotlinx.serialization.json.JsonObject }["message"] as kotlinx.serialization.json.JsonObject
+        assertFalse("notification" in message, message.toString())
+        val data = message["data"].toString()
+        assertTrue("\"title\":\"Dori vaqti\"" in data && "\"body\":\"Yod, 1 tabletka\"" in data, data)
+        val apns = message["apns"].toString()
+        assertTrue("\"category\":\"DOSE\"" in apns && "\"title\":\"Dori vaqti\"" in apns, apns)
+        assertTrue("\"priority\":\"high\"" in message["android"].toString())
     }
 
     // ---------------------------------------------------------------- harness

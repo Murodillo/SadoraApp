@@ -28,6 +28,13 @@ class MemoryKeyValues : KeyValues {
  * data does — inside the app's sandbox or its App Group — and [clear] runs at sign-out.
  */
 class WidgetStore(private val values: KeyValues) {
+    /**
+     * Held by every [WidgetSync] over this store. On Android the app's sync and the widgets'
+     * taps share one store in one process, and two read-modify-writes of the queue at once
+     * would lose a tap.
+     */
+    val lock = kotlinx.coroutines.sync.Mutex()
+
     fun snapshot(): WidgetSnapshot? =
         values.get(SNAPSHOT)?.let { runCatching { json.decodeFromString(WidgetSnapshot.serializer(), it) }.getOrNull() }
 

@@ -3,4 +3,7 @@
     <string name="push_channel_description">Лекарства, цикл и ежедневные напоминания</string>
     <string name="push_messages_channel_name">Сообщения</string>
     <string name="push_messages_channel_description">Сообщения от Yaqinim, врача и из чатов</string>
+    <string name="widget_description">День цикла, вода и лекарства с одного взгляда</string>
+    <string name="dose_taken">Принято</string>
+    <string name="dose_skipped">Пропущено</string>
 </resources>

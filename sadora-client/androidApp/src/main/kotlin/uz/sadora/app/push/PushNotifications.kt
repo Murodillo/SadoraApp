@@ -100,14 +100,19 @@ object PushNotifications {
                 .apply { if (link != null) putExtra(EXTRA_LINK, link) },
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
-        val notification = NotificationCompat.Builder(context, channelFor(context, category, link))
+        val builder = NotificationCompat.Builder(context, channelFor(context, category, link))
             .setSmallIcon(R.drawable.ic_launcher_monochrome)
             .setContentTitle(title)
             .setContentText(body)
             .setStyle(NotificationCompat.BigTextStyle().bigText(body))
             .setAutoCancel(true)
             .setContentIntent(open)
-            .build()
+        // A dose is answered on the notification itself; the watch mirrors these buttons.
+        DoseActionReceiver.doseOf(link)?.let { dose ->
+            builder.addAction(0, context.getString(R.string.dose_taken), DoseActionReceiver.intent(context, id, dose, taken = true))
+            builder.addAction(0, context.getString(R.string.dose_skipped), DoseActionReceiver.intent(context, id, dose, taken = false))
+        }
+        val notification = builder.build()
 
         NotificationManagerCompat.from(context).notify(id, notification)
     }

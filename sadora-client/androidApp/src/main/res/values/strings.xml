@@ -9,4 +9,7 @@
     <string name="push_messages_channel_id" translatable="false">sadora_messages</string>
     <string name="push_messages_channel_name">Messages</string>
     <string name="push_messages_channel_description">Messages from Yaqinim, your doctor and chats</string>
+    <string name="widget_description">Cycle day, water and medications at a glance</string>
+    <string name="dose_taken">Taken</string>
+    <string name="dose_skipped">Skipped</string>
 </resources>

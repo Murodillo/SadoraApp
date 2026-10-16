@@ -65,6 +65,7 @@ class MainActivity : ComponentActivity() {
             healthPlatform = HealthConnectPlatform(applicationContext),
             healthPrefs = AndroidHealthSyncPrefs(applicationContext),
             storeBilling = storeBilling,
+            widgetPlatform = uz.sadora.app.widget.AndroidWidgetPlatform(applicationContext),
         )
     }
 
