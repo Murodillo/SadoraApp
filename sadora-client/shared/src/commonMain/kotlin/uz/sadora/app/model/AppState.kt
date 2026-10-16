@@ -242,6 +242,9 @@ class AppState {
      */
     var hasWearable by mutableStateOf<Boolean?>(null)
 
+    /** Discreet mode: widgets, the watch and pushes in neutral words. Kept on the profile. */
+    var discreet by mutableStateOf(false)
+
     /**
      * How Today is arranged, as the server has it.
      *

@@ -439,6 +439,17 @@ private fun PrivacySettings(
                 )
             }
         }
+        // Discreet mode is saved the moment it is switched: it is about her lock screen,
+        // not a consent, and waiting for the button would leave it showing in between.
+        item {
+            SadoraCard {
+                ToggleRow(strings.widgets.discreetTitle, strings.widgets.discreetNote, state.discreet) { on ->
+                    scope.launch { controller.setDiscreet(on) }
+                }
+                Text(strings.widgets.lockScreenNote, style = Sadora.type.caption, color = Sadora.colors.muted)
+            }
+        }
+
         item {
             controller.error?.let { ErrorStrip(it.readable()) }
             SadoraButton(

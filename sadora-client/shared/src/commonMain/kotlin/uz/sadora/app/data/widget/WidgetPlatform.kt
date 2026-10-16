@@ -31,6 +31,12 @@ interface WidgetPlatform {
     /** Asks the OS to redraw every widget now. */
     fun reload()
 
+    /** The launcher can place a widget from inside the app (Android 8+); iOS cannot. */
+    val canPin: Boolean get() = false
+
+    /** Asks the launcher to place a widget set up as [config]; false when it would not. */
+    fun requestPin(config: uz.sadora.widget.WidgetConfig): Boolean = false
+
     /**
      * Hands the watch its session (when [tokens] is set) and the latest snapshot. Both
      * null means sign out. Over WatchConnectivity on iOS and the Wearable Data Layer on

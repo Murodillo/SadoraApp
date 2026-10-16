@@ -1565,6 +1565,7 @@ object StringsRu : Strings {
     override val badges: BadgeStrings = BadgesRu
     override val prescriptions: PrescriptionStrings = PrescriptionStringsRu
     override val pet: PetStrings = PetRu
+    override val widgets: WidgetUiStrings = WidgetUiRu
     override val frames: FrameStrings = FramesRu
 
     override val rewards = object : RewardStrings {

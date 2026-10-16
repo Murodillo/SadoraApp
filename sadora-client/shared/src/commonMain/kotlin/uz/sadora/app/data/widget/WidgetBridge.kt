@@ -10,7 +10,13 @@ import uz.sadora.app.data.ApiResult
 import uz.sadora.app.data.SadoraApi
 import uz.sadora.app.data.SessionStore
 import uz.sadora.contract.CompanionKind
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 import uz.sadora.widget.WidgetApi
+import uz.sadora.widget.WidgetBlock
+import uz.sadora.widget.WidgetConfig
+import uz.sadora.widget.WidgetContent
+import uz.sadora.widget.WidgetSize
 import uz.sadora.widget.WidgetSnapshot
 import uz.sadora.widget.WidgetStore
 import uz.sadora.widget.WidgetSync
@@ -89,11 +95,37 @@ class WidgetBridge(
         platform.reload()
     }
 
+    // ---------------------------------------------------------------- the settings page
+
+    val canPin: Boolean get() = platform.canPin
+    val watchPaired: Boolean get() = platform.hasWatch
+
+    /** What a widget placed now starts as: the page's choice, or water and doses. */
+    fun defaultConfig(): WidgetConfig = platform.store.config(DEFAULT_CONFIG)
+        ?: WidgetConfig(WidgetSize.MEDIUM, listOf(WidgetBlock.WATER, WidgetBlock.DOSES))
+
+    fun saveDefaultConfig(config: WidgetConfig) {
+        platform.store.putConfig(DEFAULT_CONFIG, config)
+        platform.reload()
+    }
+
+    fun pin(config: WidgetConfig): Boolean = platform.requestPin(config)
+
+    /** The page's preview, drawn from the same snapshot the widgets draw from. */
+    fun preview(config: WidgetConfig): WidgetContent? {
+        val snapshot = platform.store.snapshot() ?: return null
+        val now = kotlin.time.Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
+        return WidgetContent.build(snapshot, config, now)
+    }
+
     private fun snapshotJson(): String? =
         platform.store.snapshot()?.let { WidgetStore.json.encodeToString(WidgetSnapshot.serializer(), it) }
 
     companion object {
         private const val DEBOUNCE_MS = 1_500L
+
+        /** The settings page's choice, which a newly placed widget starts from. */
+        const val DEFAULT_CONFIG = "default"
 
         /** The writes that change something a widget draws; the server's list is the same. */
         fun affects(path: String): Boolean {

@@ -68,6 +68,7 @@ interface Strings {
     val badges: BadgeStrings
     val prescriptions: PrescriptionStrings
     val pet: PetStrings
+    val widgets: WidgetUiStrings
     val frames: FrameStrings
     val premium: PremiumStrings
     val devices: DeviceStrings

@@ -51,6 +51,7 @@ fun AppState.applyServerProfile(profile: UserProfile, entitlements: Entitlements
     profile.weightKg?.let { weightKg = it.toString() }
     profile.language.toAppLanguage()?.let { language = it }
     hasWearable = profile.hasWearable
+    discreet = profile.discreet
     memberSince = profile.createdAt.toLocalDateTime(TimeZone.currentSystemDefault()).date
     profile.lifeStage.toAppLifeStage()?.let { lifeStage = it }
 

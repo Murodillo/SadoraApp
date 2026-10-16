@@ -34,6 +34,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.datetime.plus
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -582,6 +583,23 @@ private fun MainShell(
             if (navigator.current != Route.Yaqinim) navigator.push(Route.Yaqinim)
             scope.launch { controllers.partner.refresh() }
         }
+        // A medication reminder, or a tap on a home-screen widget: the screen behind it.
+        if (link is AppLink.Dose) {
+            AppLinks.consume()
+            overlays.closeTop()
+            if (navigator.current != Route.Medications) navigator.push(Route.Medications)
+        }
+        if (link is AppLink.Open) {
+            AppLinks.consume()
+            overlays.closeTop()
+            when (link.target) {
+                AppLink.Open.Target.Today -> navigator.select(Tab.Today)
+                AppLink.Open.Target.Journey -> navigator.select(if (state.lifeStage.predictsCycle) Tab.Journey else Tab.Today)
+                AppLink.Open.Target.Medications -> if (navigator.current != Route.Medications) navigator.push(Route.Medications)
+                AppLink.Open.Target.Water -> navigator.select(Tab.Today)
+                AppLink.Open.Target.Devices -> if (navigator.current != Route.DataSources) navigator.push(Route.DataSources)
+            }
+        }
         if (link is AppLink.Conversation) {
             AppLinks.consume()
             overlays.closeTop()
@@ -1040,6 +1058,21 @@ private fun RootTab(
     // the controller, so flicking between tabs does not hammer the server.
     LaunchedEffect(tab) { controllers.rewards.loadBadges() }
 
+    // The widget card: three days in, once, and gone for good after either answer.
+    val scope = rememberCoroutineScope()
+    var widgetCardDue by remember { mutableStateOf(false) }
+    val userId = controllers.account.currentUserId
+    LaunchedEffect(userId, state.today) {
+        val id = userId ?: return@LaunchedEffect
+        val since = state.memberSince ?: return@LaunchedEffect
+        widgetCardDue = state.today >= since.plus(kotlinx.datetime.DatePeriod(days = WidgetCardAfterDays)) &&
+            !controllers.prompts.widgetCardDone(id)
+    }
+    val dismissWidgetCard: () -> Unit = {
+        widgetCardDue = false
+        userId?.let { id -> scope.launch { controllers.prompts.setWidgetCardDone(id) } }
+    }
+
     when (tab) {
         Tab.Today -> {
             // A new line on every entry to the tab — that is the feature, so it is asked
@@ -1063,6 +1096,18 @@ private fun RootTab(
                 learn = controllers.learn,
                 doctors = controllers.doctors,
                 isLoading = !controllers.health.loaded,
+                widgetCard = if (!widgetCardDue) null else {
+                    {
+                        uz.sadora.app.ui.settings.WidgetPromoCard(
+                            state = state,
+                            onAdd = {
+                                dismissWidgetCard()
+                                navigator.push(Route.Widgets)
+                            },
+                            onDismiss = { dismissWidgetCard() },
+                        )
+                    }
+                },
             )
         }
 
@@ -1243,6 +1288,13 @@ private fun PushedScreen(
         )
         Route.Referral -> ReferralScreen(controllers.rewards, close)
         Route.HomeLayout -> HomeLayoutScreen(state, controllers.rewards, close)
+        Route.Widgets -> uz.sadora.app.ui.settings.WidgetsScreen(
+            state = state,
+            widgets = controllers.widgets,
+            onClose = close,
+            onPaywall = { navigator.push(Route.Paywall) },
+            onToast = toast,
+        )
         // Kept for a link into it; the tab is where it lives now.
         Route.SecretChat -> SecretChatScreen(
             state = state,
@@ -1389,6 +1441,7 @@ private const val UnreadRefreshMillis = 30_000L
 
 /** How long after opening the app the smart-device question waits before it appears. */
 private const val WearableAskDelayMillis = 4_000L
+private const val WidgetCardAfterDays = 3
 
 /** Later than the wearable question, so the two never arrive together. */
 private const val PetOpenDelayMillis = 6_000L

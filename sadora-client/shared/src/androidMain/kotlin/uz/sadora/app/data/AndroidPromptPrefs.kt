@@ -26,7 +26,16 @@ class AndroidPromptPrefs(context: Context) : PromptPrefs {
         preferences.edit().putString(KeyPetTease + userId, date.toString()).apply()
     }
 
+    override suspend fun widgetCardDone(userId: String): Boolean = withContext(Dispatchers.IO) {
+        preferences.getBoolean(KeyWidgetCard + userId, false)
+    }
+
+    override suspend fun setWidgetCardDone(userId: String) = withContext(Dispatchers.IO) {
+        preferences.edit().putBoolean(KeyWidgetCard + userId, true).apply()
+    }
+
     private companion object {
+        const val KeyWidgetCard = "widget_card_done."
         const val KeyWearable = "wearable_ask_after."
         const val KeyPetTease = "pet_tease_after."
     }

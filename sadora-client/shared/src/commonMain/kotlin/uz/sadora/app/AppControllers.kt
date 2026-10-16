@@ -54,6 +54,7 @@ class AppControllers(
     val frames: FrameController,
     val analytics: Analytics,
     val prompts: PromptPrefs = PromptPrefs.InMemory(),
+    val widgets: uz.sadora.app.data.widget.WidgetsController = uz.sadora.app.data.widget.WidgetsController(null),
 ) {
     companion object {
         fun from(graph: SadoraGraph?, state: AppState): AppControllers = AppControllers(
@@ -77,6 +78,7 @@ class AppControllers(
             frames = graph?.frameController(state) ?: FrameController(null, state),
             analytics = graph?.analytics ?: Analytics.None,
             prompts = graph?.prompts ?: PromptPrefs.InMemory(),
+            widgets = uz.sadora.app.data.widget.WidgetsController(graph?.widgets),
         )
     }
 }

@@ -17,8 +17,15 @@ interface PromptPrefs {
     suspend fun petTeaseAfter(userId: String): LocalDate?
     suspend fun setPetTeaseAfter(userId: String, date: LocalDate)
 
+    /** Today's "add the widget" card was answered (either way) on this phone. */
+    suspend fun widgetCardDone(userId: String): Boolean
+    suspend fun setWidgetCardDone(userId: String)
+
     /** In memory: tests, previews, and a build with no platform store. */
     class InMemory : PromptPrefs {
+        private val widgetCards = mutableSetOf<String>()
+        override suspend fun widgetCardDone(userId: String) = userId in widgetCards
+        override suspend fun setWidgetCardDone(userId: String) { widgetCards += userId }
         private val dates = mutableMapOf<String, LocalDate>()
         private val teases = mutableMapOf<String, LocalDate>()
         override suspend fun wearableAskAfter(userId: String): LocalDate? = dates[userId]

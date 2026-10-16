@@ -120,6 +120,9 @@ sealed interface Route {
     /** Which cards Today draws, and in what order. */
     data object HomeLayout : Route
 
+    /** The home-screen widgets and the watch: what they show, and how to add one. */
+    data object Widgets : Route
+
     // Her account: the screen that was the fifth tab, and the QR code for a doctor.
     data object Profile : Route
     data object ShareProfile : Route
@@ -188,6 +191,17 @@ sealed interface AppLink {
      */
     data class Partner(val code: String?) : AppLink
 
+    /**
+     * `sadora://dose/{medicationId}/{day}/{time}` — a medication reminder. The phone and
+     * the watch answer it on the notification; a tap on the body opens her doses.
+     */
+    data class Dose(val medicationId: String, val day: String, val time: String) : AppLink
+
+    /** `sadora://open/{target}` — a tap on a home-screen widget's block. */
+    data class Open(val target: Target) : AppLink {
+        enum class Target { Today, Journey, Medications, Water, Devices }
+    }
+
     companion object {
         /**
          * `https://sadora.app/r/K7M2QP`, `sadora://invite/K7M2QP`,
@@ -219,6 +233,14 @@ sealed interface AppLink {
                     segments[1].takeIf { id -> id.length in 8..64 && id.all { it.isLetterOrDigit() || it == '-' } }
                         ?.let(AppLink::Conversation)
                 }
+                segments[0].equals("dose", ignoreCase = true) && segments.size == 4 &&
+                    url.startsWith("sadora://", ignoreCase = true) ->
+                    AppLink.Dose(segments[1], segments[2], segments[3])
+                segments[0].equals("open", ignoreCase = true) && url.startsWith("sadora://", ignoreCase = true) ->
+                    AppLink.Open(
+                        AppLink.Open.Target.entries.firstOrNull { it.name.equals(segments.getOrNull(1), ignoreCase = true) }
+                            ?: AppLink.Open.Target.Today,
+                    )
                 segments[0].equals("yaqinim", ignoreCase = true) && url.startsWith("sadora://", ignoreCase = true) ->
                     AppLink.Partner(segments.getOrNull(1)?.let(::partnerCode))
                 segments.size >= 3 && segments[segments.size - 2].equals("y", ignoreCase = true) ->

@@ -104,6 +104,8 @@ fun TodayScreen(
     learn: LearnController? = null,
     /** For "Shifokordan so'rang"; without it — a preview, a test — the card is skipped. */
     doctors: DoctorController? = null,
+    /** The one-time "add the widget" card, above the deck while it is due; null otherwise. */
+    widgetCard: (@Composable () -> Unit)? = null,
 ) {
     val t = strings.today
     // Quiet: the card appears once there are doctors to show, and a failure only hides it.
@@ -138,6 +140,7 @@ fun TodayScreen(
         val directory = doctors?.directory.orEmpty()
         val askAfter = widgets.indexOf(HomeWidgets.PLAN).takeIf { it >= 0 } ?: widgets.lastIndex
         ScreenContent(stagger = false) {
+            if (widgetCard != null) item(key = "widget_card") { widgetCard() }
             itemsIndexed(widgets, key = { _, key -> key }) { index, key ->
                 // A column rather than a box, so the doctors' card can follow its anchor
                 // inside the same entry and the deck's keys and stagger stay hers.

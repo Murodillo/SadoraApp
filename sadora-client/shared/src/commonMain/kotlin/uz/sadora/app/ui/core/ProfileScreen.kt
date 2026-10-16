@@ -245,6 +245,7 @@ fun ProfileScreen(
                             ) { onOpen(Route.PetPicker) }
                         }
                         SettingsRow(Res.drawable.ic3d_home, t.homeLayout) { onOpen(Route.HomeLayout) }
+                        SettingsRow(Res.drawable.ic3d_watch, strings.widgets.title) { onOpen(Route.Widgets) }
                         SettingsRow(Res.drawable.ic3d_bell, t.notifications) { onOpen(Route.Notifications) }
                         SettingsRow(Res.drawable.ic3d_lock, t.privacyAndSecurity) { onOpen(Route.PrivacySecurity) }
                     }

@@ -21,7 +21,14 @@ class IosPromptPrefs : PromptPrefs {
         defaults.setObject(date.toString(), KeyPetTease + userId)
     }
 
+    override suspend fun widgetCardDone(userId: String): Boolean = defaults.boolForKey(KeyWidgetCard + userId)
+
+    override suspend fun setWidgetCardDone(userId: String) {
+        defaults.setBool(true, KeyWidgetCard + userId)
+    }
+
     private companion object {
+        const val KeyWidgetCard = "sadora.prompts.widgetCardDone."
         const val KeyWearable = "sadora.prompts.wearableAskAfter."
         const val KeyPetTease = "sadora.prompts.petTeaseAfter."
     }

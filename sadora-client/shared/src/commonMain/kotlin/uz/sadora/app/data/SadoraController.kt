@@ -112,6 +112,13 @@ class SadoraController(
      * so the question does not come back on a failed save; the server catches up on the
      * next profile read or the next answer.
      */
+    /** Discreet mode, set at once and saved behind it; a failed save is put back. */
+    suspend fun setDiscreet(on: Boolean) {
+        state.discreet = on
+        val repo = repository ?: return
+        if (call { repo.updateProfile(UpdateProfileRequest(discreet = on)) } == null) state.discreet = !on
+    }
+
     suspend fun answerWearable(hasWearable: Boolean) {
         state.hasWearable = hasWearable
         val repo = repository ?: return
