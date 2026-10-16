@@ -26,6 +26,17 @@ class WidgetHost private constructor(context: Context) {
     }
     val sync = WidgetSync(CompanionApi(store::baseUrl, tokens, client), store, { Clock.System.now() }, { UUID.randomUUID().toString() })
 
+    private val ops = WidgetOps(store, tokens, sync, ::today)
+
+    suspend fun tapWater(ml: Int): WidgetSync.Outcome = ops.tapWater(ml)
+
+    suspend fun tapDose(medicationId: String, day: String, time: String, taken: Boolean): WidgetSync.Outcome =
+        ops.tapDose(medicationId, day, time, taken)
+
+    /** What the phone sent the watch over the Data Layer; see [WidgetOps.importFromPhone]. */
+    fun importFromPhone(tokensJson: String?, snapshotJson: String?, baseUrl: String) =
+        ops.importFromPhone(tokensJson, snapshotJson, baseUrl)
+
     fun content(config: WidgetConfig): WidgetContent? {
         val snapshot = store.snapshot() ?: return null
         return WidgetContent.build(snapshot, config, Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()))

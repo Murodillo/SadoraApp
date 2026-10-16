@@ -69,22 +69,14 @@ class WidgetHost(appGroup: String, keychainGroup: String?) {
         revealOnLockScreen = revealOnLockScreen,
     )
 
-    /** A water button: queued and drawn at once, then sent. */
-    suspend fun tapWater(ml: Int): WidgetSync.Outcome {
-        sync.addWater(ml, today())
-        return sync.refresh()
-    }
+    private val ops = WidgetOps(store, tokens, sync, ::today)
 
-    /** A dose button or a notification's answer; [day] and [time] as the link carries them. */
-    suspend fun tapDose(medicationId: String, day: String, time: String, taken: Boolean): WidgetSync.Outcome {
-        sync.markDose(
-            medicationId,
-            kotlinx.datetime.LocalDate.parse(day),
-            kotlinx.datetime.LocalTime.parse(time),
-            if (taken) uz.sadora.contract.DoseStatus.TAKEN else uz.sadora.contract.DoseStatus.SKIPPED,
-        )
-        return sync.refresh()
-    }
+    /** A water button: queued and drawn at once, then sent. */
+    suspend fun tapWater(ml: Int): WidgetSync.Outcome = ops.tapWater(ml)
+
+    /** A dose button or a notification's answer. */
+    suspend fun tapDose(medicationId: String, day: String, time: String, taken: Boolean): WidgetSync.Outcome =
+        ops.tapDose(medicationId, day, time, taken)
 
     /** The snapshot is older than [minutes], or there is none. */
     fun isStale(minutes: Int): Boolean {
@@ -95,27 +87,9 @@ class WidgetHost(appGroup: String, keychainGroup: String?) {
     /** The app's choice for a new widget (the "Widgets and watch" page), when it made one. */
     fun defaultConfig(): WidgetConfig? = store.config("default")
 
-    /**
-     * What the phone sent the watch over WatchConnectivity. Both JSONs null is sign-out;
-     * a null [tokensJson] alone keeps the session the watch already has.
-     */
-    fun importFromPhone(tokensJson: String?, snapshotJson: String?, baseUrl: String) {
-        if (tokensJson == null && snapshotJson == null) {
-            store.clear()
-            tokens.clear()
-            return
-        }
-        if (baseUrl.isNotBlank()) store.setBaseUrl(baseUrl)
-        tokensJson?.let {
-            val pair = WidgetStore.json.decodeFromString(uz.sadora.contract.TokenPair.serializer(), it)
-            tokens.save(pair.accessToken, pair.refreshToken)
-        }
-        snapshotJson?.let {
-            val incoming = WidgetStore.json.decodeFromString(WidgetSnapshot.serializer(), it)
-            // Taps made on the watch and not yet sent stay queued on top of the phone's picture.
-            store.saveSnapshot(incoming.copy(pending = store.snapshot()?.pending.orEmpty()))
-        }
-    }
+    /** What the phone sent the watch over WatchConnectivity; see [WidgetOps.importFromPhone]. */
+    fun importFromPhone(tokensJson: String?, snapshotJson: String?, baseUrl: String) =
+        ops.importFromPhone(tokensJson, snapshotJson, baseUrl)
 
     companion object {
         const val SERVICE = "uz.sadora.companion"

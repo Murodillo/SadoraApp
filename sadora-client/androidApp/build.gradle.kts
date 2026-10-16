@@ -29,6 +29,9 @@ dependencies {
     implementation(libs.glance.appwidget)
     // A tap made offline is sent the moment the network is back, app open or not.
     implementation(libs.work.runtime)
+    // The Wear OS app: its session and the snapshot go over the Wearable Data Layer.
+    implementation(libs.play.wearable)
+    implementation(libs.kotlinx.coroutines.play)
 
     implementation(libs.androidx.activity.compose)
 
