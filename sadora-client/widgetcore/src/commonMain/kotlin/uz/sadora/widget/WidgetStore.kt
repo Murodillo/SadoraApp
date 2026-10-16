@@ -54,15 +54,24 @@ class WidgetStore(private val values: KeyValues) {
 
     fun setBaseUrl(url: String) = values.put(BASE_URL, url)
 
-    /** Sign-out: nothing of hers stays where a widget could draw it. */
-    fun clear() {
-        values.keys().filter { it == SNAPSHOT || it.startsWith(CONFIG) }.forEach { values.put(it, null) }
-    }
+    /**
+     * Sign-out: nothing of hers stays where a widget could draw it. Each widget's blocks
+     * stay: they say nothing about her, and a widget she set up should not forget it.
+     */
+    fun clear() = values.put(SNAPSHOT, null)
+
+    /** The settings a widget starts with before it is set up: the app page's choice. */
+    fun defaultConfig(): WidgetConfig = config(DEFAULT_CONFIG_ID) ?: WidgetConfig.Default
+
+    fun setDefaultConfig(config: WidgetConfig) = putConfig(DEFAULT_CONFIG_ID, config)
 
     companion object {
         private const val SNAPSHOT = "widget.snapshot"
         private const val CONFIG = "widget.config."
         private const val BASE_URL = "widget.baseUrl"
+
+        /** Not a real widget id: Android's are numbers, iOS keeps its own in App Intents. */
+        private const val DEFAULT_CONFIG_ID = "default"
 
         val json = Json {
             ignoreUnknownKeys = true

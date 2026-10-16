@@ -47,6 +47,9 @@ data class WidgetConfig(
             HealthMetric.RECOVERY,
             HealthMetric.SPO2,
         )
+
+        /** A widget nobody has set up: medium, with water and the next dose. Last, as it reads the above. */
+        val Default = WidgetConfig(WidgetSize.MEDIUM, listOf(WidgetBlock.WATER, WidgetBlock.DOSES))
     }
 }
 

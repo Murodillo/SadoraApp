@@ -470,6 +470,7 @@ class UserRepository {
                 it[pushToken] = device.pushToken
                 it[timezone] = device.timezone
                 it[app] = device.app.name.lowercase()
+                it[features] = device.features.joinToString(",")
                 it[createdAt] = timestamp
                 it[lastSeenAt] = timestamp
             }
@@ -484,6 +485,8 @@ class UserRepository {
                 device.pushToken?.let { token -> it[pushToken] = token }
                 device.timezone?.let { zone -> it[timezone] = zone }
                 it[app] = device.app.name.lowercase()
+                // The build may have been updated since: what it says now is what it can do.
+                it[features] = device.features.joinToString(",")
                 it[lastSeenAt] = timestamp
             }
         }

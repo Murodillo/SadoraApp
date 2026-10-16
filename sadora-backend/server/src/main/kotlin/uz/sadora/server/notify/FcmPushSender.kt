@@ -36,7 +36,7 @@ class FcmPushSender(
 
     private val logger = LoggerFactory.getLogger(FcmPushSender::class.java)
 
-    override suspend fun send(record: OutboxRecord, pushTokens: List<String>): Boolean {
+    override suspend fun send(record: OutboxRecord, pushTokens: List<String>, drawsDoseActions: Set<String>): Boolean {
         if (pushTokens.isEmpty()) return false
 
         val bearer = try {
@@ -50,7 +50,7 @@ class FcmPushSender(
 
         var delivered = false
         pushTokens.forEach { token ->
-            when (val outcome = sendOne(bearer, record, token)) {
+            when (val outcome = sendOne(bearer, record, token, token in drawsDoseActions)) {
                 Outcome.DELIVERED -> delivered = true
                 Outcome.GONE -> onTokenRejected(token)
                 Outcome.FAILED -> Unit
@@ -89,7 +89,7 @@ class FcmPushSender(
         return delivered
     }
 
-    private suspend fun sendOne(bearer: String, record: OutboxRecord, token: String): Outcome {
+    private suspend fun sendOne(bearer: String, record: OutboxRecord, token: String, drawsDose: Boolean): Outcome {
         // The app opens the right screen from these; where the system draws the
         // notification, the visible text is in `notification` so it can be shown while
         // the app is not running.
@@ -99,9 +99,8 @@ class FcmPushSender(
             // Where a tap lands: the app routes it like any link of its own.
             record.link?.let { put("link", it) }
         }
-        val message = if (record.category == uz.sadora.contract.NotificationCategory.MED_REMINDER &&
-            record.targetApp == TARGET_CLIENT
-        ) {
+        val dose = record.category == uz.sadora.contract.NotificationCategory.MED_REMINDER && record.targetApp == TARGET_CLIENT
+        val message = if (dose && drawsDose) {
             // A dose: Android gets data only, so the app draws it with "taken" and
             // "skipped" — a notification the system draws can carry no actions. iOS
             // gets the alert under the DOSE category, whose actions the app registered.
@@ -121,6 +120,9 @@ class FcmPushSender(
                 notification = FcmNotification(record.title, record.body),
                 data = data,
                 android = channelFor(record)?.let { FcmAndroid(notification = FcmAndroidNotification(it)) },
+                // An app that does not draw it itself (an older Android build) still shows the
+                // reminder; on iOS the category alone brings the buttons.
+                apns = if (dose) FcmApns(payload = FcmApnsPayload(FcmAps(category = DOSE_CATEGORY))) else null,
             )
         }
         return post(bearer, message)

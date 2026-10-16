@@ -81,7 +81,7 @@ class SadoraWidget : GlanceAppWidget() {
             // the snapshot lives outside it.
             @Suppress("UNUSED_VARIABLE")
             val version = currentState<Preferences>()[VERSION]
-            val config = host.store.config(widgetId) ?: defaultConfig(host)
+            val config = host.store.config(widgetId) ?: host.store.defaultConfig()
             val content = host.content(config)
             WidgetBody(content, sizeOf(LocalSize.current), config, host.signInText())
         }
@@ -93,12 +93,6 @@ class SadoraWidget : GlanceAppWidget() {
         val LARGE = DpSize(250.dp, 260.dp)
         private val STALE = 30.minutes
         private const val REFRESH_BUDGET = 10_000L
-
-        /** A widget she has not set up starts as the settings page's choice. */
-        fun defaultConfig(host: WidgetHost): WidgetConfig =
-            host.store.config(DEFAULT_CONFIG) ?: WidgetConfig(WidgetSize.MEDIUM, listOf(uz.sadora.widget.WidgetBlock.WATER, uz.sadora.widget.WidgetBlock.DOSES))
-
-        const val DEFAULT_CONFIG = "default"
 
         private val VERSION = longPreferencesKey("snapshot_version")
 

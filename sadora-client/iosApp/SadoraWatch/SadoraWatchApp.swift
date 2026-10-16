@@ -28,7 +28,7 @@ final class WatchModel: ObservableObject {
 
     /// Everything on one screen: stage, water, every dose, the wearable.
     private var config: WidgetConfig {
-        host.config(size: .large, water: true, doses: true, health: true, waterStepMl: Int32(host.defaultConfig()?.waterStepMl ?? 250), lockScreen: false, revealOnLockScreen: false)
+        host.config(size: .large, water: true, doses: true, health: true, waterStepMl: host.defaultConfig().waterStepMl, lockScreen: false, revealOnLockScreen: false)
     }
 
     func redraw() {
@@ -87,13 +87,24 @@ final class WatchDelegate: NSObject, WKApplicationDelegate, WCSessionDelegate, U
         take(applicationContext)
     }
 
-    private func take(_ context: [String: Any]) {
-        let signOut = context["signOut"] as? Bool ?? false
-        SadoraKitHost.shared.importFromPhone(
-            tokensJson: signOut ? nil : context["tokens"] as? String,
-            snapshotJson: signOut ? nil : context["snapshot"] as? String,
-            baseUrl: context["baseUrl"] as? String ?? ""
-        )
+    /// The session (or a sign-out), queued by the phone so it is never lost.
+    func session(_ session: WCSession, didReceiveUserInfo userInfo: [String: Any] = [:]) {
+        take(userInfo)
+    }
+
+    private func take(_ message: [String: Any]) {
+        let host = SadoraKitHost.shared
+        let baseUrl = message["baseUrl"] as? String ?? ""
+        if message["signOut"] as? Bool == true {
+            host.importFromPhone(tokensJson: nil, snapshotJson: nil, baseUrl: "")
+        } else {
+            if let tokens = message["tokens"] as? String {
+                host.importFromPhone(tokensJson: tokens, snapshotJson: nil, baseUrl: baseUrl)
+            }
+            if let snapshot = message["snapshot"] as? String {
+                host.importFromPhone(tokensJson: nil, snapshotJson: snapshot, baseUrl: baseUrl)
+            }
+        }
         Task { @MainActor in WatchModel.shared.redraw() }
     }
 

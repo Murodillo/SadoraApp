@@ -216,13 +216,24 @@ class NotificationScheduler(
                 notifications.markFailed(record.id, uz.sadora.contract.SuppressionReasons.NO_DEVICE)
                 return@forEach
             }
-            val delivered = runCatching { sender.send(prepared(record), tokens) }.getOrElse { failure ->
+            val delivered = runCatching {
+                sender.send(prepared(record), tokens, doseDrawingTokens(record.userId, record.targetApp))
+            }.getOrElse { failure ->
                 logger.warn("Push delivery failed for {}", record.id, failure)
                 false
             }
             if (delivered) notifications.markSent(record.id)
             else notifications.markFailed(record.id, "delivery_failed")
         }
+    }
+
+    /** The account's installs that draw a dose reminder themselves (`DeviceFeatures.DOSE_ACTIONS`). */
+    private suspend fun doseDrawingTokens(userId: Uuid, app: String): Set<String> = dbQuery {
+        Devices.selectAll()
+            .where { (Devices.userId eq userId) and Devices.pushToken.isNotNull() and (Devices.app eq app) }
+            .filter { uz.sadora.contract.DeviceFeatures.DOSE_ACTIONS in it[Devices.features].split(',') }
+            .mapNotNull { it[Devices.pushToken] }
+            .toSet()
     }
 
     /** What the device is sent for outbox row [id]; see the overload. */

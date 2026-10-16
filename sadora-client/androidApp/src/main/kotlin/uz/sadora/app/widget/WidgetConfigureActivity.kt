@@ -36,7 +36,7 @@ class WidgetConfigureActivity : ComponentActivity() {
         val controller = WidgetsController.forWidget(
             store = host.store,
             widgetId = appWidgetId.toString(),
-            fallback = SadoraWidget.defaultConfig(host),
+            fallback = host.store.defaultConfig(),
             onSaved = { lifecycleScope.launch { SadoraWidget.redrawAll(this@WidgetConfigureActivity) } },
         )
         // Saved straight away, so a widget placed and left unconfigured keeps the default it showed.

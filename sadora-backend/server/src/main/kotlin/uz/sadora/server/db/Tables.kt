@@ -121,6 +121,8 @@ object Devices : Table("devices") {
     val lastSeenAt = timestampWithTimeZone("last_seen_at")
     /** `client` or `doctor`: which app this install is. */
     val app = text("app")
+    /** What this build can do beyond the first release, comma-separated (V55). */
+    val features = text("features")
 
     override val primaryKey = PrimaryKey(id)
 }

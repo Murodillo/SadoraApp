@@ -126,13 +126,14 @@ class WidgetSyncTest {
     }
 
     @Test
-    fun `signing out forgets everything a widget could show`() = runTest {
+    fun `signing out forgets her data and keeps how the widgets are set up`() = runTest {
         val store = store()
         WidgetSync(FakeApi(summary()), store, Clock(), ids = { "t" }).refresh()
-        store.putConfig("42", WidgetConfig(WidgetSize.MEDIUM, listOf(WidgetBlock.WATER)))
+        val config = WidgetConfig(WidgetSize.MEDIUM, listOf(WidgetBlock.WATER))
+        store.putConfig("42", config)
         store.clear()
         assertNull(store.snapshot())
-        assertNull(store.config("42"))
+        assertEquals(config, store.config("42"), "a widget's blocks are not hers to hide")
     }
 
     @Test

@@ -198,17 +198,23 @@ fun App(graph: SadoraGraph? = null) {
         if (sessionState is SessionState.SignedOut && (navigator.phase == AppPhase.Main || navigator.phase == AppPhase.Partner)) {
             navigator.goTo(AppPhase.SignIn)
         }
-        // The home-screen widgets and the watch follow the session: emptied the moment it
-        // ends, handed their own sessions and drawn the moment it begins.
-        when (sessionState) {
-            is SessionState.SignedOut -> graph.widgets.signedOut()
-            is SessionState.SignedIn -> graph.widgets.signedIn()
-            else -> Unit
+    }
+    // The home-screen widgets and the watch follow the session: emptied the moment it
+    // ends, handed their own sessions and drawn when it begins — once per account, not on
+    // every profile edit, which publishes a new SignedIn too.
+    val signedInUser = (sessionState as? SessionState.SignedIn)?.user?.id
+    val signedOut = sessionState is SessionState.SignedOut
+    LaunchedEffect(signedInUser, signedOut) {
+        when {
+            signedOut -> graph?.widgets?.signedOut()
+            signedInUser != null -> graph?.widgets?.signedIn()
         }
     }
-    // Drawn again whenever she leaves the app, so the home screen she returns to shows
-    // what she just did.
-    LifecycleResumeEffect(graph) {
+    // Each return to the app hands over to a watch found since, and redraws; leaving it
+    // redraws again, so the home screen she returns to shows what she just did.
+    val widgetScope = rememberCoroutineScope()
+    LifecycleResumeEffect(graph, signedInUser) {
+        if (signedInUser != null) widgetScope.launch { graph?.widgets?.signedIn() }
         onPauseOrDispose { graph?.widgets?.changed() }
     }
 

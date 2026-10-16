@@ -19,13 +19,16 @@ import platform.UIKit.UIViewController
  */
 fun MainViewController(): UIViewController {
     IosPush.follow(iosGraph)
-    IosWidgets.graphOrNull = { iosGraph }
     return ComposeUIViewController {
         App(iosGraph)
     }
 }
 
-private val iosGraph: SadoraGraph by lazy {
+/**
+ * Built on first use, not by the UI: a dose answered on a notification or a widget's
+ * silent push may launch the app in the background, where no view controller is made.
+ */
+internal val iosGraph: SadoraGraph by lazy {
     val storage = KeychainTokenStorage()
     SadoraGraph(
         tokenStorage = storage,

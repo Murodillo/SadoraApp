@@ -102,6 +102,32 @@ class WidgetContentTest {
     }
 
     @Test
+    fun `the phase turns with the day, the period ends and the fertile days come`() {
+        // Day 5 of a 5-day period, fertile from day 12 to 16, next period on day 29.
+        val withWindow = summary(
+            cycle = CycleStatus(
+                cycleDay = 5,
+                phase = CyclePhase.PERIOD,
+                daysUntilNextPeriod = 24,
+                prediction = CyclePrediction(
+                    PredictionConfidence.entries.first(), "t",
+                    nextPeriodStart = LocalDate(2026, 11, 9),
+                    fertileFrom = LocalDate(2026, 10, 23),
+                    fertileUntil = LocalDate(2026, 10, 27),
+                    averagePeriodLength = 5,
+                    averageCycleLength = 28,
+                ),
+                today = day,
+            ),
+        )
+        fun phaseOn(date: LocalDate) = build(withWindow, now = LocalDateTime(date, LocalTime(9, 0))).stage.phase
+        assertEquals(CyclePhase.FOLLICULAR, phaseOn(LocalDate(2026, 10, 17)), "the day after the period")
+        assertEquals(CyclePhase.FERTILE, phaseOn(LocalDate(2026, 10, 24)))
+        assertEquals(CyclePhase.LUTEAL, phaseOn(LocalDate(2026, 10, 30)))
+        assertEquals(CyclePhase.PERIOD, phaseOn(LocalDate(2026, 11, 10)))
+    }
+
+    @Test
     fun `a period past its predicted day is called late, not negative`() {
         val content = build(now = LocalDateTime(LocalDate(2026, 11, 1), LocalTime(7, 0)))
         assertEquals("Hayz 2 kun kechikmoqda", content.stage.line2)

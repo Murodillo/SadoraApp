@@ -23,6 +23,9 @@ suspend fun DeviceIdentity.toDeviceInfo(
     model = model,
     pushToken = pushToken,
     timezone = timezone,
+    // Android draws dose reminders itself since the widgets; iOS shows the same buttons
+    // through the DOSE category either way.
+    features = listOf(uz.sadora.contract.DeviceFeatures.DOSE_ACTIONS),
 )
 
 /** Fixed values for tests and previews. */

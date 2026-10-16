@@ -151,7 +151,7 @@ class FcmPushSenderTest {
     fun `a dose reminder is the app's to draw on Android and carries its actions on iOS`() = runTest {
         val seen = mutableListOf<HttpRequestData>()
         val sender = sender(seen) { HttpStatusCode.OK to """{"name":"projects/p/messages/3"}""" }
-        sender.send(record.copy(link = "sadora://dose/m/2026-10-16/08:00"), listOf("device-a"))
+        sender.send(record.copy(link = "sadora://dose/m/2026-10-16/08:00"), listOf("device-a"), drawsDoseActions = setOf("device-a"))
 
         val message = Json.parseToJsonElement((seen.last().body as io.ktor.http.content.TextContent).text)
             .let { it as kotlinx.serialization.json.JsonObject }["message"] as kotlinx.serialization.json.JsonObject
@@ -161,6 +161,22 @@ class FcmPushSenderTest {
         val apns = message["apns"].toString()
         assertTrue("\"category\":\"DOSE\"" in apns && "\"title\":\"Dori vaqti\"" in apns, apns)
         assertTrue("\"priority\":\"high\"" in message["android"].toString())
+    }
+
+    /**
+     * An Android build from before the widgets draws nothing for a data-only message, so a
+     * phone that has not said it draws dose reminders keeps getting the ordinary one.
+     */
+    @Test
+    fun `a dose reminder to an app that does not draw it itself stays an ordinary notification`() = runTest {
+        val seen = mutableListOf<HttpRequestData>()
+        val sender = sender(seen) { HttpStatusCode.OK to """{"name":"projects/p/messages/4"}""" }
+        sender.send(record.copy(link = "sadora://dose/m/2026-10-16/08:00"), listOf("old-phone"))
+
+        val message = Json.parseToJsonElement((seen.last().body as io.ktor.http.content.TextContent).text)
+            .let { it as kotlinx.serialization.json.JsonObject }["message"] as kotlinx.serialization.json.JsonObject
+        assertTrue("notification" in message, message.toString())
+        assertTrue("\"category\":\"DOSE\"" in message["apns"].toString(), "iOS still gets its buttons")
     }
 
     // ---------------------------------------------------------------- harness

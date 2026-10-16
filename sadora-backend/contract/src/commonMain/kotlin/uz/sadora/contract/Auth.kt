@@ -26,7 +26,15 @@ data class DeviceInfo(
     val timezone: String? = null,
     /** Which app this is: a doctor has both on one phone, and a push must ring in the right one. */
     val app: ClientApp = ClientApp.CLIENT,
+    /** What this build can do that older ones cannot; see [DeviceFeatures]. */
+    val features: List<String> = emptyList(),
 )
+
+/** Capabilities a client build reports, so the server never sends an older one what it cannot draw. */
+object DeviceFeatures {
+    /** Draws a medication reminder itself, with "taken" and "skipped" (Android since the widgets). */
+    const val DOSE_ACTIONS = "dose_actions"
+}
 
 @Serializable
 enum class ClientApp {

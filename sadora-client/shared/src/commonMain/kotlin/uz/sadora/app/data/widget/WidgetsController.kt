@@ -25,7 +25,7 @@ class WidgetsController(
 ) {
     /** The settings page, over the app's bridge; inert without one (previews, tests). */
     constructor(bridge: WidgetBridge?) : this(
-        initial = bridge?.defaultConfig() ?: WidgetConfig(WidgetSize.MEDIUM, listOf(WidgetBlock.WATER, WidgetBlock.DOSES)),
+        initial = bridge?.defaultConfig() ?: WidgetConfig.Default,
         save = { bridge?.saveDefaultConfig(it) },
         previewOf = { bridge?.preview(it) },
         pinner = bridge?.takeIf { it.canPin }?.let { b -> { config: WidgetConfig -> b.pin(config) } },

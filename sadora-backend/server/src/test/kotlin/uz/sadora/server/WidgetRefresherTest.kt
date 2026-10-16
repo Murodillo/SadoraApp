@@ -14,7 +14,7 @@ import uz.sadora.server.widget.WidgetRefresher
 class WidgetRefresherTest {
     private class Recorder : PushSender {
         val silent = mutableListOf<List<String>>()
-        override suspend fun send(record: OutboxRecord, pushTokens: List<String>) = true
+        override suspend fun send(record: OutboxRecord, pushTokens: List<String>, drawsDoseActions: Set<String>) = true
         override suspend fun sendSilent(data: Map<String, String>, pushTokens: List<String>): Boolean {
             silent += pushTokens
             return true

@@ -73,7 +73,8 @@ object IosWidgets {
         }
     }
 
-    internal var graphOrNull: () -> uz.sadora.app.data.SadoraGraph? = { null }
+    /** The app's graph, built here when the app was launched in the background. */
+    private fun graphOrNull(): uz.sadora.app.data.SadoraGraph? = iosGraph
 }
 
 /**

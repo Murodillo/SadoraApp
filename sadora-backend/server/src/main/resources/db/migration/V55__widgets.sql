@@ -9,6 +9,11 @@ ALTER TABLE users ADD COLUMN discreet_mode BOOLEAN NOT NULL DEFAULT FALSE;
 ALTER TABLE refresh_tokens ADD COLUMN parent_family_id UUID;
 CREATE INDEX refresh_tokens_parent_family_idx ON refresh_tokens (parent_family_id) WHERE parent_family_id IS NOT NULL;
 
+-- What a client build can do beyond the first release, comma-separated. An Android
+-- build that says dose_actions draws medication reminders itself, with their buttons;
+-- older builds keep getting ordinary notifications.
+ALTER TABLE devices ADD COLUMN features TEXT NOT NULL DEFAULT '';
+
 -- A widget's or watch's water tap, by the id the device gave it. The offline queue may
 -- send the same tap twice; the second finds its row here and adds nothing. Her rows
 -- older than a week are dropped on her next tap: a queue never holds one that long.

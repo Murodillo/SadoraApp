@@ -85,7 +85,7 @@ class WidgetHost(appGroup: String, keychainGroup: String?) {
     }
 
     /** The app's choice for a new widget (the "Widgets and watch" page), when it made one. */
-    fun defaultConfig(): WidgetConfig? = store.config("default")
+    fun defaultConfig(): WidgetConfig = store.defaultConfig()
 
     /** What the phone sent the watch over WatchConnectivity; see [WidgetOps.importFromPhone]. */
     fun importFromPhone(tokensJson: String?, snapshotJson: String?, baseUrl: String) =

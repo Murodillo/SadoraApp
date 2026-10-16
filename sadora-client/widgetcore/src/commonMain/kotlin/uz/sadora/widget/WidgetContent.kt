@@ -91,7 +91,7 @@ data class WidgetContent(
             val elapsed = cycle.today.daysUntil(today).coerceAtLeast(0)
             val day = cycleDay + elapsed
             val until = cycle.daysUntilNextPeriod?.minus(elapsed)
-            val phase = if (elapsed == 0) cycle.phase else phaseOn(cycle, today) ?: cycle.phase
+            val phase = if (elapsed == 0) cycle.phase else phaseOn(cycle, day, today)
             val line2 = when {
                 until == null -> null
                 until > 0 -> s.untilPeriod(until)
@@ -110,19 +110,28 @@ data class WidgetContent(
             )
         }
 
-        /** The phase on a later day, from the prediction's own dates. */
-        private fun phaseOn(cycle: uz.sadora.contract.CycleStatus, day: LocalDate): CyclePhase? {
+        /**
+         * The phase on a later day, from the prediction's own dates and the cycle day: the
+         * period while the day is inside its usual length or the next one has come, the
+         * fertile window between its dates, luteal after it, follicular before it.
+         */
+        private fun phaseOn(cycle: uz.sadora.contract.CycleStatus, cycleDay: Int, date: LocalDate): CyclePhase? {
             val p = cycle.prediction
+            val next = p.nextPeriodStart
             val fertileFrom = p.fertileFrom
             val fertileUntil = p.fertileUntil
-            val next = p.nextPeriodStart
             return when {
-                next != null && day >= next -> CyclePhase.PERIOD
-                fertileFrom != null && fertileUntil != null && day in fertileFrom..fertileUntil -> CyclePhase.FERTILE
-                fertileUntil != null && day > fertileUntil -> CyclePhase.LUTEAL
+                next != null && date >= next -> CyclePhase.PERIOD
+                cycleDay <= (p.averagePeriodLength ?: DEFAULT_PERIOD_DAYS) -> CyclePhase.PERIOD
+                fertileFrom != null && fertileUntil != null && date in fertileFrom..fertileUntil -> CyclePhase.FERTILE
+                fertileUntil != null && date > fertileUntil -> CyclePhase.LUTEAL
+                fertileFrom != null && date < fertileFrom -> CyclePhase.FOLLICULAR
+                // No window to place the day in: say nothing rather than yesterday's phase.
                 else -> null
             }
         }
+
+        private const val DEFAULT_PERIOD_DAYS = 5
 
         private fun pregnancyStage(summary: WidgetSummary, today: LocalDate, s: WidgetStrings): StageBlock {
             val due = summary.stage?.dueDate
