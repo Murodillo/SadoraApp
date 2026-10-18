@@ -52,6 +52,8 @@ data class AppConfig(
      * misplaced tap is unrecoverable, lengthen it and the promise stops being true.
      */
     val accountErasureGracePeriod: Duration,
+    /** The Telegram bot: reminders and quick logging. Off until a token is set. */
+    val telegram: TelegramConfig = TelegramConfig(),
     /**
      * Whether an admin must enrol an authenticator before the panel opens. Until she
      * does, her token reaches only her own account page, where enrolment lives. Off on a
@@ -223,6 +225,11 @@ data class AppConfig(
                     ),
                 ),
                 accountErasureGracePeriod = env("ACCOUNT_ERASURE_GRACE_DAYS", "30").toInt().days,
+                telegram = TelegramConfig(
+                    token = envOrNull("TELEGRAM_BOT_TOKEN"),
+                    username = envOrNull("TELEGRAM_BOT_USERNAME")?.removePrefix("@"),
+                    apiBase = env("TELEGRAM_API_BASE", "https://api.telegram.org"),
+                ),
                 adminRequireTotp = env("ADMIN_REQUIRE_TOTP", (environment != Environment.DEV).toString()).toBoolean(),
                 mediaDir = env("MEDIA_DIR", "build/media"),
                 promoVideoPageUrl = env("PROMO_VIDEO_PAGE_URL", "https://sadora.app/video/"),
@@ -559,4 +566,19 @@ data class HuaweiConfig(
     val subscriberSecret: String?,
 ) {
     val isConfigured: Boolean get() = clientId != null && clientSecret != null
+}
+
+/**
+ * The bot made in @BotFather. Updates are read by long polling, not a webhook: the servers
+ * sit behind NAT, and polling needs only outbound HTTPS.
+ */
+data class TelegramConfig(
+    val token: String? = null,
+    val username: String? = null,
+    val apiBase: String = "https://api.telegram.org",
+) {
+    val isConfigured: Boolean get() = !token.isNullOrBlank() && !username.isNullOrBlank()
+
+    override fun toString(): String =
+        "TelegramConfig(token=${if (token == null) "null" else "***"}, username=$username, apiBase=$apiBase)"
 }

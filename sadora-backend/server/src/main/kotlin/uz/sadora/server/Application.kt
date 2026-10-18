@@ -24,6 +24,7 @@ import uz.sadora.server.baby.babyRoutes
 import uz.sadora.server.condition.conditionRoutes
 import uz.sadora.server.kegel.kegelRoutes
 import uz.sadora.server.wrapped.wrappedRoutes
+import uz.sadora.server.telegram.telegramRoutes
 import uz.sadora.server.lab.labRoutes
 import uz.sadora.server.share.reportRoutes
 import uz.sadora.server.pet.adminPetRoutes
@@ -114,6 +115,10 @@ fun main() {
     // Her Kegel reminders, at the times she picked.
     component.kegelReminderJob.start()
 
+    // The Telegram bot, when it has a token: its updates, and the period-coming reminder.
+    component.telegramPoller?.start()
+    if (component.config.telegram.isConfigured) component.telegramPeriodJob.start()
+
     Runtime.getRuntime().addShutdownHook(Thread { component.close() })
 
     logger.info(
@@ -179,6 +184,7 @@ fun Application.apiModule(component: AppComponent) {
             conditionRoutes(component.conditionService)
             kegelRoutes(component.kegelService)
             wrappedRoutes(component.wrappedService)
+            telegramRoutes(component.telegramService)
             reportRoutes(component.reportService)
             medicationRoutes(component.medicationService)
             notificationRoutes(component.notificationService)

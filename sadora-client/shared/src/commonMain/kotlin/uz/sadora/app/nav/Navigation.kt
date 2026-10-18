@@ -113,6 +113,8 @@ sealed interface Route {
     /** Cycle Wrapped: her recaps, and one played as story slides. */
     data object WrappedList : Route
     data class WrappedStory(val key: String) : Route
+    /** The Telegram bot: link, detail switch, unlink. */
+    data object TelegramBot : Route
     data object Sleep : Route
     data object Insights : Route
     data object Knowledge : Route

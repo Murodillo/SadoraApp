@@ -1565,6 +1565,7 @@ object StringsUz : Strings {
     override val reports: ReportStrings = ReportStringsUz
     override val kegel: KegelStrings = KegelStringsUz
     override val wrapped: WrappedStrings = WrappedStringsUz
+    override val telegram: TelegramStrings = TelegramStringsUz
     override val pet: PetStrings = PetUz
     override val widgets: WidgetUiStrings = WidgetUiUz
     override val frames: FrameStrings = FramesUz

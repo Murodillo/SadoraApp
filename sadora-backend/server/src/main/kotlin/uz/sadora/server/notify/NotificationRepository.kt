@@ -324,3 +324,6 @@ const val TARGET_CLIENT = "client"
 
 /** Sadora Doctor: what a doctor receives as a doctor. */
 const val TARGET_DOCTOR = "doctor"
+
+/** Only her Telegram chat: a reminder the bot sends and the phone does not. */
+const val TARGET_TELEGRAM = "telegram"

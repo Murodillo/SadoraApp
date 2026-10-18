@@ -212,6 +212,8 @@ object ErrorText {
         Entry("Hisobot topilmadi", "Отчёт не найден", "Report not found"),
         Entry("Bu daraja hali ochilmagan", "Этот уровень ещё не открыт", "This level is not open yet"),
         Entry("Xulosa topilmadi", "Итоги не найдены", "Recap not found"),
+        Entry("Telegram bot hali ulanmagan", "Telegram-бот ещё не подключён", "The Telegram bot is not set up yet"),
+        Entry("Telegram ulanmagan", "Telegram не подключён", "Telegram is not connected"),
         Entry(
             "Eslatmalar ko'pi bilan {0} ta bo'ladi",
             "Напоминаний может быть не больше {0}",

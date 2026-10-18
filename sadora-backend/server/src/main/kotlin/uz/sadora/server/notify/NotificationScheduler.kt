@@ -72,6 +72,13 @@ class NotificationScheduler(
      */
     var companionOf: (suspend (Uuid) -> uz.sadora.contract.PetKind?)? = null
 
+    /**
+     * Her Telegram chat, when she linked one: a reminder goes there too, and counts as delivered
+     * even on an account with no phone to ring. Set once the bot exists.
+     */
+    var telegram: (suspend (OutboxRecord) -> Boolean)? = null
+    var telegramLinked: (suspend (Uuid) -> Boolean)? = null
+
     fun start() {
         job = scope.launch {
             logger.info("Notification scheduler started, ticking every {}", tickInterval)
@@ -167,7 +174,7 @@ class NotificationScheduler(
                     sentToday = notifications.sentCount(userId, currentTime - 1.days),
                     sentThisWeek = notifications.sentCount(userId, currentTime - 7.days),
                     caps = caps,
-                    hasDevice = hasPushToken(userId),
+                    hasDevice = hasPushToken(userId) || runCatching { telegramLinked?.invoke(userId) == true }.getOrDefault(false),
                 )
 
                 val template = notifications.template("med_reminder", user.language.name.lowercase())
@@ -211,9 +218,11 @@ class NotificationScheduler(
 
     private suspend fun deliver(records: List<OutboxRecord>) {
         records.forEach { record ->
-            val tokens = pushTokens(record.userId, record.targetApp)
+            val toTelegram = runCatching { telegram?.invoke(record) == true }.getOrDefault(false)
+            val tokens = if (record.targetApp == TARGET_TELEGRAM) emptyList() else pushTokens(record.userId, record.targetApp)
             if (tokens.isEmpty()) {
-                notifications.markFailed(record.id, uz.sadora.contract.SuppressionReasons.NO_DEVICE)
+                if (toTelegram) notifications.markSent(record.id)
+                else notifications.markFailed(record.id, uz.sadora.contract.SuppressionReasons.NO_DEVICE)
                 return@forEach
             }
             val delivered = runCatching {
@@ -222,7 +231,7 @@ class NotificationScheduler(
                 logger.warn("Push delivery failed for {}", record.id, failure)
                 false
             }
-            if (delivered) notifications.markSent(record.id)
+            if (delivered || toTelegram) notifications.markSent(record.id)
             else notifications.markFailed(record.id, "delivery_failed")
         }
     }

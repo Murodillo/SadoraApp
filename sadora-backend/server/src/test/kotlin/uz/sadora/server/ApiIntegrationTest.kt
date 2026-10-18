@@ -4078,6 +4078,147 @@ class ApiIntegrationTest {
         assertEquals(HttpStatusCode.NotFound, client.get("/v1/wrapped/$latest") { auth(other.token) }.status)
     }
 
+    // ---------------------------------------------------------------- telegram
+
+    private class FakeTelegram : uz.sadora.server.telegram.TelegramGateway {
+        data class Sent(val chatId: Long, val text: String, val buttons: List<List<uz.sadora.server.telegram.TgButton>>)
+        val sent = ArrayList<Sent>()
+        val edits = ArrayList<String>()
+        val answers = ArrayList<String?>()
+        override suspend fun updates(offset: Long, timeoutSeconds: Int) = emptyList<uz.sadora.server.telegram.TgUpdate>()
+        override suspend fun send(chatId: Long, text: String, buttons: List<List<uz.sadora.server.telegram.TgButton>>): Long {
+            sent += Sent(chatId, text, buttons)
+            return sent.size.toLong()
+        }
+        override suspend fun edit(chatId: Long, messageId: Long, text: String) { edits += text }
+        override suspend fun answer(callbackId: String, text: String?) { answers += text }
+    }
+
+    @Test
+    fun `the telegram bot links by a one-time code, logs from buttons and carries her reminders discreetly`() = api {
+        val her = signUp().also { onboard(it) }
+        val herId = Uuid.parse(her.userId)
+        val today = get<CycleStatus>("/v1/cycle/status", her.token).today
+        // Without a token the app is told the bot is not there yet.
+        assertFalse(get<uz.sadora.contract.TelegramStatus>("/v1/telegram", her.token).available)
+        assertEquals(HttpStatusCode.ServiceUnavailable, client.post("/v1/telegram/link") { auth(her.token) }.status)
+
+        val fake = FakeTelegram()
+        val bot = uz.sadora.server.telegram.TelegramService(
+            uz.sadora.server.config.TelegramConfig(token = "test", username = "SadoraTestBot"),
+            fake,
+            component.telegramRepository,
+            component.userRepository,
+            component.healthService,
+            component.nutritionService,
+            component.medicationService,
+            component.medicationRepository,
+        )
+        val chat = 555_000L + kotlin.random.Random.nextLong(1_000_000)
+        fun message(text: String, chatId: Long = chat) = uz.sadora.server.telegram.TgUpdate(
+            1,
+            message = uz.sadora.server.telegram.TgMessage(1, uz.sadora.server.telegram.TgChat(chatId), uz.sadora.server.telegram.TgUser(chatId, "malika"), text),
+        )
+        fun tap(data: String, messageId: Long = 1) = uz.sadora.server.telegram.TgUpdate(
+            2,
+            callback = uz.sadora.server.telegram.TgCallback("cb", uz.sadora.server.telegram.TgUser(chat), uz.sadora.server.telegram.TgMessage(messageId, uz.sadora.server.telegram.TgChat(chat)), data),
+        )
+
+        // A stranger is told how to link, and nothing else.
+        bot.handle(message("salom"))
+        assertTrue("Profil" in fake.sent.last().text)
+
+        val link = bot.createLink(herId)
+        val code = link.url.substringAfter("start=")
+        assertTrue(link.url.startsWith("https://t.me/SadoraTestBot?start="))
+        bot.handle(message("/start $code"))
+        assertTrue("ulandi" in fake.sent.last().text)
+        assertEquals(3, fake.sent.last().buttons.size, "the menu: period and water, moods, medicines")
+        val linked = bot.status(herId)
+        assertTrue(linked.linked)
+        assertEquals("malika", linked.username)
+        assertFalse(linked.detailed)
+        // The code works once.
+        bot.handle(message("/start $code", chatId = chat + 1))
+        assertTrue("eskirgan" in fake.sent.last().text)
+
+        // Buttons log what the app would.
+        put<DailyLog>("/v1/days/$today", her.token, uz.sadora.contract.SaveDailyLogRequest(symptoms = listOf(uz.sadora.contract.SymptomEntry("cramps"))))
+        bot.handle(tap("m:5"))
+        val day = get<DailyLog>("/v1/days/$today", her.token)
+        assertEquals(MoodLevel.GREAT, day.mood)
+        assertEquals(listOf("cramps"), day.symptoms.map { it.key }, "a mood from Telegram keeps the rest of the day")
+        bot.handle(tap("w"))
+        assertTrue(fake.answers.last().orEmpty().startsWith("Suv: 250"))
+        bot.handle(tap("p"))
+        assertEquals(today, get<List<PeriodEntry>>("/v1/cycle/periods", her.token).first().startedOn)
+
+        // Today's medicines as buttons; one tap marks the dose taken.
+        val medication = component.medicationRepository.add(
+            herId,
+            uz.sadora.contract.SaveMedicationRequest(name = "Folat", schedule = uz.sadora.contract.MedicationSchedule(times = listOf(LocalTime(9, 0)))),
+            startedOn = today,
+        )
+        bot.handle(tap("d"))
+        val doseButton = fake.sent.last().buttons.flatten().single()
+        assertTrue(doseButton.data.startsWith("dt:") && doseButton.data.length <= 64)
+        bot.handle(tap(doseButton.data, messageId = 7))
+        assertEquals(uz.sadora.contract.DoseStatus.TAKEN, component.medicationService.day(herId, today).doses.single().status)
+        assertEquals("✅ Belgilandi", fake.edits.last(), "discreet by default: no medicine name")
+
+        // Her reminder reaches Telegram: neutral first, the medicine's name once she asks for detail.
+        val reminder = uz.sadora.server.notify.OutboxRecord(
+            id = Uuid.random(),
+            userId = herId,
+            category = uz.sadora.contract.NotificationCategory.MED_REMINDER,
+            title = "Sadora",
+            body = "",
+            scheduledFor = kotlin.time.Clock.System.now(),
+            status = uz.sadora.contract.NotificationStatus.QUEUED,
+            sentAt = null,
+            suppressedReason = null,
+            link = "sadora://dose/$medication/$today/09:00",
+        )
+        assertTrue(bot.deliver(reminder))
+        assertEquals("🔔 Sizda yangi eslatma bor", fake.sent.last().text)
+        assertEquals(2, fake.sent.last().buttons.single().size)
+        bot.setDetailed(herId, true)
+        assertTrue(bot.deliver(reminder))
+        assertTrue("Folat" in fake.sent.last().text)
+        // A message from a person stays in the app.
+        assertFalse(bot.deliver(reminder.copy(link = "sadora://conversation/abc", category = uz.sadora.contract.NotificationCategory.PARTNER)))
+
+        // Through the scheduler: an account with no phone to ring still gets it, in Telegram.
+        val before = component.notificationScheduler.telegram
+        component.notificationScheduler.telegram = bot::deliver
+        try {
+            component.notificationRepository.enqueue(
+                userId = herId,
+                category = uz.sadora.contract.NotificationCategory.SYSTEM,
+                title = "Kunlik mashq vaqti",
+                body = "",
+                scheduledFor = kotlin.time.Clock.System.now(),
+                dedupeKey = "kegel:test:$herId",
+                status = uz.sadora.contract.NotificationStatus.QUEUED,
+                suppressedReason = null,
+                link = "sadora://open/kegel",
+            )
+            component.notificationScheduler.tick()
+        } finally {
+            component.notificationScheduler.telegram = before
+        }
+        assertEquals("🌸 Kegel mashqi vaqti", fake.sent.last().text)
+        assertEquals(
+            uz.sadora.contract.NotificationStatus.SENT,
+            assertNotNull(component.notificationRepository.history(herId, 5)).first { it.title == "Kunlik mashq vaqti" }.status,
+        )
+
+        // Unlinking says goodbye in the chat and stops the reminders.
+        assertFalse(bot.unlink(herId).linked)
+        assertTrue("uzildi" in fake.sent.last().text)
+        assertFalse(bot.deliver(reminder))
+    }
+
     // ---------------------------------------------------------------- babies
 
     @Test

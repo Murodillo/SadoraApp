@@ -73,6 +73,7 @@ interface Strings {
     val reports: ReportStrings
     val kegel: KegelStrings
     val wrapped: WrappedStrings
+    val telegram: TelegramStrings
     val pet: PetStrings
     val widgets: WidgetUiStrings
     val frames: FrameStrings

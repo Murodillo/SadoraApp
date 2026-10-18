@@ -65,6 +65,8 @@ class AppControllers(
     val kegel: uz.sadora.app.data.KegelController = uz.sadora.app.data.KegelController(null),
     /** Cycle Wrapped: per-cycle and yearly recaps. */
     val wrapped: uz.sadora.app.data.WrappedController = uz.sadora.app.data.WrappedController(null),
+    /** The Telegram bot link. */
+    val telegram: uz.sadora.app.data.TelegramController = uz.sadora.app.data.TelegramController(null),
     val pet: PetController,
     val frames: FrameController,
     val analytics: Analytics,
@@ -100,6 +102,7 @@ class AppControllers(
             reports = graph?.reportController() ?: uz.sadora.app.data.ReportController(null),
             kegel = graph?.kegelController() ?: uz.sadora.app.data.KegelController(null),
             wrapped = graph?.wrappedController() ?: uz.sadora.app.data.WrappedController(null),
+            telegram = graph?.telegramController() ?: uz.sadora.app.data.TelegramController(null),
             pet = graph?.petController(state) ?: PetController(null, state),
             frames = graph?.frameController(state) ?: FrameController(null, state),
             analytics = graph?.analytics ?: Analytics.None,

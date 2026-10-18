@@ -540,6 +540,26 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
     val vaccineReminderJob = uz.sadora.server.baby.VaccineReminderJob(babyRepository, userRepository, notificationRepository)
     val kegelReminderJob = uz.sadora.server.kegel.KegelReminderJob(kegelRepository, userRepository, notificationRepository)
 
+    // ---- the Telegram bot: off until TELEGRAM_BOT_TOKEN and TELEGRAM_BOT_USERNAME are set
+    val telegramRepository = uz.sadora.server.telegram.TelegramRepository()
+    val telegramGateway: uz.sadora.server.telegram.TelegramGateway? =
+        if (config.telegram.isConfigured) uz.sadora.server.telegram.HttpTelegramGateway(outboundHttpClient, config.telegram) else null
+    val telegramService = uz.sadora.server.telegram.TelegramService(
+        config = config.telegram,
+        gateway = telegramGateway,
+        telegram = telegramRepository,
+        users = userRepository,
+        health = healthService,
+        nutrition = nutritionService,
+        medications = medicationService,
+        medicationRecords = medicationRepository,
+    ).also { bot ->
+        notificationScheduler.telegram = bot::deliver
+        notificationScheduler.telegramLinked = bot::isLinked
+    }
+    val telegramPoller = telegramGateway?.let { uz.sadora.server.telegram.TelegramPoller(it, telegramRepository, telegramService) }
+    val telegramPeriodJob = uz.sadora.server.telegram.TelegramPeriodJob(telegramRepository, userRepository, healthService, notificationRepository)
+
     val billingRepository = BillingRepository()
     val billingService = BillingService(
         repository = billingRepository,
@@ -681,6 +701,8 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
         partnerAlertJob.stop()
         vaccineReminderJob.stop()
         kegelReminderJob.stop()
+        telegramPoller?.stop()
+        telegramPeriodJob.stop()
         outboundHttpClient.close()
         cache.close()
         databaseFactory.close()
