@@ -426,6 +426,14 @@ jobs:
             -f sadora-backend/docker-compose.prod.yml -f sadora-backend/docker-compose.stage.yml \
             --env-file "$RUNNER_TEMP/ci.env" config --quiet
 
+      # Staging's telemetry: the collector refuses a bad redaction rule only when it starts,
+      # and then the API's traces go nowhere without a word.
+      - name: Validate the OpenTelemetry collector config
+        run: |
+          docker run --rm --entrypoint /otel-lgtm/otelcol-contrib/otelcol-contrib \
+            -v "$PWD/sadora-backend/deploy/otel/otelcol-config.yaml:/c.yaml:ro" \
+            grafana/otel-lgtm:0.35.0 validate --feature-gates service.profilesSupport --config=/c.yaml
+
       - name: Validate the nginx configs
         run: |
           for conf in spa landing; do

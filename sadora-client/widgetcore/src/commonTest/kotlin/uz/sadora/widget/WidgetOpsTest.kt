@@ -22,7 +22,7 @@ class WidgetOpsTest {
         }, store, { Instant.fromEpochSeconds(0) }, { "id" }), { day })
 
     @Test
-    fun `the phone's picture arrives with a session, and the watch's own taps stay queued`() {
+    fun `the phone's picture arrives with a session — and the watch's own taps stay queued`() {
         val store = WidgetStore(MemoryKeyValues())
         val tokens = CompanionTokens(MemoryKeyValues())
         store.saveSnapshot(WidgetSnapshot(summary, Instant.fromEpochSeconds(0), listOf(PendingAction.Water(250, "w1", day))))

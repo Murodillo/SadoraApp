@@ -29,7 +29,7 @@ class DeviceProfilesTest {
     }
 
     @Test
-    fun `a whoop day leads with recovery and strain, a garmin day with its own signals`() {
+    fun `a whoop day leads with recovery and strain — a garmin day with its own signals`() {
         val whoop = day(
             Triple(HealthMetric.HRV, 55.0, HealthProvider.WHOOP),
             Triple(HealthMetric.STRAIN, 9.4, HealthProvider.WHOOP),

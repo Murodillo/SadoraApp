@@ -67,7 +67,7 @@ class CompanionApiTest {
     }
 
     @Test
-    fun `no connection is offline, and a refused tap is rejected`() = runTest {
+    fun `no connection is offline — and a refused tap is rejected`() = runTest {
         val secrets = CompanionTokens(MemoryKeyValues()).apply { save("a", "r") }
         val offline = api(secrets) { throw io.ktor.utils.io.errors.IOException("no route") }
         assertEquals(WidgetCall.Offline, offline.summary())
@@ -76,7 +76,7 @@ class CompanionApiTest {
     }
 
     @Test
-    fun `a water tap is posted with its id, a dose to its medicine`() = runTest {
+    fun `a water tap is posted with its id — a dose to its medicine`() = runTest {
         val secrets = CompanionTokens(MemoryKeyValues()).apply { save("a", "r") }
         val bodies = mutableListOf<String>()
         val api = api(secrets) { request ->
