@@ -171,6 +171,7 @@ jobs:
           cp -r landing "$b/landing"
           cp sadora-backend/docker-compose.prod.yml sadora-backend/docker-compose.stage.yml \
             sadora-backend/deploy/nginx/spa.conf sadora-backend/deploy/nginx/landing.conf \
+            sadora-backend/deploy/otel/otelcol-config.yaml sadora-backend/deploy/otel/loki-config.yaml \
             sadora-backend/deploy/stage/sadora-ci "$b/infra/"
           echo "$GITHUB_SHA" > "$b/RELEASE"
           tar -czf bundle.tgz -C "$b" .

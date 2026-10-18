@@ -16,6 +16,9 @@ hikari = "6.3.0"
 postgresql = "42.7.13"
 lettuce = "6.7.1.RELEASE"
 logback = "1.5.18"
+# No higher than the API the OTel Java agent bundles (agent 2.32.0 → 1.66), or the
+# agent stops bridging the calls and the span attributes silently go nowhere.
+opentelemetry = "1.66.0"
 bcrypt = "0.10.2"
 kotlinx-serialization = "1.11.0"
 kotlinx-datetime = "0.7.0"
@@ -60,6 +63,7 @@ flyway-core = { module = "org.flywaydb:flyway-core", version.ref = "flyway" }
 flyway-postgresql = { module = "org.flywaydb:flyway-database-postgresql", version.ref = "flyway" }
 lettuce = { module = "io.lettuce:lettuce-core", version.ref = "lettuce" }
 logback = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }
+opentelemetry-api = { module = "io.opentelemetry:opentelemetry-api", version.ref = "opentelemetry" }
 bcrypt = { module = "at.favre.lib:bcrypt", version.ref = "bcrypt" }
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlinx-coroutines" }

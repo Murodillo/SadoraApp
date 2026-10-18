@@ -25,6 +25,7 @@ dependencies {
     // The doctor's report as a PDF: HTML laid out by openhtmltopdf onto PDFBox, with the
     // bundled Noto Sans so Cyrillic and Uzbek print the same on every machine.
     implementation(libs.openhtmltopdf.pdfbox)
+
     implementation(libs.ktor.server.core)
     implementation(libs.ktor.server.netty)
     implementation(libs.ktor.server.contentNegotiation)
@@ -62,6 +63,8 @@ dependencies {
     implementation(libs.bcrypt)
     implementation(libs.kotlinx.coroutines.core)
     runtimeOnly(libs.logback)
+    // No-op on its own; the OTel Java agent, where it runs, picks the calls up.
+    implementation(libs.opentelemetry.api)
 
     testImplementation(libs.kotlin.test)
     testImplementation(libs.ktor.server.testHost)

@@ -32,7 +32,7 @@ MAX_APK=$((256 * 1024 * 1024))
 SHA_RE='^[0-9a-f]{40}$'
 IMAGE_RE='^ghcr\.io/[a-z0-9_.-]+/[a-z0-9_./-]+@sha256:[0-9a-f]{64}$'
 GATE_PATH=${SADORA_GATE_PATH:-/usr/local/bin/sadora-ci}
-INFRA_FILES=(docker-compose.prod.yml docker-compose.stage.yml deploy/nginx/spa.conf deploy/nginx/landing.conf deploy/stage/sadora-ci)
+INFRA_FILES=(docker-compose.prod.yml docker-compose.stage.yml deploy/nginx/spa.conf deploy/nginx/landing.conf deploy/otel/otelcol-config.yaml deploy/otel/loki-config.yaml deploy/stage/sadora-ci)
 # The public hostnames. The gateway in front of this server terminates TLS for them and
 # forwards each to a port of its own (docker-compose.stage.yml); they never change, so the
 # APK and the panels carry them as they are.
