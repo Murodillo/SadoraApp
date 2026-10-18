@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The taken button: a raised clay pill. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="rectangle">
+            <gradient android:angle="290" android:startColor="#4FD8A0" android:endColor="#2BA57A" />
+            <corners android:radius="22dp" />
+        </shape>
+    </item>
+    <!-- The clay finish: a bright band on top fading out by the middle, a soft shade at the bottom. -->
+    <item>
+        <shape android:shape="rectangle">
+            <gradient android:angle="270" android:startColor="#40FFFFFF" android:centerColor="#00FFFFFF" android:endColor="#1A2A0A50" />
+            <corners android:radius="22dp" />
+        </shape>
+    </item>
+</layer-list>

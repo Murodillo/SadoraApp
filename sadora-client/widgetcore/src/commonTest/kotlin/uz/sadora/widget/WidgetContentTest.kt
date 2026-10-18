@@ -92,6 +92,16 @@ class WidgetContentTest {
     }
 
     @Test
+    fun `each stage brings its own look, and discretion hides it`() {
+        assertEquals(StageLook.CYCLE, build().stage.look)
+        assertEquals(StageLook.PREGNANCY, build(summary(stage = LifeStage.PREGNANCY, cycle = null, baseline = StageBaseline(dueDate = LocalDate(2027, 3, 14)))).stage.look)
+        assertEquals(StageLook.MENOPAUSE, build(summary(stage = LifeStage.MENOPAUSE, cycle = null)).stage.look)
+        assertEquals(StageLook.DISCREET, build(summary(discreet = true)).stage.look, "a pregnancy palette would say what the words no longer do")
+        val period = summary(cycle = CycleStatus(cycleDay = 2, phase = CyclePhase.PERIOD, daysUntilNextPeriod = 26, prediction = prediction, today = day))
+        assertEquals(StageLook.PERIOD, build(period).stage.look)
+    }
+
+    @Test
     fun `a widget not refreshed since yesterday counts the new day itself`() {
         val content = build(now = LocalDateTime(LocalDate(2026, 10, 17), LocalTime(7, 0)))
         assertEquals("15", content.stage.big)

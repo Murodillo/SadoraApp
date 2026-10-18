@@ -76,8 +76,21 @@ data class WidgetContent(
                     progress = null,
                 )
             }
-            // A number and a colour, nothing that names what the number counts.
-            return if (discreet) full.copy(title = WidgetStrings.NEUTRAL_TITLE, unit = null, line1 = null, line2 = null) else full
+            val look = when (summary.lifeStage) {
+                LifeStage.CYCLE -> if (full.phase == CyclePhase.PERIOD) StageLook.PERIOD else StageLook.CYCLE
+                LifeStage.TRYING_TO_CONCEIVE -> if (full.phase == CyclePhase.PERIOD) StageLook.PERIOD else StageLook.TTC
+                LifeStage.PREGNANCY -> StageLook.PREGNANCY
+                LifeStage.POSTPARTUM -> StageLook.POSTPARTUM
+                LifeStage.PERIMENOPAUSE -> StageLook.PERIMENOPAUSE
+                LifeStage.MENOPAUSE -> StageLook.MENOPAUSE
+            }
+            // A number and a neutral look, nothing that names what the number counts: a
+            // pregnancy's warm palette or a period's pink would say what the words no longer do.
+            return if (discreet) {
+                full.copy(title = WidgetStrings.NEUTRAL_TITLE, unit = null, line1 = null, line2 = null, look = StageLook.DISCREET)
+            } else {
+                full.copy(look = look)
+            }
         }
 
         private fun cycleStage(summary: WidgetSummary, today: LocalDate, s: WidgetStrings): StageBlock {
@@ -270,7 +283,15 @@ data class StageBlock(
     val phase: CyclePhase?,
     /** How far through the cycle or the pregnancy, 0..1, for the ring. */
     val progress: Float?,
+    /** Which gradient and clay icon the renderers draw the tile with. */
+    val look: StageLook = StageLook.CYCLE,
 )
+
+/**
+ * The stage tile's colours and icon, named once here so Glance, SwiftUI and the watches
+ * paint the same stage the same way. Each renderer maps it to its own resources.
+ */
+enum class StageLook { CYCLE, PERIOD, TTC, PREGNANCY, POSTPARTUM, PERIMENOPAUSE, MENOPAUSE, DISCREET }
 
 data class WaterBlock(
     val ml: Int,

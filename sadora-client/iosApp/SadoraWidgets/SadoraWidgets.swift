@@ -90,36 +90,43 @@ struct HomeWidgetView: View {
             if let content = host.contentAt(config: config, epochSeconds: Int64(entry.date.timeIntervalSince1970)) {
                 switch family {
                 case .systemSmall:
-                    StageTile(content: content, bigSize: 52)
+                    StageTile(content: content, bigSize: 54)
                         .padding(14)
                         .widgetURL(URL(string: "sadora://open/journey"))
-                        .containerBackground(for: .widget) { SadoraPalette.stageFill(content) }
+                        .containerBackground(for: .widget) {
+                            content.stageFill.overlay(LinearGradient(colors: [.white.opacity(0.28), .clear, .black.opacity(0.07)], startPoint: .top, endPoint: .bottom))
+                        }
                 case .systemMedium:
                     HStack(spacing: 8) {
-                        StageTile(content: content, bigSize: 40)
+                        StageTile(content: content, bigSize: 42)
                             .padding(12)
-                            .background(SadoraPalette.stageFill(content), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                            .clay(content.stageFill, radius: 22)
+                            .shadow(color: Color(hex: 0x7B61FF).opacity(0.25), radius: 6, y: 4)
                         VStack(spacing: 8) { SideBlocks(content: content, compact: true) }
                     }
-                    .padding(10)
-                    .containerBackground(.white, for: .widget)
+                    .padding(9)
+                    .containerBackground(SadoraPalette.card, for: .widget)
                 default:
                     VStack(spacing: 8) {
                         WideStageTile(content: content)
-                            .padding(.horizontal, 14).padding(.vertical, 10)
-                            .frame(height: 96)
-                            .background(SadoraPalette.stageFill(content), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                            .padding(.horizontal, 12).padding(.vertical, 9)
+                            .clay(content.stageFill, radius: 22)
+                            .shadow(color: Color(hex: 0x7B61FF).opacity(0.25), radius: 6, y: 4)
                         SideBlocks(content: content, compact: false)
+                        Spacer(minLength: 0)
                     }
-                    .padding(10)
-                    .containerBackground(.white, for: .widget)
+                    .padding(9)
+                    .containerBackground(SadoraPalette.card, for: .widget)
                 }
             } else {
-                Text(host.signInText())
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundStyle(SadoraPalette.muted)
-                    .multilineTextAlignment(.center)
-                    .containerBackground(.white, for: .widget)
+                VStack(spacing: 6) {
+                    Image("clay_heart").resizable().scaledToFit().frame(width: 44, height: 44)
+                    Text(host.signInText())
+                        .font(.system(size: 13, weight: .heavy, design: .rounded))
+                        .foregroundStyle(SadoraPalette.muted)
+                        .multilineTextAlignment(.center)
+                }
+                .containerBackground(SadoraPalette.card, for: .widget)
             }
         }
     }
@@ -132,59 +139,81 @@ struct SideBlocks: View {
 
     var body: some View {
         if content.locked {
-            ValueTile(title: "🔒 " + content.lockText, value: "", tint: Color(hex: 0xF7F5FF), accent: SadoraPalette.dose) { EmptyView() }
+            ValueTile(icon: "clay_crown", title: content.lockText, value: "", fill: SadoraPalette.premiumTile, accent: SadoraPalette.stepsInk) { EmptyView() }
         } else {
             if let water = content.water {
-                ValueTile(title: water.title, value: water.label, tint: SadoraPalette.waterTint, accent: SadoraPalette.water) {
+                ValueTile(icon: "clay_water", title: water.title, value: water.label, fill: SadoraPalette.waterTile, accent: SadoraPalette.waterInk) {
                     Button(intent: AddWaterIntent(ml: Int(water.stepMl))) {
-                        PillLabel(text: compact ? "+\(water.stepMl)" : water.stepLabel, color: SadoraPalette.water)
+                        PillLabel(text: compact ? "+\(water.stepMl)" : water.stepLabel, fill: SadoraPalette.waterButton)
                     }
                     .buttonStyle(.plain)
                 }
+                .frame(maxHeight: compact ? .infinity : 52)
             }
             if let doses = content.doses {
                 if compact || doses.rows.isEmpty {
                     let next = doses.next
                     ValueTile(
+                        icon: "clay_meds",
                         title: next.map { "\($0.name) · \($0.time)" } ?? doses.title,
                         value: doses.label,
-                        tint: SadoraPalette.doseTint,
-                        accent: SadoraPalette.dose
+                        fill: SadoraPalette.doseTile,
+                        accent: SadoraPalette.doseInk
                     ) {
                         if let next { DoseButton(line: next) }
                     }
                 } else {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("\(doses.title) · \(doses.label)").font(.system(size: 11, weight: .bold)).foregroundStyle(SadoraPalette.dose)
+                        HStack(spacing: 6) {
+                            Image("clay_meds").resizable().scaledToFit().frame(width: 24, height: 24)
+                            Text("\(doses.title) · \(doses.label)").font(.system(size: 12, weight: .heavy, design: .rounded)).foregroundStyle(SadoraPalette.doseInk)
+                        }
                         ForEach(Array(doses.rows.prefix(3).enumerated()), id: \.offset) { _, row in
                             HStack {
-                                Text("\(row.name) · \(row.time)").font(.system(size: 13, weight: .bold)).foregroundStyle(SadoraPalette.ink).lineLimit(1)
+                                Text("\(row.name) · \(row.time)").font(.system(size: 13, weight: .heavy, design: .rounded)).foregroundStyle(SadoraPalette.ink).lineLimit(1)
                                 Spacer(minLength: 0)
                                 if row.status == ContractDoseStatus.taken {
-                                    Image(systemName: "checkmark.circle.fill").foregroundStyle(SadoraPalette.taken).font(.system(size: 22))
+                                    Image(systemName: "checkmark").font(.system(size: 13, weight: .black)).foregroundStyle(.white)
+                                        .frame(width: 32, height: 32).clay(SadoraPalette.takenButton, radius: 16)
                                 } else {
                                     DoseButton(line: row)
                                 }
                             }
                         }
                     }
-                    .padding(.horizontal, 10).padding(.vertical, 6)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                    .background(SadoraPalette.doseTint, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .padding(.horizontal, 10).padding(.vertical, 7)
+                    .frame(maxWidth: .infinity, alignment: .topLeading)
+                    .clay(SadoraPalette.doseTile, radius: 18)
                 }
             }
             if let health = content.health, !(compact && content.water != nil && content.doses != nil) {
                 if health.connectPrompt {
-                    ValueTile(title: health.connectText, value: "", tint: SadoraPalette.healthTint, accent: SadoraPalette.ink) { EmptyView() }
+                    ValueTile(icon: "clay_watch", title: health.connectText, value: "", fill: SadoraPalette.sleepTile, accent: SadoraPalette.ink) { EmptyView() }
                         .widgetURL(URL(string: "sadora://open/devices"))
                 } else {
                     HStack(spacing: 8) {
                         ForEach(Array(health.items.enumerated()), id: \.offset) { _, item in
-                            ValueTile(title: item.label, value: item.value, tint: SadoraPalette.healthTint, accent: SadoraPalette.muted) { EmptyView() }
+                            HealthTile(item: item)
                         }
                     }
+                    .frame(maxHeight: compact ? .infinity : 52)
                 }
             }
+        }
+    }
+}
+
+struct HealthTile: View {
+    let item: HealthItem
+
+    var body: some View {
+        switch item.metric {
+        case ContractHealthMetric.steps:
+            ValueTile(icon: "clay_active", title: item.label, value: item.value, fill: SadoraPalette.stepsTile, accent: SadoraPalette.stepsInk) { EmptyView() }
+        case ContractHealthMetric.sleepDuration:
+            ValueTile(icon: "clay_sleep", title: item.label, value: item.value, fill: SadoraPalette.sleepTile, accent: SadoraPalette.doseInk) { EmptyView() }
+        default:
+            ValueTile(icon: "clay_heart", title: item.label, value: item.value, fill: SadoraPalette.doseTile, accent: SadoraPalette.doseInk) { EmptyView() }
         }
     }
 }
@@ -194,7 +223,7 @@ struct DoseButton: View {
 
     var body: some View {
         Button(intent: MarkDoseIntent(medicationId: line.medicationId, day: "\(line.dueOn)", time: String("\(line.dueAt)".prefix(5)))) {
-            PillLabel(text: "✓", color: SadoraPalette.dose)
+            PillLabel(text: "✓", fill: SadoraPalette.doseButton)
         }
         .buttonStyle(.plain)
     }

@@ -10,6 +10,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
+import androidx.glance.Image
 import androidx.glance.ImageProvider
 import androidx.glance.LocalSize
 import androidx.glance.action.actionParametersOf
@@ -30,6 +31,8 @@ import androidx.glance.layout.Alignment
 import androidx.glance.layout.Box
 import androidx.glance.layout.Column
 import androidx.glance.layout.ColumnScope
+import androidx.glance.layout.RowScope
+import androidx.glance.layout.ContentScale
 import androidx.glance.layout.Row
 import androidx.glance.layout.Spacer
 import androidx.glance.layout.fillMaxHeight
@@ -48,9 +51,10 @@ import androidx.glance.unit.ColorProvider
 import kotlinx.coroutines.withTimeoutOrNull
 import uz.sadora.app.MainActivity
 import uz.sadora.app.R
-import uz.sadora.contract.CyclePhase
 import uz.sadora.contract.DoseStatus
 import uz.sadora.widget.DoseLine
+import uz.sadora.widget.HealthItem
+import uz.sadora.widget.StageLook
 import uz.sadora.widget.WidgetConfig
 import uz.sadora.widget.WidgetContent
 import uz.sadora.widget.WidgetHost
@@ -114,61 +118,90 @@ class SadoraWidget : GlanceAppWidget() {
 }
 
 // -------------------------------------------------------------------- layout
+//
+// The clay look of the app: every surface a gradient with a bright band on top and a soft
+// shade at the bottom (the widget_* drawables), and the app's clay icons beside each block.
 
 private val Ink = ColorProvider(Color(0xFF1A1630))
 private val Muted = ColorProvider(Color(0xFF66617F))
 private val White = ColorProvider(Color.White)
 private val WarmInk = ColorProvider(Color(0xFF2A1145))
-private val Surface = ColorProvider(Color(0xFFFFFFFF))
-private val WaterTint = Color(0xFFE8F6FF)
-private val WaterAccent = Color(0xFF1C88C8)
-private val DoseTint = Color(0xFFF1EDFF)
-private val DoseAccent = Color(0xFF6247E0)
-private val HealthTint = Color(0xFFFFE9F4)
+private val WaterInk = ColorProvider(Color(0xFF146A94))
+private val DoseInk = ColorProvider(Color(0xFF6247E0))
+private val StepsInk = ColorProvider(Color(0xFF7F5100))
 
 @Composable
 private fun WidgetBody(content: WidgetContent?, size: WidgetSize, config: WidgetConfig, signIn: String) {
-    val root = GlanceModifier.fillMaxSize().background(Surface).cornerRadius(26.dp).padding(8.dp)
+    val card = GlanceModifier.fillMaxSize().background(ImageProvider(R.drawable.widget_tile_card)).cornerRadius(28.dp).padding(9.dp)
     if (content == null) {
-        Box(root.clickable(openApp("today")), contentAlignment = Alignment.Center) {
-            Text(signIn, style = TextStyle(color = Muted, fontSize = 14.sp, fontWeight = FontWeight.Bold))
+        Column(card.clickable(openApp("today")), horizontalAlignment = Alignment.CenterHorizontally, verticalAlignment = Alignment.CenterVertically) {
+            ClayIcon(R.drawable.widget_clay_heart, 44)
+            Spacer(GlanceModifier.height(6.dp))
+            Text(signIn, style = TextStyle(color = Muted, fontSize = 13.sp, fontWeight = FontWeight.Bold))
         }
         return
     }
-    val warm = content.stage.unit != null && content.stage.phase == null && !content.discreet
     when (size) {
-        WidgetSize.SMALL -> Box(GlanceModifier.fillMaxSize().cornerRadius(26.dp)) { StageTile(content, warm, big = 52, GlanceModifier.fillMaxSize()) }
-        WidgetSize.MEDIUM -> Row(root) {
-            StageTile(content, warm, big = 40, GlanceModifier.defaultWeight().fillMaxHeight())
+        WidgetSize.SMALL -> StageTile(content, big = 54, GlanceModifier.fillMaxSize())
+        WidgetSize.MEDIUM -> Row(card) {
+            StageTile(content, big = 42, GlanceModifier.defaultWeight().fillMaxHeight())
             Spacer(GlanceModifier.width(8.dp))
             Column(GlanceModifier.defaultWeight().fillMaxHeight()) { SideBlocks(content, config, compact = true) }
         }
-        WidgetSize.LARGE -> Column(root) {
-            WideStageTile(content, warm, GlanceModifier.fillMaxWidth().height(92.dp))
+        WidgetSize.LARGE -> Column(card) {
+            WideStageTile(content, GlanceModifier.fillMaxWidth().height(86.dp))
             Spacer(GlanceModifier.height(8.dp))
             SideBlocks(content, config, compact = false)
         }
     }
 }
 
+private fun StageLook.background(): Int = when (this) {
+    StageLook.CYCLE -> R.drawable.widget_stage_cycle
+    StageLook.PERIOD -> R.drawable.widget_stage_period
+    StageLook.TTC -> R.drawable.widget_stage_ttc
+    StageLook.PREGNANCY -> R.drawable.widget_stage_pregnancy
+    StageLook.POSTPARTUM -> R.drawable.widget_stage_postpartum
+    StageLook.PERIMENOPAUSE -> R.drawable.widget_stage_perimenopause
+    StageLook.MENOPAUSE -> R.drawable.widget_stage_menopause
+    StageLook.DISCREET -> R.drawable.widget_stage_discreet
+}
+
+private fun StageLook.icon(): Int = when (this) {
+    StageLook.CYCLE -> R.drawable.widget_clay_cycle
+    StageLook.PERIOD -> R.drawable.widget_clay_period
+    StageLook.TTC -> R.drawable.widget_clay_ttc
+    StageLook.PREGNANCY -> R.drawable.widget_clay_pregnancy
+    StageLook.POSTPARTUM -> R.drawable.widget_clay_postpartum
+    StageLook.PERIMENOPAUSE -> R.drawable.widget_clay_perimenopause
+    StageLook.MENOPAUSE -> R.drawable.widget_clay_menopause
+    StageLook.DISCREET -> R.drawable.widget_clay_heart
+}
+
+/** Pregnancy and postpartum gradients are too light for white type, as in the app. */
+private fun StageLook.ink() = if (this == StageLook.PREGNANCY || this == StageLook.POSTPARTUM) WarmInk else White
+
 @Composable
-private fun StageTile(content: WidgetContent, warm: Boolean, big: Int, modifier: GlanceModifier) {
+private fun ClayIcon(res: Int, size: Int) {
+    Image(ImageProvider(res), contentDescription = null, modifier = GlanceModifier.size(size.dp), contentScale = ContentScale.Fit)
+}
+
+@Composable
+private fun StageTile(content: WidgetContent, big: Int, modifier: GlanceModifier) {
     val stage = content.stage
-    val bg = when {
-        warm -> R.drawable.widget_stage_warm_bg
-        stage.phase == CyclePhase.PERIOD -> R.drawable.widget_stage_period_bg
-        else -> R.drawable.widget_stage_bg
-    }
-    val ink = if (warm) WarmInk else White
+    val ink = stage.look.ink()
     Column(
         modifier
-            .background(ImageProvider(bg))
-            .cornerRadius(22.dp)
+            .background(ImageProvider(stage.look.background()))
+            .cornerRadius(24.dp)
             .padding(12.dp)
             .clickable(openApp("journey"))
             .semantics { contentDescription = listOfNotNull(stage.title, stage.big, stage.unit, stage.line1, stage.line2).joinToString(", ") },
     ) {
-        Text(stage.title, style = TextStyle(color = ink, fontSize = 12.sp, fontWeight = FontWeight.Bold), maxLines = 1)
+        Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
+            Text(stage.title, style = TextStyle(color = ink, fontSize = 12.sp, fontWeight = FontWeight.Bold), maxLines = 1, modifier = GlanceModifier.defaultWeight())
+            ClayIcon(stage.look.icon(), 38)
+        }
         Spacer(GlanceModifier.defaultWeight())
         Row(verticalAlignment = Alignment.Bottom) {
             Text(stage.big, style = TextStyle(color = ink, fontSize = big.sp, fontWeight = FontWeight.Bold))
@@ -180,22 +213,19 @@ private fun StageTile(content: WidgetContent, warm: Boolean, big: Int, modifier:
     }
 }
 
-/** The large widget's banner: the words on the left, the number on the right. */
+/** The large widget's banner: icon, the words, and the number on the right. */
 @Composable
-private fun WideStageTile(content: WidgetContent, warm: Boolean, modifier: GlanceModifier) {
+private fun WideStageTile(content: WidgetContent, modifier: GlanceModifier) {
     val stage = content.stage
-    val bg = when {
-        warm -> R.drawable.widget_stage_warm_bg
-        stage.phase == CyclePhase.PERIOD -> R.drawable.widget_stage_period_bg
-        else -> R.drawable.widget_stage_bg
-    }
-    val ink = if (warm) WarmInk else White
+    val ink = stage.look.ink()
     Row(
-        modifier.background(ImageProvider(bg)).cornerRadius(22.dp).padding(horizontal = 14.dp, vertical = 10.dp)
+        modifier.background(ImageProvider(stage.look.background())).cornerRadius(24.dp).padding(horizontal = 12.dp, vertical = 8.dp)
             .clickable(openApp("journey"))
             .semantics { contentDescription = listOfNotNull(stage.title, stage.big, stage.unit, stage.line1, stage.line2).joinToString(", ") },
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        ClayIcon(stage.look.icon(), 48)
+        Spacer(GlanceModifier.width(10.dp))
         Column(GlanceModifier.defaultWeight()) {
             Text(stage.title, style = TextStyle(color = ink, fontSize = 12.sp, fontWeight = FontWeight.Bold), maxLines = 1)
             stage.line1?.let { Text(it, style = TextStyle(color = ink, fontSize = 13.sp, fontWeight = FontWeight.Bold), maxLines = 1) }
@@ -209,22 +239,27 @@ private fun WideStageTile(content: WidgetContent, warm: Boolean, modifier: Glanc
 @Composable
 private fun ColumnScope.SideBlocks(content: WidgetContent, config: WidgetConfig, compact: Boolean) {
     if (content.locked) {
-        Tile(Color(0xFFF7F5FF), GlanceModifier.defaultWeight(), openApp("today")) {
-            Text("🔒 ${content.lockText}", style = TextStyle(color = ColorProvider(DoseAccent), fontSize = 12.sp, fontWeight = FontWeight.Bold))
+        Tile(R.drawable.widget_tile_premium, GlanceModifier.defaultWeight(), openApp("today")) {
+            ClayIcon(R.drawable.widget_clay_crown, 34)
+            Spacer(GlanceModifier.width(8.dp))
+            Text(content.lockText, style = TextStyle(color = StepsInk, fontSize = 12.sp, fontWeight = FontWeight.Bold), maxLines = 2, modifier = GlanceModifier.defaultWeight())
         }
         return
     }
     content.water?.let { water ->
         // Beside the stage the tiles share the height; under it each keeps its own.
-        Tile(WaterTint, if (compact) GlanceModifier.defaultWeight() else GlanceModifier, openApp("water")) {
+        Tile(R.drawable.widget_tile_water, if (compact) GlanceModifier.defaultWeight() else GlanceModifier, openApp("water")) {
+            ClayIcon(R.drawable.widget_clay_water, if (compact) 28 else 32)
+            Spacer(GlanceModifier.width(6.dp))
             Column(GlanceModifier.defaultWeight()) {
-                Text(water.title, style = TextStyle(color = ColorProvider(WaterAccent), fontSize = 11.sp, fontWeight = FontWeight.Bold))
-                Text(water.label, style = TextStyle(color = Ink, fontSize = if (compact) 15.sp else 17.sp, fontWeight = FontWeight.Bold), maxLines = 1)
+                Text(water.title, style = TextStyle(color = WaterInk, fontSize = 11.sp, fontWeight = FontWeight.Bold))
+                Text(water.label, style = TextStyle(color = Ink, fontSize = if (compact) 14.sp else 16.sp, fontWeight = FontWeight.Bold), maxLines = 1)
             }
-            ActionPill(
+            ClayButton(
                 if (compact) "+${water.stepMl}" else water.stepLabel,
-                WaterAccent,
+                R.drawable.widget_button_water,
                 actionRunCallback<AddWaterAction>(actionParametersOf(AddWaterAction.Ml to water.stepMl)),
+                wide = !compact,
             )
         }
         Spacer(GlanceModifier.height(6.dp))
@@ -232,17 +267,23 @@ private fun ColumnScope.SideBlocks(content: WidgetContent, config: WidgetConfig,
     content.doses?.let { doses ->
         if (compact || doses.rows.isEmpty()) {
             val next = doses.next
-            Tile(DoseTint, GlanceModifier.defaultWeight(), openApp("medications")) {
+            Tile(R.drawable.widget_tile_dose, GlanceModifier.defaultWeight(), openApp("medications")) {
+                ClayIcon(R.drawable.widget_clay_meds, 28)
+                Spacer(GlanceModifier.width(6.dp))
                 Column(GlanceModifier.defaultWeight()) {
-                    Text(next?.let { "${it.name} · ${it.time}" } ?: doses.title, style = TextStyle(color = ColorProvider(DoseAccent), fontSize = 11.sp, fontWeight = FontWeight.Bold), maxLines = 1)
-                    Text(doses.label, style = TextStyle(color = Ink, fontSize = 15.sp, fontWeight = FontWeight.Bold))
+                    Text(next?.let { "${it.name} · ${it.time}" } ?: doses.title, style = TextStyle(color = DoseInk, fontSize = 11.sp, fontWeight = FontWeight.Bold), maxLines = 1)
+                    Text(doses.label, style = TextStyle(color = Ink, fontSize = 14.sp, fontWeight = FontWeight.Bold))
                 }
-                next?.let { ActionPill("✓", DoseAccent, markDose(it)) }
+                next?.let { ClayButton("✓", R.drawable.widget_button_dose, markDose(it)) }
             }
         } else {
-            Tile(DoseTint, GlanceModifier.fillMaxWidth(), openApp("medications")) {
+            Tile(R.drawable.widget_tile_dose, GlanceModifier.fillMaxWidth(), openApp("medications")) {
                 Column(GlanceModifier.defaultWeight()) {
-                    Text("${doses.title} · ${doses.label}", style = TextStyle(color = ColorProvider(DoseAccent), fontSize = 11.sp, fontWeight = FontWeight.Bold))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        ClayIcon(R.drawable.widget_clay_meds, 24)
+                        Spacer(GlanceModifier.width(6.dp))
+                        Text("${doses.title} · ${doses.label}", style = TextStyle(color = DoseInk, fontSize = 12.sp, fontWeight = FontWeight.Bold))
+                    }
                     doses.rows.take(MAX_ROWS).forEach { row -> DoseRow(row) }
                 }
             }
@@ -250,22 +291,41 @@ private fun ColumnScope.SideBlocks(content: WidgetContent, config: WidgetConfig,
         Spacer(GlanceModifier.height(6.dp))
     }
     content.health?.let { health ->
-        if (compact && (content.water != null && content.doses != null)) return@let
-        Tile(HealthTint, GlanceModifier.defaultWeight(), openApp(if (health.connectPrompt) "devices" else "today")) {
-            if (health.connectPrompt) {
+        if (compact && content.water != null && content.doses != null) return@let
+        if (health.connectPrompt) {
+            Tile(R.drawable.widget_tile_sleep, GlanceModifier.defaultWeight(), openApp("devices")) {
+                ClayIcon(R.drawable.widget_clay_watch, 30)
+                Spacer(GlanceModifier.width(8.dp))
                 Text(health.connectText, style = TextStyle(color = Ink, fontSize = 13.sp, fontWeight = FontWeight.Bold))
-            } else {
-                health.items.forEach { item ->
-                    Column(GlanceModifier.defaultWeight()) {
-                        Text(item.label, style = TextStyle(color = Muted, fontSize = 11.sp, fontWeight = FontWeight.Bold), maxLines = 1)
-                        Text(item.value, style = TextStyle(color = Ink, fontSize = 15.sp, fontWeight = FontWeight.Bold), maxLines = 1)
-                    }
+            }
+        } else {
+            Row(GlanceModifier.fillMaxWidth()) {
+                health.items.forEachIndexed { index, item ->
+                    if (index > 0) Spacer(GlanceModifier.width(6.dp))
+                    HealthTile(item, GlanceModifier.defaultWeight())
                 }
             }
         }
     }
     if (content.needsRefresh && content.doses == null && WidgetBlockDoses in config.blocks) {
         Text(content.updatingText, style = TextStyle(color = Muted, fontSize = 11.sp))
+    }
+}
+
+@Composable
+private fun HealthTile(item: HealthItem, modifier: GlanceModifier) {
+    val (tile, icon, ink) = when (item.metric) {
+        uz.sadora.contract.HealthMetric.STEPS -> Triple(R.drawable.widget_tile_steps, R.drawable.widget_clay_active, StepsInk)
+        uz.sadora.contract.HealthMetric.SLEEP_DURATION -> Triple(R.drawable.widget_tile_sleep, R.drawable.widget_clay_sleep, DoseInk)
+        else -> Triple(R.drawable.widget_tile_dose, R.drawable.widget_clay_heart, DoseInk)
+    }
+    Tile(tile, modifier, openApp("today")) {
+        ClayIcon(icon, 28)
+        Spacer(GlanceModifier.width(6.dp))
+        Column {
+            Text(item.label, style = TextStyle(color = ink, fontSize = 11.sp, fontWeight = FontWeight.Bold), maxLines = 1)
+            Text(item.value, style = TextStyle(color = Ink, fontSize = 15.sp, fontWeight = FontWeight.Bold), maxLines = 1)
+        }
     }
 }
 
@@ -277,28 +337,28 @@ private fun DoseRow(row: DoseLine) {
     Row(GlanceModifier.fillMaxWidth().padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
         Text("${row.name} · ${row.time}", style = TextStyle(color = Ink, fontSize = 13.sp, fontWeight = FontWeight.Bold), maxLines = 1, modifier = GlanceModifier.defaultWeight())
         if (row.status == DoseStatus.TAKEN) {
-            Box(GlanceModifier.size(30.dp).background(Color(0xFF2BA57A)).cornerRadius(15.dp), contentAlignment = Alignment.Center) {
+            Box(GlanceModifier.size(32.dp).background(ImageProvider(R.drawable.widget_button_taken)).cornerRadius(16.dp), contentAlignment = Alignment.Center) {
                 Text("✓", style = TextStyle(color = White, fontSize = 14.sp, fontWeight = FontWeight.Bold))
             }
         } else {
-            ActionPill("✓", DoseAccent, markDose(row))
+            ClayButton("✓", R.drawable.widget_button_dose, markDose(row))
         }
     }
 }
 
 @Composable
-private fun Tile(tint: Color, modifier: GlanceModifier, onTap: androidx.glance.action.Action, content: @Composable androidx.glance.layout.RowScope.() -> Unit) {
+private fun Tile(background: Int, modifier: GlanceModifier, onTap: androidx.glance.action.Action, content: @Composable RowScope.() -> Unit) {
     Row(
-        modifier.fillMaxWidth().background(tint).cornerRadius(18.dp).padding(horizontal = 10.dp, vertical = 6.dp).clickable(onTap),
+        modifier.fillMaxWidth().background(ImageProvider(background)).cornerRadius(20.dp).padding(horizontal = 9.dp, vertical = 6.dp).clickable(onTap),
         verticalAlignment = Alignment.CenterVertically,
     ) { content() }
 }
 
-/** At least 44dp: a widget's button is pressed with a thumb, mid-stride. */
+/** A raised clay pill, at least 44dp: a widget's button is pressed with a thumb, mid-stride. */
 @Composable
-private fun ActionPill(label: String, color: Color, action: androidx.glance.action.Action) {
+private fun ClayButton(label: String, background: Int, action: androidx.glance.action.Action, wide: Boolean = false) {
     Box(
-        GlanceModifier.size(width = 52.dp, height = 44.dp).background(color).cornerRadius(22.dp).clickable(action),
+        GlanceModifier.size(width = if (wide) 76.dp else 48.dp, height = 44.dp).background(ImageProvider(background)).cornerRadius(22.dp).clickable(action),
         contentAlignment = Alignment.Center,
     ) {
         Text(label, style = TextStyle(color = White, fontSize = 13.sp, fontWeight = FontWeight.Bold))

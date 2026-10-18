@@ -134,47 +134,66 @@ struct WatchHome: View {
                 VStack(spacing: 8) {
                     StageTile(content: content, bigSize: 34)
                         .padding(10)
-                        .frame(height: 96)
-                        .background(SadoraPalette.stageFill(content), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                        .frame(height: 100)
+                        .clay(content.stageFill, radius: 20)
                     if content.locked {
-                        Text(content.lockText).font(.footnote).multilineTextAlignment(.center)
+                        HStack(spacing: 6) {
+                            Image("clay_crown").resizable().scaledToFit().frame(width: 28, height: 28)
+                            Text(content.lockText).font(.system(size: 13, weight: .heavy, design: .rounded))
+                        }
                     }
                     if let water = content.water {
                         Button(action: model.addWater) {
-                            HStack {
-                                VStack(alignment: .leading) {
-                                    Text(water.title).font(.caption2)
-                                    Text(water.label).font(.headline)
+                            HStack(spacing: 8) {
+                                Image("clay_water").resizable().scaledToFit().frame(width: 30, height: 30)
+                                VStack(alignment: .leading, spacing: 0) {
+                                    Text(water.title).font(.system(size: 11, weight: .heavy, design: .rounded))
+                                    Text(water.label).font(.system(size: 16, weight: .black, design: .rounded))
                                 }
-                                Spacer()
-                                Text(water.stepLabel).font(.footnote.bold())
+                                Spacer(minLength: 0)
+                                Text("+\(water.stepMl)").font(.system(size: 13, weight: .black, design: .rounded))
+                                    .padding(.horizontal, 8).padding(.vertical, 6)
+                                    .clay(SadoraPalette.waterButton, radius: 14)
                             }
                         }
-                        .tint(SadoraPalette.water)
+                        .buttonStyle(.plain)
+                        .padding(8)
+                        .clay(SadoraPalette.gradient([0x12405E, 0x0E2A40]), radius: 18)
                     }
                     if let doses = content.doses {
                         ForEach(Array(doses.rows.enumerated()), id: \.offset) { _, row in
+                            let taken = row.status == ContractDoseStatus.taken
                             Button { model.markDose(row) } label: {
-                                HStack {
-                                    VStack(alignment: .leading) {
-                                        Text(row.name).font(.footnote.bold()).lineLimit(1)
-                                        Text(row.time).font(.caption2)
+                                HStack(spacing: 8) {
+                                    Image("clay_meds").resizable().scaledToFit().frame(width: 28, height: 28)
+                                    VStack(alignment: .leading, spacing: 0) {
+                                        Text(row.name).font(.system(size: 13, weight: .heavy, design: .rounded)).lineLimit(1)
+                                        Text(row.time).font(.system(size: 11, weight: .semibold, design: .rounded))
                                     }
-                                    Spacer()
-                                    Image(systemName: row.status == ContractDoseStatus.taken ? "checkmark.circle.fill" : "circle")
+                                    Spacer(minLength: 0)
+                                    Image(systemName: taken ? "checkmark" : "circle")
+                                        .font(.system(size: 13, weight: .black))
+                                        .frame(width: 30, height: 30)
+                                        .clay(taken ? SadoraPalette.takenButton : SadoraPalette.doseButton, radius: 15)
                                 }
                             }
-                            .tint(SadoraPalette.dose)
-                            .disabled(row.status == ContractDoseStatus.taken)
+                            .buttonStyle(.plain)
+                            .disabled(taken)
+                            .padding(8)
+                            .clay(SadoraPalette.gradient([0x33296A, 0x221C48]), radius: 18)
                         }
                     }
                     if let health = content.health, !health.connectPrompt {
                         ForEach(Array(health.items.enumerated()), id: \.offset) { _, item in
-                            HStack {
-                                Text(item.label).font(.caption2)
+                            HStack(spacing: 8) {
+                                Image(item.metric == ContractHealthMetric.steps ? "clay_active" : (item.metric == ContractHealthMetric.sleepDuration ? "clay_sleep" : "clay_heart"))
+                                    .resizable().scaledToFit().frame(width: 26, height: 26)
+                                Text(item.label).font(.system(size: 12, weight: .heavy, design: .rounded))
                                 Spacer()
-                                Text(item.value).font(.footnote.bold())
+                                Text(item.value).font(.system(size: 14, weight: .black, design: .rounded))
                             }
+                            .padding(8)
+                            .clay(SadoraPalette.gradient([0x2A2350, 0x1C1838]), radius: 16)
                         }
                     }
                 }
@@ -182,8 +201,9 @@ struct WatchHome: View {
             .refreshable { await model.refresh() }
         } else {
             VStack(spacing: 8) {
-                Text("Sadora").font(.headline)
-                Text("iPhone'da Sadora'ni oching").font(.footnote).multilineTextAlignment(.center)
+                Image("clay_heart").resizable().scaledToFit().frame(width: 44, height: 44)
+                Text("Sadora").font(.system(size: 17, weight: .black, design: .rounded))
+                Text("iPhone'da Sadora'ni oching").font(.system(size: 13, weight: .semibold, design: .rounded)).multilineTextAlignment(.center)
             }
         }
     }

@@ -13,8 +13,3 @@ enum SadoraKitHost {
         (Bundle.main.object(forInfoDictionaryKey: key) as? String).flatMap { $0.isEmpty ? nil : $0 }
     }
 }
-
-extension WidgetContent {
-    /// Pregnancy and postpartum draw on the warm palette, as the app does.
-    var isWarm: Bool { stage.unit != nil && stage.phase == nil && !discreet }
-}

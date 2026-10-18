@@ -1,6 +1,28 @@
 package uz.sadora.app.ui.settings
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.offset
+import org.jetbrains.compose.resources.DrawableResource
+import org.jetbrains.compose.resources.painterResource
+import uz.sadora.app.resources.Res
+import uz.sadora.app.resources.ic3d_active
+import uz.sadora.app.resources.ic3d_crown
+import uz.sadora.app.resources.ic3d_cycle
+import uz.sadora.app.resources.ic3d_heart
+import uz.sadora.app.resources.ic3d_home
+import uz.sadora.app.resources.ic3d_meds
+import uz.sadora.app.resources.ic3d_menopause
+import uz.sadora.app.resources.ic3d_period
+import uz.sadora.app.resources.ic3d_perimenopause
+import uz.sadora.app.resources.ic3d_postpartum
+import uz.sadora.app.resources.ic3d_pregnancy
+import uz.sadora.app.resources.ic3d_sleep
+import uz.sadora.app.resources.ic3d_ttc
+import uz.sadora.app.resources.ic3d_watch
+import uz.sadora.app.resources.ic3d_water
+import uz.sadora.widget.StageLook
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -95,7 +117,7 @@ fun WidgetsScreen(
                     if (content == null) {
                         Text(t.previewEmpty, style = Sadora.type.body, color = Sadora.colors.muted)
                     } else {
-                        WidgetPreview(content, config.size, state.lifeStage.isWarm())
+                        WidgetPreview(content, config.size)
                     }
                 }
             }
@@ -103,10 +125,10 @@ fun WidgetsScreen(
             item {
                 SadoraCard {
                     CardLabel(t.blocks)
-                    BlockRow(t.stageBlock, t.stageBlockNote, checked = true, enabled = false) {}
-                    BlockRow(t.waterBlock, null, WidgetBlock.WATER in config.blocks, premium) { widgets.toggle(WidgetBlock.WATER) }
-                    BlockRow(t.dosesBlock, null, WidgetBlock.DOSES in config.blocks, premium) { widgets.toggle(WidgetBlock.DOSES) }
-                    BlockRow(t.healthBlock, null, WidgetBlock.HEALTH in config.blocks, premium) { widgets.toggle(WidgetBlock.HEALTH) }
+                    BlockRow(Res.drawable.ic3d_cycle, t.stageBlock, t.stageBlockNote, checked = true, enabled = false) {}
+                    BlockRow(Res.drawable.ic3d_water, t.waterBlock, null, WidgetBlock.WATER in config.blocks, premium) { widgets.toggle(WidgetBlock.WATER) }
+                    BlockRow(Res.drawable.ic3d_meds, t.dosesBlock, null, WidgetBlock.DOSES in config.blocks, premium) { widgets.toggle(WidgetBlock.DOSES) }
+                    BlockRow(Res.drawable.ic3d_watch, t.healthBlock, null, WidgetBlock.HEALTH in config.blocks, premium) { widgets.toggle(WidgetBlock.HEALTH) }
                     if (premium && WidgetBlock.WATER in config.blocks) {
                         CardLabel(t.waterStep)
                         ChipFlowRow {
@@ -178,13 +200,14 @@ fun WidgetsScreen(
 }
 
 @Composable
-private fun BlockRow(title: String, note: String?, checked: Boolean, enabled: Boolean, onToggle: () -> Unit) {
+private fun BlockRow(art: DrawableResource, title: String, note: String?, checked: Boolean, enabled: Boolean, onToggle: () -> Unit) {
     val c = Sadora.colors
     Row(
         Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
     ) {
+        ClayIcon(art, 34)
         Column(Modifier.weight(1f)) {
             Text(title, style = Sadora.type.h3, color = if (enabled || checked) c.text else c.muted)
             note?.let { Text(it, style = Sadora.type.body, color = c.muted) }
@@ -193,47 +216,97 @@ private fun BlockRow(title: String, note: String?, checked: Boolean, enabled: Bo
     }
 }
 
-private fun uz.sadora.app.model.LifeStage.isWarm() =
-    this == uz.sadora.app.model.LifeStage.Pregnancy || this == uz.sadora.app.model.LifeStage.Postpartum
-
 private const val MAX_METRICS = 2
 
 // -------------------------------------------------------------------- the preview
+//
+// The clay look the widgets have on the home screen: gradients with a bright band on top
+// and a soft shade below, and the app's clay icons beside each block.
+
+private fun StageLook.colors(): List<Color> = when (this) {
+    StageLook.PERIOD -> listOf(Color(0xFFD42A78), Color(0xFFE8478F), Color(0xFFFF6FB8))
+    StageLook.TTC -> listOf(Color(0xFF7B61FF), Color(0xFFB565DE), Color(0xFFFF6FB8))
+    StageLook.PREGNANCY -> listOf(Color(0xFFFFC54D), Color(0xFFFFA36B), Color(0xFFFF8E92))
+    StageLook.POSTPARTUM -> listOf(Color(0xFFFF8AA3), Color(0xFFFF9E72), Color(0xFFFFB020))
+    StageLook.PERIMENOPAUSE -> listOf(Color(0xFF7B61FF), Color(0xFF6F9CF0), Color(0xFF63D8FF))
+    StageLook.MENOPAUSE -> listOf(Color(0xFF4FB8FF), Color(0xFF40BCC6), Color(0xFF2FBF8F))
+    StageLook.DISCREET -> listOf(Color(0xFF6A4FF0), Color(0xFF7C66F8), Color(0xFF8E7BFF))
+    StageLook.CYCLE -> listOf(Color(0xFF7B61FF), Color(0xFFA14FD0), Color(0xFFE0559B))
+}
+
+private fun StageLook.icon(): DrawableResource = when (this) {
+    StageLook.CYCLE -> Res.drawable.ic3d_cycle
+    StageLook.PERIOD -> Res.drawable.ic3d_period
+    StageLook.TTC -> Res.drawable.ic3d_ttc
+    StageLook.PREGNANCY -> Res.drawable.ic3d_pregnancy
+    StageLook.POSTPARTUM -> Res.drawable.ic3d_postpartum
+    StageLook.PERIMENOPAUSE -> Res.drawable.ic3d_perimenopause
+    StageLook.MENOPAUSE -> Res.drawable.ic3d_menopause
+    StageLook.DISCREET -> Res.drawable.ic3d_heart
+}
+
+private fun StageLook.ink(): Color =
+    if (this == StageLook.PREGNANCY || this == StageLook.POSTPARTUM) StagePalettes.warmInk else Color.White
+
+private val WaterTile = listOf(Color(0xFFEAF8FF), Color(0xFFC9EDFF))
+private val DoseTile = listOf(Color(0xFFF3EFFF), Color(0xFFDCD3FF))
+private val StepsTile = listOf(Color(0xFFFFF6E4), Color(0xFFFFDDB0))
+private val SleepTile = listOf(Color(0xFFF1EDFF), Color(0xFFD6CCFF))
+private val PremiumTile = listOf(Color(0xFFFFF8E6), Color(0xFFFFE7B8))
+private val WaterButton = listOf(Color(0xFF6FD3FF), Color(0xFF1C88C8))
+private val DoseButton = listOf(Color(0xFFA592FF), Color(0xFF6247E0))
+private val TakenButton = listOf(Color(0xFF4FD8A0), Color(0xFF2BA57A))
+
+/** The clay finish over a gradient: light from above, a soft shade below. */
+private fun Modifier.clay(colors: List<Color>, radius: Int) = this
+    .clip(RoundedCornerShape(radius.dp))
+    .background(Brush.linearGradient(colors))
+    .background(Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.28f), Color.Transparent, Color.Black.copy(alpha = 0.06f))))
+
+@Composable
+private fun ClayIcon(art: DrawableResource, size: Int, modifier: Modifier = Modifier) {
+    Image(painterResource(art), contentDescription = null, modifier = modifier.size(size.dp))
+}
 
 /**
  * The widget as the home screen will draw it — the same [WidgetContent] the Glance and
  * SwiftUI renderers lay out, so the preview cannot promise what the widget will not show.
  */
 @Composable
-fun WidgetPreview(content: WidgetContent, size: WidgetSize, warm: Boolean, modifier: Modifier = Modifier) {
-    val height = if (size == WidgetSize.LARGE) 320.dp else 170.dp
-    val shape = RoundedCornerShape(26.dp)
+fun WidgetPreview(content: WidgetContent, size: WidgetSize, modifier: Modifier = Modifier) {
+    val height = if (size == WidgetSize.LARGE) 330.dp else 176.dp
     Box(
         modifier
-            .fillMaxWidth(if (size == WidgetSize.SMALL) 0.48f else 1f)
+            .fillMaxWidth(if (size == WidgetSize.SMALL) 0.5f else 1f)
             .height(height)
-            .clip(shape)
-            .background(Sadora.colors.surface2)
-            .padding(10.dp),
+            .clay(listOf(Color.White, Color(0xFFF6F3FF)), 28),
     ) {
         when (size) {
-            WidgetSize.SMALL -> StageTile(content, warm, Modifier.fillMaxWidth().fillMaxHeight(), big = 52)
-            WidgetSize.MEDIUM -> Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                StageTile(content, warm, Modifier.weight(1f).fillMaxHeight(), big = 40)
+            WidgetSize.SMALL -> StageTile(content, Modifier.fillMaxWidth().fillMaxHeight(), big = 54, radius = 28)
+            WidgetSize.MEDIUM -> Row(Modifier.padding(10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                StageTile(content, Modifier.weight(1f).fillMaxHeight(), big = 42)
                 SideColumn(content)
             }
-            WidgetSize.LARGE -> Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                StageTile(content, warm, Modifier.fillMaxWidth().height(96.dp), big = 40, wide = true)
-                content.water?.let { Tile(it.title, it.label, it.stepLabel, Sadora.colors.accent) }
+            WidgetSize.LARGE -> Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                WideStageTile(content, Modifier.fillMaxWidth().height(86.dp))
+                content.water?.let { Tile(Res.drawable.ic3d_water, it.title, it.label, it.stepLabel, WaterTile, WaterButton, Color(0xFF146A94)) }
                 content.doses?.let { doses ->
                     doses.rows.take(3).forEach { row ->
-                        Tile(row.name, row.time, if (row.status == uz.sadora.contract.DoseStatus.TAKEN) "✓" else "○", Sadora.colors.primary)
+                        val taken = row.status == uz.sadora.contract.DoseStatus.TAKEN
+                        Tile(Res.drawable.ic3d_meds, row.name, row.time, "✓", DoseTile, if (taken) TakenButton else DoseButton, Color(0xFF6247E0))
                     }
                 }
                 content.health?.let { health ->
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        if (health.connectPrompt) Tile(health.connectText, "", "", Sadora.colors.warning, Modifier.weight(1f))
-                        health.items.forEach { Tile(it.label, it.value, "", Sadora.colors.secondary, Modifier.weight(1f)) }
+                        if (health.connectPrompt) Tile(Res.drawable.ic3d_watch, health.connectText, "", "", SleepTile, null, Sadora.colors.text, Modifier.weight(1f))
+                        health.items.forEach { item ->
+                            val (art, fill) = when (item.metric) {
+                                uz.sadora.contract.HealthMetric.STEPS -> Res.drawable.ic3d_active to StepsTile
+                                uz.sadora.contract.HealthMetric.SLEEP_DURATION -> Res.drawable.ic3d_sleep to SleepTile
+                                else -> Res.drawable.ic3d_heart to DoseTile
+                            }
+                            Tile(art, item.label, item.value, "", fill, null, Color(0xFF6247E0), Modifier.weight(1f))
+                        }
                     }
                 }
                 if (content.locked) LockTile(content.lockText)
@@ -249,92 +322,90 @@ private fun RowScope.SideColumn(content: WidgetContent) {
             LockTile(content.lockText, Modifier.weight(1f))
             return@Column
         }
-        content.water?.let { Tile(it.title, it.label, it.stepLabel, Sadora.colors.accent, Modifier.weight(1f)) }
+        content.water?.let { Tile(Res.drawable.ic3d_water, it.title, it.label, "+${it.stepMl}", WaterTile, WaterButton, Color(0xFF146A94), Modifier.weight(1f)) }
         content.doses?.let { doses ->
             val next = doses.next
-            Tile(next?.let { "${it.name} · ${it.time}" } ?: doses.title, doses.label, "✓", Sadora.colors.primary, Modifier.weight(1f))
+            Tile(Res.drawable.ic3d_meds, next?.let { "${it.name} · ${it.time}" } ?: doses.title, doses.label, "✓", DoseTile, DoseButton, Color(0xFF6247E0), Modifier.weight(1f))
         }
         content.health?.takeIf { content.water == null || content.doses == null }?.let { health ->
             val item = health.items.firstOrNull()
-            Tile(item?.label ?: health.connectText, item?.value.orEmpty(), "", Sadora.colors.secondary, Modifier.weight(1f))
+            Tile(Res.drawable.ic3d_active, item?.label ?: health.connectText, item?.value.orEmpty(), "", StepsTile, null, Color(0xFF7F5100), Modifier.weight(1f))
         }
     }
 }
 
 @Composable
-private fun StageTile(content: WidgetContent, warm: Boolean, modifier: Modifier, big: Int, wide: Boolean = false) {
+private fun StageTile(content: WidgetContent, modifier: Modifier, big: Int, radius: Int = 22) {
     val stage = content.stage
-    val colors = when {
-        warm -> listOf(StagePalettes.pregnancy.start, StagePalettes.pregnancy.end)
-        stage.phase == CyclePhase.PERIOD -> listOf(Color(0xFFD42A78), Color(0xFFFF6FB8))
-        else -> listOf(Color(0xFF6A4FF0), Color(0xFFC93C88))
-    }
-    val ink = if (warm) StagePalettes.warmInk else Color.White
-    if (wide) {
-        // The large widget's banner: the words on the left, the number on the right.
-        Row(
-            modifier
-                .clip(RoundedCornerShape(20.dp))
-                .background(Brush.linearGradient(colors))
-                .padding(horizontal = 14.dp, vertical = 10.dp)
-                .semantics { contentDescription = listOfNotNull(stage.title, stage.big, stage.unit, stage.line1, stage.line2).joinToString(", ") },
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(Modifier.weight(1f)) {
-                Text(stage.title, color = ink, fontSize = 12.sp, fontWeight = FontWeight.Bold, maxLines = 1)
-                stage.line1?.let { Text(it, color = ink, fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1) }
-                stage.line2?.let { Text(it, color = ink.copy(alpha = 0.9f), fontSize = 12.sp, maxLines = 1) }
-            }
-            Text(stage.big, color = ink, fontSize = big.sp, fontWeight = FontWeight.Black)
-            stage.unit?.let { Text(" $it", color = ink, fontSize = 13.sp, fontWeight = FontWeight.Bold) }
-        }
-        return
-    }
+    val ink = stage.look.ink()
     Column(
         modifier
-            .clip(RoundedCornerShape(20.dp))
-            .background(Brush.linearGradient(colors))
+            .clay(stage.look.colors(), radius)
             .padding(12.dp)
             .semantics { contentDescription = listOfNotNull(stage.title, stage.big, stage.unit, stage.line1, stage.line2).joinToString(", ") },
         verticalArrangement = Arrangement.SpaceBetween,
     ) {
-        Text(stage.title, color = ink, fontSize = 12.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Row(verticalAlignment = Alignment.Top) {
+            Text(stage.title, color = ink, fontSize = 12.sp, fontWeight = FontWeight.Black, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+            ClayIcon(stage.look.icon(), 40)
+        }
         Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(stage.big, color = ink, fontSize = big.sp, fontWeight = FontWeight.Black, lineHeight = big.sp)
-            stage.unit?.let { Text(it, color = ink, fontSize = 13.sp, fontWeight = FontWeight.Bold) }
+            stage.unit?.let { Text(it, color = ink, fontSize = 13.sp, fontWeight = FontWeight.Black) }
         }
         Column {
-            stage.line1?.let { Text(it, color = ink, fontSize = 12.sp, fontWeight = FontWeight.Bold, maxLines = 1) }
-            stage.line2?.let { Text(it, color = ink.copy(alpha = 0.9f), fontSize = 11.sp, maxLines = 1) }
+            stage.line1?.let { Text(it, color = ink, fontSize = 12.sp, fontWeight = FontWeight.Black, maxLines = 1) }
+            stage.line2?.let { Text(it, color = ink.copy(alpha = 0.92f), fontSize = 11.sp, fontWeight = FontWeight.SemiBold, maxLines = 1) }
         }
     }
 }
 
+/** The large widget's banner: the clay icon, the words, and the number on the right. */
 @Composable
-private fun ColumnScope.Tile(title: String, value: String, action: String, accent: Color, modifier: Modifier = Modifier) =
-    TileBox(title, value, action, accent, modifier)
-
-@Composable
-private fun RowScope.Tile(title: String, value: String, action: String, accent: Color, modifier: Modifier = Modifier) =
-    TileBox(title, value, action, accent, modifier)
-
-@Composable
-private fun TileBox(title: String, value: String, action: String, accent: Color, modifier: Modifier) {
+private fun WideStageTile(content: WidgetContent, modifier: Modifier) {
+    val stage = content.stage
+    val ink = stage.look.ink()
     Row(
         modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(accent.copy(alpha = 0.14f))
-            .padding(horizontal = 10.dp, vertical = 6.dp),
+            .clay(stage.look.colors(), 22)
+            .padding(horizontal = 12.dp, vertical = 8.dp)
+            .semantics { contentDescription = listOfNotNull(stage.title, stage.big, stage.unit, stage.line1, stage.line2).joinToString(", ") },
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Column(Modifier.weight(1f)) {
-            Text(title, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Sadora.colors.muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            if (value.isNotEmpty()) Text(value, fontSize = 15.sp, fontWeight = FontWeight.Black, color = Sadora.colors.text, maxLines = 1)
+        ClayIcon(stage.look.icon(), 48)
+        Column(Modifier.weight(1f).padding(start = 10.dp)) {
+            Text(stage.title, color = ink, fontSize = 12.sp, fontWeight = FontWeight.Black, maxLines = 1)
+            stage.line1?.let { Text(it, color = ink, fontSize = 13.sp, fontWeight = FontWeight.Black, maxLines = 1) }
+            stage.line2?.let { Text(it, color = ink.copy(alpha = 0.92f), fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1) }
         }
-        if (action.isNotEmpty()) {
-            Box(Modifier.clip(Radius.chip).background(accent).padding(horizontal = 8.dp, vertical = 4.dp)) {
-                Text(action, fontSize = 11.sp, fontWeight = FontWeight.Black, color = Color.White)
+        Text(stage.big, color = ink, fontSize = 40.sp, fontWeight = FontWeight.Black)
+        stage.unit?.let { Text(" $it", color = ink, fontSize = 13.sp, fontWeight = FontWeight.Black) }
+    }
+}
+
+@Composable
+private fun Tile(
+    art: DrawableResource,
+    title: String,
+    value: String,
+    action: String,
+    fill: List<Color>,
+    button: List<Color>?,
+    accent: Color,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier.fillMaxWidth().clay(fill, 18).padding(horizontal = 9.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        ClayIcon(art, 30)
+        Column(Modifier.weight(1f).padding(start = 7.dp)) {
+            Text(title, fontSize = 11.sp, fontWeight = FontWeight.Black, color = accent, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            if (value.isNotEmpty()) Text(value, fontSize = 15.sp, fontWeight = FontWeight.Black, color = Color(0xFF1A1630), maxLines = 1)
+        }
+        if (button != null && action.isNotEmpty()) {
+            Box(Modifier.clay(button, 18).padding(horizontal = 11.dp, vertical = 8.dp), contentAlignment = Alignment.Center) {
+                Text(action, fontSize = 12.sp, fontWeight = FontWeight.Black, color = Color.White)
             }
         }
     }
@@ -342,11 +413,12 @@ private fun TileBox(title: String, value: String, action: String, accent: Color,
 
 @Composable
 private fun LockTile(text: String, modifier: Modifier = Modifier) {
-    Box(
-        modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Sadora.colors.surface).padding(10.dp),
-        contentAlignment = Alignment.Center,
+    Row(
+        modifier.fillMaxWidth().clay(PremiumTile, 18).padding(10.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text("🔒 $text", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Sadora.colors.textAccent)
+        ClayIcon(Res.drawable.ic3d_crown, 32)
+        Text(text, fontSize = 12.sp, fontWeight = FontWeight.Black, color = Color(0xFF7F5100), modifier = Modifier.padding(start = 8.dp))
     }
 }
 
@@ -356,13 +428,14 @@ fun WidgetPromoCard(state: AppState, onAdd: () -> Unit, onDismiss: () -> Unit) {
     val t = strings.widgets
     SadoraCard {
         Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm), verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                Modifier
-                    .clip(RoundedCornerShape(18.dp))
-                    .background(Brush.linearGradient(listOf(Color(0xFF6A4FF0), Color(0xFFC93C88))))
-                    .padding(horizontal = 14.dp, vertical = 10.dp),
-            ) {
-                Text(state.cycleDay.takeIf { it > 0 }?.toString() ?: "✿", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Black)
+            Box {
+                Box(
+                    Modifier.size(64.dp).clay(StageLook.CYCLE.colors(), 20),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(state.cycleDay.takeIf { it > 0 }?.toString() ?: "✿", color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.Black)
+                }
+                ClayIcon(Res.drawable.ic3d_home, 34, Modifier.align(Alignment.BottomEnd).offset(x = 10.dp, y = 8.dp))
             }
             Column(Modifier.weight(1f)) {
                 Text(t.cardTitle, style = Sadora.type.h3, color = Sadora.colors.text)

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The stage tile, pregnancy: the app's stage gradient with the clay finish. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="rectangle">
+            <gradient android:angle="315" android:startColor="#FFC54D" android:centerColor="#FFA36B" android:endColor="#FF8E92" />
+            <corners android:radius="24dp" />
+        </shape>
+    </item>
+    <!-- The clay finish: a bright band on top fading out by the middle, a soft shade at the bottom. -->
+    <item>
+        <shape android:shape="rectangle">
+            <gradient android:angle="270" android:startColor="#40FFFFFF" android:centerColor="#00FFFFFF" android:endColor="#1A2A0A50" />
+            <corners android:radius="24dp" />
+        </shape>
+    </item>
+</layer-list>
