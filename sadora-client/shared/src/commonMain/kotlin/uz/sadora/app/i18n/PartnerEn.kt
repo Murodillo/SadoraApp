@@ -185,6 +185,27 @@ object PartnerEn : PartnerStrings {
     override fun feedsToday(count: Int) = "$count ${en(count, "feed", "feeds")} today"
     override fun lastFeed(ago: String) = "Last one $ago"
     override fun hotFlushesToday(count: Int) = "$count ${en(count, "hot flush", "hot flushes")} today"
+    override fun babyAgeShort(days: Int) = when {
+        days < 14 -> "$days ${en(days, "day", "days")} old"
+        days < 91 -> (days / 7).let { "$it ${en(it, "week", "weeks")} old" }
+        else -> (days / 30).let { "$it ${en(it, "month", "months")} old" }
+    }
+    override fun babyFeedsToday(count: Int) = "$count ${en(count, "feed", "feeds")} today"
+    override fun lastFeedAt(time: String) = "last at $time"
+    override val babySleepToday = "Sleep today"
+    override fun sleepDuration(minutes: Int): String {
+        val h = minutes / 60
+        val m = minutes % 60
+        return when {
+            h == 0 -> "$m min"
+            m == 0 -> "$h h"
+            else -> "$h h $m min"
+        }
+    }
+    override val babyAsleepNow = "Asleep now"
+    override fun asleepFor(duration: String) = "for $duration"
+    override fun diapersToday(count: Int) = "$count ${en(count, "diaper", "diapers")} today"
+    override fun nextVaccine(name: String) = "Next vaccine: $name"
     override val helpTitle = "What would help her today"
     override val leave = "Stop following"
     override fun leaveConfirmBody(name: String) =

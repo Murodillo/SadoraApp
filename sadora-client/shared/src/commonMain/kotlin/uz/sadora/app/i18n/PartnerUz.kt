@@ -181,6 +181,27 @@ object PartnerUz : PartnerStrings {
     override fun feedsToday(count: Int) = "Bugun $count marta emizdi"
     override fun lastFeed(ago: String) = "Oxirgisi $ago"
     override fun hotFlushesToday(count: Int) = "Bugun $count ta issiq toshish"
+    override fun babyAgeShort(days: Int) = when {
+        days < 14 -> "$days kunlik"
+        days < 91 -> "${days / 7} haftalik"
+        else -> "${days / 30} oylik"
+    }
+    override fun babyFeedsToday(count: Int) = "Bugun $count marta ovqatlandi"
+    override fun lastFeedAt(time: String) = "oxirgisi $time"
+    override val babySleepToday = "Bugun uxladi"
+    override fun sleepDuration(minutes: Int): String {
+        val h = minutes / 60
+        val m = minutes % 60
+        return when {
+            h == 0 -> "$m daqiqa"
+            m == 0 -> "$h soat"
+            else -> "$h soat $m daqiqa"
+        }
+    }
+    override val babyAsleepNow = "Hozir uxlayapti"
+    override fun asleepFor(duration: String) = "${duration}dan beri"
+    override fun diapersToday(count: Int) = "Bugun $count ta taglik"
+    override fun nextVaccine(name: String) = "Keyingi emlash: $name"
     override val helpTitle = "Bugun unga nima yordam beradi"
     override val leave = "Kuzatishni to'xtatish"
     override fun leaveConfirmBody(name: String) =

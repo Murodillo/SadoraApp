@@ -111,7 +111,7 @@ private fun BigFigure(text: String, caption: String? = null) {
 
 /** One recorded event: what, when, and a way to take it back. */
 @Composable
-private fun EventLine(title: String, detail: String, onDelete: () -> Unit) {
+internal fun EventLine(title: String, detail: String, onDelete: () -> Unit) {
     val c = Sadora.colors
     val deleteLabel = strings.common.delete
     Row(

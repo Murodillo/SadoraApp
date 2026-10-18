@@ -1,0 +1,387 @@
+{
+  "comment": "Uzbekistan national immunisation calendar, routine doses to age 7. Not routine and left out: the extra measles dose at 6 months given in outbreaks; later doses: HPV at 9, Td-6 at 16.",
+  "doses": [
+    {
+      "code": "hepb_1",
+      "vaccine": "HepB",
+      "dose": 1,
+      "ageDays": 0,
+      "ageMonths": null,
+      "ageYears": null,
+      "names": {
+        "uz": "Gepatit B (1-doza)",
+        "ru": "Гепатит B (1-я доза)",
+        "en": "Hepatitis B (dose 1)"
+      },
+      "note": {
+        "uz": "Tug'ilgandan keyin birinchi 24 soat ichida (VGB-1).",
+        "ru": "В первые 24 часа жизни (ВГВ-1).",
+        "en": "Within the first 24 hours of life (HepB-1)."
+      }
+    },
+    {
+      "code": "bcg_1",
+      "vaccine": "BCG",
+      "dose": 1,
+      "ageDays": 2,
+      "ageMonths": null,
+      "ageYears": null,
+      "names": {
+        "uz": "Sil (BCG)",
+        "ru": "Туберкулёз (БЦЖ)",
+        "en": "Tuberculosis (BCG)"
+      },
+      "note": {
+        "uz": "Hayotning 2–5-kunlarida (BSJ-1).",
+        "ru": "На 2–5-й день жизни (БЦЖ-1).",
+        "en": "On day 2–5 of life (BCG-1)."
+      }
+    },
+    {
+      "code": "opv_1",
+      "vaccine": "OPV",
+      "dose": 1,
+      "ageDays": null,
+      "ageMonths": 2,
+      "ageYears": null,
+      "names": {
+        "uz": "Poliomiyelit, og'iz orqali (OPV-1)",
+        "ru": "Полиомиелит, оральная вакцина (ОПВ-1)",
+        "en": "Polio, oral vaccine (OPV-1)"
+      },
+      "note": {
+        "uz": "Og'iz orqali tomiziladi.",
+        "ru": "Вводится перорально (капли в рот).",
+        "en": "Given by mouth (drops)."
+      }
+    },
+    {
+      "code": "rota_1",
+      "vaccine": "Rota",
+      "dose": 1,
+      "ageDays": null,
+      "ageMonths": 2,
+      "ageYears": null,
+      "names": {
+        "uz": "Rotavirus infeksiyasi (1-doza)",
+        "ru": "Ротавирусная инфекция (1-я доза)",
+        "en": "Rotavirus (dose 1)"
+      },
+      "note": {
+        "uz": "Og'iz orqali tomiziladi.",
+        "ru": "Вводится перорально (капли в рот).",
+        "en": "Given by mouth (drops)."
+      }
+    },
+    {
+      "code": "penta_1",
+      "vaccine": "Penta",
+      "dose": 1,
+      "ageDays": null,
+      "ageMonths": 2,
+      "ageYears": null,
+      "names": {
+        "uz": "Penta: difteriya, ko'kyo'tal, qoqshol, gepatit B, XIB (1-doza)",
+        "ru": "Пента: дифтерия, коклюш, столбняк, гепатит B, ХИБ (1-я доза)",
+        "en": "Penta: diphtheria, pertussis, tetanus, hepatitis B, Hib (dose 1)"
+      },
+      "note": {
+        "uz": "Penta bitta kombinatsiyalangan vaksina: AKDS (difteriya, ko'kyo'tal, qoqshol), gepatit B va XIB komponentlari.",
+        "ru": "Пента — одна комбинированная вакцина: АКДС (дифтерия, коклюш, столбняк), гепатит B и ХИБ.",
+        "en": "Penta is one combined shot: DTP (diphtheria, pertussis, tetanus), hepatitis B and Hib."
+      }
+    },
+    {
+      "code": "pcv_1",
+      "vaccine": "PCV",
+      "dose": 1,
+      "ageDays": null,
+      "ageMonths": 2,
+      "ageYears": null,
+      "names": {
+        "uz": "Pnevmokokk infeksiyasi (1-doza)",
+        "ru": "Пневмококковая инфекция (1-я доза)",
+        "en": "Pneumococcal (dose 1)"
+      },
+      "note": null
+    },
+    {
+      "code": "opv_2",
+      "vaccine": "OPV",
+      "dose": 2,
+      "ageDays": null,
+      "ageMonths": 3,
+      "ageYears": null,
+      "names": {
+        "uz": "Poliomiyelit, og'iz orqali (OPV-2)",
+        "ru": "Полиомиелит, оральная вакцина (ОПВ-2)",
+        "en": "Polio, oral vaccine (OPV-2)"
+      },
+      "note": {
+        "uz": "Og'iz orqali tomiziladi.",
+        "ru": "Вводится перорально (капли в рот).",
+        "en": "Given by mouth (drops)."
+      }
+    },
+    {
+      "code": "rota_2",
+      "vaccine": "Rota",
+      "dose": 2,
+      "ageDays": null,
+      "ageMonths": 3,
+      "ageYears": null,
+      "names": {
+        "uz": "Rotavirus infeksiyasi (2-doza)",
+        "ru": "Ротавирусная инфекция (2-я доза)",
+        "en": "Rotavirus (dose 2)"
+      },
+      "note": {
+        "uz": "Og'iz orqali tomiziladi.",
+        "ru": "Вводится перорально (капли в рот).",
+        "en": "Given by mouth (drops)."
+      }
+    },
+    {
+      "code": "penta_2",
+      "vaccine": "Penta",
+      "dose": 2,
+      "ageDays": null,
+      "ageMonths": 3,
+      "ageYears": null,
+      "names": {
+        "uz": "Penta: difteriya, ko'kyo'tal, qoqshol, gepatit B, XIB (2-doza)",
+        "ru": "Пента: дифтерия, коклюш, столбняк, гепатит B, ХИБ (2-я доза)",
+        "en": "Penta: diphtheria, pertussis, tetanus, hepatitis B, Hib (dose 2)"
+      },
+      "note": {
+        "uz": "Penta bitta kombinatsiyalangan vaksina: AKDS (difteriya, ko'kyo'tal, qoqshol), gepatit B va XIB komponentlari.",
+        "ru": "Пента — одна комбинированная вакцина: АКДС (дифтерия, коклюш, столбняк), гепатит B и ХИБ.",
+        "en": "Penta is one combined shot: DTP (diphtheria, pertussis, tetanus), hepatitis B and Hib."
+      }
+    },
+    {
+      "code": "pcv_2",
+      "vaccine": "PCV",
+      "dose": 2,
+      "ageDays": null,
+      "ageMonths": 3,
+      "ageYears": null,
+      "names": {
+        "uz": "Pnevmokokk infeksiyasi (2-doza)",
+        "ru": "Пневмококковая инфекция (2-я доза)",
+        "en": "Pneumococcal (dose 2)"
+      },
+      "note": null
+    },
+    {
+      "code": "opv_3",
+      "vaccine": "OPV",
+      "dose": 3,
+      "ageDays": null,
+      "ageMonths": 4,
+      "ageYears": null,
+      "names": {
+        "uz": "Poliomiyelit, og'iz orqali (OPV-3)",
+        "ru": "Полиомиелит, оральная вакцина (ОПВ-3)",
+        "en": "Polio, oral vaccine (OPV-3)"
+      },
+      "note": {
+        "uz": "Og'iz orqali tomiziladi.",
+        "ru": "Вводится перорально (капли в рот).",
+        "en": "Given by mouth (drops)."
+      }
+    },
+    {
+      "code": "rota_3",
+      "vaccine": "Rota",
+      "dose": 3,
+      "ageDays": null,
+      "ageMonths": 4,
+      "ageYears": null,
+      "names": {
+        "uz": "Rotavirus infeksiyasi (3-doza)",
+        "ru": "Ротавирусная инфекция (3-я доза)",
+        "en": "Rotavirus (dose 3)"
+      },
+      "note": {
+        "uz": "Og'iz orqali tomiziladi.",
+        "ru": "Вводится перорально (капли в рот).",
+        "en": "Given by mouth (drops)."
+      }
+    },
+    {
+      "code": "penta_3",
+      "vaccine": "Penta",
+      "dose": 3,
+      "ageDays": null,
+      "ageMonths": 4,
+      "ageYears": null,
+      "names": {
+        "uz": "Penta: difteriya, ko'kyo'tal, qoqshol, gepatit B, XIB (3-doza)",
+        "ru": "Пента: дифтерия, коклюш, столбняк, гепатит B, ХИБ (3-я доза)",
+        "en": "Penta: diphtheria, pertussis, tetanus, hepatitis B, Hib (dose 3)"
+      },
+      "note": {
+        "uz": "Penta bitta kombinatsiyalangan vaksina: AKDS (difteriya, ko'kyo'tal, qoqshol), gepatit B va XIB komponentlari.",
+        "ru": "Пента — одна комбинированная вакцина: АКДС (дифтерия, коклюш, столбняк), гепатит B и ХИБ.",
+        "en": "Penta is one combined shot: DTP (diphtheria, pertussis, tetanus), hepatitis B and Hib."
+      }
+    },
+    {
+      "code": "ipv_1",
+      "vaccine": "IPV",
+      "dose": 1,
+      "ageDays": null,
+      "ageMonths": 4,
+      "ageYears": null,
+      "names": {
+        "uz": "Poliomiyelit, inyeksiya (IPV-1)",
+        "ru": "Полиомиелит, инактивированная вакцина (ИПВ-1)",
+        "en": "Polio, inactivated vaccine shot (IPV-1)"
+      },
+      "note": null
+    },
+    {
+      "code": "ipv_2",
+      "vaccine": "IPV",
+      "dose": 2,
+      "ageDays": null,
+      "ageMonths": 9,
+      "ageYears": null,
+      "names": {
+        "uz": "Poliomiyelit, inyeksiya (IPV-2)",
+        "ru": "Полиомиелит, инактивированная вакцина (ИПВ-2)",
+        "en": "Polio, inactivated vaccine shot (IPV-2)"
+      },
+      "note": null
+    },
+    {
+      "code": "mmr_1",
+      "vaccine": "MMR",
+      "dose": 1,
+      "ageDays": null,
+      "ageMonths": 12,
+      "ageYears": null,
+      "names": {
+        "uz": "Qizamiq, qizilcha, epidparotit (QPK-1)",
+        "ru": "Корь, краснуха, паротит (КПК-1)",
+        "en": "Measles, mumps, rubella (MMR dose 1)"
+      },
+      "note": {
+        "uz": "Epidparotit — xalq orasida tepki.",
+        "ru": "Эпидемический паротит — «свинка».",
+        "en": "Mumps is also called epidemic parotitis."
+      }
+    },
+    {
+      "code": "pcv_3",
+      "vaccine": "PCV",
+      "dose": 3,
+      "ageDays": null,
+      "ageMonths": 12,
+      "ageYears": null,
+      "names": {
+        "uz": "Pnevmokokk infeksiyasi (3-doza)",
+        "ru": "Пневмококковая инфекция (3-я доза)",
+        "en": "Pneumococcal (dose 3)"
+      },
+      "note": null
+    },
+    {
+      "code": "dtp_4",
+      "vaccine": "DTP",
+      "dose": 4,
+      "ageDays": null,
+      "ageMonths": 16,
+      "ageYears": null,
+      "names": {
+        "uz": "Difteriya, ko'kyo'tal, qoqshol (AKDS-4)",
+        "ru": "Дифтерия, коклюш, столбняк (АКДС-4)",
+        "en": "Diphtheria, pertussis, tetanus booster (DTP-4)"
+      },
+      "note": {
+        "uz": "Revaksinatsiya: 1–3-dozalar Penta tarkibida berilgan.",
+        "ru": "Ревакцинация: дозы 1–3 входили в состав Пента.",
+        "en": "Booster: doses 1–3 were part of Penta."
+      }
+    },
+    {
+      "code": "opv_4",
+      "vaccine": "OPV",
+      "dose": 4,
+      "ageDays": null,
+      "ageMonths": 16,
+      "ageYears": null,
+      "names": {
+        "uz": "Poliomiyelit, og'iz orqali (OPV-4)",
+        "ru": "Полиомиелит, оральная вакцина (ОПВ-4)",
+        "en": "Polio, oral vaccine (OPV-4)"
+      },
+      "note": {
+        "uz": "Og'iz orqali tomiziladi.",
+        "ru": "Вводится перорально (капли в рот).",
+        "en": "Given by mouth (drops)."
+      }
+    },
+    {
+      "code": "mmr_2",
+      "vaccine": "MMR",
+      "dose": 2,
+      "ageDays": null,
+      "ageMonths": null,
+      "ageYears": 6,
+      "names": {
+        "uz": "Qizamiq, qizilcha, epidparotit (QPK-2)",
+        "ru": "Корь, краснуха, паротит (КПК-2)",
+        "en": "Measles, mumps, rubella (MMR dose 2)"
+      },
+      "note": null
+    },
+    {
+      "code": "td_5",
+      "vaccine": "Td",
+      "dose": 5,
+      "ageDays": null,
+      "ageMonths": null,
+      "ageYears": 7,
+      "names": {
+        "uz": "Difteriya, qoqshol (ADS-M-5)",
+        "ru": "Дифтерия, столбняк (АДС-М-5)",
+        "en": "Diphtheria, tetanus booster (Td-5)"
+      },
+      "note": {
+        "uz": "Ko'kyo'tal komponentisiz, kamaytirilgan dozali vaksina.",
+        "ru": "Без коклюшного компонента, с уменьшенным содержанием антигенов.",
+        "en": "No pertussis component; reduced-antigen vaccine."
+      }
+    },
+    {
+      "code": "opv_5",
+      "vaccine": "OPV",
+      "dose": 5,
+      "ageDays": null,
+      "ageMonths": null,
+      "ageYears": 7,
+      "names": {
+        "uz": "Poliomiyelit, og'iz orqali (OPV-5)",
+        "ru": "Полиомиелит, оральная вакцина (ОПВ-5)",
+        "en": "Polio, oral vaccine (OPV-5)"
+      },
+      "note": {
+        "uz": "Og'iz orqali tomiziladi.",
+        "ru": "Вводится перорально (капли в рот).",
+        "en": "Given by mouth (drops)."
+      }
+    }
+  ],
+  "sources": [
+    {
+      "url": "https://gov.uz/oz/sanepid/news/view/223776",
+      "note": "Sanitariya-epidemiologik osoyishtalik va jamoat salomatligi qo‘mitasi (Ministry of Health), gov.uz · 2026-09-23"
+    },
+    {
+      "url": "https://immunizationdata.who.int/global/wiise-detail-page/vaccination-schedule-for-country_name?ISO_3_CODE=UZB",
+      "note": "WHO Immunization Data portal (country JRF reporting) · no year shown on page; export stamp 2026-10-16 · 2026-10-18"
+    }
+  ]
+}

@@ -10,6 +10,7 @@ import io.ktor.server.routing.get
 import io.ktor.server.routing.post
 import io.ktor.server.routing.route
 import uz.sadora.contract.Ack
+import uz.sadora.contract.FinishStageEventRequest
 import uz.sadora.contract.LogStageEventRequest
 import uz.sadora.contract.StageEventKind
 import uz.sadora.server.api.enumParameter
@@ -27,12 +28,19 @@ fun Route.stageEventRoutes(events: StageEventService) {
         route("/stage-events") {
             get {
                 val days = call.intParameter("days", default = 7, max = 120)
-                call.respond(events.list(call.requireUserId(), call.enumParameter<StageEventKind>("kind"), days))
+                val baby = call.request.queryParameters["babyId"]?.let { parseUuid(it, "babyId") }
+                call.respond(events.list(call.requireUserId(), call.enumParameter<StageEventKind>("kind"), days, baby))
             }
 
             post {
                 val request = call.receive<LogStageEventRequest>()
                 call.respond(HttpStatusCode.Created, events.add(call.requireUserId(), request))
+            }
+
+            /** Ends a running sleep. */
+            post("/{id}/finish") {
+                val request = runCatching { call.receive<FinishStageEventRequest>() }.getOrDefault(FinishStageEventRequest())
+                call.respond(events.finish(call.requireUserId(), parseUuid(call.parameters["id"].orEmpty(), "id"), request))
             }
 
             delete("/{id}") {

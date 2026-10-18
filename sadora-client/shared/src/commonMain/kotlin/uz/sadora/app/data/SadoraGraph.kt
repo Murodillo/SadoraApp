@@ -186,5 +186,8 @@ class SadoraGraph(
 
     fun labController(): LabController = LabController(labApi)
 
+    fun babyController(tools: StageEventsController): BabyController =
+        BabyController(uz.sadora.app.data.api.BabyApi(caller, stageEventApi), tools)
+
     fun close() = client.close()
 }

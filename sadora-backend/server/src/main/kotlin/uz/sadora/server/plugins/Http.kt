@@ -35,6 +35,8 @@ fun Application.configureHttp(config: AppConfig) {
             when {
                 path.endsWith("/nutrition/scan") -> SCAN_BODY_LIMIT
                 path.endsWith("/labs") || path.endsWith("/labs/scan") -> LAB_BODY_LIMIT
+                // A milestone may carry its photo.
+                path.contains("/milestones/") -> SCAN_BODY_LIMIT
                 else -> DEFAULT_BODY_LIMIT
             }
         }

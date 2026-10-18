@@ -41,16 +41,25 @@ class StageEventsController(private val api: StageEventApi?) {
     var kicksStartedAt by mutableStateOf<Instant?>(null)
     var kicks by mutableStateOf(0)
 
+    /**
+     * The baby the feeding screen logs for: set by the baby page once she has a profile, so
+     * a feed lands on the right twin. Null before any profile, as feeds always were.
+     */
+    var babyId by mutableStateOf<String?>(null)
+
     fun of(kind: StageEventKind): List<StageEvent> = events[kind].orEmpty()
 
     suspend fun load(kind: StageEventKind, days: Int = DEFAULT_DAYS) {
         val api = api ?: return
-        calls.run(silent = true) { api.list(kind, days) }?.let { events = events + (kind to it) }
+        // Feeds follow the chosen baby; the stage's own tools are hers alone.
+        val baby = babyId.takeIf { kind == StageEventKind.FEEDING }
+        calls.run(silent = true) { api.list(kind, days, baby) }?.let { events = events + (kind to it) }
     }
 
     suspend fun log(request: LogStageEventRequest): StageEvent? {
         val api = api ?: return null
-        val saved = calls.run { api.add(request) } ?: return null
+        val tagged = if (request.kind == StageEventKind.FEEDING && request.babyId == null) request.copy(babyId = babyId) else request
+        val saved = calls.run { api.add(tagged) } ?: return null
         events = events + (saved.kind to (listOf(saved) + of(saved.kind)))
         return saved
     }

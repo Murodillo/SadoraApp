@@ -30,6 +30,9 @@ object FeatureKeys {
      */
     const val LAB_SCAN = "lab_scan"
 
+    /** The WHO percentile curves behind a baby's growth. Premium; the measurements are free. */
+    const val BABY_GROWTH_CHART = "baby_growth_chart"
+
     /** Wearing an earned badge after her name. Premium; earning badges stays free. */
     const val BADGE_WEAR = "badge_wear"
 

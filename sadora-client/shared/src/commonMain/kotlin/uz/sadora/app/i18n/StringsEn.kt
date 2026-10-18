@@ -1557,6 +1557,7 @@ object StringsEn : Strings {
     override val badges: BadgeStrings = BadgesEn
     override val prescriptions: PrescriptionStrings = PrescriptionStringsEn
     override val labs: LabStrings = LabStringsEn
+    override val babies: BabyStrings = BabyStringsEn
     override val pet: PetStrings = PetEn
     override val widgets: WidgetUiStrings = WidgetUiEn
     override val frames: FrameStrings = FramesEn

@@ -134,7 +134,7 @@ fun Route.publicPartnerWebRoutes(partners: PartnerService) {
             if (page == null) {
                 call.respondText(PartnerWebPage.gone(language ?: Language.UZ), ContentType.Text.Html, HttpStatusCode.NotFound)
             } else {
-                call.respondText(PartnerWebPage.render(page.view, page.language), ContentType.Text.Html)
+                call.respondText(PartnerWebPage.render(page.view, page.language, kotlinx.datetime.TimeZone.of(page.timezone)), ContentType.Text.Html)
             }
         }
     }

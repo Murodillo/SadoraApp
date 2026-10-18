@@ -25,6 +25,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import kotlin.time.Clock
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 import kotlinx.coroutines.launch
 import uz.sadora.app.data.ApiFailure
 import uz.sadora.app.data.PartnerController
@@ -54,6 +56,7 @@ import uz.sadora.app.ui.components.SadoraTopBar
 import uz.sadora.app.ui.components.ScreenContent
 import uz.sadora.app.ui.components.Skeleton
 import uz.sadora.contract.LifeStage
+import uz.sadora.contract.PartnerBaby
 import uz.sadora.contract.PartnerLinkStatus
 import uz.sadora.contract.PartnerView
 import uz.sadora.contract.CyclePhase as WirePhase
@@ -193,12 +196,15 @@ private fun LazyListScope.activeView(view: PartnerView, messages: @Composable ()
     }
 
     view.care?.let { care ->
-        item {
+        if (care.feedsToday != null || care.hotFlushesToday != null) item {
             val t = strings.partner
             SadoraCard {
                 care.feedsToday?.let { Fact(t.feedsToday(it), care.lastFeedAt?.let { at -> t.lastFeed(strings.dates.ago(at, Clock.System.now())) }) }
                 care.hotFlushesToday?.let { Fact(t.hotFlushesToday(it), null) }
             }
+        }
+        care.babies.forEachIndexed { index, baby ->
+            item(key = "baby-$index-${baby.name}") { BabyCard(baby) }
         }
     }
 
@@ -320,6 +326,38 @@ private fun tipsFor(view: PartnerView): List<String> {
         view.pregnancy?.babyAgeDays != null || view.stage == LifeStage.POSTPARTUM -> t.postpartumTips
         view.stage == LifeStage.PERIMENOPAUSE || view.stage == LifeStage.MENOPAUSE -> t.menopauseTips
         else -> emptyList()
+    }
+}
+
+/** One baby she tracks, today — read only: the follower sees it and writes nothing. */
+@Composable
+private fun BabyCard(baby: PartnerBaby) {
+    val t = strings.partner
+    val c = Sadora.colors
+    val zone = TimeZone.currentSystemDefault()
+    SadoraCard {
+        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm), verticalAlignment = Alignment.CenterVertically) {
+            ArtTile(Res.drawable.ic3d_baby, tint = c.primary, size = 40.dp)
+            Text(
+                baby.name + " · " + t.babyAgeShort(baby.ageDays),
+                style = Sadora.type.h3,
+                color = c.text,
+                modifier = Modifier.weight(1f),
+            )
+        }
+        Fact(
+            t.babyFeedsToday(baby.feedsToday),
+            baby.lastFeedAt?.let { t.lastFeedAt(Fmt.time(it.toLocalDateTime(zone))) },
+        )
+        Fact(t.babySleepToday, t.sleepDuration(baby.sleepMinutesToday))
+        baby.sleepingSince?.let { since ->
+            val minutes = (Clock.System.now() - since).inWholeMinutes.toInt().coerceAtLeast(0)
+            Fact(t.babyAsleepNow, t.asleepFor(t.sleepDuration(minutes)))
+        }
+        Fact(t.diapersToday(baby.diapersToday), null)
+        baby.nextVaccineName?.let { name ->
+            Fact(t.nextVaccine(name), baby.nextVaccineOn?.let { strings.dates.dayMonth(it) })
+        }
     }
 }
 

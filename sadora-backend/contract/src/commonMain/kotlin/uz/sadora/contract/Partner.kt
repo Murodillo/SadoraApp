@@ -233,6 +233,22 @@ data class PartnerCare(
     val feedsToday: Int? = null,
     val lastFeedAt: Instant? = null,
     val hotFlushesToday: Int? = null,
+    /** Each baby she tracks, today: shown, never written to, by the person who follows her. */
+    val babies: List<PartnerBaby> = emptyList(),
+)
+
+@Serializable
+data class PartnerBaby(
+    val name: String,
+    val ageDays: Int,
+    val feedsToday: Int = 0,
+    val lastFeedAt: Instant? = null,
+    val sleepMinutesToday: Int = 0,
+    /** Asleep since then, if asleep now. */
+    val sleepingSince: Instant? = null,
+    val diapersToday: Int = 0,
+    val nextVaccineName: String? = null,
+    val nextVaccineOn: LocalDate? = null,
 )
 
 // ---------------------------------------------------------------- messages

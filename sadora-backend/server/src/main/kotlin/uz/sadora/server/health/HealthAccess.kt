@@ -33,6 +33,13 @@ class HealthAccess(
     suspend fun feature(userId: Uuid, featureKey: String, timezone: String): uz.sadora.contract.FeatureEntitlement? =
         entitlements.resolve(userId, timezone).feature(featureKey)
 
+    /** A paid read: on her tier and not out of budget, or the entitlement error the app routes to the paywall. */
+    suspend fun requireFeature(userId: Uuid, featureKey: String): UserRecord {
+        val user = requireUser(userId)
+        entitlements.requireAvailable(userId, featureKey, user.timezone)
+        return user
+    }
+
     suspend fun requireWritable(userId: Uuid, featureKey: String): UserRecord {
         val user = requireUser(userId)
         val consents = users.consentsOf(userId)

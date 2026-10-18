@@ -1,6 +1,8 @@
 package uz.sadora.server.partner
 
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 import uz.sadora.contract.CyclePhase
 import uz.sadora.contract.Language
 import uz.sadora.contract.LifeStage
@@ -17,7 +19,11 @@ import uz.sadora.server.share.DoctorPage
  */
 internal object PartnerWebPage {
 
-    fun render(view: PartnerView, language: Language): String {
+    /**
+     * [zone] reads a baby's last feed as a wall-clock time. The view carries her day but
+     * not her zone, so it defaults to Tashkent, where nearly every account lives.
+     */
+    fun render(view: PartnerView, language: Language, zone: TimeZone = DEFAULT_ZONE): String {
         val t = Words(language)
         val e = DoctorPage::escape
         val body = StringBuilder()
@@ -42,7 +48,9 @@ internal object PartnerWebPage {
                     append("<p class=\"phase\">").append(t.babyAge(view.pregnancy!!.babyAgeDays!!)).append("</p>")
                 view.stage == LifeStage.PERIMENOPAUSE || view.stage == LifeStage.MENOPAUSE ->
                     append("<p class=\"phase\">").append(t.menopause).append("</p>")
-                else -> append("<p class=\"muted\">").append(t.nothing).append("</p>")
+                // Her babies below are something shared, so "nothing yet" would be wrong.
+                view.care?.babies.isNullOrEmpty() -> append("<p class=\"muted\">").append(t.nothing).append("</p>")
+                else -> Unit
             }
             if (cycle != null) {
                 val next = cycle.nextPeriodStart
@@ -77,6 +85,30 @@ internal object PartnerWebPage {
                     visit.scheduledAt?.let { append(" · ").append("%02d:%02d".format(it.hour, it.minute)) }
                     visit.place?.let { append(" · ").append(e(it)) }
                     append("</span></p>")
+                }
+            }
+        }
+
+        view.care?.babies?.forEach { baby ->
+            body.card {
+                append("<h2>").append(e(baby.name)).append(" · ").append(t.babyAgeShort(baby.ageDays)).append("</h2>")
+                append("<p><b>").append(t.feedsToday(baby.feedsToday)).append("</b>")
+                baby.lastFeedAt?.let { at ->
+                    val local = at.toLocalDateTime(zone)
+                    append(" <span class=\"muted\">· ").append(t.lastFeedAt("%02d:%02d".format(local.hour, local.minute))).append("</span>")
+                }
+                append("</p>")
+                append("<p>").append(t.sleepToday).append(": <b>").append(t.duration(baby.sleepMinutesToday)).append("</b></p>")
+                baby.sleepingSince?.let { since ->
+                    val minutes = (view.generatedAt - since).inWholeMinutes.toInt().coerceAtLeast(0)
+                    append("<p><b>").append(t.asleepNow).append("</b> <span class=\"muted\">· ")
+                        .append(t.asleepFor(t.duration(minutes))).append("</span></p>")
+                }
+                append("<p>").append(t.diapersToday(baby.diapersToday)).append("</p>")
+                baby.nextVaccineName?.let { name ->
+                    append("<p>").append(t.nextVaccine).append(": <b>").append(e(name)).append("</b>")
+                    baby.nextVaccineOn?.let { append(" <span class=\"muted\">· ").append(date(it)).append("</span>") }
+                    append("</p>")
                 }
             }
         }
@@ -116,6 +148,8 @@ internal object PartnerWebPage {
         </head>
         <body><div class="top">SADORA</div><main>$body</main><footer>$footer</footer></body></html>
     """.trimIndent()
+
+    private val DEFAULT_ZONE = TimeZone.of("Asia/Tashkent")
 
     private fun date(d: LocalDate): String = "%02d.%02d.%d".format(d.day, d.month.ordinal + 1, d.year)
 
@@ -186,6 +220,41 @@ internal object PartnerWebPage {
             MoodLevel.OK -> pick("O'rtacha", "Нормально", "Okay")
             MoodLevel.LOW -> pick("Past", "Плохо", "Low")
             MoodLevel.BAD -> pick("Yomon", "Очень плохо", "Bad")
+        }
+        /** A baby's age on its card, after the name: "10 haftalik". */
+        fun babyAgeShort(days: Int) = when {
+            days < 14 -> pick("$days kunlik", "$days ${ru(days, "день", "дня", "дней")}", "$days ${en(days, "day", "days")} old")
+            days < 91 -> (days / 7).let { pick("$it haftalik", "$it ${ru(it, "неделя", "недели", "недель")}", "$it ${en(it, "week", "weeks")} old") }
+            else -> (days / 30).let { pick("$it oylik", "$it ${ru(it, "месяц", "месяца", "месяцев")}", "$it ${en(it, "month", "months")} old") }
+        }
+        fun feedsToday(count: Int) = pick("Bugun $count marta ovqatlandi", "Кормлений сегодня: $count", "$count ${en(count, "feed", "feeds")} today")
+        fun lastFeedAt(time: String) = pick("oxirgisi $time", "последнее в $time", "last at $time")
+        fun duration(minutes: Int): String {
+            val h = minutes / 60
+            val m = minutes % 60
+            val hours = pick("$h soat", "$h ${ru(h, "час", "часа", "часов")}", "$h h")
+            val mins = pick("$m daqiqa", "$m ${ru(m, "минута", "минуты", "минут")}", "$m min")
+            return when {
+                h == 0 -> mins
+                m == 0 -> hours
+                else -> "$hours $mins"
+            }
+        }
+        fun asleepFor(duration: String) = pick("${duration}dan beri", "уже $duration", "for $duration")
+        fun diapersToday(count: Int) = pick("Bugun $count ta taglik", "Подгузников сегодня: $count", "$count ${en(count, "diaper", "diapers")} today")
+        val sleepToday get() = pick("Bugun uxladi", "Сон сегодня", "Sleep today")
+        val asleepNow get() = pick("Hozir uxlayapti", "Сейчас спит", "Asleep now")
+        val nextVaccine get() = pick("Keyingi emlash", "Следующая прививка", "Next vaccine")
+        private fun en(n: Int, one: String, other: String) = if (n == 1) one else other
+        private fun ru(n: Int, one: String, few: String, many: String): String {
+            val tens = n % 100
+            val units = n % 10
+            return when {
+                tens in 11..14 -> many
+                units == 1 -> one
+                units in 2..4 -> few
+                else -> many
+            }
         }
         val menopause get() = pick("Menopauza davri", "Период менопаузы", "Menopause years")
         val nothing get() = pick("Hozircha hech narsa ulashilmagan.", "Пока ничего не показано.", "Nothing is shared yet.")

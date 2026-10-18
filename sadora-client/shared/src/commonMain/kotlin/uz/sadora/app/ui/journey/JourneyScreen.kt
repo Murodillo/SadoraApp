@@ -116,13 +116,15 @@ fun JourneyScreen(
     onOpen: (Route) -> Unit,
     modifier: Modifier = Modifier,
     onPregnancyEnded: () -> Unit = {},
+    /** Her babies, for the postpartum page's way into the baby tracker. */
+    babies: uz.sadora.app.data.BabyController = uz.sadora.app.data.BabyController(null, tools),
 ) {
     val t = strings.journey
     Column(modifier) {
         when (state.lifeStage) {
             LifeStage.Cycle, LifeStage.TryingToConceive -> CycleJourney(state, health, onOpen)
             LifeStage.Pregnancy -> PregnancyJourney(state, health, tools, onOpen, onPregnancyEnded)
-            LifeStage.Postpartum -> PostpartumJourney(state, health, tools, onOpen)
+            LifeStage.Postpartum -> PostpartumJourney(state, health, tools, babies, onOpen)
             LifeStage.Perimenopause -> PerimenopauseJourney(state, health, tools, onOpen)
             LifeStage.Menopause -> MenopauseJourney(state, health, tools, onOpen)
         }
@@ -802,7 +804,13 @@ private fun AiAdviceCard(body: String) {
 // ---------------------------------------------------------------- postpartum
 
 @Composable
-private fun PostpartumJourney(state: AppState, health: HealthController, tools: StageEventsController, onOpen: (Route) -> Unit) {
+private fun PostpartumJourney(
+    state: AppState,
+    health: HealthController,
+    tools: StageEventsController,
+    babies: uz.sadora.app.data.BabyController,
+    onOpen: (Route) -> Unit,
+) {
     val t = strings.journey
     val c = Sadora.colors
     SadoraTopBar(t.postpartumTitle)
@@ -858,6 +866,7 @@ private fun PostpartumJourney(state: AppState, health: HealthController, tools: 
             }
         }
 
+        item { uz.sadora.app.ui.modules.BabyEntryCard(babies, onOpen) }
         item { FeedingCard(tools, onOpen) }
 
         item {

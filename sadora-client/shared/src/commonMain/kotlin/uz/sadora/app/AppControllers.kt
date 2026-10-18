@@ -12,6 +12,7 @@ import uz.sadora.app.data.InsightsController
 import uz.sadora.app.data.LearnController
 import uz.sadora.app.data.NotificationsController
 import uz.sadora.app.data.PetController
+import uz.sadora.app.data.BabyController
 import uz.sadora.app.data.LabController
 import uz.sadora.app.data.StageEventsController
 import uz.sadora.app.data.PhotoController
@@ -53,6 +54,8 @@ class AppControllers(
     val stageEvents: StageEventsController,
     /** Her lab sheets. Defaulted so the previews and tests that build this by hand need not know it. */
     val labs: LabController = LabController(null),
+    /** Her babies; tied to [stageEvents] so a feed lands on the baby on screen. */
+    val babies: BabyController = BabyController(null, StageEventsController(null)),
     val pet: PetController,
     val frames: FrameController,
     val analytics: Analytics,
@@ -60,7 +63,12 @@ class AppControllers(
     val widgets: uz.sadora.app.data.widget.WidgetsController = uz.sadora.app.data.widget.WidgetsController(null),
 ) {
     companion object {
-        fun from(graph: SadoraGraph?, state: AppState): AppControllers = AppControllers(
+        fun from(graph: SadoraGraph?, state: AppState): AppControllers {
+            val stageEvents = graph?.stageEventsController() ?: StageEventsController(null)
+            return from(graph, state, stageEvents)
+        }
+
+        private fun from(graph: SadoraGraph?, state: AppState, stageEvents: StageEventsController): AppControllers = AppControllers(
             account = SadoraController(graph?.repository, state),
             health = graph?.healthController(state) ?: HealthController(null, null, null, null, state = state),
             community = graph?.communityController(state) ?: CommunityController(null, state),
@@ -76,8 +84,9 @@ class AppControllers(
             photos = graph?.photoController(state) ?: PhotoController(null, state),
             wearables = graph?.wearableController() ?: WearableController(null),
             notifications = graph?.notificationsController() ?: NotificationsController(null),
-            stageEvents = graph?.stageEventsController() ?: StageEventsController(null),
+            stageEvents = stageEvents,
             labs = graph?.labController() ?: LabController(null),
+            babies = graph?.babyController(stageEvents) ?: BabyController(null, stageEvents),
             pet = graph?.petController(state) ?: PetController(null, state),
             frames = graph?.frameController(state) ?: FrameController(null, state),
             analytics = graph?.analytics ?: Analytics.None,

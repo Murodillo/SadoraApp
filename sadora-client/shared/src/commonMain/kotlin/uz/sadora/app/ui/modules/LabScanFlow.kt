@@ -560,94 +560,95 @@ private fun LabEditor(
     val dateError = typedDateError(date, allowFuture = false)
     val ready = parsedDate != null && dateError == null && rows.isNotEmpty() && rows.all { it.complete }
 
-    Column(modifier) {
-        SadoraTopBar(title, onBack = onClose)
-        ScreenContent {
-            if (note != null) {
+    Box(modifier) {
+        Column(Modifier.fillMaxSize()) {
+            SadoraTopBar(title, onBack = onClose)
+            ScreenContent {
+                if (note != null) {
+                    item {
+                        SadoraCard(padding = Spacing.sm, verticalGap = Spacing.xxs) {
+                            Text(note, style = Sadora.type.body, color = c.text)
+                        }
+                    }
+                }
+                if (photos.isNotEmpty()) {
+                    item {
+                        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                            photos.forEachIndexed { index, photo -> PageChip(photo, index, onRemove = null) }
+                        }
+                    }
+                }
                 item {
-                    SadoraCard(padding = Spacing.sm, verticalGap = Spacing.xxs) {
-                        Text(note, style = Sadora.type.body, color = c.text)
+                    SadoraCard(padding = Spacing.sm) {
+                        SadoraTextField(
+                            date,
+                            { date = acceptText(it, DateFieldMax) },
+                            label = l.date,
+                            placeholder = l.dateHint,
+                            error = dateError,
+                        )
+                        SadoraTextField(
+                            place,
+                            { place = acceptText(it, Limits.LAB_PLACE_MAX) },
+                            label = l.place,
+                            placeholder = l.placeHint,
+                        )
                     }
                 }
-            }
-            if (photos.isNotEmpty()) {
+                item { CardLabel(l.rows) }
+                itemsIndexed(rows, key = { _, row -> row.key }) { index, row ->
+                    RowEditor(
+                        row = row,
+                        onChange = { rows[index] = it },
+                        onRemove = { rows.removeAt(index) },
+                    )
+                }
                 item {
-                    Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-                        photos.forEachIndexed { index, photo -> PageChip(photo, index, onRemove = null) }
-                    }
+                    SadoraButton(l.addRow, onClick = { picking = true }, tone = ButtonTone.Secondary, icon = SadoraIcons.Plus)
                 }
-            }
-            item {
-                SadoraCard(padding = Spacing.sm) {
+                item {
                     SadoraTextField(
-                        date,
-                        { date = acceptText(it, DateFieldMax) },
-                        label = l.date,
-                        placeholder = l.dateHint,
-                        error = dateError,
-                    )
-                    SadoraTextField(
-                        place,
-                        { place = acceptText(it, Limits.LAB_PLACE_MAX) },
-                        label = l.place,
-                        placeholder = l.placeHint,
+                        sheetNote,
+                        { sheetNote = acceptText(it, Limits.LAB_NOTE_MAX) },
+                        label = l.note,
+                        placeholder = l.noteHint,
+                        singleLine = false,
                     )
                 }
-            }
-            item { CardLabel(l.rows) }
-            itemsIndexed(rows, key = { _, row -> row.key }) { index, row ->
-                RowEditor(
-                    row = row,
-                    onChange = { rows[index] = it },
-                    onRemove = { rows.removeAt(index) },
-                )
-            }
-            item {
-                SadoraButton(l.addRow, onClick = { picking = true }, tone = ButtonTone.Secondary, icon = SadoraIcons.Plus)
-            }
-            item {
-                SadoraTextField(
-                    sheetNote,
-                    { sheetNote = acceptText(it, Limits.LAB_NOTE_MAX) },
-                    label = l.note,
-                    placeholder = l.noteHint,
-                    singleLine = false,
-                )
-            }
-            item {
-                Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-                    labs.error?.takeIf { !saving }?.let { ErrorStrip(it.readable(strings.errors)) }
-                    when {
-                        rows.isEmpty() -> Text(l.noRows, style = Sadora.type.caption.copy(letterSpacing = TextUnit.Unspecified), color = c.muted2)
-                        rows.any { !it.complete } -> Text(l.rowIncomplete, style = Sadora.type.caption.copy(letterSpacing = TextUnit.Unspecified), color = c.muted2)
+                item {
+                    Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                        labs.error?.takeIf { !saving }?.let { ErrorStrip(it.readable(strings.errors)) }
+                        when {
+                            rows.isEmpty() -> Text(l.noRows, style = Sadora.type.caption.copy(letterSpacing = TextUnit.Unspecified), color = c.muted2)
+                            rows.any { !it.complete } -> Text(l.rowIncomplete, style = Sadora.type.caption.copy(letterSpacing = TextUnit.Unspecified), color = c.muted2)
+                        }
+                        SadoraButton(
+                            strings.common.save,
+                            enabled = ready && !saving,
+                            onClick = {
+                                val takenOn = parsedDate ?: return@SadoraButton
+                                saving = true
+                                labs.clearError()
+                                scope.launch {
+                                    onSave(
+                                        SaveLabReportRequest(
+                                            takenOn = takenOn,
+                                            place = place.trim().takeIf { it.isNotEmpty() },
+                                            note = sheetNote.trim().takeIf { it.isNotEmpty() },
+                                            values = rows.map { it.toRequest() },
+                                            photos = photos.map { LabPhotoUpload(it.base64, it.mimeType) },
+                                            scanned = photos.isNotEmpty(),
+                                        ),
+                                    )
+                                    saving = false
+                                }
+                            },
+                        )
+                        Text(l.disclaimer, style = Sadora.type.caption.copy(letterSpacing = TextUnit.Unspecified), color = c.muted2)
                     }
-                    SadoraButton(
-                        strings.common.save,
-                        enabled = ready && !saving,
-                        onClick = {
-                            val takenOn = parsedDate ?: return@SadoraButton
-                            saving = true
-                            labs.clearError()
-                            scope.launch {
-                                onSave(
-                                    SaveLabReportRequest(
-                                        takenOn = takenOn,
-                                        place = place.trim().takeIf { it.isNotEmpty() },
-                                        note = sheetNote.trim().takeIf { it.isNotEmpty() },
-                                        values = rows.map { it.toRequest() },
-                                        photos = photos.map { LabPhotoUpload(it.base64, it.mimeType) },
-                                        scanned = photos.isNotEmpty(),
-                                    ),
-                                )
-                                saving = false
-                            }
-                        },
-                    )
-                    Text(l.disclaimer, style = Sadora.type.caption.copy(letterSpacing = TextUnit.Unspecified), color = c.muted2)
                 }
             }
         }
-
         SadoraBottomSheet(visible = picking, title = l.pickMarker, onDismiss = { picking = false }) {
             val have = rows.mapNotNull { it.markerCode }.toSet()
             labs.markers.groupBy { it.group }.forEach { (group, markers) ->

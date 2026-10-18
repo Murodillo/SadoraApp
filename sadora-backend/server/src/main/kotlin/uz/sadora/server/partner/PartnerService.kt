@@ -92,6 +92,8 @@ class PartnerService(
     /** Optional only for the tests that build the service by hand. */
     private val rewards: RewardsService? = null,
     private val messages: PartnerMessageRepository = PartnerMessageRepository(),
+    /** Her babies today, as counts, in the partner's language; null in tests without babies. */
+    private val babies: (suspend (UserRecord, uz.sadora.contract.Language) -> List<uz.sadora.contract.PartnerBaby>)? = null,
 ) {
     private val random = SecureRandom()
 
@@ -262,7 +264,7 @@ class PartnerService(
             today = today,
         )
         val shown = language ?: owner.language
-        return PartnerWebView(build(base, owner, record.link.permissions, today, shown), shown)
+        return PartnerWebView(build(base, owner, record.link.permissions, today, shown), shown, owner.timezone)
     }
 
     // ---------------------------------------------------------------- hers
@@ -474,7 +476,7 @@ class PartnerService(
         } else {
             emptyList()
         }
-        val care = if (shown.care) careOf(owner, stage, today) else null
+        val care = if (shown.care) careOf(owner, stage, today, language) else null
 
         return base.copy(
             stage = visibleStage,
@@ -542,9 +544,11 @@ class PartnerService(
         return day.takeUnless { it.mood == null && it.energy == null && it.symptoms.isEmpty() }
     }
 
-    private suspend fun careOf(owner: UserRecord, stage: LifeStage, today: LocalDate): PartnerCare? {
+    private suspend fun careOf(owner: UserRecord, stage: LifeStage, today: LocalDate, language: uz.sadora.contract.Language): PartnerCare? {
         val midnight = today.atStartOfDayIn(TimeZone.of(owner.timezone))
-        return when (stage) {
+        // A baby she tracks is shown whatever stage she is in now: a toddler outlives postpartum.
+        val tracked = babies?.invoke(owner, language).orEmpty()
+        val base = when (stage) {
             LifeStage.POSTPARTUM -> {
                 val feeds = stageEvents.list(owner.id, StageEventKind.FEEDING, since = midnight, limit = CARE_EVENTS)
                 PartnerCare(feedsToday = feeds.size, lastFeedAt = feeds.maxOfOrNull { it.startedAt })
@@ -554,6 +558,10 @@ class PartnerService(
                 PartnerCare(hotFlushesToday = flushes.size)
             }
             else -> null
+        }
+        return when {
+            tracked.isEmpty() -> base
+            else -> (base ?: PartnerCare()).copy(babies = tracked)
         }
     }
 
@@ -757,7 +765,12 @@ class PartnerService(
 }
 
 /** The browser page's content and the language it is drawn in: asked for, else hers. */
-data class PartnerWebView(val view: PartnerView, val language: Language)
+data class PartnerWebView(
+    val view: PartnerView,
+    val language: Language,
+    /** Her zone, so a feed's time on the page is the time on her clock. */
+    val timezone: String = uz.sadora.server.core.DEFAULT_TIMEZONE,
+)
 
 /** The parts a permission set shows, for the audit row. */
 internal fun PartnerPermissions.shownKeys(): List<String> = buildList {

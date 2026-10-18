@@ -94,6 +94,13 @@ sealed interface Route {
     data object LabScan : Route
     /** A sheet typed in ([id] null) or corrected. */
     data class LabEdit(val id: String?) : Route
+    /** Her babies: the chosen one's day, and the ways into growth, vaccines and milestones. */
+    data object Baby : Route
+    /** A baby's profile, new ([id] null) or hers to change. */
+    data class BabyEdit(val id: String?) : Route
+    data object BabyGrowth : Route
+    data object BabyVaccines : Route
+    data object BabyMilestones : Route
     data object Sleep : Route
     data object Insights : Route
     data object Knowledge : Route
@@ -206,6 +213,9 @@ sealed interface AppLink {
      */
     data class Dose(val medicationId: String, val day: String, val time: String) : AppLink
 
+    /** `sadora://baby/{id}/vaccines` — the vaccine reminder: that baby's calendar. */
+    data class BabyVaccines(val babyId: String) : AppLink
+
     /** `sadora://open/{target}` — a tap on a home-screen widget's block. */
     data class Open(val target: Target) : AppLink {
         enum class Target { Today, Journey, Medications, Water, Devices }
@@ -242,6 +252,10 @@ sealed interface AppLink {
                     segments[1].takeIf { id -> id.length in 8..64 && id.all { it.isLetterOrDigit() || it == '-' } }
                         ?.let(AppLink::Conversation)
                 }
+                segments[0].equals("baby", ignoreCase = true) && segments.size == 3 &&
+                    segments[2].equals("vaccines", ignoreCase = true) && url.startsWith("sadora://", ignoreCase = true) ->
+                    segments[1].takeIf { id -> id.length in 8..64 && id.all { it.isLetterOrDigit() || it == '-' } }
+                        ?.let(AppLink::BabyVaccines)
                 segments[0].equals("dose", ignoreCase = true) && segments.size == 4 &&
                     url.startsWith("sadora://", ignoreCase = true) ->
                     AppLink.Dose(segments[1], segments[2], segments[3])

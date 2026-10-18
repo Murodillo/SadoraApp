@@ -222,7 +222,9 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
     val mindService = MindService(mindRepository, healthRepository, healthAccess, rewardsService)
     val appointmentService = AppointmentService(appointmentRepository, healthAccess)
     val stageEventRepository = StageEventRepository()
-    val stageEventService = StageEventService(stageEventRepository, healthAccess)
+    val babyRepository = uz.sadora.server.baby.BabyRepository()
+    val babyService = uz.sadora.server.baby.BabyService(babyRepository, stageEventRepository, healthAccess)
+    val stageEventService = StageEventService(stageEventRepository, healthAccess, ownsBaby = babyService::owns)
     val nutritionService = NutritionService(
         nutrition = nutritionRepository,
         access = healthAccess,
@@ -500,10 +502,12 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
         audit = auditService,
         publicBaseUrl = config.publicBaseUrl,
         rewards = rewardsService,
+        babies = babyService::forPartner,
     ).also { service ->
         healthService.onPeriodStarted = service::periodStarted
     }
     val partnerAlertJob = uz.sadora.server.partner.PartnerAlertJob(partnerService)
+    val vaccineReminderJob = uz.sadora.server.baby.VaccineReminderJob(babyRepository, userRepository, notificationRepository)
 
     val billingRepository = BillingRepository()
     val billingService = BillingService(
@@ -644,6 +648,7 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
         accountErasureJob.stop()
         consultationJob.stop()
         partnerAlertJob.stop()
+        vaccineReminderJob.stop()
         outboundHttpClient.close()
         cache.close()
         databaseFactory.close()

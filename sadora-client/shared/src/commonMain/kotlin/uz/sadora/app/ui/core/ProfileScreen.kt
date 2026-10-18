@@ -211,6 +211,7 @@ fun ProfileScreen(
                         SettingsRow(Res.drawable.ic3d_sleep, t.sleep) { onOpen(Route.Sleep) }
                         SettingsRow(Res.drawable.ic3d_meds, t.medications) { onOpen(Route.Medications) }
                         SettingsRow(Res.drawable.ic3d_lab, strings.labs.title) { onOpen(Route.Labs) }
+                        SettingsRow(Res.drawable.ic3d_baby, strings.babies.title) { onOpen(Route.Baby) }
                         if (state.communityEnabled) {
                             SettingsRow(Res.drawable.ic3d_chats, t.secretChat, iconTint = c.secondary) { onOpen(Route.SecretChat) }
                         }

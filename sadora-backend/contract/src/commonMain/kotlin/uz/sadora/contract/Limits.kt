@@ -115,6 +115,18 @@ object Limits {
     const val LAB_SHARE_DAYS = 365
     const val LAB_SHARE_REPORTS_MAX = 20
 
+    // ---- babies
+    const val BABIES_MAX = 6
+    const val BABY_NAME_MAX = 40
+    /** Grams, for a birth weight or a weighing: 300 g to 30 kg. */
+    val BABY_WEIGHT_G = 300..30_000
+    /** Centimetres of length: 20 to 130. */
+    val BABY_LENGTH_CM = 20.0..130.0
+    val BABY_HEAD_CM = 20.0..60.0
+    const val BABY_NOTE_MAX = 300
+    /** A sleep longer than this is a timer left running. */
+    const val BABY_SLEEP_MAX_SECONDS = 16 * 3600
+
     /**
      * Ratings a doctor needs before her average is shown as a number; below it the
      * apps say "Yangi shifokor". One five-star rating is not a reputation.

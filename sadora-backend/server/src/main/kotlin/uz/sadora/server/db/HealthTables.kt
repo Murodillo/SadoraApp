@@ -253,6 +253,8 @@ object StageEventsTable : Table("stage_events") {
     val value = integer("value").nullable()
     val detail = text("detail").nullable()
     val createdAt = timestampWithTimeZone("created_at")
+    /** The baby a feed, sleep or nappy was about (V57). */
+    val babyId = uuid("baby_id").nullable()
 
     override val primaryKey = PrimaryKey(id)
 }

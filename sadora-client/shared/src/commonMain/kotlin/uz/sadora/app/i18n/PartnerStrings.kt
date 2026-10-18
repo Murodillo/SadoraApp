@@ -110,6 +110,19 @@ interface PartnerStrings {
     fun feedsToday(count: Int): String
     fun lastFeed(ago: String): String
     fun hotFlushesToday(count: Int): String
+    /** One card per baby she tracks: "10 haftalik", read after the baby's name. */
+    fun babyAgeShort(days: Int): String
+    fun babyFeedsToday(count: Int): String
+    /** Beside the feeds: the wall-clock time of the last one, "14:20". */
+    fun lastFeedAt(time: String): String
+    val babySleepToday: String
+    /** "3 soat 20 daqiqa" */
+    fun sleepDuration(minutes: Int): String
+    val babyAsleepNow: String
+    /** [duration] is [sleepDuration]'s answer. */
+    fun asleepFor(duration: String): String
+    fun diapersToday(count: Int): String
+    fun nextVaccine(name: String): String
     val helpTitle: String
     val leave: String
     fun leaveConfirmBody(name: String): String

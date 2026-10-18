@@ -20,6 +20,7 @@ import uz.sadora.server.billing.paymeWebhook
 import uz.sadora.server.ai.aiRoutes
 import uz.sadora.server.frame.adminFrameRoutes
 import uz.sadora.server.frame.frameRoutes
+import uz.sadora.server.baby.babyRoutes
 import uz.sadora.server.lab.labRoutes
 import uz.sadora.server.pet.adminPetRoutes
 import uz.sadora.server.pet.petRoutes
@@ -103,6 +104,9 @@ fun main() {
     // Yaqinim's daily pass: a period two days off, a doctor visit tomorrow.
     component.partnerAlertJob.start()
 
+    // Three days before a vaccine falls due, and on the day: a push to the mother.
+    component.vaccineReminderJob.start()
+
     Runtime.getRuntime().addShutdownHook(Thread { component.close() })
 
     logger.info(
@@ -164,6 +168,7 @@ fun Application.apiModule(component: AppComponent) {
             stageEventRoutes(component.stageEventService)
             nutritionRoutes(component.nutritionService)
             labRoutes(component.labService)
+            babyRoutes(component.babyService)
             medicationRoutes(component.medicationService)
             notificationRoutes(component.notificationService)
             adminNotificationRoutes(component.notificationService, component.auditService)

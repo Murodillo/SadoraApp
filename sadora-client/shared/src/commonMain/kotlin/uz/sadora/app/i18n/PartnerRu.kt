@@ -187,6 +187,29 @@ object PartnerRu : PartnerStrings {
     override fun feedsToday(count: Int) = "Сегодня кормлений: $count"
     override fun lastFeed(ago: String) = "Последнее $ago"
     override fun hotFlushesToday(count: Int) = "Сегодня приливов: $count"
+    override fun babyAgeShort(days: Int) = when {
+        days < 14 -> "$days ${ru(days, "день", "дня", "дней")}"
+        days < 91 -> (days / 7).let { "$it ${ru(it, "неделя", "недели", "недель")}" }
+        else -> (days / 30).let { "$it ${ru(it, "месяц", "месяца", "месяцев")}" }
+    }
+    override fun babyFeedsToday(count: Int) = "Кормлений сегодня: $count"
+    override fun lastFeedAt(time: String) = "последнее в $time"
+    override val babySleepToday = "Сон сегодня"
+    override fun sleepDuration(minutes: Int): String {
+        val h = minutes / 60
+        val m = minutes % 60
+        val hours = "$h ${ru(h, "час", "часа", "часов")}"
+        val mins = "$m ${ru(m, "минута", "минуты", "минут")}"
+        return when {
+            h == 0 -> mins
+            m == 0 -> hours
+            else -> "$hours $mins"
+        }
+    }
+    override val babyAsleepNow = "Сейчас спит"
+    override fun asleepFor(duration: String) = "уже $duration"
+    override fun diapersToday(count: Int) = "Подгузников сегодня: $count"
+    override fun nextVaccine(name: String) = "Следующая прививка: $name"
     override val helpTitle = "Чем помочь ей сегодня"
     override val leave = "Перестать следить"
     override fun leaveConfirmBody(name: String) =

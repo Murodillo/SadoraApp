@@ -3779,6 +3779,95 @@ class ApiIntegrationTest {
         assertTrue(get<List<uz.sadora.contract.IncomingPaymentRequest>>("/v1/payment-requests/incoming", him.token).isEmpty())
     }
 
+    // ---------------------------------------------------------------- babies
+
+    @Test
+    fun `a baby's feeds, sleep and nappies, growth, vaccines and milestones are hers, and her person sees counts`() = api {
+        val her = signUp().also { onboard(it) }
+        val today = get<CycleStatus>("/v1/cycle/status", her.token).today
+        val born = today.minus(70, DateTimeUnit.DAY)
+        val baby = post<uz.sadora.contract.Baby>(
+            "/v1/babies",
+            her.token,
+            uz.sadora.contract.SaveBabyRequest("Oysha", uz.sadora.contract.BabySex.GIRL, born, birthWeightG = 3200, birthLengthCm = 50.0),
+        )
+        assertEquals(listOf("Oysha"), get<List<uz.sadora.contract.Baby>>("/v1/babies", her.token).map { it.name })
+
+        // A feed, a nappy, a sleep started and ended, all for this baby.
+        val now = kotlin.time.Clock.System.now()
+        post<StageEvent>("/v1/stage-events", her.token, LogStageEventRequest(StageEventKind.FEEDING, now - 3.hours, durationSeconds = 900, detail = "left", babyId = baby.id))
+        post<StageEvent>("/v1/stage-events", her.token, LogStageEventRequest(StageEventKind.DIAPER, now - 2.hours, detail = "wet", babyId = baby.id))
+        val sleep = post<StageEvent>("/v1/stage-events", her.token, LogStageEventRequest(StageEventKind.SLEEP, now - 90.minutes, babyId = baby.id))
+        assertTrue(sleep.inProgress)
+        val twice = raw { client.post("/v1/stage-events") { auth(her.token); json(LogStageEventRequest(StageEventKind.SLEEP, now, babyId = baby.id)) } }
+        assertEquals(HttpStatusCode.Conflict, twice.status, "one sleep at a time")
+        val asleep = get<uz.sadora.contract.BabyOverview>("/v1/babies/${baby.id}/overview", her.token)
+        assertEquals(sleep.id, asleep.sleeping?.id)
+        val ended = post<StageEvent>("/v1/stage-events/${sleep.id}/finish", her.token, uz.sadora.contract.FinishStageEventRequest(now - 30.minutes))
+        assertEquals(3600, ended.durationSeconds)
+        val noBaby = raw { client.post("/v1/stage-events") { auth(her.token); json(LogStageEventRequest(StageEventKind.DIAPER, now, detail = "wet")) } }
+        assertEquals(HttpStatusCode.BadRequest, noBaby.status, "a nappy belongs to a baby")
+
+        val overview = get<uz.sadora.contract.BabyOverview>("/v1/babies/${baby.id}/overview", her.token)
+        assertNull(overview.sleeping)
+        assertEquals(7, overview.days.size)
+        assertEquals(1, overview.days.sumOf { it.feeds })
+        assertEquals(1, overview.days.sumOf { it.wetDiapers })
+        assertEquals(60, overview.days.sumOf { it.sleepMinutes })
+        assertEquals(uz.sadora.contract.VaccineStatus.OVERDUE, overview.nextVaccine?.status, "the birth doses are not marked yet")
+
+        // Growth is free; the WHO chart is Premium.
+        post<uz.sadora.contract.GrowthEntry>("/v1/babies/${baby.id}/growth", her.token, uz.sadora.contract.SaveGrowthRequest(today, weightG = 5600, lengthCm = 58.5))
+        assertEquals(1, get<List<uz.sadora.contract.GrowthEntry>>("/v1/babies/${baby.id}/growth", her.token).size)
+        val locked = raw { client.get("/v1/babies/${baby.id}/growth/chart?metric=weight") { auth(her.token) } }
+        assertEquals(HttpStatusCode.PaymentRequired, locked.status, locked.bodyAsTextSafe())
+        // With Premium (bought with coins, as the shop test does) the chart opens on WHO's curves.
+        val premium = get<ShopCatalog>("/v1/shop", her.token).products.first { it.kind == ShopKind.PREMIUM }
+        post<CoinBalance>("/v1/admin/rewards/users/${her.userId}/adjust", adminToken(), AdjustCoinsRequest(amount = premium.coinCost, note = "integration test"))
+        post<RedeemResult>("/v1/shop/redeem", her.token, RedeemRequest(premium.id))
+        val chart = get<uz.sadora.contract.GrowthChart>("/v1/babies/${baby.id}/growth/chart?metric=weight", her.token)
+        assertEquals(25, chart.curves.size)
+        assertEquals(listOf(born, today), chart.points.map { it.measuredOn }, "the birth weight is the first point")
+        val p = assertNotNull(chart.points.last().percentile)
+        assertTrue(p in 1.0..99.0, "5.6 kg at ten weeks is an ordinary weight: $p")
+
+        // Vaccines: the calendar from her birth date, a dose marked given.
+        val doses = get<List<uz.sadora.contract.VaccineDose>>("/v1/babies/${baby.id}/vaccines", her.token)
+        assertEquals(22, doses.size)
+        val marked = put<List<uz.sadora.contract.VaccineDose>>("/v1/babies/${baby.id}/vaccines/hepb_1", her.token, uz.sadora.contract.MarkVaccineRequest(born))
+        assertEquals(uz.sadora.contract.VaccineStatus.DONE, marked.first { it.code == "hepb_1" }.status)
+
+        // A milestone with its photo.
+        val milestones = put<List<uz.sadora.contract.Milestone>>(
+            "/v1/babies/${baby.id}/milestones/social_smile",
+            her.token,
+            uz.sadora.contract.MarkMilestoneRequest(today, note = "Dadasiga", photo = uz.sadora.contract.LabPhotoUpload(tinyPng(), "image/png")),
+        )
+        assertTrue(milestones.first { it.code == "social_smile" }.hasPhoto)
+        assertEquals(HttpStatusCode.OK, client.get("/v1/babies/${baby.id}/milestones/social_smile/photo") { auth(her.token) }.status)
+
+        // Nobody else reaches the baby.
+        val other = signUp().also { onboard(it) }
+        assertEquals(HttpStatusCode.NotFound, raw { client.get("/v1/babies/${baby.id}/overview") { auth(other.token) } }.status)
+        val foreign = raw { client.post("/v1/stage-events") { auth(other.token); json(LogStageEventRequest(StageEventKind.DIAPER, now, detail = "wet", babyId = baby.id)) } }
+        assertEquals(HttpStatusCode.NotFound, foreign.status)
+
+        // Her person sees counts with the care part on, nothing about the baby without it.
+        val him = signUp()
+        val code = post<PartnerInvite>("/v1/partner/invite", her.token, CreatePartnerInviteRequest()).code!!
+        val followed = post<FollowedPerson>("/v1/partner/accept", him.token, AcceptPartnerInviteRequest(code, name = "Aziz", asPartnerAccount = true))
+        post<PartnerState>("/v1/partner/approve", her.token, Ack())
+        assertNull(get<PartnerView>("/v1/partner/following/${followed.linkId}", him.token).care?.babies?.takeIf { it.isNotEmpty() })
+        put<PartnerState>("/v1/partner/permissions", her.token, PartnerPermissions(care = true))
+        val seen = get<PartnerView>("/v1/partner/following/${followed.linkId}", him.token).care?.babies?.single()
+        assertEquals("Oysha", seen?.name)
+        assertEquals(70, seen?.ageDays)
+
+        // Deleting the baby takes everything about it.
+        assertEquals(HttpStatusCode.OK, client.delete("/v1/babies/${baby.id}") { auth(her.token) }.status)
+        assertEquals(0, countRowsFor(Uuid.parse(her.userId), "babies"))
+    }
+
     // ---------------------------------------------------------------- lab results
 
     @Test

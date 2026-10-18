@@ -3,7 +3,9 @@ package uz.sadora.server.health
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.minutes
 import kotlin.uuid.Uuid
+import uz.sadora.contract.DiaperKind
 import uz.sadora.contract.Epds
+import uz.sadora.contract.FinishStageEventRequest
 import uz.sadora.contract.FeedingSide
 import uz.sadora.contract.HotFlushTrigger
 import uz.sadora.contract.LogStageEventRequest
@@ -30,12 +32,15 @@ import uz.sadora.server.db.enumFromDb
 class StageEventService(
     private val repository: StageEventRepository,
     private val access: HealthAccess,
+    /** Whether a baby id is hers; null in tests without babies, which then refuse any. */
+    private val ownsBaby: (suspend (Uuid, Uuid) -> Boolean)? = null,
 ) {
 
-    suspend fun list(userId: Uuid, kind: StageEventKind?, days: Int?): List<StageEvent> {
+    suspend fun list(userId: Uuid, kind: StageEventKind?, days: Int?, babyId: Uuid? = null): List<StageEvent> {
         access.requireUser(userId)
         val window = (days ?: DEFAULT_DAYS).coerceIn(1, MAX_DAYS)
-        return repository.list(userId, kind, now() - window.days, LIST_LIMIT)
+        if (babyId != null) requireBaby(userId, babyId)
+        return repository.list(userId, kind, now() - window.days, LIST_LIMIT, babyId)
     }
 
     suspend fun add(userId: Uuid, request: LogStageEventRequest): StageEvent {
@@ -47,8 +52,28 @@ class StageEventService(
         if (at > now() + CLOCK_SLACK) throw ValidationException("startedAt", "Kelajakdagi sana bo'lishi mumkin emas")
         if (at < now() - MAX_DAYS.days) throw ValidationException("startedAt", "Sana juda eski")
 
+        val baby = request.babyId?.let { raw ->
+            val id = runCatching { Uuid.parse(raw) }.getOrNull() ?: throw ValidationException("babyId", "Noto'g'ri format")
+            requireBaby(userId, id)
+            id
+        }
+
         return when (request.kind) {
-            StageEventKind.FEEDING -> feeding(userId, request)
+            StageEventKind.FEEDING -> feeding(userId, request, baby)
+            StageEventKind.SLEEP -> {
+                val id = baby ?: throw ValidationException("babyId", "Chaqaloqni tanlang")
+                val seconds = request.durationSeconds?.let { within("durationSeconds", it, 1..uz.sadora.contract.Limits.BABY_SLEEP_MAX_SECONDS) }
+                // One sleep at a time: a second "uxladi" while one runs is a double tap.
+                if (seconds == null && repository.runningSleep(id) != null) {
+                    throw uz.sadora.server.core.ConflictException("Chaqaloq allaqachon uxlayapti")
+                }
+                repository.add(userId, request.kind, at, seconds, null, null, id)
+            }
+            StageEventKind.DIAPER -> {
+                val id = baby ?: throw ValidationException("babyId", "Chaqaloqni tanlang")
+                val kind = enumFromDb<DiaperKind>(request.detail) ?: throw ValidationException("detail", "Noto'g'ri format")
+                repository.add(userId, request.kind, at, null, null, kind.dbValue(), id)
+            }
             StageEventKind.KICK_COUNT -> {
                 val kicks = within("value", request.value, 1..MAX_KICKS)
                 val seconds = within("durationSeconds", request.durationSeconds, 1..MAX_KICK_SECONDS)
@@ -75,21 +100,42 @@ class StageEventService(
         }
     }
 
+    /**
+     * Ends a running sleep, now or at the moment she says she forgot to stop it. The length
+     * is the server's arithmetic, so a sleep cannot end before it began.
+     */
+    suspend fun finish(userId: Uuid, id: Uuid, request: FinishStageEventRequest): StageEvent {
+        access.requireUser(userId)
+        val event = repository.byId(userId, id)?.takeIf { it.inProgress } ?: throw NotFoundException("Yozuv topilmadi")
+        val ended = request.endedAt ?: now()
+        if (ended > now() + CLOCK_SLACK) throw ValidationException("endedAt", "Kelajakdagi sana bo'lishi mumkin emas")
+        val seconds = (ended - event.startedAt).inWholeSeconds
+        if (seconds < 1 || seconds > uz.sadora.contract.Limits.BABY_SLEEP_MAX_SECONDS) {
+            throw ValidationException("endedAt", "Uyqu vaqti noto'g'ri")
+        }
+        if (!repository.finish(userId, id, seconds.toInt())) throw NotFoundException("Yozuv topilmadi")
+        return repository.byId(userId, id)!!
+    }
+
     suspend fun delete(userId: Uuid, id: Uuid) {
         access.requireUser(userId)
         if (!repository.delete(userId, id)) throw NotFoundException("Yozuv topilmadi")
     }
 
-    private suspend fun feeding(userId: Uuid, request: LogStageEventRequest): StageEvent {
+    private suspend fun requireBaby(userId: Uuid, babyId: Uuid) {
+        if (ownsBaby?.invoke(userId, babyId) != true) throw NotFoundException("Chaqaloq topilmadi")
+    }
+
+    private suspend fun feeding(userId: Uuid, request: LogStageEventRequest, baby: Uuid?): StageEvent {
         val side = enumFromDb<FeedingSide>(request.detail)
             ?: throw ValidationException("detail", "Noto'g'ri format")
         return if (side.isBreast) {
             val seconds = within("durationSeconds", request.durationSeconds, 1..MAX_FEED_SECONDS)
-            repository.add(userId, request.kind, request.startedAt, seconds, null, side.dbValue())
+            repository.add(userId, request.kind, request.startedAt, seconds, null, side.dbValue(), baby)
         } else {
             val ml = within("value", request.value, 1..MAX_FEED_ML)
             val seconds = request.durationSeconds?.let { within("durationSeconds", it, 1..MAX_FEED_SECONDS) }
-            repository.add(userId, request.kind, request.startedAt, seconds, ml, side.dbValue())
+            repository.add(userId, request.kind, request.startedAt, seconds, ml, side.dbValue(), baby)
         }
     }
 

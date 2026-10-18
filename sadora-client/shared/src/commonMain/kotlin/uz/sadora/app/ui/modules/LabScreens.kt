@@ -5,6 +5,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
@@ -244,71 +245,73 @@ fun LabReportScreen(
         failed = found == null
     }
 
-    Column(modifier) {
-        SadoraTopBar(l.title, onBack = onClose)
-        val sheet = report
-        if (sheet == null) {
-            Box(Modifier.fillMaxWidth().padding(Spacing.xl), contentAlignment = Alignment.Center) {
-                if (failed) {
-                    labs.error?.let { ErrorStrip(it.readable(strings.errors)) }
-                } else {
-                    SadoraLoader(size = 40.dp)
-                }
-            }
-            return@Column
-        }
-        ScreenContent {
-            item {
-                Column(verticalArrangement = Arrangement.spacedBy(Spacing.xxs)) {
-                    Text(strings.dates.dayMonthYear(sheet.takenOn), style = Sadora.type.h2, color = c.text)
-                    sheet.place?.let { Text(it, style = Sadora.type.body, color = c.muted) }
-                    Text(l.countLine(sheet.values.size, sheet.flaggedCount), style = Sadora.type.caption.copy(letterSpacing = TextUnit.Unspecified), color = c.muted2)
-                    if (sheet.scanned) SadoraBadge(l.scanned, BadgeTone.Estimated)
-                }
-            }
-            item {
-                SadoraCard(padding = Spacing.sm, verticalGap = 0.dp) {
-                    sheet.values.forEachIndexed { index, value ->
-                        if (index > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(c.line))
-                        ValueRow(value)
+    Box(modifier) {
+        Column(Modifier.fillMaxSize()) {
+            SadoraTopBar(l.title, onBack = onClose)
+            val sheet = report
+            if (sheet == null) {
+                Box(Modifier.fillMaxWidth().padding(Spacing.xl), contentAlignment = Alignment.Center) {
+                    if (failed) {
+                        labs.error?.let { ErrorStrip(it.readable(strings.errors)) }
+                    } else {
+                        SadoraLoader(size = 40.dp)
                     }
                 }
+                return@Column
             }
-            item {
-                SadoraCard(padding = Spacing.sm, verticalGap = Spacing.xs) {
-                    Text(l.disclaimer, style = Sadora.type.body, color = c.muted)
-                    SadoraButton(l.askDoctor, onClick = onAskDoctor, tone = ButtonTone.Secondary)
-                }
-            }
-            if (sheet.photos.isNotEmpty()) {
+            ScreenContent {
                 item {
-                    CardLabel(l.photos)
-                    Row(Modifier.padding(top = Spacing.xs), horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-                        sheet.photos.indices.forEach { page ->
-                            PageThumb(labs, sheet.id, page, Modifier.weight(1f)) { viewing = page }
+                    Column(verticalArrangement = Arrangement.spacedBy(Spacing.xxs)) {
+                        Text(strings.dates.dayMonthYear(sheet.takenOn), style = Sadora.type.h2, color = c.text)
+                        sheet.place?.let { Text(it, style = Sadora.type.body, color = c.muted) }
+                        Text(l.countLine(sheet.values.size, sheet.flaggedCount), style = Sadora.type.caption.copy(letterSpacing = TextUnit.Unspecified), color = c.muted2)
+                        if (sheet.scanned) SadoraBadge(l.scanned, BadgeTone.Estimated)
+                    }
+                }
+                item {
+                    SadoraCard(padding = Spacing.sm, verticalGap = 0.dp) {
+                        sheet.values.forEachIndexed { index, value ->
+                            if (index > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(c.line))
+                            ValueRow(value)
                         }
-                        repeat(uz.sadora.contract.Limits.LAB_PHOTOS_MAX - sheet.photos.size) { Box(Modifier.weight(1f)) }
                     }
                 }
-            }
-            sheet.note?.let { note ->
                 item {
-                    SadoraCard(padding = Spacing.sm, verticalGap = Spacing.xxs) {
-                        Text(l.note, style = Sadora.type.caption.copy(letterSpacing = TextUnit.Unspecified), color = c.muted)
-                        Text(note, style = Sadora.type.body, color = c.text)
+                    SadoraCard(padding = Spacing.sm, verticalGap = Spacing.xs) {
+                        Text(l.disclaimer, style = Sadora.type.body, color = c.muted)
+                        SadoraButton(l.askDoctor, onClick = onAskDoctor, tone = ButtonTone.Secondary)
                     }
                 }
-            }
-            item {
-                Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-                    SadoraButton(l.delete, onClick = { confirmDelete = true }, tone = ButtonTone.Destructive, modifier = Modifier.weight(1f))
-                    SadoraButton(l.edit, onClick = onEdit, tone = ButtonTone.Outline, modifier = Modifier.weight(1f))
+                if (sheet.photos.isNotEmpty()) {
+                    item {
+                        CardLabel(l.photos)
+                        Row(Modifier.padding(top = Spacing.xs), horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                            sheet.photos.indices.forEach { page ->
+                                PageThumb(labs, sheet.id, page, Modifier.weight(1f)) { viewing = page }
+                            }
+                            repeat(uz.sadora.contract.Limits.LAB_PHOTOS_MAX - sheet.photos.size) { Box(Modifier.weight(1f)) }
+                        }
+                    }
+                }
+                sheet.note?.let { note ->
+                    item {
+                        SadoraCard(padding = Spacing.sm, verticalGap = Spacing.xxs) {
+                            Text(l.note, style = Sadora.type.caption.copy(letterSpacing = TextUnit.Unspecified), color = c.muted)
+                            Text(note, style = Sadora.type.body, color = c.text)
+                        }
+                    }
+                }
+                item {
+                    Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                        SadoraButton(l.delete, onClick = { confirmDelete = true }, tone = ButtonTone.Destructive, modifier = Modifier.weight(1f))
+                        SadoraButton(l.edit, onClick = onEdit, tone = ButtonTone.Outline, modifier = Modifier.weight(1f))
+                    }
                 }
             }
         }
-
         SadoraBottomSheet(visible = viewing != null, title = viewing?.let { l.photo(it + 1) }.orEmpty(), onDismiss = { viewing = null }) {
-            viewing?.let { page -> PagePhoto(labs, sheet.id, page, Modifier.fillMaxWidth()) }
+            val shown = report
+            if (viewing != null && shown != null) PagePhoto(labs, shown.id, viewing!!, Modifier.fillMaxWidth())
         }
 
         SadoraDialog(
@@ -319,7 +322,7 @@ fun LabReportScreen(
             onConfirm = {
                 confirmDelete = false
                 scope.launch {
-                    if (labs.delete(sheet.id)) {
+                    if (labs.delete(id)) {
                         onToast(l.deleted)
                         onClose()
                     }

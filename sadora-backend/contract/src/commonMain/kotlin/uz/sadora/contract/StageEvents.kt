@@ -19,6 +19,11 @@ import kotlinx.serialization.Serializable
  * | CONTRACTION   | how long it lasted     | —                     | —                  |
  * | HOT_FLUSH     | —                      | intensity 1–3         | [HotFlushTrigger]  |
  * | MOOD_SCREEN   | —                      | EPDS score, 0–30      | the ten answers    |
+ * | SLEEP         | how long; null = asleep | —                    | —                  |
+ * | DIAPER        | —                      | —                     | [DiaperKind]       |
+ *
+ * Feeds, sleeps and nappies carry the baby they are about ([StageEvent.babyId]) once she
+ * has made a profile for the baby; a feed logged before that has none.
  */
 @Serializable
 enum class StageEventKind {
@@ -27,6 +32,16 @@ enum class StageEventKind {
     @SerialName("contraction") CONTRACTION,
     @SerialName("hot_flush") HOT_FLUSH,
     @SerialName("mood_screen") MOOD_SCREEN,
+    @SerialName("sleep") SLEEP,
+    @SerialName("diaper") DIAPER,
+}
+
+/** What was in the nappy. */
+@Serializable
+enum class DiaperKind {
+    @SerialName("wet") WET,
+    @SerialName("dirty") DIRTY,
+    @SerialName("both") BOTH,
 }
 
 @Serializable
@@ -61,7 +76,12 @@ data class StageEvent(
     val value: Int? = null,
     val detail: String? = null,
     val createdAt: Instant,
-)
+    /** The baby a feed, a sleep or a nappy was about. */
+    val babyId: String? = null,
+) {
+    /** A sleep still running: started, not yet ended. */
+    val inProgress: Boolean get() = kind == StageEventKind.SLEEP && durationSeconds == null
+}
 
 /**
  * A new event. For [StageEventKind.MOOD_SCREEN] only [answers] is read: the score is the
@@ -75,7 +95,13 @@ data class LogStageEventRequest(
     val value: Int? = null,
     val detail: String? = null,
     val answers: List<Int>? = null,
+    /** Required for a sleep or a nappy; optional for a feed (older apps send none). */
+    val babyId: String? = null,
 )
+
+/** Ends a running sleep. [endedAt] defaults to now; it may be earlier, if she forgot to stop it. */
+@Serializable
+data class FinishStageEventRequest(val endedAt: Instant? = null)
 
 /**
  * The Edinburgh Postnatal Depression Scale: ten questions about the past seven days,

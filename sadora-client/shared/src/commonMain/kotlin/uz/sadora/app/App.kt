@@ -595,6 +595,13 @@ private fun MainShell(
             overlays.closeTop()
             if (navigator.current != Route.Medications) navigator.push(Route.Medications)
         }
+        if (link is AppLink.BabyVaccines) {
+            AppLinks.consume()
+            overlays.closeTop()
+            controllers.babies.select(link.babyId)
+            scope.launch { controllers.babies.refresh() }
+            if (navigator.current != Route.BabyVaccines) navigator.push(Route.BabyVaccines)
+        }
         if (link is AppLink.Open) {
             AppLinks.consume()
             overlays.closeTop()
@@ -1158,6 +1165,7 @@ private fun RootTab(
             state = state,
             health = controllers.health,
             tools = controllers.stageEvents,
+            babies = controllers.babies,
             onOpen = navigator::push,
             onPregnancyEnded = { overlays.showPregnancyEnded = true },
         )
@@ -1251,6 +1259,11 @@ private fun PushedScreen(
         is Route.EditMedication -> AddMedicationScreen(health, close, editingId = route.id)
         Route.MedicationHistory -> MedicationHistoryScreen(health, close)
         Route.Labs -> uz.sadora.app.ui.modules.LabsScreen(state, controllers.labs, close, navigator::push)
+        Route.Baby -> uz.sadora.app.ui.modules.BabyScreen(controllers.babies, close, navigator::push, onToast = toast)
+        is Route.BabyEdit -> uz.sadora.app.ui.modules.BabyEditScreen(route.id, controllers.babies, close, onToast = toast)
+        Route.BabyGrowth -> uz.sadora.app.ui.modules.BabyGrowthScreen(controllers.babies, close, onUpgrade = upgrade)
+        Route.BabyVaccines -> uz.sadora.app.ui.modules.BabyVaccinesScreen(controllers.babies, close)
+        Route.BabyMilestones -> uz.sadora.app.ui.modules.BabyMilestonesScreen(controllers.babies, close)
         is Route.LabReport -> uz.sadora.app.ui.modules.LabReportScreen(
             id = route.id,
             labs = controllers.labs,
