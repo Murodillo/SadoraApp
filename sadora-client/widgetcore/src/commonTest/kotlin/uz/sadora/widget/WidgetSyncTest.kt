@@ -101,7 +101,7 @@ class WidgetSyncTest {
     }
 
     @Test
-    fun `a tap the server refuses is dropped, not retried forever`() = runTest {
+    fun `a tap the server refuses is dropped — not retried forever`() = runTest {
         val store = store()
         val api = FakeApi(summary())
         val sync = WidgetSync(api, store, Clock(), ids = { "t" })

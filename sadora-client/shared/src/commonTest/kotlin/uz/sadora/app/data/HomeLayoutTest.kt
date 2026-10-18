@@ -10,7 +10,7 @@ import uz.sadora.contract.HomeWidgets
 class HomeLayoutTest {
 
     @Test
-    fun `a layout saved before the body-signals card gains it switched on, after her own cards`() {
+    fun `a layout saved before the body-signals card gains it switched on — after her own cards`() {
         val saved = HomeLayout(
             listOf(
                 HomeWidget(HomeWidgets.STREAK, 0, true),

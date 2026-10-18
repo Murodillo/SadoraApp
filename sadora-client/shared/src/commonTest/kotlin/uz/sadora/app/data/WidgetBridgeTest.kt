@@ -89,7 +89,7 @@ class WidgetBridgeTest {
     }
 
     @Test
-    fun `a failed handover leaves the widgets signed out, not the app`() = runTest {
+    fun `a failed handover leaves the widgets signed out — not the app`() = runTest {
         val engine = RecordingEngine { request ->
             when (request.url.encodedPath) {
                 "/v1/auth/companion" -> json(errorBody("server_error", "x"), HttpStatusCode.InternalServerError)

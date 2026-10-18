@@ -82,7 +82,7 @@ class WidgetContentTest {
     ) = WidgetContent.build(WidgetSnapshot(summary, Instant.fromEpochSeconds(0), pending), config, now)
 
     @Test
-    fun `a cycle widget shows the day, the phase and the days to her period`() {
+    fun `a cycle widget shows the day — the phase and the days to her period`() {
         val stage = build().stage
         assertEquals("14", stage.big)
         assertEquals("Sikl kuni", stage.title)
@@ -92,7 +92,7 @@ class WidgetContentTest {
     }
 
     @Test
-    fun `each stage brings its own look, and discretion hides it`() {
+    fun `each stage brings its own look — and discretion hides it`() {
         assertEquals(StageLook.CYCLE, build().stage.look)
         assertEquals(StageLook.PREGNANCY, build(summary(stage = LifeStage.PREGNANCY, cycle = null, baseline = StageBaseline(dueDate = LocalDate(2027, 3, 14)))).stage.look)
         assertEquals(StageLook.MENOPAUSE, build(summary(stage = LifeStage.MENOPAUSE, cycle = null)).stage.look)
@@ -112,7 +112,7 @@ class WidgetContentTest {
     }
 
     @Test
-    fun `the phase turns with the day, the period ends and the fertile days come`() {
+    fun `the phase turns with the day — the period ends and the fertile days come`() {
         // Day 5 of a 5-day period, fertile from day 12 to 16, next period on day 29.
         val withWindow = summary(
             cycle = CycleStatus(
@@ -138,7 +138,7 @@ class WidgetContentTest {
     }
 
     @Test
-    fun `a period past its predicted day is called late, not negative`() {
+    fun `a period past its predicted day is called late — not negative`() {
         val content = build(now = LocalDateTime(LocalDate(2026, 11, 1), LocalTime(7, 0)))
         assertEquals("Hayz 2 kun kechikmoqda", content.stage.line2)
         val today = build(now = LocalDateTime(LocalDate(2026, 10, 30), LocalTime(7, 0)))
@@ -171,7 +171,7 @@ class WidgetContentTest {
     }
 
     @Test
-    fun `water and doses read as the widget draws them, the next dose first`() {
+    fun `water and doses read as the widget draws them — the next dose first`() {
         val content = build()
         assertEquals("1.25 / 2 L", content.water?.label)
         assertEquals(250, content.water?.stepMl)
@@ -183,7 +183,7 @@ class WidgetContentTest {
     }
 
     @Test
-    fun `the wearable block shows the metrics she picked, in words`() {
+    fun `the wearable block shows the metrics she picked — in words`() {
         val health = build().health!!
         assertEquals(listOf("Qadam" to "6\u202F420", "Uyqu" to "7 s 20 daq"), health.items.map { it.label to it.value })
         val none = build(summary().copy(health = null)).health!!
@@ -222,7 +222,7 @@ class WidgetContentTest {
     }
 
     @Test
-    fun `a free account gets the stage, and a lock where the Premium blocks would be`() {
+    fun `a free account gets the stage — and a lock where the Premium blocks would be`() {
         val content = build(summary(premium = false))
         assertEquals("14", content.stage.big)
         assertNull(content.water)
