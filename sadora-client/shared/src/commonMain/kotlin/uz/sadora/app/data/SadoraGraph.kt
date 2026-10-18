@@ -189,6 +189,8 @@ class SadoraGraph(
     fun conditionController(): ConditionController =
         ConditionController(uz.sadora.app.data.api.ConditionApi(caller), wearableApi)
 
+    fun wrappedController(): WrappedController = WrappedController(uz.sadora.app.data.api.WrappedApi(caller))
+
     fun kegelController(): KegelController = KegelController(uz.sadora.app.data.api.KegelApi(caller))
 
     fun reportController(): ReportController = ReportController(uz.sadora.app.data.api.ReportApi(caller))

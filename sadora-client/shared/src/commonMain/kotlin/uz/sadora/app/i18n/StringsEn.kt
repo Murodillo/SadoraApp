@@ -1561,6 +1561,7 @@ object StringsEn : Strings {
     override val conditions: ConditionStrings = ConditionStringsEn
     override val reports: ReportStrings = ReportStringsEn
     override val kegel: KegelStrings = KegelStringsEn
+    override val wrapped: WrappedStrings = WrappedStringsEn
     override val pet: PetStrings = PetEn
     override val widgets: WidgetUiStrings = WidgetUiEn
     override val frames: FrameStrings = FramesEn

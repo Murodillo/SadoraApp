@@ -4021,6 +4021,63 @@ class ApiIntegrationTest {
         }
     }
 
+    // ---------------------------------------------------------------- wrapped
+
+    @Test
+    fun `a finished cycle gets a fresh recap with its numbers, and the year adds them up`() = api {
+        val her = signUp().also { onboard(it) }
+        val today = get<CycleStatus>("/v1/cycle/status", her.token).today
+        // Three finished cycles of 28 days and the current period, two days in.
+        listOf(85, 57, 29).forEach { back ->
+            post<PeriodEntry>("/v1/cycle/periods", her.token, LogPeriodRequest(today.minus(back, DateTimeUnit.DAY), today.minus(back - 4, DateTimeUnit.DAY)))
+        }
+        post<PeriodEntry>("/v1/cycle/periods", her.token, LogPeriodRequest(today.minus(1, DateTimeUnit.DAY), null))
+        // The last cycle: cramps three times, a great day in the fertile window, a low one before the period.
+        listOf(29, 28, 27).forEach { back ->
+            put<DailyLog>(
+                "/v1/days/${today.minus(back, DateTimeUnit.DAY)}",
+                her.token,
+                uz.sadora.contract.SaveDailyLogRequest(symptoms = listOf(uz.sadora.contract.SymptomEntry("cramps"))),
+            )
+        }
+        put<DailyLog>("/v1/days/${today.minus(15, DateTimeUnit.DAY)}", her.token, uz.sadora.contract.SaveDailyLogRequest(mood = MoodLevel.GREAT))
+        put<DailyLog>("/v1/days/${today.minus(3, DateTimeUnit.DAY)}", her.token, uz.sadora.contract.SaveDailyLogRequest(mood = MoodLevel.LOW))
+
+        val index = get<uz.sadora.contract.WrappedIndex>("/v1/wrapped", her.token)
+        val latest = "cycle-${today.minus(29, DateTimeUnit.DAY)}"
+        assertEquals(latest, index.fresh?.key)
+        assertEquals(3, index.items.count { it.kind == uz.sadora.contract.WrappedKind.CYCLE })
+
+        val recap = get<uz.sadora.contract.Wrapped>("/v1/wrapped/$latest", her.token)
+        assertEquals(28, recap.cycleLength)
+        assertEquals(5, recap.periodLength)
+        assertEquals(28, recap.usualLength)
+        assertEquals(0, recap.forecastErrorDays)
+        assertEquals("cramps", recap.topSymptoms.first().key)
+        assertEquals(3, recap.topSymptoms.first().days)
+        assertEquals(today.minus(15, DateTimeUnit.DAY), recap.bestMoodDay)
+        assertEquals(
+            mapOf(uz.sadora.contract.CyclePhase.FERTILE to 5.0, uz.sadora.contract.CyclePhase.LUTEAL to 2.0),
+            recap.moodByPhase.associate { it.phase to it.average },
+        )
+
+        // Opened once, it is no longer offered on Today.
+        assertEquals(HttpStatusCode.OK, client.post("/v1/wrapped/$latest/seen") { auth(her.token) }.status)
+        assertNull(get<uz.sadora.contract.WrappedIndex>("/v1/wrapped", her.token).fresh)
+
+        // The year counts the cycles that began in it.
+        val year = get<uz.sadora.contract.Wrapped>("/v1/wrapped/year-${today.year}", her.token)
+        val inYear = listOf(85, 57, 29).count { today.minus(it, DateTimeUnit.DAY).year == today.year }
+        assertEquals(inYear, year.cycles?.count)
+        assertEquals(3, year.topSymptoms.first().days)
+
+        assertEquals(HttpStatusCode.BadRequest, client.get("/v1/wrapped/nonsense") { auth(her.token) }.status)
+        assertEquals(HttpStatusCode.NotFound, client.get("/v1/wrapped/cycle-2001-01-01") { auth(her.token) }.status)
+        // Nobody reads another woman's recap: hers is counted from her own rows only.
+        val other = signUp().also { onboard(it) }
+        assertEquals(HttpStatusCode.NotFound, client.get("/v1/wrapped/$latest") { auth(other.token) }.status)
+    }
+
     // ---------------------------------------------------------------- babies
 
     @Test

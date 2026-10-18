@@ -1097,6 +1097,8 @@ private fun RootTab(
             // A new line on every entry to the tab — that is the feature, so it is asked
             // for here rather than once per session.
             LaunchedEffect(Unit) { controllers.ai.loadGreeting() }
+            // A recap that is new since last time: Today offers it until she opens it.
+            LaunchedEffect(userId, state.today) { controllers.wrapped.refresh() }
             TodayScreen(
                 state = state,
                 onOpen = navigator::push,
@@ -1115,6 +1117,9 @@ private fun RootTab(
                 learn = controllers.learn,
                 doctors = controllers.doctors,
                 isLoading = !controllers.health.loaded,
+                wrappedCard = controllers.wrapped.index?.fresh?.let { fresh ->
+                    { uz.sadora.app.ui.modules.WrappedFreshCard(fresh) { navigator.push(Route.WrappedStory(fresh.key)) } }
+                },
                 widgetCard = if (!widgetCardDue) null else {
                     {
                         uz.sadora.app.ui.settings.WidgetPromoCard(
@@ -1279,6 +1284,8 @@ private fun PushedScreen(
             onUpgrade = upgrade,
             onShowDoctor = { navigator.push(Route.ShareProfile) },
         )
+        Route.WrappedList -> uz.sadora.app.ui.modules.WrappedListScreen(controllers.wrapped, close, navigator::push)
+        is Route.WrappedStory -> uz.sadora.app.ui.modules.WrappedStoryScreen(route.key, controllers.wrapped, close)
         Route.Kegel -> uz.sadora.app.ui.modules.KegelScreen(controllers.kegel, close, navigator::push, onUpgrade = upgrade, onToast = toast)
         Route.KegelSession -> uz.sadora.app.ui.modules.KegelSessionScreen(controllers.kegel, close)
         Route.DoctorReport -> uz.sadora.app.ui.modules.DoctorReportScreen(

@@ -211,6 +211,7 @@ object ErrorText {
         Entry("Chaqaloq topilmadi", "Ребёнок не найден", "Baby not found"),
         Entry("Hisobot topilmadi", "Отчёт не найден", "Report not found"),
         Entry("Bu daraja hali ochilmagan", "Этот уровень ещё не открыт", "This level is not open yet"),
+        Entry("Xulosa topilmadi", "Итоги не найдены", "Recap not found"),
         Entry(
             "Eslatmalar ko'pi bilan {0} ta bo'ladi",
             "Напоминаний может быть не больше {0}",

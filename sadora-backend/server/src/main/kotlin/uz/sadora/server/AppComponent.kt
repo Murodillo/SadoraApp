@@ -262,6 +262,12 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
         health = healthService,
         dailyHealth = { userId, from, to -> wearableService.daily(userId, from, to).days },
     )
+    val wrappedService = uz.sadora.server.wrapped.WrappedService(
+        wrapped = uz.sadora.server.wrapped.WrappedRepository(),
+        access = healthAccess,
+        health = healthService,
+        daily = { userId, from, to -> wearableService.daily(userId, from, to).days },
+    )
     val kegelRepository = uz.sadora.server.kegel.KegelRepository()
     val kegelService = uz.sadora.server.kegel.KegelService(
         kegel = kegelRepository,

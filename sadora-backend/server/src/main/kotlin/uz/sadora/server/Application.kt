@@ -23,6 +23,7 @@ import uz.sadora.server.frame.frameRoutes
 import uz.sadora.server.baby.babyRoutes
 import uz.sadora.server.condition.conditionRoutes
 import uz.sadora.server.kegel.kegelRoutes
+import uz.sadora.server.wrapped.wrappedRoutes
 import uz.sadora.server.lab.labRoutes
 import uz.sadora.server.share.reportRoutes
 import uz.sadora.server.pet.adminPetRoutes
@@ -177,6 +178,7 @@ fun Application.apiModule(component: AppComponent) {
             babyRoutes(component.babyService)
             conditionRoutes(component.conditionService)
             kegelRoutes(component.kegelService)
+            wrappedRoutes(component.wrappedService)
             reportRoutes(component.reportService)
             medicationRoutes(component.medicationService)
             notificationRoutes(component.notificationService)

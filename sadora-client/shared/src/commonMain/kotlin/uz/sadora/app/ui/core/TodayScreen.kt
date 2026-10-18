@@ -106,6 +106,8 @@ fun TodayScreen(
     doctors: DoctorController? = null,
     /** The one-time "add the widget" card, above the deck while it is due; null otherwise. */
     widgetCard: (@Composable () -> Unit)? = null,
+    /** "Sikl xulosangiz tayyor": a recap waiting to be opened; null otherwise. */
+    wrappedCard: (@Composable () -> Unit)? = null,
 ) {
     val t = strings.today
     // Quiet: the card appears once there are doctors to show, and a failure only hides it.
@@ -140,6 +142,7 @@ fun TodayScreen(
         val directory = doctors?.directory.orEmpty()
         val askAfter = widgets.indexOf(HomeWidgets.PLAN).takeIf { it >= 0 } ?: widgets.lastIndex
         ScreenContent(stagger = false) {
+            if (wrappedCard != null) item(key = "wrapped_card") { wrappedCard() }
             if (widgetCard != null) item(key = "widget_card") { widgetCard() }
             itemsIndexed(widgets, key = { _, key -> key }) { index, key ->
                 // A column rather than a box, so the doctors' card can follow its anchor
