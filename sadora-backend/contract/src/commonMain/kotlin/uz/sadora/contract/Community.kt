@@ -206,6 +206,9 @@ enum class MessageKind(val wire: String) {
 
     /** A doctor's prescription: [DirectMessage.prescription]; [DirectMessage.body] is it as plain text. */
     PRESCRIPTION("prescription"),
+
+    /** One of the patient's lab sheets, sent to her doctor: [DirectMessage.labReport]; [DirectMessage.body] is it as plain text. */
+    LAB("lab"),
 }
 
 object MessageKindSerializer : KSerializer<MessageKind> {
@@ -237,6 +240,11 @@ data class DirectMessage(
     val read: Boolean = false,
     /** Set on a [MessageKind.PRESCRIPTION] line. */
     val prescription: Prescription? = null,
+    /**
+     * Set on a [MessageKind.LAB] line while the sheet still exists: it is read live, so a
+     * correction she makes reaches the card, and a sheet she deleted leaves only [body].
+     */
+    val labReport: LabReport? = null,
 )
 
 /**
@@ -271,13 +279,16 @@ data class StartConversationRequest(
 
 /**
  * One message. Text, or a photo with an optional caption in [body], or — in a
- * consultation, from the patient — her health record with [attachRecord].
+ * consultation, from the patient — her health record with [attachRecord] or one of her
+ * lab sheets with [labReportId].
  */
 @Serializable
 data class SendMessageRequest(
     val body: String = "",
     val image: MessageImageUpload? = null,
     val attachRecord: Boolean = false,
+    /** In a consultation, from the patient: one of her lab sheets, sent as a card. */
+    val labReportId: String? = null,
 )
 
 /** A photo, resized by the phone and sent base64 like a document page. */

@@ -125,3 +125,31 @@ export function usePhoto(url: string | null | undefined): string | null {
   if (!url) return null
   return state.url === url ? state.objectUrl : peekPhoto(url)
 }
+
+/**
+ * A private picture that is not a face: a photo in the thread, a page of a lab sheet. It
+ * is fetched with her token and shown from an object URL that is let go when the one
+ * showing it leaves — these are not shared between places, so they skip the cache above.
+ */
+export function useAuthorizedImage(path: string): { url?: string; failed?: boolean } {
+  const [state, setState] = useState<{ url?: string; failed?: boolean }>({})
+  useEffect(() => {
+    const controller = new AbortController()
+    let url: string | null = null
+    requestBlob(path, { signal: controller.signal }).then(
+      (blob) => {
+        if (controller.signal.aborted) return
+        url = URL.createObjectURL(blob)
+        setState({ url })
+      },
+      () => {
+        if (!controller.signal.aborted) setState({ failed: true })
+      },
+    )
+    return () => {
+      controller.abort()
+      if (url) URL.revokeObjectURL(url)
+    }
+  }, [path])
+  return state
+}

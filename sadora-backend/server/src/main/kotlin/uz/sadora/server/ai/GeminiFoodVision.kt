@@ -142,14 +142,14 @@ class GeminiFoodVision(
 }
 
 /** How the language is named to the model. */
-private val Language.displayName: String
+internal val Language.displayName: String
     get() = when (this) {
         Language.UZ -> "Uzbek"
         Language.RU -> "Russian"
         Language.EN -> "English"
     }
 
-private inline fun <T> runCatchingVision(block: () -> T): T =
+internal inline fun <T> runCatchingVision(block: () -> T): T =
     try {
         block()
     } catch (cancellation: kotlinx.coroutines.CancellationException) {
@@ -159,32 +159,33 @@ private inline fun <T> runCatchingVision(block: () -> T): T =
     }
 
 // ---------------------------------------------------------------- wire types
+// Shared with GeminiLabVision: the same endpoint, asked for a different JSON object.
 
 @Serializable
-private data class VisionRequest(
+internal data class VisionRequest(
     val systemInstruction: VisionContent,
     val contents: List<VisionContent>,
     val generationConfig: VisionGenerationConfig,
 )
 
 @Serializable
-private data class VisionContent(val parts: List<VisionPart>)
+internal data class VisionContent(val parts: List<VisionPart>)
 
 @Serializable
-private data class VisionPart(
+internal data class VisionPart(
     val text: String? = null,
     @SerialName("inline_data") val inlineData: VisionBlob? = null,
     val thought: Boolean? = null,
 )
 
 @Serializable
-private data class VisionBlob(
+internal data class VisionBlob(
     @SerialName("mime_type") val mimeType: String,
     val data: String,
 )
 
 @Serializable
-private data class VisionGenerationConfig(
+internal data class VisionGenerationConfig(
     val temperature: Double,
     val maxOutputTokens: Int,
     val responseMimeType: String,
@@ -192,22 +193,22 @@ private data class VisionGenerationConfig(
 )
 
 @Serializable
-private data class VisionThinkingConfig(val thinkingLevel: String)
+internal data class VisionThinkingConfig(val thinkingLevel: String)
 
 @Serializable
-private data class VisionResponse(
+internal data class VisionResponse(
     val candidates: List<VisionCandidate> = emptyList(),
     val usageMetadata: VisionUsage? = null,
 )
 
 @Serializable
-private data class VisionCandidate(
+internal data class VisionCandidate(
     val content: VisionContent? = null,
     val finishReason: String? = null,
 )
 
 @Serializable
-private data class VisionUsage(
+internal data class VisionUsage(
     val promptTokenCount: Int? = null,
     val candidatesTokenCount: Int? = null,
 )

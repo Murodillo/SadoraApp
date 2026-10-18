@@ -77,6 +77,7 @@ import uz.sadora.contract.ReportReason
 import uz.sadora.doctor.data.ApiFailure
 import uz.sadora.doctor.data.CapturedPhotoData
 import uz.sadora.doctor.data.DoctorController
+import uz.sadora.doctor.data.LabPhotos
 import uz.sadora.doctor.data.WorkController
 import uz.sadora.doctor.data.insertReply
 import uz.sadora.doctor.data.readable
@@ -214,7 +215,7 @@ private fun ConversationRow(chat: Conversation, onClick: () -> Unit) {
     }
 }
 
-/** "Rasm: caption", "Tibbiy karta", or the line itself; the kind's mark is [previewArt]. */
+/** "Rasm: caption", "Bemor kartasi", "Tahlil natijalari", or the line itself; the kind's mark is [previewArt]. */
 @Composable
 private fun previewOf(chat: Conversation): String {
     val t = strings.tabs
@@ -224,6 +225,7 @@ private fun previewOf(chat: Conversation): String {
         MessageKind.IMAGE -> t.photo + text.takeIf { it.isNotEmpty() }?.let { ": $it" }.orEmpty()
         MessageKind.RECORD -> t.record
         MessageKind.PRESCRIPTION -> strings.prescriptions.title
+        MessageKind.LAB -> strings.labs.title
     }
 }
 
@@ -233,6 +235,7 @@ private fun previewArt(kind: MessageKind): DrawableResource? = when (kind) {
     MessageKind.IMAGE -> Res.drawable.ic3d_camera
     MessageKind.RECORD -> Res.drawable.ic3d_record
     MessageKind.PRESCRIPTION -> Res.drawable.ic3d_meds
+    MessageKind.LAB -> LabArt
 }
 
 @Composable
@@ -348,6 +351,9 @@ fun ConversationScreen(
     var sendingPhoto by remember { mutableStateOf(false) }
     var attachOpen by remember { mutableStateOf(false) }
     var cancelling by remember { mutableStateOf<Prescription?>(null) }
+    /** The lab sheet line opened in full, and a page of it opened over that. */
+    var labOpen by remember { mutableStateOf<DirectMessage?>(null) }
+    var labPhoto by remember { mutableStateOf<OpenLabPhoto?>(null) }
 
     val picker = rememberPhotoCapture { photo ->
         sendingPhoto = true
@@ -445,6 +451,7 @@ fun ConversationScreen(
                         onViewImage = { viewing = message },
                         onOpenRecord = { onOpenRecord(message.id) },
                         onCancelPrescription = { cancelling = it },
+                        onOpenLab = { labOpen = message },
                     )
                 }
                 if (thread?.otherTyping == true) {
@@ -598,9 +605,18 @@ fun ConversationScreen(
             onDismiss = { repliesOpen = false },
         )
 
+        LabReportSheet(
+            report = labOpen?.labReport,
+            photos = labOpen?.let { LabPhotos.InMessage(id, it.id) },
+            doctors = doctors,
+            onOpenPhoto = { labPhoto = it },
+            onDismiss = { labOpen = null },
+        )
+
         viewing?.let { message ->
             PhotoViewer(message, id, doctors, onDismiss = { viewing = null })
         }
+        labPhoto?.let { LabPhotoViewer(it, doctors, onDismiss = { labPhoto = null }) }
     }
 }
 
@@ -711,10 +727,23 @@ private fun MessageBubble(
     onViewImage: () -> Unit,
     onOpenRecord: () -> Unit,
     onCancelPrescription: (Prescription) -> Unit,
+    onOpenLab: () -> Unit,
 ) {
     val c = Sadora.colors
     val t = strings.tabs
     val mine = message.isMine
+    message.labReport?.takeIf { message.kind == MessageKind.LAB }?.let { report ->
+        Column(Modifier.fillMaxWidth(), horizontalAlignment = if (mine) Alignment.End else Alignment.Start) {
+            LabMessageCard(report, onOpen = onOpenLab)
+            Text(
+                clock(message.createdAt),
+                style = Sadora.type.caption.copy(letterSpacing = TextUnit.Unspecified),
+                color = c.muted2,
+                modifier = Modifier.padding(top = 2.dp, end = Spacing.xs),
+            )
+        }
+        return
+    }
     message.prescription?.takeIf { message.kind == MessageKind.PRESCRIPTION }?.let { prescription ->
         Column(Modifier.fillMaxWidth(), horizontalAlignment = if (mine) Alignment.End else Alignment.Start) {
             PrescriptionCard(
@@ -757,6 +786,15 @@ private fun MessageBubble(
                 }
                 // A prescription whose structured copy is missing reads as its text.
                 MessageKind.TEXT, MessageKind.PRESCRIPTION -> Text(message.body, style = Sadora.type.body, color = fg)
+                // A sheet she has deleted since: the text sent with it is all that is left.
+                MessageKind.LAB -> {
+                    Text(message.body, style = Sadora.type.body, color = fg)
+                    Text(
+                        strings.labs.deleted,
+                        style = Sadora.type.caption.copy(letterSpacing = TextUnit.Unspecified),
+                        color = if (mine) c.onPrimary else c.muted2,
+                    )
+                }
             }
             Row(
                 Modifier.align(Alignment.End).padding(horizontal = if (message.kind == MessageKind.IMAGE) Spacing.xs else 0.dp),

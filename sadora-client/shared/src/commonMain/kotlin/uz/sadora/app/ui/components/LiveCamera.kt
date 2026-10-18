@@ -55,6 +55,8 @@ expect fun LiveCamera(
     onCaptured: (CapturedPhoto) -> Unit,
     modifier: Modifier = Modifier,
     front: Boolean = false,
+    /** The long edge of the delivered photo; see [PhotoEdge]. */
+    maxEdge: Int = PhotoEdge.Default,
 )
 
 /** Opens this app's page in the system settings — the only way back from a refused permission. */

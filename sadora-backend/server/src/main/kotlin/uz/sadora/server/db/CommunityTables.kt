@@ -141,8 +141,10 @@ object CommunityMessages : Table("community_messages") {
     val status = text("status")
     val hiddenReason = text("hidden_reason").nullable()
     val createdAt = timestampWithTimeZone("created_at")
-    /** `text`, `image` or `record`. */
+    /** `text`, `image`, `record`, `prescription` or `lab`. */
     val kind = text("kind")
+    /** The sheet behind a `lab` line (V56); cleared when she deletes the sheet. */
+    val labReportId = uuid("lab_report_id").nullable()
 
     override val primaryKey = PrimaryKey(id)
 }

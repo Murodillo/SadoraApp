@@ -1,7 +1,8 @@
 import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { fieldsOf, messageOf, requestBlob } from '../api/client'
+import { fieldsOf, messageOf } from '../api/client'
+import { useAuthorizedImage } from '../api/photos'
 import {
   CONVERSATIONS_POLL_MS,
   sendTyping,
@@ -37,6 +38,7 @@ import {
   reportReasonLabels,
   reportReasonOrder,
 } from '../components/labels'
+import { LabCard, labLinePhotoPath, LabReportDialog, labRecordPhotoPath } from '../components/LabReport'
 import { PatientRecord } from '../components/PatientRecord'
 import { CancelPrescriptionDialog, PatientPrescriptions, PrescriptionCard, PrescriptionDialog } from '../components/Prescription'
 import { useToast } from '../components/toast'
@@ -132,6 +134,8 @@ function lastLine(conversation: Conversation): string {
       return '📋 Tibbiy karta'
     case 'prescription':
       return '💊 Retsept'
+    case 'lab':
+      return '🧪 Tahlil natijalari'
     default:
       return conversation.lastMessage ?? ''
   }
@@ -622,6 +626,12 @@ function MessageBubble({
     </span>
   )
 
+  // A lab line whose sheet she has since deleted keeps only its plain-text copy, drawn
+  // as an ordinary line.
+  const [openLab, setOpenLab] = useState(false)
+  const labReport = kind === 'lab' ? message.labReport : null
+  const lineKind = kind === 'lab' && !labReport ? 'text' : kind
+
   let content: ReactNode
   const prescription = kind === 'prescription' ? message.prescription : null
   if (prescription) {
@@ -646,6 +656,8 @@ function MessageBubble({
         </button>
       </div>
     )
+  } else if (labReport) {
+    content = <LabCard report={labReport} onOpen={() => setOpenLab(true)} />
   } else if (kind === 'image') {
     content = (
       <>
@@ -658,11 +670,18 @@ function MessageBubble({
   }
 
   return (
-    <li className={`msg ${message.isMine ? 'mine' : 'theirs'} ${kind}`}>
+    <li className={`msg ${message.isMine ? 'mine' : 'theirs'} ${lineKind}`}>
       <div className="msg-bubble">
         {content}
         {stamp}
       </div>
+      {openLab && labReport && (
+        <LabReportDialog
+          report={labReport}
+          photoPath={labLinePhotoPath(conversationId, message.id)}
+          onClose={() => setOpenLab(false)}
+        />
+      )}
     </li>
   )
 }
@@ -704,29 +723,6 @@ function MessagePhoto({
       )}
     </button>
   )
-}
-
-function useAuthorizedImage(path: string): { url?: string; failed?: boolean } {
-  const [state, setState] = useState<{ url?: string; failed?: boolean }>({})
-  useEffect(() => {
-    const controller = new AbortController()
-    let url: string | null = null
-    requestBlob(path, { signal: controller.signal }).then(
-      (blob) => {
-        if (controller.signal.aborted) return
-        url = URL.createObjectURL(blob)
-        setState({ url })
-      },
-      () => {
-        if (!controller.signal.aborted) setState({ failed: true })
-      },
-    )
-    return () => {
-      controller.abort()
-      if (url) URL.revokeObjectURL(url)
-    }
-  }, [path])
-  return state
 }
 
 function Composer({
@@ -1362,7 +1358,10 @@ function RecordPanel({ conversationId, message, open }: { conversationId: string
   return (
     <>
       <div className="faint">Biriktirilgan: {formatDateTime(message.createdAt)}</div>
-      <PatientRecord record={record.data.summary} />
+      <PatientRecord
+        record={record.data.summary}
+        labPhotoPath={(reportId) => labRecordPhotoPath(conversationId, message.id, reportId)}
+      />
     </>
   )
 }

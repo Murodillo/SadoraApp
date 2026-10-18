@@ -34,10 +34,10 @@ import platform.darwin.NSObject
  */
 @OptIn(ExperimentalForeignApi::class)
 @Composable
-actual fun rememberPhotoCapture(onCaptured: (CapturedPhoto) -> Unit): PhotoCapture {
+actual fun rememberPhotoCapture(maxEdge: Int, onCaptured: (CapturedPhoto) -> Unit): PhotoCapture {
     val callback = rememberUpdatedState(onCaptured)
 
-    return remember {
+    return remember(maxEdge) {
         object : PhotoCapture {
             private val pickerDelegate = object : NSObject(),
                 UIImagePickerControllerDelegateProtocol,
@@ -49,7 +49,7 @@ actual fun rememberPhotoCapture(onCaptured: (CapturedPhoto) -> Unit): PhotoCaptu
                 ) {
                     val image = didFinishPickingMediaWithInfo[UIImagePickerControllerOriginalImage] as? UIImage
                     picker.dismissViewControllerAnimated(true, null)
-                    image?.encode()?.let { callback.value(it) }
+                    image?.encode(maxEdge)?.let { callback.value(it) }
                 }
 
                 override fun imagePickerControllerDidCancel(picker: UIImagePickerController) {
@@ -74,13 +74,13 @@ actual fun rememberPhotoCapture(onCaptured: (CapturedPhoto) -> Unit): PhotoCaptu
     }
 }
 
-/** Scaled to fit [MaxEdge] and encoded as JPEG, matching what the endpoint accepts. */
+/** Scaled to fit [maxEdge] and encoded as JPEG, matching what the endpoint accepts. */
 @OptIn(ExperimentalForeignApi::class)
-internal fun UIImage.encode(): CapturedPhoto? {
+internal fun UIImage.encode(maxEdge: Int = PhotoEdge.Default): CapturedPhoto? {
     val width = size.useContents { width }
     val height = size.useContents { height }
     val longest = maxOf(width, height)
-    val scale = if (longest <= 0.0) 1.0 else minOf(1.0, MaxEdge / longest)
+    val scale = if (longest <= 0.0) 1.0 else minOf(1.0, maxEdge.toDouble() / longest)
     val targetWidth = width * scale
     val targetHeight = height * scale
 
@@ -96,5 +96,4 @@ internal fun UIImage.encode(): CapturedPhoto? {
     )
 }
 
-private const val MaxEdge = 1024.0
 private const val JpegQuality = 0.82

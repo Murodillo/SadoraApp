@@ -118,6 +118,23 @@ fun Route.communityRoutes(community: CommunityService, messaging: MessagingServi
                         call.response.header(HttpHeaders.CacheControl, "private, no-store")
                         call.respondBytes(image.bytes, ContentType.parse(image.mimeType))
                     }
+                    /** A page of the lab sheet behind a `lab` line. Private, so never cached. */
+                    get("/messages/{messageId}/lab-photos/{page}") {
+                        val page = call.parameters["page"]?.toIntOrNull()?.takeIf { it >= 0 }
+                            ?: throw uz.sadora.server.core.ValidationException("page", "Butun son bo'lishi kerak")
+                        val photo = messaging.labPhoto(call.requireUserId(), call.conversationId(), call.messageId(), page)
+                        call.response.header(HttpHeaders.CacheControl, "private, no-store")
+                        call.respondBytes(photo.bytes, ContentType.parse(photo.mimeType))
+                    }
+                    /** A page of a lab sheet inside an attached record, under the record's rule. */
+                    get("/messages/{messageId}/record/labs/{reportId}/photos/{page}") {
+                        val page = call.parameters["page"]?.toIntOrNull()?.takeIf { it >= 0 }
+                            ?: throw uz.sadora.server.core.ValidationException("page", "Butun son bo'lishi kerak")
+                        val reportId = uz.sadora.server.core.parseUuid(call.parameters["reportId"].orEmpty(), "reportId")
+                        val photo = messaging.recordLabPhoto(call.requireUserId(), call.conversationId(), call.messageId(), reportId, page)
+                        call.response.header(HttpHeaders.CacheControl, "private, no-store")
+                        call.respondBytes(photo.bytes, ContentType.parse(photo.mimeType))
+                    }
                     /** The record a patient attached, assembled now, in the asked language. */
                     get("/messages/{messageId}/record") {
                         val language = call.request.queryParameters["lang"]

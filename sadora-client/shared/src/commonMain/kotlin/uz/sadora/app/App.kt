@@ -1193,6 +1193,7 @@ private fun PushedScreen(
     onThreadRead: () -> Unit,
 ) {
     val close = navigator::pop
+    val labSaved = strings.labs.saved
     val upgrade = {
         controllers.analytics.event(AnalyticsEvents.PAYWALL_OPENED, mapOf("from" to (route::class.simpleName ?: "route")))
         navigator.push(Route.Paywall)
@@ -1249,6 +1250,41 @@ private fun PushedScreen(
         Route.AddMedication -> AddMedicationScreen(health, close)
         is Route.EditMedication -> AddMedicationScreen(health, close, editingId = route.id)
         Route.MedicationHistory -> MedicationHistoryScreen(health, close)
+        Route.Labs -> uz.sadora.app.ui.modules.LabsScreen(state, controllers.labs, close, navigator::push)
+        is Route.LabReport -> uz.sadora.app.ui.modules.LabReportScreen(
+            id = route.id,
+            labs = controllers.labs,
+            onClose = close,
+            onEdit = { navigator.push(Route.LabEdit(route.id)) },
+            onAskDoctor = { navigator.push(Route.Doctors) },
+            onToast = toast,
+        )
+        is Route.LabTrend -> uz.sadora.app.ui.modules.LabTrendScreen(
+            code = route.code,
+            labs = controllers.labs,
+            onClose = close,
+            onOpenReport = { navigator.push(Route.LabReport(it)) },
+        )
+        // Camera -> reading -> the rows to check is one flow; a saved sheet replaces it.
+        Route.LabScan -> uz.sadora.app.ui.modules.LabScanScreen(
+            labs = controllers.labs,
+            onManualEntry = { navigator.replaceTop(Route.LabEdit(null)) },
+            onSaved = {
+                toast(labSaved)
+                navigator.replaceTop(Route.LabReport(it.id))
+            },
+            onUpgrade = upgrade,
+            onClose = close,
+        )
+        is Route.LabEdit -> uz.sadora.app.ui.modules.LabEditScreen(
+            id = route.id,
+            labs = controllers.labs,
+            onClose = close,
+            onSaved = { saved ->
+                toast(labSaved)
+                if (route.id == null) navigator.replaceTop(Route.LabReport(saved.id)) else close()
+            },
+        )
         Route.Sleep -> SleepScreen(state, health, insights, close, onToast = toast)
         Route.Insights -> InsightsScreen(state, insights, close, upgrade)
         Route.Knowledge -> KnowledgeScreen(state, controllers.learn, close, navigator::push)
@@ -1376,6 +1412,9 @@ private fun PushedScreen(
             onClose = close,
             health = controllers.health,
             onToast = toast,
+            labs = controllers.labs,
+            onOpenLab = { navigator.push(Route.LabReport(it)) },
+            onOpenLabs = { navigator.push(Route.Labs) },
         )
 
         // Her account, behind the avatar in the home header.

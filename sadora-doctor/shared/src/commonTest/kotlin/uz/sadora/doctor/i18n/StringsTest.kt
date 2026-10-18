@@ -167,6 +167,15 @@ class StringsTest {
                 thresholds.forEach { add(goal(key, it)) }
             }
         }
+        with(t.labs) {
+            addAll(
+                listOf(
+                    title, range, values(1), values(3), values(12), flagged(2), scanned, sheetPhoto,
+                    sheetPhotoNumber(2), allValues, deleted,
+                ),
+            )
+            uz.sadora.contract.LabFlag.entries.forEach { add(flag(it)) }
+        }
     }
 
     @Test
@@ -256,6 +265,7 @@ class StringsTest {
             t.tabs.days(1), t.tabs.age(1), t.tabs.lastDays(1), t.tabs.lastHours(1), t.tabs.symptomsWindow(1),
             t.tabs.kicksResult(1, "5 min"), t.work.workDays(1), t.work.ratingValue("5", 1), t.dates.daysAgo(1),
             t.prescriptions.everyDays(1), t.prescriptions.timesPerDay(1), t.badges.more(1),
+            t.labs.values(1),
         ) + uz.sadora.contract.DoctorBadges.catalogue.map { (key, _) -> t.badges.goal(key, 1) }
         val plural = Regex("""\b1 (days|hours|years|times|posts|patients|ratings|movements|questions|messages|likes|badges)\b""")
         ones.forEach { assertTrue(!plural.containsMatchIn(it), "'$it' says one in the plural") }

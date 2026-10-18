@@ -23,7 +23,7 @@ import java.io.ByteArrayOutputStream
  * picked. The camera is not here — it is [LiveCamera], which draws its preview in the page.
  */
 @Composable
-actual fun rememberPhotoCapture(onCaptured: (CapturedPhoto) -> Unit): PhotoCapture {
+actual fun rememberPhotoCapture(maxEdge: Int, onCaptured: (CapturedPhoto) -> Unit): PhotoCapture {
     val context = LocalContext.current
     val callback = rememberUpdatedState(onCaptured)
 
@@ -31,7 +31,7 @@ actual fun rememberPhotoCapture(onCaptured: (CapturedPhoto) -> Unit): PhotoCaptu
         ActivityResultContracts.PickVisualMedia(),
     ) { uri: Uri? ->
         uri ?: return@rememberLauncherForActivityResult
-        context.decodeSampled(uri)?.let { (bitmap, rotation) -> bitmap.encode(rotation) }?.let { callback.value(it) }
+        context.decodeSampled(uri, maxEdge)?.let { (bitmap, rotation) -> bitmap.encode(rotation, maxEdge) }?.let { callback.value(it) }
     }
 
     return remember(gallery) {
@@ -53,14 +53,14 @@ actual fun rememberPhotoCapture(onCaptured: (CapturedPhoto) -> Unit): PhotoCaptu
  * The picked image, decoded no larger than it needs to be, with the turn its EXIF asks for.
  *
  * Decoding at full size first is what this avoids: a 200-megapixel frame from an S23
- * Ultra is 800 MB as a bitmap, and the endpoint wants a 1024-pixel edge. `decodeStream`
+ * Ultra is 800 MB as a bitmap, and the endpoint wants a [maxEdge]-pixel edge. `decodeStream`
  * also ignores EXIF, so a portrait photo reached the model lying on its side.
  */
-private fun Context.decodeSampled(uri: Uri): Pair<Bitmap, Int>? = runCatching {
+private fun Context.decodeSampled(uri: Uri, maxEdge: Int): Pair<Bitmap, Int>? = runCatching {
     val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
     contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, bounds) }
     var sample = 1
-    while (maxOf(bounds.outWidth, bounds.outHeight) / (sample * 2) >= MaxEdge) sample *= 2
+    while (maxOf(bounds.outWidth, bounds.outHeight) / (sample * 2) >= maxEdge) sample *= 2
 
     val bitmap = contentResolver.openInputStream(uri)?.use {
         BitmapFactory.decodeStream(it, null, BitmapFactory.Options().apply { inSampleSize = sample })
@@ -78,13 +78,13 @@ private fun Context.decodeSampled(uri: Uri): Pair<Bitmap, Int>? = runCatching {
 }.getOrNull()
 
 /**
- * Scaled to fit [MaxEdge] and encoded as JPEG, because that is what the endpoint takes.
+ * Scaled to fit [maxEdge] and encoded as JPEG, because that is what the endpoint takes.
  *
  * [rotationDegrees] is what the sensor says the frame needs to stand upright; a camera
  * frame arrives sideways and a gallery pick does not.
  */
-internal fun Bitmap.encode(rotationDegrees: Int = 0): CapturedPhoto? {
-    val scale = minOf(1f, MaxEdge.toFloat() / maxOf(width, height).coerceAtLeast(1))
+internal fun Bitmap.encode(rotationDegrees: Int = 0, maxEdge: Int = PhotoEdge.Default): CapturedPhoto? {
+    val scale = minOf(1f, maxEdge.toFloat() / maxOf(width, height).coerceAtLeast(1))
     val scaled = if (scale >= 1f && rotationDegrees == 0) this else Bitmap.createBitmap(
         this,
         0,
@@ -105,6 +105,4 @@ internal fun Bitmap.encode(rotationDegrees: Int = 0): CapturedPhoto? {
     )
 }
 
-/** Long edge in pixels. Plenty for recognising a plate, and a fraction of the upload. */
-private const val MaxEdge = 1024
 private const val JpegQuality = 82

@@ -12,6 +12,7 @@ import uz.sadora.app.data.InsightsController
 import uz.sadora.app.data.LearnController
 import uz.sadora.app.data.NotificationsController
 import uz.sadora.app.data.PetController
+import uz.sadora.app.data.LabController
 import uz.sadora.app.data.StageEventsController
 import uz.sadora.app.data.PhotoController
 import uz.sadora.app.data.RewardsController
@@ -50,6 +51,8 @@ class AppControllers(
     val wearables: WearableController,
     val notifications: NotificationsController,
     val stageEvents: StageEventsController,
+    /** Her lab sheets. Defaulted so the previews and tests that build this by hand need not know it. */
+    val labs: LabController = LabController(null),
     val pet: PetController,
     val frames: FrameController,
     val analytics: Analytics,
@@ -74,6 +77,7 @@ class AppControllers(
             wearables = graph?.wearableController() ?: WearableController(null),
             notifications = graph?.notificationsController() ?: NotificationsController(null),
             stageEvents = graph?.stageEventsController() ?: StageEventsController(null),
+            labs = graph?.labController() ?: LabController(null),
             pet = graph?.petController(state) ?: PetController(null, state),
             frames = graph?.frameController(state) ?: FrameController(null, state),
             analytics = graph?.analytics ?: Analytics.None,

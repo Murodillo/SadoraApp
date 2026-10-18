@@ -251,7 +251,7 @@ export interface CreateCommentRequest {
 
 export type LifeStage = 'cycle' | 'trying_to_conceive' | 'pregnancy' | 'postpartum' | 'perimenopause' | 'menopause'
 
-export type MessageKind = 'text' | 'image' | 'record' | 'prescription'
+export type MessageKind = 'text' | 'image' | 'record' | 'prescription' | 'lab'
 
 /** Who a doctor is consulting: her real name, and what a doctor needs at a glance. */
 export interface ConsultationPatient {
@@ -323,6 +323,54 @@ export interface DirectMessage {
   read?: boolean
   /** Set on a `prescription` line. */
   prescription?: Prescription | null
+  /**
+   * Set on a `lab` line while the sheet exists, read live. When she has deleted it this
+   * is absent and `body` holds a plain-text copy of the sheet.
+   */
+  labReport?: LabReport | null
+}
+
+// ---------------------------------------------------------------- lab results (Labs.kt)
+
+/** Against the laboratory's own printed range. Missing means no range, not "normal". */
+export type LabFlag = 'low' | 'normal' | 'high'
+
+/** One row of a sheet. `value` is the number; `valueText` what was printed when it is not one. */
+export interface LabValue {
+  id: string
+  markerCode?: string | null
+  name: string
+  value?: number | null
+  valueText?: string | null
+  unit?: string | null
+  refLow?: number | null
+  refHigh?: number | null
+  /** The range as printed when it is not two numbers. */
+  refText?: string | null
+  flag?: LabFlag | null
+  /** What a known marker is, in two sentences. */
+  about?: string | null
+}
+
+/** One page's shape, so a thumbnail can be sized before the picture arrives. */
+export interface LabPhoto {
+  width: number
+  height: number
+  mimeType?: string
+}
+
+/** One sheet from one visit to a laboratory. `takenOn` is `YYYY-MM-DD`. */
+export interface LabReport {
+  id: string
+  takenOn: string
+  place?: string | null
+  note?: string | null
+  scanned?: boolean
+  values?: LabValue[]
+  /** The pages photographed, in order; fetched as `…/photos/{index}`. */
+  photos?: LabPhoto[]
+  createdAt: string
+  updatedAt: string
 }
 
 // ---------------------------------------------------------------- prescriptions (Prescriptions.kt)
@@ -574,6 +622,8 @@ export interface DoctorSummary {
   appointments?: Appointment[]
   nutrition?: SharedNutrition | null
   wearable?: SharedWearable | null
+  /** Her lab sheets from the last 365 days, newest first, at most 20. */
+  labs?: LabReport[]
 }
 
 // ---------------------------------------------------------------- the doctor's workplace (DoctorWork.kt)

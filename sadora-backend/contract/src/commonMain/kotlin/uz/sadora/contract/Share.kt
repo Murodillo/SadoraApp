@@ -58,6 +58,11 @@ data class DoctorSummary(
     val wearable: SharedWearable? = null,
     /** What the stage tools recorded; null when she recorded nothing with them. */
     val stageRecords: SharedStageRecords? = null,
+    /**
+     * Her lab sheets from the last [Limits.LAB_SHARE_DAYS] days, newest first, at most
+     * [Limits.LAB_SHARE_REPORTS_MAX]. The photos are fetched by report id and page.
+     */
+    val labs: List<LabReport> = emptyList(),
 ) {
     companion object {
         const val SHARE_WINDOW_DAYS = 90

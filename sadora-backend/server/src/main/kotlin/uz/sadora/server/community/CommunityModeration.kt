@@ -256,8 +256,8 @@ class CommunityModerationService(
                     id = line.id.toString(),
                     fromReported = line.senderId == reported,
                     kind = line.kind,
-                    // A record is her health data: the moderator is told it was attached, nothing more.
-                    body = if (line.kind == MessageKind.RECORD) "" else line.body,
+                    // A record or a lab sheet is her health data: the moderator is told it was attached, nothing more.
+                    body = if (line.kind == MessageKind.RECORD || line.kind == MessageKind.LAB) "" else line.body,
                     createdAt = line.createdAt,
                     reported = line.id == messageId,
                     hidden = line.status == ContentStatus.HIDDEN,

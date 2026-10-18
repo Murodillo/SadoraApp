@@ -117,4 +117,5 @@ object StringsUz : Strings {
     override val photo: PhotoStrings = PhotoStringsUz
     override val badges: BadgeStrings = BadgeStringsUz
     override val prescriptions: PrescriptionStrings = PrescriptionStringsUz
+    override val labs: LabStrings = LabStringsUz
 }

@@ -1,12 +1,14 @@
 import type { ReactNode } from 'react'
 import type { CyclePhase, DoctorSummary, HealthMetric } from '../api/types'
+import { RecordLabs } from './LabReport'
+import type { LabPhotoPath } from './LabReport'
 import { lifeStageLabel, RECORD_DISCLAIMER } from './labels'
 import { formatDateTime } from './ui'
 
 /*
  * The record a patient attached, drawn the way the doctor app's PatientRecordScreen
  * draws it: who she is, her cycle or pregnancy, what she has felt, what she takes, her
- * visits, how she has been, food, and her devices. A section with nothing in it is left
+ * visits, her lab sheets, how she has been, food, and her devices. A section with nothing in it is left
  * out rather than drawn empty. The words are the doctor app's `TabStringsUz`.
  */
 
@@ -103,11 +105,19 @@ function Section({ title, glyph, subtitle, children }: { title: string; glyph: s
 
 const present = <T,>(facts: (T | null | undefined | false | '')[]): T[] => facts.filter(Boolean) as T[]
 
-export function PatientRecord({ record }: { record: DoctorSummary }) {
+export function PatientRecord({
+  record,
+  labPhotoPath,
+}: {
+  record: DoctorSummary
+  /** Where a page of one of her lab sheets is fetched; without it the pages are not shown. */
+  labPhotoPath?: (reportId: string) => LabPhotoPath
+}) {
   const { person, cycle, pregnancy, mind, nutrition, wearable } = record
   const symptoms = (record.symptomCounts ?? []).slice(0, 10)
   const medications = record.medications ?? []
   const appointments = record.appointments ?? []
+  const labs = record.labs ?? []
 
   const personFacts = present<Fact>([
     person.heightCm != null && ["Bo'y", `${person.heightCm} sm`],
@@ -227,6 +237,12 @@ export function PatientRecord({ record }: { record: DoctorSummary }) {
               </li>
             ))}
           </ul>
+        </Section>
+      )}
+
+      {labs.length > 0 && (
+        <Section title="Tahlil natijalari" glyph="🧪" subtitle="Oxirgi 12 oy, yangilari birinchi">
+          <RecordLabs labs={labs} photoPath={labPhotoPath} />
         </Section>
       )}
 

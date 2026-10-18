@@ -29,6 +29,10 @@ class HealthAccess(
     suspend fun hasStorageConsent(userId: Uuid): Boolean =
         users.consentsOf(userId)?.storeHealth == true
 
+    /** One feature as resolved for her now, usage included; null when no such key is defined. */
+    suspend fun feature(userId: Uuid, featureKey: String, timezone: String): uz.sadora.contract.FeatureEntitlement? =
+        entitlements.resolve(userId, timezone).feature(featureKey)
+
     suspend fun requireWritable(userId: Uuid, featureKey: String): UserRecord {
         val user = requireUser(userId)
         val consents = users.consentsOf(userId)

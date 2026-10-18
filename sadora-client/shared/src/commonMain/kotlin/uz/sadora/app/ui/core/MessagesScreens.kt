@@ -72,7 +72,9 @@ import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.decodeToImageBitmap
 import uz.sadora.app.data.HealthController
+import uz.sadora.app.data.LabController
 import uz.sadora.app.data.MessagesController
+import uz.sadora.app.ui.modules.LabPicker
 import uz.sadora.app.data.readable
 import uz.sadora.app.design.IconSize
 import uz.sadora.app.design.MinTouchTarget
@@ -272,6 +274,7 @@ private fun LastLine(thread: Conversation, unread: Boolean) {
         MessageKind.Image -> if (caption.isBlank()) t.photo else "${t.photo} · $caption"
         MessageKind.Record -> t.record
         MessageKind.Prescription -> strings.prescriptions.lastLine
+        MessageKind.Lab -> strings.labs.lastLine
     }
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
         if (thread.lastMessageRead) ReadTicks(read = true, tint = c.textAccent)
@@ -279,6 +282,7 @@ private fun LastLine(thread: Conversation, unread: Boolean) {
             MessageKind.Image -> Icon(SadoraIcons.Camera, contentDescription = null, Modifier.size(14.dp), tint = colour)
             MessageKind.Record -> Icon(SadoraIcons.Document, contentDescription = null, Modifier.size(14.dp), tint = colour)
             MessageKind.Prescription -> ArtIcon(Res.drawable.ic3d_meds, 16.dp)
+            MessageKind.Lab -> ArtIcon(Res.drawable.ic3d_lab, 16.dp)
             MessageKind.Text -> Unit
         }
         Text(text, style = style, color = colour, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -335,6 +339,11 @@ fun ConversationScreen(
     health: HealthController,
     onToast: (String) -> Unit,
     modifier: Modifier = Modifier,
+    /** Her lab sheets, one of which she can send to her doctor. */
+    labs: LabController = LabController(null),
+    /** Opens one of her sheets; and the section itself, from the empty picker. */
+    onOpenLab: (String) -> Unit = {},
+    onOpenLabs: () -> Unit = {},
 ) {
     val t = strings.community
     val d = strings.doctors
@@ -346,6 +355,7 @@ fun ConversationScreen(
     var showAttach by remember { mutableStateOf(false) }
     var pendingPhoto by remember { mutableStateOf<CapturedPhoto?>(null) }
     var confirmRecord by remember { mutableStateOf(false) }
+    var pickLab by remember { mutableStateOf(false) }
     var recordFor by remember { mutableStateOf<String?>(null) }
     var viewing by remember { mutableStateOf<DirectMessage?>(null) }
     var addingPrescription by remember { mutableStateOf<uz.sadora.contract.Prescription?>(null) }
@@ -500,6 +510,7 @@ fun ConversationScreen(
                         onOpenImage = { viewing = message },
                         onOpenRecord = { recordFor = message.id },
                         onAddPrescription = { addingPrescription = it },
+                        onOpenLab = onOpenLab,
                     )
                 }
                 if (otherTyping) {
@@ -558,7 +569,27 @@ fun ConversationScreen(
                     showAttach = false
                     confirmRecord = true
                 }
+                AttachOption(Res.drawable.ic3d_lab, strings.labs.attach, strings.labs.attachNote) {
+                    showAttach = false
+                    pickLab = true
+                }
             }
+        }
+
+        SadoraBottomSheet(visible = pickLab, title = strings.labs.pickTitle, onDismiss = { pickLab = false }) {
+            LaunchedEffect(Unit) { labs.refresh() }
+            LabPicker(
+                reports = labs.reports,
+                loaded = labs.loaded,
+                sending = messages.sendingAttachment,
+                onPick = { report ->
+                    scope.launch { if (messages.sendLab(report.id)) pickLab = false }
+                },
+                onAdd = {
+                    pickLab = false
+                    onOpenLabs()
+                },
+            )
         }
 
         SadoraBottomSheet(visible = pendingPhoto != null, title = t.sendPhoto, onDismiss = { pendingPhoto = null }) {
@@ -1006,6 +1037,7 @@ private fun Bubble(
     onOpenImage: () -> Unit,
     onOpenRecord: () -> Unit,
     onAddPrescription: (uz.sadora.contract.Prescription) -> Unit,
+    onOpenLab: (String) -> Unit = {},
 ) {
     val c = Sadora.colors
     val t = strings.community
@@ -1056,6 +1088,10 @@ private fun Bubble(
             when (message.kind) {
                 // A prescription whose card did not come with it reads as its text.
                 MessageKind.Text, MessageKind.Prescription -> Text(message.body, style = Sadora.type.body, color = content)
+                // A sheet she has since deleted reads as the text it was sent with.
+                MessageKind.Lab -> message.labReport
+                    ?.let { report -> LabInBubble(report, mine, onOpen = { onOpenLab(report.id) }.takeIf { mine }) }
+                    ?: Text(message.body, style = Sadora.type.body, color = content)
                 MessageKind.Image -> {
                     PhotoInBubble(message, conversationId, messages, onOpenImage)
                     if (message.body.isNotBlank()) {
@@ -1141,6 +1177,39 @@ private fun RecordInBubble(mine: Boolean, onOpen: (() -> Unit)?) {
         Column(Modifier.widthIn(max = 220.dp)) {
             Text(t.recordAttached, style = Sadora.type.body.copy(fontWeight = FontWeight.SemiBold), color = content)
             Text(t.recordAttachedNote, style = Sadora.type.caption.copy(letterSpacing = TextUnit.Unspecified), color = content.copy(alpha = 0.85f))
+        }
+    }
+}
+
+/** One of her lab sheets, sent to her doctor: a card in the bubble. Hers opens the sheet. */
+@Composable
+private fun LabInBubble(report: uz.sadora.contract.LabReport, mine: Boolean, onOpen: (() -> Unit)?) {
+    val c = Sadora.colors
+    val l = strings.labs
+    val content = if (mine) c.onPrimary else c.text
+    Row(
+        Modifier.then(if (onOpen != null) Modifier.noRippleClickable(role = Role.Button, onClick = onOpen) else Modifier),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+    ) {
+        Box(
+            Modifier.size(36.dp).clip(Radius.chip).background(content.copy(alpha = 0.16f)),
+            contentAlignment = Alignment.Center,
+        ) {
+            ArtIcon(Res.drawable.ic3d_lab, 26.dp)
+        }
+        Column(Modifier.widthIn(max = 220.dp)) {
+            Text(l.title, style = Sadora.type.body.copy(fontWeight = FontWeight.SemiBold), color = content)
+            Text(
+                listOfNotNull(strings.dates.dayMonthYear(report.takenOn), report.place).joinToString(" · "),
+                style = Sadora.type.caption.copy(letterSpacing = TextUnit.Unspecified),
+                color = content.copy(alpha = 0.85f),
+            )
+            Text(
+                l.countLine(report.values.size, report.flaggedCount),
+                style = Sadora.type.caption.copy(letterSpacing = TextUnit.Unspecified),
+                color = content.copy(alpha = 0.85f),
+            )
         }
     }
 }

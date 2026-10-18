@@ -77,7 +77,7 @@ object StringsUz : Strings {
         override val featureNutrition = "Ovqatlanish"
         override val featureMeds = "Vitamin va dorilar"
         override val featureAi = "SADORA AI"
-        override val featureInsights = "Tahlil va tavsiyalar"
+        override val featureInsights = "Xulosa va tavsiyalar"
         override val privacyPromise = "Ma'lumotlaringiz sizniki — istalgan vaqtda o'chirasiz"
         override val start = "Boshlash"
         override val haveAccount = "Hisobim bor →"
@@ -303,7 +303,7 @@ object StringsUz : Strings {
         override val sleep = "Uyqu"
         override val medications = "Dorilar"
         override val secretChat = "Chat"
-        override val insights = "Tahlillar"
+        override val insights = "Xulosalar"
         override val knowledge = "Bilim"
 
         override val rewards = "Gul va ketma-ketlik"
@@ -894,7 +894,7 @@ object StringsUz : Strings {
 
     override val nutrition = object : NutritionStrings {
         override val title = "Ovqatlanish"
-        override val insights = "Tahlillar"
+        override val insights = "Xulosalar"
         override val meals = "Ovqatlar"
         override val addMeal = "Ovqat qo'shish"
         override val emptyTitle = "Bugun hali ovqat qayd etilmagan"
@@ -1213,10 +1213,10 @@ object StringsUz : Strings {
         override val light = "Yengil"
         override val stages = "Bosqichlar"
 
-        override val insightsTitle = "Tahlillar"
+        override val insightsTitle = "Xulosalar"
         override fun windowDays(days: Int) = "$days kun"
         override val windowPremium = "Bu oraliq Premium bilan ochiladi"
-        override val insightsEmptyTitle = "Tahlillar hozircha yo'q"
+        override val insightsEmptyTitle = "Xulosalar hozircha yo'q"
         override val loadFailed = "Ma'lumotlar yuklanmadi. Internetni tekshirib, qayta urinib ko'ring."
         override val noRecordsInWindow = "Bu oraliqda yozuv yo'q"
         override val noRecordsBody =
@@ -1559,6 +1559,7 @@ object StringsUz : Strings {
     override val partner: PartnerStrings = PartnerUz
     override val badges: BadgeStrings = BadgesUz
     override val prescriptions: PrescriptionStrings = PrescriptionStringsUz
+    override val labs: LabStrings = LabStringsUz
     override val pet: PetStrings = PetUz
     override val widgets: WidgetUiStrings = WidgetUiUz
     override val frames: FrameStrings = FramesUz
@@ -1699,7 +1700,7 @@ object StringsUz : Strings {
             HomeWidgets.PLAN -> "Bugungi reja"
             HomeWidgets.SLEEP -> "Uyqu"
             HomeWidgets.MEDICATIONS -> "Dorilar"
-            HomeWidgets.INSIGHTS -> "Tahlillar"
+            HomeWidgets.INSIGHTS -> "Xulosalar"
             HomeWidgets.KNOWLEDGE -> "Bilim"
             HomeWidgets.QUICK_ACTIONS -> "Tezkor amallar"
             HomeWidgets.SUMMARY -> "Bugungi xulosa"
@@ -1778,7 +1779,7 @@ object StringsUz : Strings {
         override val benefitAiBody = "Kuniga 20 tagacha savol — sikl, uyqu va ovqatlanishingizni bilgan holda javob beradi."
         override val benefitScannerTitle = "Ovqat skaneri"
         override val benefitScannerBody = "Oyiga 30 ta surat: taomni suratga oling — kaloriya va tarkib taxminan baholanadi, kerak bo'lsa o'zingiz to'g'rilaysiz."
-        override val benefitInsightsTitle = "Tahlillar tarixi"
+        override val benefitInsightsTitle = "Xulosalar tarixi"
         override val benefitInsightsBody = "30 va 90 kunlik oynalar va kuzatuvlar: nima nima bilan birga kelayotganini ko'rasiz."
         override val benefitLibraryTitle = "Butun Bilim kutubxonasi"
         override val benefitLibraryBody = "Mutaxassislar tayyorlagan barcha maqolalar, bosqichingizga mos."
@@ -1856,8 +1857,8 @@ object StringsUz : Strings {
         override fun usedIn(provider: HealthProvider) = when (provider) {
             HealthProvider.WHOOP -> listOf("Uyqu ekrani", "Bugun — salomatlik ko'rsatkichi", "Balans", "Sikl — tana signallari", "Shifokor sahifasi")
             HealthProvider.APPLE_HEALTH, HealthProvider.HEALTH_CONNECT ->
-                listOf("Uyqu ekrani", "Bugun — salomatlik ko'rsatkichi", "Balans", "Sikl — hayz kunlari va tana harorati", "Tahlillar")
-            else -> listOf("Uyqu ekrani", "Bugun — salomatlik ko'rsatkichi", "Balans", "Tahlillar")
+                listOf("Uyqu ekrani", "Bugun — salomatlik ko'rsatkichi", "Balans", "Sikl — hayz kunlari va tana harorati", "Xulosalar")
+            else -> listOf("Uyqu ekrani", "Bugun — salomatlik ko'rsatkichi", "Balans", "Xulosalar")
         }
         override val openBrowserNote = "Brauzerda qurilmaning o'z sahifasi ochiladi. Ruxsat bergach, ilovaga qaytasiz — birinchi yuklab olish 30 kunlik va bir necha daqiqa oladi."
         override val returnedOk = "Ulandi — ma'lumotlar kelmoqda"

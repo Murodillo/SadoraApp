@@ -41,7 +41,7 @@ import uz.sadora.app.data.readable
 private val windows = listOf(7, 30, 90)
 
 /**
- * "Tahlillar" — trends and the observations drawn from them.
+ * "Xulosalar" — trends and the observations drawn from them.
  *
  * Every number here is measured. The screen used to draw a fixed "+12 daqiqa" and a
  * seven-bar chart of constants, which is exactly what the product forbids elsewhere;

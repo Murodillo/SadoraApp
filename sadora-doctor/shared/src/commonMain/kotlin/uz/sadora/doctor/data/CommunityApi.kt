@@ -77,6 +77,17 @@ class CommunityApi(private val caller: ApiCaller) {
     suspend fun image(conversationId: String, messageId: String): ApiResult<ByteArray> =
         caller.authenticated("v1/community/conversations/$conversationId/messages/$messageId/image", HttpMethodKind.GET)
 
+    /** A page of the lab sheet a patient sent as a line of the thread; [page] counts from 0. */
+    suspend fun labPhoto(conversationId: String, messageId: String, page: Int): ApiResult<ByteArray> =
+        caller.authenticated("v1/community/conversations/$conversationId/messages/$messageId/lab-photos/$page", HttpMethodKind.GET)
+
+    /** A page of a lab sheet inside an attached record; refused, like the record, once the consultation closes. */
+    suspend fun recordLabPhoto(conversationId: String, messageId: String, reportId: String, page: Int): ApiResult<ByteArray> =
+        caller.authenticated(
+            "v1/community/conversations/$conversationId/messages/$messageId/record/labs/$reportId/photos/$page",
+            HttpMethodKind.GET,
+        )
+
     /** The record a patient attached, assembled now; refused once the consultation closes. */
     suspend fun record(conversationId: String, messageId: String, language: Language): ApiResult<DoctorSummary> =
         caller.authenticated(

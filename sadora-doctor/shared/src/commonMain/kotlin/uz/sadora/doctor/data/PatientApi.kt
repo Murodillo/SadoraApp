@@ -14,6 +14,10 @@ class PatientApi(private val caller: ApiCaller) {
 
     suspend fun record(token: String, language: Language): ApiResult<DoctorSummary> =
         caller.authenticated("share/$token/json?lang=${language.name.lowercase()}", HttpMethodKind.GET)
+
+    /** A page of one of her lab sheets, by the same link, while it is live; [page] counts from 0. */
+    suspend fun labPhoto(token: String, reportId: String, page: Int): ApiResult<ByteArray> =
+        caller.authenticated("share/$token/labs/$reportId/photos/$page", HttpMethodKind.GET)
 }
 
 /**

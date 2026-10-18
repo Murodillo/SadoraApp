@@ -318,7 +318,7 @@ object SadoraIcons {
         stroke { moveTo(9.2f, 9.2f); lineTo(14.8f, 14.8f) }
     }
 
-    /** Tahlillar — three bars, tallest last. */
+    /** Xulosalar — three bars, tallest last. */
     val Chart: ImageVector = icon("Chart") {
         stroke { moveTo(4.4f, 19.6f); lineTo(19.6f, 19.6f) }
         stroke { moveTo(7.6f, 19.6f); lineTo(7.6f, 13.4f) }

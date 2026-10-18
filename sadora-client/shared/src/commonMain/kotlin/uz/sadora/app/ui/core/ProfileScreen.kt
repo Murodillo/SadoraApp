@@ -210,6 +210,7 @@ fun ProfileScreen(
                     SadoraCard(padding = Spacing.xs) {
                         SettingsRow(Res.drawable.ic3d_sleep, t.sleep) { onOpen(Route.Sleep) }
                         SettingsRow(Res.drawable.ic3d_meds, t.medications) { onOpen(Route.Medications) }
+                        SettingsRow(Res.drawable.ic3d_lab, strings.labs.title) { onOpen(Route.Labs) }
                         if (state.communityEnabled) {
                             SettingsRow(Res.drawable.ic3d_chats, t.secretChat, iconTint = c.secondary) { onOpen(Route.SecretChat) }
                         }

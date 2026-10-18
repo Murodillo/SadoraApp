@@ -9,6 +9,7 @@ import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
 import kotlin.uuid.Uuid
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.minus
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import uz.sadora.contract.AccountStatus
@@ -23,6 +24,7 @@ import uz.sadora.contract.DoctorStatus
 import uz.sadora.contract.DoctorSummary
 import uz.sadora.contract.Language
 import uz.sadora.contract.Limits
+import uz.sadora.server.core.dayIn
 import uz.sadora.contract.MessageImage
 import uz.sadora.contract.MessageImageUpload
 import uz.sadora.contract.MessageKind
@@ -102,6 +104,8 @@ class MessagingService(
     private val prescriptions: PrescriptionRepository? = null,
     /** The avatar frame each alias wears; null in tests, which then show none. */
     private val wornFrames: (suspend (Collection<Uuid>) -> Map<Uuid, String>)? = null,
+    /** The patient's lab sheets, behind `lab` lines. Null in tests without them. */
+    private val labs: uz.sadora.server.lab.LabService? = null,
 ) {
     /** What happens after a window is closed — the patient's push. Set at wiring. */
     var onSessionClosed: (suspend (SessionRecord) -> Unit)? = null
@@ -269,7 +273,19 @@ class MessagingService(
             if (doctor == null || doctor.status != DoctorStatus.APPROVED) throw ForbiddenException(message = DOCTOR_UNAVAILABLE)
         }
 
+        var labReportId: Uuid? = null
         val (kind, body, image) = when {
+            request.labReportId != null -> {
+                val doctor = thread.doctorId?.let { doctors?.byId(it) }
+                if (doctor == null || doctor.userId == userId) {
+                    throw ValidationException("labReportId", "Tahlilni faqat bemorning o'zi shifokoriga yuboradi")
+                }
+                val id = runCatching { Uuid.parse(request.labReportId!!) }.getOrNull()
+                val report = id?.let { labs?.ownedBy(userId, it) } ?: throw NotFoundException("Tahlil topilmadi")
+                labReportId = report.id
+                val language = users?.findById(userId)?.language ?: Language.UZ
+                Triple(MessageKind.LAB, uz.sadora.server.lab.LabWords.plainText(labs!!.dto(report, language), language), null)
+            }
             request.attachRecord -> {
                 val doctor = thread.doctorId?.let { doctors?.byId(it) }
                 if (doctor == null || doctor.userId == userId) {
@@ -280,7 +296,7 @@ class MessagingService(
             request.image != null -> Triple(MessageKind.IMAGE, validateCaption(request.body), decodeImage(request.image!!))
             else -> Triple(MessageKind.TEXT, validateText(request.body), null)
         }
-        val message = write(userId, thread, body, kind, image)
+        val message = write(userId, thread, body, kind, image, labReportId)
         // The doctor's first line in a window is what "answered" and the reply time mean.
         if (thread.isConsultation && thread.doctorId != null && doctors?.byId(thread.doctorId)?.userId == userId) {
             consultations?.currentSession(thread.id)
@@ -289,7 +305,7 @@ class MessagingService(
         }
         // What was written ends the "yozmoqda…" it came from.
         cache?.delete(typingKey(conversationId, userId))
-        return message.toDto(userId, thread.readAt(other))
+        return dtos(userId, listOf(message), thread.readAt(other)).single()
     }
 
     /**
@@ -345,12 +361,13 @@ class MessagingService(
         body: String,
         kind: MessageKind,
         image: MessageImageRecord?,
+        labReportId: Uuid? = null,
     ): MessageRecord {
         community.requireCanWrite(userId)
         if (messages.messagesSince(userId, now() - 24.hours) >= MAX_MESSAGES_PER_DAY) {
             throw RateLimitedException("Bir kunda $MAX_MESSAGES_PER_DAY tadan ko'p xabar yozib bo'lmaydi")
         }
-        val message = messages.insertMessage(thread.id, userId, body, kind, image)
+        val message = messages.insertMessage(thread.id, userId, body, kind, image, labReportId)
         notify(thread, recipient = thread.other(userId), sender = userId, message = message)
         return message
     }
@@ -397,6 +414,20 @@ class MessagingService(
     }
 
     /**
+     * A photographed page of the lab sheet behind a `lab` line, for the two people in
+     * the thread. Like a photo it stays readable after the window closes: she sent it.
+     */
+    suspend fun labPhoto(userId: Uuid, conversationId: Uuid, messageId: Uuid, page: Int): uz.sadora.server.lab.LabPhotoRecord {
+        val thread = requireParticipant(userId, conversationId)
+        val message = messages.messageById(messageId)
+            ?.takeIf { it.conversationId == thread.id && it.status == ContentStatus.VISIBLE && it.kind == MessageKind.LAB }
+            ?: throw NotFoundException("Rasm topilmadi")
+        val reportId = message.labReportId ?: throw NotFoundException("Rasm topilmadi")
+        val report = labs?.ownedBy(message.senderId, reportId) ?: throw NotFoundException("Rasm topilmadi")
+        return labs.photoOf(report.id, page) ?: throw NotFoundException("Rasm topilmadi")
+    }
+
+    /**
      * The record a patient attached, assembled now. Her doctor reads it while the
      * consultation is open — once it closes the door closes with it — and she can always
      * read her own. Every opening by the doctor is audited, as a QR scan is.
@@ -426,6 +457,34 @@ class MessagingService(
             )
         }
         return provider(patient, language ?: owner.language)
+    }
+
+    /**
+     * A page of one of the lab sheets inside an attached record: under the record's own
+     * rule — her doctor while the window is open, she always — and only a sheet the
+     * record would list.
+     */
+    suspend fun recordLabPhoto(
+        userId: Uuid,
+        conversationId: Uuid,
+        messageId: Uuid,
+        reportId: Uuid,
+        page: Int,
+    ): uz.sadora.server.lab.LabPhotoRecord {
+        val thread = requireParticipant(userId, conversationId)
+        val message = messages.messageById(messageId)
+            ?.takeIf { it.conversationId == thread.id && it.status == ContentStatus.VISIBLE && it.kind == MessageKind.RECORD }
+            ?: throw NotFoundException("Rasm topilmadi")
+        val patient = message.senderId
+        if (patient != userId && !thread.isOpen(clock.now())) {
+            throw ForbiddenException(message = "Konsultatsiya yopilgan — bemor kartasi endi ko'rinmaydi")
+        }
+        val owner = users?.findById(patient)
+        if (owner == null || owner.status != AccountStatus.ACTIVE) throw NotFoundException("Rasm topilmadi")
+        val report = labs?.ownedBy(patient, reportId) ?: throw NotFoundException("Rasm topilmadi")
+        val earliest = clock.now().dayIn(owner.timezone).minus(Limits.LAB_SHARE_DAYS - 1, kotlinx.datetime.DateTimeUnit.DAY)
+        if (report.takenOn < earliest) throw NotFoundException("Rasm topilmadi")
+        return labs.photoOf(report.id, page) ?: throw NotFoundException("Rasm topilmadi")
     }
 
     // ---------------------------------------------------------------- reports
@@ -614,6 +673,7 @@ class MessagingService(
         MessageKind.IMAGE -> body.take(PREVIEW_LENGTH)
         MessageKind.RECORD -> ""
         MessageKind.PRESCRIPTION -> ""
+        MessageKind.LAB -> ""
     }
 
     /**
@@ -625,11 +685,18 @@ class MessagingService(
         val byMessage = if (ids.isEmpty()) emptyMap() else prescriptions?.byMessages(ids).orEmpty()
         val doctorsById = byMessage.values.map { it.doctorId }.distinct()
             .takeIf { it.isNotEmpty() }?.let { doctors?.byIds(it) }.orEmpty()
+        // A sheet is shown in the reader's language, and only while it is still the sender's.
+        val labIds = lines.filter { it.kind == MessageKind.LAB }.mapNotNull { it.labReportId }.distinct()
+        val sheets = if (labIds.isEmpty()) emptyMap() else labs?.byIds(labIds).orEmpty()
+        val language = if (sheets.isEmpty()) Language.UZ else users?.findById(viewer)?.language ?: Language.UZ
         return lines.map { line ->
             val prescription = byMessage[line.id]?.let { record ->
                 doctorsById[record.doctorId]?.let { PrescriptionRules.dto(record, it, patientName = null) }
             }
-            line.toDto(viewer, otherReadAt).copy(prescription = prescription)
+            val labReport = line.labReportId?.let { sheets[it] }
+                ?.takeIf { it.userId == line.senderId }
+                ?.let { labs!!.dto(it, language) }
+            line.toDto(viewer, otherReadAt).copy(prescription = prescription, labReport = labReport)
         }
     }
 

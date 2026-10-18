@@ -85,6 +85,7 @@ class SadoraGraph(
     val wearableApi: WearableApi = WearableApi(caller)
     val appointmentApi: AppointmentApi = AppointmentApi(caller)
     val stageEventApi: StageEventApi = StageEventApi(caller)
+    val labApi: uz.sadora.app.data.api.LabApi = uz.sadora.app.data.api.LabApi(caller)
     val communityApi: CommunityApi = CommunityApi(caller)
     val doctorApi: DoctorApi = DoctorApi(caller)
     val aiApi: AiApi = AiApi(caller)
@@ -182,6 +183,8 @@ class SadoraGraph(
     fun notificationsController(): NotificationsController = NotificationsController(notificationApi)
 
     fun stageEventsController(): StageEventsController = StageEventsController(stageEventApi)
+
+    fun labController(): LabController = LabController(labApi)
 
     fun close() = client.close()
 }

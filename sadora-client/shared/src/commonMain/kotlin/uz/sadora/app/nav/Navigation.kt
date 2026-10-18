@@ -85,6 +85,15 @@ sealed interface Route {
     /** The same form, filled with one course, with Save and Delete. */
     data class EditMedication(val id: String) : Route
     data object MedicationHistory : Route
+    /** Her lab sheets: a chart per marker, and the sheets themselves. */
+    data object Labs : Route
+    data class LabReport(val id: String) : Route
+    /** One known marker across her sheets, by its catalogue code. */
+    data class LabTrend(val code: String) : Route
+    /** The camera, the reading, then the rows to check: one flow, like the food scanner. */
+    data object LabScan : Route
+    /** A sheet typed in ([id] null) or corrected. */
+    data class LabEdit(val id: String?) : Route
     data object Sleep : Route
     data object Insights : Route
     data object Knowledge : Route
@@ -152,7 +161,7 @@ sealed interface Route {
  * header and input, and a camera viewfinder has nowhere to put a bar.
  */
 val Route.isFullScreen: Boolean
-    get() = this == Route.AiChat || this == Route.FoodScanCamera || this == Route.Paywall ||
+    get() = this == Route.AiChat || this == Route.FoodScanCamera || this == Route.LabScan || this == Route.Paywall ||
         // A thread and a post end in a text field. Above the tab bar it was padded for the
         // system bar a second time, and with the keyboard up it floated a bar's height over it.
         this is Route.Post || this is Route.Conversation

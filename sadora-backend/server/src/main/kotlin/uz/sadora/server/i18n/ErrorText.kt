@@ -69,6 +69,10 @@ object ErrorText {
         Entry("Litsenziya raqami", "Номер лицензии", "Licence number"),
         Entry("Sharh", "Отзыв", "Review"),
         Entry("Tavsiya", "Рекомендация", "Advice"),
+        Entry("Laboratoriya", "Лаборатория", "Laboratory"),
+        Entry("Ko'rsatkich nomi", "Название показателя", "Marker name"),
+        Entry("Natija", "Результат", "Result"),
+        Entry("Norma", "Референс", "Reference range"),
     )
 
     private val labelsByUz: Map<String, Entry> = labels.associateBy { it.uz }
@@ -203,6 +207,33 @@ object ErrorText {
         Entry("Dori topilmadi", "Лекарство не найдено", "Medication not found"),
         Entry("Shifokor kuniga {0} marta yozgan — shuncha vaqt tanlang", "Врач назначил {0} раз в день — выберите столько же времени приёма", "The doctor prescribed {0} times a day — choose that many times"),
         Entry("Retsept topilmadi", "Рецепт не найден", "Prescription not found"),
+        Entry("Tahlil topilmadi", "Анализ не найден", "Lab result not found"),
+        Entry("Kamida bitta sahifani suratga oling", "Сфотографируйте хотя бы одну страницу", "Take a photo of at least one page"),
+        Entry(
+            "Skaner hozircha ishlamayapti. Natijalarni qo'lda kiritishingiz mumkin.",
+            "Сканер пока не работает. Результаты можно ввести вручную.",
+            "The scanner is not working right now. You can type the results in.",
+        ),
+        Entry(
+            "Tahlilni o'qib bo'lmadi. Qaytadan urinib ko'ring yoki qo'lda kiriting.",
+            "Не удалось прочитать анализ. Попробуйте ещё раз или введите вручную.",
+            "The sheet could not be read. Try again or type the results in.",
+        ),
+        Entry("Tahlil sanasi noto'g'ri", "Неверная дата анализа", "The test date is not valid"),
+        Entry("Kamida bitta natijani kiriting", "Введите хотя бы один результат", "Enter at least one result"),
+        Entry("Natija son bo'lishi kerak", "Результат должен быть числом", "The result must be a number"),
+        Entry(
+            "Normaning quyi chegarasi yuqorisidan katta bo'lmasin",
+            "Нижняя граница нормы не может быть больше верхней",
+            "The range's lower bound cannot be above its upper bound",
+        ),
+        Entry("Eng ko'pi {0} ta sahifa", "Не больше {0} страниц", "{0} pages at most"),
+        Entry("Eng ko'pi {0} ta natija", "Не больше {0} результатов", "{0} results at most"),
+        Entry(
+            "Tahlilni faqat bemorning o'zi shifokoriga yuboradi",
+            "Анализ отправляет врачу только сама пациентка",
+            "Only the patient sends her lab results to her doctor",
+        ),
         Entry("Retseptni faqat shifokor yozadi", "Рецепт выписывает только врач", "Only the doctor writes a prescription"),
         Entry("Retseptni faqat uni yozgan shifokor bekor qiladi", "Отменить рецепт может только выписавший его врач", "Only the doctor who wrote it can cancel a prescription"),
         Entry("Sababini yozing", "Укажите причину", "Please give a reason"),

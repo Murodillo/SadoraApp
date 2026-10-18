@@ -6,7 +6,7 @@ import uz.sadora.app.data.HttpMethodKind
 import uz.sadora.contract.InsightsSummary
 
 /**
- * The trend windows behind Tahlillar — and behind the weekly charts on Mind and Uyqu,
+ * The trend windows behind Xulosalar — and behind the weekly charts on Mind and Uyqu,
  * which draw the same series over seven days.
  */
 class InsightsApi(private val caller: ApiCaller) {

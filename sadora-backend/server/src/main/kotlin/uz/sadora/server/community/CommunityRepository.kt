@@ -167,6 +167,7 @@ private class ReportedMessage(val body: String, val status: ContentStatus, val k
         MessageKind.IMAGE -> "[rasm]" + body.takeIf { it.isNotEmpty() }?.let { " $it" }.orEmpty()
         MessageKind.RECORD -> "[tibbiy karta]"
         MessageKind.PRESCRIPTION -> "[retsept] $body"
+        MessageKind.LAB -> "[tahlil natijalari]"
     }
 }
 

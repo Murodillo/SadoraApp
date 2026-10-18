@@ -10,7 +10,7 @@ import uz.sadora.contract.InsightsSummary
 /**
  * The trend windows, kept per length.
  *
- * Switching the range chip on Tahlillar must not blank the chart it just drew, and the
+ * Switching the range chip on Xulosalar must not blank the chart it just drew, and the
  * seven-day window is shared with Mind and Uyqu — so each window is cached under its own
  * length and a screen reads whichever one it asked for.
  *

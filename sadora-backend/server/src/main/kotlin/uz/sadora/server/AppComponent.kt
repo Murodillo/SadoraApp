@@ -233,6 +233,15 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
         usage = aiUsageRepository,
         rewards = rewardsService,
     )
+    val labRepository = uz.sadora.server.lab.LabRepository()
+    val labService = uz.sadora.server.lab.LabService(
+        labs = labRepository,
+        access = healthAccess,
+        // The scanner's rule: no key, no model object, and the screen offers typing only.
+        vision = config.ai.apiKey?.let { uz.sadora.server.ai.GeminiLabVision(outboundHttpClient, config.ai) },
+        visionConfig = config.ai,
+        usage = aiUsageRepository,
+    )
     val prescriptionRepository = PrescriptionRepository()
     val medicationService = MedicationService(
         medicationRepository,
@@ -366,6 +375,7 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
         consultations = consultationRepository,
         prescriptions = prescriptionRepository,
         wornFrames = frameRepository::wornBy,
+        labs = labService,
     )
     val prescriptionService = PrescriptionService(
         prescriptions = prescriptionRepository,
@@ -474,6 +484,7 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
         audit = auditService,
         publicBaseUrl = config.publicBaseUrl,
         entitlements = entitlementService,
+        labs = labService,
     )
 
     /** Yaqinim: built from her records at read time, through the same services as the app. */

@@ -100,7 +100,7 @@ fun FoodScannerScreen(
             }
         }
     }
-    val picker = rememberPhotoCapture(read)
+    val picker = rememberPhotoCapture(onCaptured = read)
 
     when (val current = stage) {
         ScanStage.Framing -> Viewfinder(

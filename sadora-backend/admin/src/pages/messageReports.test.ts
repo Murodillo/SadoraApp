@@ -7,6 +7,7 @@ import {
   contextLineText,
   IMAGE_PLACEHOLDER,
   isDoctorLine,
+  LAB_LINE,
   RECORD_LINE,
   reportTarget,
   restrictDone,
@@ -40,8 +41,9 @@ describe('reportTarget', () => {
 })
 
 describe('contextLineText', () => {
-  it('never shows a record, and shows a photo as a placeholder with its caption', () => {
+  it('never shows a record or a lab sheet, and shows a photo as a placeholder with its caption', () => {
     expect(contextLineText({ kind: 'record', body: 'anything the wire sent' })).toBe(RECORD_LINE)
+    expect(contextLineText({ kind: 'lab', body: 'Gemoglobin: 104 g/L' })).toBe(LAB_LINE)
     expect(contextLineText({ kind: 'image', body: '' })).toBe(IMAGE_PLACEHOLDER)
     expect(contextLineText({ kind: 'image', body: 'toshma' })).toBe(`${IMAGE_PLACEHOLDER} toshma`)
     expect(contextLineText({ kind: 'text', body: 'Salom' })).toBe('Salom')

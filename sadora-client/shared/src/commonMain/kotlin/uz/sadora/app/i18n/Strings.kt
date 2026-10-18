@@ -67,6 +67,7 @@ interface Strings {
     val partner: PartnerStrings
     val badges: BadgeStrings
     val prescriptions: PrescriptionStrings
+    val labs: LabStrings
     val pet: PetStrings
     val widgets: WidgetUiStrings
     val frames: FrameStrings

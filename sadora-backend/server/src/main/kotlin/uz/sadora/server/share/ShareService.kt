@@ -80,6 +80,8 @@ class ShareService(
     private val publicBaseUrl: String,
     /** Meters the export; optional only for the tests that build the service by hand. */
     private val entitlements: uz.sadora.server.entitlement.EntitlementService? = null,
+    /** Her lab sheets; null in the tests that build the service by hand. */
+    private val labs: uz.sadora.server.lab.LabService? = null,
 ) {
 
     // ---------------------------------------------------------------- hers
@@ -170,6 +172,23 @@ class ShareService(
             ),
         )
         return summaryFor(user.id, language ?: user.language)
+    }
+
+    /**
+     * A photographed page of one of her lab sheets, for a live link only, and only a
+     * sheet the summary would list. Not audited on its own: the page that links it was.
+     */
+    suspend fun labPhoto(token: String, reportId: Uuid, page: Int): uz.sadora.server.lab.LabPhotoRecord? {
+        val service = labs ?: return null
+        if (token.length !in TOKEN_LENGTH_RANGE) return null
+        val record = shares.byTokenHash(sha256(token)) ?: return null
+        if (!record.share.isActive(now())) return null
+        val user = users.findById(record.userId) ?: return null
+        if (user.status != uz.sadora.contract.AccountStatus.ACTIVE) return null
+        val report = service.ownedBy(user.id, reportId) ?: return null
+        val earliest = now().dayIn(user.timezone).minus(Limits.LAB_SHARE_DAYS - 1, DateTimeUnit.DAY)
+        if (report.takenOn < earliest) return null
+        return service.photoOf(report.id, page)
     }
 
     /** The same document she can download for herself — the data-export button. */
@@ -314,6 +333,7 @@ class ShareService(
                 now(),
                 user.timezone,
             ),
+            labs = labs?.forSummary(userId, today, language).orEmpty(),
         )
     }
 

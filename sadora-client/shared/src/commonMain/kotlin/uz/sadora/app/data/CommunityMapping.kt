@@ -130,6 +130,7 @@ fun WireMessage.toAppMessage(): DirectMessage = DirectMessage(
     image = image?.takeIf { kind == WireKind.IMAGE }?.let { MessageImageSize(it.width, it.height) },
     read = read,
     prescription = prescription?.takeIf { kind == WireKind.PRESCRIPTION },
+    labReport = labReport?.takeIf { kind == WireKind.LAB },
 )
 
 fun WireKind.toAppKind(): MessageKind = when (this) {
@@ -137,6 +138,7 @@ fun WireKind.toAppKind(): MessageKind = when (this) {
     WireKind.IMAGE -> MessageKind.Image
     WireKind.RECORD -> MessageKind.Record
     WireKind.PRESCRIPTION -> MessageKind.Prescription
+    WireKind.LAB -> MessageKind.Lab
 }
 
 fun WireTopic.toAppTopic(): CommunityTopic = when (this) {

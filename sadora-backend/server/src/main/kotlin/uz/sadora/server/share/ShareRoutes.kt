@@ -7,6 +7,7 @@ import io.ktor.server.plugins.ratelimit.rateLimit
 import io.ktor.server.request.receive
 import io.ktor.server.response.header
 import io.ktor.server.response.respond
+import io.ktor.server.response.respondBytes
 import io.ktor.server.response.respondText
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.delete
@@ -73,8 +74,19 @@ fun Route.publicShareRoutes(shares: ShareService) {
                 } else {
                     // Never cached, never framed: the page is health data, shown once.
                     call.response.header("Cache-Control", "no-store")
-                    call.respondText(DoctorPage.render(summary, summary.language), ContentType.Text.Html)
+                    call.respondText(DoctorPage.render(summary, summary.language, token), ContentType.Text.Html)
                 }
+            }
+
+            /** A page of one of her lab sheets, while the link is live. */
+            get("/labs/{id}/photos/{page}") {
+                val token = call.parameters["token"].orEmpty()
+                val reportId = runCatching { kotlin.uuid.Uuid.parse(call.parameters["id"].orEmpty()) }.getOrNull()
+                val page = call.parameters["page"]?.toIntOrNull()
+                val photo = if (reportId != null && page != null) shares.labPhoto(token, reportId, page) else null
+                if (photo == null) return@get call.respond(HttpStatusCode.NotFound, Ack(false))
+                call.response.header("Cache-Control", "no-store")
+                call.respondBytes(photo.bytes, ContentType.parse(photo.mimeType))
             }
 
             get("/json") {

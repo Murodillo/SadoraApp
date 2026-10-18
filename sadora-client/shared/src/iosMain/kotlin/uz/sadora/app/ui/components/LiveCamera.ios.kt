@@ -62,6 +62,7 @@ actual fun LiveCamera(
     onCaptured: (CapturedPhoto) -> Unit,
     modifier: Modifier,
     front: Boolean,
+    maxEdge: Int,
 ) {
     val access = rememberUpdatedState(onAccess)
     val captured = rememberUpdatedState(onCaptured)
@@ -92,7 +93,7 @@ actual fun LiveCamera(
         return
     }
 
-    val camera = remember(front) { IosCamera(front) }
+    val camera = remember(front, maxEdge) { IosCamera(front, maxEdge) }
     DisposableEffect(camera) {
         if (camera.start()) {
             shutter.onFire = { camera.capture { photo -> captured.value(photo) } }
@@ -121,7 +122,7 @@ actual fun rememberOpenAppSettings(): () -> Unit = remember {
 
 /** The session, its one input and one output, and the view that shows it. */
 @OptIn(ExperimentalForeignApi::class)
-private class IosCamera(private val front: Boolean) {
+private class IosCamera(private val front: Boolean, private val maxEdge: Int) {
     private val session = AVCaptureSession()
     private val output = AVCapturePhotoOutput()
     private val previewLayer = AVCaptureVideoPreviewLayer(session = session).apply {
@@ -180,7 +181,7 @@ private class IosCamera(private val front: Boolean) {
             ) {
                 val photo = didFinishProcessingPhoto.fileDataRepresentation()
                     ?.let { UIImage(data = it) }
-                    ?.encode()
+                    ?.encode(maxEdge)
                 dispatch_async(dispatch_get_main_queue()) {
                     inFlight = null
                     if (photo != null) onPhoto(photo)

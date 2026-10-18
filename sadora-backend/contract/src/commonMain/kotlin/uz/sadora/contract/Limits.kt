@@ -96,6 +96,25 @@ object Limits {
     const val PRESCRIPTION_DAYS_MAX = 365
     const val PRESCRIPTION_CANCEL_REASON_MAX = 300
 
+    // ---- lab results, entered by hand or read from a photo of the lab's sheet
+    /** Rows on one sheet; a full blood count with biochemistry is about forty. */
+    const val LAB_VALUES_MAX = 60
+    /** Pages of one sheet, photographed. */
+    const val LAB_PHOTOS_MAX = 3
+    /** A page decoded. The apps resize to a 2048-pixel edge: small print must stay legible. */
+    const val LAB_PHOTO_MAX_BYTES = 3_000_000
+    const val LAB_NAME_MAX = 80
+    const val LAB_PLACE_MAX = 80
+    const val LAB_NOTE_MAX = 500
+    const val LAB_UNIT_MAX = 24
+    /** "manfiy", "1:160", "< 0.5" — a result that is not one number. */
+    const val LAB_VALUE_TEXT_MAX = 40
+    /** The range as printed when it is not two numbers: "< 5.0", "follikulyar faza 2–12". */
+    const val LAB_REF_TEXT_MAX = 80
+    /** How far back a doctor's summary reaches, and how many sheets it carries. */
+    const val LAB_SHARE_DAYS = 365
+    const val LAB_SHARE_REPORTS_MAX = 20
+
     /**
      * Ratings a doctor needs before her average is shown as a number; below it the
      * apps say "Yangi shifokor". One five-star rating is not a reputation.

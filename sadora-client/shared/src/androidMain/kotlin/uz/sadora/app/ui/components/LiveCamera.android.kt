@@ -58,6 +58,7 @@ actual fun LiveCamera(
     onCaptured: (CapturedPhoto) -> Unit,
     modifier: Modifier,
     front: Boolean,
+    maxEdge: Int,
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -93,7 +94,7 @@ actual fun LiveCamera(
         }
     }
 
-    DisposableEffect(lifecycleOwner, previewView, front) {
+    DisposableEffect(lifecycleOwner, previewView, front, maxEdge) {
         val main = ContextCompat.getMainExecutor(context)
         val future = ProcessCameraProvider.getInstance(context)
         var provider: ProcessCameraProvider? = null
@@ -105,7 +106,7 @@ actual fun LiveCamera(
             .setResolutionSelector(
                 ResolutionSelector.Builder()
                     .setResolutionStrategy(
-                        ResolutionStrategy(CaptureSize, ResolutionStrategy.FALLBACK_RULE_CLOSEST_HIGHER_THEN_LOWER),
+                        ResolutionStrategy(captureSizeFor(maxEdge), ResolutionStrategy.FALLBACK_RULE_CLOSEST_HIGHER_THEN_LOWER),
                     )
                     .build(),
             )
@@ -139,7 +140,7 @@ actual fun LiveCamera(
                                 scope.launch {
                                     val photo = withContext(Dispatchers.Default) {
                                         runCatching {
-                                            BitmapFactory.decodeByteArray(jpeg, 0, jpeg.size)?.encode(rotation)
+                                            BitmapFactory.decodeByteArray(jpeg, 0, jpeg.size)?.encode(rotation, maxEdge)
                                         }.getOrNull()
                                     }
                                     inFlight = false
@@ -199,3 +200,7 @@ private fun ImageProxy.jpegBytes(): ByteArray {
 
 /** Landscape, as the sensor sees it; CameraX matches it to the device's turn. */
 private val CaptureSize = Size(1280, 960)
+
+/** A document wants a frame at least as long as the edge it is sent at, in the sensor's 4:3. */
+private fun captureSizeFor(maxEdge: Int): Size =
+    if (maxEdge <= CaptureSize.width) CaptureSize else Size(maxEdge, maxEdge * 3 / 4)

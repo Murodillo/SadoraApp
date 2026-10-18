@@ -77,6 +77,8 @@ data class MessageRecord(
     val imageWidth: Int? = null,
     val imageHeight: Int? = null,
     val imageMime: String? = null,
+    /** The sheet behind a `lab` line, while it exists. */
+    val labReportId: Uuid? = null,
 )
 
 /** Which of her threads a list asks for; see [MessagingRepository.conversationsOf]. */
@@ -280,6 +282,7 @@ class MessagingRepository {
         body: String,
         kind: MessageKind = MessageKind.TEXT,
         image: MessageImageRecord? = null,
+        labReportId: Uuid? = null,
     ): MessageRecord = dbQuery {
         val id = Uuid.random()
         val timestamp = now()
@@ -289,6 +292,7 @@ class MessagingRepository {
             it[CommunityMessages.senderId] = senderId
             it[CommunityMessages.body] = body
             it[CommunityMessages.kind] = kind.dbValue()
+            it[CommunityMessages.labReportId] = labReportId
             it[status] = ContentStatus.VISIBLE.dbValue()
             it[createdAt] = timestamp.toOffsetDateTime()
         }
@@ -307,7 +311,7 @@ class MessagingRepository {
         }
         MessageRecord(
             id, conversationId, senderId, body, ContentStatus.VISIBLE, timestamp, kind,
-            image?.width, image?.height, image?.mimeType,
+            image?.width, image?.height, image?.mimeType, labReportId,
         )
     }
 
@@ -558,5 +562,6 @@ class MessagingRepository {
         status = enumFromDb(this[CommunityMessages.status], ContentStatus.VISIBLE),
         createdAt = this[CommunityMessages.createdAt].toKotlinInstant(),
         kind = enumFromDb(this[CommunityMessages.kind], MessageKind.TEXT),
+        labReportId = this[CommunityMessages.labReportId],
     )
 }

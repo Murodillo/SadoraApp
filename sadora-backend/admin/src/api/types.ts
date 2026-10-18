@@ -234,12 +234,12 @@ export interface CommunityStats {
   prescriptionsAdded?: number
 }
 
-export type MessageKind = 'text' | 'image' | 'record' | 'prescription'
+export type MessageKind = 'text' | 'image' | 'record' | 'prescription' | 'lab'
 
 /**
  * One line around a reported private message. `fromReported` is the side the report is
- * about; the other side is the one who reported. A record line never carries its body —
- * her health record is not the moderator's to read.
+ * about; the other side is the one who reported. A record or lab line never carries its
+ * body — her health record and her lab results are not the moderator's to read.
  */
 export interface ReportContextMessage {
   id: string

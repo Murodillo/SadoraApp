@@ -2,6 +2,15 @@ package uz.sadora.app.ui.components
 
 import androidx.compose.runtime.Composable
 
+/**
+ * The long edge a capture is resized to. A plate is recognised at [Default]; a printed
+ * lab sheet needs [Document], or its small type turns to grey before the model sees it.
+ */
+object PhotoEdge {
+    const val Default = 1024
+    const val Document = 2048
+}
+
 /** A photo the user chose or took, already encoded for the wire. */
 data class CapturedPhoto(
     /** The bytes, base64-encoded, ready to be the body of a scan request. */
@@ -32,4 +41,7 @@ interface PhotoCapture {
  * that on its own.
  */
 @Composable
-expect fun rememberPhotoCapture(onCaptured: (CapturedPhoto) -> Unit): PhotoCapture
+expect fun rememberPhotoCapture(
+    maxEdge: Int = PhotoEdge.Default,
+    onCaptured: (CapturedPhoto) -> Unit,
+): PhotoCapture

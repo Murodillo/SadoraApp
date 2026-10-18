@@ -172,7 +172,7 @@ fun MedicationsWidget(
 }
 
 /**
- * The most recent finding from Tahlillar.
+ * The most recent finding from Xulosalar.
  *
  * Only ever a finding the server produced, worded the way the Insights screen words it
  * — "often seen together", never "caused by". A card that had to shorten a finding into
@@ -186,7 +186,7 @@ fun InsightsWidget(
 ) {
     val t = strings.modules
     val c = Sadora.colors
-    // The widget is the only thing on Today that reads Tahlillar, so it fetches its own
+    // The widget is the only thing on Today that reads Xulosalar, so it fetches its own
     // window rather than relying on the Insights screen having been opened first — a
     // card that said "nothing yet" only because nobody had visited that screen would be
     // lying about her data.

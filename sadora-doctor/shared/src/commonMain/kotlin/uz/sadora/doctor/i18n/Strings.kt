@@ -43,6 +43,7 @@ interface Strings {
     val photo: PhotoStrings
     val badges: BadgeStrings
     val prescriptions: PrescriptionStrings
+    val labs: LabStrings
 }
 
 interface CommonStrings {

@@ -120,6 +120,7 @@ import uz.sadora.contract.Conversation
 import uz.sadora.contract.ConversationThread
 import uz.sadora.contract.MessagePage
 import uz.sadora.contract.DirectMessage
+import uz.sadora.contract.MessageKind
 import uz.sadora.contract.SendMessageRequest
 import uz.sadora.contract.StartConversationRequest
 import uz.sadora.contract.UpdateIdentityRequest
@@ -3776,6 +3777,149 @@ class ApiIntegrationTest {
         )
         assertFalse(fifth.sentToPartner)
         assertTrue(get<List<uz.sadora.contract.IncomingPaymentRequest>>("/v1/payment-requests/incoming", him.token).isEmpty())
+    }
+
+    // ---------------------------------------------------------------- lab results
+
+    @Test
+    fun `a lab sheet is hers, flags against its own range, charts and reaches her doctor`() = api {
+        val her = signUp().also { onboard(it) }
+        val today = get<CycleStatus>("/v1/cycle/status", her.token).today
+        val png = tinyPng()
+
+        val first = post<uz.sadora.contract.LabReport>(
+            "/v1/labs",
+            her.token,
+            uz.sadora.contract.SaveLabReportRequest(
+                takenOn = today.minus(40, kotlinx.datetime.DateTimeUnit.DAY),
+                place = "Invitro",
+                values = listOf(
+                    // The printed name is matched to the marker; the range is the lab's own.
+                    uz.sadora.contract.SaveLabValue(name = "Гемоглобин (HGB)", value = 104.0, unit = "g/L", refLow = 120.0, refHigh = 150.0),
+                    uz.sadora.contract.SaveLabValue(name = "Ferritin", value = 9.5, unit = "ng/mL", refHigh = 150.0),
+                    uz.sadora.contract.SaveLabValue(name = "Something unknown", valueText = "manfiy"),
+                ),
+                photos = listOf(uz.sadora.contract.LabPhotoUpload(png, "image/png")),
+            ),
+        )
+        assertEquals(listOf("hgb", "ferritin", null), first.values.map { it.markerCode })
+        assertEquals("Gemoglobin", first.values[0].name)
+        assertEquals(uz.sadora.contract.LabFlag.LOW, first.values[0].flag)
+        assertEquals(uz.sadora.contract.LabFlag.NORMAL, first.values[1].flag, "one printed bound is a range")
+        assertNull(first.values[2].flag, "no range, no flag")
+        assertNotNull(first.values[0].about)
+        assertEquals(1, first.photos.size)
+        assertEquals(1, first.flaggedCount)
+        assertTrue(client.get("/v1/labs/${first.id}/photos/0") { auth(her.token) }.readRawBytes().isNotEmpty())
+
+        post<uz.sadora.contract.LabReport>(
+            "/v1/labs",
+            her.token,
+            uz.sadora.contract.SaveLabReportRequest(
+                takenOn = today,
+                values = listOf(uz.sadora.contract.SaveLabValue(markerCode = "hgb", name = "Hb", value = 126.0, unit = "g/L", refLow = 120.0, refHigh = 150.0)),
+            ),
+        )
+        val overview = get<uz.sadora.contract.LabOverview>("/v1/labs/overview", her.token)
+        val hgb = overview.trends.first { it.markerCode == "hgb" }
+        assertEquals(listOf(104.0, 126.0), hgb.points.map { it.value }, "oldest first")
+        assertEquals(uz.sadora.contract.LabFlag.NORMAL, hgb.latest?.flag)
+        assertFalse(overview.scanAvailable, "the test config has no model key")
+        assertEquals(2L, get<Page<uz.sadora.contract.LabReport>>("/v1/labs", her.token).total)
+
+        // A correction replaces the rows; a reversed range is refused.
+        val edited = put<uz.sadora.contract.LabReport>(
+            "/v1/labs/${first.id}",
+            her.token,
+            uz.sadora.contract.SaveLabReportRequest(
+                takenOn = first.takenOn,
+                place = "Invitro",
+                values = listOf(uz.sadora.contract.SaveLabValue(name = "Гемоглобин", value = 110.0, unit = "g/L", refLow = 120.0, refHigh = 150.0)),
+            ),
+        )
+        assertEquals(1, edited.values.size)
+        assertEquals(1, edited.photos.size, "editing keeps the pages")
+        val reversed = raw {
+            client.put("/v1/labs/${first.id}") {
+                auth(her.token)
+                json(uz.sadora.contract.SaveLabReportRequest(first.takenOn, values = listOf(uz.sadora.contract.SaveLabValue(name = "Hb", value = 1.0, refLow = 5.0, refHigh = 2.0))))
+            }
+        }
+        assertEquals(HttpStatusCode.BadRequest, reversed.status)
+
+        // Nobody else reaches it, and without a model the scanner says so before spending a use.
+        val other = signUp().also { onboard(it) }
+        assertEquals(HttpStatusCode.NotFound, raw { client.get("/v1/labs/${first.id}") { auth(other.token) } }.status)
+        assertEquals(HttpStatusCode.NotFound, raw { client.get("/v1/labs/${first.id}/photos/0") { auth(other.token) } }.status)
+        val scan = raw {
+            client.post("/v1/labs/scan") { auth(her.token); json(uz.sadora.contract.LabScanRequest(listOf(uz.sadora.contract.LabPhotoUpload(png, "image/png")))) }
+        }
+        assertEquals(HttpStatusCode.ServiceUnavailable, scan.status, scan.bodyAsTextSafe())
+        val scanUse = get<Entitlements>("/v1/entitlements", her.token).feature(uz.sadora.contract.FeatureKeys.LAB_SCAN)
+        assertEquals(0, assertNotNull(scanUse).usedThisMonth)
+        assertTrue(scanUse.available, "free accounts may scan")
+
+        // Her QR page carries the sheets, and the photo opens under the link.
+        val share = post<ProfileShare>("/v1/me/shares", her.token, CreateShareRequest(ttlHours = 2))
+        val token = assertNotNull(share.url).substringAfterLast("/")
+        val summary = client.get("/share/$token/json").body<DoctorSummary>()
+        assertEquals(2, summary.labs.size)
+        assertEquals(today, summary.labs.first().takenOn, "newest first")
+        val html = client.get("/share/$token").bodyAsText()
+        assertTrue("Tahlil natijalari" in html)
+        assertTrue("$token/labs/${first.id}/photos/0" in html)
+        assertEquals(HttpStatusCode.OK, client.get("/share/$token/labs/${first.id}/photos/0").status)
+        assertEquals(HttpStatusCode.NotFound, client.get("/share/${"x".repeat(43)}/labs/${first.id}/photos/0").status)
+
+        // Sent to her doctor: a card on both sides, the photo readable by the doctor, plain text behind it.
+        val admin = adminToken()
+        val doctor = signUp().also { onboard(it) }
+        val profileId = approvedDoctor(doctor, admin, "Dr Lab ${Uuid.random().toString().take(6)}")
+        val thread = post<ConversationThread>("/v1/doctors/$profileId/consultations", her.token, uz.sadora.contract.StartConsultationRequest("Salom"))
+        val id = thread.conversation.id
+        val sent = post<DirectMessage>("/v1/community/conversations/$id/messages", her.token, SendMessageRequest(labReportId = first.id))
+        assertEquals(MessageKind.LAB, sent.kind)
+        assertEquals(first.id, sent.labReport?.id)
+        assertTrue(sent.body.startsWith("🧪 Tahlil natijalari"), sent.body)
+        assertTrue("Gemoglobin: 110 g/L (past" in sent.body, sent.body)
+        val seen = get<ConversationThread>("/v1/community/conversations/$id", doctor.token).messages.single { it.id == sent.id }
+        assertEquals(1, seen.labReport?.values?.size)
+        assertEquals(HttpStatusCode.OK, client.get("/v1/community/conversations/$id/messages/${sent.id}/lab-photos/0") { auth(doctor.token) }.status)
+        // The doctor cannot send her own, and the patient cannot send someone else's.
+        assertEquals(HttpStatusCode.BadRequest, raw { client.post("/v1/community/conversations/$id/messages") { auth(doctor.token); json(SendMessageRequest(labReportId = first.id)) } }.status)
+        val foreign = post<uz.sadora.contract.LabReport>(
+            "/v1/labs",
+            other.token,
+            uz.sadora.contract.SaveLabReportRequest(today, values = listOf(uz.sadora.contract.SaveLabValue(name = "TSH", value = 2.0))),
+        )
+        assertEquals(HttpStatusCode.NotFound, raw { client.post("/v1/community/conversations/$id/messages") { auth(her.token); json(SendMessageRequest(labReportId = foreign.id)) } }.status)
+
+        // Deleting the sheet takes the photo with it; the card falls back to its text.
+        assertEquals(HttpStatusCode.OK, client.delete("/v1/labs/${first.id}") { auth(her.token) }.status)
+        val after = get<ConversationThread>("/v1/community/conversations/$id", doctor.token).messages.single { it.id == sent.id }
+        assertNull(after.labReport)
+        assertEquals(sent.body, after.body)
+        assertEquals(HttpStatusCode.NotFound, raw { client.get("/v1/community/conversations/$id/messages/${sent.id}/lab-photos/0") { auth(doctor.token) } }.status)
+    }
+
+    @Test
+    fun `typing a lab sheet in needs the storage consent`() = api {
+        val her = signUp().also { onboard(it, storeHealth = false) }
+        val refused = raw {
+            client.post("/v1/labs") {
+                auth(her.token)
+                json(uz.sadora.contract.SaveLabReportRequest(kotlinx.datetime.LocalDate(2026, 1, 5), values = listOf(uz.sadora.contract.SaveLabValue(name = "TSH", value = 2.0))))
+            }
+        }
+        assertEquals(HttpStatusCode.Forbidden, refused.status, refused.bodyAsTextSafe())
+    }
+
+    /** A real one-pixel PNG: the server reads every page it stores. */
+    private fun tinyPng(): String {
+        val image = java.awt.image.BufferedImage(2, 2, java.awt.image.BufferedImage.TYPE_INT_RGB)
+        val out = java.io.ByteArrayOutputStream()
+        javax.imageio.ImageIO.write(image, "png", out)
+        return kotlin.io.encoding.Base64.encode(out.toByteArray())
     }
 
     private fun api(block: suspend Api.() -> Unit) = testApplication {

@@ -31,7 +31,11 @@ import uz.sadora.contract.SymptomSeverity
  */
 object DoctorPage {
 
-    fun render(summary: DoctorSummary, language: Language): String {
+    /**
+     * [token] is the link's own, for the lab sheets' photo links — relative, so they open
+     * under whatever path the page was served from. Without it the sheets list no photos.
+     */
+    fun render(summary: DoctorSummary, language: Language, token: String? = null): String {
         val t = PageText.of(language)
         val p = summary.person
         val esc = ::escape
@@ -151,6 +155,34 @@ object DoctorPage {
                         append("<tr><td>${date(a.scheduledOn)}$time</td><td>${esc(a.title)}${if (a.isDone) " ✓" else ""}</td><td>${esc(a.place.orEmpty())}</td></tr>")
                     }
                     append("</tbody></table>")
+                }
+            }
+
+            // ---- lab results
+            if (summary.labs.isNotEmpty()) {
+                section(t.labsTitle) {
+                    append("<p class=\"muted\">${esc(t.labsNote)}</p>")
+                    summary.labs.forEach { report ->
+                        val head = listOfNotNull(date(report.takenOn), report.place).joinToString(" · ")
+                        append("<h3>${esc(head)}</h3>")
+                        append("<div class=\"scroll\"><table><thead><tr><th>${t.labMarker}</th><th>${t.labResult}</th><th>${t.labRange}</th><th></th></tr></thead><tbody>")
+                        report.values.forEach { v ->
+                            val flagged = v.flag == uz.sadora.contract.LabFlag.LOW || v.flag == uz.sadora.contract.LabFlag.HIGH
+                            val cls = if (flagged) " class=\"warn\"" else ""
+                            val mark = v.flag?.let { uz.sadora.server.lab.LabWords.flag(it, language) }.orEmpty()
+                            append("<tr$cls><td>${esc(v.name)}</td><td>${esc(uz.sadora.server.lab.LabWords.result(v))}</td>")
+                            append("<td>${esc(uz.sadora.server.lab.LabWords.rangeText(v).orEmpty())}</td><td>${esc(mark)}</td></tr>")
+                        }
+                        append("</tbody></table></div>")
+                        if (token != null && report.photos.isNotEmpty()) {
+                            append("<p>")
+                            report.photos.indices.forEach { page ->
+                                append("<a href=\"${esc(token)}/labs/${report.id}/photos/$page\" target=\"_blank\" rel=\"noopener\">${esc(t.labPhoto(page + 1))}</a> ")
+                            }
+                            append("</p>")
+                        }
+                        report.note?.let { append("<p class=\"muted\">${esc(it)}</p>") }
+                    }
                 }
             }
 
@@ -425,6 +457,16 @@ internal class PageText private constructor(private val language: Language) {
     val schedule get() = pick("Jadval", "График", "Schedule")
     val period get() = pick("Davr", "Период", "Period")
     val adherence get() = pick("Qabul", "Приём", "Adherence")
+    val labsTitle get() = pick("Tahlil natijalari", "Результаты анализов", "Lab results")
+    val labsNote get() = pick(
+        "Bemor kiritgan yoki tahlil varag'i suratidan o'qilgan natijalar. Past/yuqori belgisi laboratoriya ko'rsatgan norma bo'yicha.",
+        "Результаты, введённые пациенткой или прочитанные с фото бланка. Отметка «ниже/выше нормы» — по референсу лаборатории.",
+        "Results entered by the patient or read from a photo of the sheet. Low/high is against the laboratory's printed range.",
+    )
+    val labMarker get() = pick("Ko'rsatkich", "Показатель", "Marker")
+    val labResult get() = pick("Natija", "Результат", "Result")
+    val labRange get() = pick("Norma", "Референс", "Range")
+    fun labPhoto(page: Int) = pick("Varaq rasmi $page", "Фото бланка $page", "Sheet photo $page")
     val appointmentsTitle get() = pick("Ko'riklar va tekshiruvlar", "Приёмы и обследования", "Appointments")
     val date get() = pick("Sana", "Дата", "Date")
     val appointment get() = pick("Nima", "Что", "What")

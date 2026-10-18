@@ -24,7 +24,7 @@ import uz.sadora.server.health.NutritionRepository
 import uz.sadora.server.wearable.WearableRepository
 
 /**
- * The Tahlillar screen's numbers, computed from what she actually logged.
+ * The Xulosalar screen's numbers, computed from what she actually logged.
  *
  * Two rules run through all of it. A day with nothing recorded is a gap, never a zero —
  * averaging a gap as zero would make a week off look like a collapse. And nothing is

@@ -25,11 +25,18 @@ import uz.sadora.server.config.AppConfig
  */
 private const val DEFAULT_BODY_LIMIT: Long = 2L * 1024 * 1024
 private const val SCAN_BODY_LIMIT: Long = 8L * 1024 * 1024
+/** A lab sheet travels as up to three photographed pages, when read and again when saved. */
+private const val LAB_BODY_LIMIT: Long = 14L * 1024 * 1024
 
 fun Application.configureHttp(config: AppConfig) {
     install(RequestBodyLimit) {
         bodyLimit { call ->
-            if (call.request.path().endsWith("/nutrition/scan")) SCAN_BODY_LIMIT else DEFAULT_BODY_LIMIT
+            val path = call.request.path()
+            when {
+                path.endsWith("/nutrition/scan") -> SCAN_BODY_LIMIT
+                path.endsWith("/labs") || path.endsWith("/labs/scan") -> LAB_BODY_LIMIT
+                else -> DEFAULT_BODY_LIMIT
+            }
         }
     }
 

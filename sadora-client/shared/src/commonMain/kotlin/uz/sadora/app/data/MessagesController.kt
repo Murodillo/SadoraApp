@@ -271,6 +271,18 @@ class MessagesController(
         }
     }
 
+    /** Sends one of her lab sheets to her doctor, as a card. Only in an open consultation. */
+    suspend fun sendLab(reportId: String): Boolean {
+        val api = api ?: return true
+        val thread = current?.takeIf { it.id.isNotEmpty() && it.consultation?.open == true } ?: return false
+        sendingAttachment = true
+        return try {
+            deliver(thread.id, SendMessageRequest(labReportId = reportId)) != null
+        } finally {
+            sendingAttachment = false
+        }
+    }
+
     private suspend fun deliver(conversationId: String, request: SendMessageRequest): WireMessage? {
         val api = api ?: return null
         val sent = calls.run { api.sendMessage(conversationId, request) }

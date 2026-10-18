@@ -26,6 +26,8 @@ export const PRIVACY_LINE = "Shaxsiy yozishmalar faqat shikoyat bo'yicha ko'rina
 
 export const RECORD_LINE = "📋 Tibbiy karta biriktirilgan (mazmuni ko'rsatilmaydi)"
 
+export const LAB_LINE = "🧪 Tahlil natijalari biriktirilgan (mazmuni ko'rsatilmaydi)"
+
 export const IMAGE_PLACEHOLDER = '[rasm]'
 
 /** What was reported, as the queue names it. */
@@ -44,13 +46,15 @@ export function conversationLabel(view: Pick<ReportContextView, 'consultation'>)
 }
 
 /**
- * The line's text as the moderator may read it. A record's body is empty on the wire and
- * would stay unshown anyway; a photo is a placeholder, with its caption if it had one.
+ * The line's text as the moderator may read it. A record's or a lab sheet's body is empty
+ * on the wire and would stay unshown anyway; a photo is a placeholder, with its caption if it had one.
  */
 export function contextLineText(line: Pick<ReportContextMessage, 'kind' | 'body'>): string {
   switch (line.kind) {
     case 'record':
       return RECORD_LINE
+    case 'lab':
+      return LAB_LINE
     case 'image':
       return line.body.trim() ? `${IMAGE_PLACEHOLDER} ${line.body}` : IMAGE_PLACEHOLDER
     default:

@@ -15,7 +15,7 @@ import uz.sadora.app.i18n.ModuleStrings
  * How a measured series becomes something on screen.
  *
  * The server states what it measured and never how to say it — the same split the cycle
- * prediction uses for its reasons — so every sentence in Tahlillar is written here, and
+ * prediction uses for its reasons — so every sentence in Xulosalar is written here, and
  * every one of them is phrased as co-occurrence. Nothing in this file may claim a cause.
  */
 

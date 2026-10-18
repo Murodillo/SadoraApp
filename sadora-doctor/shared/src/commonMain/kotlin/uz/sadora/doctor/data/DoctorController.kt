@@ -673,6 +673,23 @@ class DoctorController(
         return bytes
     }
 
+    /** Pages of lab sheets already fetched, the most recently looked at kept. */
+    private val labPhotos = PhotoCache<ByteArray>(LabPhotosKept)
+
+    /** A page of a lab sheet, from wherever the sheet was opened; null while it cannot be had. */
+    suspend fun labPhoto(from: LabPhotos, page: Int): ByteArray? {
+        val key = from.key(page)
+        labPhotos[key]?.let { return it }
+        val result = when (from) {
+            is LabPhotos.InMessage -> community?.labPhoto(from.conversationId, from.messageId, page)
+            is LabPhotos.InRecord -> community?.recordLabPhoto(from.conversationId, from.messageId, from.reportId, page)
+            is LabPhotos.InShare -> patients?.labPhoto(from.token, from.reportId, page)
+        } ?: return null
+        val bytes = (result as? ApiResult.Success)?.value ?: return null
+        labPhotos[key] = bytes
+        return bytes
+    }
+
     /**
      * The record a patient attached, opened on the same page as a scanned one. Keyed
      * apart from share tokens, and not added to the Scan tab's list: that list is for
@@ -750,6 +767,7 @@ class DoctorController(
         hasMoreConversations = false
         openConversation = null
         images.clear()
+        labPhotos.clear()
         lastTypingSent = 0L
         patient = null
         patientToken = null
@@ -783,6 +801,9 @@ data class QuestionRow(val post: CommunityPost, val answered: Boolean)
 data class RecentPatient(val token: String, val name: String, val age: Int?, val openedAt: Instant)
 
 private const val RecentPatientsMax = 10
+
+/** Lab sheet pages held in memory: a few sheets' worth, each a phone photo. */
+private const val LabPhotosKept = 16
 
 /** How often "yozmoqda…" is reported while she types; the server holds it a little longer. */
 private const val TypingEveryMillis = 3_000L

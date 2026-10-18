@@ -24,6 +24,12 @@ object FeatureKeys {
     /** Reading a photograph of a meal. Premium, metered, and billed like an AI call. */
     const val FOOD_SCAN = "food_scan"
 
+    /**
+     * Reading a photograph of a lab sheet. Free accounts get a few a month, Premium
+     * many; typing results in and every chart stay free for everyone.
+     */
+    const val LAB_SCAN = "lab_scan"
+
     /** Wearing an earned badge after her name. Premium; earning badges stays free. */
     const val BADGE_WEAR = "badge_wear"
 

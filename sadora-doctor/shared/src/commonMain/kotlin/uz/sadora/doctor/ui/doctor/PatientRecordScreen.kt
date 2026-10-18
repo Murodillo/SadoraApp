@@ -18,7 +18,17 @@ import uz.sadora.doctor.resources.ic3d_pregnancy
 import uz.sadora.doctor.resources.ic3d_record
 import uz.sadora.doctor.resources.ic3d_sym_hot_flush
 import uz.sadora.doctor.resources.ic3d_watch
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.draw.clip
+import uz.sadora.doctor.data.LabPhotos
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -64,7 +74,8 @@ import uz.sadora.doctor.ui.components.Skeleton
  * natively instead of as the web page the code also links to.
  *
  * The order is a consultation's — who she is, her cycle or pregnancy, what she has felt,
- * the last days, how she has been, what she takes, her visits, food, and the devices.
+ * the last days, how she has been, what she takes, her lab results, her visits, food,
+ * and the devices.
  * A section with nothing in it is left out rather than drawn empty. Nothing here is a
  * verdict, and the page says so.
  */
@@ -104,32 +115,47 @@ fun PatientRecordScreen(
     }
     val record = doctors.patientFor(source.key)
     val failure = calls.error
+    var viewing by remember(source) { mutableStateOf<OpenLabPhoto?>(null) }
 
-    Column(modifier) {
-        SadoraTopBar(t.recordTitle, onBack = onClose)
-        ScreenContent {
-            if (record == null) {
-                when {
-                    failure is ApiFailure.NotFound -> item {
-                        EmptyState(title = t.recordGone, body = t.recordGoneBody, actionText = null, onAction = {}, art = Res.drawable.ic3d_lock)
+    Box(modifier) {
+        Column(Modifier.fillMaxSize()) {
+            SadoraTopBar(t.recordTitle, onBack = onClose)
+            ScreenContent {
+                if (record == null) {
+                    when {
+                        failure is ApiFailure.NotFound -> item {
+                            EmptyState(title = t.recordGone, body = t.recordGoneBody, actionText = null, onAction = {}, art = Res.drawable.ic3d_lock)
+                        }
+                        // An attached record closes with its consultation.
+                        failure is ApiFailure.Forbidden -> item {
+                            EmptyState(title = t.consultationClosed, body = t.recordClosed, actionText = null, onAction = {}, art = Res.drawable.ic3d_lock)
+                        }
+                        failure != null -> item {
+                            ErrorStrip(failure.readable(), onRetry = { scope.launch { load() } })
+                        }
+                        else -> items(4) { Skeleton(Modifier.fillMaxWidth().height(110.dp), shape = Radius.card) }
                     }
-                    // An attached record closes with its consultation.
-                    failure is ApiFailure.Forbidden -> item {
-                        EmptyState(title = t.consultationClosed, body = t.recordClosed, actionText = null, onAction = {}, art = Res.drawable.ic3d_lock)
-                    }
-                    failure != null -> item {
-                        ErrorStrip(failure.readable(), onRetry = { scope.launch { load() } })
-                    }
-                    else -> items(4) { Skeleton(Modifier.fillMaxWidth().height(110.dp), shape = Radius.card) }
+                    return@ScreenContent
                 }
-                return@ScreenContent
+                recordSections(record, source, doctors, onOpenPhoto = { viewing = it })
             }
-            recordSections(record)
         }
+        viewing?.let { LabPhotoViewer(it, doctors, onDismiss = { viewing = null }) }
     }
 }
 
-private fun androidx.compose.foundation.lazy.LazyListScope.recordSections(record: DoctorSummary) {
+/** The route a sheet's pages are read by, which depends on how the record was opened. */
+private fun RecordSource.labPhotos(reportId: String): LabPhotos = when (this) {
+    is RecordSource.Share -> LabPhotos.InShare(token, reportId)
+    is RecordSource.Attached -> LabPhotos.InRecord(conversationId, messageId, reportId)
+}
+
+private fun androidx.compose.foundation.lazy.LazyListScope.recordSections(
+    record: DoctorSummary,
+    source: RecordSource,
+    doctors: DoctorController,
+    onOpenPhoto: (OpenLabPhoto) -> Unit,
+) {
     item(key = "person") { PersonCard(record) }
 
     record.cycle?.let { cycle ->
@@ -234,6 +260,25 @@ private fun androidx.compose.foundation.lazy.LazyListScope.recordSections(record
                             color = c.muted,
                         )
                     }
+                }
+            }
+        }
+    }
+
+    // Her sheets, newest first: each its own block, a value outside the laboratory's range
+    // in the warning colour.
+    if (record.labs.isNotEmpty()) {
+        item(key = "labs") {
+            val c = Sadora.colors
+            RecordSection(strings.labs.title, LabArt) {
+                record.labs.forEach { report ->
+                    LabSheet(
+                        report,
+                        photos = source.labPhotos(report.id),
+                        doctors = doctors,
+                        onOpenPhoto = onOpenPhoto,
+                        modifier = Modifier.fillMaxWidth().clip(Radius.cardSmall).background(c.surface2).padding(Spacing.sm),
+                    )
                 }
             }
         }
