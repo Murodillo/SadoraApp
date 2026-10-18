@@ -87,7 +87,10 @@ class SadoraWidget : GlanceAppWidget() {
             val version = currentState<Preferences>()[VERSION]
             val config = host.store.config(widgetId) ?: host.store.defaultConfig()
             val content = host.content(config)
-            WidgetBody(content, sizeOf(LocalSize.current), config, host.signInText())
+            val size = LocalSize.current
+            // One UI's four-column grid makes a "medium" widget narrower than Pixel's: there
+            // the side tiles drop their icons so the numbers fit whole.
+            WidgetBody(content, sizeOf(size), config, host.signInText(), narrow = size.width < NARROW)
         }
     }
 
@@ -95,6 +98,7 @@ class SadoraWidget : GlanceAppWidget() {
         val SMALL = DpSize(110.dp, 110.dp)
         val MEDIUM = DpSize(250.dp, 110.dp)
         val LARGE = DpSize(250.dp, 260.dp)
+        private val NARROW = 320.dp
         private val STALE = 30.minutes
         private const val REFRESH_BUDGET = 10_000L
 
@@ -131,7 +135,7 @@ private val DoseInk = ColorProvider(Color(0xFF6247E0))
 private val StepsInk = ColorProvider(Color(0xFF7F5100))
 
 @Composable
-private fun WidgetBody(content: WidgetContent?, size: WidgetSize, config: WidgetConfig, signIn: String) {
+private fun WidgetBody(content: WidgetContent?, size: WidgetSize, config: WidgetConfig, signIn: String, narrow: Boolean) {
     val card = GlanceModifier.fillMaxSize().background(ImageProvider(R.drawable.widget_tile_card)).cornerRadius(28.dp).padding(9.dp)
     if (content == null) {
         Column(card.clickable(openApp("today")), horizontalAlignment = Alignment.CenterHorizontally, verticalAlignment = Alignment.CenterVertically) {
@@ -146,12 +150,12 @@ private fun WidgetBody(content: WidgetContent?, size: WidgetSize, config: Widget
         WidgetSize.MEDIUM -> Row(card) {
             StageTile(content, big = 42, GlanceModifier.defaultWeight().fillMaxHeight())
             Spacer(GlanceModifier.width(8.dp))
-            Column(GlanceModifier.defaultWeight().fillMaxHeight()) { SideBlocks(content, config, compact = true) }
+            Column(GlanceModifier.defaultWeight().fillMaxHeight()) { SideBlocks(content, config, compact = true, narrow = narrow) }
         }
         WidgetSize.LARGE -> Column(card) {
             WideStageTile(content, GlanceModifier.fillMaxWidth().height(86.dp))
             Spacer(GlanceModifier.height(8.dp))
-            SideBlocks(content, config, compact = false)
+            SideBlocks(content, config, compact = false, narrow = false)
         }
     }
 }
@@ -237,7 +241,7 @@ private fun WideStageTile(content: WidgetContent, modifier: GlanceModifier) {
 }
 
 @Composable
-private fun ColumnScope.SideBlocks(content: WidgetContent, config: WidgetConfig, compact: Boolean) {
+private fun ColumnScope.SideBlocks(content: WidgetContent, config: WidgetConfig, compact: Boolean, narrow: Boolean) {
     if (content.locked) {
         Tile(R.drawable.widget_tile_premium, GlanceModifier.defaultWeight(), openApp("today")) {
             ClayIcon(R.drawable.widget_clay_crown, 34)
@@ -249,8 +253,10 @@ private fun ColumnScope.SideBlocks(content: WidgetContent, config: WidgetConfig,
     content.water?.let { water ->
         // Beside the stage the tiles share the height; under it each keeps its own.
         Tile(R.drawable.widget_tile_water, if (compact) GlanceModifier.defaultWeight() else GlanceModifier, openApp("water")) {
-            ClayIcon(R.drawable.widget_clay_water, if (compact) 28 else 32)
-            Spacer(GlanceModifier.width(6.dp))
+            if (!narrow) {
+                ClayIcon(R.drawable.widget_clay_water, if (compact) 28 else 32)
+                Spacer(GlanceModifier.width(6.dp))
+            }
             Column(GlanceModifier.defaultWeight()) {
                 Text(water.title, style = TextStyle(color = WaterInk, fontSize = 11.sp, fontWeight = FontWeight.Bold))
                 Text(water.label, style = TextStyle(color = Ink, fontSize = if (compact) 14.sp else 16.sp, fontWeight = FontWeight.Bold), maxLines = 1)
@@ -260,6 +266,7 @@ private fun ColumnScope.SideBlocks(content: WidgetContent, config: WidgetConfig,
                 R.drawable.widget_button_water,
                 actionRunCallback<AddWaterAction>(actionParametersOf(AddWaterAction.Ml to water.stepMl)),
                 wide = !compact,
+                small = narrow,
             )
         }
         Spacer(GlanceModifier.height(6.dp))
@@ -268,13 +275,15 @@ private fun ColumnScope.SideBlocks(content: WidgetContent, config: WidgetConfig,
         if (compact || doses.rows.isEmpty()) {
             val next = doses.next
             Tile(R.drawable.widget_tile_dose, GlanceModifier.defaultWeight(), openApp("medications")) {
-                ClayIcon(R.drawable.widget_clay_meds, 28)
-                Spacer(GlanceModifier.width(6.dp))
+                if (!narrow) {
+                    ClayIcon(R.drawable.widget_clay_meds, 28)
+                    Spacer(GlanceModifier.width(6.dp))
+                }
                 Column(GlanceModifier.defaultWeight()) {
                     Text(next?.let { "${it.name} · ${it.time}" } ?: doses.title, style = TextStyle(color = DoseInk, fontSize = 11.sp, fontWeight = FontWeight.Bold), maxLines = 1)
                     Text(doses.label, style = TextStyle(color = Ink, fontSize = 14.sp, fontWeight = FontWeight.Bold))
                 }
-                next?.let { ClayButton("✓", R.drawable.widget_button_dose, markDose(it)) }
+                next?.let { ClayButton("✓", R.drawable.widget_button_dose, markDose(it), small = narrow) }
             }
         } else {
             Tile(R.drawable.widget_tile_dose, GlanceModifier.fillMaxWidth(), openApp("medications")) {
@@ -356,9 +365,9 @@ private fun Tile(background: Int, modifier: GlanceModifier, onTap: androidx.glan
 
 /** A raised clay pill, at least 44dp: a widget's button is pressed with a thumb, mid-stride. */
 @Composable
-private fun ClayButton(label: String, background: Int, action: androidx.glance.action.Action, wide: Boolean = false) {
+private fun ClayButton(label: String, background: Int, action: androidx.glance.action.Action, wide: Boolean = false, small: Boolean = false) {
     Box(
-        GlanceModifier.size(width = if (wide) 76.dp else 48.dp, height = 44.dp).background(ImageProvider(background)).cornerRadius(22.dp).clickable(action),
+        GlanceModifier.size(width = if (wide) 76.dp else if (small) 44.dp else 48.dp, height = 44.dp).background(ImageProvider(background)).cornerRadius(22.dp).clickable(action),
         contentAlignment = Alignment.Center,
     ) {
         Text(label, style = TextStyle(color = White, fontSize = 13.sp, fontWeight = FontWeight.Bold))
