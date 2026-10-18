@@ -59,6 +59,8 @@ dependencies {
     implementation(libs.bcrypt)
     implementation(libs.kotlinx.coroutines.core)
     runtimeOnly(libs.logback)
+    // No-op on its own; the OTel Java agent, where it runs, picks the calls up.
+    implementation(libs.opentelemetry.api)
 
     testImplementation(libs.kotlin.test)
     testImplementation(libs.ktor.server.testHost)

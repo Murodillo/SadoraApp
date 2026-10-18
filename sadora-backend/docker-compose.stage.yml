@@ -18,6 +18,13 @@
 #
 # `!override` replaces production's list instead of adding to it, so staging never also
 # listens on 8090–8093, which belong to production.
+#
+# Staging also runs OpenTelemetry: the API loads the agent baked into its image (SADORA_OTEL=1) and sends
+# traces, metrics and logs to `otel` (grafana/otel-lgtm — collector, Tempo, Loki,
+# Prometheus and Grafana in one container). Grafana listens on the server's loopback
+# only and has no login; reach it through SSH:
+#
+#   ssh -L 3000:127.0.0.1:3000 <staging host>   →   http://localhost:3000
 
 services:
   doctor-admin:
@@ -42,3 +49,44 @@ services:
       STORE_ALLOW_TEST_PURCHASES: "true"
       # The page the panel names as where the promo video plays.
       PROMO_VIDEO_PAGE_URL: https://dev.sadora.app/video/
+      # The agent, and where it sends. Every request is kept on staging; production will
+      # want a sampler. The JDBC statements it records have their literals masked.
+      SADORA_OTEL: "1"
+      OTEL_SERVICE_NAME: sadora-api
+      OTEL_RESOURCE_ATTRIBUTES: deployment.environment.name=staging
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel:4318
+      OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
+      OTEL_METRIC_EXPORT_INTERVAL: "30000"
+      # The X-Request-Id an error response shows the user, on every log line in Loki —
+      # what a support ticket quotes leads straight to the trace.
+      OTEL_INSTRUMENTATION_LOGBACK_APPENDER_EXPERIMENTAL_CAPTURE_MDC_ATTRIBUTES: requestId
+      # No request or response headers on spans: Authorization and cookies stay out.
+      OTEL_INSTRUMENTATION_HTTP_SERVER_CAPTURE_REQUEST_HEADERS: ""
+      OTEL_INSTRUMENTATION_HTTP_CLIENT_CAPTURE_REQUEST_HEADERS: ""
+    depends_on:
+      otel:
+        condition: service_started
+    logging:
+      driver: json-file
+      options: { max-size: "50m", max-file: "5" }
+
+  otel:
+    image: grafana/otel-lgtm:0.35.0
+    restart: unless-stopped
+    environment:
+      # Tempo keeps 14 days by default and Loki is set to the same; this is Prometheus.
+      PROMETHEUS_EXTRA_ARGS: --storage.tsdb.retention.time=14d
+    volumes:
+      - ./deploy/otel/otelcol-config.yaml:/otel-lgtm/otelcol-config.yaml:ro
+      - ./deploy/otel/loki-config.yaml:/otel-lgtm/loki-config.yaml:ro
+      - otel-data:/data
+    # Grafana only, and only on loopback: it has no login. OTLP (4317/4318) stays on the
+    # compose network, where only the API reaches it.
+    ports:
+      - "127.0.0.1:3000:3000"
+    logging:
+      driver: json-file
+      options: { max-size: "20m", max-file: "3" }
+
+volumes:
+  otel-data:
