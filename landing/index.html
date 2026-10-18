@@ -993,6 +993,94 @@ body {
 .rx-btn { justify-self: start; font-size: 12px; font-weight: 700; padding: 8px 13px; border-radius: 999px; background: var(--primary); color: var(--on-primary); }
 .rx small { font-size: 10.5px; color: var(--muted); }
 
+/* ---------- Clay ----------
+   Ilovadagi Clay.kt va panellardagi «clay surfaces» bilan bir xil retsept: yuqoridan yoritilgan yuz,
+   yorug'lik tushgan joyda yorqin chet, pastda yengil soya, ostida yumshoq ko'tarilish va brend
+   ranglari hovuzchalari bilan yoritilgan zamin. Tungi mavzuda chet va hovuzchalar sokinroq, ko'tarilish yo'q. */
+:root {
+  --clay-hi: rgba(255,255,255,.7); --clay-lo: rgba(40,20,90,.05); --clay-rim: rgba(255,255,255,.95);
+  --clay-lift: 0 10px 24px -8px color-mix(in srgb, var(--primary) 18%, transparent), 0 1px 2px rgba(40,20,90,.05);
+  --clay-pool: 12%;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --clay-hi: rgba(255,255,255,.06); --clay-lo: rgba(0,0,0,.22); --clay-rim: rgba(255,255,255,.1); --clay-lift: 0 0 0 transparent; --clay-pool: 7%; }
+}
+:root[data-theme="dark"] { --clay-hi: rgba(255,255,255,.06); --clay-lo: rgba(0,0,0,.22); --clay-rim: rgba(255,255,255,.1); --clay-lift: 0 0 0 transparent; --clay-pool: 7%; }
+body {
+  background:
+    radial-gradient(70vmax 70vmax at 0% 0%, color-mix(in srgb, var(--primary) var(--clay-pool), transparent), transparent 70%),
+    radial-gradient(60vmax 60vmax at 100% 45%, color-mix(in srgb, var(--secondary) calc(var(--clay-pool) * .8), transparent), transparent 70%),
+    radial-gradient(70vmax 70vmax at 10% 100%, color-mix(in srgb, #63D8FF calc(var(--clay-pool) * .7), transparent), transparent 70%),
+    var(--bg);
+  background-attachment: fixed;
+}
+.tile:not(.ai-tile), .panel, .dpt, .src, .plan:not(.hi), .scr-card, .rule, .yq-tip {
+  background:
+    linear-gradient(to bottom, var(--clay-hi), transparent 30px),
+    linear-gradient(to top, var(--clay-lo), transparent 22px),
+    var(--surface);
+  border-color: color-mix(in srgb, var(--line) 70%, transparent);
+  box-shadow: inset 0 1px 0 var(--clay-rim), var(--clay-lift);
+}
+.ftable, .stage-card, .rules { border-color: color-mix(in srgb, var(--line) 70%, transparent); box-shadow: inset 0 1px 0 var(--clay-rim), var(--clay-lift); }
+.rule { box-shadow: inset 0 1px 0 var(--clay-rim); }
+.tile:not(.ai-tile):hover { box-shadow: inset 0 1px 0 var(--clay-rim), 0 26px 50px -30px color-mix(in srgb, var(--primary) 55%, transparent); }
+.plan:not(.hi):hover, .dpt:hover, .src:hover { box-shadow: inset 0 1px 0 var(--clay-rim), 0 20px 40px -26px color-mix(in srgb, var(--primary) 45%, transparent); }
+.plan.hi { background: linear-gradient(to bottom, rgba(255,255,255,.22), transparent 40%, rgba(0,0,0,.1)), linear-gradient(135deg, var(--primary), var(--secondary));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.5), inset 0 -2px 0 rgba(0,0,0,.1), 0 24px 50px -30px var(--primary); }
+.pet, .yq-row, .med, .quick i, .earn span, .filters span:not(.on), .lang-tabs i:not(.on) {
+  background: linear-gradient(to bottom, var(--clay-hi), transparent 55%, var(--clay-lo)), var(--surface-2);
+  box-shadow: inset 0 1px 0 var(--clay-rim);
+}
+.pet.on { box-shadow: inset 0 0 0 1.5px var(--primary), inset 0 1px 0 var(--clay-rim); }
+
+/* Tugmalar: yuqorida yorug'lik chizig'i, bosilganda sahifaga botadi */
+.btn-fill {
+  background: linear-gradient(to bottom, rgba(255,255,255,.2), transparent 50%, rgba(0,0,0,.12)), linear-gradient(120deg, var(--primary), var(--secondary));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.5), inset 0 -2px 0 rgba(0,0,0,.12), 0 10px 22px -8px color-mix(in srgb, var(--primary) 60%, transparent);
+}
+.btn-fill::before { content: ''; position: absolute; left: 16px; right: 16px; top: 4px; height: 18%; min-height: 3px; border-radius: 999px; background: rgba(255,255,255,.2); pointer-events: none; z-index: -1; }
+.btn-fill:hover { box-shadow: inset 0 1px 0 rgba(255,255,255,.5), inset 0 -2px 0 rgba(0,0,0,.12), 0 18px 32px -12px color-mix(in srgb, var(--primary) 70%, transparent); }
+.btn-fill:active { transform: translateY(1px) scale(.98); box-shadow: inset 0 2px 5px rgba(0,0,0,.2), 0 3px 8px -2px color-mix(in srgb, var(--primary) 40%, transparent); }
+.btn-ghost {
+  border-color: color-mix(in srgb, var(--line) 60%, transparent);
+  background: linear-gradient(to bottom, var(--clay-hi), transparent 55%, var(--clay-lo)), var(--surface);
+  box-shadow: inset 0 1px 0 var(--clay-rim), inset 0 -2px 0 rgba(0,0,0,.05), 0 3px 8px color-mix(in srgb, var(--primary) 10%, transparent);
+}
+.btn-ghost:active { transform: translateY(1px) scale(.98); box-shadow: inset 0 2px 4px rgba(0,0,0,.1); }
+.close-card .btn-fill::before { display: none; }
+.close-card .btn-ghost { box-shadow: inset 0 1px 0 rgba(255,255,255,.25); }
+.pill.fill, .rx-btn, .tg.on, .lang-tabs i.on { background-image: linear-gradient(to bottom, rgba(255,255,255,.22), transparent 55%, rgba(0,0,0,.1)); box-shadow: inset 0 1px 0 rgba(255,255,255,.45), 0 4px 10px -4px var(--primary); }
+.theme-btn { box-shadow: inset 0 1px 0 var(--clay-rim), 0 3px 8px color-mix(in srgb, var(--primary) 10%, transparent); }
+
+/* Rangli clay ikonkalar — ilovadagi ic3d to'plami */
+.tile-ico.art, .dpt .ico.art { width: 46px; height: 46px; border-radius: 0; background: none; }
+.tile-ico.art img, .dpt .ico.art img, .stage-btn .sw img, .quick i img, .tabbar img, .em img {
+  width: 100%; height: 100%; object-fit: contain;
+  filter: drop-shadow(0 5px 7px color-mix(in srgb, var(--primary) 26%, transparent));
+}
+.tile:hover .tile-ico.art img, .dpt:hover .ico.art img { transform: translateY(-2px) rotate(-5deg) scale(1.06); }
+.tile-ico.art img, .dpt .ico.art img { transition: transform .5s var(--pop); }
+.stage-btn .sw { background: none; border-radius: 0; }
+.quick i { border: 0; }
+.quick i img { width: 30px; height: 30px; }
+.em img { width: 26px; height: 26px; filter: none; }
+
+/* Telefon: tab paneli sahifa ustida suzadi, tanlangan tab lavanda pilyulada */
+.scr-body { padding-bottom: 84px; }
+.tabbar {
+  position: absolute; left: 10px; right: 10px; bottom: 10px; z-index: 3;
+  padding: 6px; border-top: 0; border-radius: 999px; align-items: center;
+  background: linear-gradient(to bottom, var(--clay-hi), transparent 55%, var(--clay-lo)), var(--surface);
+  box-shadow: inset 0 1px 0 var(--clay-rim), 0 10px 24px -8px color-mix(in srgb, var(--primary) 35%, transparent), 0 2px 6px var(--shadow-2);
+}
+.tabbar button { gap: 2px; padding: 6px 0; border-radius: 999px; }
+.tabbar img { width: 24px; height: 24px; filter: grayscale(.85) opacity(.55); }
+.tabbar button span { display: none; }
+.tabbar button[aria-current="true"] { background: var(--surface-2); color: var(--ink); }
+.tabbar button[aria-current="true"] img { filter: drop-shadow(0 4px 6px color-mix(in srgb, var(--primary) 30%, transparent)); }
+.tabbar button[aria-current="true"] span { display: block; }
+
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   *, *::before, *::after { animation-duration: .01ms !important; animation-delay: 0ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; transition-delay: 0ms !important; }
@@ -1190,24 +1278,24 @@ body {
 
               <div class="scr-card">
                 <div class="plan-hd"><b>Bugungi reja</b><span class="tnum">1 / 2</span></div>
-                <div class="plan-row"><span class="em">🩸</span><div class="t"><b>Temir 30 mg</b><span>20:00 &middot; Ovqatdan keyin</span></div><span class="pill fill">Qabul qildim</span></div>
-                <div class="plan-row"><span class="em">💧</span><div class="t"><b>Suv</b><span>yana 800 ml</span></div><span class="pill">+250 ml</span></div>
+                <div class="plan-row"><span class="em"><img src="img/ic_vitamins.webp" alt="" width="48" height="48" loading="lazy" decoding="async"></span><div class="t"><b>Temir 30 mg</b><span>20:00 &middot; Ovqatdan keyin</span></div><span class="pill fill">Qabul qildim</span></div>
+                <div class="plan-row"><span class="em"><img src="img/ic_water.webp" alt="" width="48" height="48" loading="lazy" decoding="async"></span><div class="t"><b>Suv</b><span>yana 800 ml</span></div><span class="pill">+250 ml</span></div>
               </div>
 
               <div class="quick" aria-hidden="true">
-                <div><i><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h9l4 4v14H6z"/><path d="M9 12h6M9 16h6"/></svg></i>Jurnal</div>
-                <div><i><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.5"/><path d="M4 20c1-4 4-6 8-6s7 2 8 6"/></svg></i>Meditatsiya</div>
-                <div><i><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h11a3 3 0 1 0-3-3M3 12h15a3 3 0 1 1-3 3M3 16h8"/></svg></i>Nafas</div>
-                <div><i><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3v5a3 3 0 0 0 6 0V3"/><path d="M12 11v4a4 4 0 0 0 8 0v-1"/><circle cx="20" cy="12" r="2"/></svg></i>Shifokor</div>
+                <div><i><img src="img/ic_notebook.webp" alt="" width="48" height="48" loading="lazy" decoding="async"></i>Jurnal</div>
+                <div><i><img src="img/ic_meditation.webp" alt="" width="48" height="48" loading="lazy" decoding="async"></i>Meditatsiya</div>
+                <div><i><img src="img/ic_breath.webp" alt="" width="48" height="48" loading="lazy" decoding="async"></i>Nafas</div>
+                <div><i><img src="img/ic_bell.webp" alt="" width="48" height="48" loading="lazy" decoding="async"></i>Eslatmalar</div>
               </div>
             </div>
 
             <nav class="tabbar" aria-label="Ilova tablari">
-              <button type="button" aria-current="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5.5 9.5V20h13V9.5"/></svg><span>Bugun</span></button>
-              <button type="button"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.5A4 4 0 0 1 19 10c0 5.5-7 10-7 10z"/></svg><span>Ong</span></button>
-              <button type="button"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h11a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H9l-4 3v-3H4z"/><path d="M19 9h1v8h-1v3l-3-3h-5"/></svg><span>Chat</span></button>
-              <button type="button"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5 20c0-6 6-4 6-9S6 6 6 4"/><circle cx="17.5" cy="7" r="2.5"/><circle cx="6" cy="19.5" r="1.6"/></svg><span>Sikl</span></button>
-              <button type="button"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 16l.7 1.8 1.8.7-1.8.7L19 21l-.7-1.8-1.8-.7 1.8-.7z"/></svg><span>Premium</span></button>
+              <button type="button" aria-current="true"><img src="img/ic_home.webp" alt="" width="48" height="48" loading="lazy" decoding="async"><span>Bugun</span></button>
+              <button type="button"><img src="img/ic_calm.webp" alt="" width="48" height="48" loading="lazy" decoding="async"><span>Ong</span></button>
+              <button type="button"><img src="img/ic_chats.webp" alt="" width="48" height="48" loading="lazy" decoding="async"><span>Chat</span></button>
+              <button type="button"><img src="img/ic_cycle_ring.webp" alt="" width="48" height="48" loading="lazy" decoding="async"><span>Sikl</span></button>
+              <button type="button"><img src="img/ic_crown.webp" alt="" width="48" height="48" loading="lazy" decoding="async"><span>Premium</span></button>
             </nav>
           </div>
         </div>
@@ -1303,7 +1391,7 @@ body {
       <!-- Sikl -->
       <article class="tile spot t-6 r" style="--d:0ms">
         <div class="tile-hd">
-          <span class="tile-ico" style="background:var(--ph-period)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c2 3 5 5 5 9a5 5 0 0 1-10 0c0-4 3-6 5-9z"/><path d="M12 21v-4"/></svg></span>
+          <span class="tile-ico art"><img src="img/ic_cycle.webp" alt="" width="48" height="48" loading="lazy" decoding="async"></span>
           <h3>Sikl</h3>
           <span class="pred" style="margin-left:auto">Taxminiy</span>
         </div>
@@ -1327,7 +1415,7 @@ body {
       <!-- Kayfiyat -->
       <article class="tile spot t-6 r" style="--d:60ms">
         <div class="tile-hd">
-          <span class="tile-ico" style="background:var(--warm)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8.5 14.5c1 1.3 2.2 2 3.5 2s2.5-.7 3.5-2"/><path d="M9 9.5h.01M15 9.5h.01"/></svg></span>
+          <span class="tile-ico art"><img src="img/ic_mood_good.webp" alt="" width="48" height="48" loading="lazy" decoding="async"></span>
           <h3>Kayfiyat</h3>
         </div>
         <p>Besh qadamli shkala, stress va energiya bilan. Bir hafta qayd etilsa, ilova buni siklingiz bilan yonma-yon qo'yadi.</p>
@@ -1348,7 +1436,7 @@ body {
       <!-- Ovqatlanish -->
       <article class="tile spot t-4 r" style="--d:0ms">
         <div class="tile-hd">
-          <span class="tile-ico" style="background:var(--success)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6c-4 0-7 3-7 7.5S8 21 12 21s7-3 7-7.5S16 6 12 6z"/><path d="M12 6c0-2 1-3 3-3"/></svg></span>
+          <span class="tile-ico art"><img src="img/ic_nutrition.webp" alt="" width="48" height="48" loading="lazy" decoding="async"></span>
           <h3>Ovqatlanish</h3>
         </div>
         <p>Kamera sahifaning o'zida ochiladi: taomni suratga oling, AI kaloriya va makrolarni o'qiydi. O'zbekcha taomlar katalogi ham bor.</p>
@@ -1371,13 +1459,13 @@ body {
       <!-- Dorilar -->
       <article class="tile spot t-4 r" style="--d:60ms">
         <div class="tile-hd">
-          <span class="tile-ico" style="background:var(--accent)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="8" rx="4" transform="rotate(-45 12 12)"/><path d="M8.5 15.5l7-7"/></svg></span>
+          <span class="tile-ico art"><img src="img/ic_meds.webp" alt="" width="48" height="48" loading="lazy" decoding="async"></span>
           <h3>Vitamin va dorilar</h3>
         </div>
         <p>Qabul jadvali, tasdiq va zaxira; dorini tahrirlash yoki o'chirish mumkin. Shifokor yozgan retsept bir teginishda shu ro'yxatga qo'shiladi. O'tkazib yuborilgan qabul haqida maslahat bermaydi &mdash; farmatsevtga yo'naltiradi.</p>
         <div class="viz meds">
-          <div class="med"><span class="em">🌿</span><div><b>Folik kislota 400 mkg</b><span>08:00 &middot; Har kuni &middot; Ovqatdan keyin</span></div><span class="badge ok">Qabul qilindi</span></div>
-          <div class="med"><span class="em">🩸</span><div><b>Temir 30 mg</b><span>20:00 &middot; Har kuni &middot; Zaxira 12 kun</span></div><span class="badge wait">Kutilmoqda</span></div>
+          <div class="med"><span class="em"><img src="img/ic_med_bottle.webp" alt="" width="48" height="48" loading="lazy" decoding="async"></span><div><b>Folik kislota 400 mkg</b><span>08:00 &middot; Har kuni &middot; Ovqatdan keyin</span></div><span class="badge ok">Qabul qilindi</span></div>
+          <div class="med"><span class="em"><img src="img/ic_vitamins.webp" alt="" width="48" height="48" loading="lazy" decoding="async"></span><div><b>Temir 30 mg</b><span>20:00 &middot; Har kuni &middot; Zaxira 12 kun</span></div><span class="badge wait">Kutilmoqda</span></div>
         </div>
       </article>
 
@@ -1398,7 +1486,7 @@ body {
       <!-- Tahlillar -->
       <article class="tile spot t-12 r" style="--d:0ms">
         <div class="tile-hd">
-          <span class="tile-ico" style="background:var(--ph-fert)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V5M4 19h16"/><path d="M7 15l4-5 3 3 5-7"/></svg></span>
+          <span class="tile-ico art"><img src="img/ic_insights.webp" alt="" width="48" height="48" loading="lazy" decoding="async"></span>
           <h3>Tahlil va tavsiyalar</h3>
           <span class="small" style="margin-left:auto;white-space:nowrap">7 &middot; 30 &middot; 90 kun</span>
         </div>
@@ -1435,7 +1523,7 @@ body {
       <!-- Seriya va Gul -->
       <article class="tile spot t-8 r" style="--d:0ms">
         <div class="tile-hd">
-          <span class="tile-ico" style="background:var(--secondary)"><svg width="20" height="20" viewBox="-11 -11 22 22" aria-hidden="true" style="color:#fff"><use href="#bloomArt"/></svg></span>
+          <span class="tile-ico art"><img src="img/ic_flower_coin.webp" alt="" width="48" height="48" loading="lazy" decoding="async"></span>
           <h3>Seriya va Gul</h3>
           <span class="small" style="margin-left:auto;white-space:nowrap">Bepul rejada ham</span>
         </div>
@@ -1450,7 +1538,7 @@ body {
       <!-- Uch til -->
       <article class="tile spot t-4 r" style="--d:80ms">
         <div class="tile-hd">
-          <span class="tile-ico" style="background:var(--primary)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.6 2.8 3.8 5.8 3.8 9s-1.2 6.2-3.8 9c-2.6-2.8-3.8-5.8-3.8-9S9.4 5.8 12 3z"/></svg></span>
+          <span class="tile-ico art"><img src="img/ic_globe.webp" alt="" width="48" height="48" loading="lazy" decoding="async"></span>
           <h3>Uch tilda</h3>
         </div>
         <p>Har bir ekran, xato xabari va AI javobi &mdash; ilova qaysi tilda bo'lsa, o'sha tilda.</p>
@@ -1463,7 +1551,7 @@ body {
       <!-- AI hamroh -->
       <article class="tile spot t-6 r" style="--d:0ms">
         <div class="tile-hd">
-          <span class="tile-ico" style="background:var(--warm)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21c-4.5 0-7.5-2.8-7.5-6.8 0-2.6 1.5-4.4 1.5-7.2 1.8.3 3 1.3 3.6 2.6.8-.4 1.5-.6 2.4-.6s1.6.2 2.4.6C15 8.300 16.200 7.300 18 7c0 2.800 1.500 4.600 1.500 7.200 0 4-3 6.800-7.500 6.800z"/><path d="M9.500 14.500h.01M14.500 14.500h.01"/></svg></span>
+          <span class="tile-ico art"><img src="img/ic_heart.webp" alt="" width="48" height="48" loading="lazy" decoding="async"></span>
           <h3>AI hamroh</h3>
           <span class="small" style="margin-left:auto;white-space:nowrap">Premium</span>
         </div>
@@ -1477,7 +1565,7 @@ body {
       <!-- Nishonlar va ramkalar -->
       <article class="tile spot t-6 r" style="--d:60ms">
         <div class="tile-hd">
-          <span class="tile-ico" style="background:var(--primary)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="9" r="5.5"/><path d="M8.500 13.500 7 21l5-2.500L17 21l-1.500-7.500"/></svg></span>
+          <span class="tile-ico art"><img src="img/ic_trophy.webp" alt="" width="48" height="48" loading="lazy" decoding="async"></span>
           <h3>Nishonlar va ramkalar</h3>
           <span class="small" style="margin-left:auto;white-space:nowrap">27 ta</span>
         </div>
@@ -1672,17 +1760,17 @@ body {
 
     <div class="doc-points">
       <div class="dpt spot r" style="--d:0ms">
-        <span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 5-3.5 8.5-7 10-3.5-1.5-7-5-7-10V6z"/><path d="M9 12l2 2 4-4"/></svg></span>
+        <span class="ico art"><img src="img/ic_shield.webp" alt="" width="48" height="48" loading="lazy" decoding="async"></span>
         <b>Tasdiqlangan</b>
         <p>Shifokor diplom va litsenziyani yuklaydi, admin tekshiradi. &#10003; belgisi faqat shundan keyin.</p>
       </div>
       <div class="dpt spot r" style="--d:70ms">
-        <span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.6 5.4 5.9.8-4.3 4.1 1 5.8L12 16.4 6.8 19.1l1-5.8L3.5 9.2l5.9-.8z"/></svg></span>
+        <span class="ico art"><img src="img/ic_star.webp" alt="" width="48" height="48" loading="lazy" decoding="async"></span>
         <b>Halol reyting</b>
         <p>Uchtadan kam baho bo&rsquo;lsa &mdash; raqam emas, &laquo;Yangi shifokor&raquo;. Javobsiz qolgan oynalar reytingni tushiradi.</p>
       </div>
       <div class="dpt spot r" style="--d:140ms">
-        <span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="13" rx="3"/><path d="M3 10h18M7 15h4"/></svg></span>
+        <span class="ico art"><img src="img/ic_shop.webp" alt="" width="48" height="48" loading="lazy" decoding="async"></span>
         <b>Payme va Click</b>
         <p>Narxni shifokor belgilaydi. To&rsquo;lov tasdiqlangach oyna ochiladi: rasm, o&rsquo;qildi belgisi, &laquo;yozmoqda&hellip;&raquo;.</p>
       </div>
@@ -1748,22 +1836,22 @@ body {
 
     <div class="doc-points">
       <div class="dpt spot r" style="--d:0ms">
-        <span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="10" rx="3"/><path d="M7.500 12h.01M12 12h.01M16.500 12h.01"/></svg></span>
+        <span class="ico art"><img src="img/ic_share.webp" alt="" width="48" height="48" loading="lazy" decoding="async"></span>
         <b>Kod bilan taklif</b>
         <p>Sakkiz belgili kod 48 soat amal qiladi. Yaqiningiz kodni kiritadi &mdash; ko&rsquo;rish esa faqat siz ruxsat bergandan keyin boshlanadi.</p>
       </div>
       <div class="dpt spot r" style="--d:70ms">
-        <span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9a6 6 0 1 1 12 0c0 6 2.500 7 2.500 7h-17S6 15 6 9z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg></span>
+        <span class="ico art"><img src="img/ic_bell.webp" alt="" width="48" height="48" loading="lazy" decoding="async"></span>
         <b>O&rsquo;z vaqtida xabar</b>
         <p>Hayz boshlandi, hayzga ikki kun qoldi, ertaga ko&rsquo;rik. To&rsquo;lg&rsquo;oq ekranidagi bitta tugma yaqiningizni darhol chaqiradi.</p>
       </div>
       <div class="dpt spot r" style="--d:140ms">
-        <span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20s-7-4.500-7-10a4 4 0 0 1 7-2.500A4 4 0 0 1 19 10c0 5.500-7 10-7 10z"/></svg></span>
+        <span class="ico art"><img src="img/ic_message.webp" alt="" width="48" height="48" loading="lazy" decoding="async"></span>
         <b>Qisqa so&rsquo;zlar</b>
         <p>Siz choy, shirinlik, dam yoki sukunat so&rsquo;raysiz; u yurakcha yoki &laquo;Hozir!&raquo; bilan javob beradi. Uzun yozish shart emas.</p>
       </div>
       <div class="dpt spot r" style="--d:210ms">
-        <span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="13" rx="3"/><path d="M3 10h18M7 15h4"/></svg></span>
+        <span class="ico art"><img src="img/ic_gift.webp" alt="" width="48" height="48" loading="lazy" decoding="async"></span>
         <b>Yaqinimdan so&rsquo;rash</b>
         <p>Premium yoki konsultatsiya to&rsquo;lovini yaqiningizdan so&rsquo;rash mumkin: unga xabar va Payme / Click havolasi boradi. Rad etsa, siz faqat &laquo;yopildi&raquo;ni ko&rsquo;rasiz.</p>
       </div>
@@ -1858,7 +1946,7 @@ body {
     <div class="rules r" style="--d:80ms">
       <article class="rule">
         <h3>Gradient faqat to'rt joyda.</h3>
-        <p>Hero, AI, Premium CTA va faol tab. Oddiy karta gradientni umuman bilmaydi.</p>
+        <p>Hero, AI, Premium CTA va asosiy tugma. Qolgan yuzalar bir xil yumshoq &laquo;clay&raquo;: yuqoridan yorug'lik, pastda yengil soya.</p>
         <div class="demo"><span class="sw-g"></span><span class="sw-g"></span><span class="sw-g"></span><span class="sw-g"></span><span class="sw-f"></span><span class="sw-f"></span></div>
       </article>
       <article class="rule">
@@ -2379,7 +2467,7 @@ body {
     var li = document.createElement('li');
     li.innerHTML =
       '<button class="stage-btn" type="button" aria-pressed="false" style="--a:' + s.a + ';--b:' + s.b + '">' +
-        '<span class="sw" aria-hidden="true">' + s.glyph + '</span>' +
+        '<span class="sw" aria-hidden="true"><img src="img/ic_' + s.id + '.webp" alt="" width="48" height="48"></span>' +
         '<span><b>' + s.name + '</b><span>' + s.sub + '</span></span>' +
         '<span class="tab">' + s.tab + '</span>' +
       '</button>';
