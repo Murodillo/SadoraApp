@@ -193,14 +193,31 @@ class ShareService(
         return service.photoOf(report.id, page)
     }
 
+    /**
+     * The QR page's "PDF yuklab olish": the page's own 90 days and every section, in the
+     * page's language. Opened like the page — the same live-link check and the same audit
+     * row — and free for her: it is the doctor reading what she already showed.
+     */
+    suspend fun openPdf(token: String, language: Language?, ip: String?, userAgent: String?): ReportFile? {
+        val summary = open(token, language, ip, userAgent) ?: return null
+        val to = summary.generatedAt.dayIn(uz.sadora.server.core.DEFAULT_TIMEZONE)
+        val from = to.minus(DoctorSummary.SHARE_WINDOW_DAYS - 1, DateTimeUnit.DAY)
+        return ReportFile(ReportPdf.fileName(summary, to), ReportPdf.render(summary, ReportService.ALL, from, to, summary.language))
+    }
+
     /** The same document she can download for herself — the data-export button. */
-    suspend fun summaryFor(userId: Uuid, language: Language): DoctorSummary {
+    suspend fun summaryFor(
+        userId: Uuid,
+        language: Language,
+        /** How far back: the QR page's 90 days, or the PDF report's three or six months. */
+        windowDays: Int = DoctorSummary.SHARE_WINDOW_DAYS,
+    ): DoctorSummary {
         val user = users.findById(userId) ?: throw NotFoundException("Foydalanuvchi topilmadi")
         val today = now().dayIn(user.timezone)
-        val from = today.minus(DoctorSummary.SHARE_WINDOW_DAYS - 1, DateTimeUnit.DAY)
+        val from = today.minus(windowDays - 1, DateTimeUnit.DAY)
         val stage = users.stageBaselineOf(userId)
 
-        val catalogue = health.symptomCatalogue(userId, lifeStage = null).associateBy { it.key }
+        val catalogue = health.symptomLabels(language).associateBy { it.key }
         val logs = health.logs(userId, from, today).logs.sortedByDescending { it.date }
         val days = logs.filterNot { it.isEmpty }.map { log ->
             SharedDay(
@@ -258,7 +275,7 @@ class ShareService(
         val practices = mind.recentPractices(userId, limit = 500)
             .filter { it.completedAt.toLocalDateTime(zone).date >= from }
         val mindSummary = SharedMind(
-            windowDays = DoctorSummary.SHARE_WINDOW_DAYS,
+            windowDays = windowDays,
             daysLogged = checkIns.size,
             averageMood = checkIns.mapNotNull { it.mood?.score }.averageOrNull(),
             averageEnergy = checkIns.mapNotNull { it.energy }.averageOrNull(),
@@ -270,7 +287,7 @@ class ShareService(
         val courses = medications.list(userId, includeArchived = true)
             .filter { it.endedOn == null || it.endedOn!! >= from }
             .map { medication ->
-                val history = medications.history(userId, Uuid.parse(medication.id), DoctorSummary.SHARE_WINDOW_DAYS)
+                val history = medications.history(userId, Uuid.parse(medication.id), windowDays)
                 val decided = history.takenCount + history.skippedCount
                 SharedMedication(
                     name = medication.name,
@@ -290,7 +307,7 @@ class ShareService(
         val kcal = nutrition.kcalBetween(userId, from, today).filterValues { it > 0 }
         val water = nutrition.waterBetween(userId, from, today).filterValues { it > 0 }
         val nutritionSummary = SharedNutrition(
-            windowDays = DoctorSummary.SHARE_WINDOW_DAYS,
+            windowDays = windowDays,
             daysLogged = (kcal.keys + water.keys).size,
             averageKcal = kcal.values.averageOrNull()?.toInt(),
             averageWaterMl = water.values.averageOrNull()?.toInt(),
@@ -336,7 +353,7 @@ class ShareService(
                 user.timezone,
             ),
             labs = labs?.forSummary(userId, today, language).orEmpty(),
-            conditions = conditions?.shared(userId, today),
+            conditions = conditions?.shared(userId, today, windowDays),
         )
     }
 
@@ -378,6 +395,6 @@ class ShareService(
 /** Kept here so the page and the export agree on one schedule wording. */
 internal fun MedicationSchedule.describe(): String = buildString {
     append(times.joinToString(", ") { time -> "%02d:%02d".format(time.hour, time.minute) })
-    if (weekdays.isNotEmpty()) append(" · ").append(weekdays.joinToString("/") { it.name.take(3).lowercase() })
+    if (weekdays.isNotEmpty() && weekdays.size < 7) append(" · ").append(weekdays.joinToString("/") { it.name.take(3).lowercase() })
     intervalDays?.let { append(" · ").append(it).append("d") }
 }

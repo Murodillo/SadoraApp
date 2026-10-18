@@ -6,6 +6,7 @@ import kotlinx.datetime.LocalDate
 import kotlinx.datetime.daysUntil
 import kotlinx.datetime.plus
 import uz.sadora.contract.CycleCalendar
+import uz.sadora.contract.Language
 import uz.sadora.contract.CycleDay
 import uz.sadora.contract.CycleHistory
 import uz.sadora.contract.CycleHistoryEntry
@@ -187,6 +188,10 @@ class HealthService(
         val user = access.requireUser(userId)
         return repository.symptomCatalogue(lifeStage ?: user.lifeStage, user.language)
     }
+
+    /** Every symptom in [language], whatever her stage: old logs keep their names after a stage change. */
+    suspend fun symptomLabels(language: Language): List<SymptomDefinition> =
+        repository.symptomCatalogue(lifeStage = null, language = language)
 
     // ---------------------------------------------------------------- writes
 

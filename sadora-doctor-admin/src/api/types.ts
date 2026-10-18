@@ -251,7 +251,7 @@ export interface CreateCommentRequest {
 
 export type LifeStage = 'cycle' | 'trying_to_conceive' | 'pregnancy' | 'postpartum' | 'perimenopause' | 'menopause'
 
-export type MessageKind = 'text' | 'image' | 'record' | 'prescription' | 'lab'
+export type MessageKind = 'text' | 'image' | 'record' | 'prescription' | 'lab' | 'report'
 
 /** Who a doctor is consulting: her real name, and what a doctor needs at a glance. */
 export interface ConsultationPatient {
@@ -328,6 +328,15 @@ export interface DirectMessage {
    * is absent and `body` holds a plain-text copy of the sheet.
    */
   labReport?: LabReport | null
+  /** Set on a `report` line: her PDF, fetched from `…/messages/{id}/document`. */
+  document?: MessageDocument | null
+}
+
+/** The file behind a `report` line. */
+export interface MessageDocument {
+  name: string
+  mimeType: string
+  sizeBytes: number
 }
 
 // ---------------------------------------------------------------- lab results (Labs.kt)

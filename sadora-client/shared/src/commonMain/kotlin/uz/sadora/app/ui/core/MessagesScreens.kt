@@ -15,6 +15,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import uz.sadora.app.data.isAllowance
+import uz.sadora.app.ui.components.rememberFileShareAction
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
@@ -275,6 +277,7 @@ private fun LastLine(thread: Conversation, unread: Boolean) {
         MessageKind.Record -> t.record
         MessageKind.Prescription -> strings.prescriptions.lastLine
         MessageKind.Lab -> strings.labs.lastLine
+        MessageKind.Report -> strings.reports.lastLine
     }
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
         if (thread.lastMessageRead) ReadTicks(read = true, tint = c.textAccent)
@@ -283,6 +286,7 @@ private fun LastLine(thread: Conversation, unread: Boolean) {
             MessageKind.Record -> Icon(SadoraIcons.Document, contentDescription = null, Modifier.size(14.dp), tint = colour)
             MessageKind.Prescription -> ArtIcon(Res.drawable.ic3d_meds, 16.dp)
             MessageKind.Lab -> ArtIcon(Res.drawable.ic3d_lab, 16.dp)
+            MessageKind.Report -> ArtIcon(Res.drawable.ic3d_notebook, 16.dp)
             MessageKind.Text -> Unit
         }
         Text(text, style = style, color = colour, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -344,6 +348,9 @@ fun ConversationScreen(
     /** Opens one of her sheets; and the section itself, from the empty picker. */
     onOpenLab: (String) -> Unit = {},
     onOpenLabs: () -> Unit = {},
+    /** Her report PDF, which she can make and send into the consultation. */
+    reports: uz.sadora.app.data.ReportController = uz.sadora.app.data.ReportController(null),
+    onUpgrade: () -> Unit = {},
 ) {
     val t = strings.community
     val d = strings.doctors
@@ -356,6 +363,10 @@ fun ConversationScreen(
     var pendingPhoto by remember { mutableStateOf<CapturedPhoto?>(null) }
     var confirmRecord by remember { mutableStateOf(false) }
     var pickLab by remember { mutableStateOf(false) }
+    var makeReport by remember { mutableStateOf(false) }
+    var reportLocked by remember { mutableStateOf(false) }
+    val reportChoice = remember { uz.sadora.app.ui.modules.ReportChoice(uz.sadora.app.model.AppLanguage.entries.firstOrNull { it.code == language } ?: uz.sadora.app.model.AppLanguage.Uz) }
+    val shareFile = rememberFileShareAction()
     var recordFor by remember { mutableStateOf<String?>(null) }
     var viewing by remember { mutableStateOf<DirectMessage?>(null) }
     var addingPrescription by remember { mutableStateOf<uz.sadora.contract.Prescription?>(null) }
@@ -511,6 +522,16 @@ fun ConversationScreen(
                         onOpenRecord = { recordFor = message.id },
                         onAddPrescription = { addingPrescription = it },
                         onOpenLab = onOpenLab,
+                        onOpenDocument = { line ->
+                            val id = liveId
+                            if (id != null) {
+                                scope.launch {
+                                    messages.document(id, line.id)?.let { bytes ->
+                                        shareFile(bytes, line.document?.name ?: "SADORA.pdf", line.document?.mimeType ?: "application/pdf")
+                                    }
+                                }
+                            }
+                        },
                     )
                 }
                 if (otherTyping) {
@@ -573,6 +594,10 @@ fun ConversationScreen(
                     showAttach = false
                     pickLab = true
                 }
+                AttachOption(Res.drawable.ic3d_notebook, strings.reports.attach, strings.reports.attachNote) {
+                    showAttach = false
+                    makeReport = true
+                }
             }
         }
 
@@ -588,6 +613,34 @@ fun ConversationScreen(
                 onAdd = {
                     pickLab = false
                     onOpenLabs()
+                },
+            )
+        }
+
+        SadoraBottomSheet(visible = makeReport, title = strings.reports.title, onDismiss = { makeReport = false }) {
+            LaunchedEffect(Unit) { reports.refresh() }
+            uz.sadora.app.ui.modules.ReportForm(reportChoice)
+            Spacer(Modifier.height(Spacing.xs))
+            uz.sadora.app.ui.modules.ReportAction(
+                reports = reports,
+                choice = reportChoice,
+                label = strings.reports.send,
+                onUpgrade = {
+                    makeReport = false
+                    onUpgrade()
+                },
+                busy = messages.sendingAttachment,
+                locked = reportLocked,
+                onClick = {
+                    scope.launch {
+                        if (messages.sendReport(reportChoice.request())) {
+                            makeReport = false
+                            reports.refresh()
+                        } else if (messages.error.isAllowance()) {
+                            messages.clearError()
+                            reportLocked = true
+                        }
+                    }
                 },
             )
         }
@@ -1038,6 +1091,7 @@ private fun Bubble(
     onOpenRecord: () -> Unit,
     onAddPrescription: (uz.sadora.contract.Prescription) -> Unit,
     onOpenLab: (String) -> Unit = {},
+    onOpenDocument: (DirectMessage) -> Unit = {},
 ) {
     val c = Sadora.colors
     val t = strings.community
@@ -1104,6 +1158,9 @@ private fun Bubble(
                     }
                 }
                 MessageKind.Record -> RecordInBubble(mine, onOpen = onOpenRecord.takeIf { mine })
+                MessageKind.Report -> message.document
+                    ?.let { document -> DocumentInBubble(document, mine, onOpen = { onOpenDocument(message) }) }
+                    ?: Text(message.body, style = Sadora.type.body, color = content)
             }
             Row(
                 Modifier
@@ -1177,6 +1234,34 @@ private fun RecordInBubble(mine: Boolean, onOpen: (() -> Unit)?) {
         Column(Modifier.widthIn(max = 220.dp)) {
             Text(t.recordAttached, style = Sadora.type.body.copy(fontWeight = FontWeight.SemiBold), color = content)
             Text(t.recordAttachedNote, style = Sadora.type.caption.copy(letterSpacing = TextUnit.Unspecified), color = content.copy(alpha = 0.85f))
+        }
+    }
+}
+
+/** Her report PDF in the bubble: name and size; a tap opens it through the share sheet. */
+@Composable
+private fun DocumentInBubble(document: uz.sadora.contract.MessageDocument, mine: Boolean, onOpen: () -> Unit) {
+    val c = Sadora.colors
+    val r = strings.reports
+    val content = if (mine) c.onPrimary else c.text
+    Row(
+        Modifier.noRippleClickable(role = Role.Button, onClick = onOpen),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+    ) {
+        Box(
+            Modifier.size(36.dp).clip(Radius.chip).background(content.copy(alpha = 0.16f)),
+            contentAlignment = Alignment.Center,
+        ) {
+            ArtIcon(Res.drawable.ic3d_notebook, 26.dp)
+        }
+        Column(Modifier.widthIn(max = 220.dp)) {
+            Text(r.bubbleTitle, style = Sadora.type.body.copy(fontWeight = FontWeight.SemiBold), color = content)
+            Text(
+                "PDF · " + r.size(document.sizeBytes),
+                style = Sadora.type.caption.copy(letterSpacing = TextUnit.Unspecified),
+                color = content.copy(alpha = 0.85f),
+            )
         }
     }
 }

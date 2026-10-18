@@ -131,6 +131,7 @@ fun WireMessage.toAppMessage(): DirectMessage = DirectMessage(
     read = read,
     prescription = prescription?.takeIf { kind == WireKind.PRESCRIPTION },
     labReport = labReport?.takeIf { kind == WireKind.LAB },
+    document = document?.takeIf { kind == WireKind.REPORT },
 )
 
 fun WireKind.toAppKind(): MessageKind = when (this) {
@@ -139,6 +140,7 @@ fun WireKind.toAppKind(): MessageKind = when (this) {
     WireKind.RECORD -> MessageKind.Record
     WireKind.PRESCRIPTION -> MessageKind.Prescription
     WireKind.LAB -> MessageKind.Lab
+    WireKind.REPORT -> MessageKind.Report
 }
 
 fun WireTopic.toAppTopic(): CommunityTopic = when (this) {

@@ -105,6 +105,8 @@ sealed interface Route {
     data object Conditions : Route
     data object PainDiary : Route
     data object ConditionReport : Route
+    /** The doctor's report PDF: period, sections and language, then the share sheet. */
+    data object DoctorReport : Route
     data object Sleep : Route
     data object Insights : Route
     data object Knowledge : Route

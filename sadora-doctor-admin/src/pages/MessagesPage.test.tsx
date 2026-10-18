@@ -289,7 +289,7 @@ describe('Xabarlar — the conversation list', () => {
     expect(within(list).getByRole('button', { name: /Nodira/ })).toBeInTheDocument()
   })
 
-  it('previews a photo, a record and a lab sheet as words', async () => {
+  it('previews a photo, a record, a lab sheet and a report as words', async () => {
     mockApi({
       'GET /v1/doctor/me': doctorAccount(),
       'GET /v1/doctor/questions': [],
@@ -297,12 +297,14 @@ describe('Xabarlar — the conversation list', () => {
         conversation('c1', 'Malika', { lastMessageKind: 'image', lastMessage: '' }),
         conversation('c2', 'Nodira', { lastMessageKind: 'record', lastMessage: '' }),
         conversation('c3', 'Dilnoza', { lastMessageKind: 'lab', lastMessage: '🧪 Tahlil natijalari · 01.10.2026' }),
+        conversation('c4', 'Zarina', { lastMessageKind: 'report', lastMessage: '' }),
       ],
     })
     const list = await openMessages()
     expect(await within(list).findByRole('button', { name: /Malika/ })).toHaveTextContent('📷 Rasm')
     expect(within(list).getByRole('button', { name: /Nodira/ })).toHaveTextContent('📋 Tibbiy karta')
     expect(within(list).getByRole('button', { name: /Dilnoza/ })).toHaveTextContent('🧪 Tahlil natijalari')
+    expect(within(list).getByRole('button', { name: /Zarina/ })).toHaveTextContent('📄 Hisobot (PDF)')
   })
 })
 

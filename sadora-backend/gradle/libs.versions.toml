@@ -4,6 +4,7 @@
 # include the contract build; tools/ci/check_versions.py fails CI when they drift.
 
 [versions]
+openhtmltopdf = "1.1.80"
 agp = "9.0.1"
 android-compileSdk = "36"
 android-minSdk = "24"
@@ -21,6 +22,7 @@ kotlinx-datetime = "0.7.0"
 kotlinx-coroutines = "1.10.2"
 
 [libraries]
+openhtmltopdf-pdfbox = { module = "io.github.openhtmltopdf:openhtmltopdf-pdfbox", version.ref = "openhtmltopdf" }
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
 kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinx-datetime" }

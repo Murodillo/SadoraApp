@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- What the photos FileProvider may hand out: only the camera's capture folder in the cache. -->
+<!-- What the photos FileProvider may hand out: only the camera's capture folder in the
+     cache, and the folder a downloaded PDF report is written to before a viewer opens it. -->
 <paths>
     <cache-path name="photos" path="photos/" />
+    <cache-path name="shared" path="shared/" />
 </paths>

@@ -106,6 +106,8 @@ class MessagingService(
     private val wornFrames: (suspend (Collection<Uuid>) -> Map<Uuid, String>)? = null,
     /** The patient's lab sheets, behind `lab` lines. Null in tests without them. */
     private val labs: uz.sadora.server.lab.LabService? = null,
+    /** Makes her PDF report, spending her allowance; null in tests without it. */
+    private val reports: (suspend (Uuid, uz.sadora.contract.PdfReportRequest) -> uz.sadora.server.share.ReportFile)? = null,
 ) {
     /** What happens after a window is closed — the patient's push. Set at wiring. */
     var onSessionClosed: (suspend (SessionRecord) -> Unit)? = null
@@ -274,7 +276,19 @@ class MessagingService(
         }
 
         var labReportId: Uuid? = null
+        var document: Triple<String, String, ByteArray>? = null
         val (kind, body, image) = when {
+            request.report != null -> {
+                val doctor = thread.doctorId?.let { doctors?.byId(it) }
+                if (doctor == null || doctor.userId == userId) {
+                    throw ValidationException("report", "Hisobotni faqat bemorning o'zi shifokoriga yuboradi")
+                }
+                val maker = reports ?: throw NotFoundException("Hisobot topilmadi")
+                val report = request.report!!
+                val file = maker(userId, report)
+                document = Triple(file.name, "application/pdf", file.bytes)
+                Triple(MessageKind.REPORT, uz.sadora.server.share.ReportWords.line(report.months, report.language), null)
+            }
             request.labReportId != null -> {
                 val doctor = thread.doctorId?.let { doctors?.byId(it) }
                 if (doctor == null || doctor.userId == userId) {
@@ -296,7 +310,7 @@ class MessagingService(
             request.image != null -> Triple(MessageKind.IMAGE, validateCaption(request.body), decodeImage(request.image!!))
             else -> Triple(MessageKind.TEXT, validateText(request.body), null)
         }
-        val message = write(userId, thread, body, kind, image, labReportId)
+        val message = write(userId, thread, body, kind, image, labReportId, document)
         // The doctor's first line in a window is what "answered" and the reply time mean.
         if (thread.isConsultation && thread.doctorId != null && doctors?.byId(thread.doctorId)?.userId == userId) {
             consultations?.currentSession(thread.id)
@@ -362,12 +376,13 @@ class MessagingService(
         kind: MessageKind,
         image: MessageImageRecord?,
         labReportId: Uuid? = null,
+        document: Triple<String, String, ByteArray>? = null,
     ): MessageRecord {
         community.requireCanWrite(userId)
         if (messages.messagesSince(userId, now() - 24.hours) >= MAX_MESSAGES_PER_DAY) {
             throw RateLimitedException("Bir kunda $MAX_MESSAGES_PER_DAY tadan ko'p xabar yozib bo'lmaydi")
         }
-        val message = messages.insertMessage(thread.id, userId, body, kind, image, labReportId)
+        val message = messages.insertMessage(thread.id, userId, body, kind, image, labReportId, document)
         notify(thread, recipient = thread.other(userId), sender = userId, message = message)
         return message
     }
@@ -411,6 +426,15 @@ class MessagingService(
             ?.takeIf { it.conversationId == thread.id && it.status == ContentStatus.VISIBLE && it.kind == MessageKind.IMAGE }
             ?: throw NotFoundException("Rasm topilmadi")
         return messages.imageOf(message.id) ?: throw NotFoundException("Rasm topilmadi")
+    }
+
+    /** The PDF behind a `report` line, for the two people in the thread. */
+    suspend fun document(userId: Uuid, conversationId: Uuid, messageId: Uuid): Pair<String, ByteArray> {
+        val thread = requireParticipant(userId, conversationId)
+        val message = messages.messageById(messageId)
+            ?.takeIf { it.conversationId == thread.id && it.status == ContentStatus.VISIBLE && it.kind == MessageKind.REPORT }
+            ?: throw NotFoundException("Hisobot topilmadi")
+        return messages.documentOf(message.id) ?: throw NotFoundException("Hisobot topilmadi")
     }
 
     /**
@@ -674,6 +698,7 @@ class MessagingService(
         MessageKind.RECORD -> ""
         MessageKind.PRESCRIPTION -> ""
         MessageKind.LAB -> ""
+        MessageKind.REPORT -> ""
     }
 
     /**
@@ -689,6 +714,8 @@ class MessagingService(
         val labIds = lines.filter { it.kind == MessageKind.LAB }.mapNotNull { it.labReportId }.distinct()
         val sheets = if (labIds.isEmpty()) emptyMap() else labs?.byIds(labIds).orEmpty()
         val language = if (sheets.isEmpty()) Language.UZ else users?.findById(viewer)?.language ?: Language.UZ
+        val documents = lines.filter { it.kind == MessageKind.REPORT }.map { it.id }
+            .takeIf { it.isNotEmpty() }?.let { messages.documentsOf(it) }.orEmpty()
         return lines.map { line ->
             val prescription = byMessage[line.id]?.let { record ->
                 doctorsById[record.doctorId]?.let { PrescriptionRules.dto(record, it, patientName = null) }
@@ -696,7 +723,7 @@ class MessagingService(
             val labReport = line.labReportId?.let { sheets[it] }
                 ?.takeIf { it.userId == line.senderId }
                 ?.let { labs!!.dto(it, language) }
-            line.toDto(viewer, otherReadAt).copy(prescription = prescription, labReport = labReport)
+            line.toDto(viewer, otherReadAt).copy(prescription = prescription, labReport = labReport, document = documents[line.id])
         }
     }
 

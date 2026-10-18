@@ -176,6 +176,7 @@ class StringsTest {
             )
             uz.sadora.contract.LabFlag.entries.forEach { add(flag(it)) }
         }
+        with(t.reports) { addAll(listOf(title, open, opening, failed)) }
         with(t.conditions) {
             addAll(listOf(title, painTitle(90), painTitle(1), painDays, averageLevel, maxLevel, painkillerDays, missedDays, whenTitle, whereTitle))
             uz.sadora.contract.HealthCondition.entries.forEach { add(condition(it)) }
@@ -243,6 +244,16 @@ class StringsTest {
     fun `the record's metrics are the same set in every language`() {
         val shown = languages.map { t -> HealthMetric.entries.filter { t.tabs.metric(it) != null } }
         assertEquals(1, shown.distinct().size, "$shown")
+    }
+
+    @Test
+    fun `a report's size reads in KB under a megabyte and MB with one decimal over it`() {
+        assertEquals("1 KB", StringsUz.reports.size(10))
+        assertEquals("240 KB", StringsEn.reports.size(240 * 1024))
+        assertEquals("1 MB", StringsEn.reports.size(1024 * 1024))
+        assertEquals("1.4 MB", StringsEn.reports.size(1_468_006))
+        assertEquals("1,4 МБ", StringsRu.reports.size(1_468_006))
+        assertEquals("1,4 MB", StringsUz.reports.size(1_468_006))
     }
 
     @Test

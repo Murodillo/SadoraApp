@@ -26,16 +26,22 @@ actual fun rememberShareAction(): (String) -> Unit {
 
 @Composable
 actual fun rememberImageShareAction(): (png: ByteArray, fileName: String) -> Unit {
+    val share = rememberFileShareAction()
+    return remember(share) { { png, fileName -> share(png, fileName, "image/png") } }
+}
+
+@Composable
+actual fun rememberFileShareAction(): (bytes: ByteArray, fileName: String, mimeType: String) -> Unit {
     val context = LocalContext.current
     return remember(context) {
-        { png, fileName ->
+        { bytes, fileName, mimeType ->
             // Written under the cache's own folder, which the file provider exposes and
             // nothing else; the system may clear it whenever it likes, which is fine.
             val folder = java.io.File(context.cacheDir, "shared").apply { mkdirs() }
-            val file = java.io.File(folder, fileName).apply { writeBytes(png) }
+            val file = java.io.File(folder, fileName).apply { writeBytes(bytes) }
             val uri = androidx.core.content.FileProvider.getUriForFile(context, "${context.packageName}.files", file)
             val send = Intent(Intent.ACTION_SEND).apply {
-                type = "image/png"
+                type = mimeType
                 putExtra(Intent.EXTRA_STREAM, uri)
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }

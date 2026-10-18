@@ -24,6 +24,7 @@ import uz.sadora.server.core.now
 import uz.sadora.server.core.toKotlinInstant
 import uz.sadora.server.core.toOffsetDateTime
 import uz.sadora.server.db.CommunityConversations
+import uz.sadora.server.db.CommunityMessageDocuments
 import uz.sadora.server.db.CommunityMessageImages
 import uz.sadora.server.db.CommunityReports
 import uz.sadora.server.db.CommunityMessages
@@ -283,6 +284,8 @@ class MessagingRepository {
         kind: MessageKind = MessageKind.TEXT,
         image: MessageImageRecord? = null,
         labReportId: Uuid? = null,
+        /** The file of a `report` line: name, mime type, bytes. */
+        document: Triple<String, String, ByteArray>? = null,
     ): MessageRecord = dbQuery {
         val id = Uuid.random()
         val timestamp = now()
@@ -295,6 +298,15 @@ class MessagingRepository {
             it[CommunityMessages.labReportId] = labReportId
             it[status] = ContentStatus.VISIBLE.dbValue()
             it[createdAt] = timestamp.toOffsetDateTime()
+        }
+        if (document != null) {
+            CommunityMessageDocuments.insert {
+                it[messageId] = id
+                it[name] = document.first
+                it[mimeType] = document.second
+                it[content] = document.third
+                it[createdAt] = timestamp.toOffsetDateTime()
+            }
         }
         if (image != null) {
             CommunityMessageImages.insert {
@@ -463,6 +475,33 @@ class MessagingRepository {
             .limit(1)
             .singleOrNull()
             ?.toMessage()
+    }
+
+    /** The name, type and size of each `report` line's file, read without the bytes. */
+    suspend fun documentsOf(ids: Collection<Uuid>): Map<Uuid, uz.sadora.contract.MessageDocument> = dbQuery {
+        if (ids.isEmpty()) return@dbQuery emptyMap()
+        val size = org.jetbrains.exposed.v1.core.CustomFunction(
+            "octet_length",
+            org.jetbrains.exposed.v1.core.IntegerColumnType(),
+            CommunityMessageDocuments.content,
+        )
+        CommunityMessageDocuments
+            .select(CommunityMessageDocuments.messageId, CommunityMessageDocuments.name, CommunityMessageDocuments.mimeType, size)
+            .where { CommunityMessageDocuments.messageId inList ids }
+            .associate { row ->
+                row[CommunityMessageDocuments.messageId] to uz.sadora.contract.MessageDocument(
+                    name = row[CommunityMessageDocuments.name],
+                    mimeType = row[CommunityMessageDocuments.mimeType],
+                    sizeBytes = row[size] ?: 0,
+                )
+            }
+    }
+
+    suspend fun documentOf(messageId: Uuid): Pair<String, ByteArray>? = dbQuery {
+        CommunityMessageDocuments.selectAll()
+            .where { CommunityMessageDocuments.messageId eq messageId }
+            .singleOrNull()
+            ?.let { it[CommunityMessageDocuments.name] to it[CommunityMessageDocuments.content] }
     }
 
     suspend fun messageById(id: Uuid): MessageRecord? = dbQuery {

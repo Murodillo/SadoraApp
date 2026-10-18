@@ -27,6 +27,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
+import io.ktor.http.contentType
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.time.Clock
@@ -3777,6 +3778,78 @@ class ApiIntegrationTest {
         )
         assertFalse(fifth.sentToPartner)
         assertTrue(get<List<uz.sadora.contract.IncomingPaymentRequest>>("/v1/payment-requests/incoming", him.token).isEmpty())
+    }
+
+    // ---------------------------------------------------------------- the PDF report
+
+    @Test
+    fun `the PDF report is one a month free, prints in her chosen language, and reaches the doctor two ways`() = api {
+        val her = signUp().also { onboard(it) }
+        val today = get<CycleStatus>("/v1/cycle/status", her.token).today
+        listOf(84, 56, 28).forEach { back ->
+            post<PeriodEntry>("/v1/cycle/periods", her.token, LogPeriodRequest(today.minus(back, DateTimeUnit.DAY), today.minus(back - 4, DateTimeUnit.DAY)))
+        }
+        post<uz.sadora.contract.LabReport>(
+            "/v1/labs",
+            her.token,
+            uz.sadora.contract.SaveLabReportRequest(today, place = "Инвитро", values = listOf(uz.sadora.contract.SaveLabValue(name = "Гемоглобин", value = 104.0, unit = "г/л", refLow = 120.0, refHigh = 150.0))),
+        )
+        assertEquals(1, get<uz.sadora.contract.ReportOptions>("/v1/reports/options", her.token).allowance?.monthlyLimit)
+        // A medication, so the six-month report reads its full history (184 days at most).
+        component.medicationRepository.add(
+            Uuid.parse(her.userId),
+            uz.sadora.contract.SaveMedicationRequest(name = "Folat", schedule = uz.sadora.contract.MedicationSchedule(times = listOf(kotlinx.datetime.LocalTime(9, 0)))),
+            startedOn = today.minus(200, DateTimeUnit.DAY),
+        )
+
+        val first = raw {
+            client.post("/v1/reports/pdf") {
+                auth(her.token)
+                json(uz.sadora.contract.PdfReportRequest(months = 3, language = Language.RU))
+            }
+        }
+        assertEquals(HttpStatusCode.OK, first.status, first.bodyAsTextSafe())
+        assertEquals(ContentType.Application.Pdf, first.contentType()?.withoutParameters())
+        val bytes = first.readRawBytes()
+        assertEquals("%PDF", bytes.copyOfRange(0, 4).decodeToString())
+        val text = org.apache.pdfbox.Loader.loadPDF(bytes).use { org.apache.pdfbox.text.PDFTextStripper().getText(it) }
+        assertTrue("Отчёт для врача" in text, "the report is in the language she chose")
+        assertTrue("Гемоглобин" in text)
+
+        // The free month is spent; a second one asks for Premium or next month.
+        val second = raw { client.post("/v1/reports/pdf") { auth(her.token); json(uz.sadora.contract.PdfReportRequest()) } }
+        assertNotEquals(HttpStatusCode.OK, second.status)
+        val none = raw { client.post("/v1/reports/pdf") { auth(her.token); json(uz.sadora.contract.PdfReportRequest(sections = emptyList())) } }
+        assertEquals(HttpStatusCode.BadRequest, none.status)
+
+        // The doctor's QR page links the PDF, and downloading it costs her nothing.
+        val share = post<ProfileShare>("/v1/me/shares", her.token, CreateShareRequest(ttlHours = 2))
+        val token = assertNotNull(share.url).substringAfterLast("/")
+        assertTrue("$token/pdf" in client.get("/share/$token").bodyAsText())
+        val fromQr = client.get("/share/$token/pdf?lang=uz")
+        assertEquals(HttpStatusCode.OK, fromQr.status)
+        assertEquals("%PDF", fromQr.readRawBytes().copyOfRange(0, 4).decodeToString())
+
+        // With Premium she can send one into a consultation, where both sides can open it.
+        val premium = get<ShopCatalog>("/v1/shop", her.token).products.first { it.kind == ShopKind.PREMIUM }
+        val admin = adminToken()
+        post<CoinBalance>("/v1/admin/rewards/users/${her.userId}/adjust", admin, AdjustCoinsRequest(amount = premium.coinCost, note = "integration test"))
+        post<RedeemResult>("/v1/shop/redeem", her.token, RedeemRequest(premium.id))
+        val doctor = signUp().also { onboard(it) }
+        val profileId = approvedDoctor(doctor, admin, "Dr PDF ${Uuid.random().toString().take(6)}")
+        val thread = post<ConversationThread>("/v1/doctors/$profileId/consultations", her.token, uz.sadora.contract.StartConsultationRequest("Salom"))
+        val id = thread.conversation.id
+        val sent = post<DirectMessage>("/v1/community/conversations/$id/messages", her.token, SendMessageRequest(report = uz.sadora.contract.PdfReportRequest(months = 6)))
+        assertEquals(MessageKind.REPORT, sent.kind)
+        assertTrue(assertNotNull(sent.document).sizeBytes > 1000)
+        val seen = get<ConversationThread>("/v1/community/conversations/$id", doctor.token).messages.single { it.id == sent.id }
+        assertEquals(sent.document?.name, seen.document?.name)
+        val file = client.get("/v1/community/conversations/$id/messages/${sent.id}/document") { auth(doctor.token) }
+        assertEquals(HttpStatusCode.OK, file.status)
+        assertEquals("%PDF", file.readRawBytes().copyOfRange(0, 4).decodeToString())
+        // The doctor cannot send her one.
+        val fromDoctor = raw { client.post("/v1/community/conversations/$id/messages") { auth(doctor.token); json(SendMessageRequest(report = uz.sadora.contract.PdfReportRequest())) } }
+        assertEquals(HttpStatusCode.BadRequest, fromDoctor.status)
     }
 
     // ---------------------------------------------------------------- conditions

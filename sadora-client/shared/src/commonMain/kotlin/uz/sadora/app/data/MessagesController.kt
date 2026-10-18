@@ -283,6 +283,28 @@ class MessagesController(
         }
     }
 
+    /**
+     * Her report PDF into the open consultation: made on the server and kept with the line,
+     * so the doctor opens the same file. An allowance refusal comes back as false with
+     * [error] left for the caller to read.
+     */
+    suspend fun sendReport(request: uz.sadora.contract.PdfReportRequest): Boolean {
+        val api = api ?: return true
+        val thread = current?.takeIf { it.id.isNotEmpty() && it.consultation?.open == true } ?: return false
+        sendingAttachment = true
+        return try {
+            deliver(thread.id, SendMessageRequest(report = request)) != null
+        } finally {
+            sendingAttachment = false
+        }
+    }
+
+    /** A report's bytes, to open with the share sheet. Not cached: it is read rarely and may be large. */
+    suspend fun document(conversationId: String, messageId: String): ByteArray? {
+        val api = api ?: return null
+        return calls.run { api.messageDocument(conversationId, messageId) }
+    }
+
     private suspend fun deliver(conversationId: String, request: SendMessageRequest): WireMessage? {
         val api = api ?: return null
         val sent = calls.run { api.sendMessage(conversationId, request) }

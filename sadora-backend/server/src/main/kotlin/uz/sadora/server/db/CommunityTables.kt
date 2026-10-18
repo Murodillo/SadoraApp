@@ -171,3 +171,14 @@ object CommunityBlocks : Table("community_blocks") {
 
 /** The two states content can be in. Stored lowercase, like every other enum. */
 enum class ContentStatus { VISIBLE, HIDDEN }
+
+/** The file of a `report` message (V59): her PDF, kept with the line it was sent in. */
+object CommunityMessageDocuments : Table("community_message_documents") {
+    val messageId = uuid("message_id").references(CommunityMessages.id)
+    val name = text("name")
+    val mimeType = text("mime_type")
+    val content = binary("content")
+    val createdAt = timestampWithTimeZone("created_at")
+
+    override val primaryKey = PrimaryKey(messageId)
+}

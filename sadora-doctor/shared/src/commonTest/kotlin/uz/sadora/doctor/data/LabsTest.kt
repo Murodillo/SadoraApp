@@ -27,7 +27,7 @@ class LabsTest {
     }
 
     @Test
-    fun `a result is the number or the printed text, with its unit`() {
+    fun `a result is the number or the printed text with its unit`() {
         assertEquals("104 g/L", labResult(row(value = 104.0, unit = "g/L")))
         assertEquals("manfiy", labResult(row(valueText = "manfiy")))
         assertEquals("1:160", labResult(row(valueText = " 1:160 ", unit = " ")))

@@ -209,6 +209,13 @@ object ErrorText {
         Entry("Retsept topilmadi", "Рецепт не найден", "Prescription not found"),
         Entry("Tahlil topilmadi", "Анализ не найден", "Lab result not found"),
         Entry("Chaqaloq topilmadi", "Ребёнок не найден", "Baby not found"),
+        Entry("Hisobot topilmadi", "Отчёт не найден", "Report not found"),
+        Entry("Kamida bitta bo'limni tanlang", "Выберите хотя бы один раздел", "Choose at least one section"),
+        Entry(
+            "Hisobotni faqat bemorning o'zi shifokoriga yuboradi",
+            "Отчёт отправляет врачу только сама пациентка",
+            "Only the patient sends her report to her doctor",
+        ),
         Entry("Chaqaloqni tanlang", "Выберите ребёнка", "Choose the baby"),
         Entry("Chaqaloq allaqachon uxlayapti", "Малыш уже спит", "The baby is already asleep"),
         Entry("Uyqu vaqti noto'g'ri", "Неверная длительность сна", "The sleep time is not valid"),

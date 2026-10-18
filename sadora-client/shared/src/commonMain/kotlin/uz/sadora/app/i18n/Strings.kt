@@ -70,6 +70,7 @@ interface Strings {
     val labs: LabStrings
     val babies: BabyStrings
     val conditions: ConditionStrings
+    val reports: ReportStrings
     val pet: PetStrings
     val widgets: WidgetUiStrings
     val frames: FrameStrings

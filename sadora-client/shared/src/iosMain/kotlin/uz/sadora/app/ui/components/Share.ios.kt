@@ -7,6 +7,7 @@ import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.usePinned
 import platform.Foundation.create
+import platform.Foundation.writeToFile
 import platform.UIKit.UIActivityViewController
 import platform.UIKit.UIApplication
 
@@ -27,6 +28,22 @@ actual fun rememberImageShareAction(): (png: ByteArray, fileName: String) -> Uni
             platform.UIKit.UIImage(data = platform.Foundation.NSData.create(bytes = pinned.addressOf(0), length = png.size.toULong()))
         }
         val controller = UIActivityViewController(listOf(image), null)
+        UIApplication.sharedApplication.keyWindow?.rootViewController
+            ?.presentViewController(controller, animated = true, completion = null)
+    }
+}
+
+@OptIn(ExperimentalForeignApi::class, kotlinx.cinterop.BetaInteropApi::class)
+@Composable
+actual fun rememberFileShareAction(): (bytes: ByteArray, fileName: String, mimeType: String) -> Unit = remember {
+    { bytes, fileName, _ ->
+        // A file URL rather than the bare data, so Mail, Telegram and Files keep the name.
+        val path = platform.Foundation.NSTemporaryDirectory() + fileName
+        val data = bytes.usePinned { pinned ->
+            platform.Foundation.NSData.create(bytes = pinned.addressOf(0), length = bytes.size.toULong())
+        }
+        data.writeToFile(path, atomically = true)
+        val controller = UIActivityViewController(listOf(platform.Foundation.NSURL.fileURLWithPath(path)), null)
         UIApplication.sharedApplication.keyWindow?.rootViewController
             ?.presentViewController(controller, animated = true, completion = null)
     }

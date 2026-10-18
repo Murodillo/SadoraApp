@@ -44,7 +44,8 @@
             android:value="@string/push_channel_id" />
 
         <!-- The file the phone's camera app writes her profile photo into: one file in the
-             cache, shared for the length of the capture and deleted once it is read. -->
+             cache, shared for the length of the capture and deleted once it is read; and a
+             patient's PDF report, handed to a viewer. -->
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.photos"

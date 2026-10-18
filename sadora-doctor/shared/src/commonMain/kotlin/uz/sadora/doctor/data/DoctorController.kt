@@ -673,6 +673,10 @@ class DoctorController(
         return bytes
     }
 
+    /** A report's PDF, fetched each time it is opened: it is large and opened rarely. */
+    suspend fun document(conversationId: String, messageId: String): ByteArray? =
+        (community?.document(conversationId, messageId) as? ApiResult.Success)?.value
+
     /** Pages of lab sheets already fetched, the most recently looked at kept. */
     private val labPhotos = PhotoCache<ByteArray>(LabPhotosKept)
 

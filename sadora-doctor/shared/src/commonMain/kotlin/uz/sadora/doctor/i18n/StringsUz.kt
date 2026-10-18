@@ -118,5 +118,6 @@ object StringsUz : Strings {
     override val badges: BadgeStrings = BadgeStringsUz
     override val prescriptions: PrescriptionStrings = PrescriptionStringsUz
     override val labs: LabStrings = LabStringsUz
+    override val reports: ReportStrings = ReportStringsUz
     override val conditions: ConditionStrings = ConditionStringsUz
 }

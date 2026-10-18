@@ -77,6 +77,10 @@ class CommunityApi(private val caller: ApiCaller) {
     suspend fun image(conversationId: String, messageId: String): ApiResult<ByteArray> =
         caller.authenticated("v1/community/conversations/$conversationId/messages/$messageId/image", HttpMethodKind.GET)
 
+    /** The PDF behind a `report` line, as the bytes the server made. */
+    suspend fun document(conversationId: String, messageId: String): ApiResult<ByteArray> =
+        caller.authenticated("v1/community/conversations/$conversationId/messages/$messageId/document", HttpMethodKind.GET)
+
     /** A page of the lab sheet a patient sent as a line of the thread; [page] counts from 0. */
     suspend fun labPhoto(conversationId: String, messageId: String, page: Int): ApiResult<ByteArray> =
         caller.authenticated("v1/community/conversations/$conversationId/messages/$messageId/lab-photos/$page", HttpMethodKind.GET)

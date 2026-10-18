@@ -89,6 +89,18 @@ fun Route.publicShareRoutes(shares: ShareService) {
                 call.respondBytes(photo.bytes, ContentType.parse(photo.mimeType))
             }
 
+            /** The same document as a PDF, for the doctor to keep or print. */
+            get("/pdf") {
+                val token = call.parameters["token"].orEmpty()
+                val language = call.request.queryParameters["lang"]?.let(::languageOf)
+                val context = call.requestContext()
+                val file = shares.openPdf(token, language, context.ip, context.userAgent)
+                    ?: return@get call.respond(HttpStatusCode.NotFound, Ack(false))
+                call.response.header("Cache-Control", "no-store")
+                call.response.header("Content-Disposition", "attachment; filename=\"${file.name}\"")
+                call.respondBytes(file.bytes, ContentType.Application.Pdf)
+            }
+
             get("/json") {
                 val token = call.parameters["token"].orEmpty()
                 val language = call.request.queryParameters["lang"]?.let(::languageOf)

@@ -118,6 +118,13 @@ fun Route.communityRoutes(community: CommunityService, messaging: MessagingServi
                         call.response.header(HttpHeaders.CacheControl, "private, no-store")
                         call.respondBytes(image.bytes, ContentType.parse(image.mimeType))
                     }
+                    /** The PDF behind a `report` line. Private, so never cached. */
+                    get("/messages/{messageId}/document") {
+                        val (name, bytes) = messaging.document(call.requireUserId(), call.conversationId(), call.messageId())
+                        call.response.header(HttpHeaders.CacheControl, "private, no-store")
+                        call.response.header(HttpHeaders.ContentDisposition, "attachment; filename=\"$name\"")
+                        call.respondBytes(bytes, ContentType.Application.Pdf)
+                    }
                     /** A page of the lab sheet behind a `lab` line. Private, so never cached. */
                     get("/messages/{messageId}/lab-photos/{page}") {
                         val page = call.parameters["page"]?.toIntOrNull()?.takeIf { it >= 0 }

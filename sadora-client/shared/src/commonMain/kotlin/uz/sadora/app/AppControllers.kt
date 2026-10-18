@@ -59,6 +59,8 @@ class AppControllers(
     val babies: BabyController = BabyController(null, StageEventsController(null)),
     /** PCOS and endometriosis: what she marked, the pain diary and the report. */
     val conditions: ConditionController = ConditionController(null),
+    /** The doctor's report PDF and her month's free one. */
+    val reports: uz.sadora.app.data.ReportController = uz.sadora.app.data.ReportController(null),
     val pet: PetController,
     val frames: FrameController,
     val analytics: Analytics,
@@ -91,6 +93,7 @@ class AppControllers(
             labs = graph?.labController() ?: LabController(null),
             babies = graph?.babyController(stageEvents) ?: BabyController(null, stageEvents),
             conditions = graph?.conditionController() ?: ConditionController(null),
+            reports = graph?.reportController() ?: uz.sadora.app.data.ReportController(null),
             pet = graph?.petController(state) ?: PetController(null, state),
             frames = graph?.frameController(state) ?: FrameController(null, state),
             analytics = graph?.analytics ?: Analytics.None,

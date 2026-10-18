@@ -64,6 +64,9 @@ object DoctorPage {
             append("</div></section>")
 
             append("<p class=\"note\">${esc(t.disclaimer)}</p>")
+            if (token != null) {
+                append("<p><a class=\"pdf\" href=\"${esc(token)}/pdf?lang=${language.name.lowercase()}\">${esc(t.downloadPdf)}</a></p>")
+            }
 
             // ---- cycle
             summary.cycle?.let { c ->
@@ -412,6 +415,7 @@ object DoctorPage {
     private val CSS = """
         :root{--bg:#f7f5ff;--card:#fff;--ink:#1a1630;--muted:#6f6a8a;--line:#eae6fa;--primary:#6247e0;--pink:#ff6fb8;--warn:#9a6200}
         *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 -apple-system,Segoe UI,Roboto,sans-serif;overflow-wrap:anywhere}
+        .pdf{display:inline-block;padding:10px 16px;border-radius:999px;background:var(--primary);color:#fff;font-weight:600;text-decoration:none}
         .top{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;background:linear-gradient(90deg,#7b61ff,#ff6fb8);color:#fff}
         .brand{font-weight:800;letter-spacing:.18em}.lang a{color:#fff;opacity:.7;margin-left:10px;text-decoration:none;font-weight:600}.lang a.on{opacity:1;text-decoration:underline}
         main{max-width:920px;margin:0 auto;padding:16px}section{background:var(--card);border-radius:18px;padding:16px 18px;margin:0 0 14px;box-shadow:0 6px 24px rgba(123,97,255,.08);overflow-x:auto}
@@ -519,6 +523,7 @@ internal class PageText private constructor(private val language: Language) {
         uz.sadora.contract.PainArea.LEGS -> pick("oyoqlar", "ноги", "legs")
         uz.sadora.contract.PainArea.RECTUM -> pick("to'g'ri ichak", "прямая кишка", "rectum")
     }
+    val downloadPdf get() = pick("PDF yuklab olish", "Скачать PDF", "Download PDF")
     val labsTitle get() = pick("Tahlil natijalari", "Результаты анализов", "Lab results")
     val labsNote get() = pick(
         "Bemor kiritgan yoki tahlil varag'i suratidan o'qilgan natijalar. Past/yuqori belgisi laboratoriya ko'rsatgan norma bo'yicha.",

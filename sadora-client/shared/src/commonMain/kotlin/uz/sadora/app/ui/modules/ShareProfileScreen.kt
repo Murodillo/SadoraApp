@@ -68,6 +68,8 @@ fun ShareProfileScreen(
     onClose: () -> Unit,
     onToast: (String) -> Unit,
     modifier: Modifier = Modifier,
+    /** The PDF made from the same records, for a doctor who is not in front of her. */
+    onOpenReport: () -> Unit = {},
 ) {
     val t = strings.share
     val c = Sadora.colors
@@ -170,6 +172,8 @@ fun ShareProfileScreen(
                     t.excludes.forEach { line -> Bullet(line, "–", c.muted2) }
                 }
             }
+
+            item { LinkCard(Res.drawable.ic3d_notebook, strings.reports.title + " (PDF)", strings.reports.linkNote, onOpenReport) }
 
             item { DisclaimerNote(t.privacyNote) }
         }

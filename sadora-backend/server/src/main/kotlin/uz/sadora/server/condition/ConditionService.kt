@@ -163,12 +163,12 @@ class ConditionService(
     }
 
     /** For the doctor's page: her conditions and 90 days of pain; null when she marked none. */
-    suspend fun shared(userId: Uuid, today: LocalDate): SharedConditions? {
+    suspend fun shared(userId: Uuid, today: LocalDate, days: Int = SHARED_PAIN_DAYS): SharedConditions? {
         val marked = conditions.conditionsOf(userId)
         if (marked.isEmpty()) return null
-        val from = today.minus(SHARED_PAIN_DAYS - 1, DateTimeUnit.DAY)
+        val from = today.minus(days - 1, DateTimeUnit.DAY)
         val pain = conditions.pain(userId, from, today)
-        return SharedConditions(marked, summary(pain, SHARED_PAIN_DAYS).takeIf { it.daysLogged > 0 })
+        return SharedConditions(marked, summary(pain, days).takeIf { it.daysLogged > 0 })
     }
 
     suspend fun hasPcos(userId: Uuid): Boolean = conditions.has(userId, HealthCondition.PCOS)

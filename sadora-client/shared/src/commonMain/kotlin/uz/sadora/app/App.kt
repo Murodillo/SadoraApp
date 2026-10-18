@@ -1278,6 +1278,12 @@ private fun PushedScreen(
             onUpgrade = upgrade,
             onShowDoctor = { navigator.push(Route.ShareProfile) },
         )
+        Route.DoctorReport -> uz.sadora.app.ui.modules.DoctorReportScreen(
+            reports = controllers.reports,
+            language = state.language,
+            onClose = close,
+            onUpgrade = upgrade,
+        )
         is Route.LabReport -> uz.sadora.app.ui.modules.LabReportScreen(
             id = route.id,
             labs = controllers.labs,
@@ -1442,6 +1448,8 @@ private fun PushedScreen(
             labs = controllers.labs,
             onOpenLab = { navigator.push(Route.LabReport(it)) },
             onOpenLabs = { navigator.push(Route.Labs) },
+            reports = controllers.reports,
+            onUpgrade = upgrade,
         )
 
         // Her account, behind the avatar in the home header.
@@ -1469,7 +1477,12 @@ private fun PushedScreen(
             },
             onClose = close,
         )
-        Route.ShareProfile -> ShareProfileScreen(controllers.share, close, onToast = toast)
+        Route.ShareProfile -> ShareProfileScreen(
+            controllers.share,
+            close,
+            onToast = toast,
+            onOpenReport = { navigator.push(Route.DoctorReport) },
+        )
         Route.Yaqinim -> YaqinimScreen(
             state = state,
             partner = controllers.partner,

@@ -3,6 +3,7 @@ package uz.sadora.doctor.ui.doctor
 import uz.sadora.doctor.resources.Res
 import uz.sadora.doctor.resources.ic3d_camera
 import uz.sadora.doctor.resources.ic3d_meds
+import uz.sadora.doctor.resources.ic3d_notebook
 import uz.sadora.doctor.resources.ic3d_record
 import uz.sadora.doctor.resources.ic3d_message
 import androidx.compose.animation.AnimatedVisibility
@@ -215,7 +216,7 @@ private fun ConversationRow(chat: Conversation, onClick: () -> Unit) {
     }
 }
 
-/** "Rasm: caption", "Bemor kartasi", "Tahlil natijalari", or the line itself; the kind's mark is [previewArt]. */
+/** "Rasm: caption", "Bemor kartasi", "Tahlil natijalari", "Hisobot (PDF)", or the line itself; the kind's mark is [previewArt]. */
 @Composable
 private fun previewOf(chat: Conversation): String {
     val t = strings.tabs
@@ -226,6 +227,7 @@ private fun previewOf(chat: Conversation): String {
         MessageKind.RECORD -> t.record
         MessageKind.PRESCRIPTION -> strings.prescriptions.title
         MessageKind.LAB -> strings.labs.title
+        MessageKind.REPORT -> strings.reports.title
     }
 }
 
@@ -236,6 +238,7 @@ private fun previewArt(kind: MessageKind): DrawableResource? = when (kind) {
     MessageKind.RECORD -> Res.drawable.ic3d_record
     MessageKind.PRESCRIPTION -> Res.drawable.ic3d_meds
     MessageKind.LAB -> LabArt
+    MessageKind.REPORT -> Res.drawable.ic3d_notebook
 }
 
 @Composable
@@ -744,6 +747,18 @@ private fun MessageBubble(
         }
         return
     }
+    message.document?.takeIf { message.kind == MessageKind.REPORT }?.let { document ->
+        Column(Modifier.fillMaxWidth(), horizontalAlignment = if (mine) Alignment.End else Alignment.Start) {
+            ReportMessageCard(document, conversationId, message.id, doctors)
+            Text(
+                clock(message.createdAt),
+                style = Sadora.type.caption.copy(letterSpacing = TextUnit.Unspecified),
+                color = c.muted2,
+                modifier = Modifier.padding(top = 2.dp, end = Spacing.xs),
+            )
+        }
+        return
+    }
     message.prescription?.takeIf { message.kind == MessageKind.PRESCRIPTION }?.let { prescription ->
         Column(Modifier.fillMaxWidth(), horizontalAlignment = if (mine) Alignment.End else Alignment.Start) {
             PrescriptionCard(
@@ -784,8 +799,8 @@ private fun MessageBubble(
                     Text(t.recordCardBody, style = Sadora.type.body, color = fg)
                     PillButton(t.viewRecord, onClick = onOpenRecord)
                 }
-                // A prescription whose structured copy is missing reads as its text.
-                MessageKind.TEXT, MessageKind.PRESCRIPTION -> Text(message.body, style = Sadora.type.body, color = fg)
+                // A prescription or report whose structured copy is missing reads as its text.
+                MessageKind.TEXT, MessageKind.PRESCRIPTION, MessageKind.REPORT -> Text(message.body, style = Sadora.type.body, color = fg)
                 // A sheet she has deleted since: the text sent with it is all that is left.
                 MessageKind.LAB -> {
                     Text(message.body, style = Sadora.type.body, color = fg)

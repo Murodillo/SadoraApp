@@ -19,5 +19,9 @@ expect fun rememberShareAction(): (String) -> Unit
 @Composable
 expect fun rememberImageShareAction(): (png: ByteArray, fileName: String) -> Unit
 
+/** Hands a file to the share sheet by its bytes: the doctor report PDF goes out this way. */
+@Composable
+expect fun rememberFileShareAction(): (bytes: ByteArray, fileName: String, mimeType: String) -> Unit
+
 /** The bitmap as PNG bytes, for [rememberImageShareAction]. */
 expect fun androidx.compose.ui.graphics.ImageBitmap.encodePng(): ByteArray

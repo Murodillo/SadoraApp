@@ -4118,13 +4118,15 @@ textarea {
 
 /* ---------------------------------------------------------------- lab results */
 
-.msg.lab .msg-bubble {
+.msg.lab .msg-bubble,
+.msg.report .msg-bubble {
   background: transparent;
   padding: 0;
   box-shadow: none;
 }
 
-.lab-card .rx-foot {
+.lab-card .rx-foot,
+.report-card .rx-foot {
   flex-wrap: wrap;
 }
 

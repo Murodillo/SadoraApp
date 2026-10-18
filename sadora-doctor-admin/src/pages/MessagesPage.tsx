@@ -40,6 +40,7 @@ import {
 } from '../components/labels'
 import { LabCard, labLinePhotoPath, LabReportDialog, labRecordPhotoPath } from '../components/LabReport'
 import { PatientRecord } from '../components/PatientRecord'
+import { ReportCard } from '../components/ReportDocument'
 import { CancelPrescriptionDialog, PatientPrescriptions, PrescriptionCard, PrescriptionDialog } from '../components/Prescription'
 import { useToast } from '../components/toast'
 import {
@@ -136,6 +137,8 @@ function lastLine(conversation: Conversation): string {
       return '💊 Retsept'
     case 'lab':
       return '🧪 Tahlil natijalari'
+    case 'report':
+      return '📄 Hisobot (PDF)'
     default:
       return conversation.lastMessage ?? ''
   }
@@ -626,11 +629,12 @@ function MessageBubble({
     </span>
   )
 
-  // A lab line whose sheet she has since deleted keeps only its plain-text copy, drawn
-  // as an ordinary line.
+  // A lab line whose sheet she has since deleted, or a report line without its file,
+  // keeps only its plain-text copy, drawn as an ordinary line.
   const [openLab, setOpenLab] = useState(false)
   const labReport = kind === 'lab' ? message.labReport : null
-  const lineKind = kind === 'lab' && !labReport ? 'text' : kind
+  const reportDocument = kind === 'report' ? message.document : null
+  const lineKind = (kind === 'lab' && !labReport) || (kind === 'report' && !reportDocument) ? 'text' : kind
 
   let content: ReactNode
   const prescription = kind === 'prescription' ? message.prescription : null
@@ -658,6 +662,8 @@ function MessageBubble({
     )
   } else if (labReport) {
     content = <LabCard report={labReport} onOpen={() => setOpenLab(true)} />
+  } else if (reportDocument) {
+    content = <ReportCard conversationId={conversationId} messageId={message.id} document={reportDocument} />
   } else if (kind === 'image') {
     content = (
       <>

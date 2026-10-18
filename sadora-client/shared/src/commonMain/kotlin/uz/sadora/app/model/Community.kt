@@ -167,7 +167,7 @@ data class ConsultationWindow(
 }
 
 /** What a line carries. Mirrors the wire enum without depending on it. */
-enum class MessageKind { Text, Image, Record, Prescription, Lab }
+enum class MessageKind { Text, Image, Record, Prescription, Lab, Report }
 
 /** A photo's pixel size, known before the picture itself, so the bubble keeps its place. */
 data class MessageImageSize(val width: Int, val height: Int) {
@@ -191,6 +191,8 @@ data class DirectMessage(
     val prescription: uz.sadora.contract.Prescription? = null,
     /** Set on a lab line while the sheet still exists; without it the line reads as its text. */
     val labReport: uz.sadora.contract.LabReport? = null,
+    /** Set on her report PDF: its name and size. The bytes are fetched separately, by [id]. */
+    val document: uz.sadora.contract.MessageDocument? = null,
 )
 
 /**

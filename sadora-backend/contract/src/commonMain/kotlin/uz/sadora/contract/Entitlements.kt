@@ -36,6 +36,9 @@ object FeatureKeys {
     /** The 3–6 month condition report (PCOS, endometriosis). Premium; the tracking is free. */
     const val CONDITION_REPORT = "condition_report"
 
+    /** The doctor's PDF report. One a month free, Premium unmetered. */
+    const val DOCTOR_REPORT_PDF = "doctor_report_pdf"
+
     /** Wearing an earned badge after her name. Premium; earning badges stays free. */
     const val BADGE_WEAR = "badge_wear"
 

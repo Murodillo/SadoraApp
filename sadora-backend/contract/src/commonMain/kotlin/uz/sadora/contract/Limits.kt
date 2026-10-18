@@ -120,6 +120,9 @@ object Limits {
     const val PAINKILLER_NAME_MAX = 60
     const val PAIN_NOTE_MAX = 300
     val CONDITION_REPORT_MONTHS = setOf(3, 6)
+    /** The PDF report's choices; and the largest one the server will make. */
+    val REPORT_MONTHS = setOf(3, 6)
+    const val REPORT_MAX_BYTES = 5_000_000
 
     // ---- babies
     const val BABIES_MAX = 6

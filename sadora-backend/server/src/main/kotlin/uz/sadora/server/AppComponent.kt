@@ -388,6 +388,8 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
         prescriptions = prescriptionRepository,
         wornFrames = frameRepository::wornBy,
         labs = labService,
+        // Read at call time: the share service is built further down.
+        reports = { userId, request -> reportService.pdf(userId, request) },
     )
     val prescriptionService = PrescriptionService(
         prescriptions = prescriptionRepository,
@@ -499,6 +501,7 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
         labs = labService,
         conditions = conditionService,
     )
+    val reportService = uz.sadora.server.share.ReportService(shareService, healthAccess)
 
     /** Yaqinim: built from her records at read time, through the same services as the app. */
     val partnerRepository = uz.sadora.server.partner.PartnerRepository()

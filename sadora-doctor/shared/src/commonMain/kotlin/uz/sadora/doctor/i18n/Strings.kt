@@ -44,6 +44,7 @@ interface Strings {
     val badges: BadgeStrings
     val prescriptions: PrescriptionStrings
     val labs: LabStrings
+    val reports: ReportStrings
     val conditions: ConditionStrings
 }
 

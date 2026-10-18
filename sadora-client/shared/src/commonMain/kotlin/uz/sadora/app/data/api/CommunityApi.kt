@@ -108,6 +108,13 @@ class CommunityApi(private val caller: ApiCaller) {
             HttpMethodKind.GET,
         )
 
+    /** Her report PDF's bytes, for either side of the consultation; never cached by the server. */
+    suspend fun messageDocument(conversationId: String, messageId: String): ApiResult<ByteArray> =
+        caller.authenticated(
+            "v1/community/conversations/$conversationId/messages/$messageId/document",
+            HttpMethodKind.GET,
+        )
+
     /**
      * The record she attached, as the doctor reads it — so she can see exactly what she
      * shared. She may always read her own; the doctor only while the consultation is open.

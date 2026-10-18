@@ -212,7 +212,7 @@ private fun ConditionCard(
 }
 
 @Composable
-private fun LinkCard(art: org.jetbrains.compose.resources.DrawableResource, title: String, body: String, onClick: () -> Unit) {
+internal fun LinkCard(art: org.jetbrains.compose.resources.DrawableResource, title: String, body: String, onClick: () -> Unit) {
     val c = Sadora.colors
     SadoraCard(padding = Spacing.sm, onClick = onClick, verticalGap = 0.dp) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {

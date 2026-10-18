@@ -168,6 +168,7 @@ private class ReportedMessage(val body: String, val status: ContentStatus, val k
         MessageKind.RECORD -> "[tibbiy karta]"
         MessageKind.PRESCRIPTION -> "[retsept] $body"
         MessageKind.LAB -> "[tahlil natijalari]"
+        MessageKind.REPORT -> "[hisobot PDF]"
     }
 }
 

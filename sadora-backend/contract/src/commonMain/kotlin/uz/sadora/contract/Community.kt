@@ -209,6 +209,9 @@ enum class MessageKind(val wire: String) {
 
     /** One of the patient's lab sheets, sent to her doctor: [DirectMessage.labReport]; [DirectMessage.body] is it as plain text. */
     LAB("lab"),
+
+    /** Her PDF report, sent to her doctor: [DirectMessage.document]; [DirectMessage.body] says what it is. */
+    REPORT("report"),
 }
 
 object MessageKindSerializer : KSerializer<MessageKind> {
@@ -245,6 +248,8 @@ data class DirectMessage(
      * correction she makes reaches the card, and a sheet she deleted leaves only [body].
      */
     val labReport: LabReport? = null,
+    /** Set on a [MessageKind.REPORT] line: the file, fetched as `…/messages/{id}/document`. */
+    val document: MessageDocument? = null,
 )
 
 /**
@@ -289,6 +294,8 @@ data class SendMessageRequest(
     val attachRecord: Boolean = false,
     /** In a consultation, from the patient: one of her lab sheets, sent as a card. */
     val labReportId: String? = null,
+    /** In a consultation, from the patient: her PDF report, made now and sent as a file. */
+    val report: PdfReportRequest? = null,
 )
 
 /** A photo, resized by the phone and sent base64 like a document page. */

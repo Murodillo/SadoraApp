@@ -328,6 +328,7 @@ class MedicationService(
         const val MAX_INTERVAL_DAYS = 90
         const val MAX_STOCK = Limits.MEDICATION_STOCK_MAX
         const val MAX_REFILL = 10_000
-        const val MAX_HISTORY_DAYS = 180
+        /** Six calendar months can be 184 days: the PDF report asks for that much. */
+        const val MAX_HISTORY_DAYS = 186
     }
 }
