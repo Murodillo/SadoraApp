@@ -118,11 +118,13 @@ fun JourneyScreen(
     onPregnancyEnded: () -> Unit = {},
     /** Her babies, for the postpartum page's way into the baby tracker. */
     babies: uz.sadora.app.data.BabyController = uz.sadora.app.data.BabyController(null, tools),
+    /** PCOS and endometriosis: the pain diary's card on the cycle page. */
+    conditions: uz.sadora.app.data.ConditionController = uz.sadora.app.data.ConditionController(null),
 ) {
     val t = strings.journey
     Column(modifier) {
         when (state.lifeStage) {
-            LifeStage.Cycle, LifeStage.TryingToConceive -> CycleJourney(state, health, onOpen)
+            LifeStage.Cycle, LifeStage.TryingToConceive -> CycleJourney(state, health, conditions, onOpen)
             LifeStage.Pregnancy -> PregnancyJourney(state, health, tools, onOpen, onPregnancyEnded)
             LifeStage.Postpartum -> PostpartumJourney(state, health, tools, babies, onOpen)
             LifeStage.Perimenopause -> PerimenopauseJourney(state, health, tools, onOpen)
@@ -150,7 +152,12 @@ private fun CyclePhase.dialColor(dark: Boolean): Color = when (this) {
  * with the lotus, and the symptom tiles.
  */
 @Composable
-private fun CycleJourney(state: AppState, health: HealthController, onOpen: (Route) -> Unit) {
+private fun CycleJourney(
+    state: AppState,
+    health: HealthController,
+    conditions: uz.sadora.app.data.ConditionController,
+    onOpen: (Route) -> Unit,
+) {
     val t = strings.journey
     val c = Sadora.colors
     val phase = state.currentPhase()
@@ -222,6 +229,10 @@ private fun CycleJourney(state: AppState, health: HealthController, onOpen: (Rou
         // no period on record, or a stage just switched to — the store still holds day 14
         // of 28, and this card told her she was fertile with 15 days to go.
         if (state.hasCyclePrediction) item { PhaseLegend() }
+        state.cycleAttention?.let { attention ->
+            item { uz.sadora.app.ui.modules.CycleAttentionCard(attention, onFindDoctor = { onOpen(Route.Doctors) }) }
+        }
+        item { uz.sadora.app.ui.modules.ConditionsJourneyCard(conditions, onOpen) }
 
         if (state.hasCyclePrediction) item {
             SadoraCard {
@@ -241,7 +252,8 @@ private fun CycleJourney(state: AppState, health: HealthController, onOpen: (Rou
                             // The badge is the part that must survive a narrow card: a
                             // prediction shown without it reads as a fact, so the line
                             // beside it gives way first.
-                            Text(
+                            // With a window below, a single countdown would contradict it.
+                            if (state.nextPeriodWindow == null) Text(
                                 t.daysToNextPeriod(state.daysToNextPeriod()),
                                 style = Sadora.type.body,
                                 color = c.muted,
@@ -249,6 +261,14 @@ private fun CycleJourney(state: AppState, health: HealthController, onOpen: (Rou
                                 modifier = Modifier.weight(1f, fill = false),
                             )
                             SadoraBadge(t.estimatedCaps, BadgeTone.Estimated, icon = SadoraIcons.Clock)
+                        }
+                        // An irregular cycle: the honest forecast is the window, on a line of its own.
+                        state.nextPeriodWindow?.let { (from, to) ->
+                            Text(
+                                strings.conditions.periodWindow(strings.dates.dayMonth(from), strings.dates.dayMonth(to)),
+                                style = Sadora.type.body.copy(fontWeight = FontWeight.SemiBold),
+                                color = c.text,
+                            )
                         }
                     }
                     LotusIllustration(Modifier.size(96.dp))

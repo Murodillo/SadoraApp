@@ -21,6 +21,7 @@ import uz.sadora.server.ai.aiRoutes
 import uz.sadora.server.frame.adminFrameRoutes
 import uz.sadora.server.frame.frameRoutes
 import uz.sadora.server.baby.babyRoutes
+import uz.sadora.server.condition.conditionRoutes
 import uz.sadora.server.lab.labRoutes
 import uz.sadora.server.pet.adminPetRoutes
 import uz.sadora.server.pet.petRoutes
@@ -169,6 +170,7 @@ fun Application.apiModule(component: AppComponent) {
             nutritionRoutes(component.nutritionService)
             labRoutes(component.labService)
             babyRoutes(component.babyService)
+            conditionRoutes(component.conditionService)
             medicationRoutes(component.medicationService)
             notificationRoutes(component.notificationService)
             adminNotificationRoutes(component.notificationService, component.auditService)

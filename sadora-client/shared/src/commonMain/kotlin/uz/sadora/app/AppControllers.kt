@@ -13,6 +13,7 @@ import uz.sadora.app.data.LearnController
 import uz.sadora.app.data.NotificationsController
 import uz.sadora.app.data.PetController
 import uz.sadora.app.data.BabyController
+import uz.sadora.app.data.ConditionController
 import uz.sadora.app.data.LabController
 import uz.sadora.app.data.StageEventsController
 import uz.sadora.app.data.PhotoController
@@ -56,6 +57,8 @@ class AppControllers(
     val labs: LabController = LabController(null),
     /** Her babies; tied to [stageEvents] so a feed lands on the baby on screen. */
     val babies: BabyController = BabyController(null, StageEventsController(null)),
+    /** PCOS and endometriosis: what she marked, the pain diary and the report. */
+    val conditions: ConditionController = ConditionController(null),
     val pet: PetController,
     val frames: FrameController,
     val analytics: Analytics,
@@ -87,6 +90,7 @@ class AppControllers(
             stageEvents = stageEvents,
             labs = graph?.labController() ?: LabController(null),
             babies = graph?.babyController(stageEvents) ?: BabyController(null, stageEvents),
+            conditions = graph?.conditionController() ?: ConditionController(null),
             pet = graph?.petController(state) ?: PetController(null, state),
             frames = graph?.frameController(state) ?: FrameController(null, state),
             analytics = graph?.analytics ?: Analytics.None,

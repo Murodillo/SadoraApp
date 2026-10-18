@@ -501,6 +501,9 @@ export interface CyclePrediction {
   reason: string
   nextPeriodStart?: string | null
   nextPeriodEnd?: string | null
+  /** A range for an irregular cycle: both set, or neither. */
+  nextPeriodEarliest?: string | null
+  nextPeriodLatest?: string | null
 }
 
 export interface CycleHistory {
@@ -624,6 +627,40 @@ export interface DoctorSummary {
   wearable?: SharedWearable | null
   /** Her lab sheets from the last 365 days, newest first, at most 20. */
   labs?: LabReport[]
+  /** Her conditions and 90 days of the pain diary; null when she marked none. */
+  conditions?: SharedConditions | null
+}
+
+// ---------------------------------------------------------------- conditions (Conditions.kt)
+
+export type HealthCondition = 'pcos' | 'endometriosis'
+export type ConditionStatus = 'diagnosed' | 'suspected'
+export type PainKind = 'period' | 'ovulation' | 'intercourse' | 'bowel' | 'urination' | 'constant'
+export type PainArea = 'lower_abdomen' | 'pelvis_left' | 'pelvis_right' | 'lower_back' | 'legs' | 'rectum'
+
+export interface UserCondition {
+  condition: HealthCondition
+  status: ConditionStatus
+  diagnosedOn?: string | null
+  updatedAt: string
+}
+
+/** A stretch of the pain diary summed. Levels are 0–10. */
+export interface PainSummary {
+  days: number
+  daysLogged: number
+  painDays: number
+  averageLevel?: number | null
+  maxLevel?: number
+  painkillerDays?: number
+  missedDays?: number
+  byKind?: Partial<Record<PainKind, number>>
+  byArea?: Partial<Record<PainArea, number>>
+}
+
+export interface SharedConditions {
+  conditions?: UserCondition[]
+  pain?: PainSummary | null
 }
 
 // ---------------------------------------------------------------- the doctor's workplace (DoctorWork.kt)

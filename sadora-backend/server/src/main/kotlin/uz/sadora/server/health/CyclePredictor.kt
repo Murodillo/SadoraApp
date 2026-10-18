@@ -49,6 +49,13 @@ object CyclePredictor {
     /** Spread across the observed cycles beyond which the user counts as irregular. */
     private const val IRREGULAR_SPREAD_DAYS = 8
 
+    /** Each side of the date when the cycle is irregular but its spread not yet seen. */
+    private const val UNKNOWN_SPREAD_DAYS = 7
+
+    /** What a gynaecologist calls a long cycle, and how long without a period is worth a visit. */
+    private const val LONG_CYCLE_DAYS = 35
+    private const val NO_PERIOD_DAYS = 90
+
     /** The luteal phase is the stable half, so ovulation is counted back from the next period. */
     private const val LUTEAL_PHASE_DAYS = 14
     private const val FERTILE_DAYS_BEFORE_OVULATION = 5
@@ -62,6 +69,11 @@ object CyclePredictor {
         periods: List<RecordedPeriod>,
         baseline: CycleBaselineData?,
         today: LocalDate,
+        /**
+         * A condition that makes cycles unpredictable (PCOS): the forecast is a range even
+         * before her own history shows the spread.
+         */
+        irregularByCondition: Boolean = false,
     ): CyclePrediction {
         if (!lifeStage.predictsCycle) {
             return CyclePrediction(
@@ -108,6 +120,17 @@ object CyclePredictor {
 
         val ovulation = nextStart.minus(LUTEAL_PHASE_DAYS, DateTimeUnit.DAY)
 
+        // An irregular cycle gets the window her own shortest and longest cycles allow; one
+        // with too little history to show a spread, but known to be irregular, a fortnight.
+        val window = when {
+            spread != null && spread >= IRREGULAR_SPREAD_DAYS ->
+                nextStart.minus(cycleLength - observed.min(), DateTimeUnit.DAY) to
+                    nextStart.plus(observed.max() - cycleLength, DateTimeUnit.DAY)
+            irregularByCondition || (observed.size < 2 && baseline?.isRegular == false) ->
+                nextStart.minus(UNKNOWN_SPREAD_DAYS, DateTimeUnit.DAY) to nextStart.plus(UNKNOWN_SPREAD_DAYS, DateTimeUnit.DAY)
+            else -> null
+        }?.let { (earliest, latest) -> maxOf(earliest, today) to maxOf(latest, today) }
+
         return CyclePrediction(
             confidence = confidence,
             reason = reason,
@@ -120,7 +143,31 @@ object CyclePredictor {
             averagePeriodLength = periodLength,
             variationDays = spread,
             basedOnCycles = observed.size,
+            nextPeriodEarliest = window?.first,
+            nextPeriodLatest = window?.second,
         )
+    }
+
+    /**
+     * Whether the cycle is worth a doctor's look: no period for 90 days, or cycles that run
+     * longer than 35 days on average. Null for every stage without a cycle, and while a
+     * period is under way.
+     */
+    fun attention(
+        lifeStage: LifeStage,
+        periods: List<RecordedPeriod>,
+        prediction: CyclePrediction,
+        today: LocalDate,
+    ): uz.sadora.contract.CycleAttention? {
+        if (!lifeStage.predictsCycle) return null
+        if (periods.any { it.endedOn == null && it.startedOn <= today }) return null
+        val last = periods.maxOfOrNull { it.startedOn } ?: return null
+        return when {
+            last.daysUntil(today) >= NO_PERIOD_DAYS -> uz.sadora.contract.CycleAttention.NO_PERIOD_90
+            prediction.basedOnCycles >= 2 && (prediction.averageCycleLength ?: 0) > LONG_CYCLE_DAYS ->
+                uz.sadora.contract.CycleAttention.LONG_CYCLES
+            else -> null
+        }
     }
 
     /** Gaps between consecutive period starts, with implausible ones dropped. */

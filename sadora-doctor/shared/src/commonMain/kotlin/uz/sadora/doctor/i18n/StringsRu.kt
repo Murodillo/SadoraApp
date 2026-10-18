@@ -123,4 +123,5 @@ object StringsRu : Strings {
     override val badges: BadgeStrings = BadgeStringsRu
     override val prescriptions: PrescriptionStrings = PrescriptionStringsRu
     override val labs: LabStrings = LabStringsRu
+    override val conditions: ConditionStrings = ConditionStringsRu
 }

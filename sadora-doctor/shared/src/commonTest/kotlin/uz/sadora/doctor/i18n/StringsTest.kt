@@ -176,6 +176,13 @@ class StringsTest {
             )
             uz.sadora.contract.LabFlag.entries.forEach { add(flag(it)) }
         }
+        with(t.conditions) {
+            addAll(listOf(title, painTitle(90), painTitle(1), painDays, averageLevel, maxLevel, painkillerDays, missedDays, whenTitle, whereTitle))
+            uz.sadora.contract.HealthCondition.entries.forEach { add(condition(it)) }
+            uz.sadora.contract.ConditionStatus.entries.forEach { add(status(it)) }
+            uz.sadora.contract.PainKind.entries.forEach { add(kind(it)) }
+            uz.sadora.contract.PainArea.entries.forEach { add(area(it)) }
+        }
     }
 
     @Test
@@ -236,6 +243,19 @@ class StringsTest {
     fun `the record's metrics are the same set in every language`() {
         val shown = languages.map { t -> HealthMetric.entries.filter { t.tabs.metric(it) != null } }
         assertEquals(1, shown.distinct().size, "$shown")
+    }
+
+    @Test
+    fun `pain kinds and areas are told apart within each language`() {
+        languages.forEach { t ->
+            val kinds = uz.sadora.contract.PainKind.entries.map { t.conditions.kind(it) }
+            assertEquals(kinds.size, kinds.distinct().size, "${t.language}: $kinds")
+            val areas = uz.sadora.contract.PainArea.entries.map { t.conditions.area(it) }
+            assertEquals(areas.size, areas.distinct().size, "${t.language}: $areas")
+        }
+        assertEquals("Og'riq kundaligi · so'nggi 90 kun", StringsUz.conditions.painTitle(90))
+        assertEquals("Дневник боли · последние 90 дней", StringsRu.conditions.painTitle(90))
+        assertEquals("Pain diary · last 1 day", StringsEn.conditions.painTitle(1))
     }
 
     @Test

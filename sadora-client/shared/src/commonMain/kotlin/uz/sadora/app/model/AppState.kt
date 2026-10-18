@@ -294,6 +294,10 @@ class AppState {
     /** The server's phase for today, when it has given one. */
     var cyclePhase by mutableStateOf<CyclePhase?>(null)
     var daysUntilNextPeriod by mutableStateOf<Int?>(null)
+    /** For an irregular cycle: the earliest and latest day the period may come. */
+    var nextPeriodWindow by mutableStateOf<Pair<LocalDate, LocalDate>?>(null)
+    /** A pattern worth a doctor's look — long cycles, or three months without a period. */
+    var cycleAttention by mutableStateOf<uz.sadora.contract.CycleAttention?>(null)
     var fertileFrom by mutableStateOf<LocalDate?>(null)
     var fertileUntil by mutableStateOf<LocalDate?>(null)
 
@@ -810,6 +814,8 @@ class AppState {
         // The server has not spoken yet, so anything it would have said is unknown.
         cyclePhase = null
         daysUntilNextPeriod = null
+        nextPeriodWindow = null
+        cycleAttention = null
         fertileFrom = null
         fertileUntil = null
     }

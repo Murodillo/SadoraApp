@@ -101,6 +101,10 @@ sealed interface Route {
     data object BabyGrowth : Route
     data object BabyVaccines : Route
     data object BabyMilestones : Route
+    /** "Holatlarim": PCOS and endometriosis, as she marks them. */
+    data object Conditions : Route
+    data object PainDiary : Route
+    data object ConditionReport : Route
     data object Sleep : Route
     data object Insights : Route
     data object Knowledge : Route

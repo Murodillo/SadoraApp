@@ -431,7 +431,8 @@ class BabyService(
             }
             return dates.map { date ->
                 val b = buckets.getValue(date)
-                BabyDay(date, b.feeds, b.breastSeconds / 60, b.bottleMl, (b.sleepSeconds / 60).toInt(), b.wet, b.dirty)
+                // Rounded, not truncated: a night split at midnight would otherwise lose a minute.
+                BabyDay(date, b.feeds, (b.breastSeconds + 30) / 60, b.bottleMl, ((b.sleepSeconds + 30) / 60).toInt(), b.wet, b.dirty)
             }
         }
 

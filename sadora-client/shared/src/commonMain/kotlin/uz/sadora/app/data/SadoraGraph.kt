@@ -186,6 +186,9 @@ class SadoraGraph(
 
     fun labController(): LabController = LabController(labApi)
 
+    fun conditionController(): ConditionController =
+        ConditionController(uz.sadora.app.data.api.ConditionApi(caller), wearableApi)
+
     fun babyController(tools: StageEventsController): BabyController =
         BabyController(uz.sadora.app.data.api.BabyApi(caller, stageEventApi), tools)
 

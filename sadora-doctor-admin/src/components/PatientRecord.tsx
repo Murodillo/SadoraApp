@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import type { CyclePhase, DoctorSummary, HealthMetric } from '../api/types'
+import type { CyclePhase, CyclePrediction, DoctorSummary, HealthCondition, HealthMetric, PainArea, PainKind, SharedConditions } from '../api/types'
 import { RecordLabs } from './LabReport'
 import type { LabPhotoPath } from './LabReport'
 import { lifeStageLabel, RECORD_DISCLAIMER } from './labels'
@@ -7,7 +7,7 @@ import { formatDateTime } from './ui'
 
 /*
  * The record a patient attached, drawn the way the doctor app's PatientRecordScreen
- * draws it: who she is, her cycle or pregnancy, what she has felt, what she takes, her
+ * draws it: who she is, her cycle, her conditions and pain diary, her pregnancy, what she has felt, what she takes, her
  * visits, her lab sheets, how she has been, food, and her devices. A section with nothing in it is left
  * out rather than drawn empty. The words are the doctor app's `TabStringsUz`.
  */
@@ -71,6 +71,45 @@ function metricValue(metric: HealthMetric, value: number): string {
   return [number, metricUnits[metric] ?? ''].filter(Boolean).join(' ')
 }
 
+const conditionLabels: Record<HealthCondition, string> = {
+  pcos: 'Polikistoz tuxumdon sindromi (PCOS)',
+  endometriosis: 'Endometrioz',
+}
+
+const painKindLabels: Record<PainKind, string> = {
+  period: 'Hayzda',
+  ovulation: 'Ovulyatsiyada',
+  intercourse: 'Jinsiy aloqada',
+  bowel: "Ichak bo'shatishda",
+  urination: 'Siyishda',
+  constant: 'Doimiy',
+}
+
+const painAreaLabels: Record<PainArea, string> = {
+  lower_abdomen: 'Qorin pasti',
+  pelvis_left: 'Tos (chap)',
+  pelvis_right: "Tos (o'ng)",
+  lower_back: 'Bel',
+  legs: 'Oyoqlar',
+  rectum: "To'g'ri ichak",
+}
+
+/** The counts above zero, most first; a tie keeps the labels' order, so the list never shuffles. */
+export function rankedCounts<K extends string>(counts: Partial<Record<K, number>> | undefined, order: readonly K[]): [K, number][] {
+  return order
+    .map((key) => [key, counts?.[key] ?? 0] as [K, number])
+    .filter(([, n]) => n > 0)
+    .sort((a, b) => b[1] - a[1])
+}
+
+/** The next period: a range when her cycle is too irregular for one day, else the day. */
+function nextPeriod(prediction: CyclePrediction | undefined): string | null {
+  if (prediction?.nextPeriodEarliest && prediction.nextPeriodLatest) {
+    return `${formatLocalDate(prediction.nextPeriodEarliest)} – ${formatLocalDate(prediction.nextPeriodLatest)}`
+  }
+  return prediction?.nextPeriodStart ? formatLocalDate(prediction.nextPeriodStart) : null
+}
+
 type Fact = [label: string, value: ReactNode]
 
 function Facts({ facts }: { facts: Fact[] }) {
@@ -105,6 +144,64 @@ function Section({ title, glyph, subtitle, children }: { title: string; glyph: s
 
 const present = <T,>(facts: (T | null | undefined | false | '')[]): T[] => facts.filter(Boolean) as T[]
 
+/**
+ * Her conditions — a suspected one in the warning tone, so it is not read as a diagnosis —
+ * then 90 days of the pain diary: how often and how hard, and when and where, most first.
+ */
+function ConditionsSection({ shared }: { shared: SharedConditions }) {
+  const conditions = shared.conditions ?? []
+  const pain = shared.pain
+  if (conditions.length === 0 && !pain) return null
+  const kinds = pain ? rankedCounts(pain.byKind, Object.keys(painKindLabels) as PainKind[]) : []
+  const areas = pain ? rankedCounts(pain.byArea, Object.keys(painAreaLabels) as PainArea[]) : []
+  return (
+    <Section title="Holatlar" glyph="🩷">
+      {conditions.length > 0 && (
+        <ul className="record-list">
+          {conditions.map((item) => (
+            <li key={item.condition}>
+              <b>{conditionLabels[item.condition] ?? item.condition}</b>
+              {item.status === 'diagnosed' ? (
+                <span className="faint">
+                  {present(['Shifokor tashxisi', item.diagnosedOn && formatLocalDate(item.diagnosedOn)]).join(' · ')}
+                </span>
+              ) : (
+                <span className="record-suspected">Gumon (tashxis yo'q)</span>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+      {pain && (
+        <>
+          <h5 className="record-subhead">Og'riq kundaligi · so'nggi {pain.days} kun</h5>
+          <Facts
+            facts={present<Fact>([
+              ["Og'riqli kunlar / qayd etilgan", `${pain.painDays} / ${pain.daysLogged}`],
+              pain.averageLevel != null && ["O'rtacha kuchi", `${oneDecimal(pain.averageLevel)} / 10`],
+              pain.painDays > 0 && ['Eng kuchli', `${pain.maxLevel ?? 0} / 10`],
+              ["Og'riq qoldiruvchi ichilgan kunlar", String(pain.painkillerDays ?? 0)],
+              ["Ish/o'qishga bora olmagan kunlar", String(pain.missedDays ?? 0)],
+            ])}
+          />
+          {kinds.length > 0 && (
+            <>
+              <h5 className="record-subhead">Qachon og'rigan</h5>
+              <Facts facts={kinds.map<Fact>(([kind, n]) => [painKindLabels[kind], `${n} kun`])} />
+            </>
+          )}
+          {areas.length > 0 && (
+            <>
+              <h5 className="record-subhead">Qayeri og'rigan</h5>
+              <Facts facts={areas.map<Fact>(([area, n]) => [painAreaLabels[area], `${n} kun`])} />
+            </>
+          )}
+        </>
+      )}
+    </Section>
+  )
+}
+
 export function PatientRecord({
   record,
   labPhotoPath,
@@ -133,10 +230,7 @@ export function PatientRecord({
         cycle.history.averagePeriodLength != null && ["O'rtacha hayz", `${cycle.history.averagePeriodLength} kun`],
         cycle.history.shortestCycle != null &&
           cycle.history.longestCycle != null && ['Diapazon', `${cycle.history.shortestCycle}–${cycle.history.longestCycle}`],
-        cycle.history.prediction?.nextPeriodStart && [
-          'Keyingi hayz',
-          `${formatLocalDate(cycle.history.prediction.nextPeriodStart)} (taxminiy)`,
-        ],
+        nextPeriod(cycle.history.prediction) && ['Keyingi hayz', `${nextPeriod(cycle.history.prediction)} (taxminiy)`],
       ])
     : []
 
@@ -189,6 +283,8 @@ export function PatientRecord({
           <Facts facts={cycleFacts} />
         </Section>
       )}
+
+      {record.conditions && <ConditionsSection shared={record.conditions} />}
 
       {(pregnancyFacts.length > 0 || lessMovement > 0) && (
         <Section title="Homiladorlik" glyph="🤰">

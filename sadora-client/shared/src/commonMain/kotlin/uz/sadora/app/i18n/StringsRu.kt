@@ -1566,6 +1566,7 @@ object StringsRu : Strings {
     override val prescriptions: PrescriptionStrings = PrescriptionStringsRu
     override val labs: LabStrings = LabStringsRu
     override val babies: BabyStrings = BabyStringsRu
+    override val conditions: ConditionStrings = ConditionStringsRu
     override val pet: PetStrings = PetRu
     override val widgets: WidgetUiStrings = WidgetUiRu
     override val frames: FrameStrings = FramesRu

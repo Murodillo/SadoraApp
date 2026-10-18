@@ -115,6 +115,12 @@ object Limits {
     const val LAB_SHARE_DAYS = 365
     const val LAB_SHARE_REPORTS_MAX = 20
 
+    // ---- conditions
+    val PAIN_LEVEL = 0..10
+    const val PAINKILLER_NAME_MAX = 60
+    const val PAIN_NOTE_MAX = 300
+    val CONDITION_REPORT_MONTHS = setOf(3, 6)
+
     // ---- babies
     const val BABIES_MAX = 6
     const val BABY_NAME_MAX = 40

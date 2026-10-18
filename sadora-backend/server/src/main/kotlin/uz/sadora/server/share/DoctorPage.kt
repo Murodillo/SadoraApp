@@ -158,6 +158,39 @@ object DoctorPage {
                 }
             }
 
+            // ---- conditions and the pain diary
+            summary.conditions?.let { shared ->
+                section(t.conditionsTitle) {
+                    append("<div class=\"facts\">")
+                    shared.conditions.forEach { c ->
+                        fact(
+                            uz.sadora.server.condition.ConditionWords.info(c.condition, language).name,
+                            t.conditionStatus(c.status) + (c.diagnosedOn?.let { " · " + date(it) } ?: ""),
+                        )
+                    }
+                    append("</div>")
+                    shared.pain?.let { p ->
+                        append("<h3>${esc(t.painTitle(p.days))}</h3><div class=\"facts\">")
+                        fact(t.painDays, "${p.painDays} / ${p.daysLogged}")
+                        fact(t.painAverage, p.averageLevel?.let { one(it) + " / 10" })
+                        fact(t.painMax, "${p.maxLevel} / 10")
+                        fact(t.painkillerDays, p.painkillerDays.toString())
+                        fact(t.missedDays, p.missedDays.toString())
+                        append("</div>")
+                        if (p.byKind.isNotEmpty()) {
+                            append("<p class=\"muted\">${esc(t.painKinds)}: ")
+                            append(p.byKind.entries.sortedByDescending { it.value }.joinToString(", ") { (k, n) -> esc(t.painKind(k)) + " — " + n })
+                            append("</p>")
+                        }
+                        if (p.byArea.isNotEmpty()) {
+                            append("<p class=\"muted\">${esc(t.painAreas)}: ")
+                            append(p.byArea.entries.sortedByDescending { it.value }.joinToString(", ") { (a, n) -> esc(t.painArea(a)) + " — " + n })
+                            append("</p>")
+                        }
+                    }
+                }
+            }
+
             // ---- lab results
             if (summary.labs.isNotEmpty()) {
                 section(t.labsTitle) {
@@ -457,6 +490,35 @@ internal class PageText private constructor(private val language: Language) {
     val schedule get() = pick("Jadval", "График", "Schedule")
     val period get() = pick("Davr", "Период", "Period")
     val adherence get() = pick("Qabul", "Приём", "Adherence")
+    val conditionsTitle get() = pick("Holatlar", "Состояния", "Conditions")
+    fun conditionStatus(status: uz.sadora.contract.ConditionStatus) = when (status) {
+        uz.sadora.contract.ConditionStatus.DIAGNOSED -> pick("Shifokor tashxisi", "Диагноз врача", "Diagnosed by a doctor")
+        uz.sadora.contract.ConditionStatus.SUSPECTED -> pick("Gumon (tashxis yo'q)", "Подозрение (без диагноза)", "Suspected (not diagnosed)")
+    }
+    fun painTitle(days: Int) = pick("Og'riq kundaligi, so'nggi $days kun", "Дневник боли, последние $days дн.", "Pain diary, last $days days")
+    val painDays get() = pick("Og'riqli kunlar / qayd etilgan", "Дни с болью / записано", "Days with pain / logged")
+    val painAverage get() = pick("O'rtacha kuchi", "Средняя сила", "Average level")
+    val painMax get() = pick("Eng kuchli", "Максимум", "Worst")
+    val painkillerDays get() = pick("Og'riq qoldiruvchi ichilgan kunlar", "Дни с обезболивающими", "Days with painkillers")
+    val missedDays get() = pick("Ish/o'qishga bora olmagan kunlar", "Пропущенные дни работы/учёбы", "Days missed (work/school)")
+    val painKinds get() = pick("Qachon og'rigan", "Когда болело", "When it hurt")
+    val painAreas get() = pick("Qayeri og'rigan", "Где болело", "Where it hurt")
+    fun painKind(kind: uz.sadora.contract.PainKind) = when (kind) {
+        uz.sadora.contract.PainKind.PERIOD -> pick("hayzda", "при месячных", "with the period")
+        uz.sadora.contract.PainKind.OVULATION -> pick("ovulyatsiyada", "при овуляции", "at ovulation")
+        uz.sadora.contract.PainKind.INTERCOURSE -> pick("jinsiy aloqada", "при близости", "during sex")
+        uz.sadora.contract.PainKind.BOWEL -> pick("ichak bo'shatishda", "при дефекации", "on bowel movements")
+        uz.sadora.contract.PainKind.URINATION -> pick("siyishda", "при мочеиспускании", "on urination")
+        uz.sadora.contract.PainKind.CONSTANT -> pick("doimiy", "постоянная", "constant")
+    }
+    fun painArea(area: uz.sadora.contract.PainArea) = when (area) {
+        uz.sadora.contract.PainArea.LOWER_ABDOMEN -> pick("qorin pasti", "низ живота", "lower abdomen")
+        uz.sadora.contract.PainArea.PELVIS_LEFT -> pick("tos, chap", "таз слева", "pelvis, left")
+        uz.sadora.contract.PainArea.PELVIS_RIGHT -> pick("tos, o'ng", "таз справа", "pelvis, right")
+        uz.sadora.contract.PainArea.LOWER_BACK -> pick("bel", "поясница", "lower back")
+        uz.sadora.contract.PainArea.LEGS -> pick("oyoqlar", "ноги", "legs")
+        uz.sadora.contract.PainArea.RECTUM -> pick("to'g'ri ichak", "прямая кишка", "rectum")
+    }
     val labsTitle get() = pick("Tahlil natijalari", "Результаты анализов", "Lab results")
     val labsNote get() = pick(
         "Bemor kiritgan yoki tahlil varag'i suratidan o'qilgan natijalar. Past/yuqori belgisi laboratoriya ko'rsatgan norma bo'yicha.",

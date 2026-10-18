@@ -2650,6 +2650,17 @@ button.btn.chat-attach {
   font-size: 13px;
 }
 
+.record-suspected {
+  color: var(--warn);
+  font-size: 12px;
+}
+
+.record-subhead {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
 /* --- the profile switch */
 
 .switch-row {

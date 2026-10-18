@@ -277,4 +277,43 @@ class CyclePredictorTest {
         val prediction = CyclePredictor.predict(LifeStage.CYCLE, periods, baseline, date("2026-08-19"))
         assertEquals(date("2026-08-06"), CyclePredictor.cycleStartFor(date("2026-08-19"), periods, prediction))
     }
+
+    // ---------------------------------------------------------------- ranges and attention
+
+    @Test
+    fun `an irregular cycle is forecast as the window its own shortest and longest cycles allow`() {
+        // Cycles of 26, 40 and 33 days: average 33, spread 14.
+        val periods = listOf(period("2026-05-01"), period("2026-05-27"), period("2026-07-06"), period("2026-08-08"))
+        val prediction = CyclePredictor.predict(LifeStage.CYCLE, periods, baseline = null, today = date("2026-08-15"))
+        assertEquals(date("2026-09-10"), prediction.nextPeriodStart)
+        assertEquals(date("2026-09-03"), prediction.nextPeriodEarliest)
+        assertEquals(date("2026-09-17"), prediction.nextPeriodLatest)
+        assertTrue(prediction.isRange)
+    }
+
+    @Test
+    fun `a regular cycle keeps one date, and PCOS widens it to a fortnight`() {
+        val periods = listOf(period("2026-06-13"), period("2026-07-11"), period("2026-08-08"))
+        val regular = CyclePredictor.predict(LifeStage.CYCLE, periods, baseline = null, today = date("2026-08-15"))
+        assertNull(regular.nextPeriodEarliest)
+        val pcos = CyclePredictor.predict(LifeStage.CYCLE, periods, baseline = null, today = date("2026-08-15"), irregularByCondition = true)
+        assertEquals(date("2026-08-29"), pcos.nextPeriodEarliest)
+        assertEquals(date("2026-09-12"), pcos.nextPeriodLatest)
+    }
+
+    @Test
+    fun `long cycles and three months without a period are worth a doctor's look`() {
+        val long = listOf(period("2026-03-01", "2026-03-05"), period("2026-04-10", "2026-04-14"), period("2026-05-21", "2026-05-25"))
+        val today = date("2026-06-01")
+        val forecast = CyclePredictor.predict(LifeStage.CYCLE, long, null, today)
+        assertEquals(uz.sadora.contract.CycleAttention.LONG_CYCLES, CyclePredictor.attention(LifeStage.CYCLE, long, forecast, today))
+
+        val lastSpring = listOf(period("2026-05-01", "2026-05-05"))
+        val later = date("2026-08-05")
+        val none = CyclePredictor.predict(LifeStage.CYCLE, lastSpring, baseline, later)
+        assertEquals(uz.sadora.contract.CycleAttention.NO_PERIOD_90, CyclePredictor.attention(LifeStage.CYCLE, lastSpring, none, later))
+        assertNull(CyclePredictor.attention(LifeStage.PREGNANCY, lastSpring, none, later), "not in a stage without a cycle")
+        val normal = listOf(period("2026-07-11", "2026-07-15"), period("2026-08-08", "2026-08-12"))
+        assertNull(CyclePredictor.attention(LifeStage.CYCLE, normal, CyclePredictor.predict(LifeStage.CYCLE, normal, null, date("2026-08-20")), date("2026-08-20")))
+    }
 }

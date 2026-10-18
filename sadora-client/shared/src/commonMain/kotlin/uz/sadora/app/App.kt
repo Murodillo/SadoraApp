@@ -170,7 +170,12 @@ fun App(graph: SadoraGraph? = null) {
     var store by remember { mutableStateOf(AppState()) }
     val state = store
     val navigator = remember { Navigator() }
-    val controllers = remember(graph, state) { AppControllers.from(graph, state) }
+    val controllers = remember(graph, state) {
+        AppControllers.from(graph, state).also { built ->
+            // PCOS turns the forecast into a range: the cycle is read again when it changes.
+            built.conditions.onChanged = { built.health.refreshCycle() }
+        }
+    }
 
     var wasInside by remember { mutableStateOf(false) }
     LaunchedEffect(navigator.phase) {
@@ -1166,6 +1171,7 @@ private fun RootTab(
             health = controllers.health,
             tools = controllers.stageEvents,
             babies = controllers.babies,
+            conditions = controllers.conditions,
             onOpen = navigator::push,
             onPregnancyEnded = { overlays.showPregnancyEnded = true },
         )
@@ -1264,6 +1270,14 @@ private fun PushedScreen(
         Route.BabyGrowth -> uz.sadora.app.ui.modules.BabyGrowthScreen(controllers.babies, close, onUpgrade = upgrade)
         Route.BabyVaccines -> uz.sadora.app.ui.modules.BabyVaccinesScreen(controllers.babies, close)
         Route.BabyMilestones -> uz.sadora.app.ui.modules.BabyMilestonesScreen(controllers.babies, close)
+        Route.Conditions -> uz.sadora.app.ui.modules.ConditionsScreen(controllers.conditions, close, navigator::push, onToast = toast)
+        Route.PainDiary -> uz.sadora.app.ui.modules.PainDiaryScreen(controllers.conditions, close, onToast = toast)
+        Route.ConditionReport -> uz.sadora.app.ui.modules.ConditionReportScreen(
+            conditions = controllers.conditions,
+            onClose = close,
+            onUpgrade = upgrade,
+            onShowDoctor = { navigator.push(Route.ShareProfile) },
+        )
         is Route.LabReport -> uz.sadora.app.ui.modules.LabReportScreen(
             id = route.id,
             labs = controllers.labs,

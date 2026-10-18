@@ -41,6 +41,8 @@ import uz.sadora.server.user.UserRecord
 class HealthService(
     private val repository: HealthRepository,
     private val access: HealthAccess,
+    /** Whether she marked PCOS, which makes the forecast a range. Null in tests without it. */
+    private val hasPcos: (suspend (Uuid) -> Boolean)? = null,
 ) {
     /** Set once at wiring: Yaqinim tells her person. Null in the tests that do not care. */
     var onPeriodStarted: (suspend (userId: Uuid, day: LocalDate) -> Unit)? = null
@@ -65,6 +67,7 @@ class HealthService(
             daysUntilNextPeriod = prediction.nextPeriodStart?.let { today.daysUntil(it) },
             prediction = prediction,
             today = today,
+            attention = CyclePredictor.attention(user.lifeStage, periods, prediction, today),
         )
     }
 
@@ -276,6 +279,7 @@ class HealthService(
         periods = periods,
         baseline = repository.baselineOf(user.id),
         today = today,
+        irregularByCondition = hasPcos?.invoke(user.id) == true,
     )
 
     private fun validatePeriod(startedOn: LocalDate, endedOn: LocalDate?, today: LocalDate) {

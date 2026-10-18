@@ -48,10 +48,13 @@ import kotlinx.coroutines.launch
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
+import uz.sadora.contract.ConditionStatus
+import uz.sadora.contract.CyclePrediction
 import uz.sadora.contract.DoctorSummary
 import uz.sadora.contract.Epds
 import uz.sadora.contract.HealthMetric
 import uz.sadora.contract.Language
+import uz.sadora.contract.SharedConditions
 import uz.sadora.contract.SharedStageRecords
 import uz.sadora.doctor.data.ApiFailure
 import uz.sadora.doctor.data.DoctorController
@@ -73,7 +76,7 @@ import uz.sadora.doctor.ui.components.Skeleton
  * What a patient's QR code opens: the record her app assembles for a doctor, drawn
  * natively instead of as the web page the code also links to.
  *
- * The order is a consultation's — who she is, her cycle or pregnancy, what she has felt,
+ * The order is a consultation's — who she is, her cycle, her conditions and pain diary, her pregnancy, what she has felt,
  * the last days, how she has been, what she takes, her lab results, her visits, food,
  * and the devices.
  * A section with nothing in it is left out rather than drawn empty. Nothing here is a
@@ -171,10 +174,14 @@ private fun androidx.compose.foundation.lazy.LazyListScope.recordSections(
                 if (h.shortestCycle != null && h.longestCycle != null) {
                     t.cycleRange to "${h.shortestCycle}–${h.longestCycle}"
                 } else null,
-                h.prediction.nextPeriodStart?.let { t.nextPeriod to "${fullDate(it)} (${t.estimated})" },
+                nextPeriod(h.prediction)?.let { t.nextPeriod to "$it (${t.estimated})" },
             )
             RecordSection(t.cycleTitle, Res.drawable.ic3d_period) { Facts(facts) }
         }
+    }
+
+    record.conditions?.takeIf { it.conditions.isNotEmpty() || it.pain != null }?.let { shared ->
+        item(key = "conditions") { ConditionsSection(shared) }
     }
 
     record.pregnancy?.let { pregnancy ->
@@ -423,6 +430,68 @@ private fun androidx.compose.foundation.lazy.LazyListScope.stageSections(r: Shar
                 }
             }
         }
+    }
+}
+
+/**
+ * Her conditions, a suspected one in the warning tone so it is not read as a diagnosis,
+ * then 90 days of the pain diary: how often and how hard, and when and where, most first.
+ */
+@Composable
+private fun ConditionsSection(shared: SharedConditions) {
+    val t = strings.conditions
+    val c = Sadora.colors
+    RecordSection(t.title, Res.drawable.ic3d_health) {
+        shared.conditions.forEach { condition ->
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(t.condition(condition.condition), style = Sadora.type.h3, color = c.text)
+                val diagnosed = condition.status == ConditionStatus.DIAGNOSED
+                Text(
+                    listOfNotNull(t.status(condition.status), condition.diagnosedOn?.takeIf { diagnosed }?.let { fullDate(it) })
+                        .joinToString(" · "),
+                    style = Sadora.type.body,
+                    color = if (diagnosed) c.muted else c.warningText,
+                )
+            }
+        }
+        shared.pain?.let { pain ->
+            val days = strings.tabs::days
+            Text(t.painTitle(pain.days), style = Sadora.type.h3, color = c.text)
+            Facts(
+                listOfNotNull(
+                    t.painDays to "${pain.painDays} / ${pain.daysLogged}",
+                    pain.averageLevel?.let { t.averageLevel to "${oneDecimal(it)} / 10" },
+                    if (pain.painDays > 0) t.maxLevel to "${pain.maxLevel} / 10" else null,
+                    t.painkillerDays to pain.painkillerDays.toString(),
+                    t.missedDays to pain.missedDays.toString(),
+                ),
+            )
+            val kinds = rankedCounts(pain.byKind)
+            if (kinds.isNotEmpty()) {
+                Text(t.whenTitle, style = Sadora.type.h3, color = c.text)
+                Facts(kinds.map { (kind, n) -> t.kind(kind) to days(n) })
+            }
+            val areas = rankedCounts(pain.byArea)
+            if (areas.isNotEmpty()) {
+                Text(t.whereTitle, style = Sadora.type.h3, color = c.text)
+                Facts(areas.map { (area, n) -> t.area(area) to days(n) })
+            }
+        }
+    }
+}
+
+/** The counts above zero, most first; a tie keeps the enum's order, so the list never shuffles. */
+internal fun <K : Enum<K>> rankedCounts(counts: Map<K, Int>): List<Pair<K, Int>> =
+    counts.filterValues { it > 0 }.toList().sortedWith(compareByDescending<Pair<K, Int>> { it.second }.thenBy { it.first.ordinal })
+
+/** The next period: a range when her cycle is too irregular for one day, else the day. */
+@Composable
+private fun nextPeriod(prediction: CyclePrediction): String? {
+    val earliest = prediction.nextPeriodEarliest
+    val latest = prediction.nextPeriodLatest
+    return when {
+        earliest != null && latest != null -> "${fullDate(earliest)} – ${fullDate(latest)}"
+        else -> prediction.nextPeriodStart?.let { fullDate(it) }
     }
 }
 

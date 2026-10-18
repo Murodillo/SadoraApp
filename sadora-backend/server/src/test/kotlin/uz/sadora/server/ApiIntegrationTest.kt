@@ -3779,6 +3779,80 @@ class ApiIntegrationTest {
         assertTrue(get<List<uz.sadora.contract.IncomingPaymentRequest>>("/v1/payment-requests/incoming", him.token).isEmpty())
     }
 
+    // ---------------------------------------------------------------- conditions
+
+    @Test
+    fun `her conditions change the forecast, the pain diary is hers, the report is Premium and the doctor sees both`() = api {
+        val her = signUp().also { onboard(it) }
+        val today = get<CycleStatus>("/v1/cycle/status", her.token).today
+        val state = get<uz.sadora.contract.ConditionsState>("/v1/conditions", her.token)
+        assertTrue(state.conditions.isEmpty())
+        assertEquals(2, state.catalog.size)
+
+        // Three regular cycles: one date — until PCOS is marked, then a range.
+        listOf(84, 56, 28).forEach { back ->
+            post<PeriodEntry>("/v1/cycle/periods", her.token, LogPeriodRequest(today.minus(back, DateTimeUnit.DAY), today.minus(back - 4, DateTimeUnit.DAY)))
+        }
+        assertNull(get<CycleStatus>("/v1/cycle/status", her.token).prediction.nextPeriodEarliest)
+        val marked = put<uz.sadora.contract.ConditionsState>("/v1/conditions/pcos", her.token, uz.sadora.contract.SetConditionRequest(uz.sadora.contract.ConditionStatus.SUSPECTED))
+        assertTrue(marked.has(uz.sadora.contract.HealthCondition.PCOS))
+        assertTrue(get<CycleStatus>("/v1/cycle/status", her.token).prediction.isRange)
+
+        put<uz.sadora.contract.ConditionsState>(
+            "/v1/conditions/endometriosis",
+            her.token,
+            uz.sadora.contract.SetConditionRequest(uz.sadora.contract.ConditionStatus.DIAGNOSED, diagnosedOn = today.minus(400, DateTimeUnit.DAY)),
+        )
+        val saved = put<uz.sadora.contract.PainLog>(
+            "/v1/pain/$today",
+            her.token,
+            uz.sadora.contract.SavePainLogRequest(
+                level = 7,
+                areas = listOf(uz.sadora.contract.PainArea.LOWER_ABDOMEN, uz.sadora.contract.PainArea.LOWER_BACK),
+                kinds = listOf(uz.sadora.contract.PainKind.PERIOD),
+                painkiller = true,
+                painkillerName = "Ibuprofen",
+                missedActivities = true,
+            ),
+        )
+        assertEquals(7, saved.level)
+        put<uz.sadora.contract.PainLog>("/v1/pain/${today.minus(1, DateTimeUnit.DAY)}", her.token, uz.sadora.contract.SavePainLogRequest(level = 0))
+        assertEquals(2, get<List<uz.sadora.contract.PainLog>>("/v1/pain?days=7", her.token).size)
+        val tooMuch = raw { client.put("/v1/pain/$today") { auth(her.token); json(uz.sadora.contract.SavePainLogRequest(level = 11)) } }
+        assertEquals(HttpStatusCode.BadRequest, tooMuch.status)
+        val future = raw { client.put("/v1/pain/${today.plus(1, DateTimeUnit.DAY)}") { auth(her.token); json(uz.sadora.contract.SavePainLogRequest(level = 3)) } }
+        assertEquals(HttpStatusCode.BadRequest, future.status)
+
+        // Nobody else reads her diary.
+        val other = signUp().also { onboard(it) }
+        assertTrue(get<List<uz.sadora.contract.PainLog>>("/v1/pain?days=7", other.token).isEmpty())
+
+        // The report is Premium; with Premium it carries the cycles and the pain.
+        val locked = raw { client.get("/v1/conditions/report?months=3") { auth(her.token) } }
+        assertEquals(HttpStatusCode.PaymentRequired, locked.status)
+        val premium = get<ShopCatalog>("/v1/shop", her.token).products.first { it.kind == ShopKind.PREMIUM }
+        post<CoinBalance>("/v1/admin/rewards/users/${her.userId}/adjust", adminToken(), AdjustCoinsRequest(amount = premium.coinCost, note = "integration test"))
+        post<RedeemResult>("/v1/shop/redeem", her.token, RedeemRequest(premium.id))
+        val report = get<uz.sadora.contract.ConditionReport>("/v1/conditions/report?months=3", her.token)
+        assertEquals(3, report.cycles.size)
+        assertEquals(listOf(28, 28, null), report.cycles.map { it.length })
+        assertEquals(1, report.pain?.painDays)
+        assertEquals(1, report.pain?.missedDays)
+        assertEquals(2, report.conditions.size)
+
+        // The doctor's page names the conditions and sums the diary.
+        val share = post<ProfileShare>("/v1/me/shares", her.token, CreateShareRequest(ttlHours = 2))
+        val token = assertNotNull(share.url).substringAfterLast("/")
+        val summary = client.get("/share/$token/json").body<DoctorSummary>()
+        assertEquals(2, summary.conditions?.conditions?.size)
+        assertEquals(7, summary.conditions?.pain?.maxLevel)
+        assertTrue("Endometrioz" in client.get("/share/$token").bodyAsText())
+
+        // Taking PCOS off brings the single date back.
+        assertEquals(HttpStatusCode.OK, client.delete("/v1/conditions/pcos") { auth(her.token) }.status)
+        assertNull(get<CycleStatus>("/v1/cycle/status", her.token).prediction.nextPeriodEarliest)
+    }
+
     // ---------------------------------------------------------------- babies
 
     @Test
@@ -3813,7 +3887,8 @@ class ApiIntegrationTest {
         assertEquals(7, overview.days.size)
         assertEquals(1, overview.days.sumOf { it.feeds })
         assertEquals(1, overview.days.sumOf { it.wetDiapers })
-        assertEquals(60, overview.days.sumOf { it.sleepMinutes })
+        // An hour, give or take the rounding when it crosses midnight on the test machine.
+        assertTrue(overview.days.sumOf { it.sleepMinutes } in 59..61)
         assertEquals(uz.sadora.contract.VaccineStatus.OVERDUE, overview.nextVaccine?.status, "the birth doses are not marked yet")
 
         // Growth is free; the WHO chart is Premium.

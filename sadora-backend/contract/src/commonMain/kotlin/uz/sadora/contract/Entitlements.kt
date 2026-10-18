@@ -33,6 +33,9 @@ object FeatureKeys {
     /** The WHO percentile curves behind a baby's growth. Premium; the measurements are free. */
     const val BABY_GROWTH_CHART = "baby_growth_chart"
 
+    /** The 3–6 month condition report (PCOS, endometriosis). Premium; the tracking is free. */
+    const val CONDITION_REPORT = "condition_report"
+
     /** Wearing an earned badge after her name. Premium; earning badges stays free. */
     const val BADGE_WEAR = "badge_wear"
 

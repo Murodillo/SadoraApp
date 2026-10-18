@@ -63,6 +63,8 @@ data class DoctorSummary(
      * [Limits.LAB_SHARE_REPORTS_MAX]. The photos are fetched by report id and page.
      */
     val labs: List<LabReport> = emptyList(),
+    /** Her conditions and 90 days of the pain diary; null when she marked none. */
+    val conditions: SharedConditions? = null,
 ) {
     companion object {
         const val SHARE_WINDOW_DAYS = 90

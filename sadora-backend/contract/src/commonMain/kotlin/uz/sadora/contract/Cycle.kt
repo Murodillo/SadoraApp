@@ -94,7 +94,14 @@ data class CyclePrediction(
     val variationDays: Int? = null,
     /** How many completed cycles the estimate is built from. */
     val basedOnCycles: Int = 0,
+    /**
+     * For an irregular cycle, when the period may come: the earliest and latest day her
+     * own shortest and longest cycles allow. Null when one date is honest.
+     */
+    val nextPeriodEarliest: LocalDate? = null,
+    val nextPeriodLatest: LocalDate? = null,
 ) {
+    val isRange: Boolean get() = nextPeriodEarliest != null && nextPeriodLatest != null
     val hasPrediction: Boolean get() = confidence != PredictionConfidence.NONE
 }
 
@@ -111,6 +118,8 @@ data class CycleStatus(
     val daysUntilNextPeriod: Int? = null,
     val prediction: CyclePrediction,
     val today: LocalDate,
+    /** Something about the cycle worth a doctor's look; null almost always. */
+    val attention: CycleAttention? = null,
 )
 
 /** One day in the calendar. */
@@ -154,3 +163,15 @@ data class CycleHistory(
     val longestCycle: Int? = null,
     val prediction: CyclePrediction,
 )
+
+/**
+ * A pattern worth showing a doctor. Said once, plainly, with a way to a doctor — never as
+ * a diagnosis: long cycles and missing periods have many causes, most of them ordinary.
+ */
+@Serializable
+enum class CycleAttention {
+    /** Her cycles run longer than 35 days on average. */
+    @SerialName("long_cycles") LONG_CYCLES,
+    /** No period for 90 days or more, outside pregnancy and the stages without one. */
+    @SerialName("no_period_90") NO_PERIOD_90,
+}

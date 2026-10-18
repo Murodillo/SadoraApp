@@ -55,6 +55,8 @@ fun AppState.applyCycle(status: CycleStatus) {
         ?: cycleStartDate
     cyclePhase = status.phase?.toAppPhase()
     daysUntilNextPeriod = status.daysUntilNextPeriod
+    nextPeriodWindow = status.prediction.nextPeriodEarliest?.let { from -> status.prediction.nextPeriodLatest?.let { from to it } }
+    cycleAttention = status.attention
     fertileFrom = status.prediction.fertileFrom
     fertileUntil = status.prediction.fertileUntil
     hasCyclePrediction = status.prediction.confidence != PredictionConfidence.NONE

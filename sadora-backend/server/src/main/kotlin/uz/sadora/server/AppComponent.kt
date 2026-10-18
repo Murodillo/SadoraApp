@@ -218,7 +218,11 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
     val aiUsageRepository = AiUsageRepository()
 
     val healthAccess = HealthAccess(userRepository, entitlementService)
-    val healthService = HealthService(healthRepository, healthAccess)
+    val conditionRepository = uz.sadora.server.condition.ConditionRepository()
+    // PCOS makes the forecast a range; asked per read so a change shows at once.
+    val healthService = HealthService(healthRepository, healthAccess, hasPcos = { userId ->
+        conditionRepository.has(userId, uz.sadora.contract.HealthCondition.PCOS)
+    })
     val mindService = MindService(mindRepository, healthRepository, healthAccess, rewardsService)
     val appointmentService = AppointmentService(appointmentRepository, healthAccess)
     val stageEventRepository = StageEventRepository()
@@ -252,6 +256,12 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
         prescribers = prescriptionRepository::prescriberNames,
     )
     val wearableService = WearableService(wearableRepository, healthAccess)
+    val conditionService = uz.sadora.server.condition.ConditionService(
+        conditions = conditionRepository,
+        access = healthAccess,
+        health = healthService,
+        dailyHealth = { userId, from, to -> wearableService.daily(userId, from, to).days },
+    )
     val widgetService = uz.sadora.server.widget.WidgetService(
         users = userService,
         health = healthService,
@@ -487,6 +497,7 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
         publicBaseUrl = config.publicBaseUrl,
         entitlements = entitlementService,
         labs = labService,
+        conditions = conditionService,
     )
 
     /** Yaqinim: built from her records at read time, through the same services as the app. */

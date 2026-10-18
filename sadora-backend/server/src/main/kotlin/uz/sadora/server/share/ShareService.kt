@@ -82,6 +82,8 @@ class ShareService(
     private val entitlements: uz.sadora.server.entitlement.EntitlementService? = null,
     /** Her lab sheets; null in the tests that build the service by hand. */
     private val labs: uz.sadora.server.lab.LabService? = null,
+    /** Her conditions and pain diary; null in the tests that build the service by hand. */
+    private val conditions: uz.sadora.server.condition.ConditionService? = null,
 ) {
 
     // ---------------------------------------------------------------- hers
@@ -334,6 +336,7 @@ class ShareService(
                 user.timezone,
             ),
             labs = labs?.forSummary(userId, today, language).orEmpty(),
+            conditions = conditions?.shared(userId, today),
         )
     }
 
