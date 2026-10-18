@@ -136,7 +136,10 @@ private val StepsInk = ColorProvider(Color(0xFF7F5100))
 
 @Composable
 private fun WidgetBody(content: WidgetContent?, size: WidgetSize, config: WidgetConfig, signIn: String, narrow: Boolean) {
+    // No card behind the tiles: each is a clay surface of its own and floats on her
+    // wallpaper. Only the sign-in prompt keeps one, as plain text needs a ground to be read on.
     val card = GlanceModifier.fillMaxSize().background(ImageProvider(R.drawable.widget_tile_card)).cornerRadius(28.dp).padding(9.dp)
+    val bare = GlanceModifier.fillMaxSize().padding(2.dp)
     if (content == null) {
         Column(card.clickable(openApp("today")), horizontalAlignment = Alignment.CenterHorizontally, verticalAlignment = Alignment.CenterVertically) {
             ClayIcon(R.drawable.widget_clay_heart, 44)
@@ -147,12 +150,12 @@ private fun WidgetBody(content: WidgetContent?, size: WidgetSize, config: Widget
     }
     when (size) {
         WidgetSize.SMALL -> StageTile(content, big = 54, GlanceModifier.fillMaxSize())
-        WidgetSize.MEDIUM -> Row(card) {
+        WidgetSize.MEDIUM -> Row(bare) {
             StageTile(content, big = 42, GlanceModifier.defaultWeight().fillMaxHeight())
             Spacer(GlanceModifier.width(8.dp))
             Column(GlanceModifier.defaultWeight().fillMaxHeight()) { SideBlocks(content, config, compact = true, narrow = narrow) }
         }
-        WidgetSize.LARGE -> Column(card) {
+        WidgetSize.LARGE -> Column(bare) {
             WideStageTile(content, GlanceModifier.fillMaxWidth().height(86.dp))
             Spacer(GlanceModifier.height(8.dp))
             SideBlocks(content, config, compact = false, narrow = false)

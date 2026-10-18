@@ -275,41 +275,50 @@ private fun ClayIcon(art: DrawableResource, size: Int, modifier: Modifier = Modi
 @Composable
 fun WidgetPreview(content: WidgetContent, size: WidgetSize, modifier: Modifier = Modifier) {
     val height = if (size == WidgetSize.LARGE) 330.dp else 176.dp
+    // Drawn on a wallpaper-like ground: the widget has no card of its own, its tiles sit
+    // straight on the home screen.
     Box(
-        modifier
-            .fillMaxWidth(if (size == WidgetSize.SMALL) 0.5f else 1f)
-            .height(height)
-            .clay(listOf(Color.White, Color(0xFFF6F3FF)), 28),
+        Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(24.dp))
+            .background(Brush.linearGradient(listOf(Color(0xFF2A1F5C), Color(0xFF3B2A6E), Color(0xFF1B3A4F))))
+            .padding(14.dp),
     ) {
-        when (size) {
-            WidgetSize.SMALL -> StageTile(content, Modifier.fillMaxWidth().fillMaxHeight(), big = 54, radius = 28)
-            WidgetSize.MEDIUM -> Row(Modifier.padding(10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                StageTile(content, Modifier.weight(1f).fillMaxHeight(), big = 42)
-                SideColumn(content)
-            }
-            WidgetSize.LARGE -> Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                WideStageTile(content, Modifier.fillMaxWidth().height(86.dp))
-                content.water?.let { Tile(Res.drawable.ic3d_water, it.title, it.label, it.stepLabel, WaterTile, WaterButton, Color(0xFF146A94)) }
-                content.doses?.let { doses ->
-                    doses.rows.take(3).forEach { row ->
-                        val taken = row.status == uz.sadora.contract.DoseStatus.TAKEN
-                        Tile(Res.drawable.ic3d_meds, row.name, row.time, "✓", DoseTile, if (taken) TakenButton else DoseButton, Color(0xFF6247E0))
-                    }
+        Box(
+            modifier
+                .fillMaxWidth(if (size == WidgetSize.SMALL) 0.5f else 1f)
+                .height(height),
+        ) {
+            when (size) {
+                WidgetSize.SMALL -> StageTile(content, Modifier.fillMaxWidth().fillMaxHeight(), big = 54, radius = 28)
+                WidgetSize.MEDIUM -> Row(Modifier.padding(10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    StageTile(content, Modifier.weight(1f).fillMaxHeight(), big = 42)
+                    SideColumn(content)
                 }
-                content.health?.let { health ->
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        if (health.connectPrompt) Tile(Res.drawable.ic3d_watch, health.connectText, "", "", SleepTile, null, Sadora.colors.text, Modifier.weight(1f))
-                        health.items.forEach { item ->
-                            val (art, fill) = when (item.metric) {
-                                uz.sadora.contract.HealthMetric.STEPS -> Res.drawable.ic3d_active to StepsTile
-                                uz.sadora.contract.HealthMetric.SLEEP_DURATION -> Res.drawable.ic3d_sleep to SleepTile
-                                else -> Res.drawable.ic3d_heart to DoseTile
-                            }
-                            Tile(art, item.label, item.value, "", fill, null, Color(0xFF6247E0), Modifier.weight(1f))
+                WidgetSize.LARGE -> Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    WideStageTile(content, Modifier.fillMaxWidth().height(86.dp))
+                    content.water?.let { Tile(Res.drawable.ic3d_water, it.title, it.label, it.stepLabel, WaterTile, WaterButton, Color(0xFF146A94)) }
+                    content.doses?.let { doses ->
+                        doses.rows.take(3).forEach { row ->
+                            val taken = row.status == uz.sadora.contract.DoseStatus.TAKEN
+                            Tile(Res.drawable.ic3d_meds, row.name, row.time, "✓", DoseTile, if (taken) TakenButton else DoseButton, Color(0xFF6247E0))
                         }
                     }
+                    content.health?.let { health ->
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            if (health.connectPrompt) Tile(Res.drawable.ic3d_watch, health.connectText, "", "", SleepTile, null, Sadora.colors.text, Modifier.weight(1f))
+                            health.items.forEach { item ->
+                                val (art, fill) = when (item.metric) {
+                                    uz.sadora.contract.HealthMetric.STEPS -> Res.drawable.ic3d_active to StepsTile
+                                    uz.sadora.contract.HealthMetric.SLEEP_DURATION -> Res.drawable.ic3d_sleep to SleepTile
+                                    else -> Res.drawable.ic3d_heart to DoseTile
+                                }
+                                Tile(art, item.label, item.value, "", fill, null, Color(0xFF6247E0), Modifier.weight(1f))
+                            }
+                        }
+                    }
+                    if (content.locked) LockTile(content.lockText)
                 }
-                if (content.locked) LockTile(content.lockText)
             }
         }
     }
