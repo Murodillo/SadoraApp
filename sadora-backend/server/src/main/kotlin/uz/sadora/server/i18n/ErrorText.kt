@@ -210,6 +210,12 @@ object ErrorText {
         Entry("Tahlil topilmadi", "Анализ не найден", "Lab result not found"),
         Entry("Chaqaloq topilmadi", "Ребёнок не найден", "Baby not found"),
         Entry("Hisobot topilmadi", "Отчёт не найден", "Report not found"),
+        Entry("Bu daraja hali ochilmagan", "Этот уровень ещё не открыт", "This level is not open yet"),
+        Entry(
+            "Eslatmalar ko'pi bilan {0} ta bo'ladi",
+            "Напоминаний может быть не больше {0}",
+            "There can be at most {0} reminders",
+        ),
         Entry("Kamida bitta bo'limni tanlang", "Выберите хотя бы один раздел", "Choose at least one section"),
         Entry(
             "Hisobotni faqat bemorning o'zi shifokoriga yuboradi",

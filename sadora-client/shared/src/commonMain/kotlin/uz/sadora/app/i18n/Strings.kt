@@ -71,6 +71,7 @@ interface Strings {
     val babies: BabyStrings
     val conditions: ConditionStrings
     val reports: ReportStrings
+    val kegel: KegelStrings
     val pet: PetStrings
     val widgets: WidgetUiStrings
     val frames: FrameStrings

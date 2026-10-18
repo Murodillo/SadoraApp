@@ -78,7 +78,8 @@ class BadgeRepository {
                      AND p.status = 'visible'),
               (SELECT count(*) FROM shop_redemptions WHERE user_id = $u AND status <> 'cancelled'),
               (SELECT coalesce(sum(amount), 0) FROM coin_ledger
-                 WHERE user_id = $u AND amount > 0 AND reason <> '${CoinReasons.ADMIN_ADJUSTMENT}')
+                 WHERE user_id = $u AND amount > 0 AND reason <> '${CoinReasons.ADMIN_ADJUSTMENT}'),
+              (SELECT count(DISTINCT done_on) FROM kegel_sessions WHERE user_id = $u)
         """.trimIndent()
         val result = HashMap<String, Int>()
         exec(sql) { rows ->
@@ -110,6 +111,7 @@ class BadgeRepository {
                 result[Badges.LOVED] = rows.getInt(24)
                 result[Badges.SHOPPER] = rows.getInt(25)
                 result[Badges.GARDENER] = rows.getLong(26).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+                result[Badges.KEGEL] = rows.getInt(27)
             }
         }
         result

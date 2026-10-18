@@ -49,6 +49,9 @@ object CoinReasons {
     /** The welcome the invited account gets for arriving with a code. */
     const val REFERRAL_WELCOME = "referral_welcome"
 
+    /** Finishing a Kegel session. Capped per day like the other practices. */
+    const val KEGEL_SESSION = "kegel_session"
+
     /** Her Yaqinim said yes and sees her for the first time. Paid once, to her. */
     const val PARTNER_LINKED = "partner_linked"
 
@@ -71,6 +74,7 @@ object CoinReasons {
         MEAL_LOGGED,
         JOURNAL_ENTRY,
         PRACTICE,
+        KEGEL_SESSION,
         ARTICLE_READ,
         REFERRAL_JOINED,
         REFERRAL_WELCOME,
@@ -221,6 +225,8 @@ object Badges {
     const val LOVED = "loved"
     const val SHOPPER = "shopper"
     const val GARDENER = "gardener"
+    /** Days with a Kegel session. */
+    const val KEGEL = "kegel"
 
     /** Every badge with its tier thresholds, in the order the board shows them. */
     val catalogue: List<Pair<String, List<Int>>> = listOf(
@@ -251,6 +257,7 @@ object Badges {
         LOVED to listOf(10, 50, 200),
         SHOPPER to listOf(1, 3, 10),
         GARDENER to listOf(500, 2500, 10000),
+        KEGEL to listOf(7, 30, 100),
     )
 
     fun tiersOf(key: String): List<Int> = catalogue.firstOrNull { it.first == key }?.second.orEmpty()

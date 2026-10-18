@@ -22,4 +22,9 @@ class WidgetLinkTest {
         assertEquals(AppLink.Open(AppLink.Open.Target.Today), AppLink.parse("sadora://open/nonsense"))
         assertNull(AppLink.parse("https://sadora.app/open/journey"), "only the app's own scheme opens a screen")
     }
+
+    @Test
+    fun `the kegel reminder opens the exercise page`() {
+        assertEquals(AppLink.Open(AppLink.Open.Target.Kegel), AppLink.parse("sadora://open/kegel"))
+    }
 }

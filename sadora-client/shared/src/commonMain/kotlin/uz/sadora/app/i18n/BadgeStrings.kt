@@ -121,6 +121,7 @@ object BadgesUz : BadgeStrings {
         Badges.LOVED -> "Sevimli"
         Badges.SHOPPER -> "Xaridor"
         Badges.GARDENER -> "Gul bog'boni"
+        Badges.KEGEL -> "Nilufar kuchi"
         else -> null
     }
 
@@ -152,6 +153,7 @@ object BadgesUz : BadgeStrings {
         Badges.LOVED -> "Postlaringiz $target ta yurak olsin"
         Badges.SHOPPER -> "Gul do'konidan $target marta xarid qiling"
         Badges.GARDENER -> "Jami $target Gul yig'ing"
+        Badges.KEGEL -> "$target kun tos tubi mashqini bajaring"
         else -> ""
     }
 }
@@ -220,6 +222,7 @@ object BadgesRu : BadgeStrings {
         Badges.LOVED -> "Любимица"
         Badges.SHOPPER -> "Покупательница"
         Badges.GARDENER -> "Садовница"
+        Badges.KEGEL -> "Сила лотоса"
         else -> null
     }
 
@@ -251,6 +254,7 @@ object BadgesRu : BadgeStrings {
         Badges.LOVED -> "Соберите $target ${ru(target, "сердечко", "сердечка", "сердечек")} на постах"
         Badges.SHOPPER -> "Сделайте $target ${ru(target, "покупку", "покупки", "покупок")} в магазине Gul"
         Badges.GARDENER -> "Соберите всего $target Gul"
+        Badges.KEGEL -> "Делайте упражнения Кегеля ${target} ${ru(target, "день", "дня", "дней")}"
         else -> ""
     }
 }
@@ -322,6 +326,7 @@ object BadgesEn : BadgeStrings {
         Badges.LOVED -> "Beloved"
         Badges.SHOPPER -> "Shopper"
         Badges.GARDENER -> "Gul gardener"
+        Badges.KEGEL -> "Lotus strength"
         else -> null
     }
 
@@ -353,6 +358,7 @@ object BadgesEn : BadgeStrings {
         Badges.LOVED -> "Get $target ${en(target, "heart", "hearts")} on your posts"
         Badges.SHOPPER -> "Redeem in the Gul shop ${times(target)}"
         Badges.GARDENER -> "Collect $target Gul in total"
+        Badges.KEGEL -> "Do your Kegel exercises on $target ${en(target, "day", "days")}"
         else -> ""
     }
 }

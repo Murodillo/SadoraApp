@@ -1,5 +1,18 @@
 import type { ReactNode } from 'react'
-import type { CyclePhase, CyclePrediction, DoctorSummary, HealthCondition, HealthMetric, PainArea, PainKind, SharedConditions } from '../api/types'
+import type {
+  CyclePhase,
+  CyclePrediction,
+  DoctorSummary,
+  HealthCondition,
+  HealthMetric,
+  KegelCheck,
+  KegelProgram,
+  LeakSituation,
+  PainArea,
+  PainKind,
+  SharedConditions,
+  SharedPelvicFloor,
+} from '../api/types'
 import { RecordLabs } from './LabReport'
 import type { LabPhotoPath } from './LabReport'
 import { lifeStageLabel, RECORD_DISCLAIMER } from './labels'
@@ -7,7 +20,7 @@ import { formatDateTime } from './ui'
 
 /*
  * The record a patient attached, drawn the way the doctor app's PatientRecordScreen
- * draws it: who she is, her cycle, her conditions and pain diary, her pregnancy, what she has felt, what she takes, her
+ * draws it: who she is, her cycle, her conditions and pain diary, her pelvic floor training, her pregnancy, what she has felt, what she takes, her
  * visits, her lab sheets, how she has been, food, and her devices. A section with nothing in it is left
  * out rather than drawn empty. The words are the doctor app's `TabStringsUz`.
  */
@@ -202,6 +215,65 @@ function ConditionsSection({ shared }: { shared: SharedConditions }) {
   )
 }
 
+const kegelProgramLabels: Record<KegelProgram, string> = {
+  cycle: 'Asosiy dastur',
+  pregnancy: 'Homiladorlik dasturi',
+  postpartum: "Tug'ruqdan keyingi dastur",
+  menopause: 'Menopauza dasturi',
+}
+
+const leakFrequencyWords = ['hech qachon', 'haftada ≤1', 'haftada 2–3', 'kuniga ~1', 'kuniga bir necha']
+const leakAmountWords = ['—', 'tomchi', 'oz', "ko'p"]
+
+const leakSituationLabels: Record<LeakSituation, string> = {
+  cough: "yo'tal/aksirish/kulish",
+  exercise: 'jismoniy harakat',
+  urge: "to'satdan qistash",
+  night: 'tunda',
+  other: 'boshqa',
+}
+
+/** One check on one line, as the doctor app writes it: an empty answer is left out. */
+export function leakCheckLine(check: KegelCheck): string {
+  const situations = check.situations ?? []
+  return present([
+    leakFrequencyWords[Math.min(Math.max(check.frequency, 0), 4)],
+    check.amount > 0 && leakAmountWords[Math.min(check.amount, 3)],
+    situations.length > 0 && situations.map((s) => leakSituationLabels[s] ?? s).join(', '),
+    `Bezovtalik ${check.bother} / 10`,
+  ]).join(' · ')
+}
+
+/** Her Kegel program and level, how much she trains, then her leak checks with the note that she filled them in herself. */
+function PelvicFloorSection({ shared }: { shared: SharedPelvicFloor }) {
+  const checks = shared.checks ?? []
+  return (
+    <Section title="Tos tubi mashqlari (Kegel)" glyph="🌸">
+      <Facts
+        facts={[
+          [kegelProgramLabels[shared.program] ?? shared.program, `Daraja ${shared.level}`],
+          ["Mashg'ulotlar", String(shared.sessions)],
+          ['Faol kunlar', String(shared.activeDays)],
+        ]}
+      />
+      {checks.length > 0 && (
+        <>
+          <h5 className="record-subhead">Siydik tutolmaslik bo'yicha so'rov</h5>
+          <ul className="record-list">
+            {checks.map((check) => (
+              <li key={check.takenOn}>
+                <b>{formatLocalDate(check.takenOn)}</b>
+                <span className="faint">{leakCheckLine(check)}</span>
+              </li>
+            ))}
+          </ul>
+          <p className="faint">Bemor o'zi to'ldirgan qisqa so'rov; tashxis vositasi emas.</p>
+        </>
+      )}
+    </Section>
+  )
+}
+
 export function PatientRecord({
   record,
   labPhotoPath,
@@ -285,6 +357,8 @@ export function PatientRecord({
       )}
 
       {record.conditions && <ConditionsSection shared={record.conditions} />}
+
+      {record.pelvicFloor && <PelvicFloorSection shared={record.pelvicFloor} />}
 
       {(pregnancyFacts.length > 0 || lessMovement > 0) && (
         <Section title="Homiladorlik" glyph="🤰">

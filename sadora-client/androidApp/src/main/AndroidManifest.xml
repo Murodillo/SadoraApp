@@ -23,6 +23,8 @@
     <!-- Android 13 and later post no notification at all without this, granted at runtime.
          MainActivity asks once the user is past onboarding. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- The Kegel session buzzes at each squeeze and release, so she can follow it eyes closed. -->
+    <uses-permission android:name="android.permission.VIBRATE" />
 
     <!--
         Health Connect: read only, and only these. Each is asked for on the devices

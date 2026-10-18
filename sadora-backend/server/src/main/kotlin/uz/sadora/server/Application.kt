@@ -22,6 +22,7 @@ import uz.sadora.server.frame.adminFrameRoutes
 import uz.sadora.server.frame.frameRoutes
 import uz.sadora.server.baby.babyRoutes
 import uz.sadora.server.condition.conditionRoutes
+import uz.sadora.server.kegel.kegelRoutes
 import uz.sadora.server.lab.labRoutes
 import uz.sadora.server.share.reportRoutes
 import uz.sadora.server.pet.adminPetRoutes
@@ -109,6 +110,9 @@ fun main() {
     // Three days before a vaccine falls due, and on the day: a push to the mother.
     component.vaccineReminderJob.start()
 
+    // Her Kegel reminders, at the times she picked.
+    component.kegelReminderJob.start()
+
     Runtime.getRuntime().addShutdownHook(Thread { component.close() })
 
     logger.info(
@@ -172,6 +176,7 @@ fun Application.apiModule(component: AppComponent) {
             labRoutes(component.labService)
             babyRoutes(component.babyService)
             conditionRoutes(component.conditionService)
+            kegelRoutes(component.kegelService)
             reportRoutes(component.reportService)
             medicationRoutes(component.medicationService)
             notificationRoutes(component.notificationService)

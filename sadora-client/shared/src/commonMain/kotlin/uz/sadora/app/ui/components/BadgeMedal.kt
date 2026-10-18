@@ -268,6 +268,7 @@ fun badgeArt(key: String): DrawableResource? = when (key) {
     Badges.LOVED -> Res.drawable.badge_loved
     Badges.SHOPPER -> Res.drawable.badge_shopper
     Badges.GARDENER -> Res.drawable.badge_gardener
+    Badges.KEGEL -> Res.drawable.badge_kegel
     else -> null
 }
 
@@ -515,6 +516,7 @@ enum class BadgeGesture(val periodMillis: Int) {
             Badges.LOVED -> Heartbeat
             Badges.SHOPPER -> Bounce
             Badges.GARDENER -> Cradle
+            Badges.KEGEL -> Breathe
             else -> Hover
         }
     }

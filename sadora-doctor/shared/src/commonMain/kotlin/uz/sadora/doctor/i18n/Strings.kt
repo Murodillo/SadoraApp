@@ -46,6 +46,7 @@ interface Strings {
     val labs: LabStrings
     val reports: ReportStrings
     val conditions: ConditionStrings
+    val kegel: KegelStrings
 }
 
 interface CommonStrings {

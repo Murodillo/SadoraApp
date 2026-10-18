@@ -38,6 +38,8 @@ object FeatureKeys {
 
     /** The doctor's PDF report. One a month free, Premium unmetered. */
     const val DOCTOR_REPORT_PDF = "doctor_report_pdf"
+    /** Kegel levels from 3 up. Levels 1–2 and the reminders are free. */
+    const val KEGEL_ADVANCED = "kegel_advanced"
 
     /** Wearing an earned badge after her name. Premium; earning badges stays free. */
     const val BADGE_WEAR = "badge_wear"

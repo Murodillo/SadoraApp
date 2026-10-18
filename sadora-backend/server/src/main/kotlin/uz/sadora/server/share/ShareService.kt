@@ -84,6 +84,8 @@ class ShareService(
     private val labs: uz.sadora.server.lab.LabService? = null,
     /** Her conditions and pain diary; null in the tests that build the service by hand. */
     private val conditions: uz.sadora.server.condition.ConditionService? = null,
+    /** Her Kegel training and leak checks; null in the tests that build the service by hand. */
+    private val kegel: uz.sadora.server.kegel.KegelService? = null,
 ) {
 
     // ---------------------------------------------------------------- hers
@@ -354,6 +356,7 @@ class ShareService(
             ),
             labs = labs?.forSummary(userId, today, language).orEmpty(),
             conditions = conditions?.shared(userId, today, windowDays),
+            pelvicFloor = kegel?.shared(userId, from, today),
         )
     }
 

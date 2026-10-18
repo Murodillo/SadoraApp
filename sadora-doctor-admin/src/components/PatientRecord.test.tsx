@@ -1,7 +1,7 @@
 import { render, screen, within } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import type { DoctorSummary } from '../api/types'
-import { PatientRecord, rankedCounts } from './PatientRecord'
+import { leakCheckLine, PatientRecord, rankedCounts } from './PatientRecord'
 
 function record(overrides: Partial<DoctorSummary> = {}): DoctorSummary {
   return {
@@ -92,5 +92,53 @@ describe('PatientRecord — conditions and the pain diary', () => {
       ['b', 2],
     ])
     expect(rankedCounts(undefined, ['a'])).toEqual([])
+  })
+})
+
+describe('PatientRecord — pelvic floor', () => {
+  it('shows the program, level, training and each leak check with the note', () => {
+    render(
+      <PatientRecord
+        record={record({
+          pelvicFloor: {
+            program: 'postpartum',
+            level: 2,
+            sessions: 31,
+            activeDays: 18,
+            checks: [
+              { takenOn: '2026-10-01', frequency: 2, amount: 1, situations: ['cough', 'urge'], bother: 4 },
+              { takenOn: '2026-09-03', frequency: 0, amount: 0, situations: [], bother: 0 },
+            ],
+          },
+        })}
+      />,
+    )
+    const section = screen.getByRole('region', { name: 'Tos tubi mashqlari (Kegel)' })
+    expect(within(section).getByText("Tug'ruqdan keyingi dastur")).toBeInTheDocument()
+    expect(within(section).getByText('Daraja 2')).toBeInTheDocument()
+    expect(within(section).getByText('31')).toBeInTheDocument()
+    expect(within(section).getByText('18')).toBeInTheDocument()
+    expect(within(section).getByText('1-oktabr 2026')).toBeInTheDocument()
+    expect(
+      within(section).getByText("haftada 2–3 · tomchi · yo'tal/aksirish/kulish, to'satdan qistash · Bezovtalik 4 / 10"),
+    ).toBeInTheDocument()
+    expect(within(section).getByText('hech qachon · Bezovtalik 0 / 10')).toBeInTheDocument()
+    expect(within(section).getByText("Bemor o'zi to'ldirgan qisqa so'rov; tashxis vositasi emas.")).toBeInTheDocument()
+  })
+
+  it('leaves the checks out when she took none, and the section when there is nothing', () => {
+    const { unmount } = render(
+      <PatientRecord record={record({ pelvicFloor: { program: 'cycle', level: 1, sessions: 3, activeDays: 2 } })} />,
+    )
+    const section = screen.getByRole('region', { name: 'Tos tubi mashqlari (Kegel)' })
+    expect(within(section).getByText('Asosiy dastur')).toBeInTheDocument()
+    expect(within(section).queryByText("Siydik tutolmaslik bo'yicha so'rov")).not.toBeInTheDocument()
+    unmount()
+    render(<PatientRecord record={record({ pelvicFloor: null })} />)
+    expect(screen.queryByRole('region', { name: 'Tos tubi mashqlari (Kegel)' })).not.toBeInTheDocument()
+  })
+
+  it('clamps an answer out of range to the scale', () => {
+    expect(leakCheckLine({ takenOn: '2026-10-01', frequency: 9, amount: 7, bother: 10 })).toBe("kuniga bir necha · ko'p · Bezovtalik 10 / 10")
   })
 })

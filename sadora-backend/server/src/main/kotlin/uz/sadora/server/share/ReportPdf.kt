@@ -188,6 +188,28 @@ object ReportPdf {
                 }
             }
 
+            // ---- pelvic floor
+            val pf = summary.pelvicFloor
+            if (ReportSection.PELVIC_FLOOR in sections && pf != null) {
+                section(t.pelvicTitle) {
+                    append("<table class=\"facts\"><tr>")
+                    cell(t.kegelProgram(pf.program), "${t.kegelLevel} ${pf.level}")
+                    cell(t.kegelSessions, pf.sessions.toString())
+                    cell(t.kegelDays, pf.activeDays.toString())
+                    cell(null, null)
+                    append("</tr></table>")
+                    if (pf.checks.isNotEmpty()) {
+                        append("<h3>${x(t.leakChecks)}</h3>")
+                        append("<table class=\"grid\"><thead><tr><th>${x(t.date)}</th><th>${x(t.leakFrequency)}</th><th>${x(t.leakAmount)}</th><th>${x(t.leakWhen)}</th><th>${x(t.leakBother)}</th></tr></thead><tbody>")
+                        pf.checks.forEach { c ->
+                            append("<tr><td>${date(c.takenOn)}</td><td>${x(t.leakFrequencyWord(c.frequency))}</td><td>${x(t.leakAmountWord(c.amount))}</td>")
+                            append("<td>${x(c.situations.joinToString(", ") { t.leakSituation(it) }.ifEmpty { "—" })}</td><td>${c.bother} / 10</td></tr>")
+                        }
+                        append("</tbody></table><p class=\"muted\">${x(t.leakNote)}</p>")
+                    }
+                }
+            }
+
             // ---- medications
             if (ReportSection.MEDICATIONS in sections && summary.medications.isNotEmpty()) {
                 section(t.medsTitle) {

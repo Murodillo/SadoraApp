@@ -194,6 +194,26 @@ object DoctorPage {
                 }
             }
 
+            // ---- pelvic floor
+            summary.pelvicFloor?.let { pf ->
+                section(t.pelvicTitle) {
+                    append("<div class=\"facts\">")
+                    fact(t.kegelProgram(pf.program), "${t.kegelLevel} ${pf.level}")
+                    fact(t.kegelSessions, pf.sessions.toString())
+                    fact(t.kegelDays, pf.activeDays.toString())
+                    append("</div>")
+                    if (pf.checks.isNotEmpty()) {
+                        append("<h3>${esc(t.leakChecks)}</h3>")
+                        append("<table><thead><tr><th>${t.date}</th><th>${esc(t.leakFrequency)}</th><th>${esc(t.leakAmount)}</th><th>${esc(t.leakWhen)}</th><th>${esc(t.leakBother)}</th></tr></thead><tbody>")
+                        pf.checks.forEach { c ->
+                            append("<tr><td>${date(c.takenOn)}</td><td>${esc(t.leakFrequencyWord(c.frequency))}</td><td>${esc(t.leakAmountWord(c.amount))}</td>")
+                            append("<td>${esc(c.situations.joinToString(", ") { t.leakSituation(it) }.ifEmpty { "—" })}</td><td>${c.bother} / 10</td></tr>")
+                        }
+                        append("</tbody></table><p class=\"muted\">${esc(t.leakNote)}</p>")
+                    }
+                }
+            }
+
             // ---- lab results
             if (summary.labs.isNotEmpty()) {
                 section(t.labsTitle) {
@@ -495,6 +515,46 @@ internal class PageText private constructor(private val language: Language) {
     val period get() = pick("Davr", "Период", "Period")
     val adherence get() = pick("Qabul", "Приём", "Adherence")
     val conditionsTitle get() = pick("Holatlar", "Состояния", "Conditions")
+    val pelvicTitle get() = pick("Tos tubi mashqlari (Kegel)", "Упражнения для тазового дна (Кегель)", "Pelvic floor exercises (Kegel)")
+    fun kegelProgram(program: uz.sadora.contract.KegelProgram) = when (program) {
+        uz.sadora.contract.KegelProgram.CYCLE -> pick("Asosiy dastur", "Базовая программа", "Core program")
+        uz.sadora.contract.KegelProgram.PREGNANCY -> pick("Homiladorlik dasturi", "Программа для беременных", "Pregnancy program")
+        uz.sadora.contract.KegelProgram.POSTPARTUM -> pick("Tug'ruqdan keyingi dastur", "Программа после родов", "Postpartum program")
+        uz.sadora.contract.KegelProgram.MENOPAUSE -> pick("Menopauza dasturi", "Программа для менопаузы", "Menopause program")
+    }
+    val kegelLevel get() = pick("Daraja", "Уровень", "Level")
+    val kegelSessions get() = pick("Mashg'ulotlar", "Тренировки", "Sessions")
+    val kegelDays get() = pick("Faol kunlar", "Активные дни", "Active days")
+    val leakChecks get() = pick("Siydik tutolmaslik bo'yicha so'rov", "Опрос о подтекании мочи", "Leak check")
+    val leakFrequency get() = pick("Qanchalik tez-tez", "Как часто", "How often")
+    val leakAmount get() = pick("Miqdori", "Сколько", "Amount")
+    val leakWhen get() = pick("Qachon", "Когда", "When")
+    val leakBother get() = pick("Bezovtalik", "Беспокоит", "Bother")
+    val leakNote get() = pick(
+        "Bemor o'zi to'ldirgan qisqa so'rov; tashxis vositasi emas.",
+        "Короткий опрос, заполненный пациенткой; не диагностический инструмент.",
+        "A short questionnaire she filled in herself; not a diagnostic instrument.",
+    )
+    fun leakFrequencyWord(value: Int) = when (value) {
+        0 -> pick("hech qachon", "никогда", "never")
+        1 -> pick("haftada ≤1", "≤1 раза в неделю", "≤ once a week")
+        2 -> pick("haftada 2–3", "2–3 раза в неделю", "2–3 times a week")
+        3 -> pick("kuniga ~1", "~1 раз в день", "about daily")
+        else -> pick("kuniga bir necha", "несколько раз в день", "several times a day")
+    }
+    fun leakAmountWord(value: Int) = when (value) {
+        0 -> "—"
+        1 -> pick("tomchi", "капли", "drops")
+        2 -> pick("oz", "немного", "a little")
+        else -> pick("ko'p", "много", "more")
+    }
+    fun leakSituation(situation: uz.sadora.contract.LeakSituation) = when (situation) {
+        uz.sadora.contract.LeakSituation.COUGH -> pick("yo'tal/aksirish/kulish", "кашель/чихание/смех", "cough/sneeze/laugh")
+        uz.sadora.contract.LeakSituation.EXERCISE -> pick("jismoniy harakat", "нагрузка", "exercise/lifting")
+        uz.sadora.contract.LeakSituation.URGE -> pick("to'satdan qistash", "внезапный позыв", "sudden urge")
+        uz.sadora.contract.LeakSituation.NIGHT -> pick("tunda", "ночью", "at night")
+        uz.sadora.contract.LeakSituation.OTHER -> pick("boshqa", "другое", "other")
+    }
     fun conditionStatus(status: uz.sadora.contract.ConditionStatus) = when (status) {
         uz.sadora.contract.ConditionStatus.DIAGNOSED -> pick("Shifokor tashxisi", "Диагноз врача", "Diagnosed by a doctor")
         uz.sadora.contract.ConditionStatus.SUSPECTED -> pick("Gumon (tashxis yo'q)", "Подозрение (без диагноза)", "Suspected (not diagnosed)")

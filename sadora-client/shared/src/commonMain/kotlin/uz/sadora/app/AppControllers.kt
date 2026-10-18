@@ -61,6 +61,8 @@ class AppControllers(
     val conditions: ConditionController = ConditionController(null),
     /** The doctor's report PDF and her month's free one. */
     val reports: uz.sadora.app.data.ReportController = uz.sadora.app.data.ReportController(null),
+    /** Kegel exercises: program, levels, reminders, the leak check. */
+    val kegel: uz.sadora.app.data.KegelController = uz.sadora.app.data.KegelController(null),
     val pet: PetController,
     val frames: FrameController,
     val analytics: Analytics,
@@ -94,6 +96,7 @@ class AppControllers(
             babies = graph?.babyController(stageEvents) ?: BabyController(null, stageEvents),
             conditions = graph?.conditionController() ?: ConditionController(null),
             reports = graph?.reportController() ?: uz.sadora.app.data.ReportController(null),
+            kegel = graph?.kegelController() ?: uz.sadora.app.data.KegelController(null),
             pet = graph?.petController(state) ?: PetController(null, state),
             frames = graph?.frameController(state) ?: FrameController(null, state),
             analytics = graph?.analytics ?: Analytics.None,

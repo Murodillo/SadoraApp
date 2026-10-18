@@ -638,6 +638,8 @@ export interface DoctorSummary {
   labs?: LabReport[]
   /** Her conditions and 90 days of the pain diary; null when she marked none. */
   conditions?: SharedConditions | null
+  /** Her pelvic floor (Kegel) training and leak checks; null when she never trained nor took a check. */
+  pelvicFloor?: SharedPelvicFloor | null
 }
 
 // ---------------------------------------------------------------- conditions (Conditions.kt)
@@ -670,6 +672,29 @@ export interface PainSummary {
 export interface SharedConditions {
   conditions?: UserCondition[]
   pain?: PainSummary | null
+}
+
+// ---------------------------------------------------------------- pelvic floor (Kegel.kt)
+
+export type KegelProgram = 'cycle' | 'pregnancy' | 'postpartum' | 'menopause'
+export type LeakSituation = 'cough' | 'exercise' | 'urge' | 'night' | 'other'
+
+/** The four-weekly check: frequency 0 never … 4 several times a day, amount 0 none … 3 more, bother 0–10. */
+export interface KegelCheck {
+  takenOn: string
+  frequency: number
+  amount: number
+  situations?: LeakSituation[]
+  bother: number
+}
+
+export interface SharedPelvicFloor {
+  program: KegelProgram
+  level: number
+  sessions: number
+  activeDays: number
+  /** Newest first. */
+  checks?: KegelCheck[]
 }
 
 // ---------------------------------------------------------------- the doctor's workplace (DoctorWork.kt)

@@ -107,6 +107,9 @@ sealed interface Route {
     data object ConditionReport : Route
     /** The doctor's report PDF: period, sections and language, then the share sheet. */
     data object DoctorReport : Route
+    /** Kegel exercises: her program, the session, reminders and the leak check. */
+    data object Kegel : Route
+    data object KegelSession : Route
     data object Sleep : Route
     data object Insights : Route
     data object Knowledge : Route
@@ -175,6 +178,9 @@ sealed interface Route {
  */
 val Route.isFullScreen: Boolean
     get() = this == Route.AiChat || this == Route.FoodScanCamera || this == Route.LabScan || this == Route.Paywall ||
+        // A guided session is the whole screen: nothing to tap by mistake with the eyes shut. Its
+        // program page too, whose check sheet is taller than the space above the bar.
+        this == Route.KegelSession || this == Route.Kegel ||
         // A thread and a post end in a text field. Above the tab bar it was padded for the
         // system bar a second time, and with the keyboard up it floated a bar's height over it.
         this is Route.Post || this is Route.Conversation
@@ -224,7 +230,7 @@ sealed interface AppLink {
 
     /** `sadora://open/{target}` — a tap on a home-screen widget's block. */
     data class Open(val target: Target) : AppLink {
-        enum class Target { Today, Journey, Medications, Water, Devices }
+        enum class Target { Today, Journey, Medications, Water, Devices, Kegel }
     }
 
     companion object {

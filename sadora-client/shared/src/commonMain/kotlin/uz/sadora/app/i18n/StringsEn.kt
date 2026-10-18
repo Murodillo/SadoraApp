@@ -1560,6 +1560,7 @@ object StringsEn : Strings {
     override val babies: BabyStrings = BabyStringsEn
     override val conditions: ConditionStrings = ConditionStringsEn
     override val reports: ReportStrings = ReportStringsEn
+    override val kegel: KegelStrings = KegelStringsEn
     override val pet: PetStrings = PetEn
     override val widgets: WidgetUiStrings = WidgetUiEn
     override val frames: FrameStrings = FramesEn
@@ -1597,6 +1598,7 @@ object StringsEn : Strings {
             CoinReasons.MEAL_LOGGED -> "Log a meal"
             CoinReasons.JOURNAL_ENTRY -> "Write in the journal"
             CoinReasons.PRACTICE -> "Breathing or meditation"
+            CoinReasons.KEGEL_SESSION -> "Kegel exercises"
             CoinReasons.ARTICLE_READ -> "Read an article"
             CoinReasons.REFERRAL_JOINED -> "A friend joined"
             CoinReasons.REFERRAL_WELCOME -> "Arriving with an invite code"

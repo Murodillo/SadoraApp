@@ -406,7 +406,8 @@ private fun QuickActions(onOpen: (Route) -> Unit, onSelectTab: (Tab) -> Unit) {
         ) {
             QuickAction(Res.drawable.ic3d_notebook, t.journal, Modifier.weight(1f)) { onOpen(Route.MindJournal) }
             QuickAction(Res.drawable.ic3d_meditation, t.meditation, Modifier.weight(1f)) { onSelectTab(Tab.Mind) }
-            QuickAction(Res.drawable.ic3d_breath, t.breathing, Modifier.weight(1f)) { onSelectTab(Tab.Mind) }
+            // Breathing lived on the Mind tab like meditation; the slot is the pelvic floor's now.
+            QuickAction(Res.drawable.ic3d_kegel, strings.kegel.shortTitle, Modifier.weight(1f)) { onOpen(Route.Kegel) }
             QuickAction(Res.drawable.ic3d_bell, t.reminders, Modifier.weight(1f)) { onOpen(Route.Medications) }
         }
     }

@@ -1563,6 +1563,7 @@ object StringsUz : Strings {
     override val babies: BabyStrings = BabyStringsUz
     override val conditions: ConditionStrings = ConditionStringsUz
     override val reports: ReportStrings = ReportStringsUz
+    override val kegel: KegelStrings = KegelStringsUz
     override val pet: PetStrings = PetUz
     override val widgets: WidgetUiStrings = WidgetUiUz
     override val frames: FrameStrings = FramesUz
@@ -1600,6 +1601,7 @@ object StringsUz : Strings {
             CoinReasons.MEAL_LOGGED -> "Ovqat qo'shish"
             CoinReasons.JOURNAL_ENTRY -> "Kundalikka yozuv"
             CoinReasons.PRACTICE -> "Nafas yoki meditatsiya"
+            CoinReasons.KEGEL_SESSION -> "Tos tubi mashqi (Kegel)"
             CoinReasons.ARTICLE_READ -> "Maqolani o'qish"
             CoinReasons.REFERRAL_JOINED -> "Do'st taklif bo'yicha qo'shildi"
             CoinReasons.REFERRAL_WELCOME -> "Taklif kodi bilan kelish"

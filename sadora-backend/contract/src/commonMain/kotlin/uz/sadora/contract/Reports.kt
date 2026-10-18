@@ -19,6 +19,7 @@ enum class ReportSection {
     @SerialName("conditions") CONDITIONS,
     @SerialName("mood") MOOD,
     @SerialName("pregnancy") PREGNANCY,
+    @SerialName("pelvic_floor") PELVIC_FLOOR,
 }
 
 @Serializable

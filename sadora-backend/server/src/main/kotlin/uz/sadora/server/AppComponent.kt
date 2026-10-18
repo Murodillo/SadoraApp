@@ -262,6 +262,15 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
         health = healthService,
         dailyHealth = { userId, from, to -> wearableService.daily(userId, from, to).days },
     )
+    val kegelRepository = uz.sadora.server.kegel.KegelRepository()
+    val kegelService = uz.sadora.server.kegel.KegelService(
+        kegel = kegelRepository,
+        access = healthAccess,
+        users = userRepository,
+        coins = { userId, reason ->
+            rewardsService.grant(userId, reason, language = userRepository.findById(userId)?.language ?: uz.sadora.contract.Language.UZ)
+        },
+    )
     val widgetService = uz.sadora.server.widget.WidgetService(
         users = userService,
         health = healthService,
@@ -500,6 +509,7 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
         entitlements = entitlementService,
         labs = labService,
         conditions = conditionService,
+        kegel = kegelService,
     )
     val reportService = uz.sadora.server.share.ReportService(shareService, healthAccess)
 
@@ -522,6 +532,7 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
     }
     val partnerAlertJob = uz.sadora.server.partner.PartnerAlertJob(partnerService)
     val vaccineReminderJob = uz.sadora.server.baby.VaccineReminderJob(babyRepository, userRepository, notificationRepository)
+    val kegelReminderJob = uz.sadora.server.kegel.KegelReminderJob(kegelRepository, userRepository, notificationRepository)
 
     val billingRepository = BillingRepository()
     val billingService = BillingService(
@@ -663,6 +674,7 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
         consultationJob.stop()
         partnerAlertJob.stop()
         vaccineReminderJob.stop()
+        kegelReminderJob.stop()
         outboundHttpClient.close()
         cache.close()
         databaseFactory.close()

@@ -616,6 +616,7 @@ private fun MainShell(
                 AppLink.Open.Target.Medications -> if (navigator.current != Route.Medications) navigator.push(Route.Medications)
                 AppLink.Open.Target.Water -> navigator.select(Tab.Today)
                 AppLink.Open.Target.Devices -> if (navigator.current != Route.DataSources) navigator.push(Route.DataSources)
+                AppLink.Open.Target.Kegel -> if (navigator.current != Route.Kegel) navigator.push(Route.Kegel)
             }
         }
         if (link is AppLink.Conversation) {
@@ -1278,6 +1279,8 @@ private fun PushedScreen(
             onUpgrade = upgrade,
             onShowDoctor = { navigator.push(Route.ShareProfile) },
         )
+        Route.Kegel -> uz.sadora.app.ui.modules.KegelScreen(controllers.kegel, close, navigator::push, onUpgrade = upgrade, onToast = toast)
+        Route.KegelSession -> uz.sadora.app.ui.modules.KegelSessionScreen(controllers.kegel, close)
         Route.DoctorReport -> uz.sadora.app.ui.modules.DoctorReportScreen(
             reports = controllers.reports,
             language = state.language,

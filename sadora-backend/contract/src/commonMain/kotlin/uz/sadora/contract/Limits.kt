@@ -124,6 +124,12 @@ object Limits {
     val REPORT_MONTHS = setOf(3, 6)
     const val REPORT_MAX_BYTES = 5_000_000
 
+    /** Kegel: reminders a day, days at a level that open the next, and the check's spacing. */
+    const val KEGEL_MAX_REMINDERS = 3
+    const val KEGEL_DAYS_TO_UNLOCK = 5
+    const val KEGEL_CHECK_DAYS = 28
+    const val KEGEL_FREE_LEVELS = 2
+
     // ---- babies
     const val BABIES_MAX = 6
     const val BABY_NAME_MAX = 40

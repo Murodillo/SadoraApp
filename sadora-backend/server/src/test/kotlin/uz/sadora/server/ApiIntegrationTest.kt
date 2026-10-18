@@ -3926,6 +3926,101 @@ class ApiIntegrationTest {
         assertNull(get<CycleStatus>("/v1/cycle/status", her.token).prediction.nextPeriodEarliest)
     }
 
+    // ---------------------------------------------------------------- kegel
+
+    @Test
+    fun `kegel levels open with practice, level three is Premium, reminders and checks reach the doctor`() = api {
+        val her = signUp().also { onboard(it) }
+        val herId = Uuid.parse(her.userId)
+        val today = get<CycleStatus>("/v1/cycle/status", her.token).today
+        val fresh = get<uz.sadora.contract.KegelState>("/v1/kegel", her.token)
+        assertEquals(uz.sadora.contract.KegelProgram.CYCLE, fresh.program)
+        assertEquals(1, fresh.unlockedLevel)
+        assertTrue(fresh.checkDue, "the first check is offered before any training")
+        assertFalse(fresh.advanced)
+
+        val program = uz.sadora.contract.KegelProgram.CYCLE
+        val first = post<uz.sadora.contract.KegelSessionResult>("/v1/kegel/sessions", her.token, uz.sadora.contract.LogKegelSessionRequest(program, 1, reps = 20, durationSeconds = 140))
+        assertEquals(5, first.coins?.amount)
+        assertEquals(1, first.state.todaySessions)
+        assertEquals(1, first.state.streakDays)
+        val closed = raw { client.post("/v1/kegel/sessions") { auth(her.token); json(uz.sadora.contract.LogKegelSessionRequest(program, 2, 20, 200)) } }
+        assertEquals(HttpStatusCode.BadRequest, closed.status, "level 2 is not open yet")
+
+        // Five days at level 1 open level 2; five at level 2 open level 3, which is Premium.
+        (1..4).forEach { back -> component.kegelRepository.addSession(herId, program, 1, today.minus(back, DateTimeUnit.DAY), 20, 140) }
+        val opened = get<uz.sadora.contract.KegelState>("/v1/kegel", her.token)
+        assertEquals(2, opened.unlockedLevel)
+        assertEquals(5, opened.streakDays)
+        val second = post<uz.sadora.contract.KegelSessionResult>("/v1/kegel/sessions", her.token, uz.sadora.contract.LogKegelSessionRequest(program, 2, 20, 200))
+        assertNull(second.unlockedLevel)
+        (1..4).forEach { back -> component.kegelRepository.addSession(herId, program, 2, today.minus(back, DateTimeUnit.DAY), 20, 200) }
+        assertEquals(3, get<uz.sadora.contract.KegelState>("/v1/kegel", her.token).unlockedLevel)
+        val premiumOnly = raw { client.post("/v1/kegel/sessions") { auth(her.token); json(uz.sadora.contract.LogKegelSessionRequest(program, 3, 20, 280)) } }
+        assertEquals(HttpStatusCode.PaymentRequired, premiumOnly.status)
+
+        // Reminders: three at most; the program can be another stage's.
+        val tooMany = raw {
+            client.put("/v1/kegel/settings") {
+                auth(her.token)
+                json(uz.sadora.contract.KegelSettingsRequest(reminders = (8..11).map { kotlinx.datetime.LocalTime(it, 0) }))
+            }
+        }
+        assertEquals(HttpStatusCode.BadRequest, tooMany.status)
+        val pregnancy = put<uz.sadora.contract.KegelState>(
+            "/v1/kegel/settings",
+            her.token,
+            uz.sadora.contract.KegelSettingsRequest(uz.sadora.contract.KegelProgram.PREGNANCY, listOf(kotlinx.datetime.LocalTime(20, 0), kotlinx.datetime.LocalTime(8, 0))),
+        )
+        assertEquals(4, pregnancy.levels.size)
+        assertEquals(uz.sadora.contract.KegelProgram.CYCLE, pregnancy.stageProgram)
+        assertEquals(1, pregnancy.unlockedLevel, "levels are counted per program")
+        assertEquals(listOf(8, 20), pregnancy.reminders.map { it.hour })
+        assertEquals(2, pregnancy.dailyGoal)
+
+        // The check: once now, then not due for four weeks.
+        val badCheck = raw { client.post("/v1/kegel/checks") { auth(her.token); json(uz.sadora.contract.SaveKegelCheckRequest(frequency = 5, amount = 0, bother = 0)) } }
+        assertEquals(HttpStatusCode.BadRequest, badCheck.status)
+        val checked = post<uz.sadora.contract.KegelState>(
+            "/v1/kegel/checks",
+            her.token,
+            uz.sadora.contract.SaveKegelCheckRequest(frequency = 2, amount = 1, situations = listOf(uz.sadora.contract.LeakSituation.COUGH), bother = 4),
+        )
+        assertFalse(checked.checkDue)
+        assertEquals(listOf(uz.sadora.contract.LeakSituation.COUGH), checked.checks.single().situations)
+
+        // The doctor sees the training and the check.
+        val share = post<ProfileShare>("/v1/me/shares", her.token, CreateShareRequest(ttlHours = 2))
+        val token = assertNotNull(share.url).substringAfterLast("/")
+        val summary = client.get("/share/$token/json").body<DoctorSummary>()
+        assertEquals(10, summary.pelvicFloor?.sessions)
+        assertEquals(1, summary.pelvicFloor?.checks?.size)
+        assertTrue("Kegel" in client.get("/share/$token").bodyAsText())
+        val pdf = client.get("/share/$token/pdf?lang=en").body<ByteArray>()
+        org.apache.pdfbox.Loader.loadPDF(pdf).use { doc ->
+            val text = org.apache.pdfbox.text.PDFTextStripper().getText(doc)
+            assertTrue("Pelvic floor exercises (Kegel)" in text)
+            assertTrue("cough/sneeze/laugh" in text)
+        }
+
+        // A reminder whose time just passed is queued once, and never says what it is for.
+        val other = signUp().also { onboard(it) }
+        val otherId = Uuid.parse(other.userId)
+        val zone = kotlinx.datetime.TimeZone.of(assertNotNull(component.userRepository.findById(otherId)).timezone)
+        val local = kotlin.time.Clock.System.now().toLocalDateTime(zone)
+        if (local.hour * 60 + local.minute >= 5) {
+            val minutes = local.hour * 60 + local.minute - 2
+            put<uz.sadora.contract.KegelState>("/v1/kegel/settings", other.token, uz.sadora.contract.KegelSettingsRequest(reminders = listOf(kotlinx.datetime.LocalTime(minutes / 60, minutes % 60))))
+            component.kegelReminderJob.tick()
+            component.kegelReminderJob.tick()
+            // Read whatever its status: the test server's own delivery loop may already have sent it.
+            val reminder = uz.sadora.server.kegel.KegelReminderJob.words(uz.sadora.contract.Language.UZ)
+            val queued = assertNotNull(component.notificationRepository.history(otherId, 20)).filter { it.title == reminder.first }
+            assertEquals(1, queued.size)
+            assertFalse("Kegel" in queued.single().title + queued.single().body)
+        }
+    }
+
     // ---------------------------------------------------------------- babies
 
     @Test

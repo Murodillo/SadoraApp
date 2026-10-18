@@ -125,4 +125,5 @@ object StringsRu : Strings {
     override val labs: LabStrings = LabStringsRu
     override val reports: ReportStrings = ReportStringsRu
     override val conditions: ConditionStrings = ConditionStringsRu
+    override val kegel: KegelStrings = KegelStringsRu
 }

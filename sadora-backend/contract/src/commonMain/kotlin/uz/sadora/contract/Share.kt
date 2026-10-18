@@ -65,6 +65,8 @@ data class DoctorSummary(
     val labs: List<LabReport> = emptyList(),
     /** Her conditions and 90 days of the pain diary; null when she marked none. */
     val conditions: SharedConditions? = null,
+    /** Her Kegel training and leak checks in the window; null when she has none. */
+    val pelvicFloor: SharedPelvicFloor? = null,
 ) {
     companion object {
         const val SHARE_WINDOW_DAYS = 90

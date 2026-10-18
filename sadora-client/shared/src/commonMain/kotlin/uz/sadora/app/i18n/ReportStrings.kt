@@ -50,6 +50,7 @@ object ReportStringsUz : ReportStrings {
         ReportSection.CONDITIONS -> "Holatlar va og'riq"
         ReportSection.MOOD -> "Kayfiyat"
         ReportSection.PREGNANCY -> "Homiladorlik"
+        ReportSection.PELVIC_FLOOR -> "Tos tubi (Kegel)"
     }
     override val pickSection = "Kamida bitta bo'limni tanlang"
     override val language = "Hisobot tili"
@@ -84,6 +85,7 @@ object ReportStringsRu : ReportStrings {
         ReportSection.CONDITIONS -> "Состояния и боль"
         ReportSection.MOOD -> "Настроение"
         ReportSection.PREGNANCY -> "Беременность"
+        ReportSection.PELVIC_FLOOR -> "Тазовое дно (Кегель)"
     }
     override val pickSection = "Выберите хотя бы один раздел"
     override val language = "Язык отчёта"
@@ -118,6 +120,7 @@ object ReportStringsEn : ReportStrings {
         ReportSection.CONDITIONS -> "Conditions and pain"
         ReportSection.MOOD -> "Mood"
         ReportSection.PREGNANCY -> "Pregnancy"
+        ReportSection.PELVIC_FLOOR -> "Pelvic floor (Kegel)"
     }
     override val pickSection = "Pick at least one section"
     override val language = "Report language"

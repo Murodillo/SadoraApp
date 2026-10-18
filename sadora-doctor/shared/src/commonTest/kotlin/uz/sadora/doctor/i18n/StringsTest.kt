@@ -184,6 +184,13 @@ class StringsTest {
             uz.sadora.contract.PainKind.entries.forEach { add(kind(it)) }
             uz.sadora.contract.PainArea.entries.forEach { add(area(it)) }
         }
+        with(t.kegel) {
+            addAll(listOf(title, level(3), sessions, activeDays, checksTitle, bother, note))
+            uz.sadora.contract.KegelProgram.entries.forEach { add(program(it)) }
+            uz.sadora.contract.LeakSituation.entries.forEach { add(situation(it)) }
+            (0..4).forEach { add(frequency(it)) }
+            (0..3).forEach { add(amount(it)) }
+        }
     }
 
     @Test
@@ -267,6 +274,26 @@ class StringsTest {
         assertEquals("Og'riq kundaligi · so'nggi 90 kun", StringsUz.conditions.painTitle(90))
         assertEquals("Дневник боли · последние 90 дней", StringsRu.conditions.painTitle(90))
         assertEquals("Pain diary · last 1 day", StringsEn.conditions.painTitle(1))
+    }
+
+    @Test
+    fun `leak check answers are told apart and read as one line`() {
+        languages.forEach { t ->
+            val frequencies = (0..4).map { t.kegel.frequency(it) }
+            assertEquals(frequencies.size, frequencies.distinct().size, "${t.language}: $frequencies")
+            val situations = uz.sadora.contract.LeakSituation.entries.map { t.kegel.situation(it) }
+            assertEquals(situations.size, situations.distinct().size, "${t.language}: $situations")
+        }
+        val check = uz.sadora.contract.KegelCheck(
+            takenOn = kotlinx.datetime.LocalDate(2026, 10, 1),
+            frequency = 2,
+            amount = 1,
+            situations = listOf(uz.sadora.contract.LeakSituation.COUGH, uz.sadora.contract.LeakSituation.URGE),
+            bother = 4,
+        )
+        assertEquals("haftada 2–3 · tomchi · yo'tal/aksirish/kulish, to'satdan qistash · Bezovtalik 4 / 10", StringsUz.kegel.checkLine(check))
+        assertEquals("never · Bother 0 / 10", StringsEn.kegel.checkLine(check.copy(frequency = 0, amount = 0, situations = emptyList(), bother = 0)))
+        assertEquals("Daraja 3", StringsUz.kegel.level(3))
     }
 
     @Test

@@ -17,6 +17,7 @@ import uz.sadora.doctor.resources.ic3d_period
 import uz.sadora.doctor.resources.ic3d_pregnancy
 import uz.sadora.doctor.resources.ic3d_record
 import uz.sadora.doctor.resources.ic3d_sym_hot_flush
+import uz.sadora.doctor.resources.ic3d_kegel
 import uz.sadora.doctor.resources.ic3d_watch
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -55,6 +56,7 @@ import uz.sadora.contract.Epds
 import uz.sadora.contract.HealthMetric
 import uz.sadora.contract.Language
 import uz.sadora.contract.SharedConditions
+import uz.sadora.contract.SharedPelvicFloor
 import uz.sadora.contract.SharedStageRecords
 import uz.sadora.doctor.data.ApiFailure
 import uz.sadora.doctor.data.DoctorController
@@ -64,6 +66,7 @@ import uz.sadora.doctor.design.Radius
 import uz.sadora.doctor.design.Sadora
 import uz.sadora.doctor.design.SadoraIcons
 import uz.sadora.doctor.design.Spacing
+import uz.sadora.doctor.i18n.checkLine
 import uz.sadora.doctor.i18n.strings
 import uz.sadora.doctor.ui.components.EmptyState
 import uz.sadora.doctor.ui.components.ErrorStrip
@@ -76,7 +79,7 @@ import uz.sadora.doctor.ui.components.Skeleton
  * What a patient's QR code opens: the record her app assembles for a doctor, drawn
  * natively instead of as the web page the code also links to.
  *
- * The order is a consultation's — who she is, her cycle, her conditions and pain diary, her pregnancy, what she has felt,
+ * The order is a consultation's — who she is, her cycle, her conditions and pain diary, her pelvic floor training, her pregnancy, what she has felt,
  * the last days, how she has been, what she takes, her lab results, her visits, food,
  * and the devices.
  * A section with nothing in it is left out rather than drawn empty. Nothing here is a
@@ -182,6 +185,10 @@ private fun androidx.compose.foundation.lazy.LazyListScope.recordSections(
 
     record.conditions?.takeIf { it.conditions.isNotEmpty() || it.pain != null }?.let { shared ->
         item(key = "conditions") { ConditionsSection(shared) }
+    }
+
+    record.pelvicFloor?.let { pf ->
+        item(key = "pelvic-floor") { PelvicFloorSection(pf) }
     }
 
     record.pregnancy?.let { pregnancy ->
@@ -476,6 +483,32 @@ private fun ConditionsSection(shared: SharedConditions) {
                 Text(t.whereTitle, style = Sadora.type.h3, color = c.text)
                 Facts(areas.map { (area, n) -> t.area(area) to days(n) })
             }
+        }
+    }
+}
+
+/** Her Kegel program and level, how much she trains, then her leak checks with the note that she filled them in herself. */
+@Composable
+private fun PelvicFloorSection(pf: SharedPelvicFloor) {
+    val t = strings.kegel
+    val c = Sadora.colors
+    RecordSection(t.title, Res.drawable.ic3d_kegel) {
+        Facts(
+            listOf(
+                t.program(pf.program) to t.level(pf.level),
+                t.sessions to pf.sessions.toString(),
+                t.activeDays to pf.activeDays.toString(),
+            ),
+        )
+        if (pf.checks.isNotEmpty()) {
+            Text(t.checksTitle, style = Sadora.type.h3, color = c.text)
+            pf.checks.forEach { check ->
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(fullDate(check.takenOn), style = Sadora.type.body, color = c.muted)
+                    Text(t.checkLine(check), style = Sadora.type.body, color = c.text)
+                }
+            }
+            Text(t.note, style = Sadora.type.caption.copy(letterSpacing = TextUnit.Unspecified), color = c.muted2)
         }
     }
 }
