@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useAudit } from '../api/hooks'
 import { Card, Empty, ErrorNotice, formatDateTime, Loading } from '../components/ui'
+import { actionLabel } from './auditLabels'
 
 const PAGE_SIZE = 40
 
@@ -85,7 +86,10 @@ export function AuditPage() {
                         <span className="badge free">{entry.actorType}</span>{' '}
                         <span className="faint">{entry.actorLabel ?? ''}</span>
                       </td>
-                      <td className="mono">{entry.action}</td>
+                      <td>
+                        <div>{actionLabel(entry.action)}</div>
+                        <div className="mono faint">{entry.action}</div>
+                      </td>
                       <td className="mono faint" title={entry.entityId ?? undefined}>
                         {entry.entityType ? `${entry.entityType}:${entry.entityId?.slice(0, 8) ?? ''}` : '—'}
                       </td>

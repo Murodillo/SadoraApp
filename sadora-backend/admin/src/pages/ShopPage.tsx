@@ -10,6 +10,7 @@ import { useAuth } from '../auth/AuthContext'
 import { acceptSlug, slugPattern } from '../api/limits'
 import { useToast } from '../components/toast'
 import { Card, ConfirmDialog, ErrorNotice, Field, Loading, Modal, Spinner, Switch, TabPanel, Tabs } from '../components/ui'
+import { PaidProducts } from './PaidProducts'
 
 const KINDS: { value: ShopKind; label: string }[] = [
   { value: 'premium', label: 'Obuna (Premium)' },
@@ -57,6 +58,20 @@ const EMPTY: SaveShopProductBody = {
   position: 0,
 }
 
+/** The Gul catalogue's three kinds, and the items sold for money beside them. */
+type ShopTab = ShopKind | 'paid'
+
+/**
+ * Everything the app sells, priced in one place. Support has no Gul catalogue — the
+ * server refuses it to her — but she reads the pet's and the frames' prices, as she did
+ * on the billing page they came from.
+ */
+export function ShopPage() {
+  const { can } = useAuth()
+  if (!can(['OWNER', 'ADMIN', 'ANALYST'])) return <PaidProducts />
+  return <GulShop />
+}
+
 /**
  * The Gul shop's catalogue, a tab per kind: subscriptions, devices, medicines.
  *
@@ -69,7 +84,7 @@ const EMPTY: SaveShopProductBody = {
  * promises somebody is holding, and the page says so rather than silently doing
  * something different from what the button offered.
  */
-export function ShopPage() {
+function GulShop() {
   const products = useShopProducts()
   const create = useCreateShopProduct()
   const update = useUpdateShopProduct()
@@ -82,7 +97,7 @@ export function ShopPage() {
   const [creating, setCreating] = useState(false)
   const [slug, setSlug] = useState('')
   const [form, setForm] = useState<SaveShopProductBody>(EMPTY)
-  const [tab, setTab] = useState<ShopKind>('premium')
+  const [tab, setTab] = useState<ShopTab>('premium')
   const [removing, setRemoving] = useState<AdminShopProduct | null>(null)
 
   if (products.isLoading) return <Loading rows={8} />
@@ -91,7 +106,8 @@ export function ShopPage() {
   function openCreate() {
     // A new product starts as the tab it was added from. A Premium row has no price and
     // no discount, so it starts with days instead.
-    setForm(tab === 'premium' ? { ...EMPTY, kind: tab, discountPercent: 0, premiumDays: 30 } : { ...EMPTY, kind: tab })
+    const kind = current.kind
+    setForm(kind === 'premium' ? { ...EMPTY, kind, discountPercent: 0, premiumDays: 30 } : { ...EMPTY, kind })
     setSlug('')
     setEditing(null)
     setCreating(true)
@@ -160,23 +176,29 @@ export function ShopPage() {
 
   return (
     <div className="grid" style={{ gap: 16 }}>
-      <Tabs<ShopKind>
+      <Tabs<ShopTab>
         value={tab}
         onChange={setTab}
-        items={TABS.map((t) => ({
-          key: t.kind,
-          label: (
-            <>
-              {t.label}
-              <span className="badge" style={{ marginLeft: 6 }}>
-                {all.filter((product) => product.kind === t.kind).length}
-              </span>
-            </>
-          ),
-        }))}
+        items={[
+          ...TABS.map((t) => ({
+            key: t.kind as ShopTab,
+            label: (
+              <>
+                {t.label}
+                <span className="badge" style={{ marginLeft: 6 }}>
+                  {all.filter((product) => product.kind === t.kind).length}
+                </span>
+              </>
+            ),
+          })),
+          { key: 'paid' as ShopTab, label: 'Hamroh va ramkalar' },
+        ]}
       />
 
       <TabPanel id={tab}>
+        {tab === 'paid' ? (
+          <PaidProducts />
+        ) : (
         <div className="grid" style={{ gap: 16 }}>
           <div className="notice">{current.notice}</div>
 
@@ -262,6 +284,7 @@ export function ShopPage() {
             </div>
           </Card>
         </div>
+        )}
       </TabPanel>
 
       {removing && (

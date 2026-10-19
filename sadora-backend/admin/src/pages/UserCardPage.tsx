@@ -9,7 +9,7 @@ import {
   useUserFrames,
   useUserRewards,
 } from '../api/hooks'
-import { frameNames } from './BillingPage'
+import { frameNames } from './PaidProducts'
 import { UserRewardsCard } from './RewardsPage'
 import { limits } from '../api/limits'
 import { useAuth } from '../auth/AuthContext'
@@ -22,6 +22,7 @@ import {
   formatExpiry,
   Loading,
   Modal,
+  PrivacyNote,
   Spinner,
   StatusBadge,
   TabPanel,
@@ -100,9 +101,10 @@ export function UserCardPage() {
               <Row label="Oxirgi faollik" value={formatDateTime(user.lastActiveAt)} />
             </tbody>
           </table>
-          <div className="notice privacy" style={{ marginTop: 14 }}>
-            Sikl, simptomlar, kayfiyat, dorilar va AI yozishmalari bu yerda yo'q va bo'lmaydi.
-            Backend ularni admin API'ga umuman uzatmaydi.
+          <div style={{ marginTop: 14 }}>
+            <PrivacyNote detail="Sikl, simptomlar, kayfiyat, dorilar va AI yozishmalari bu yerda yo'q va bo'lmaydi: server ularni admin API'ga umuman uzatmaydi.">
+              Sog'liq ma'lumotlari bu kartochkada yo'q va bo'lmaydi.
+            </PrivacyNote>
           </div>
         </Card>
       )}

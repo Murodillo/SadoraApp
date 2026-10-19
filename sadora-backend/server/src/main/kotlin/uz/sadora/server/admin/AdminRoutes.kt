@@ -92,6 +92,12 @@ fun Route.adminRoutes(
                 call.respond(statsRepository.stats())
             }
 
+            // The dashboard's "Bugun" queues; each role gets the ones its pages can work.
+            get("/stats/todo") {
+                val principal = call.requireAdminRole(AdminRole.OWNER, AdminRole.ADMIN, AdminRole.SUPPORT, AdminRole.ANALYST)
+                call.respond(statsRepository.todo(principal.role))
+            }
+
             get("/stats/signups") {
                 call.requireAdminRole(AdminRole.OWNER, AdminRole.ADMIN, AdminRole.ANALYST)
                 call.respond(statsRepository.signUpsPerDay(call.intParameter("days", 14, 90)))
@@ -157,6 +163,11 @@ fun Route.adminRoutes(
             get("/features") {
                 call.requireAdminRole(AdminRole.OWNER, AdminRole.ADMIN, AdminRole.ANALYST)
                 call.respond(adminService.featureDefinitions())
+            }
+
+            get("/features/usage") {
+                call.requireAdminRole(AdminRole.OWNER, AdminRole.ADMIN, AdminRole.ANALYST)
+                call.respond(statsRepository.featureUsage(call.intParameter("days", 7, 90)))
             }
 
             put("/features/{key}") {

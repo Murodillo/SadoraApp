@@ -17,7 +17,6 @@ import { ContentPage } from './pages/ContentPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { DoctorsPage } from './pages/DoctorsPage'
 import { FeaturesPage } from './pages/FeaturesPage'
-import { FlagsPage } from './pages/FlagsPage'
 import { NotificationsPage } from './pages/NotificationsPage'
 import { PromoVideoPage } from './pages/PromoVideoPage'
 import { RewardsPage } from './pages/RewardsPage'
@@ -120,13 +119,15 @@ function SignedInRoutes() {
           path="rewards"
           element={can(['OWNER', 'ADMIN', 'SUPPORT', 'ANALYST']) ? <RewardsPage /> : <Navigate to="/" replace />}
         />
-        <Route
-          path="shop"
-          element={can(['OWNER', 'ADMIN', 'ANALYST']) ? <ShopPage /> : <Navigate to="/" replace />}
-        />
+        {/* Every role: Support reads the pet's and the frames' prices; the Gul catalogue inside is not hers. */}
+        <Route path="shop" element={<ShopPage />} />
         <Route path="promo-video" element={<PromoVideoPage />} />
-        <Route path="features" element={<FeaturesPage />} />
-        <Route path="flags" element={<FlagsPage />} />
+        <Route
+          path="features"
+          element={can(['OWNER', 'ADMIN', 'ANALYST']) ? <FeaturesPage /> : <Navigate to="/" replace />}
+        />
+        {/* The flags page became part of Funksiyalar; an old bookmark lands there. */}
+        <Route path="flags" element={<Navigate to="/features" replace />} />
         <Route path="security" element={<SecurityPage />} />
         <Route path="audit" element={can(['OWNER']) ? <AuditPage /> : <Navigate to="/" replace />} />
         <Route path="*" element={<Navigate to="/" replace />} />

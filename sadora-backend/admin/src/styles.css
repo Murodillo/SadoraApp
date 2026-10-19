@@ -2402,3 +2402,238 @@ textarea {
     transition: none;
   }
 }
+
+/* ------------------------------------------------------------------ today */
+
+/* The dashboard's first card: what is waiting on this operator, one row per queue. */
+.today-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
+  gap: 10px;
+}
+
+.today-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  transition:
+    border-color var(--quick) var(--gentle),
+    transform var(--standard) var(--emphasized);
+}
+
+.today-item:hover {
+  border-color: color-mix(in srgb, var(--warn) 55%, var(--border));
+  transform: translateY(-1px);
+}
+
+.today-item:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.today-text {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+}
+
+.today-label {
+  font-weight: 600;
+}
+
+.today-count {
+  min-width: 34px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  text-align: center;
+  font-weight: 700;
+  font-size: 16px;
+  color: var(--warn);
+  background: color-mix(in srgb, var(--warn) 16%, transparent);
+}
+
+.today-go {
+  color: var(--text-faint);
+}
+
+.today-clear {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-dim);
+}
+
+.today-check {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  color: var(--ok);
+  background: color-mix(in srgb, var(--ok) 16%, transparent);
+  font-weight: 700;
+}
+
+/* ------------------------------------------------------------------ privacy note */
+
+.privacy-note {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-faint);
+  font-size: 12px;
+  cursor: help;
+}
+
+/* ------------------------------------------------------------------ features */
+
+.features-toolbar input[type='search'] {
+  max-width: 320px;
+}
+
+.features-hint {
+  margin-left: auto;
+}
+
+.feature-group {
+  display: grid;
+  gap: 10px;
+}
+
+.feature-group-title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(360px, 100%), 1fr));
+  gap: 12px;
+}
+
+/* Cards in a row share a height; the footer sits on the bottom edge of each. */
+.feature-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Off reads as off from across the room: a dashed edge and a greyed icon. */
+.feature-card.off {
+  border-style: dashed;
+}
+
+.feature-card.off .art-tile {
+  filter: grayscale(1);
+  opacity: 0.55;
+}
+
+.feature-card.partial {
+  border-color: color-mix(in srgb, var(--warn) 45%, var(--border));
+}
+
+.feature-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.feature-title {
+  flex: 1;
+  min-width: 0;
+}
+
+.feature-name {
+  font-weight: 600;
+}
+
+.feature-name .badge {
+  margin-left: 4px;
+  vertical-align: 1px;
+}
+
+.feature-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.feature-label {
+  width: 86px;
+  color: var(--text-dim);
+  font-size: 12px;
+}
+
+.feature-row input.limit {
+  width: 72px;
+}
+
+.feature-foot {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+
+.link-btn {
+  margin-left: auto;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--text-faint);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.link-btn:hover {
+  color: var(--text);
+}
+
+.link-btn:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.feature-advanced {
+  display: grid;
+  gap: 14px;
+  padding: 12px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+}
+
+.feature-advanced > .grid + .grid {
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+@media (max-width: 600px) {
+  .features-toolbar input[type='search'] {
+    max-width: none;
+  }
+
+  .features-hint {
+    margin-left: 0;
+  }
+
+  /* The row's name takes its own line, so "kuniga [ ] oyiga [ ]" stays on one. */
+  .feature-label {
+    width: 100%;
+  }
+
+  .feature-row input.limit {
+    width: 64px;
+  }
+}

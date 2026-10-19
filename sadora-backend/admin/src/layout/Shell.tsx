@@ -21,18 +21,20 @@ interface NavGroup {
 
 const ALL: AdminRole[] = ['OWNER', 'ADMIN', 'SUPPORT', 'ANALYST']
 
+/*
+ * Grouped by the job an operator came to do, not by the server module behind the page:
+ * people, content, money, the app's settings, and reports. A page's title in the
+ * header is its name here, so the rail and the page always agree.
+ */
 const groups: NavGroup[] = [
   {
-    title: 'Umumiy',
-    entries: [
-      { to: '/', label: 'Boshqaruv paneli', art: 'ic3d_home', roles: ALL },
-      { to: '/analytics', label: 'Analitika', art: 'ic3d_insights', roles: ['OWNER', 'ADMIN', 'ANALYST'] },
-    ],
+    title: '',
+    entries: [{ to: '/', label: 'Bosh sahifa', art: 'ic3d_home', roles: ALL }],
   },
   {
-    title: 'Foydalanuvchilar',
+    title: 'Odamlar',
     entries: [
-      { to: '/users', label: "Ro'yxat", art: 'ic3d_profile', roles: ALL },
+      { to: '/users', label: 'Foydalanuvchilar', art: 'ic3d_profile', roles: ALL },
       { to: '/doctors', label: 'Shifokorlar', art: 'ic3d_doctor', roles: ['OWNER', 'ADMIN', 'SUPPORT'] },
       { to: '/consultations', label: 'Konsultatsiyalar', art: 'ic3d_message', roles: ['OWNER', 'ADMIN', 'SUPPORT'] },
     ],
@@ -41,59 +43,47 @@ const groups: NavGroup[] = [
     title: 'Kontent',
     entries: [
       { to: '/community', label: 'Chat', art: 'ic3d_chats', roles: ALL },
-      { to: '/content', label: 'Bilim — maqolalar', art: 'ic3d_book', roles: ALL },
-      { to: '/ai', label: 'AI xarajati', art: 'ic3d_ai', roles: ['OWNER', 'ADMIN', 'ANALYST'] },
+      { to: '/content', label: 'Maqolalar', art: 'ic3d_book', roles: ALL },
+    ],
+  },
+  {
+    title: 'Pul',
+    entries: [
+      { to: '/billing', label: "Obunalar va to'lovlar", art: 'ic3d_crown', roles: ALL },
+      { to: '/shop', label: "Do'kon", art: 'ic3d_shop', roles: ALL },
+    ],
+  },
+  {
+    title: 'Ilova',
+    entries: [
+      { to: '/features', label: 'Funksiyalar', art: 'ic3d_bulb', roles: ['OWNER', 'ADMIN', 'ANALYST'] },
+      { to: '/rewards', label: 'Gul va ketma-ketlik', art: 'ic3d_trophy', roles: ALL },
       { to: '/notifications', label: 'Bildirishnomalar', art: 'ic3d_bell', roles: ['OWNER', 'ADMIN', 'ANALYST'] },
-      { to: '/wearables', label: 'Taqiladigan qurilmalar', art: 'ic3d_watch', roles: ['OWNER', 'ADMIN', 'ANALYST'] },
+      { to: '/wearables', label: 'Soat va qurilmalar', art: 'ic3d_watch', roles: ['OWNER', 'ADMIN', 'ANALYST'] },
       { to: '/promo-video', label: 'Reklama videosi', art: 'ic3d_globe', roles: ALL },
     ],
   },
   {
-    title: 'Gul',
+    title: 'Hisobot',
     entries: [
-      { to: '/rewards', label: 'Mukofotlar va ketma-ketlik', art: 'ic3d_trophy', roles: ALL },
-      { to: '/shop', label: "Do'kon — chegirmalar", art: 'ic3d_shop', roles: ['OWNER', 'ADMIN', 'ANALYST'] },
+      { to: '/analytics', label: 'Analitika', art: 'ic3d_insights', roles: ['OWNER', 'ADMIN', 'ANALYST'] },
+      { to: '/ai', label: 'AI xarajati', art: 'ic3d_ai', roles: ['OWNER', 'ADMIN', 'ANALYST'] },
+      { to: '/audit', label: 'Audit jurnali', art: 'ic3d_notebook', roles: ['OWNER'] },
     ],
   },
   {
-    title: 'Sozlamalar',
-    entries: [
-      { to: '/billing', label: "Obunalar va to'lovlar", art: 'ic3d_crown', roles: ALL },
-      { to: '/features', label: 'Obuna huquqlari va limitlar', art: 'ic3d_gem', roles: ['OWNER', 'ADMIN', 'ANALYST'] },
-      { to: '/flags', label: 'Funksiya bayroqlari', art: 'ic3d_bulb', roles: ['OWNER', 'ADMIN', 'ANALYST'] },
-    ],
-  },
-  {
-    title: 'Xavfsizlik',
+    title: 'Hisob',
     entries: [
       // Every role: 2FA is each operator's own to switch on, and one that cannot enrol
       // is one whose account stays a password.
-      { to: '/security', label: 'Hisobim va ikki bosqichli kirish', art: 'ic3d_lock', roles: ALL },
-      { to: '/audit', label: 'Audit jurnali', art: 'ic3d_notebook', roles: ['OWNER'] },
+      { to: '/security', label: 'Hisobim va 2FA', art: 'ic3d_lock', roles: ALL },
     ],
   },
 ]
 
-const titles: Record<string, string> = {
-  '/': 'Boshqaruv paneli',
-  '/analytics': 'Analitika',
-  '/users': 'Foydalanuvchilar',
-  '/doctors': 'Shifokorlar — tekshiruv',
-  '/consultations': "Konsultatsiyalar — to'lovlar va qaytarish",
-  '/community': 'Chat — moderatsiya',
-  '/content': 'Bilim — maqolalar',
-  '/ai': 'AI xarajati',
-  '/billing': "Obunalar va to'lovlar",
-  '/notifications': 'Bildirishnomalar',
-  '/wearables': 'Taqiladigan qurilmalar',
-  '/promo-video': 'Reklama videosi',
-  '/rewards': 'Gul — mukofotlar va ketma-ketlik',
-  '/shop': "Gul do'koni — mahsulot va chegirmalar",
-  '/features': 'Obuna huquqlari va limitlar',
-  '/flags': 'Funksiya bayroqlari',
-  '/security': 'Hisobim va ikki bosqichli kirish',
-  '/audit': 'Audit jurnali va xavfsizlik',
-}
+const titles: Record<string, string> = Object.fromEntries(
+  groups.flatMap((group) => group.entries.map((entry) => [entry.to, entry.label])),
+)
 
 /**
  * [setupOnly]: 2FA is mandatory and she has not enrolled, so the server refuses every
@@ -146,8 +136,8 @@ export function Shell({ setupOnly = false }: { setupOnly?: boolean }) {
           )
           if (!visible.length) return null
           return (
-            <div key={group.title}>
-              <div className="nav-section">{group.title}</div>
+            <div key={group.title || 'home'}>
+              {group.title && <div className="nav-section">{group.title}</div>}
               {visible.map((entry) => (
                 <NavLink
                   key={entry.to}

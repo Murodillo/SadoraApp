@@ -166,6 +166,24 @@ export interface AdminStats {
   generatedAt: string
 }
 
+/**
+ * The dashboard's "Bugun" queues. A queue is null for a role whose page refuses it, so
+ * the panel never links to a 403.
+ */
+export interface AdminTodo {
+  doctorsPending?: number | null
+  openReports: number
+  refundsDue?: number | null
+  shopSoldOut?: number | null
+  generatedAt: string
+}
+
+export interface AdminFeatureUsage {
+  key: string
+  uses: number
+  users: number
+}
+
 // ---- secret chat (moderation) ----
 //
 // Alias, text, counts — and no user id. The server never puts one on these types, so

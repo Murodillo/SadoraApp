@@ -1,11 +1,14 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useAnalytics, useRecentEvents, useStats } from '../api/hooks'
+import { useAnalytics, useRecentEvents, useStats, useTodo } from '../api/hooks'
 import type { AdminAnalytics } from '../api/types'
 import { useAuth } from '../auth/AuthContext'
 import { som } from '../components/analytics'
 import { BarChart, Donut, LineChart } from '../components/charts'
+import { ArtTile } from '../components/art'
 import { Card, Delta, ErrorNotice, formatDateTime, formatTime, Loading, Stat } from '../components/ui'
+import { actionLabel } from './auditLabels'
+import { todayItems } from './today'
 
 export const lifeStageLabels: Record<string, string> = {
   cycle: 'Sikl',
@@ -20,27 +23,6 @@ export const languageLabels: Record<string, string> = {
   uz: "O'zbekcha",
   ru: 'Ruscha',
   en: 'Inglizcha',
-}
-
-const actionLabels: Record<string, string> = {
-  'user.signed_up': "Ro'yxatdan o'tdi",
-  'user.signed_in': 'Kirdi',
-  'user.signed_out': 'Chiqdi',
-  'user.onboarded': 'Onboardingni tugatdi',
-  'user.blocked': 'Bloklandi',
-  'user.unblocked': 'Blokdan chiqdi',
-  'user.profile_updated': 'Profilni yangiladi',
-  'user.consent_changed': "Rozilikni o'zgartirdi",
-  'user.deletion_requested': "O'chirishni so'radi",
-  'subscription.granted': 'Premium berildi',
-  'admin.signed_in': 'Operator kirdi',
-  'admin.sign_in_failed': 'Operator kira olmadi',
-  'flag.updated': "Bayroq o'zgardi",
-  'community.post_hidden': 'Post yashirildi',
-  'community.report_resolved': 'Shikoyat yopildi',
-  'rewards.coins_adjusted': "Gul to'g'rilandi",
-  'share.created': 'Shifokor sahifasi yaratildi',
-  'share.viewed': "Shifokor sahifasi ko'rildi",
 }
 
 export const PERIODS = [7, 14, 30, 90] as const
@@ -83,6 +65,8 @@ export function DashboardPage() {
         {seesAnalytics && <PeriodPicker value={days} onChange={setDays} />}
       </div>
 
+      <TodayCard />
+
       <div className="grid stat-row">
         <Stat
           label="Jami foydalanuvchi"
@@ -102,7 +86,13 @@ export function DashboardPage() {
           label="Kunlik faol (DAU)"
           art="ic3d_heart"
           value={data.activeToday}
-          hint={dauOfMau !== null ? `MAU ${data.activeThisMonth} · ${dauOfMau}% qaytadi` : undefined}
+          hint={
+            dauOfMau !== null ? (
+              <span title="Hisobning oxirgi so'rovi bo'yicha: bugun va so'nggi 30 kunda kamida bir marta murojaat qilganlar">
+                MAU {data.activeThisMonth} · {dauOfMau}% qaytadi
+              </span>
+            ) : undefined
+          }
           spark={report?.perDay.map((day) => day.activeUsers)}
           sparkColor="var(--c3)"
         />
@@ -232,10 +222,7 @@ export function DashboardPage() {
                       <td>
                         <span className={`badge ${event.actorType === 'admin' ? 'premium' : 'free'}`}>{event.actorType}</span>
                       </td>
-                      <td>
-                        <div>{actionLabels[event.action] ?? event.action}</div>
-                        <div className="mono faint">{event.action}</div>
-                      </td>
+                      <td title={event.action}>{actionLabel(event.action)}</td>
                       <td className="muted">{event.reason ?? ''}</td>
                     </tr>
                   ))}
@@ -251,13 +238,45 @@ export function DashboardPage() {
         </Card>
       </div>
 
-      <div className="notice">
-        DAU va MAU — hisobning oxirgi so'rovi bo'yicha. Grafikdagi "faol" esa o'lchangan: kunlik
-        check-in yozuvi va kirishlar bo'yicha, har bir hisob kuniga bir marta. Ekranlar va
-        voronkalar uchun alohida hodisalar jadvali kerak; u yo'q, shuning uchun bu yerda
-        o'lchanmagan raqam ko'rsatilmaydi.
-      </div>
     </div>
+  )
+}
+
+/**
+ * What is waiting on this operator, before any number about the product: each queue a
+ * count and one click to the page that works it. An empty list says so, so "nothing
+ * here" is an answer rather than a card that failed to load.
+ */
+function TodayCard() {
+  const todo = useTodo()
+  const items = todayItems(todo.data)
+  return (
+    <Card title="Bugun" className="today">
+      {todo.isLoading ? (
+        <Loading rows={2} />
+      ) : todo.error ? (
+        <ErrorNotice error={todo.error} />
+      ) : items.length === 0 ? (
+        <div className="today-clear">
+          <span className="today-check" aria-hidden="true">✓</span>
+          Hammasi joyida — kutib turgan ish yo'q.
+        </div>
+      ) : (
+        <div className="today-list">
+          {items.map((item) => (
+            <Link key={item.key} to={item.to} className="today-item">
+              <ArtTile name={item.art} size={38} />
+              <span className="today-text">
+                <span className="today-label">{item.label}</span>
+                <span className="faint">{item.hint}</span>
+              </span>
+              <span className="today-count">{item.count}</span>
+              <span className="today-go" aria-hidden="true">→</span>
+            </Link>
+          ))}
+        </div>
+      )}
+    </Card>
   )
 }
 

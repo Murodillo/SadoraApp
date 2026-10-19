@@ -1706,6 +1706,76 @@ class ApiIntegrationTest {
         assertTrue(lines.toSet().size > 1, "four opens produced the same line every time: $lines")
     }
 
+    // ---------------------------------------------------------------- admin dashboard
+
+    /**
+     * The dashboard's "Bugun" list counts the rows waiting on a person, and a role only
+     * gets the queues its pages can work: an analyst never sees doctor reviews, support
+     * never sees the shop.
+     */
+    @Test
+    fun `the today list counts each queue and leaves out what a role cannot open`() = api {
+        val owner = adminToken()
+        val before = get<uz.sadora.server.admin.AdminTodo>("/v1/admin/stats/todo", owner)
+
+        val doctor = signUp().also { onboard(it) }
+        val jpeg = kotlin.io.encoding.Base64.encode(byteArrayOf(0xFF.toByte(), 0xD8.toByte(), 0xFF.toByte(), 0xE0.toByte(), 1, 2, 3))
+        post<DoctorAccount>(
+            "/v1/doctor/application",
+            doctor.token,
+            DoctorApplicationRequest("Dr Todo", DoctorSpecialty.GYNECOLOGIST, "Klinika", 5, "LIC-T", documents = listOf(DoctorDocumentUpload(DoctorDocumentKind.DIPLOMA, jpeg))),
+        )
+        val slug = "todo-${Uuid.random().toString().take(8)}"
+        dbQuery {
+            exec("INSERT INTO shop_products (slug, kind, title, price_uzs, discount_percent, coin_cost, stock, active) VALUES ('$slug', 'vitamin', 'Todo', 100000, 10, 100, 0, TRUE)")
+        }
+        try {
+            val after = get<uz.sadora.server.admin.AdminTodo>("/v1/admin/stats/todo", owner)
+            assertEquals(before.doctorsPending!! + 1, after.doctorsPending)
+            assertEquals(before.shopSoldOut!! + 1, after.shopSoldOut)
+            assertNotNull(after.refundsDue)
+
+            val analyst = get<uz.sadora.server.admin.AdminTodo>("/v1/admin/stats/todo", adminAccount("analyst").token)
+            assertNull(analyst.doctorsPending)
+            assertNull(analyst.refundsDue)
+            assertEquals(after.shopSoldOut, analyst.shopSoldOut)
+            assertEquals(after.openReports, analyst.openReports)
+
+            val support = get<uz.sadora.server.admin.AdminTodo>("/v1/admin/stats/todo", adminAccount("support").token)
+            assertEquals(after.doctorsPending, support.doctorsPending)
+            assertNull(support.shopSoldOut)
+        } finally {
+            dbQuery { exec("DELETE FROM shop_products WHERE slug = '$slug'") }
+        }
+    }
+
+    /**
+     * Feature usage sums the metered rows of the window and counts each account once; a
+     * use handed back at the limit leaves a zero row, which is not a use.
+     */
+    @Test
+    fun `feature usage sums the window and does not count a handed-back use`() = api {
+        val owner = adminToken()
+        val key = "test_usage_${Uuid.random().toString().take(8)}"
+        val first = signUp().also { onboard(it) }
+        val second = signUp().also { onboard(it) }
+        dbQuery {
+            exec("INSERT INTO feature_usage_daily (user_id, feature_key, usage_date, used, cost_micros) VALUES ('${first.userId}', '$key', (now() AT TIME ZONE 'Asia/Tashkent')::date, 2, 0)")
+            exec("INSERT INTO feature_usage_daily (user_id, feature_key, usage_date, used, cost_micros) VALUES ('${first.userId}', '$key', (now() AT TIME ZONE 'Asia/Tashkent')::date - 3, 1, 0)")
+            exec("INSERT INTO feature_usage_daily (user_id, feature_key, usage_date, used, cost_micros) VALUES ('${first.userId}', '$key', (now() AT TIME ZONE 'Asia/Tashkent')::date - 30, 5, 0)")
+            exec("INSERT INTO feature_usage_daily (user_id, feature_key, usage_date, used, cost_micros) VALUES ('${second.userId}', '$key', (now() AT TIME ZONE 'Asia/Tashkent')::date, 0, 0)")
+        }
+
+        val week = get<List<uz.sadora.server.admin.AdminFeatureUsage>>("/v1/admin/features/usage?days=7", owner).single { it.key == key }
+        assertEquals(3, week.uses)
+        assertEquals(1, week.users)
+        val quarter = get<List<uz.sadora.server.admin.AdminFeatureUsage>>("/v1/admin/features/usage?days=90", owner).single { it.key == key }
+        assertEquals(8, quarter.uses)
+
+        val refused = client.get("/v1/admin/features/usage") { auth(adminAccount("support").token) }
+        assertEquals(HttpStatusCode.Forbidden, refused.status)
+    }
+
     // ---------------------------------------------------------------- admin 2FA
 
     /**

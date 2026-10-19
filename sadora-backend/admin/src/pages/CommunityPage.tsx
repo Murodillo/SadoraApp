@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import {
   useCommunityStats,
   useHideComment,
@@ -13,7 +14,7 @@ import type { ModerationFilters } from '../api/hooks'
 import type { ModerationComment, ModerationPost, ModerationReport } from '../api/types'
 import { useAuth } from '../auth/AuthContext'
 import { useToast } from '../components/toast'
-import { Card, Empty, ErrorNotice, Field, formatDateTime, Loading, Modal, Spinner, Stat, TabPanel, Tabs } from '../components/ui'
+import { Card, Empty, ErrorNotice, Field, formatDateTime, Loading, Modal, PrivacyNote, Spinner, Stat, TabPanel, Tabs } from '../components/ui'
 import { limits } from '../api/limits'
 import { canViewMessageContext, reasonLabels, reportTarget } from './messageReports'
 import { ReportContextModal, RestrictSenderDialog } from './ReportContext'
@@ -38,14 +39,15 @@ type Tab = 'posts' | 'reports'
  */
 export function CommunityPage() {
   const stats = useCommunityStats()
-  const [tab, setTab] = useState<Tab>('posts')
+  // "Bugun" on the dashboard links straight to the reports.
+  const [params] = useSearchParams()
+  const [tab, setTab] = useState<Tab>(params.get('tab') === 'reports' ? 'reports' : 'posts')
 
   return (
     <div className="grid" style={{ gap: 16 }}>
-      <div className="notice privacy">
-        Bu sahifada faqat taxallus va matn ko'rinadi. Post muallifining hisobiga o'tish yo'li
-        yo'q — cheklash ham post orqali qo'llanadi, moderator kimligini bilmaydi.
-      </div>
+      <PrivacyNote detail="Post muallifining hisobiga o'tish yo'li yo'q — cheklash ham post orqali qo'llanadi, moderator kimligini bilmaydi.">
+        Faqat taxallus va matn ko'rinadi — muallifning hisobi yashirin.
+      </PrivacyNote>
 
       {stats.data && (
         <div className="grid stat-row">

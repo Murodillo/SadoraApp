@@ -4,7 +4,7 @@ import { useUsers } from '../api/hooks'
 import type { UserFilters } from '../api/hooks'
 import type { AdminUserSummary } from '../api/types'
 import { useAuth } from '../auth/AuthContext'
-import { Card, Empty, ErrorNotice, formatDateTime, Loading, StatusBadge, TierBadge } from '../components/ui'
+import { Card, Empty, ErrorNotice, formatDateTime, Loading, PrivacyNote, StatusBadge, TierBadge } from '../components/ui'
 import { lifeStageLabels } from './DashboardPage'
 
 const PAGE_SIZE = 25
@@ -28,10 +28,9 @@ export function UsersPage() {
 
   return (
     <div className="grid" style={{ gap: 16 }}>
-      <div className="notice privacy">
-        Bu yerda sog'liq ma'lumotlari ko'rinmaydi — sikl, simptomlar, kayfiyat, dorilar va AI
-        yozishmalari operatorga umuman uzatilmaydi. Faqat hisob va texnik metadata (TZ 17-bo'lim).
-      </div>
+      <PrivacyNote detail="Sikl, simptomlar, kayfiyat, dorilar va AI yozishmalari operatorga umuman uzatilmaydi. Faqat hisob va texnik metadata (TZ 17-bo'lim).">
+        Sog'liq ma'lumotlari panelga uzatilmaydi — faqat hisob va texnik ma'lumot.
+      </PrivacyNote>
 
       <Card>
         <form

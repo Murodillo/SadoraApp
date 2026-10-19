@@ -1,18 +1,10 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import {
-  useBillingPlans,
-  useBillingSummary,
-  useFrameProducts,
-  usePayments,
-  usePetProducts,
-  useRefundGift,
-  useUpdateFrameProduct,
-  useUpdatePetProduct,
-} from '../api/hooks'
-import type { AdminFrameProduct, AdminPayment, AdminPetProduct, PaymentProvider, PaymentState } from '../api/types'
+import { useBillingPlans, useBillingSummary, usePayments, useRefundGift } from '../api/hooks'
+import type { AdminPayment, PaymentProvider, PaymentState } from '../api/types'
 import { useToast } from '../components/toast'
 import { Card, ConfirmDialog, Empty, ErrorNotice, formatDateTime, Loading, Stat } from '../components/ui'
+import { frameNames } from './PaidProducts'
 
 const providerLabels: Record<PaymentProvider, string> = {
   payme: 'Payme',
@@ -152,10 +144,6 @@ export function BillingPage() {
           yangi versiya chiqarish shart emas.
         </p>
       </Card>
-
-      <PetProductsCard />
-
-      <FrameProductsCard />
 
       <Card
         title="To'lovlar"
@@ -298,135 +286,5 @@ function RefundGiftDialog({ payment, onClose }: { payment: AdminPayment; onClose
       </label>
       {refund.error && <ErrorNotice error={refund.error} />}
     </ConfirmDialog>
-  )
-}
-
-/**
- * The legendary pet's price. One price everywhere: the app shows this one and Payme and
- * Click charge it; the stores charge what is set in their consoles, so a change here has
- * to be made there too. The sale itself is the `pet_humo_sale` flag.
- */
-function PetProductsCard() {
-  const products = usePetProducts()
-  return (
-    <Card title="Legendar hamroh">
-      <ErrorNotice error={products.error} />
-      {products.data?.map((product) => <PetProductRow key={product.pet} product={product} />)}
-      <p className="faint">
-        Sotuv <code>pet_humo_sale</code> flagi bilan yoqiladi. Play va App Store narxi ularning konsolida
-        alohida o'zgartiriladi.
-      </p>
-    </Card>
-  )
-}
-
-function PetProductRow({ product }: { product: AdminPetProduct }) {
-  const update = useUpdatePetProduct()
-  const [price, setPrice] = useState(String(Math.round(product.priceMinor / 100)))
-  const whole = Number(price.replace(/\s/g, ''))
-  const valid = Number.isFinite(whole) && whole >= 1000
-  return (
-    <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-      <b style={{ textTransform: 'capitalize' }}>{product.pet}</b>
-      <span className="faint">{product.appStoreProductId ?? '—'} · {product.googlePlayProductId ?? '—'}</span>
-      <input
-        aria-label="Narx, so'm"
-        inputMode="numeric"
-        value={price}
-        onChange={(event) => setPrice(event.target.value)}
-        style={{ width: 140 }}
-      />
-      <span>so'm</span>
-      <button
-        className="btn small"
-        disabled={!valid || update.isPending || whole * 100 === product.priceMinor}
-        onClick={() => update.mutate({ pet: product.pet, priceMinor: whole * 100, active: product.active })}
-      >
-        Saqlash
-      </button>
-      <ErrorNotice error={update.error} />
-    </div>
-  )
-}
-
-/** What each frame is called in the panel; the keys are the contract's AvatarFrames. */
-export const frameNames: Record<string, string> = {
-  tulip: 'Lola',
-  lavender: 'Lavanda',
-  sakura: 'Sakura',
-  moon: 'Oy va yulduzlar',
-  rose: 'Atirgul toji',
-  gold_flame: 'Oltin olov',
-  gold_laurel: 'Oltin dafna',
-  rainbow: 'Kamalak',
-  humo_wing: 'Humo qanoti',
-}
-
-/**
- * Avatar frames sold for Gul or money. A badge's frame is not here: only the badge gives
- * it. Switching a frame off hides it from anyone who does not own it yet. The paid frames'
- * sale is the `frame_sale` flag.
- */
-function FrameProductsCard() {
-  const products = useFrameProducts()
-  return (
-    <Card title="Avatar ramkalari">
-      <ErrorNotice error={products.error} />
-      {products.data?.map((product) => <FrameProductRow key={product.key} product={product} />)}
-      <p className="faint">
-        Pullik ramkalar <code>frame_sale</code> flagi bilan sotuvga chiqadi. Play va App Store narxi ularning
-        konsolida alohida o'zgartiriladi.
-      </p>
-    </Card>
-  )
-}
-
-function FrameProductRow({ product }: { product: AdminFrameProduct }) {
-  const update = useUpdateFrameProduct()
-  const coins = product.unlock === 'coins'
-  const current = coins ? (product.coinCost ?? 0) : Math.round((product.priceMinor ?? 0) / 100)
-  const [price, setPrice] = useState(String(current))
-  const whole = Number(price.replace(/\s/g, ''))
-  const valid = Number.isFinite(whole) && (coins ? whole >= 1 : whole >= 1000)
-  const save = (active: boolean) =>
-    update.mutate(
-      coins
-        ? { key: product.key, coinCost: whole, active }
-        : { key: product.key, priceMinor: whole * 100, active },
-    )
-  return (
-    <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-      <b style={{ minWidth: 140 }}>{frameNames[product.key] ?? product.key}</b>
-      {!coins && (
-        <span className="faint">
-          {product.appStoreProductId ?? '—'} · {product.googlePlayProductId ?? '—'}
-        </span>
-      )}
-      <input
-        aria-label={coins ? 'Narx, Gul' : "Narx, so'm"}
-        inputMode="numeric"
-        value={price}
-        onChange={(event) => setPrice(event.target.value)}
-        style={{ width: 120 }}
-      />
-      <span>{coins ? 'Gul' : "so'm"}</span>
-      <button
-        className="btn small"
-        disabled={!valid || update.isPending || whole === current}
-        onClick={() => save(product.active)}
-      >
-        Saqlash
-      </button>
-      <label style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-        <input
-          type="checkbox"
-          checked={product.active}
-          disabled={update.isPending || !valid}
-          onChange={(event) => save(event.target.checked)}
-        />
-        Sotuvda
-      </label>
-      <ErrorNotice error={update.error} />
-    </div>
   )
 }

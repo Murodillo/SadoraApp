@@ -1,9 +1,8 @@
 import { useState } from 'react'
-import { useAddFlagRule, useFlags, useRemoveFlagRule, useUpdateFlag } from '../api/hooks'
+import { useAddFlagRule, useRemoveFlagRule, useUpdateFlag } from '../api/hooks'
 import type { AdminFlag } from '../api/types'
-import { useAuth } from '../auth/AuthContext'
 import { useToast } from '../components/toast'
-import { Card, ConfirmDialog, ErrorNotice, Field, Loading, Modal, Switch } from '../components/ui'
+import { ConfirmDialog, ErrorNotice, Field, Modal, Switch } from '../components/ui'
 
 /**
  * Priority orders the rules, and the server refuses anything outside this. Clamping
@@ -16,86 +15,81 @@ function clampPriority(raw: string): number {
   return Math.min(1000, Math.max(0, Math.round(value)))
 }
 
-export function FlagsPage() {
-  const flags = useFlags()
+/**
+ * A flag's own two switches and its rollout rules, behind a feature card's
+ * "Kengaytirilgan". The card's one switch covers the everyday case; this is for a
+ * percentage rollout or a rule per environment, language or platform.
+ */
+export function FlagAdvanced({
+  flag,
+  title,
+  heading,
+  editable,
+}: {
+  flag: AdminFlag
+  title: string
+  /** Names the flag when a card has more than one (one per platform). */
+  heading?: string
+  editable: boolean
+}) {
   const update = useUpdateFlag()
-  const { can } = useAuth()
   const { notify } = useToast()
-  const editable = can(['OWNER', 'ADMIN'])
-  const [ruleFor, setRuleFor] = useState<AdminFlag | null>(null)
+  const [ruleOpen, setRuleOpen] = useState(false)
   const [change, setChange] = useState<FlagChange | null>(null)
 
-  if (flags.isLoading) return <Loading rows={8} />
-  if (flags.error) return <ErrorNotice error={flags.error} />
-
   return (
-    <div className="grid" style={{ gap: 16 }}>
-      <div className="notice">
-        <strong>Yoqilgan</strong> — umumiy o'chirgich: o'chirilsa barcha qoidalar chetlab o'tiladi va
-        bayroq hamma uchun yopiladi. <strong>Standart</strong> — hech bir qoida mos kelmaganda
-        qaytariladigan qiymat. Foizli yoyish foydalanuvchi ID va bayroq kalitidan olingan barqaror
-        hash bo'yicha bo'linadi, shuning uchun 5% dan 20% ga kengaytirish hech kimni chiqarib
+    <div className="grid" style={{ gap: 8 }}>
+      <div className="row" style={{ justifyContent: 'space-between' }}>
+        <strong>{heading}</strong>
+        {editable && (
+          <button className="btn small" onClick={() => setRuleOpen(true)}>
+            Qoida qo'shish
+          </button>
+        )}
+      </div>
+      <div className="row">
+        <Switch
+          label="Umumiy o'chirgich"
+          disabled={!editable || update.isPending}
+          checked={flag.enabled}
+          onChange={(enabled) => setChange({ flag, title, field: 'enabled', value: enabled })}
+        />
+        <Switch
+          label="Qoida mos kelmasa — yoqilgan"
+          disabled={!editable || update.isPending}
+          checked={flag.defaultValue}
+          onChange={(defaultValue) => setChange({ flag, title, field: 'defaultValue', value: defaultValue })}
+        />
+      </div>
+      <div className="faint">
+        Foizli yoyish har bir foydalanuvchini barqaror guruhga qo'yadi: 5% dan 20% ga kengaytirish hech kimni chiqarib
         yubormaydi.
       </div>
 
-      {update.error && <ErrorNotice error={update.error} />}
+      {flag.rules.length > 0 && (
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Muhit</th>
+                <th>Til</th>
+                <th>Platforma</th>
+                <th>Yoyish</th>
+                <th>Qiymat</th>
+                <th>Prioritet</th>
+                <th />
+              </tr>
+            </thead>
+            <tbody>
+              {flag.rules.map((rule) => (
+                <RuleRow key={rule.id} flagKey={flag.key} rule={rule} editable={editable} />
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
-      {(flags.data ?? []).map((flag) => (
-        <Card key={flag.key}>
-          <div className="row" style={{ justifyContent: 'space-between', alignItems: 'flex-start' }}>
-            <div>
-              <div className="mono" style={{ fontWeight: 600 }}>
-                {flag.key}
-              </div>
-              <div className="faint">{flag.description}</div>
-            </div>
-            <div className="row">
-              <Switch
-                label="Yoqilgan"
-                disabled={!editable || update.isPending}
-                checked={flag.enabled}
-                onChange={(enabled) => setChange({ flag, field: 'enabled', value: enabled })}
-              />
-              <Switch
-                label="Standart"
-                disabled={!editable || update.isPending}
-                checked={flag.defaultValue}
-                onChange={(defaultValue) => setChange({ flag, field: 'defaultValue', value: defaultValue })}
-              />
-              {editable && (
-                <button className="btn small" onClick={() => setRuleFor(flag)}>
-                  Qoida qo'shish
-                </button>
-              )}
-            </div>
-          </div>
-
-          {flag.rules.length > 0 && (
-            <div className="table-wrap" style={{ marginTop: 12 }}>
-              <table>
-                <thead>
-                  <tr>
-                    <th>Muhit</th>
-                    <th>Til</th>
-                    <th>Platforma</th>
-                    <th>Yoyish</th>
-                    <th>Qiymat</th>
-                    <th>Prioritet</th>
-                    <th />
-                  </tr>
-                </thead>
-                <tbody>
-                  {flag.rules.map((rule) => (
-                    <RuleRow key={rule.id} flagKey={flag.key} rule={rule} editable={editable} />
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </Card>
-      ))}
-
-      {ruleFor && <AddRuleDialog flag={ruleFor} onClose={() => setRuleFor(null)} />}
+      {ruleOpen && <AddRuleDialog flag={flag} title={title} onClose={() => setRuleOpen(false)} />}
       {change && (
         <ConfirmDialog
           title={flagChangeCopy(change).title}
@@ -105,7 +99,7 @@ export function FlagsPage() {
           pending={update.isPending}
           onClose={() => setChange(null)}
           onConfirm={() => {
-            const { flag, field, value } = change
+            const { field, value } = change
             const enabled = field === 'enabled' ? value : flag.enabled
             const defaultValue = field === 'defaultValue' ? value : flag.defaultValue
             update.mutate(
@@ -114,8 +108,8 @@ export function FlagsPage() {
                 onSuccess: () => {
                   notify(
                     field === 'enabled'
-                      ? `${flag.key}: ${value ? 'yoqildi' : "o'chirildi"}`
-                      : `${flag.key}: standart qiymat ${value ? 'ha' : "yo'q"}`,
+                      ? `${title}: ${value ? 'yoqildi' : "o'chirildi"}`
+                      : `${title}: qoida mos kelmasa — ${value ? 'yoqilgan' : "o'chiq"}`,
                     field === 'enabled' && !value ? 'info' : 'ok',
                   )
                   setChange(null)
@@ -137,12 +131,13 @@ export function FlagsPage() {
 /** A switch flipped on a flag, held until the operator confirms it. */
 interface FlagChange {
   flag: AdminFlag
+  title: string
   field: 'enabled' | 'defaultValue'
   value: boolean
 }
 
 /** What the confirmation says: every flag change reaches every user at once. */
-function flagChangeCopy({ flag, field, value }: FlagChange): {
+function flagChangeCopy({ title, field, value }: FlagChange): {
   title: string
   body: string
   confirmLabel: string
@@ -150,7 +145,7 @@ function flagChangeCopy({ flag, field, value }: FlagChange): {
 } {
   if (field === 'enabled' && !value) {
     return {
-      title: `«${flag.key}» hamma uchun o'chirilsinmi?`,
+      title: `«${title}» hamma uchun o'chirilsinmi?`,
       body: "Barcha qoidalar chetlab o'tiladi va bu funksiya hamma foydalanuvchi uchun darhol yopiladi.",
       confirmLabel: "Hamma uchun o'chirish",
       pendingLabel: "O'chirilmoqda…",
@@ -158,16 +153,16 @@ function flagChangeCopy({ flag, field, value }: FlagChange): {
   }
   if (field === 'enabled') {
     return {
-      title: `«${flag.key}» yoqilsinmi?`,
+      title: `«${title}» yoqilsinmi?`,
       body: 'Qoidalar va standart qiymat darhol yana ishlay boshlaydi.',
       confirmLabel: 'Yoqish',
       pendingLabel: 'Yoqilmoqda…',
     }
   }
   return {
-    title: `«${flag.key}» standart qiymati «${value ? 'ha' : "yo'q"}» bo'lsinmi?`,
-    body: "Hech bir qoida mos kelmagan barcha foydalanuvchilar uchun darhol o'zgaradi.",
-    confirmLabel: "Standartni o'zgartirish",
+    title: `Qoida mos kelmaganlar uchun «${title}» ${value ? 'yoqilsinmi' : "o'chirilsinmi"}?`,
+    body: "Hech bir qoidaga tushmagan barcha foydalanuvchilar uchun darhol o'zgaradi.",
+    confirmLabel: value ? 'Yoqish' : "O'chirish",
     pendingLabel: 'Saqlanmoqda…',
   }
 }
@@ -231,7 +226,7 @@ function RuleRow({
   )
 }
 
-function AddRuleDialog({ flag, onClose }: { flag: AdminFlag; onClose: () => void }) {
+function AddRuleDialog({ flag, title, onClose }: { flag: AdminFlag; title: string; onClose: () => void }) {
   const add = useAddFlagRule()
   const { notify } = useToast()
   const [environment, setEnvironment] = useState('')
@@ -240,7 +235,7 @@ function AddRuleDialog({ flag, onClose }: { flag: AdminFlag; onClose: () => void
   const [priority, setPriority] = useState(100)
 
   return (
-    <Modal title={`Qoida — ${flag.key}`} onClose={onClose}>
+    <Modal title={`Qoida — ${title}`} onClose={onClose}>
       <Field label="Muhit (bo'sh — har qanday)">
         <select value={environment} onChange={(event) => setEnvironment(event.target.value)}>
           <option value="">Har qanday</option>
@@ -292,7 +287,7 @@ function AddRuleDialog({ flag, onClose }: { flag: AdminFlag; onClose: () => void
               },
               {
                 onSuccess: () => {
-                  notify(`${flag.key}: qoida qo'shildi (${rollout}%)`)
+                  notify(`${title}: qoida qo'shildi (${rollout}%)`)
                   onClose()
                 },
               },

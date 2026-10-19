@@ -26,9 +26,11 @@ import type {
   DoctorCounts,
   DoctorReviewAction,
   DoctorStatus,
+  AdminFeatureUsage,
   AdminFlag,
   AdminPayment,
   AdminStats,
+  AdminTodo,
   AdminUserCard,
   AdminUserSummary,
   ArticleCategory,
@@ -68,6 +70,14 @@ export const useStats = () =>
   useQuery({
     queryKey: ['stats'],
     queryFn: () => request<AdminStats>('/v1/admin/stats'),
+    refetchInterval: 30_000,
+  })
+
+/** The dashboard's "Bugun" queues, refreshed with the numbers beside them. */
+export const useTodo = () =>
+  useQuery({
+    queryKey: ['todo'],
+    queryFn: () => request<AdminTodo>('/v1/admin/stats/todo'),
     refetchInterval: 30_000,
   })
 
@@ -116,6 +126,13 @@ export const useFeatures = () =>
   useQuery({
     queryKey: ['features'],
     queryFn: () => request<FeatureDefinition[]>('/v1/admin/features'),
+  })
+
+/** Uses of each metered feature over the last [days] days; a feature absent here was not measured. */
+export const useFeatureUsage = (days = 7) =>
+  useQuery({
+    queryKey: ['feature-usage', days],
+    queryFn: () => request<AdminFeatureUsage[]>(`/v1/admin/features/usage${query({ days })}`),
   })
 
 export const useFlags = () =>
@@ -278,6 +295,7 @@ function useCommunityMutation<T>(mutationFn: (input: T) => Promise<unknown>) {
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: ['community'] })
       void client.invalidateQueries({ queryKey: ['stats'] })
+      void client.invalidateQueries({ queryKey: ['todo'] })
     },
   })
 }
@@ -614,7 +632,10 @@ export const useCreateShopProduct = () => {
   return useMutation({
     mutationFn: ({ slug, product }: { slug: string; product: SaveShopProductBody }) =>
       request<AdminShopProduct>('/v1/admin/shop/products', { method: 'POST', body: { slug, product } }),
-    onSuccess: () => void client.invalidateQueries({ queryKey: ['shop-products'] }),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: ['shop-products'] })
+      void client.invalidateQueries({ queryKey: ['todo'] })
+    },
   })
 }
 
@@ -623,7 +644,10 @@ export const useUpdateShopProduct = () => {
   return useMutation({
     mutationFn: ({ id, product }: { id: string; product: SaveShopProductBody }) =>
       request<AdminShopProduct>(`/v1/admin/shop/products/${id}`, { method: 'PUT', body: product }),
-    onSuccess: () => void client.invalidateQueries({ queryKey: ['shop-products'] }),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: ['shop-products'] })
+      void client.invalidateQueries({ queryKey: ['todo'] })
+    },
   })
 }
 
@@ -631,7 +655,10 @@ export const useDeleteShopProduct = () => {
   const client = useQueryClient()
   return useMutation({
     mutationFn: (id: string) => request(`/v1/admin/shop/products/${id}`, { method: 'DELETE' }),
-    onSuccess: () => void client.invalidateQueries({ queryKey: ['shop-products'] }),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: ['shop-products'] })
+      void client.invalidateQueries({ queryKey: ['todo'] })
+    },
   })
 }
 
@@ -715,6 +742,7 @@ export const useReviewDoctor = () => {
       void client.invalidateQueries({ queryKey: ['doctors', 'list'] })
       void client.invalidateQueries({ queryKey: ['doctors', 'counts'] })
       void client.invalidateQueries({ queryKey: ['doctors', 'detail', id] })
+      void client.invalidateQueries({ queryKey: ['todo'] })
     },
   })
 }
@@ -779,6 +807,7 @@ export const useMarkConsultationRefunded = () => {
       void client.invalidateQueries({ queryKey: ['consultations'] })
       void client.invalidateQueries({ queryKey: ['doctor-quality'] })
       void client.invalidateQueries({ queryKey: ['doctor-earnings'] })
+      void client.invalidateQueries({ queryKey: ['todo'] })
     },
   })
 }

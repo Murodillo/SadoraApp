@@ -123,6 +123,20 @@ export function Field({ label, children }: { label: string; children: ReactNode 
   )
 }
 
+/**
+ * What this page never shows, in one quiet line. The rule is the same on every page that
+ * carries it, and a full-width banner repeated on each of them was read once and then
+ * scrolled past; the longer wording stays on hover.
+ */
+export function PrivacyNote({ children, detail }: { children: ReactNode; detail: string }) {
+  return (
+    <div className="privacy-note" title={detail}>
+      <Art name="ic3d_lock" size={16} />
+      <span>{children}</span>
+    </div>
+  )
+}
+
 export function ErrorNotice({ error }: { error: unknown }) {
   if (!error) return null
   const message = error instanceof Error ? error.message : String(error)
@@ -163,17 +177,21 @@ export function Switch({
   onChange,
   disabled = false,
   label,
+  ariaLabel,
 }: {
   checked: boolean
   onChange: (checked: boolean) => void
   disabled?: boolean
   label?: string
+  /** The switch's name when the visible label is only its state ("Ishlayapti"). */
+  ariaLabel?: string
 }) {
   return (
     <label className={`switch${disabled ? ' disabled' : ''}`}>
       <input
         type="checkbox"
         role="switch"
+        aria-label={ariaLabel}
         aria-checked={checked}
         checked={checked}
         disabled={disabled}

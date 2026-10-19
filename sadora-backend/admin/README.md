@@ -47,19 +47,22 @@ Birinchi Owner hisobi backend birinchi marta ko'tarilganda yaratiladi —
 
 ## Tayyor sahifalar
 
+Menyu ish bo'yicha guruhlangan: **Odamlar**, **Kontent**, **Pul**, **Ilova**,
+**Hisobot**. Sahifaning sarlavhasi menyudagi nomi bilan bir xil.
+
 | Sahifa | Rol | Nima |
 |---|---|---|
 | Kirish | — | Email + parol, 2FA yoqilgan bo'lsa TOTP kodi |
-| Dashboard | hamma | Ko'rsatkichlar (oldingi davrga nisbatan o'zgarish va sparkline bilan), faollik grafigi, bosqich va til donutlari, hodisalar lentasi |
+| Bosh sahifa | hamma | Eng tepada **Bugun**: pulni qaytarish, shifokor arizalari, chat shikoyatlari, do'konda tugagan mahsulotlar — har biri soni va bir bosishda o'z sahifasi (`/admin/stats/todo`, rolga ko'ra). Keyin ko'rsatkichlar, faollik grafigi, bosqich va til donutlari, hodisalar lentasi |
 | Analitika | Owner/Admin/Analyst | Kunlik faol foydalanuvchilar (o'lchangan), retention 1/7/30, hisobdan to'lovgacha voronka, tushum, platforma va versiyalar, streak taqsimoti, rozilik, kunlar jadvali va CSV |
 | Foydalanuvchilar | hamma | Filtrlar, qidiruv, CSV, sahifalash |
 | Kartochka | Owner/Admin/Support | Umumiy · Obuna · Texnik. Bloklash, Premium berish |
-| Entitlements va limitlar | Owner/Admin (Analyst o'qiydi) | Jadvalni joyida tahrirlash |
-| Feature flags | Owner/Admin (Analyst o'qiydi) | Kill switch, standart qiymat, foizli yoyish qoidalari |
-| Maxfiy chat | hamma (Owner/Admin amal qiladi) | Moderatsiya navbati: postlar, izohlar, shikoyatlar. Yashirish, qaytarish, muallifni cheklash — hammasi taxallus ostida, foydalanuvchi ID'si ko'rinmaydi |
+| Funksiyalar | Owner/Admin (Analyst o'qiydi) | Ilova qila oladigan har narsa — bitta kartada: ishlayaptimi (bitta kalit), kim uchun (Hamma / Faqat Premium), limitlar va 7 kunlik foydalanish. Foizli yoyish va qoidalar «Kengaytirilgan»da. Avvalgi «Feature flags» va «Entitlements» sahifalari shu yerga birlashdi |
+| Do'kon | hamma (Gul katalogi Owner/Admin/Analyst) | Gul do'koni (obuna, qurilma, dori) va pulga sotiladigan hamroh hamda ramkalar narxi |
+| Chat | hamma (Owner/Admin amal qiladi) | Moderatsiya navbati: postlar, izohlar, shikoyatlar. Yashirish, qaytarish, muallifni cheklash — hammasi taxallus ostida, foydalanuvchi ID'si ko'rinmaydi |
 | Bildirishnomalar | Owner/Admin (Analyst o'qiydi) | Chastota chegaralari va shablonlar |
-| Wearable providerlar | Owner/Admin (Analyst o'qiydi) | Provayderlar holati, metrika moslashtirish jadvali |
-| Audit log | faqat Owner | Filtr va sahifalash |
+| Soat va qurilmalar | Owner/Admin (Analyst o'qiydi) | Provayderlar holati, metrika moslashtirish jadvali |
+| Audit jurnali | faqat Owner | Filtr va sahifalash |
 
 Barcha sahifalarning backend'i bor — o'chirilgan punkt qolmadi. Alohida
 "qo'llab-quvvatlash" sahifasi ataylab yo'q: operatorning ish oqimi (hisobni topish,
@@ -109,6 +112,15 @@ donut va voronka — bir necha yuz qator, va ular ilovaning o'z egri chiziqlarid
 animatsiya qiladi hamda qolgan hamma narsa bilan bir xil rang tokenlarini o'qiydi.
 Bog'liqlik yo'q. Har bir grafik o'lchov, shuning uchun har birini hover qilib raqamni
 ko'rish mumkin.
+
+**Funksiya kartasi — bayroq va huquqning juftligi.** Serverda bitta narsa ko'pincha ikki
+qator: hamma uchun o'chiradigan bayroq va kim olishini aytadigan huquq. Ularni
+`pages/featureCatalog.ts` juftlaydi va kartaning bitta kaliti nima qilishini o'sha yerda
+belgilaydi: o'chirish — umumiy o'chirgich (qolgan sozlama saqlanadi), yoqish — faqat
+o'chiq qismni tiklaydi, hech kimga ochiq bo'lmagan huquq esa faqat Premium'ga ochiladi.
+Katalog bilmagan yangi kalit «Boshqa» guruhida o'z tavsifi bilan chiqadi. Limit maydonlari
+faqat server ishlatilishni sanaydigan funksiyalarda (yoki limit allaqachon qo'yilgan
+joyda) ko'rinadi — boshqasida limit hech narsani cheklamaydi va karta shuni aytadi.
 
 **Saqlash toast bilan tasdiqlanadi.** Ilgari yagona tasdiq "Saqlash" tugmasining
 kulrang bo'lishi edi — buni "hali saqlanmoqda"dan ajratib bo'lmasdi. Endi har bir
