@@ -18,6 +18,7 @@ import uz.sadora.contract.SosState
 import uz.sadora.contract.UzbekPhone
 import uz.sadora.server.auth.PhoneNumbers
 import uz.sadora.server.auth.TextMessageSender
+import uz.sadora.server.core.FeatureDisabledException
 import uz.sadora.server.core.RateLimitedException
 import uz.sadora.server.core.ValidationException
 import uz.sadora.server.core.now
@@ -39,15 +40,27 @@ class SosService(
     private val sms: TextMessageSender,
     /** Sends a queued push now rather than at the next tick. */
     private val deliverSoon: (Uuid) -> Unit = {},
+    /** The admin's `sos` switch for this woman; null in tests is on. */
+    private val enabled: (suspend (UserRecord) -> Boolean)? = null,
 ) {
     private val logger = LoggerFactory.getLogger(SosService::class.java)
 
     suspend fun state(userId: Uuid): SosState {
-        users.findById(userId) ?: throw ValidationException("user", "Foydalanuvchi topilmadi")
+        val user = users.findById(userId) ?: throw ValidationException("user", "Foydalanuvchi topilmadi")
+        if (!isOn(user)) return SosState(enabled = false)
         return SosState(contacts = sos.contacts(userId), partnerName = partnerOf(userId)?.name)
     }
 
+    private suspend fun isOn(user: UserRecord): Boolean = runCatching { enabled?.invoke(user) ?: true }.getOrDefault(true)
+
+    private suspend fun requireOn(userId: Uuid): UserRecord {
+        val user = users.findById(userId) ?: throw ValidationException("user", "Foydalanuvchi topilmadi")
+        if (!isOn(user)) throw FeatureDisabledException(FLAG)
+        return user
+    }
+
     suspend fun saveContacts(userId: Uuid, request: SaveSosContactsRequest): SosState {
+        requireOn(userId)
         if (request.contacts.size > Limits.SOS_MAX_CONTACTS) {
             throw ValidationException("contacts", "Ko'pi bilan ${Limits.SOS_MAX_CONTACTS} ta kontakt")
         }
@@ -62,7 +75,7 @@ class SosService(
     }
 
     suspend fun alert(userId: Uuid, request: SosAlertRequest): SosAlertResult {
-        val user = users.findById(userId) ?: throw ValidationException("user", "Foydalanuvchi topilmadi")
+        val user = requireOn(userId)
         if (sos.alertsSince(userId, now() - 1.hours) >= Limits.SOS_ALERTS_PER_HOUR) {
             throw RateLimitedException("Signal juda ko'p yuborildi. 103 ga qo'ng'iroq qiling.")
         }
@@ -116,8 +129,10 @@ class SosService(
         return lat to lon
     }
 
-    private companion object {
-        const val MAX_NAME = 40
+    companion object {
+        /** The admin panel's switch. */
+        const val FLAG = "sos"
+        private const val MAX_NAME = 40
     }
 }
 

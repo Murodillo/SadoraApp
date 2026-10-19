@@ -4294,6 +4294,24 @@ class ApiIntegrationTest {
         val other = signUp().also { onboard(it) }
         put<uz.sadora.contract.SosState>("/v1/sos/contacts", other.token, uz.sadora.contract.SaveSosContactsRequest(listOf(uz.sadora.contract.SosContact("Onam", "90 123 45 67"))))
         assertEquals(1, post<uz.sadora.contract.SosAlertResult>("/v1/sos/alert", other.token, uz.sadora.contract.SosAlertRequest()).smsSent)
+
+        // The admin closes SOS: the state says so, and neither the alert nor the contacts answer.
+        val admin = adminToken()
+        setFlag(admin, uz.sadora.server.sos.SosService.FLAG, enabled = false)
+        try {
+            component.flagService.invalidate()
+            val closed = get<uz.sadora.contract.SosState>("/v1/sos", other.token)
+            assertFalse(closed.enabled)
+            assertTrue(closed.contacts.isEmpty())
+            val refused = raw { client.post("/v1/sos/alert") { auth(other.token); json(uz.sadora.contract.SosAlertRequest()) } }
+            assertEquals(HttpStatusCode.Forbidden, refused.status, refused.bodyAsTextSafe())
+            val refusedContacts = raw { client.put("/v1/sos/contacts") { auth(other.token); json(uz.sadora.contract.SaveSosContactsRequest(emptyList())) } }
+            assertEquals(HttpStatusCode.Forbidden, refusedContacts.status)
+        } finally {
+            setFlag(admin, uz.sadora.server.sos.SosService.FLAG, enabled = true)
+            component.flagService.invalidate()
+        }
+        assertTrue(get<uz.sadora.contract.SosState>("/v1/sos", other.token).enabled)
     }
 
     // ---------------------------------------------------------------- voice

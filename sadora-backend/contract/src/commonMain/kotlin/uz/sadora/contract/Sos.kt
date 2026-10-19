@@ -15,6 +15,8 @@ data class SosState(
     val contacts: List<SosContact> = emptyList(),
     /** Her Yaqinim's name when one is linked: they are alerted too. */
     val partnerName: String? = null,
+    /** Off when the admin has closed SOS: the app then shows only the 103 and 112 buttons. */
+    val enabled: Boolean = true,
 )
 
 @Serializable

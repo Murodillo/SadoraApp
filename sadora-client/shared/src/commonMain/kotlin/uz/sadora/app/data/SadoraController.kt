@@ -161,6 +161,7 @@ class SadoraController(
         call(silent = true) { repo.featureFlags() }?.let { flags ->
             state.communityEnabled = flags.isEnabled(COMMUNITY_FLAG)
             state.aiChatEnabled = flags.isEnabled(AI_CHAT_FLAG)
+            state.sosEnabled = flags.isEnabled(SOS_FLAG)
         }
     }
 
@@ -204,6 +205,7 @@ class SadoraController(
 
     private companion object {
         const val COMMUNITY_FLAG = "community"
+        const val SOS_FLAG = "sos"
         const val AI_CHAT_FLAG = "ai_chat_enabled"
     }
 }

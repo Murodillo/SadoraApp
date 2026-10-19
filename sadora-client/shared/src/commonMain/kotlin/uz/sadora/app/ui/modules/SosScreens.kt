@@ -107,7 +107,8 @@ fun SosScreen(
                         SadoraButton(t.call112, onClick = { uri.openUri("tel:112") }, tone = ButtonTone.Secondary)
                     }
                 }
-                item {
+                // Closed from the admin panel: the calls stay, the alert and the contacts go.
+                if (state?.enabled != false) item {
                     SadoraCard(padding = Spacing.sm, verticalGap = Spacing.xs) {
                         Text(t.alertTitle, style = Sadora.type.h3, color = c.text)
                         Text(t.alertBody, style = Sadora.type.body, color = c.muted)
@@ -116,7 +117,7 @@ fun SosScreen(
                     }
                 }
                 sos.error?.let { failure -> item { ErrorStrip(failure.readable(), onRetry = sos::clearError) } }
-                item { ContactsCard(sos, state?.contacts.orEmpty(), onToast) }
+                if (state?.enabled != false) item { ContactsCard(sos, state?.contacts.orEmpty(), onToast) }
                 item { DisclaimerNote(t.disclaimer) }
             }
         }

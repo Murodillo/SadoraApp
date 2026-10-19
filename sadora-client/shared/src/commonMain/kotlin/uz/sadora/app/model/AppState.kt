@@ -264,6 +264,8 @@ class AppState {
     // app whole, and the server's flags close a section rather than open one.
     var communityEnabled by mutableStateOf(true)
     var aiChatEnabled by mutableStateOf(true)
+    /** The admin's SOS switch. Off leaves the 103 and 112 buttons; only the alert closes. */
+    var sosEnabled by mutableStateOf(true)
 
     // ---- the day ----
     /**

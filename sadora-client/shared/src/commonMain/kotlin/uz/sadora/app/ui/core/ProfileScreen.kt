@@ -254,7 +254,9 @@ fun ProfileScreen(
                         SettingsRow(Res.drawable.ic3d_watch, strings.widgets.title) { onOpen(Route.Widgets) }
                         SettingsRow(Res.drawable.ic3d_bell, t.notifications) { onOpen(Route.Notifications) }
                         SettingsRow(Res.drawable.ic3d_message, strings.telegram.title) { onOpen(Route.TelegramBot) }
-                        SettingsRow(Res.drawable.ic3d_shield, strings.sos.contactsTitle + " (SOS)") { onOpen(Route.Sos) }
+                        if (state.sosEnabled) {
+                            SettingsRow(Res.drawable.ic3d_shield, strings.sos.contactsTitle + " (SOS)") { onOpen(Route.Sos) }
+                        }
                         SettingsRow(Res.drawable.ic3d_lock, t.privacyAndSecurity) { onOpen(Route.PrivacySecurity) }
                     }
                 }

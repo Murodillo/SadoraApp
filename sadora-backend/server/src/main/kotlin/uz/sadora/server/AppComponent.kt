@@ -563,6 +563,12 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
             uz.sadora.server.auth.LoggingTextSender()
         },
         deliverSoon = notificationScheduler::deliverSoon,
+        enabled = { user ->
+            flagService.isEnabled(
+                uz.sadora.server.sos.SosService.FLAG,
+                uz.sadora.server.flags.FlagContext(userId = user.id, environment = config.environment, language = user.language, lifeStage = user.lifeStage),
+            )
+        },
     )
 
     // ---- the Telegram bot: off until TELEGRAM_BOT_TOKEN and TELEGRAM_BOT_USERNAME are set
