@@ -403,7 +403,7 @@ class AdminService(
 
 }
 
-private fun UserRecord.toSummary(tier: SubscriptionTier) = AdminUserSummary(
+internal fun UserRecord.toSummary(tier: SubscriptionTier) = AdminUserSummary(
     id = id.toString(),
     name = name,
     phone = phone,

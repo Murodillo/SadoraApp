@@ -35,10 +35,16 @@ data class BlockedPrincipal(val userId: Uuid, val message: String)
 
 /**
  * The signed-in admin operator. [role] gates which admin routes are reachable.
- * [totpSetupRequired] is an operator who has not enrolled 2FA where it is mandatory:
- * she reaches her own account page and nothing else until she does.
+ * [totpSetupRequired] is an operator who has not enrolled 2FA where it is mandatory, and
+ * [passwordChangeRequired] one still on a password the Owner set: either way she reaches
+ * her own account page and nothing else until she has fixed it.
  */
-data class AdminPrincipal(val adminId: Uuid, val role: AdminRole, val totpSetupRequired: Boolean = false)
+data class AdminPrincipal(
+    val adminId: Uuid,
+    val role: AdminRole,
+    val totpSetupRequired: Boolean = false,
+    val passwordChangeRequired: Boolean = false,
+)
 
 /**
  * Admin roles, narrowest last. The proposal fixes these four and the page list each one
@@ -88,6 +94,7 @@ fun Application.configureSecurity(jwtService: JwtService, accountGate: AccountGa
                     adminId = adminId,
                     role = role,
                     totpSetupRequired = adminRequireTotp && !row[AdminUsers.totpEnabled],
+                    passwordChangeRequired = row[AdminUsers.passwordChangeRequired],
                 )
             }
             challenge { _, _ -> call.respondUnauthorized() }

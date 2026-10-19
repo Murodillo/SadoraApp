@@ -43,6 +43,28 @@ export interface AdminMe {
   totpEnabled: boolean
   /** 2FA is mandatory on this server and she has not enrolled: only enrolment is open. */
   totpSetupRequired?: boolean
+  /** She signed in with a password the Owner set: only the password form is open. */
+  passwordChangeRequired?: boolean
+}
+
+/** A staff account on the Owner's operators page. */
+export interface AdminOperator {
+  id: string
+  email: string
+  name: string
+  role: AdminRole
+  active: boolean
+  totpEnabled: boolean
+  passwordChangeRequired: boolean
+  lockedUntil?: string | null
+  lastLoginAt?: string | null
+  createdAt: string
+}
+
+/** Shown to the Owner once; only its hash is kept. */
+export interface OperatorCredentials {
+  operator: AdminOperator
+  temporaryPassword: string
 }
 
 export interface TotpEnrolment {
@@ -98,6 +120,38 @@ export interface AdminUserCard {
     }[]
     featureUsage: { featureKey: string; usedToday: number; usedThisMonth: number }[]
   }
+  connections?: AdminConnections
+}
+
+/** Which links hang off an account, by their state only — never who is on the other end. */
+export interface AdminConnections {
+  partner?: { status: string; relation: string; since: string } | null
+  partnerOf: number
+  telegramLinkedAt?: string | null
+  wearables: { provider: string; status: string; lastSyncAt?: string | null; lastError?: string | null }[]
+}
+
+export interface AdminSupportNote {
+  id: string
+  body: string
+  authorName?: string | null
+  createdAt: string
+  /** Written by the operator reading it: she may delete it, as may the Owner. */
+  mine: boolean
+}
+
+export interface AdminSearchResults {
+  users: AdminUserSummary[]
+  doctors: { id: string; fullName: string; specialty: string; status: string }[]
+  payments: {
+    id: string
+    userId: string
+    payerId?: string | null
+    provider: string
+    amountMinor: number
+    state: string
+    createdAt: string
+  }[]
 }
 
 export interface FeatureDefinition {

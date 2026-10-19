@@ -56,13 +56,19 @@ Menyu ish bo'yicha guruhlangan: **Odamlar**, **Kontent**, **Pul**, **Ilova**,
 | Bosh sahifa | hamma | Eng tepada **Bugun**: pulni qaytarish, shifokor arizalari, chat shikoyatlari, do'konda tugagan mahsulotlar — har biri soni va bir bosishda o'z sahifasi (`/admin/stats/todo`, rolga ko'ra). Keyin ko'rsatkichlar, faollik grafigi, bosqich va til donutlari, hodisalar lentasi |
 | Analitika | Owner/Admin/Analyst | Kunlik faol foydalanuvchilar (o'lchangan), retention 1/7/30, hisobdan to'lovgacha voronka, tushum, platforma va versiyalar, streak taqsimoti, rozilik, kunlar jadvali va CSV |
 | Foydalanuvchilar | hamma | Filtrlar, qidiruv, CSV, sahifalash |
-| Kartochka | Owner/Admin/Support | Umumiy · Obuna · Texnik. Bloklash, Premium berish |
+| Kartochka | Owner/Admin/Support | Umumiy (ulanishlar: Yaqinim, Telegram, soatlar — faqat holati; operatorlar izohlari) · Tarix (hisob voqealari, bir xillari bitta qatorga yig'iladi) · Obuna · Gul · Texnik. Bloklash, Premium berish |
 | Funksiyalar | Owner/Admin (Analyst o'qiydi) | Ilova qila oladigan har narsa — bitta kartada: ishlayaptimi (bitta kalit), kim uchun (Hamma / Faqat Premium), limitlar va 7 kunlik foydalanish. Foizli yoyish va qoidalar «Kengaytirilgan»da. Avvalgi «Feature flags» va «Entitlements» sahifalari shu yerga birlashdi |
 | Do'kon | hamma (Gul katalogi Owner/Admin/Analyst) | Gul do'koni (obuna, qurilma, dori) va pulga sotiladigan hamroh hamda ramkalar narxi |
 | Chat | hamma (Owner/Admin amal qiladi) | Moderatsiya navbati: postlar, izohlar, shikoyatlar. Yashirish, qaytarish, muallifni cheklash — hammasi taxallus ostida, foydalanuvchi ID'si ko'rinmaydi |
 | Bildirishnomalar | Owner/Admin (Analyst o'qiydi) | Chastota chegaralari va shablonlar |
 | Soat va qurilmalar | Owner/Admin (Analyst o'qiydi) | Provayderlar holati, metrika moslashtirish jadvali |
 | Audit jurnali | faqat Owner | Filtr va sahifalash |
+| Operatorlar | faqat Owner | Operator qo'shish (vaqtinchalik parol bir marta ko'rsatiladi), rol, o'chirish/yoqish, parol va 2FA'ni tiklash |
+
+**Ctrl+K (⌘K)** — har qanday sahifadan bitta qidiruv oynasi: sahifa nomi (yoki «bayroq», «payme»
+kabi kalit so'z), telefon (bo'shliq bilan yozilsa ham), ism, email, shifokor ismi yoki litsenziyasi,
+to'lov ID'si. Hisob, shifokor va to'lov qidiruvi Owner/Admin/Support uchun (`/admin/search`);
+Analitik faqat sahifalarni topadi, chunki kartochkani ocha olmaydi.
 
 Barcha sahifalarning backend'i bor — o'chirilgan punkt qolmadi. Alohida
 "qo'llab-quvvatlash" sahifasi ataylab yo'q: operatorning ish oqimi (hisobni topish,
@@ -121,6 +127,18 @@ o'chiq qismni tiklaydi, hech kimga ochiq bo'lmagan huquq esa faqat Premium'ga oc
 Katalog bilmagan yangi kalit «Boshqa» guruhida o'z tavsifi bilan chiqadi. Limit maydonlari
 faqat server ishlatilishni sanaydigan funksiyalarda (yoki limit allaqachon qo'yilgan
 joyda) ko'rinadi — boshqasida limit hech narsani cheklamaydi va karta shuni aytadi.
+
+**Operatorni faqat Owner boshqaradi va hech kim o'zini emas.** O'zini pasaytirgan yoki
+o'chirgan Owner panelni Owner'siz qoldirardi; o'z paroli va 2FA'si esa isbot so'raydigan
+«Hisobim» sahifasida. Yangi operator ham, paroli tiklangan operator ham Owner ko'rgan
+vaqtinchalik parol bilan kiradi: uni almashtirmaguncha server faqat «Hisobim»ni ochadi
+(`password_change_required`), panel ham faqat shu sahifani ko'rsatadi. Har o'zgarish
+operatorning keyingi so'rovidan kuchga kiradi — admin realmi hisobni har so'rovda o'qiydi.
+
+**Kartochka tarixi chat moderatsiyasini ko'rsatmaydi.** Moderatsiya sahifasi taxallusni
+hisobga bog'lamaydi; bir xil daqiqalardagi tarix bog'lab qo'yardi. Owner bo'lmaganlarga
+har voqea dashboarddagidek — kim, qayerdan va nega qismisiz — boradi. Izohlar audit
+jurnaliga matnisiz yoziladi va hisob bilan birga o'chadi.
 
 **Saqlash toast bilan tasdiqlanadi.** Ilgari yagona tasdiq "Saqlash" tugmasining
 kulrang bo'lishi edi — buni "hali saqlanmoqda"dan ajratib bo'lmasdi. Endi har bir

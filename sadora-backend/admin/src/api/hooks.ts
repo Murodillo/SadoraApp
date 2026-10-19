@@ -28,6 +28,11 @@ import type {
   DoctorStatus,
   AdminFeatureUsage,
   AdminFlag,
+  AdminOperator,
+  AdminRole,
+  AdminSearchResults,
+  AdminSupportNote,
+  OperatorCredentials,
   AdminPayment,
   AdminStats,
   AdminTodo,
@@ -120,6 +125,53 @@ export const useUserCard = (id: string | undefined) =>
     queryKey: ['user', id],
     queryFn: () => request<AdminUserCard>(`/v1/admin/users/${id}`),
     enabled: Boolean(id),
+  })
+
+/** What happened on the account, newest first; without who and where unless she is the Owner. */
+export const useUserTimeline = (id: string | undefined) =>
+  useQuery({
+    queryKey: ['user', id, 'timeline'],
+    queryFn: () => request<AuditEntry[]>(`/v1/admin/users/${id}/timeline`),
+    enabled: Boolean(id),
+  })
+
+export const useUserNotes = (id: string | undefined) =>
+  useQuery({
+    queryKey: ['user', id, 'notes'],
+    queryFn: () => request<AdminSupportNote[]>(`/v1/admin/users/${id}/notes`),
+    enabled: Boolean(id),
+  })
+
+/** A note is also a timeline event, so both refetch. */
+const useNoteMutation = <T,>(userId: string, mutationFn: (input: T) => Promise<unknown>) => {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn,
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: ['user', userId, 'notes'] })
+      void client.invalidateQueries({ queryKey: ['user', userId, 'timeline'] })
+    },
+  })
+}
+
+export const useAddNote = (userId: string) =>
+  useNoteMutation(userId, (body: string) =>
+    request<AdminSupportNote>(`/v1/admin/users/${userId}/notes`, { method: 'POST', body: { body } }),
+  )
+
+export const useDeleteNote = (userId: string) =>
+  useNoteMutation(userId, (noteId: string) =>
+    request(`/v1/admin/users/${userId}/notes/${noteId}`, { method: 'DELETE' }),
+  )
+
+/** The Ctrl+K box. Runs only for a query worth sending, and keeps the last answer while typing. */
+export const useAdminSearch = (q: string, enabled: boolean) =>
+  useQuery({
+    queryKey: ['search', q],
+    queryFn: () => request<AdminSearchResults>(`/v1/admin/search${query({ q })}`),
+    enabled: enabled && q.trim().length >= 2,
+    placeholderData: (previous) => previous,
+    staleTime: 10_000,
   })
 
 export const useFeatures = () =>
@@ -581,11 +633,52 @@ export const useDisableTotp = () =>
     request('/v1/admin/me/totp/disable', { method: 'POST', body: input }),
   )
 
+/** Refetches `me`: replacing a temporary password is what opens the rest of the panel. */
 export const useChangePassword = () =>
-  useMutation({
-    mutationFn: (input: { currentPassword: string; newPassword: string; totpCode?: string }) =>
-      request('/v1/admin/me/password', { method: 'POST', body: input }),
+  useTotpMutation((input: { currentPassword: string; newPassword: string; totpCode?: string }) =>
+    request('/v1/admin/me/password', { method: 'POST', body: input }),
+  )
+
+// ---------------------------------------------------------------- operators (Owner)
+
+export const useOperators = () =>
+  useQuery({
+    queryKey: ['operators'],
+    queryFn: () => request<AdminOperator[]>('/v1/admin/operators'),
   })
+
+const useOperatorMutation = <T, R>(mutationFn: (input: T) => Promise<R>) => {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn,
+    onSuccess: () => void client.invalidateQueries({ queryKey: ['operators'] }),
+  })
+}
+
+export const useCreateOperator = () =>
+  useOperatorMutation((body: { email: string; name: string; role: AdminRole }) =>
+    request<OperatorCredentials>('/v1/admin/operators', { method: 'POST', body }),
+  )
+
+export const useChangeOperatorRole = () =>
+  useOperatorMutation(({ id, role }: { id: string; role: AdminRole }) =>
+    request<AdminOperator>(`/v1/admin/operators/${id}/role`, { method: 'PUT', body: { role } }),
+  )
+
+export const useSetOperatorActive = () =>
+  useOperatorMutation(({ id, active }: { id: string; active: boolean }) =>
+    request<AdminOperator>(`/v1/admin/operators/${id}/status`, { method: 'PUT', body: { active } }),
+  )
+
+export const useResetOperatorPassword = () =>
+  useOperatorMutation((id: string) =>
+    request<OperatorCredentials>(`/v1/admin/operators/${id}/reset-password`, { method: 'POST', body: {} }),
+  )
+
+export const useResetOperatorTotp = () =>
+  useOperatorMutation((id: string) =>
+    request<AdminOperator>(`/v1/admin/operators/${id}/reset-totp`, { method: 'POST', body: {} }),
+  )
 
 // ---------------------------------------------------------------- Gul
 

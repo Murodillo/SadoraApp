@@ -38,6 +38,16 @@ export function SecurityPage() {
         </div>
       </Card>
 
+      {me.data.passwordChangeRequired ? (
+        <>
+          <div className="notice">
+            Siz Owner bergan vaqtinchalik parol bilan kirdingiz. O'zingiz biladigan parol qo'ymaguningizcha
+            panelning boshqa bo'limlari ochilmaydi. «Joriy parol» — o'sha vaqtinchalik parol.
+          </div>
+          <PasswordCard totpEnabled={me.data.totpEnabled} />
+        </>
+      ) : null}
+
       {me.data.totpSetupRequired ? (
         <div className="notice">
           Bu serverda 2FA majburiy. Uni yoqmaguningizcha panelning boshqa bo'limlari ochilmaydi.
@@ -46,7 +56,7 @@ export function SecurityPage() {
 
       {me.data.totpEnabled ? <DisableCard /> : <EnrolCard email={me.data.email} />}
 
-      <PasswordCard totpEnabled={me.data.totpEnabled} />
+      {!me.data.passwordChangeRequired && <PasswordCard totpEnabled={me.data.totpEnabled} />}
     </div>
   )
 }
@@ -92,7 +102,7 @@ function EnrolCard({ email }: { email: string }) {
           </Field>
           <div className="notice">
             Kalitni hoziroq saqlab qo'ying. U faqat shu yerda ko'rsatiladi — telefon
-            yo'qolsa, 2FA'ni boshqa Owner o'chirib beradi.
+            yo'qolsa, 2FA'ni Owner «Operatorlar» sahifasida tiklab beradi.
           </div>
           <Field label="Ilovadagi kod">
             <input

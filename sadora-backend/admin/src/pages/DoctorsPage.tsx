@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import { useDoctor, useDoctorCounts, useDoctorDocument, useDoctors, useRemoveDoctorPhoto, useReviewDoctor } from '../api/hooks'
 import { limits } from '../api/limits'
 import type { AdminDoctorDetail, AdminDoctorDocument, AdminDoctorQuality, DoctorReviewAction, DoctorStatus } from '../api/types'
@@ -54,9 +54,21 @@ type DoctorsTab = DoctorStatus | 'quality'
 
 export function DoctorsPage() {
   const counts = useDoctorCounts()
+  const [params] = useSearchParams()
   const [tab, setTab] = useState<DoctorsTab>('pending')
   const [offset, setOffset] = useState(0)
   const [selected, setSelected] = useState<string | null>(null)
+
+  // Ctrl+K opens a doctor as /doctors?status=…&id=…: her card, on her status's tab. Read on
+  // every change, since a second search from this page keeps the page mounted.
+  useEffect(() => {
+    const status = doctorStatusOrder.find((key) => key === params.get('status'))
+    const id = params.get('id')
+    if (!status || !id) return
+    setTab(status)
+    setOffset(0)
+    setSelected(id)
+  }, [params])
 
   function changeTab(next: DoctorsTab) {
     setTab(next)

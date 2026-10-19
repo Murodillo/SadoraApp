@@ -277,8 +277,21 @@ object AdminUsers : Table("admin_users") {
     val failedAttempts = integer("failed_attempts")
     val lockedUntil = timestampWithTimeZone("locked_until").nullable()
     val lastLoginAt = timestampWithTimeZone("last_login_at").nullable()
+    /** Signed in with a password the Owner set (V66); only her account page opens until she changes it. */
+    val passwordChangeRequired = bool("password_change_required").default(false)
     val createdAt = timestampWithTimeZone("created_at")
     val updatedAt = timestampWithTimeZone("updated_at")
+
+    override val primaryKey = PrimaryKey(id)
+}
+
+/** Operators' notes on an account (V66), erased with it. */
+object UserSupportNotes : Table("user_support_notes") {
+    val id = uuid("id")
+    val userId = uuid("user_id").references(Users.id)
+    val adminId = uuid("admin_id").references(AdminUsers.id).nullable()
+    val body = text("body")
+    val createdAt = timestampWithTimeZone("created_at")
 
     override val primaryKey = PrimaryKey(id)
 }

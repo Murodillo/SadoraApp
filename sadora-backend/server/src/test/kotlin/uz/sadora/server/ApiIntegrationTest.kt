@@ -28,6 +28,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
 import io.ktor.http.contentType
+import io.ktor.http.encodeURLParameter
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.time.Clock
@@ -1774,6 +1775,182 @@ class ApiIntegrationTest {
 
         val refused = client.get("/v1/admin/features/usage") { auth(adminAccount("support").token) }
         assertEquals(HttpStatusCode.Forbidden, refused.status)
+    }
+
+    // ---------------------------------------------------------------- admin operators
+
+    /**
+     * The Owner adds an operator and is shown a temporary password once. The operator signs
+     * in with it, and until she sets her own the API opens nothing but her account.
+     */
+    @Test
+    fun `a new operator must replace the temporary password before the panel opens`() = api {
+        val owner = adminAccount("owner").token
+        val email = "op-${Uuid.random().toString().take(8)}@sadora.test"
+        val created = post<uz.sadora.server.admin.OperatorCredentials>(
+            "/v1/admin/operators",
+            owner,
+            uz.sadora.server.admin.CreateOperatorRequest(email, "Yangi operator", uz.sadora.server.plugins.AdminRole.SUPPORT),
+        )
+        assertEquals(email, created.operator.email)
+        assertTrue(created.operator.passwordChangeRequired)
+        assertTrue(created.temporaryPassword.length >= 12)
+
+        val duplicate = client.post("/v1/admin/operators") {
+            auth(owner)
+            json(uz.sadora.server.admin.CreateOperatorRequest(email.uppercase(), "Ikkinchi", uz.sadora.server.plugins.AdminRole.ADMIN))
+        }
+        assertEquals(HttpStatusCode.Conflict, duplicate.status)
+
+        val token = client.post("/v1/admin/auth/login") { json(AdminSignInRequest(email, created.temporaryPassword)) }
+            .body<AdminSession>().accessToken
+        assertTrue(get<AdminMe>("/v1/admin/me", token).passwordChangeRequired)
+        val gated = client.get("/v1/admin/stats") { auth(token) }
+        assertEquals(HttpStatusCode.Forbidden, gated.status)
+        assertTrue("password_change_required" in gated.bodyAsText())
+
+        postAck("/v1/admin/me/password", token, AdminPasswordChangeRequest(created.temporaryPassword, "OwnWords2026"))
+        assertTrue(!get<AdminMe>("/v1/admin/me", token).passwordChangeRequired)
+        get<uz.sadora.server.admin.AdminStats>("/v1/admin/stats", token)
+
+        // Support is not the Owner: the staff list is closed to her.
+        assertEquals(HttpStatusCode.Forbidden, client.get("/v1/admin/operators") { auth(token) }.status)
+        assertTrue("admin.operator_created" in rawGet("/v1/admin/audit?action=admin.operator_created&entityId=${created.operator.id}&limit=5", owner))
+    }
+
+    /**
+     * A role change, a switch-off and a reset all land on the operator's next request; and
+     * the Owner can do none of it to herself, which is what keeps the panel with an Owner.
+     */
+    @Test
+    fun `the Owner changes a role, switches an account off and resets it, but never her own`() = api {
+        val ownerAccount = adminAccount("owner")
+        val owner = ownerAccount.token
+        val operator = adminAccount("support")
+        val operatorId = get<AdminMe>("/v1/admin/me", operator.token).id
+
+        assertEquals(HttpStatusCode.Forbidden, client.get("/v1/admin/stats/analytics") { auth(operator.token) }.status)
+        val promoted = put<uz.sadora.server.admin.AdminOperatorView>(
+            "/v1/admin/operators/$operatorId/role",
+            owner,
+            uz.sadora.server.admin.UpdateOperatorRequest(uz.sadora.server.plugins.AdminRole.ANALYST),
+        )
+        assertEquals(uz.sadora.server.plugins.AdminRole.ANALYST, promoted.role)
+        assertEquals(HttpStatusCode.OK, client.get("/v1/admin/stats/analytics") { auth(operator.token) }.status)
+
+        put<uz.sadora.server.admin.AdminOperatorView>("/v1/admin/operators/$operatorId/status", owner, uz.sadora.server.admin.OperatorStatusRequest(false))
+        assertEquals(HttpStatusCode.Unauthorized, client.get("/v1/admin/stats") { auth(operator.token) }.status)
+        val refused = client.post("/v1/admin/auth/login") { json(AdminSignInRequest(operator.email, operator.password)) }
+        assertEquals(HttpStatusCode.Forbidden, refused.status)
+        put<uz.sadora.server.admin.AdminOperatorView>("/v1/admin/operators/$operatorId/status", owner, uz.sadora.server.admin.OperatorStatusRequest(true))
+
+        dbQuery { exec("UPDATE admin_users SET totp_enabled = TRUE, totp_secret = 'JBSWY3DPEHPK3PXP' WHERE id = '$operatorId'") }
+        val cleared = post<uz.sadora.server.admin.AdminOperatorView>("/v1/admin/operators/$operatorId/reset-totp", owner, Ack())
+        assertTrue(!cleared.totpEnabled)
+
+        val reset = post<uz.sadora.server.admin.OperatorCredentials>("/v1/admin/operators/$operatorId/reset-password", owner, Ack())
+        assertTrue(reset.operator.passwordChangeRequired)
+        val oldPassword = client.post("/v1/admin/auth/login") { json(AdminSignInRequest(operator.email, operator.password)) }
+        assertEquals(HttpStatusCode.Unauthorized, oldPassword.status)
+        val fresh = client.post("/v1/admin/auth/login") { json(AdminSignInRequest(operator.email, reset.temporaryPassword)) }
+        assertEquals(HttpStatusCode.OK, fresh.status)
+
+        val ownerId = get<AdminMe>("/v1/admin/me", owner).id
+        val selfDemote = client.put("/v1/admin/operators/$ownerId/role") {
+            auth(owner)
+            json(uz.sadora.server.admin.UpdateOperatorRequest(uz.sadora.server.plugins.AdminRole.SUPPORT))
+        }
+        assertEquals(HttpStatusCode.Forbidden, selfDemote.status)
+        val selfDisable = client.put("/v1/admin/operators/$ownerId/status") { auth(owner); json(uz.sadora.server.admin.OperatorStatusRequest(false)) }
+        assertEquals(HttpStatusCode.Forbidden, selfDisable.status)
+        assertEquals(uz.sadora.server.plugins.AdminRole.OWNER, get<AdminMe>("/v1/admin/me", owner).role)
+
+        val actions = rawGet("/v1/admin/audit?entityId=$operatorId&limit=20", owner)
+        listOf("admin.operator_role_changed", "admin.operator_disabled", "admin.operator_enabled", "admin.operator_totp_reset", "admin.operator_password_reset")
+            .forEach { assertTrue(it in actions, "missing $it") }
+    }
+
+    // ---------------------------------------------------------------- user card support side
+
+    /**
+     * Operators leave each other notes on an account; the author or the Owner may remove
+     * one. The timeline shows what happened, without who and where for anyone but the Owner,
+     * and the card says which links hang off the account.
+     */
+    @Test
+    fun `notes, the timeline and the connections fill the user card`() = api {
+        val user = signUp().also { onboard(it) }
+        val owner = adminToken()
+        val support = adminAccount("support").token
+        val otherSupport = adminAccount("support").token
+
+        val empty = client.post("/v1/admin/users/${user.userId}/notes") { auth(support); json(uz.sadora.server.admin.AddSupportNoteRequest("   ")) }
+        assertEquals(HttpStatusCode.BadRequest, empty.status)
+        val note = post<uz.sadora.server.admin.AdminSupportNote>(
+            "/v1/admin/users/${user.userId}/notes",
+            support,
+            uz.sadora.server.admin.AddSupportNoteRequest("Pul qaytarishni so'radi, 3-kuni javob beramiz"),
+        )
+        assertTrue(note.mine)
+        val seenByOther = get<List<uz.sadora.server.admin.AdminSupportNote>>("/v1/admin/users/${user.userId}/notes", otherSupport).single()
+        assertEquals(note.body, seenByOther.body)
+        assertTrue(!seenByOther.mine)
+        assertEquals(HttpStatusCode.Forbidden, client.delete("/v1/admin/users/${user.userId}/notes/${note.id}") { auth(otherSupport) }.status)
+
+        val forSupport = get<List<uz.sadora.server.admin.AuditEntryView>>("/v1/admin/users/${user.userId}/timeline", support)
+        val actions = forSupport.map { it.action }
+        assertTrue("user.signed_up" in actions && "user.onboarded" in actions && "user.note_added" in actions, "$actions")
+        assertTrue(forSupport.all { it.actorLabel == null && it.ip == null })
+        val forOwner = get<List<uz.sadora.server.admin.AuditEntryView>>("/v1/admin/users/${user.userId}/timeline", owner)
+        assertEquals("support", forOwner.first { it.action == "user.note_added" }.actorLabel)
+
+        assertEquals(HttpStatusCode.OK, client.delete("/v1/admin/users/${user.userId}/notes/${note.id}") { auth(owner) }.status)
+        assertTrue(get<List<uz.sadora.server.admin.AdminSupportNote>>("/v1/admin/users/${user.userId}/notes", support).isEmpty())
+
+        val bare = get<uz.sadora.server.admin.AdminUserCard>("/v1/admin/users/${user.userId}", support).connections
+        assertNull(bare.partner)
+        assertNull(bare.telegramLinkedAt)
+        dbQuery { exec("INSERT INTO telegram_links (user_id, chat_id, detailed, linked_at) VALUES ('${user.userId}', ${kotlin.random.Random.nextLong(1, Long.MAX_VALUE)}, FALSE, now())") }
+        assertNotNull(get<uz.sadora.server.admin.AdminUserCard>("/v1/admin/users/${user.userId}", support).connections.telegramLinkedAt)
+    }
+
+    // ---------------------------------------------------------------- admin search
+
+    /** One box finds an account by a phone typed with spaces, a doctor by name, a payment by its id. */
+    @Test
+    fun `search finds an account by phone digits, a doctor by name and a payment by id`() = api {
+        val user = signUp().also { onboard(it) }
+        val support = adminAccount("support").token
+        val phone = dbQuery {
+            exec("SELECT phone FROM users WHERE id = '${user.userId}'") { rows -> rows.next(); rows.getString(1) }
+        }!!
+        val spaced = phone.drop(4).chunked(2).joinToString(" ")
+        val byPhone = get<uz.sadora.server.admin.AdminSearchResults>("/v1/admin/search?q=${spaced.encodeURLParameter()}", support)
+        assertTrue(byPhone.users.any { it.id == user.userId }, "searched «$spaced» for $phone")
+        assertTrue(get<uz.sadora.server.admin.AdminSearchResults>("/v1/admin/search?q=${user.userId}", support).users.any { it.id == user.userId })
+
+        val doctor = signUp().also { onboard(it) }
+        val name = "Dr Qidiruv ${Uuid.random().toString().take(6)}"
+        val jpeg = kotlin.io.encoding.Base64.encode(byteArrayOf(0xFF.toByte(), 0xD8.toByte(), 0xFF.toByte(), 0xE0.toByte(), 1, 2, 3))
+        post<DoctorAccount>(
+            "/v1/doctor/application",
+            doctor.token,
+            DoctorApplicationRequest(name, DoctorSpecialty.GYNECOLOGIST, "Klinika", 4, "LIC-Q", documents = listOf(DoctorDocumentUpload(DoctorDocumentKind.DIPLOMA, jpeg))),
+        )
+        val found = get<uz.sadora.server.admin.AdminSearchResults>("/v1/admin/search?q=${name.lowercase().encodeURLParameter()}", support).doctors.single()
+        assertEquals(name, found.fullName)
+        assertEquals("pending", found.status)
+
+        val paymentId = Uuid.random()
+        dbQuery {
+            exec("INSERT INTO payment_transactions (id, user_id, plan_id, provider, amount_minor, currency, state, external_id) VALUES ('$paymentId', '${user.userId}', 'premium_month', 'payme', 4990000, 'UZS', 'paid', 'ext-$paymentId')")
+        }
+        val byId = get<uz.sadora.server.admin.AdminSearchResults>("/v1/admin/search?q=$paymentId", support).payments.single()
+        assertEquals(user.userId, byId.userId)
+        assertEquals(paymentId.toString(), get<uz.sadora.server.admin.AdminSearchResults>("/v1/admin/search?q=ext-$paymentId", support).payments.single().id)
+
+        assertTrue(get<uz.sadora.server.admin.AdminSearchResults>("/v1/admin/search?q=a", support).users.isEmpty())
+        assertEquals(HttpStatusCode.Forbidden, client.get("/v1/admin/search?q=abc") { auth(adminAccount("analyst").token) }.status)
     }
 
     // ---------------------------------------------------------------- admin 2FA

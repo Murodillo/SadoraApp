@@ -45,6 +45,9 @@ fun Route.adminRoutes(
     statsRepository: AdminStatsRepository,
     analyticsRepository: AdminAnalyticsRepository,
     refreshTokens: RefreshTokenService,
+    operators: AdminOperatorService,
+    support: AdminSupportService,
+    search: AdminSearchService,
 ) {
     route("/admin") {
 
@@ -140,7 +143,42 @@ fun Route.adminRoutes(
             get("/users/{id}") {
                 call.requireAdminRole(AdminRole.OWNER, AdminRole.ADMIN, AdminRole.SUPPORT)
                 val userId = parseUuid(call.parameters["id"].orEmpty(), "id")
-                call.respond(adminService.userCard(userId))
+                call.respond(adminService.userCard(userId).copy(connections = support.connections(userId)))
+            }
+
+            // --- the card's support side: what happened, and the operators' notes ---
+            get("/users/{id}/timeline") {
+                val principal = call.requireAdminRole(AdminRole.OWNER, AdminRole.ADMIN, AdminRole.SUPPORT)
+                val userId = parseUuid(call.parameters["id"].orEmpty(), "id")
+                call.respond(support.timeline(userId, principal, call.intParameter("limit", 40, 100)))
+            }
+
+            get("/users/{id}/notes") {
+                val principal = call.requireAdminRole(AdminRole.OWNER, AdminRole.ADMIN, AdminRole.SUPPORT)
+                val userId = parseUuid(call.parameters["id"].orEmpty(), "id")
+                call.respond(support.notes(userId, principal))
+            }
+
+            post("/users/{id}/notes") {
+                val principal = call.requireAdminRole(AdminRole.OWNER, AdminRole.ADMIN, AdminRole.SUPPORT)
+                val userId = parseUuid(call.parameters["id"].orEmpty(), "id")
+                val request = call.receive<AddSupportNoteRequest>()
+                call.respond(HttpStatusCode.Created, support.addNote(userId, request, principal, call.requestContext()))
+            }
+
+            delete("/users/{id}/notes/{noteId}") {
+                val principal = call.requireAdminRole(AdminRole.OWNER, AdminRole.ADMIN, AdminRole.SUPPORT)
+                val userId = parseUuid(call.parameters["id"].orEmpty(), "id")
+                val noteId = parseUuid(call.parameters["noteId"].orEmpty(), "noteId")
+                support.deleteNote(userId, noteId, principal, call.requestContext())
+                call.respond(Ack())
+            }
+
+            // --- one search box for the panel (Ctrl+K) ---------------------------
+            // The roles that can open what it finds: a card, a doctor, a payment's owner.
+            get("/search") {
+                call.requireAdminRole(AdminRole.OWNER, AdminRole.ADMIN, AdminRole.SUPPORT)
+                call.respond(search.search(call.request.queryParameters["q"].orEmpty()))
             }
 
             post("/users/{id}/block") {
@@ -224,6 +262,44 @@ fun Route.adminRoutes(
                 val ruleId = parseUuid(call.parameters["ruleId"].orEmpty(), "ruleId")
                 adminService.removeFlagRule(key, ruleId, admin, call.requestContext())
                 call.respond(Ack())
+            }
+
+            // --- operators: the Owner's alone -----------------------------------
+            get("/operators") {
+                call.requireAdminRole(AdminRole.OWNER)
+                call.respond(operators.list())
+            }
+
+            post("/operators") {
+                val owner = call.requireAdminRole(AdminRole.OWNER)
+                val request = call.receive<CreateOperatorRequest>()
+                call.respond(HttpStatusCode.Created, operators.create(request, owner, call.requestContext()))
+            }
+
+            put("/operators/{id}/role") {
+                val owner = call.requireAdminRole(AdminRole.OWNER)
+                val id = parseUuid(call.parameters["id"].orEmpty(), "id")
+                val request = call.receive<UpdateOperatorRequest>()
+                call.respond(operators.changeRole(id, request, owner, call.requestContext()))
+            }
+
+            put("/operators/{id}/status") {
+                val owner = call.requireAdminRole(AdminRole.OWNER)
+                val id = parseUuid(call.parameters["id"].orEmpty(), "id")
+                val request = call.receive<OperatorStatusRequest>()
+                call.respond(operators.setActive(id, request.active, owner, call.requestContext()))
+            }
+
+            post("/operators/{id}/reset-password") {
+                val owner = call.requireAdminRole(AdminRole.OWNER)
+                val id = parseUuid(call.parameters["id"].orEmpty(), "id")
+                call.respond(operators.resetPassword(id, owner, call.requestContext()))
+            }
+
+            post("/operators/{id}/reset-totp") {
+                val owner = call.requireAdminRole(AdminRole.OWNER)
+                val id = parseUuid(call.parameters["id"].orEmpty(), "id")
+                call.respond(operators.resetTotp(id, owner, call.requestContext()))
             }
 
             // --- audit log: owner only, as specified in the proposal ------------

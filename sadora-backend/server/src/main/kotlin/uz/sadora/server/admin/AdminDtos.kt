@@ -27,6 +27,8 @@ data class AdminMe(
     val totpEnabled: Boolean,
     /** 2FA is mandatory here and she has not enrolled: the panel shows only enrolment. */
     val totpSetupRequired: Boolean = false,
+    /** She is on a password the Owner set: the panel shows only the password form. */
+    val passwordChangeRequired: Boolean = false,
 )
 
 /** [totpCode] is required once she has 2FA on. */
@@ -91,6 +93,7 @@ data class AdminUserCard(
     val general: AdminUserSummary,
     val subscription: AdminSubscriptionView,
     val technical: AdminTechnicalView,
+    val connections: AdminConnectionsView = AdminConnectionsView(),
 )
 
 @Serializable

@@ -4,6 +4,12 @@
  * shows as itself, so a new server action is never hidden, only untranslated.
  */
 export const actionLabels: Record<string, string> = {
+  'admin.operator_created': "Operator qo'shildi",
+  'admin.operator_disabled': "Operator o'chirildi",
+  'admin.operator_enabled': 'Operator yoqildi',
+  'admin.operator_password_reset': 'Operatorga yangi parol berildi',
+  'admin.operator_role_changed': "Operator roli o'zgardi",
+  'admin.operator_totp_reset': "Operator 2FA'si tiklandi",
   'admin.password_changed': "Operator parolini o'zgartirdi",
   'admin.sign_in_failed': 'Operator kira olmadi',
   'admin.signed_in': 'Operator kirdi',
@@ -73,6 +79,8 @@ export const actionLabels: Record<string, string> = {
   'user.consent_changed': "Rozilikni o'zgartirdi",
   'user.deletion_requested': "O'chirishni so'radi",
   'user.erased': "Hisob o'chirildi",
+  'user.note_added': "Izoh qo'shildi",
+  'user.note_deleted': "Izoh o'chirildi",
   'user.onboarded': 'Onboardingni tugatdi',
   'user.profile_updated': 'Profilni yangiladi',
   'user.signed_in': 'Kirdi',

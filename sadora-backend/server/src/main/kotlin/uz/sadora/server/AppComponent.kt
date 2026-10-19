@@ -1,6 +1,9 @@
 package uz.sadora.server
 
 import uz.sadora.server.admin.AdminAuthService
+import uz.sadora.server.admin.AdminOperatorService
+import uz.sadora.server.admin.AdminSearchService
+import uz.sadora.server.admin.AdminSupportService
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation as ClientContentNegotiation
@@ -710,6 +713,9 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
     }
 
     val adminAuthService = AdminAuthService(jwtService, auditService, requireTotp = config.adminRequireTotp)
+    val adminOperatorService = AdminOperatorService(auditService)
+    val adminSupportService = AdminSupportService(auditService)
+    val adminSearchService = AdminSearchService(userRepository, entitlementRepository)
 
     val adminService = AdminService(
         users = userRepository,

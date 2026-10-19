@@ -238,6 +238,9 @@ fun Application.apiModule(component: AppComponent) {
                 statsRepository = component.statsRepository,
                 analyticsRepository = component.analyticsRepository,
                 refreshTokens = component.refreshTokenService,
+                operators = component.adminOperatorService,
+                support = component.adminSupportService,
+                search = component.adminSearchService,
             )
         }
     }

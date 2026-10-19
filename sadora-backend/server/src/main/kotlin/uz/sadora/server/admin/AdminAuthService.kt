@@ -152,6 +152,7 @@ class AdminAuthService(
                 ?: AdminRole.ANALYST,
             totpEnabled = row[AdminUsers.totpEnabled],
             totpSetupRequired = requireTotp && !row[AdminUsers.totpEnabled],
+            passwordChangeRequired = row[AdminUsers.passwordChangeRequired],
         )
     }
 
@@ -180,6 +181,8 @@ class AdminAuthService(
         dbQuery {
             AdminUsers.update({ AdminUsers.id eq adminId }) {
                 it[passwordHash] = hash
+                // A password only she knows: the temporary one the Owner saw is gone.
+                it[passwordChangeRequired] = false
                 it[updatedAt] = now().toOffsetDateTime()
             }
         }

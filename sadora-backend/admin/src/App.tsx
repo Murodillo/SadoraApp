@@ -5,6 +5,7 @@ import { useAdminMe } from './api/hooks'
 import { AuthProvider, useAuth } from './auth/AuthContext'
 import { LoginPage } from './auth/LoginPage'
 import { ErrorBoundary } from './components/ErrorBoundary'
+import { Loading } from './components/ui'
 import { ToastProvider } from './components/toast'
 import { Shell } from './layout/Shell'
 import { AnalyticsPage } from './pages/AnalyticsPage'
@@ -18,6 +19,7 @@ import { DashboardPage } from './pages/DashboardPage'
 import { DoctorsPage } from './pages/DoctorsPage'
 import { FeaturesPage } from './pages/FeaturesPage'
 import { NotificationsPage } from './pages/NotificationsPage'
+import { OperatorsPage } from './pages/OperatorsPage'
 import { PromoVideoPage } from './pages/PromoVideoPage'
 import { RewardsPage } from './pages/RewardsPage'
 import { ShopPage } from './pages/ShopPage'
@@ -68,10 +70,16 @@ function SignedInRoutes() {
   const { can } = useAuth()
   const me = useAdminMe()
 
+  // Until `me` answers, which panel she gets is unknown: rendering the full one first
+  // flashed every page, and its requests, at an operator the server will only show her
+  // account page.
+  if (me.isLoading) return <Loading rows={3} />
+
   // Where 2FA is mandatory, an operator who has not enrolled reaches her account page
-  // and nothing else; the server refuses the rest. Enrolling refetches `me` and the
-  // whole panel opens.
-  if (me.data?.totpSetupRequired) {
+  // and nothing else; the server refuses the rest. The same holds while she is on the
+  // temporary password the Owner gave her. Fixing either refetches `me` and the whole
+  // panel opens.
+  if (me.data?.totpSetupRequired || me.data?.passwordChangeRequired) {
     return (
       <Routes>
         <Route element={<Shell setupOnly />}>
@@ -130,6 +138,7 @@ function SignedInRoutes() {
         <Route path="flags" element={<Navigate to="/features" replace />} />
         <Route path="security" element={<SecurityPage />} />
         <Route path="audit" element={can(['OWNER']) ? <AuditPage /> : <Navigate to="/" replace />} />
+        <Route path="operators" element={can(['OWNER']) ? <OperatorsPage /> : <Navigate to="/" replace />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>

@@ -2637,3 +2637,122 @@ textarea {
     width: 64px;
   }
 }
+
+/* ------------------------------------------------------------------ search (Ctrl+K) */
+
+.search-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-dim);
+}
+
+.search-trigger kbd {
+  padding: 1px 6px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 11px;
+  color: var(--text-faint);
+}
+
+.palette {
+  display: grid;
+  gap: 10px;
+}
+
+.palette-input {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.palette-input input {
+  font-size: 15px;
+  padding: 10px 12px;
+}
+
+.palette-list {
+  max-height: min(56vh, 460px);
+  overflow-y: auto;
+  display: grid;
+  gap: 2px;
+}
+
+.palette-section {
+  margin: 8px 0 2px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-faint);
+}
+
+.palette-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.palette-item.active {
+  background: color-mix(in srgb, var(--primary) 16%, var(--surface-2));
+}
+
+.palette-text {
+  display: grid;
+  min-width: 0;
+}
+
+.palette-text > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.palette-empty {
+  padding: 12px 4px;
+}
+
+.palette-hint {
+  border-top: 1px solid var(--border);
+  padding-top: 8px;
+}
+
+@media (max-width: 600px) {
+  .search-trigger kbd {
+    display: none;
+  }
+}
+
+/* ------------------------------------------------------------------ support notes */
+
+.notes {
+  display: grid;
+  gap: 8px;
+}
+
+.note {
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+}
+
+.note-body {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* The role picker keeps its words when the table scrolls sideways on a phone. */
+.operators-table select {
+  min-width: 112px;
+}
