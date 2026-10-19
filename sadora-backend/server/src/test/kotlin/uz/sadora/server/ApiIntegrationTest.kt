@@ -4390,8 +4390,9 @@ class ApiIntegrationTest {
         )
         assertEquals(listOf("Oysha"), get<List<uz.sadora.contract.Baby>>("/v1/babies", her.token).map { it.name })
 
-        // A feed, a nappy, a sleep started and ended, all for this baby.
-        val now = kotlin.time.Clock.System.now()
+        // A feed, a nappy, a sleep started and ended, all for this baby. Whole seconds: the
+        // database keeps microseconds, and a nanosecond "now" made the hour 3599 s on CI.
+        val now = kotlin.time.Instant.fromEpochSeconds(kotlin.time.Clock.System.now().epochSeconds)
         post<StageEvent>("/v1/stage-events", her.token, LogStageEventRequest(StageEventKind.FEEDING, now - 3.hours, durationSeconds = 900, detail = "left", babyId = baby.id))
         post<StageEvent>("/v1/stage-events", her.token, LogStageEventRequest(StageEventKind.DIAPER, now - 2.hours, detail = "wet", babyId = baby.id))
         val sleep = post<StageEvent>("/v1/stage-events", her.token, LogStageEventRequest(StageEventKind.SLEEP, now - 90.minutes, babyId = baby.id))
