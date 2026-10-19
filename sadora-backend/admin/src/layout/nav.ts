@@ -56,6 +56,8 @@ export const groups: NavGroup[] = [
       { to: '/features', label: 'Funksiyalar', art: 'ic3d_bulb', roles: ['OWNER', 'ADMIN', 'ANALYST'], keywords: ['bayroq', 'flag', 'limit', 'huquq'] },
       { to: '/rewards', label: 'Gul va ketma-ketlik', art: 'ic3d_trophy', roles: ALL, keywords: ['mukofot', 'streak', 'tanga'] },
       { to: '/notifications', label: 'Bildirishnomalar', art: 'ic3d_bell', roles: ['OWNER', 'ADMIN', 'ANALYST'], keywords: ['push', 'shablon'] },
+      { to: '/campaigns', label: 'Kampaniyalar', art: 'ic3d_message', roles: ['OWNER', 'ADMIN', 'ANALYST'], keywords: ['push', 'xabar', 'reklama', 'yuborish'] },
+      { to: '/app-release', label: 'Ilova versiyasi', art: 'ic3d_globe', roles: ['OWNER', 'ADMIN', 'ANALYST'], keywords: ['yangilash', 'update', 'build', 'texnik ishlar'] },
       { to: '/wearables', label: 'Soat va qurilmalar', art: 'ic3d_watch', roles: ['OWNER', 'ADMIN', 'ANALYST'], keywords: ['garmin', 'oura', 'wearable'] },
       { to: '/promo-video', label: 'Reklama videosi', art: 'ic3d_globe', roles: ALL, keywords: ['video'] },
     ],
@@ -65,6 +67,7 @@ export const groups: NavGroup[] = [
     entries: [
       { to: '/analytics', label: 'Analitika', art: 'ic3d_insights', roles: ['OWNER', 'ADMIN', 'ANALYST'], keywords: ['retention', 'dau', 'voronka'] },
       { to: '/ai', label: 'AI xarajati', art: 'ic3d_ai', roles: ['OWNER', 'ADMIN', 'ANALYST'], keywords: ['gemini'] },
+      { to: '/system', label: 'Tizim holati', art: 'ic3d_health', roles: ['OWNER', 'ADMIN'], keywords: ['sms', 'gemini', 'firebase', 'xato', 'server'] },
       { to: '/audit', label: 'Audit jurnali', art: 'ic3d_notebook', roles: ['OWNER'], keywords: ['log', 'jurnal'] },
     ],
   },

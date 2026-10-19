@@ -57,6 +57,7 @@ class MainActivity : ComponentActivity() {
                     ?: SadoraEnvironment.Production
             },
             appVersion = BuildConfig.VERSION_NAME,
+            appBuild = BuildConfig.VERSION_CODE,
             // The launcher icon follows the streak, which needs a Context to switch the
             // manifest's aliases — so it is built here alongside the token storage.
             icons = AndroidAppIcons(applicationContext),

@@ -48,6 +48,9 @@ fun Route.adminRoutes(
     operators: AdminOperatorService,
     support: AdminSupportService,
     search: AdminSearchService,
+    system: SystemHealthService,
+    campaigns: CampaignService,
+    release: AppReleaseService,
 ) {
     route("/admin") {
 
@@ -262,6 +265,51 @@ fun Route.adminRoutes(
                 val ruleId = parseUuid(call.parameters["ruleId"].orEmpty(), "ruleId")
                 adminService.removeFlagRule(key, ruleId, admin, call.requestContext())
                 call.respond(Ack())
+            }
+
+            // --- system health: what is broken outside the product --------------
+            get("/system/health") {
+                call.requireAdminRole(AdminRole.OWNER, AdminRole.ADMIN)
+                call.respond(system.health())
+            }
+
+            // --- push campaigns: written by Owner and Admin, read by Analyst ---------
+            get("/campaigns") {
+                call.requireAdminRole(AdminRole.OWNER, AdminRole.ADMIN, AdminRole.ANALYST)
+                call.respond(campaigns.list())
+            }
+
+            post("/campaigns/audience") {
+                call.requireAdminRole(AdminRole.OWNER, AdminRole.ADMIN, AdminRole.ANALYST)
+                call.respond(campaigns.audience(call.receive<CampaignSegment>()))
+            }
+
+            post("/campaigns") {
+                val admin = call.requireAdminRole(AdminRole.OWNER, AdminRole.ADMIN)
+                val request = call.receive<CreateCampaignRequest>()
+                call.respond(HttpStatusCode.Created, campaigns.create(request, admin, call.requestContext()))
+            }
+
+            post("/campaigns/test") {
+                val admin = call.requireAdminRole(AdminRole.OWNER, AdminRole.ADMIN)
+                call.respond(campaigns.test(call.receive<CampaignTestRequest>(), admin, call.requestContext()))
+            }
+
+            post("/campaigns/{id}/cancel") {
+                val admin = call.requireAdminRole(AdminRole.OWNER, AdminRole.ADMIN)
+                val id = parseUuid(call.parameters["id"].orEmpty(), "id")
+                call.respond(campaigns.cancel(id, admin, call.requestContext()))
+            }
+
+            // --- app versions and maintenance ----------------------------------
+            get("/app-release") {
+                call.requireAdminRole(AdminRole.OWNER, AdminRole.ADMIN, AdminRole.ANALYST)
+                call.respond(release.policy())
+            }
+
+            put("/app-release") {
+                val admin = call.requireAdminRole(AdminRole.OWNER, AdminRole.ADMIN)
+                call.respond(release.save(call.receive<AppReleasePolicy>(), admin, call.requestContext()))
             }
 
             // --- operators: the Owner's alone -----------------------------------

@@ -2756,3 +2756,174 @@ textarea {
 .operators-table select {
   min-width: 112px;
 }
+
+/* ------------------------------------------------------------------ system health */
+
+.system-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr));
+  gap: 12px;
+}
+
+.system-fact {
+  display: grid;
+  gap: 2px;
+}
+
+.system-fact .badge {
+  justify-self: start;
+}
+
+.system-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr));
+  gap: 12px;
+}
+
+.system-card {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+}
+
+.system-card.error {
+  border-color: color-mix(in srgb, var(--danger) 55%, var(--border));
+}
+
+.system-card.warn {
+  border-color: color-mix(in srgb, var(--warn) 45%, var(--border));
+}
+
+.system-card.off {
+  border-style: dashed;
+  opacity: 0.7;
+}
+
+.system-metrics {
+  display: grid;
+  gap: 4px;
+}
+
+.system-number {
+  font-weight: 700;
+  font-size: 16px;
+}
+
+.system-failed {
+  color: var(--danger);
+}
+
+.system-error {
+  display: grid;
+  gap: 2px;
+}
+
+.system-error code {
+  font-size: 12px;
+  overflow-wrap: anywhere;
+  color: var(--text-dim);
+}
+
+/* ------------------------------------------------------------------ campaigns */
+
+.campaign-composer {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: 18px;
+}
+
+@media (max-width: 800px) {
+  .campaign-composer {
+    grid-template-columns: 1fr;
+  }
+}
+
+.chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.chip-toggle {
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text-dim);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.chip-toggle.on {
+  border-color: color-mix(in srgb, var(--primary) 60%, var(--border));
+  background: color-mix(in srgb, var(--primary) 20%, var(--surface-2));
+  color: var(--text);
+}
+
+.chip-toggle:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.chip-any {
+  font-size: 12px;
+  color: var(--text-faint);
+  margin-right: 4px;
+}
+
+.chip-any.on {
+  color: var(--ok);
+}
+
+/* A notification as the phone's lock screen draws it, so the words are judged in place. */
+.lock-preview {
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--surface-2) 80%, #ffffff 6%);
+  border: 1px solid var(--border);
+  box-shadow: 0 8px 22px rgb(0 0 0 / 0.18);
+  display: grid;
+  gap: 2px;
+}
+
+.lock-app {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--text-faint);
+  letter-spacing: 0.04em;
+}
+
+.lock-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  background: var(--brand);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.lock-title {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.lock-body {
+  color: var(--text-dim);
+  overflow-wrap: anywhere;
+}
+
+.campaign-side {
+  align-content: start;
+}
+
+.campaign-audience {
+  display: grid;
+  gap: 4px;
+}

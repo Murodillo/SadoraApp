@@ -133,6 +133,8 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
     val cache: Cache = Caches.create(config.redis)
 
     val auditService = AuditService()
+    /** Outcomes the system health page cannot read off the product's rows (SMS, the bot). */
+    val opsRecorder = uz.sadora.server.ops.OpsRecorder()
     val promoVideoStore = PromoVideoStore(File(config.mediaDir))
     val auditRepository = AuditRepository()
     val statsRepository = AdminStatsRepository()
@@ -168,7 +170,10 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
         // A fixed code is known without an SMS, and the numbers testers and store reviewers
         // sign in with are not theirs: with OTP_FIXED_CODE set nothing is sent, login or not.
         if (config.otp.playMobile.isConfigured && config.otp.fixedCode == null) {
-            PlayMobileOtpSender(outboundHttpClient, config.otp.playMobile, config.otp.smsText)
+            uz.sadora.server.ops.MonitoredOtpSender(
+                PlayMobileOtpSender(outboundHttpClient, config.otp.playMobile, config.otp.smsText),
+                opsRecorder,
+            )
         } else {
             LoggingOtpSender(showCode = config.environment == Environment.DEV)
         },
@@ -591,7 +596,7 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
         notificationScheduler.telegram = bot::deliver
         notificationScheduler.telegramLinked = bot::isLinked
     }
-    val telegramPoller = telegramGateway?.let { uz.sadora.server.telegram.TelegramPoller(it, telegramRepository, telegramService) }
+    val telegramPoller = telegramGateway?.let { uz.sadora.server.telegram.TelegramPoller(it, telegramRepository, telegramService, opsRecorder) }
     val telegramPeriodJob = uz.sadora.server.telegram.TelegramPeriodJob(telegramRepository, userRepository, healthService, notificationRepository)
 
     val billingRepository = BillingRepository()
@@ -716,6 +721,10 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
     val adminOperatorService = AdminOperatorService(auditService)
     val adminSupportService = AdminSupportService(auditService)
     val adminSearchService = AdminSearchService(userRepository, entitlementRepository)
+    val systemHealthService = uz.sadora.server.admin.SystemHealthService(config, SERVER_VERSION)
+    val campaignService = uz.sadora.server.admin.CampaignService(notificationRepository, auditService)
+    val campaignJob = uz.sadora.server.admin.CampaignJob(campaignService)
+    val appReleaseService = uz.sadora.server.admin.AppReleaseService(auditService)
 
     val adminService = AdminService(
         users = userRepository,
@@ -738,6 +747,7 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
         partnerAlertJob.stop()
         vaccineReminderJob.stop()
         kegelReminderJob.stop()
+        campaignJob.stop()
         telegramPoller?.stop()
         telegramPeriodJob.stop()
         outboundHttpClient.close()

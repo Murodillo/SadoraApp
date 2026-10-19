@@ -32,6 +32,13 @@ import type {
   AdminRole,
   AdminSearchResults,
   AdminSupportNote,
+  SystemHealth,
+  AppReleasePolicy,
+  Campaign,
+  CampaignAudience,
+  CampaignSegment,
+  CampaignTestResult,
+  CampaignText,
   OperatorCredentials,
   AdminPayment,
   AdminStats,
@@ -1001,5 +1008,73 @@ export function useRemovePromoVideo() {
   return useMutation({
     mutationFn: () => request<PromoVideoView>('/v1/admin/promo-video', { method: 'DELETE' }),
     onSuccess: (view) => client.setQueryData(['promo-video'], view),
+  })
+}
+
+// ---------------------------------------------------------------- system health
+
+/** Refreshed every minute: the page is left open on a screen while something is being fixed. */
+export const useSystemHealth = () =>
+  useQuery({
+    queryKey: ['system-health'],
+    queryFn: () => request<SystemHealth>('/v1/admin/system/health'),
+    refetchInterval: 60_000,
+  })
+
+// ---------------------------------------------------------------- push campaigns
+
+export const useCampaigns = () =>
+  useQuery({
+    queryKey: ['campaigns'],
+    queryFn: () => request<Campaign[]>('/v1/admin/campaigns'),
+    // A campaign moves from scheduled to sent on its own; the list follows it.
+    refetchInterval: 30_000,
+  })
+
+/** How many accounts a segment reaches right now; asked again as the segment changes. */
+export const useCampaignAudience = (segment: CampaignSegment, enabled = true) =>
+  useQuery({
+    queryKey: ['campaign-audience', segment],
+    queryFn: () => request<CampaignAudience>('/v1/admin/campaigns/audience', { method: 'POST', body: segment }),
+    enabled,
+    placeholderData: (previous) => previous,
+  })
+
+export const useCreateCampaign = () => {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (body: { name: string; texts: Partial<Record<string, CampaignText>>; segment: CampaignSegment; scheduledFor?: string | null }) =>
+      request<Campaign>('/v1/admin/campaigns', { method: 'POST', body }),
+    onSuccess: () => void client.invalidateQueries({ queryKey: ['campaigns'] }),
+  })
+}
+
+export const useCancelCampaign = () => {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => request<Campaign>(`/v1/admin/campaigns/${id}/cancel`, { method: 'POST', body: {} }),
+    onSuccess: () => void client.invalidateQueries({ queryKey: ['campaigns'] }),
+  })
+}
+
+export const useTestCampaign = () =>
+  useMutation({
+    mutationFn: (body: { texts: Partial<Record<string, CampaignText>>; phone: string }) =>
+      request<CampaignTestResult>('/v1/admin/campaigns/test', { method: 'POST', body }),
+  })
+
+// ---------------------------------------------------------------- app versions
+
+export const useAppRelease = () =>
+  useQuery({
+    queryKey: ['app-release'],
+    queryFn: () => request<AppReleasePolicy>('/v1/admin/app-release'),
+  })
+
+export const useSaveAppRelease = () => {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (policy: AppReleasePolicy) => request<AppReleasePolicy>('/v1/admin/app-release', { method: 'PUT', body: policy }),
+    onSuccess: (saved) => client.setQueryData(['app-release'], saved),
   })
 }

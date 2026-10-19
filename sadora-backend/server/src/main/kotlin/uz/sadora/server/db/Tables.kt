@@ -326,6 +326,8 @@ object UserNotificationSettings : Table("user_notification_settings") {
     val categories = text("categories")
     val quietFrom = time("quiet_from").nullable()
     val quietUntil = time("quiet_until").nullable()
+    /** News and offers from the team (V68): the campaigns' own switch. */
+    val news = bool("news").default(true)
     val updatedAt = timestampWithTimeZone("updated_at")
 
     override val primaryKey = PrimaryKey(userId)

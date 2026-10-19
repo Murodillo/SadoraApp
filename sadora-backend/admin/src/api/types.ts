@@ -948,3 +948,86 @@ export interface PromoUploadProgress {
   uploadId: string
   receivedBytes: number
 }
+
+// ---- system health ----
+
+export interface ServiceHealth {
+  key: string
+  configured: boolean
+  status: 'ok' | 'warn' | 'error' | 'off'
+  okToday?: number | null
+  failedToday?: number | null
+  lastOkAt?: string | null
+  lastErrorAt?: string | null
+  lastError?: string | null
+}
+
+export interface SystemHealth {
+  environment: string
+  version: string
+  release: string
+  startedAt: string
+  database: { ok: boolean; latencyMs?: number | null; schemaVersion?: string | null }
+  services: ServiceHealth[]
+  generatedAt: string
+}
+
+// ---- push campaigns ----
+
+export interface CampaignText {
+  title: string
+  body: string
+}
+
+export type CampaignLanguage = 'uz' | 'ru' | 'en'
+
+export interface CampaignSegment {
+  lifeStages: LifeStage[]
+  languages: Language[]
+  tier: 'all' | 'free' | 'premium'
+  accountKinds: ('self' | 'partner')[]
+}
+
+export interface Campaign {
+  id: string
+  name: string
+  texts: Partial<Record<CampaignLanguage, CampaignText>>
+  segment: CampaignSegment
+  status: 'scheduled' | 'sending' | 'sent' | 'cancelled'
+  scheduledFor: string
+  createdAt: string
+  startedAt?: string | null
+  finishedAt?: string | null
+  audience?: number | null
+  /** Outbox rows by status: queued, sent, failed, suppressed. */
+  delivery: Record<string, number>
+  /** Accounts left out before queueing, by reason. */
+  skipped: Record<string, number>
+}
+
+export interface CampaignAudience {
+  matched: number
+  reachable: number
+  skipped: Record<string, number>
+}
+
+export interface CampaignTestResult {
+  sent: boolean
+  language?: Language | null
+  reason?: string | null
+}
+
+// ---- app versions and maintenance ----
+
+export interface PlatformRelease {
+  minBuild?: number | null
+  latestBuild?: number | null
+  storeUrl?: string | null
+}
+
+export interface AppReleasePolicy {
+  android: PlatformRelease
+  ios: PlatformRelease
+  maintenance: { active: boolean; message: Partial<Record<CampaignLanguage, string>> }
+  updatedAt?: string | null
+}

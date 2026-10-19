@@ -63,6 +63,9 @@ Menyu ish bo'yicha guruhlangan: **Odamlar**, **Kontent**, **Pul**, **Ilova**,
 | Bildirishnomalar | Owner/Admin (Analyst o'qiydi) | Chastota chegaralari va shablonlar |
 | Soat va qurilmalar | Owner/Admin (Analyst o'qiydi) | Provayderlar holati, metrika moslashtirish jadvali |
 | Audit jurnali | faqat Owner | Filtr va sahifalash |
+| Kampaniyalar | Owner/Admin (Analyst o'qiydi) | Push kampaniya: UZ (majburiy)/RU/EN matn, segment (hayot bosqichi, til, tarif, ayollar/Yaqinimlar), hozir yoki vaqtga, telefon ekranidagi ko'rinishi, jonli auditoriya hisobi, bitta telefonga sinov, yetkazilganlar statistikasi |
+| Ilova versiyasi | Owner/Admin (Analyst o'qiydi) | Android/iOS uchun majburiy va taklif qilinadigan build, do'kon havolasi, texnik ishlar xabari (UZ/RU/EN) |
+| Tizim holati | Owner/Admin | Server, ma'lumotlar bazasi va har bir tashqi xizmat (SMS, push, Gemini, Telegram, Payme, Click, Play, App Store) — bugungi muvaffaqiyat va xatolar, oxirgi xato matni |
 | Operatorlar | faqat Owner | Operator qo'shish (vaqtinchalik parol bir marta ko'rsatiladi), rol, o'chirish/yoqish, parol va 2FA'ni tiklash |
 
 **Ctrl+K (⌘K)** — har qanday sahifadan bitta qidiruv oynasi: sahifa nomi (yoki «bayroq», «payme»
@@ -139,6 +142,23 @@ operatorning keyingi so'rovidan kuchga kiradi — admin realmi hisobni har so'ro
 hisobga bog'lamaydi; bir xil daqiqalardagi tarix bog'lab qo'yardi. Owner bo'lmaganlarga
 har voqea dashboarddagidek — kim, qayerdan va nega qismisiz — boradi. Izohlar audit
 jurnaliga matnisiz yoziladi va hisob bilan birga o'chadi.
+
+**Kampaniya oddiy eslatma yo'lidan boradi.** Har bir push bildirishnomalar navbatiga
+(`campaign:<id>:<user>` kaliti bilan, ikki marta ketmaydi) tushadi va undan oldin
+foydalanuvchining umumiy kaliti, «Yangiliklar» kaliti, kunlik/haftalik chegara tekshiriladi;
+sokin soatlarga tushsa, ular tugaguncha kutadi. Yashirin rejimdagi hisobga umuman
+yuborilmaydi — «Sizda yangi eslatma bor» degan taklif jumboqqa aylanadi. Navbatdagi
+kategoriya `system`: yangi kategoriya eski ilovalarning bildirishnomalar tarixini buzardi,
+shuning uchun «Yangiliklar» sozlamalarda alohida maydon (`news`).
+
+**Majburiy yangilash build raqami bo'yicha.** iOS'da ko'rinadigan versiya 1.0 bo'lib qoladi,
+faqat build o'sadi; ilova `/v1/app/status`ga build raqamini yuboradi (kirishdan oldin, har
+ochilganda va qaytganda). Javob bo'lmasa ilova ochilaveradi. Texnik ishlar API'ni to'xtatmaydi —
+faqat ilova o'zini yopib xabarni ko'rsatadi; webhook'lar va panel ishlayveradi.
+
+**Tizim holati faqat mavjud qatorlardan.** Push — navbatdan, Gemini — AI jurnalidan, to'lovlar —
+tranzaksiyalardan; SMS va Telegram bot uchun alohida kunlik hisoblagich (`ops_counters`).
+Bekor qilingan to'lov xato hisoblanmaydi.
 
 **Saqlash toast bilan tasdiqlanadi.** Ilgari yagona tasdiq "Saqlash" tugmasining
 kulrang bo'lishi edi — buni "hali saqlanmoqda"dan ajratib bo'lmasdi. Endi har bir

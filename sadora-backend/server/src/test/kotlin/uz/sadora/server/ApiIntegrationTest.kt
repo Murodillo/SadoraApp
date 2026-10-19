@@ -1953,6 +1953,173 @@ class ApiIntegrationTest {
         assertEquals(HttpStatusCode.Forbidden, client.get("/v1/admin/search?q=abc") { auth(adminAccount("analyst").token) }.status)
     }
 
+    // ---------------------------------------------------------------- system health
+
+    /** The health page reads the ops counters, the database and every service, for Owner and Admin only. */
+    @Test
+    fun `system health shows the database and each service, with what the ops counters saw`() = api {
+        val owner = adminToken()
+        component.opsRecorder.failed(uz.sadora.server.ops.OpsServices.SMS, "gateway said no")
+        val health = get<uz.sadora.server.admin.SystemHealth>("/v1/admin/system/health", owner)
+        assertTrue(health.database.ok)
+        assertNotNull(health.database.schemaVersion)
+        val keys = health.services.map { it.key }
+        listOf("sms", "push", "ai", "telegram", "payme", "click", "google_play", "app_store").forEach { assertTrue(it in keys, "missing $it") }
+        val sms = health.services.single { it.key == "sms" }
+        assertTrue((sms.failedToday ?: 0) >= 1)
+        assertEquals("gateway said no", sms.lastError)
+        assertEquals(HttpStatusCode.Forbidden, client.get("/v1/admin/system/health") { auth(adminAccount("support").token) }.status)
+    }
+
+    // ---------------------------------------------------------------- app release policy
+
+    /** Before sign-in the app learns whether it must update, may update, or is closed for maintenance. */
+    @Test
+    fun `the app learns it must update, may update, or is closed for maintenance`() = api {
+        val owner = adminToken()
+        suspend fun status(platform: Platform, build: Int?, language: String = "uz") = client.post("/v1/app/status") {
+            header(HttpHeaders.AcceptLanguage, language)
+            json(uz.sadora.contract.AppStatusRequest(platform, build))
+        }.also { assertEquals(HttpStatusCode.OK, it.status) }.body<uz.sadora.contract.AppStatus>()
+
+        try {
+            put<uz.sadora.server.admin.AppReleasePolicy>(
+                "/v1/admin/app-release",
+                owner,
+                uz.sadora.server.admin.AppReleasePolicy(
+                    android = uz.sadora.server.admin.PlatformRelease(minBuild = 10, latestBuild = 12, storeUrl = uz.sadora.server.admin.PLAY_URL),
+                ),
+            )
+            assertEquals(uz.sadora.contract.AppUpdate.REQUIRED, status(Platform.ANDROID, 5).update)
+            assertEquals(uz.sadora.server.admin.PLAY_URL, status(Platform.ANDROID, 5).storeUrl)
+            assertEquals(uz.sadora.contract.AppUpdate.SUGGESTED, status(Platform.ANDROID, 11).update)
+            assertEquals(uz.sadora.contract.AppUpdate.NONE, status(Platform.ANDROID, 12).update)
+            assertEquals(uz.sadora.contract.AppUpdate.NONE, status(Platform.ANDROID, null).update)
+            assertEquals(uz.sadora.contract.AppUpdate.NONE, status(Platform.IOS, 1).update)
+            assertTrue(!status(Platform.ANDROID, 12).maintenance)
+
+            val noUzbek = client.put("/v1/admin/app-release") {
+                auth(owner)
+                json(uz.sadora.server.admin.AppReleasePolicy(maintenance = uz.sadora.server.admin.Maintenance(active = true, message = mapOf("ru" to "Работы"))))
+            }
+            assertEquals(HttpStatusCode.BadRequest, noUzbek.status)
+            val upsideDown = client.put("/v1/admin/app-release") {
+                auth(owner)
+                json(uz.sadora.server.admin.AppReleasePolicy(ios = uz.sadora.server.admin.PlatformRelease(minBuild = 9, latestBuild = 3)))
+            }
+            assertEquals(HttpStatusCode.BadRequest, upsideDown.status)
+
+            put<uz.sadora.server.admin.AppReleasePolicy>(
+                "/v1/admin/app-release",
+                owner,
+                uz.sadora.server.admin.AppReleasePolicy(
+                    maintenance = uz.sadora.server.admin.Maintenance(active = true, message = mapOf("uz" to "Texnik ishlar", "ru" to "Технические работы")),
+                ),
+            )
+            val closed = status(Platform.IOS, 40, "ru")
+            assertTrue(closed.maintenance)
+            assertEquals("Технические работы", closed.message)
+            assertEquals("Texnik ishlar", status(Platform.ANDROID, 40, "en").message)
+
+            val analyst = adminAccount("analyst").token
+            assertEquals(true, get<uz.sadora.server.admin.AppReleasePolicy>("/v1/admin/app-release", analyst).maintenance.active)
+            assertEquals(HttpStatusCode.Forbidden, client.put("/v1/admin/app-release") { auth(analyst); json(uz.sadora.server.admin.AppReleasePolicy()) }.status)
+            assertTrue("app.release_policy_updated" in rawGet("/v1/admin/audit?action=app.release_policy_updated&limit=5", owner))
+        } finally {
+            put<uz.sadora.server.admin.AppReleasePolicy>("/v1/admin/app-release", owner, uz.sadora.server.admin.AppReleasePolicy())
+        }
+    }
+
+    // ---------------------------------------------------------------- push campaigns
+
+    /**
+     * A campaign queues one push per account in the segment, in her language; leaves out who
+     * turned news off, who is in discreet mode and who has no phone to ring; waits out quiet
+     * hours; and a second pass changes nothing.
+     */
+    @Test
+    fun `a campaign reaches its segment once and leaves out who asked not to hear`() = api {
+        val owner = adminToken()
+        val users = List(5) { signUp().also { onboard(it) } }
+        val (reached, newsOff, discreet, noPhone, quiet) = users
+        // A segment nobody else in the test database is in.
+        dbQuery {
+            exec("UPDATE users SET life_stage = 'menopause', language = 'en' WHERE id IN (${users.joinToString { "'${it.userId}'" }})")
+            users.filter { it !== noPhone }.forEach { exec("UPDATE devices SET push_token = 'tok-${it.userId}' WHERE user_id = '${it.userId}'") }
+            exec("UPDATE users SET discreet_mode = TRUE WHERE id = '${discreet.userId}'")
+        }
+        val off = put<uz.sadora.contract.NotificationSettings>("/v1/notifications/settings", newsOff.token, uz.sadora.contract.UpdateNotificationSettingsRequest(news = false))
+        assertTrue(!off.news)
+        assertTrue(!get<uz.sadora.contract.NotificationSettings>("/v1/notifications/settings", newsOff.token).news)
+        val tashkent = kotlinx.datetime.TimeZone.of("Asia/Tashkent")
+        val localNow = now().toLocalDateTime(tashkent).time
+        put<uz.sadora.contract.NotificationSettings>(
+            "/v1/notifications/settings",
+            quiet.token,
+            uz.sadora.contract.UpdateNotificationSettingsRequest(
+                quietFrom = LocalTime((localNow.hour + 23) % 24, 0),
+                quietUntil = LocalTime((localNow.hour + 2) % 24, 0),
+            ),
+        )
+
+        val segment = uz.sadora.server.admin.CampaignSegment(lifeStages = listOf(LifeStage.MENOPAUSE), languages = listOf(Language.EN))
+        val preview = post<uz.sadora.server.admin.CampaignAudience>("/v1/admin/campaigns/audience", owner, segment)
+        assertTrue(preview.matched >= 5)
+        val texts = mapOf(
+            "uz" to uz.sadora.server.admin.CampaignText("Yangilik", "Yangi funksiya"),
+            "en" to uz.sadora.server.admin.CampaignText("News", "A new feature"),
+        )
+        val campaign = post<uz.sadora.server.admin.CampaignView>(
+            "/v1/admin/campaigns",
+            owner,
+            uz.sadora.server.admin.CreateCampaignRequest("Test campaign", texts, segment),
+        )
+        assertEquals("scheduled", campaign.status)
+        assertTrue(component.campaignService.runDue() >= 1)
+
+        suspend fun rows(user: TestUser): List<Pair<String, String>> = dbQuery {
+            exec("SELECT title, status FROM notification_outbox WHERE dedupe_key = 'campaign:${campaign.id}:${user.userId}'") { rs ->
+                buildList { while (rs.next()) add(rs.getString(1) to rs.getString(2)) }
+            } ?: emptyList()
+        }
+        assertEquals("News", rows(reached).single().first)
+        assertTrue(rows(newsOff).isEmpty())
+        assertTrue(rows(discreet).isEmpty())
+        assertTrue(rows(noPhone).isEmpty())
+        val later = dbQuery {
+            exec("SELECT scheduled_for > now() FROM notification_outbox WHERE dedupe_key = 'campaign:${campaign.id}:${quiet.userId}'") { rs -> rs.next(); rs.getBoolean(1) }
+        }
+        assertEquals(true, later, "a push inside her quiet hours waits for them to end")
+
+        val sent = get<List<uz.sadora.server.admin.CampaignView>>("/v1/admin/campaigns", owner).single { it.id == campaign.id }
+        assertEquals("sent", sent.status)
+        listOf("news_off", "discreet", "no_device").forEach { assertTrue((sent.skipped[it] ?: 0) >= 1, "skipped $it: ${sent.skipped}") }
+
+        assertEquals(0, component.campaignService.runDue())
+        assertEquals(1, rows(reached).size)
+        assertEquals(HttpStatusCode.Conflict, client.post("/v1/admin/campaigns/${campaign.id}/cancel") { auth(owner) }.status)
+
+        val phone = dbQuery { exec("SELECT phone FROM users WHERE id = '${reached.userId}'") { rs -> rs.next(); rs.getString(1) } }!!
+        val test = post<uz.sadora.server.admin.CampaignTestResult>("/v1/admin/campaigns/test", owner, uz.sadora.server.admin.CampaignTestRequest(texts, phone.drop(4)))
+        assertTrue(test.sent)
+        assertEquals(Language.EN, test.language)
+        assertEquals("no_account", post<uz.sadora.server.admin.CampaignTestResult>("/v1/admin/campaigns/test", owner, uz.sadora.server.admin.CampaignTestRequest(texts, "+998 11 111 11 11")).reason)
+
+        val noUzbek = client.post("/v1/admin/campaigns") {
+            auth(owner)
+            json(uz.sadora.server.admin.CreateCampaignRequest("x", mapOf("en" to uz.sadora.server.admin.CampaignText("a", "b"))))
+        }
+        assertEquals(HttpStatusCode.BadRequest, noUzbek.status)
+        assertEquals(HttpStatusCode.Forbidden, client.post("/v1/admin/campaigns") { auth(adminAccount("analyst").token); json(uz.sadora.server.admin.CreateCampaignRequest("x", texts)) }.status)
+
+        val later2 = post<uz.sadora.server.admin.CampaignView>(
+            "/v1/admin/campaigns",
+            owner,
+            uz.sadora.server.admin.CreateCampaignRequest("Later", texts, segment, scheduledFor = now() + 2.days),
+        )
+        assertEquals("cancelled", post<uz.sadora.server.admin.CampaignView>("/v1/admin/campaigns/${later2.id}/cancel", owner, Ack()).status)
+    }
+
     // ---------------------------------------------------------------- admin 2FA
 
     /**

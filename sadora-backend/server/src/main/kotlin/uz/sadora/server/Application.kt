@@ -53,6 +53,7 @@ import uz.sadora.server.photo.photoRoutes
 import uz.sadora.server.doctor.doctorBadgeRoutes
 import uz.sadora.server.doctor.doctorRoutes
 import uz.sadora.server.admin.adminRoutes
+import uz.sadora.server.admin.appStatusRoutes
 import uz.sadora.server.api.healthCheckRoutes
 import uz.sadora.server.auth.authRoutes
 import uz.sadora.server.config.AppConfig
@@ -117,6 +118,9 @@ fun main() {
     // Her Kegel reminders, at the times she picked.
     component.kegelReminderJob.start()
 
+    // The team's push campaigns, when their time comes.
+    component.campaignJob.start()
+
     // The Telegram bot, when it has a token: its updates, and the period-coming reminder.
     component.telegramPoller?.start()
     if (component.config.telegram.isConfigured) component.telegramPeriodJob.start()
@@ -166,6 +170,8 @@ fun Application.apiModule(component: AppComponent) {
         publicPaymentRequestRoutes(component.paymentRequestService)
 
         route("/$API_VERSION") {
+            // Before sign-in: may this build run, and is the service open.
+            appStatusRoutes(component.appReleaseService)
             authRoutes(component.authService, component.otpService)
             shareRoutes(component.shareService)
             partnerRoutes(component.partnerService)
@@ -241,6 +247,9 @@ fun Application.apiModule(component: AppComponent) {
                 operators = component.adminOperatorService,
                 support = component.adminSupportService,
                 search = component.adminSearchService,
+                system = component.systemHealthService,
+                campaigns = component.campaignService,
+                release = component.appReleaseService,
             )
         }
     }

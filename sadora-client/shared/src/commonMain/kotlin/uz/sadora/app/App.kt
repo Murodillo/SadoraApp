@@ -150,6 +150,7 @@ import uz.sadora.app.ui.onboarding.SplashScreen
 import uz.sadora.app.ui.settings.NotificationInboxScreen
 import uz.sadora.app.ui.settings.HomeLayoutScreen
 import uz.sadora.app.ui.settings.SettingsDetailScreen
+import uz.sadora.app.ui.AppStatusGate
 
 /**
  * SADORA — root composable.
@@ -262,6 +263,8 @@ fun App(graph: SadoraGraph? = null) {
                 // Her companion, for the places outside the AI chat that show it. None without the pet.
                 LocalCompanion provides controllers.pet.let { if (it.active) Companion(it.pet, it.cheers, it.lastWin, it::cheerShown) else null },
             ) {
+                // A build the server has retired, or maintenance, stands in front of everything.
+                AppStatusGate(graph) {
                 AnimatedContent(
                     targetState = navigator.phase,
                     transitionSpec = { fadeIn() togetherWith fadeOut() },
@@ -320,6 +323,7 @@ fun App(graph: SadoraGraph? = null) {
                             MainShell(state, navigator, controllers)
                         }
                     }
+                }
                 }
             }
             }

@@ -35,6 +35,7 @@ internal val iosGraph: SadoraGraph by lazy {
         device = IosDeviceIdentity(storage),
         environment = if (isDebugBuild()) debugEnvironment() else releaseEnvironment(),
         appVersion = NSBundle.mainBundle.objectForInfoDictionaryKey("CFBundleShortVersionString") as? String,
+        appBuild = (NSBundle.mainBundle.objectForInfoDictionaryKey("CFBundleVersion") as? String)?.toIntOrNull(),
         healthPlatform = HealthKitPlatform(),
         healthPrefs = IosHealthSyncPrefs(),
         prompts = IosPromptPrefs(),

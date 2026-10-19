@@ -31,6 +31,7 @@ class NotificationService(private val repository: NotificationRepository) {
             categories = request.categories ?: current.categories,
             quietFrom = quietFrom,
             quietUntil = quietUntil,
+            news = request.news ?: current.news,
         )
         repository.saveSettings(userId, updated)
         return updated

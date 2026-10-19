@@ -34,6 +34,8 @@ class TelegramPoller(
     private val gateway: TelegramGateway,
     private val telegram: TelegramRepository,
     private val service: TelegramService,
+    /** The health page's "last worked": a good poll stamps it, a failed one is counted. */
+    private val ops: uz.sadora.server.ops.OpsRecorder? = null,
 ) {
     private val logger = LoggerFactory.getLogger(TelegramPoller::class.java)
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -43,10 +45,13 @@ class TelegramPoller(
         job = scope.launch {
             logger.info("Telegram poller started")
             while (isActive) {
-                runCatching { poll() }.onFailure {
-                    logger.warn("Telegram poll failed", it)
-                    delay(5.seconds)
-                }
+                runCatching { poll() }
+                    .onSuccess { ops?.alive(uz.sadora.server.ops.OpsServices.TELEGRAM) }
+                    .onFailure {
+                        logger.warn("Telegram poll failed", it)
+                        ops?.failed(uz.sadora.server.ops.OpsServices.TELEGRAM, it.message ?: it::class.simpleName.orEmpty())
+                        delay(5.seconds)
+                    }
             }
         }
     }

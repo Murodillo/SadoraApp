@@ -399,6 +399,8 @@ object StringsUz : Strings {
         override val waterReminderNote = "Kuniga uch marta"
         override val aiSummary = "Kunlik AI xulosasi"
         override val aiSummaryNote = "Ertalab 08:00"
+        override val newsTitle = "Yangiliklar va takliflar"
+        override val newsNote = "Sadora jamoasidan, ba'zan"
 
         override val privacyTitle = "Maxfiylik va xavfsizlik"
         override val consentHealth = "Salomatlik ma'lumotlarini saqlash"
@@ -592,6 +594,7 @@ object StringsUz : Strings {
 
     override val doctors: DoctorStrings = DoctorStringsUz
     override val healthGate: HealthGateStrings = HealthGateStringsUz
+    override val appStatus: AppStatusStrings = AppStatusStringsUz
 
     override val community = object : CommunityStrings {
         override val title = "Chat"

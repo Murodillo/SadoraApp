@@ -98,6 +98,13 @@ class NotificationsController(private val api: NotificationApi?) {
             ?.let { settings = it }
     }
 
+    /** The team's news and offers: a switch of its own, not a category (see NotificationSettings.news). */
+    suspend fun setNews(enabled: Boolean) {
+        settings = settings.copy(news = enabled)
+        val api = api ?: return
+        calls.run { api.updateSettings(UpdateNotificationSettingsRequest(news = enabled)) }?.let { settings = it }
+    }
+
     suspend fun setAll(enabled: Boolean) {
         settings = settings.copy(enabled = enabled)
         val api = api ?: return

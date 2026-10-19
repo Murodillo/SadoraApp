@@ -2,6 +2,8 @@ package uz.sadora.app.data
 
 import io.ktor.client.request.setBody
 import uz.sadora.contract.Ack
+import uz.sadora.contract.AppStatus
+import uz.sadora.contract.AppStatusRequest
 import uz.sadora.contract.AuthSession
 import uz.sadora.contract.Bootstrap
 import uz.sadora.contract.ConsentGrants
@@ -32,6 +34,12 @@ class SadoraApi internal constructor(
     private val caller: ApiCaller,
     private val session: SessionStore,
 ) {
+    // ---------------------------------------------------------------- before sign-in
+
+    /** May this build run, and is the service open: asked on every start, signed in or not. */
+    suspend fun appStatus(platform: Platform, build: Int?): ApiResult<AppStatus> =
+        caller.unauthenticated("v1/app/status") { setBody(AppStatusRequest(platform, build)) }
+
     // ---------------------------------------------------------------- sign-in
 
     suspend fun requestOtp(phone: String): ApiResult<OtpChallenge> =

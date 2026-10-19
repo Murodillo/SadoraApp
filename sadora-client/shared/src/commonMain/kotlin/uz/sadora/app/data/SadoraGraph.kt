@@ -40,6 +40,11 @@ class SadoraGraph(
     val environment: SadoraEnvironment = SadoraEnvironment.Production,
     val appVersion: String? = null,
     /**
+     * The store's build number — Android's versionCode, iOS's CFBundleVersion. The server's
+     * forced update compares this, because the visible version stays "1.0" on iOS.
+     */
+    val appBuild: Int? = null,
+    /**
      * Changes the launcher icon with the streak.
      *
      * Built by the platform like the token storage is, and defaulting to the no-op so

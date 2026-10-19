@@ -9,10 +9,12 @@ import { Loading } from './components/ui'
 import { ToastProvider } from './components/toast'
 import { Shell } from './layout/Shell'
 import { AnalyticsPage } from './pages/AnalyticsPage'
+import { AppReleasePage } from './pages/AppReleasePage'
 import { AuditPage } from './pages/AuditPage'
 import { CommunityPage } from './pages/CommunityPage'
 import { AiPage } from './pages/AiPage'
 import { BillingPage } from './pages/BillingPage'
+import { CampaignsPage } from './pages/CampaignsPage'
 import { ConsultationsPage } from './pages/ConsultationsPage'
 import { ContentPage } from './pages/ContentPage'
 import { DashboardPage } from './pages/DashboardPage'
@@ -24,6 +26,7 @@ import { PromoVideoPage } from './pages/PromoVideoPage'
 import { RewardsPage } from './pages/RewardsPage'
 import { ShopPage } from './pages/ShopPage'
 import { SecurityPage } from './pages/SecurityPage'
+import { SystemPage } from './pages/SystemPage'
 import { UserCardPage } from './pages/UserCardPage'
 import { UsersPage } from './pages/UsersPage'
 import { WearablesPage } from './pages/WearablesPage'
@@ -139,6 +142,9 @@ function SignedInRoutes() {
         <Route path="security" element={<SecurityPage />} />
         <Route path="audit" element={can(['OWNER']) ? <AuditPage /> : <Navigate to="/" replace />} />
         <Route path="operators" element={can(['OWNER']) ? <OperatorsPage /> : <Navigate to="/" replace />} />
+        <Route path="system" element={can(['OWNER', 'ADMIN']) ? <SystemPage /> : <Navigate to="/" replace />} />
+        <Route path="campaigns" element={can(['OWNER', 'ADMIN', 'ANALYST']) ? <CampaignsPage /> : <Navigate to="/" replace />} />
+        <Route path="app-release" element={can(['OWNER', 'ADMIN', 'ANALYST']) ? <AppReleasePage /> : <Navigate to="/" replace />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>

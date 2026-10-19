@@ -402,6 +402,8 @@ object StringsRu : Strings {
         override val waterReminderNote = "Три раза в день"
         override val aiSummary = "Ежедневная сводка ИИ"
         override val aiSummaryNote = "Утром в 08:00"
+        override val newsTitle = "Новости и предложения"
+        override val newsNote = "От команды Sadora, иногда"
 
         override val privacyTitle = "Приватность и безопасность"
         override val consentHealth = "Хранение данных о здоровье"
@@ -596,6 +598,7 @@ object StringsRu : Strings {
 
     override val doctors: DoctorStrings = DoctorStringsRu
     override val healthGate: HealthGateStrings = HealthGateStringsRu
+    override val appStatus: AppStatusStrings = AppStatusStringsRu
 
     override val community = object : CommunityStrings {
         override val title = "Чат"

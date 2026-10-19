@@ -54,6 +54,7 @@ class NotificationRepository {
                     categories = it[UserNotificationSettings.categories].parseCategories(),
                     quietFrom = it[UserNotificationSettings.quietFrom],
                     quietUntil = it[UserNotificationSettings.quietUntil],
+                    news = it[UserNotificationSettings.news],
                 )
             }
             ?: NotificationSettings()
@@ -68,6 +69,7 @@ class NotificationRepository {
             }
             it[quietFrom] = settings.quietFrom
             it[quietUntil] = settings.quietUntil
+            it[news] = settings.news
             it[updatedAt] = now().toOffsetDateTime()
         }
     }

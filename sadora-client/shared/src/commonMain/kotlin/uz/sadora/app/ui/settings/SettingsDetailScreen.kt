@@ -370,6 +370,9 @@ private fun NotificationSettings(state: AppState, notifications: NotificationsCo
                         scope.launch { notifications.setCategory(category, enabled) }
                     }
                 }
+                ToggleRow(t.newsTitle, t.newsNote, notifications.settings.enabled && notifications.settings.news) { enabled ->
+                    scope.launch { notifications.setNews(enabled) }
+                }
             }
         }
     }

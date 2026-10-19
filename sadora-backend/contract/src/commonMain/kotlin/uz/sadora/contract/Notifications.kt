@@ -64,6 +64,12 @@ data class NotificationSettings(
     val categories: Map<NotificationCategory, Boolean> = emptyMap(),
     val quietFrom: LocalTime? = null,
     val quietUntil: LocalTime? = null,
+    /**
+     * News and offers from the Sadora team (the admin panel's campaigns). A field of its own
+     * rather than a [NotificationCategory]: an app that predates it would fail to read a
+     * history holding a category it does not know, and ignores an unknown field.
+     */
+    val news: Boolean = true,
 ) {
     fun isCategoryEnabled(category: NotificationCategory): Boolean =
         categories[category] ?: true
@@ -77,6 +83,8 @@ data class UpdateNotificationSettingsRequest(
     val quietUntil: LocalTime? = null,
     /** Clears the quiet window; a null [quietFrom] alone means "unchanged". */
     val clearQuietHours: Boolean = false,
+    /** See [NotificationSettings.news]; null leaves it as it is. */
+    val news: Boolean? = null,
 )
 
 @Serializable

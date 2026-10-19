@@ -58,6 +58,7 @@ interface Strings {
     val community: CommunityStrings
     val doctors: DoctorStrings
     val healthGate: HealthGateStrings
+    val appStatus: AppStatusStrings
     val rewards: RewardStrings
     val pregnancyWeeks: PregnancyWeekStrings
     val tools: StageToolsStrings
@@ -877,6 +878,9 @@ interface SettingsStrings {
     val waterReminderNote: String
     val aiSummary: String
     val aiSummaryNote: String
+    /** The team's news and offers: the switch for the admin panel's campaigns. */
+    val newsTitle: String
+    val newsNote: String
 
     // ---- privacy
     val privacyTitle: String
