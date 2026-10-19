@@ -37,7 +37,7 @@ object TelegramStringsUz : TelegramStrings {
     override val disconnectTitle = "Telegramni uzasizmi?"
     override val disconnectBody = "Eslatmalar faqat ilovaga keladi. Istalgan payt qayta ulash mumkin."
     override val disconnected = "Telegram uzildi"
-    override val connectedToast = "Telegram ulandi ✓"
+    override val connectedToast = "Telegram ulandi"
 }
 
 object TelegramStringsRu : TelegramStrings {
@@ -59,7 +59,7 @@ object TelegramStringsRu : TelegramStrings {
     override val disconnectTitle = "Отключить Telegram?"
     override val disconnectBody = "Напоминания будут приходить только в приложение. Подключить снова можно в любой момент."
     override val disconnected = "Telegram отключён"
-    override val connectedToast = "Telegram подключён ✓"
+    override val connectedToast = "Telegram подключён"
 }
 
 object TelegramStringsEn : TelegramStrings {
@@ -81,5 +81,5 @@ object TelegramStringsEn : TelegramStrings {
     override val disconnectTitle = "Disconnect Telegram?"
     override val disconnectBody = "Reminders will come to the app only. You can connect again any time."
     override val disconnected = "Telegram disconnected"
-    override val connectedToast = "Telegram connected ✓"
+    override val connectedToast = "Telegram connected"
 }

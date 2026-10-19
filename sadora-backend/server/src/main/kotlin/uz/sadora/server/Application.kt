@@ -26,6 +26,7 @@ import uz.sadora.server.kegel.kegelRoutes
 import uz.sadora.server.wrapped.wrappedRoutes
 import uz.sadora.server.telegram.telegramRoutes
 import uz.sadora.server.sos.sosRoutes
+import uz.sadora.server.voice.voiceRoutes
 import uz.sadora.server.lab.labRoutes
 import uz.sadora.server.share.reportRoutes
 import uz.sadora.server.pet.adminPetRoutes
@@ -187,6 +188,7 @@ fun Application.apiModule(component: AppComponent) {
             wrappedRoutes(component.wrappedService)
             telegramRoutes(component.telegramService)
             sosRoutes(component.sosService)
+            voiceRoutes(component.voiceService)
             reportRoutes(component.reportService)
             medicationRoutes(component.medicationService)
             notificationRoutes(component.notificationService)

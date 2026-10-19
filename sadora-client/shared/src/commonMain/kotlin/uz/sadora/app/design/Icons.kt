@@ -421,6 +421,21 @@ object SadoraIcons {
         stroke { moveTo(10.2f, 19.4f); arcToRelative(1.9f, 1.9f, 0f, false, false, 3.6f, 0f) }
     }
 
+    /** Ovoz bilan belgilash. */
+    val Mic: ImageVector = icon("Mic") {
+        stroke {
+            moveTo(12f, 4.2f)
+            arcToRelative(2.8f, 2.8f, 0f, false, true, 2.8f, 2.8f)
+            verticalLineToRelative(4.6f)
+            arcToRelative(2.8f, 2.8f, 0f, false, true, -5.6f, 0f)
+            verticalLineTo(7f)
+            arcToRelative(2.8f, 2.8f, 0f, false, true, 2.8f, -2.8f)
+            close()
+        }
+        stroke { moveTo(6.6f, 11.2f); arcToRelative(5.4f, 5.4f, 0f, false, false, 10.8f, 0f) }
+        stroke { moveTo(12f, 16.6f); verticalLineToRelative(3.2f) }
+    }
+
     /** Maxfiylik va xavfsizlik. */
     val Lock: ImageVector = icon("Lock") {
         stroke {

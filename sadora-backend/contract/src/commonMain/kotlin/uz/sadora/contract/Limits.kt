@@ -134,6 +134,10 @@ object Limits {
     const val SOS_MAX_CONTACTS = 3
     const val SOS_ALERTS_PER_HOUR = 5
 
+    /** Voice log: a minute of speech at most, and the audio no bigger than this. */
+    const val VOICE_MAX_SECONDS = 60
+    const val VOICE_MAX_BYTES = 3_000_000
+
     // ---- babies
     const val BABIES_MAX = 6
     const val BABY_NAME_MAX = 40

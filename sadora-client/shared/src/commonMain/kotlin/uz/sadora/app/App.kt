@@ -1284,6 +1284,20 @@ private fun PushedScreen(
             onUpgrade = upgrade,
             onShowDoctor = { navigator.push(Route.ShareProfile) },
         )
+        Route.VoiceLog -> uz.sadora.app.ui.modules.VoiceLogScreen(
+            voice = controllers.voice,
+            onClose = close,
+            onUpgrade = upgrade,
+            onSaved = {
+                scope.launch {
+                    health.loadDay(state.today)
+                    health.refreshCycle()
+                    health.refreshNutrition()
+                    health.refreshMedications()
+                }
+            },
+            onToast = toast,
+        )
         Route.Sos -> uz.sadora.app.ui.modules.SosScreen(controllers.sos, close, onToast = toast)
         Route.TelegramBot -> uz.sadora.app.ui.settings.TelegramScreen(controllers.telegram, close, onToast = toast)
         Route.WrappedList -> uz.sadora.app.ui.modules.WrappedListScreen(controllers.wrapped, close, navigator::push)

@@ -189,6 +189,8 @@ class SadoraGraph(
     fun conditionController(): ConditionController =
         ConditionController(uz.sadora.app.data.api.ConditionApi(caller), wearableApi)
 
+    fun voiceController(): VoiceController = VoiceController(uz.sadora.app.data.api.VoiceApi(caller))
+
     fun sosController(): SosController = SosController(uz.sadora.app.data.api.SosApi(caller))
 
     fun telegramController(): TelegramController = TelegramController(uz.sadora.app.data.api.TelegramApi(caller))

@@ -540,6 +540,17 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
     val vaccineReminderJob = uz.sadora.server.baby.VaccineReminderJob(babyRepository, userRepository, notificationRepository)
     val kegelReminderJob = uz.sadora.server.kegel.KegelReminderJob(kegelRepository, userRepository, notificationRepository)
 
+    // ---- logging by voice: no key, no listener, and the app hides the button
+    val voiceService = uz.sadora.server.voice.VoiceService(
+        access = healthAccess,
+        health = healthService,
+        nutrition = nutritionService,
+        medications = medicationService,
+        listener = config.ai.apiKey?.let { uz.sadora.server.ai.GeminiVoice(outboundHttpClient, config.ai) },
+        aiConfig = config.ai,
+        usage = aiUsageRepository,
+    )
+
     // ---- SOS: real SMS only where SOS_SMS_LIVE is on and Play Mobile has a login
     val sosService = uz.sadora.server.sos.SosService(
         sos = uz.sadora.server.sos.SosRepository(),

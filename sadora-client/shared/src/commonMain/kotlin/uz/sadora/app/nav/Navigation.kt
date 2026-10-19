@@ -117,6 +117,8 @@ sealed interface Route {
     data object TelegramBot : Route
     /** SOS: call 103, alert her people, her emergency contacts. */
     data object Sos : Route
+    /** Logging by voice: speak, check, save. */
+    data object VoiceLog : Route
     data object Sleep : Route
     data object Insights : Route
     data object Knowledge : Route
@@ -189,7 +191,7 @@ val Route.isFullScreen: Boolean
         // program page too, whose check sheet is taller than the space above the bar.
         this == Route.KegelSession || this == Route.Kegel || this is Route.WrappedStory ||
         // SOS: nothing between her and the 103 button.
-        this == Route.Sos ||
+        this == Route.Sos || this == Route.VoiceLog ||
         // A thread and a post end in a text field. Above the tab bar it was padded for the
         // system bar a second time, and with the keyboard up it floated a bar's height over it.
         this is Route.Post || this is Route.Conversation

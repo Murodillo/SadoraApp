@@ -28,6 +28,8 @@
     <!-- SOS sends where she is, once, in the alert. Asked for only when she presses SOS. -->
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <!-- Logging by voice: a short note, recorded only while she is speaking it. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
     <!--
         Health Connect: read only, and only these. Each is asked for on the devices

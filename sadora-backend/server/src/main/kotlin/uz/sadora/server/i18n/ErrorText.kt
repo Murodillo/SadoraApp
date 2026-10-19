@@ -216,6 +216,12 @@ object ErrorText {
         Entry("Telegram ulanmagan", "Telegram не подключён", "Telegram is not connected"),
         Entry("Ko'pi bilan {0} ta kontakt", "Не больше {0} контактов", "At most {0} contacts"),
         Entry("Ismni yozing", "Напишите имя", "Write a name"),
+        Entry("Ovoz bilan belgilash hozircha ishlamayapti", "Голосовая отметка сейчас недоступна", "Voice logging is not available right now"),
+        Entry("Bu audio turi qo'llab-quvvatlanmaydi", "Этот формат аудио не поддерживается", "This audio format is not supported"),
+        Entry("Yozuvni o'qib bo'lmadi", "Не удалось прочитать запись", "The recording could not be read"),
+        Entry("Yozuv juda uzun", "Запись слишком длинная", "The recording is too long"),
+        Entry("Ovozni tushunib bo'lmadi. Qaytadan urinib ko'ring.", "Не удалось распознать голос. Попробуйте ещё раз.", "The voice could not be understood. Please try again."),
+        Entry("Davom etayotgan hayz yo'q", "Нет текущих месячных", "There is no ongoing period"),
         Entry("Telefon raqami noto'g'ri", "Неверный номер телефона", "That phone number is not valid"),
         Entry(
             "Signal juda ko'p yuborildi. 103 ga qo'ng'iroq qiling.",

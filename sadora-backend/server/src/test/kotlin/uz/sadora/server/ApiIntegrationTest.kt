@@ -4296,6 +4296,86 @@ class ApiIntegrationTest {
         assertEquals(1, post<uz.sadora.contract.SosAlertResult>("/v1/sos/alert", other.token, uz.sadora.contract.SosAlertRequest()).smsSent)
     }
 
+    // ---------------------------------------------------------------- voice
+
+    private class FakeListener(var heard: uz.sadora.server.ai.VoiceHeard) : uz.sadora.server.ai.VoiceListener {
+        var symptoms: List<uz.sadora.server.ai.VoiceChoice> = emptyList()
+        var medications: List<uz.sadora.server.ai.VoiceChoice> = emptyList()
+        override val name = "fake"
+        override suspend fun hear(
+            audioBase64: String,
+            mimeType: String,
+            language: uz.sadora.contract.Language,
+            symptoms: List<uz.sadora.server.ai.VoiceChoice>,
+            medications: List<uz.sadora.server.ai.VoiceChoice>,
+        ): uz.sadora.server.ai.VoiceAnswer {
+            this.symptoms = symptoms
+            this.medications = medications
+            return uz.sadora.server.ai.VoiceAnswer(heard, "fake", 100, 50)
+        }
+    }
+
+    @Test
+    fun `a voice note becomes a draft held to her lists, and only what she keeps is saved`() = api {
+        val her = signUp().also { onboard(it) }
+        val herId = Uuid.parse(her.userId)
+        val today = get<CycleStatus>("/v1/cycle/status", her.token).today
+        val medication = component.medicationRepository.add(
+            herId,
+            uz.sadora.contract.SaveMedicationRequest(name = "Folat", schedule = uz.sadora.contract.MedicationSchedule(times = listOf(LocalTime(9, 0), LocalTime(21, 0)))),
+            startedOn = today,
+        )
+        put<DailyLog>("/v1/days/$today", her.token, uz.sadora.contract.SaveDailyLogRequest(symptoms = listOf(uz.sadora.contract.SymptomEntry("acne"))))
+        val listener = FakeListener(
+            uz.sadora.server.ai.VoiceHeard(
+                transcript = "Boshim og'riyapti, kayfiyatim yomon, ikki stakan suv ichdim, folatni ichdim",
+                mood = "low",
+                symptoms = listOf("headache", "made_up_symptom"),
+                waterMl = 500,
+                medications = listOf(medication.toString(), Uuid.random().toString()),
+            ),
+        )
+        val voice = uz.sadora.server.voice.VoiceService(component.healthAccess, component.healthService, component.nutritionService, component.medicationService, listener)
+        val audio = java.util.Base64.getEncoder().encodeToString(ByteArray(2000) { 1 })
+
+        val draft = voice.hear(herId, uz.sadora.contract.VoiceLogRequest(audio, "audio/aac"))
+        assertTrue(draft.understood)
+        assertEquals(MoodLevel.LOW, draft.mood)
+        assertEquals(listOf("headache"), draft.symptoms.map { it.key }, "a symptom not in her list is dropped")
+        assertEquals(500, draft.waterMl)
+        assertEquals(listOf(medication.toString()), draft.doses.map { it.medicationId }, "a medicine she does not take is never taken")
+        assertTrue(listener.symptoms.any { it.id == "headache" })
+        assertEquals(listOf("Folat"), listener.medications.map { it.name })
+
+        // Nothing is saved by hearing.
+        assertNull(get<DailyLog>("/v1/days/$today", her.token).mood)
+        // She keeps the mood, the symptom and the dose, and drops the water.
+        voice.save(herId, uz.sadora.contract.SaveVoiceLogRequest(mood = draft.mood, symptoms = draft.symptoms.map { it.key }, doses = draft.doses))
+        val day = get<DailyLog>("/v1/days/$today", her.token)
+        assertEquals(MoodLevel.LOW, day.mood)
+        assertEquals(setOf("acne", "headache"), day.symptoms.map { it.key }.toSet(), "what the day already had stays")
+        assertEquals(1, component.medicationService.day(herId, today).doses.count { it.status == uz.sadora.contract.DoseStatus.TAKEN })
+        assertEquals(0, component.nutritionService.day(herId, today).waterMl)
+
+        // "Hayzim boshlandi", then "tugadi".
+        voice.save(herId, uz.sadora.contract.SaveVoiceLogRequest(period = uz.sadora.contract.VoicePeriod.STARTED))
+        assertEquals(today, get<List<PeriodEntry>>("/v1/cycle/periods", her.token).first().startedOn)
+        voice.save(herId, uz.sadora.contract.SaveVoiceLogRequest(period = uz.sadora.contract.VoicePeriod.ENDED))
+        assertEquals(today, get<List<PeriodEntry>>("/v1/cycle/periods", her.token).first().endedOn)
+
+        // Noise is said to be noise.
+        listener.heard = uz.sadora.server.ai.VoiceHeard(transcript = "", understood = true)
+        assertFalse(voice.hear(herId, uz.sadora.contract.VoiceLogRequest(audio, "audio/aac")).understood)
+        val badType = runCatching { voice.hear(herId, uz.sadora.contract.VoiceLogRequest(audio, "video/mp4")) }.exceptionOrNull()
+        assertTrue(badType is uz.sadora.server.core.ValidationException)
+
+        // Three a day for free: the fourth is the paywall's.
+        listener.heard = uz.sadora.server.ai.VoiceHeard(transcript = "suv", waterMl = 250)
+        voice.hear(herId, uz.sadora.contract.VoiceLogRequest(audio, "audio/wav"))
+        val limited = runCatching { voice.hear(herId, uz.sadora.contract.VoiceLogRequest(audio, "audio/wav")) }.exceptionOrNull()
+        assertTrue(limited is uz.sadora.server.core.LimitReachedException, "got $limited")
+    }
+
     // ---------------------------------------------------------------- babies
 
     @Test

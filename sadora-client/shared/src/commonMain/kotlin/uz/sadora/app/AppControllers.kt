@@ -69,6 +69,8 @@ class AppControllers(
     val telegram: uz.sadora.app.data.TelegramController = uz.sadora.app.data.TelegramController(null),
     /** SOS contacts and the alert. */
     val sos: uz.sadora.app.data.SosController = uz.sadora.app.data.SosController(null),
+    /** Logging by voice. */
+    val voice: uz.sadora.app.data.VoiceController = uz.sadora.app.data.VoiceController(null),
     val pet: PetController,
     val frames: FrameController,
     val analytics: Analytics,
@@ -106,6 +108,7 @@ class AppControllers(
             wrapped = graph?.wrappedController() ?: uz.sadora.app.data.WrappedController(null),
             telegram = graph?.telegramController() ?: uz.sadora.app.data.TelegramController(null),
             sos = graph?.sosController() ?: uz.sadora.app.data.SosController(null),
+            voice = graph?.voiceController() ?: uz.sadora.app.data.VoiceController(null),
             pet = graph?.petController(state) ?: PetController(null, state),
             frames = graph?.frameController(state) ?: FrameController(null, state),
             analytics = graph?.analytics ?: Analytics.None,

@@ -47,6 +47,8 @@
 	</array>
 	<!-- The food scanner, the profile photo and photos in messages. iOS terminates the app
 	     on present without these. -->
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Ovoz bilan belgilash: aytganingizni tushunib, kundalikka yozish uchun. Yozuv saqlanmaydi.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>SOS signal bilan joylashuvingizni bir marta yaqinlaringizga yuboradi.</string>
 	<key>NSCameraUsageDescription</key>

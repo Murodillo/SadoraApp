@@ -291,6 +291,12 @@ private fun TodayHeader(
             ) { shown ->
                 Text(shown, style = Sadora.type.body, color = Sadora.colors.muted)
             }
+            // Logging by voice: the quickest way to say how today is.
+            uz.sadora.app.ui.components.CircleIconButton(
+                uz.sadora.app.design.SadoraIcons.Mic,
+                contentDescription = strings.voice.title,
+                onClick = { onOpen(Route.VoiceLog) },
+            )
             if (showCounters) {
                 StreakBadge(state.streakDays, onClick = { onOpen(Route.Rewards) })
                 CoinPill(state.coins, onClick = { onOpen(Route.Rewards) })
