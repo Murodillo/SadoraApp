@@ -214,6 +214,14 @@ object ErrorText {
         Entry("Xulosa topilmadi", "Итоги не найдены", "Recap not found"),
         Entry("Telegram bot hali ulanmagan", "Telegram-бот ещё не подключён", "The Telegram bot is not set up yet"),
         Entry("Telegram ulanmagan", "Telegram не подключён", "Telegram is not connected"),
+        Entry("Ko'pi bilan {0} ta kontakt", "Не больше {0} контактов", "At most {0} contacts"),
+        Entry("Ismni yozing", "Напишите имя", "Write a name"),
+        Entry("Telefon raqami noto'g'ri", "Неверный номер телефона", "That phone number is not valid"),
+        Entry(
+            "Signal juda ko'p yuborildi. 103 ga qo'ng'iroq qiling.",
+            "Слишком много сигналов. Позвоните 103.",
+            "Too many alerts sent. Call 103.",
+        ),
         Entry(
             "Eslatmalar ko'pi bilan {0} ta bo'ladi",
             "Напоминаний может быть не больше {0}",

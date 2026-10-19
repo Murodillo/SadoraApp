@@ -55,6 +55,11 @@ data class AppConfig(
     /** The Telegram bot: reminders and quick logging. Off until a token is set. */
     val telegram: TelegramConfig = TelegramConfig(),
     /**
+     * Whether an SOS alert really sends SMS. Off on a laptop, where a test press must not text a
+     * real person's phone; the alert is logged instead. On by default everywhere else.
+     */
+    val sosSmsLive: Boolean = false,
+    /**
      * Whether an admin must enrol an authenticator before the panel opens. Until she
      * does, her token reaches only her own account page, where enrolment lives. Off on a
      * laptop only; staging and production are both on the internet.
@@ -225,6 +230,7 @@ data class AppConfig(
                     ),
                 ),
                 accountErasureGracePeriod = env("ACCOUNT_ERASURE_GRACE_DAYS", "30").toInt().days,
+                sosSmsLive = env("SOS_SMS_LIVE", (environment != Environment.DEV).toString()).toBoolean(),
                 telegram = TelegramConfig(
                     token = envOrNull("TELEGRAM_BOT_TOKEN"),
                     username = envOrNull("TELEGRAM_BOT_USERNAME")?.removePrefix("@"),

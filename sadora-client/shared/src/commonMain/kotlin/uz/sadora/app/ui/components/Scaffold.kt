@@ -2,8 +2,10 @@ package uz.sadora.app.ui.components
 
 import androidx.compose.ui.draw.alpha
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -229,6 +231,8 @@ fun GreetingHeader(
     photoUrl: String? = null,
     /** The frame she wears around her photo. */
     frame: String? = null,
+    /** The red SOS button before her face; null hides it. */
+    onSosClick: (() -> Unit)? = null,
 ) {
     val c = Sadora.colors
     Row(
@@ -257,6 +261,20 @@ fun GreetingHeader(
         // The deck puts the face next to the bell: the avatar is the way into the
         // profile, so the greeting itself is left as plain text.
         // The whole box is the button, ring included, so a frame never shrinks the target.
+        if (onSosClick != null) {
+            val label = strings.sos.headerLabel
+            Box(
+                Modifier
+                    .size(MinTouchTarget)
+                    .clip(Radius.chip)
+                    .background(c.danger)
+                    .pressable(pressedScale = 0.9f, onClick = onSosClick)
+                    .semantics { contentDescription = label },
+                contentAlignment = Alignment.Center,
+            ) {
+                Text("SOS", style = Sadora.type.caption.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, letterSpacing = androidx.compose.ui.unit.TextUnit.Unspecified), color = Color.White)
+            }
+        }
         FramedAvatar(frame, size = MinTouchTarget, modifier = Modifier.pressable(pressedScale = 0.9f, onClick = onAvatarClick)) { inner ->
             Avatar(name, size = inner, photoUrl = photoUrl)
         }

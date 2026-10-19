@@ -130,6 +130,10 @@ object Limits {
     const val KEGEL_CHECK_DAYS = 28
     const val KEGEL_FREE_LEVELS = 2
 
+    /** SOS: people she can add, and alerts an hour before the rest are refused. */
+    const val SOS_MAX_CONTACTS = 3
+    const val SOS_ALERTS_PER_HOUR = 5
+
     // ---- babies
     const val BABIES_MAX = 6
     const val BABY_NAME_MAX = 40

@@ -1284,6 +1284,7 @@ private fun PushedScreen(
             onUpgrade = upgrade,
             onShowDoctor = { navigator.push(Route.ShareProfile) },
         )
+        Route.Sos -> uz.sadora.app.ui.modules.SosScreen(controllers.sos, close, onToast = toast)
         Route.TelegramBot -> uz.sadora.app.ui.settings.TelegramScreen(controllers.telegram, close, onToast = toast)
         Route.WrappedList -> uz.sadora.app.ui.modules.WrappedListScreen(controllers.wrapped, close, navigator::push)
         is Route.WrappedStory -> uz.sadora.app.ui.modules.WrappedStoryScreen(route.key, controllers.wrapped, close)

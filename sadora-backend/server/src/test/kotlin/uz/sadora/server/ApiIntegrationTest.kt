@@ -4219,6 +4219,83 @@ class ApiIntegrationTest {
         assertFalse(bot.deliver(reminder))
     }
 
+    // ---------------------------------------------------------------- sos
+
+    private class FakeSms : uz.sadora.server.auth.TextMessageSender {
+        val sent = ArrayList<Pair<String, String>>()
+        var failFor: String? = null
+        override suspend fun sendText(phone: String, text: String) {
+            if (phone == failFor) throw uz.sadora.server.auth.SmsDeliveryException("refused")
+            sent += phone to text
+        }
+    }
+
+    @Test
+    fun `sos alerts her contacts and Yaqinim with her location, and keeps going when one SMS fails`() = api {
+        val her = signUp().also { onboard(it) }
+        val herId = Uuid.parse(her.userId)
+        assertTrue(get<uz.sadora.contract.SosState>("/v1/sos", her.token).contacts.isEmpty())
+
+        val tooMany = raw {
+            client.put("/v1/sos/contacts") {
+                auth(her.token)
+                json(uz.sadora.contract.SaveSosContactsRequest((1..4).map { uz.sadora.contract.SosContact("K$it", "90 123 45 6$it") }))
+            }
+        }
+        assertEquals(HttpStatusCode.BadRequest, tooMany.status)
+        val badPhone = raw {
+            client.put("/v1/sos/contacts") { auth(her.token); json(uz.sadora.contract.SaveSosContactsRequest(listOf(uz.sadora.contract.SosContact("Onam", "12345")))) }
+        }
+        assertEquals(HttpStatusCode.BadRequest, badPhone.status)
+        val saved = put<uz.sadora.contract.SosState>(
+            "/v1/sos/contacts",
+            her.token,
+            uz.sadora.contract.SaveSosContactsRequest(listOf(uz.sadora.contract.SosContact(" Onam ", "90 123 45 67"), uz.sadora.contract.SosContact("Opam", "+998 91 765 43 21"))),
+        )
+        assertEquals(listOf("Onam" to "+998901234567", "Opam" to "+998917654321"), saved.contacts.map { it.name to it.phone })
+
+        // Her Yaqinim, linked and approved.
+        val invite = post<PartnerInvite>("/v1/partner/invite", her.token, CreatePartnerInviteRequest(PartnerRelation.HUSBAND))
+        val him = signUp()
+        post<FollowedPerson>("/v1/partner/accept", him.token, AcceptPartnerInviteRequest(assertNotNull(invite.code), name = "Aziz", asPartnerAccount = true))
+        post<PartnerState>("/v1/partner/approve", her.token, Ack())
+        assertEquals("Aziz", get<uz.sadora.contract.SosState>("/v1/sos", her.token).partnerName)
+        val hisPhone = assertNotNull(component.userRepository.findById(Uuid.parse(him.userId))?.phone)
+
+        val sms = FakeSms().apply { failFor = "+998917654321" }
+        val sos = uz.sadora.server.sos.SosService(
+            uz.sadora.server.sos.SosRepository(),
+            component.userRepository,
+            component.partnerRepository,
+            component.notificationRepository,
+            sms,
+        )
+        val result = sos.alert(herId, uz.sadora.contract.SosAlertRequest(latitude = 41.311081, longitude = 69.240562, accuracyMeters = 20))
+        assertEquals(2, result.smsSent, "her mother and Yaqinim")
+        assertEquals(1, result.smsFailed, "her sister's SMS failed and held nobody up")
+        assertTrue(result.partnerNotified)
+        assertTrue(result.withLocation)
+        assertEquals(setOf("+998901234567", hisPhone), sms.sent.map { it.first }.toSet())
+        assertTrue(sms.sent.all { "https://maps.google.com/?q=41.31108,69.24056" in it.second && "SOS" in it.second })
+        val push = assertNotNull(component.notificationRepository.history(Uuid.parse(him.userId), 5)).first()
+        assertTrue(push.title.startsWith("🆘"))
+        assertEquals(uz.sadora.contract.NotificationCategory.SYSTEM, push.category)
+
+        // Without a location the alert still goes, and says so.
+        val blind = sos.alert(herId, uz.sadora.contract.SosAlertRequest())
+        assertFalse(blind.withLocation)
+        assertTrue("aniqlanmadi" in sms.sent.last().second)
+
+        // A runaway button is stopped after five in an hour; the message points at 103.
+        repeat(3) { sos.alert(herId, uz.sadora.contract.SosAlertRequest()) }
+        val limited = runCatching { sos.alert(herId, uz.sadora.contract.SosAlertRequest()) }.exceptionOrNull()
+        assertTrue(limited is uz.sadora.server.core.RateLimitedException)
+        // Over HTTP, the dev server only logs the SMS — and still answers.
+        val other = signUp().also { onboard(it) }
+        put<uz.sadora.contract.SosState>("/v1/sos/contacts", other.token, uz.sadora.contract.SaveSosContactsRequest(listOf(uz.sadora.contract.SosContact("Onam", "90 123 45 67"))))
+        assertEquals(1, post<uz.sadora.contract.SosAlertResult>("/v1/sos/alert", other.token, uz.sadora.contract.SosAlertRequest()).smsSent)
+    }
+
     // ---------------------------------------------------------------- babies
 
     @Test

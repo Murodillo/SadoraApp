@@ -540,6 +540,20 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
     val vaccineReminderJob = uz.sadora.server.baby.VaccineReminderJob(babyRepository, userRepository, notificationRepository)
     val kegelReminderJob = uz.sadora.server.kegel.KegelReminderJob(kegelRepository, userRepository, notificationRepository)
 
+    // ---- SOS: real SMS only where SOS_SMS_LIVE is on and Play Mobile has a login
+    val sosService = uz.sadora.server.sos.SosService(
+        sos = uz.sadora.server.sos.SosRepository(),
+        users = userRepository,
+        partners = partnerRepository,
+        notifications = notificationRepository,
+        sms = if (config.sosSmsLive && config.otp.playMobile.isConfigured) {
+            PlayMobileOtpSender(outboundHttpClient, config.otp.playMobile, config.otp.smsText)
+        } else {
+            uz.sadora.server.auth.LoggingTextSender()
+        },
+        deliverSoon = notificationScheduler::deliverSoon,
+    )
+
     // ---- the Telegram bot: off until TELEGRAM_BOT_TOKEN and TELEGRAM_BOT_USERNAME are set
     val telegramRepository = uz.sadora.server.telegram.TelegramRepository()
     val telegramGateway: uz.sadora.server.telegram.TelegramGateway? =

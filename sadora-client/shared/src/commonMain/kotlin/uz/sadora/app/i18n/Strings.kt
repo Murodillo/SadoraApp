@@ -74,6 +74,7 @@ interface Strings {
     val kegel: KegelStrings
     val wrapped: WrappedStrings
     val telegram: TelegramStrings
+    val sos: SosStrings
     val pet: PetStrings
     val widgets: WidgetUiStrings
     val frames: FrameStrings

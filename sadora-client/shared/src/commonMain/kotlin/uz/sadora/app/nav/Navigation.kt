@@ -115,6 +115,8 @@ sealed interface Route {
     data class WrappedStory(val key: String) : Route
     /** The Telegram bot: link, detail switch, unlink. */
     data object TelegramBot : Route
+    /** SOS: call 103, alert her people, her emergency contacts. */
+    data object Sos : Route
     data object Sleep : Route
     data object Insights : Route
     data object Knowledge : Route
@@ -186,6 +188,8 @@ val Route.isFullScreen: Boolean
         // A guided session is the whole screen: nothing to tap by mistake with the eyes shut. Its
         // program page too, whose check sheet is taller than the space above the bar.
         this == Route.KegelSession || this == Route.Kegel || this is Route.WrappedStory ||
+        // SOS: nothing between her and the 103 button.
+        this == Route.Sos ||
         // A thread and a post end in a text field. Above the tab bar it was padded for the
         // system bar a second time, and with the keyboard up it floated a bar's height over it.
         this is Route.Post || this is Route.Conversation

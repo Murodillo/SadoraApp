@@ -37,7 +37,7 @@ class PlayMobileOtpSender(
     private val client: HttpClient,
     private val config: PlayMobileConfig,
     private val text: String,
-) : OtpSender {
+) : OtpSender, TextMessageSender {
 
     private val logger = LoggerFactory.getLogger(PlayMobileOtpSender::class.java)
 
@@ -49,6 +49,11 @@ class PlayMobileOtpSender(
         "Basic " + Base64.getEncoder().encodeToString("${config.login}:${config.password}".toByteArray())
 
     override suspend fun send(phone: String, code: String) {
+        sendText(phone, text.replace("{code}", code))
+        logger.info("Sign-in code sent by SMS to {}", PhoneNumbers.mask(phone))
+    }
+
+    override suspend fun sendText(phone: String, text: String) {
         val body = buildJsonObject {
             putJsonArray("messages") {
                 addJsonObject {
@@ -59,7 +64,7 @@ class PlayMobileOtpSender(
                     put("message-id", "sdr" + UUID.randomUUID().toString().replace("-", ""))
                     putJsonObject("sms") {
                         put("originator", config.originator)
-                        putJsonObject("content") { put("text", text.replace("{code}", code)) }
+                        putJsonObject("content") { put("text", text) }
                     }
                 }
             }
@@ -84,7 +89,6 @@ class PlayMobileOtpSender(
             }
             throw SmsDeliveryException("Play Mobile said ${response.status.value}")
         }
-        logger.info("Sign-in code sent by SMS to {}", PhoneNumbers.mask(phone))
     }
 
     /**
@@ -111,3 +115,17 @@ class PlayMobileOtpSender(
 
 /** The code was not handed to the SMS gateway. Not the user's fault, and worth retrying. */
 class SmsDeliveryException(message: String) : Exception(message)
+
+/** Any text by SMS — the SOS alert. Throws [SmsDeliveryException] when the gateway refused it. */
+interface TextMessageSender {
+    suspend fun sendText(phone: String, text: String)
+}
+
+/** Where SMS must not leave the machine: the text is logged, masked phone and all, and dropped. */
+class LoggingTextSender : TextMessageSender {
+    private val logger = LoggerFactory.getLogger(LoggingTextSender::class.java)
+
+    override suspend fun sendText(phone: String, text: String) {
+        logger.info("SMS not sent (SOS_SMS_LIVE is off) to {}: {}", PhoneNumbers.mask(phone), text)
+    }
+}

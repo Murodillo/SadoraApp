@@ -1563,6 +1563,7 @@ object StringsEn : Strings {
     override val kegel: KegelStrings = KegelStringsEn
     override val wrapped: WrappedStrings = WrappedStringsEn
     override val telegram: TelegramStrings = TelegramStringsEn
+    override val sos: SosStrings = SosStringsEn
     override val pet: PetStrings = PetEn
     override val widgets: WidgetUiStrings = WidgetUiEn
     override val frames: FrameStrings = FramesEn

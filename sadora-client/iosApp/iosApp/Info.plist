@@ -47,6 +47,8 @@
 	</array>
 	<!-- The food scanner, the profile photo and photos in messages. iOS terminates the app
 	     on present without these. -->
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>SOS signal bilan joylashuvingizni bir marta yaqinlaringizga yuboradi.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>SADORA ovqat suratini o'qib, taxminiy kaloriya, oqsil, yog' va uglevodni ko'rsatadi. Profil rasmingizni ham suratga olishingiz mumkin.</string>
 	<key>NSPhotoLibraryUsageDescription</key>

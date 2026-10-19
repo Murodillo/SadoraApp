@@ -265,6 +265,7 @@ private fun TodayHeader(
             name = state.name.trim().substringBefore(' '),
             onAvatarClick = { onOpen(Route.Profile) },
             onNotificationsClick = { onOpen(Route.NotificationInbox) },
+            onSosClick = { onOpen(Route.Sos) },
             photoUrl = state.avatarUrl,
             frame = state.wornFrame,
             // No dot: the inbox has no read state yet, and a dot tied to pending doses

@@ -1571,6 +1571,7 @@ object StringsRu : Strings {
     override val kegel: KegelStrings = KegelStringsRu
     override val wrapped: WrappedStrings = WrappedStringsRu
     override val telegram: TelegramStrings = TelegramStringsRu
+    override val sos: SosStrings = SosStringsRu
     override val pet: PetStrings = PetRu
     override val widgets: WidgetUiStrings = WidgetUiRu
     override val frames: FrameStrings = FramesRu
