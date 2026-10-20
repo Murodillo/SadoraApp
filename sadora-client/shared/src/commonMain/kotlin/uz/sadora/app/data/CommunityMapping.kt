@@ -100,6 +100,9 @@ fun WireConversation.toAppConversation(): Conversation = Conversation(
     patient = patient,
     consultation = consultation?.toAppWindow(),
     lastMessageKind = lastMessageKind.toAppKind(),
+    lastMessageMedia = lastMessageMedia?.takeIf { lastMessageKind == WireKind.MEDIA },
+    lastMessageMediaCount = if (lastMessageKind == WireKind.MEDIA) lastMessageMediaCount else 0,
+    lastMessageVideoCount = if (lastMessageKind == WireKind.MEDIA) lastMessageVideoCount else 0,
     lastMessageRead = lastMessageRead,
     frame = frame,
 )
@@ -132,6 +135,7 @@ fun WireMessage.toAppMessage(): DirectMessage = DirectMessage(
     prescription = prescription?.takeIf { kind == WireKind.PRESCRIPTION },
     labReport = labReport?.takeIf { kind == WireKind.LAB },
     document = document?.takeIf { kind == WireKind.REPORT },
+    media = if (kind == WireKind.MEDIA) media else emptyList(),
 )
 
 fun WireKind.toAppKind(): MessageKind = when (this) {
@@ -141,6 +145,7 @@ fun WireKind.toAppKind(): MessageKind = when (this) {
     WireKind.PRESCRIPTION -> MessageKind.Prescription
     WireKind.LAB -> MessageKind.Lab
     WireKind.REPORT -> MessageKind.Report
+    WireKind.MEDIA -> MessageKind.Media
 }
 
 fun WireTopic.toAppTopic(): CommunityTopic = when (this) {

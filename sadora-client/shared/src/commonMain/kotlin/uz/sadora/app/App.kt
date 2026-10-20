@@ -1478,6 +1478,7 @@ private fun PushedScreen(
             labs = controllers.labs,
             onOpenLab = { navigator.push(Route.LabReport(it)) },
             onOpenLabs = { navigator.push(Route.Labs) },
+            chatMedia = state.chatMediaEnabled,
             reports = controllers.reports,
             onUpgrade = upgrade,
         )

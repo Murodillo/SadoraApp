@@ -1571,6 +1571,7 @@ object StringsUz : Strings {
     override val telegram: TelegramStrings = TelegramStringsUz
     override val sos: SosStrings = SosStringsUz
     override val voice: VoiceStrings = VoiceStringsUz
+    override val media: MediaStrings = MediaStringsUz
     override val pet: PetStrings = PetUz
     override val widgets: WidgetUiStrings = WidgetUiUz
     override val frames: FrameStrings = FramesUz

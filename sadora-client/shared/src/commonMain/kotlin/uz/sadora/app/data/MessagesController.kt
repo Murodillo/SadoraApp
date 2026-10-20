@@ -3,19 +3,20 @@ package uz.sadora.app.data
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import kotlin.io.encoding.Base64
-import kotlin.io.encoding.ExperimentalEncodingApi
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import uz.sadora.app.data.api.CommunityApi
+import uz.sadora.app.data.api.MediaApi
 import uz.sadora.app.model.Conversation
 import uz.sadora.app.model.DirectMessage
 import uz.sadora.app.model.MessageKind
 import uz.sadora.app.model.ReportReason
 import uz.sadora.contract.ConversationThread
 import uz.sadora.contract.DoctorSummary
-import uz.sadora.contract.MessageImageUpload
 import uz.sadora.contract.ReportReason as WireReason
 import uz.sadora.contract.SendMessageRequest
 import uz.sadora.contract.DirectMessage as WireMessage
@@ -36,6 +37,8 @@ import uz.sadora.contract.DirectMessage as WireMessage
 class MessagesController(
     private val api: CommunityApi?,
     private val clock: Clock = Clock.System,
+    /** Photos and videos; null where nothing can be uploaded (previews, tests without it). */
+    private val media: MediaApi? = null,
 ) {
     val calls = ApiCallState()
 
@@ -238,22 +241,80 @@ class MessagesController(
         return deliver(thread.id, SendMessageRequest(body = body)) != null
     }
 
+    // ---------------------------------------------------------------- photos and videos
+
+    /** Outlives the thread's screen: an album keeps going while she reads the list. */
+    private val uploadScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
+    private val uploader: MediaUploader? = media?.let { transport ->
+        MediaUploader(transport, uploadScope) { album, ids -> deliverAlbum(album, ids) }
+    }
+
+    /** Photos and videos can be sent from here at all. */
+    val canSendMedia: Boolean get() = uploader != null
+
+    /** The albums on their way into [conversationId], drawn as her bubbles under the thread. */
+    fun outgoing(conversationId: String?): List<OutgoingAlbum> =
+        conversationId?.let { id -> uploader?.outgoingFor(id) }.orEmpty()
+
     /**
-     * A photo, already resized and encoded by the picker, with an optional caption. Only
-     * into a thread that exists: the start call takes text, so a first line is words.
+     * Photos and videos with an optional caption, into the open thread. They show as her
+     * bubble at once and go up behind it. Only into a thread that exists: the start call
+     * takes text, so a first line is words.
      */
-    suspend fun sendImage(imageBase64: String, mimeType: String, caption: String = ""): Boolean {
-        val api = api ?: return true
+    fun sendMedia(picked: List<PickedMedia>, caption: String = ""): Boolean {
+        val uploader = uploader ?: return false
         val thread = current?.takeIf { it.id.isNotEmpty() } ?: return false
-        sendingAttachment = true
-        return try {
-            val sent = deliver(thread.id, SendMessageRequest(body = caption.trim(), image = MessageImageUpload(imageBase64, mimeType)))
-            // Her own bubble draws from what she already has rather than downloading it back.
-            sent?.let { message -> decodeBase64(imageBase64)?.let { rememberImage(message.id, it) } }
-            sent != null
-        } finally {
-            sendingAttachment = false
+        if (picked.isEmpty()) return false
+        uploader.send(thread.id, caption, picked)
+        return true
+    }
+
+    fun retryOutgoing(localId: String) = uploader?.retry(localId)
+
+    fun cancelOutgoing(localId: String) = uploader?.cancel(localId)
+
+    /**
+     * The album's message, once every file is up. A failure stays on the album's bubble
+     * rather than the banner: it is that bubble she retries.
+     */
+    private suspend fun deliverAlbum(album: OutgoingAlbum, mediaIds: List<String>): ApiResult<Unit> {
+        val api = api ?: return ApiResult.Failure(ApiFailure.Network("offline"))
+        val result = api.sendMessage(album.conversationId, SendMessageRequest(body = album.caption, mediaIds = mediaIds))
+        if (result is ApiResult.Success) {
+            // Her own thumbnails are what she picked; they are not downloaded back.
+            mediaIds.zip(album.items).forEach { (id, item) -> item.preview?.let { thumbs.put(id, it) } }
+            appendSent(album.conversationId, result.value)
+            lastTypingSent = null
         }
+        return result.map { }
+    }
+
+    /** Thumbnails by media id, in memory only — the server marks them no-store. */
+    private val thumbs = ImageBytesCache(ThumbCacheSize)
+
+    /** Full photos by media id: a few, because each is up to a couple of megabytes. */
+    private val photos = ImageBytesCache(PhotoCacheSize)
+
+    suspend fun mediaThumb(mediaId: String): ByteArray? {
+        val media = media ?: return thumbs.get(mediaId)
+        return thumbs.getOrFetch(mediaId) { (media.thumb(mediaId) as? ApiResult.Success)?.value }
+    }
+
+    /** The photo itself, for the viewer: through a signed address, then from memory. */
+    suspend fun mediaPhoto(mediaId: String): ByteArray? {
+        val media = media ?: return photos.get(mediaId)
+        return photos.getOrFetch(mediaId) {
+            val link = (media.link(mediaId) as? ApiResult.Success)?.value ?: return@getOrFetch null
+            (media.fetch(link) as? ApiResult.Success)?.value
+        }
+    }
+
+    /** A fresh signed address for a video, as the player opens it. Asked each time: it lasts minutes. */
+    suspend fun mediaUrl(mediaId: String): String? {
+        val media = media ?: return null
+        val link = (media.link(mediaId) as? ApiResult.Success)?.value ?: return null
+        return media.absolute(link)
     }
 
     /**
@@ -418,8 +479,6 @@ class MessagesController(
         messages = messages.map { if (it.prescription?.id == updated.id) it.copy(prescription = updated) else it }
     }
 
-    /** Remembers a photo she just sent, so her own bubble does not download what she has. */
-    suspend fun rememberImage(messageId: String, bytes: ByteArray) = imageCache.put(messageId, bytes)
 
     // ---------------------------------------------------------------- her record
 
@@ -451,12 +510,12 @@ class MessagesController(
         ReportReason.Other -> WireReason.OTHER
     }
 
-    @OptIn(ExperimentalEncodingApi::class)
-    private fun decodeBase64(value: String): ByteArray? = runCatching { Base64.decode(value) }.getOrNull()
-
     companion object {
         /** The server shows "yozmoqda" for six seconds; one call in three keeps it lit. */
         val TypingEvery = 3.seconds
         const val ImageCacheSize = 40
+        /** A few albums' worth: a thumbnail is tens of kilobytes. */
+        const val ThumbCacheSize = 120
+        const val PhotoCacheSize = 6
     }
 }

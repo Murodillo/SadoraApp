@@ -120,6 +120,10 @@ data class Conversation(
     val consultation: ConsultationWindow? = null,
     /** What the last line was, so the list can say "Rasm" rather than show an empty caption. */
     val lastMessageKind: MessageKind = MessageKind.Text,
+    /** The last line's first photo or video, and how many it carried: "Video · 0:42", "3 ta rasm". */
+    val lastMessageMedia: uz.sadora.contract.MessageMedia? = null,
+    val lastMessageMediaCount: Int = 0,
+    val lastMessageVideoCount: Int = 0,
     /** The last line is hers and the other side has read it: the double tick in the list. */
     val lastMessageRead: Boolean = false,
     /** The frame the other alias wears; never on a consultation. */
@@ -167,7 +171,7 @@ data class ConsultationWindow(
 }
 
 /** What a line carries. Mirrors the wire enum without depending on it. */
-enum class MessageKind { Text, Image, Record, Prescription, Lab, Report }
+enum class MessageKind { Text, Image, Record, Prescription, Lab, Report, Media }
 
 /** A photo's pixel size, known before the picture itself, so the bubble keeps its place. */
 data class MessageImageSize(val width: Int, val height: Int) {
@@ -193,6 +197,8 @@ data class DirectMessage(
     val labReport: uz.sadora.contract.LabReport? = null,
     /** Set on her report PDF: its name and size. The bytes are fetched separately, by [id]. */
     val document: uz.sadora.contract.MessageDocument? = null,
+    /** Set on a photos-and-videos line, in the order they were sent. Thumbnails are fetched by id. */
+    val media: List<uz.sadora.contract.MessageMedia> = emptyList(),
 )
 
 /**

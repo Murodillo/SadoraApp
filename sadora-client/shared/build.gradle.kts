@@ -55,6 +55,11 @@ kotlin {
             implementation(libs.androidx.camera.camera2)
             implementation(libs.androidx.camera.lifecycle)
             implementation(libs.androidx.camera.view)
+            // Message videos: compressed to 720p before they go up, and played from a signed address.
+            implementation(libs.androidx.media3.exoplayer)
+            implementation(libs.androidx.media3.ui)
+            implementation(libs.androidx.media3.transformer)
+            implementation(libs.androidx.media3.effect)
         }
         iosMain.dependencies {
             implementation(libs.ktor.client.darwin)

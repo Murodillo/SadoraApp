@@ -26,7 +26,8 @@ import uz.sadora.contract.DirectMessage
 import uz.sadora.contract.DoctorAuthor
 import uz.sadora.contract.DoctorSpecialty
 import uz.sadora.contract.ErrorCodes
-import uz.sadora.contract.MessageImage
+import uz.sadora.contract.MediaKind
+import uz.sadora.contract.MessageMedia
 import uz.sadora.contract.MessageKind as WireKind
 
 /**
@@ -131,16 +132,13 @@ class MessagingV2ControllerTest {
     }
 
     @Test
-    fun `a photo goes up base64 and its bytes are fetched once`() = runTest {
+    fun `an older photo and a thumbnail are each fetched once, then served from memory`() = runTest {
         val jpeg = byteArrayOf(0xFF.toByte(), 0xD8.toByte(), 1, 2, 3)
         val recording = RecordingEngine { request ->
             val path = request.url.encodedPath
             when {
-                path.endsWith("/messages/m9/image") -> respond(jpeg, HttpStatusCode.OK, headersOf(HttpHeaders.ContentType, "image/jpeg"))
-                path.endsWith("/k1/messages") -> json(
-                    encode(DirectMessage("m1", "Toshma", TestNow, isMine = true, kind = WireKind.IMAGE, image = MessageImage(640, 480))),
-                    HttpStatusCode.Created,
-                )
+                path.endsWith("/messages/m9/image") || path.endsWith("/media/p1/thumb") ->
+                    respond(jpeg, HttpStatusCode.OK, headersOf(HttpHeaders.ContentType, "image/jpeg"))
                 path.endsWith("/conversations/k1") -> json(encode(consultation()))
                 else -> json(encode(emptyList<Conversation>()))
             }
@@ -148,22 +146,33 @@ class MessagingV2ControllerTest {
         val controller = graph(recording).messagesController()
         controller.open("k1", doctor.fullName)
 
-        assertTrue(controller.sendImage("/9gBAgM=", "image/jpeg", caption = " Toshma "))
-        val body = recording.bodies.last { it.contains("imageBase64") }
-        assertTrue(body.contains("\"imageBase64\":\"/9gBAgM=\""))
-        assertTrue(body.contains("\"body\":\"Toshma\""), "the caption is trimmed")
-        val sent = controller.messages.single()
-        assertEquals(MessageKind.Image, sent.kind)
-        assertEquals(MessageKind.Image, controller.conversations.single().lastMessageKind)
-
-        // Her own photo is drawn from what she sent, never downloaded back.
-        assertContentEquals(jpeg, controller.imageBytes("k1", "m1"))
-        assertEquals(0, recording.countOf("/v1/community/conversations/k1/messages/m1/image"))
-
-        // Someone else's is fetched once, then served from memory.
         assertContentEquals(jpeg, controller.imageBytes("k1", "m9"))
         assertContentEquals(jpeg, controller.imageBytes("k1", "m9"))
         assertEquals(1, recording.countOf("/v1/community/conversations/k1/messages/m9/image"))
+
+        assertContentEquals(jpeg, controller.mediaThumb("p1"))
+        assertContentEquals(jpeg, controller.mediaThumb("p1"))
+        assertEquals(1, recording.countOf("/v1/media/p1/thumb"))
+    }
+
+    @Test
+    fun `a media line keeps its photos and videos in order, and the list says what it was`() {
+        val items = listOf(
+            MessageMedia("p1", MediaKind.PHOTO, 640, 480, sizeBytes = 1000),
+            MessageMedia("v1", MediaKind.VIDEO, 720, 1280, durationMs = 42_000, sizeBytes = 9000),
+        )
+        val line = DirectMessage("m1", "Natija", TestNow, isMine = false, kind = WireKind.MEDIA, media = items).toAppMessage()
+        assertEquals(MessageKind.Media, line.kind)
+        assertEquals(listOf("p1", "v1"), line.media.map { it.id })
+        val thread = Conversation(
+            "k1", "Dr", 1, lastMessage = "Natija", lastMessageAt = TestNow, unread = 0,
+            lastMessageKind = WireKind.MEDIA, lastMessageMedia = items.first(), lastMessageMediaCount = 2,
+        ).toAppConversation()
+        assertEquals(MediaKind.PHOTO, thread.lastMessageMedia?.kind)
+        assertEquals(2, thread.lastMessageMediaCount)
+        // Media on any other kind of line means nothing and is dropped.
+        val text = DirectMessage("m2", "Salom", TestNow, isMine = true, media = items).toAppMessage()
+        assertTrue(text.media.isEmpty())
     }
 
     @Test

@@ -56,7 +56,7 @@ actual fun rememberPhotoCapture(maxEdge: Int, onCaptured: (CapturedPhoto) -> Uni
  * Ultra is 800 MB as a bitmap, and the endpoint wants a [maxEdge]-pixel edge. `decodeStream`
  * also ignores EXIF, so a portrait photo reached the model lying on its side.
  */
-private fun Context.decodeSampled(uri: Uri, maxEdge: Int): Pair<Bitmap, Int>? = runCatching {
+internal fun Context.decodeSampled(uri: Uri, maxEdge: Int): Pair<Bitmap, Int>? = runCatching {
     val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
     contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, bounds) }
     var sample = 1

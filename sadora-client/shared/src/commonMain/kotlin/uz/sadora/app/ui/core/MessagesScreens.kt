@@ -64,8 +64,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
-import kotlin.io.encoding.Base64
-import kotlin.io.encoding.ExperimentalEncodingApi
 import kotlin.time.Clock
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -92,7 +90,6 @@ import uz.sadora.app.model.MessageKind
 import uz.sadora.app.ui.components.ResizeForKeyboard
 import uz.sadora.app.ui.components.BadgeRow
 import uz.sadora.app.ui.components.ButtonTone
-import uz.sadora.app.ui.components.CapturedPhoto
 import uz.sadora.app.ui.components.CircleIconButton
 import uz.sadora.app.ui.components.ErrorStrip
 import uz.sadora.app.ui.components.LoadMoreRow
@@ -109,7 +106,6 @@ import uz.sadora.app.ui.components.SystemBackHandler
 import uz.sadora.app.ui.components.acceptText
 import uz.sadora.app.ui.components.noRippleClickable
 import uz.sadora.app.ui.components.pressable
-import uz.sadora.app.ui.components.rememberPhotoCapture
 import uz.sadora.contract.ConsultationPayment
 import uz.sadora.contract.DoctorSummary
 import uz.sadora.contract.Limits
@@ -278,6 +274,7 @@ private fun LastLine(thread: Conversation, unread: Boolean) {
         MessageKind.Prescription -> strings.prescriptions.lastLine
         MessageKind.Lab -> strings.labs.lastLine
         MessageKind.Report -> strings.reports.lastLine
+        MessageKind.Media -> mediaLastLine(strings.media, thread.lastMessageMedia, thread.lastMessageMediaCount, thread.lastMessageVideoCount, caption)
     }
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
         if (thread.lastMessageRead) ReadTicks(read = true, tint = c.textAccent)
@@ -287,7 +284,8 @@ private fun LastLine(thread: Conversation, unread: Boolean) {
             MessageKind.Prescription -> ArtIcon(Res.drawable.ic3d_meds, 16.dp)
             MessageKind.Lab -> ArtIcon(Res.drawable.ic3d_lab, 16.dp)
             MessageKind.Report -> ArtIcon(Res.drawable.ic3d_notebook, 16.dp)
-            MessageKind.Text -> Unit
+            // The line itself starts with 📷 or 🎥.
+            MessageKind.Text, MessageKind.Media -> Unit
         }
         Text(text, style = style, color = colour, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
@@ -351,6 +349,8 @@ fun ConversationScreen(
     /** Her report PDF, which she can make and send into the consultation. */
     reports: uz.sadora.app.data.ReportController = uz.sadora.app.data.ReportController(null),
     onUpgrade: () -> Unit = {},
+    /** Videos and albums in a consultation ([uz.sadora.contract.FlagKeys.CHAT_MEDIA]); off, one photo. */
+    chatMedia: Boolean = false,
 ) {
     val t = strings.community
     val d = strings.doctors
@@ -360,7 +360,7 @@ fun ConversationScreen(
     val list = rememberLazyListState()
 
     var showAttach by remember { mutableStateOf(false) }
-    var pendingPhoto by remember { mutableStateOf<CapturedPhoto?>(null) }
+    var picked by remember { mutableStateOf<List<uz.sadora.app.data.PickedMedia>>(emptyList()) }
     var confirmRecord by remember { mutableStateOf(false) }
     var pickLab by remember { mutableStateOf(false) }
     var makeReport by remember { mutableStateOf(false) }
@@ -369,6 +369,8 @@ fun ConversationScreen(
     val shareFile = rememberFileShareAction()
     var recordFor by remember { mutableStateOf<String?>(null) }
     var viewing by remember { mutableStateOf<DirectMessage?>(null) }
+    /** An album line open in the viewer, and the tile she tapped. */
+    var viewingMedia by remember { mutableStateOf<Pair<DirectMessage, Int>?>(null) }
     var addingPrescription by remember { mutableStateOf<uz.sadora.contract.Prescription?>(null) }
     val addedToast = strings.prescriptions.addedToast
     var reopening by remember { mutableStateOf(false) }
@@ -380,7 +382,10 @@ fun ConversationScreen(
     var ratedHere by remember { mutableStateOf<String?>(null) }
     // Its own flag: the controller's busy also blinks with every silent poll of the thread.
     var sendingRating by remember { mutableStateOf(false) }
-    val picker = rememberPhotoCapture { pendingPhoto = it }
+    val picker = uz.sadora.app.ui.components.rememberMediaPicker { chosen ->
+        // A second pick before sending adds to the first; the sheet names anything past the limit.
+        picked = picked + chosen
+    }
     ResizeForKeyboard()
 
     LaunchedEffect(conversationId, alias) {
@@ -409,14 +414,16 @@ fun ConversationScreen(
     var settled by remember(conversationId) { mutableStateOf(false) }
     // Keyed on the newest line, not the count: a page of older lines read in above must
     // not throw her back to the bottom.
-    LaunchedEffect(messages.messages.lastOrNull()?.id, otherTyping) {
-        if (messages.messages.isEmpty()) return@LaunchedEffect
+    // Her albums on their way sit under the lines; a new one is scrolled to like a new line.
+    val outgoingCount = messages.outgoing(messages.current?.id?.takeIf { it.isNotEmpty() }).size
+    LaunchedEffect(messages.messages.lastOrNull()?.id, otherTyping, outgoingCount) {
+        if (messages.messages.isEmpty() && outgoingCount == 0) return@LaunchedEffect
         // Counted rather than read from the layout, which has not caught up with the
-        // new line yet when this runs: the spinner, the note, the lines, "yozmoqda", the end spacer.
+        // new line yet when this runs: the spinner, the note, the lines, the albums, "yozmoqda", the end spacer.
         val older = if (messages.hasOlder) 1 else 0
         val note = if (messages.current?.consultation != null) 1 else 0
         val typing = if (otherTyping) 1 else 0
-        list.animateScrollToItem(older + note + messages.messages.size + typing)
+        list.animateScrollToItem(older + note + messages.messages.size + outgoingCount + typing)
         settled = true
     }
     // Near the top, the page above. Prepended lines keep the one she is reading in place,
@@ -440,6 +447,10 @@ fun ConversationScreen(
     val window = thread?.consultation
     val name = thread?.alias ?: alias
     val canAttachRecord = window?.open == true && doctor != null
+    // Between aliases, and in a consultation until the switch is on, one photo at a time.
+    val albums = window != null && chatMedia
+    val mediaMax = if (albums) Limits.MESSAGE_MEDIA_MAX else 1
+    val canSendMedia = picker.available && messages.canSendMedia
 
     Box(modifier.fillMaxSize().clayBackdrop(c)) {
         Column(Modifier.fillMaxSize()) {
@@ -519,6 +530,7 @@ fun ConversationScreen(
                         conversationId = liveId,
                         messages = messages,
                         onOpenImage = { viewing = message },
+                        onOpenMedia = { index -> viewingMedia = message to index },
                         onOpenRecord = { recordFor = message.id },
                         onAddPrescription = { addingPrescription = it },
                         onOpenLab = onOpenLab,
@@ -532,6 +544,13 @@ fun ConversationScreen(
                                 }
                             }
                         },
+                    )
+                }
+                items(messages.outgoing(liveId), key = { it.localId }) { album ->
+                    OutgoingAlbumBubble(
+                        album = album,
+                        onRetry = { messages.retryOutgoing(album.localId) },
+                        onDiscard = { messages.cancelOutgoing(album.localId) },
                     )
                 }
                 if (otherTyping) {
@@ -571,7 +590,7 @@ fun ConversationScreen(
                     onSend = { body -> messages.send(body) },
                     onTyping = { scope.launch { messages.typing() } },
                     // A first line to an alias opens the thread and is words; attachments come after.
-                    onAttach = { showAttach = true }.takeIf { liveId != null && (picker.available || canAttachRecord) },
+                    onAttach = { showAttach = true }.takeIf { liveId != null && (canSendMedia || canAttachRecord) },
                     sendingAttachment = messages.sendingAttachment,
                     modifier = composerModifier,
                 )
@@ -579,10 +598,24 @@ fun ConversationScreen(
         }
 
         SadoraBottomSheet(visible = showAttach, title = t.attach, onDismiss = { showAttach = false }) {
-            if (picker.available) {
-                AttachOption(Res.drawable.ic3d_gallery, t.photo, t.photoNote) {
+            if (canSendMedia) {
+                val m = strings.media
+                // "Rasm yoki video" only where a video can go; one photo is just "Rasm".
+                AttachOption(Res.drawable.ic3d_gallery, if (albums) m.attach else m.photo, m.attachNote(mediaMax, videos = albums)) {
                     showAttach = false
-                    picker.pickFromGallery()
+                    picker.pickFromGallery(mediaMax, videos = albums)
+                }
+                if (picker.canUseCamera) {
+                    AttachOption(Res.drawable.ic3d_camera, m.takePhoto, m.takePhotoNote) {
+                        showAttach = false
+                        picker.takePhoto()
+                    }
+                    if (albums) {
+                        AttachOption(Res.drawable.ic3d_camera, m.recordVideo, m.recordVideoNote) {
+                            showAttach = false
+                            picker.recordVideo()
+                        }
+                    }
                 }
             }
             if (canAttachRecord) {
@@ -645,18 +678,26 @@ fun ConversationScreen(
             )
         }
 
-        SadoraBottomSheet(visible = pendingPhoto != null, title = t.sendPhoto, onDismiss = { pendingPhoto = null }) {
-            pendingPhoto?.let { photo ->
-                PhotoSendContent(
-                    photo = photo,
-                    sending = messages.sendingAttachment,
-                    onSend = { caption ->
-                        scope.launch {
-                            if (messages.sendImage(photo.base64, photo.mimeType, caption)) pendingPhoto = null
-                        }
-                    },
-                )
-            }
+        SadoraBottomSheet(
+            visible = picked.isNotEmpty(),
+            title = strings.media.sendTitle(picked.size),
+            onDismiss = {
+                picked.forEach { it.discard() }
+                picked = emptyList()
+            },
+        ) {
+            MediaSendContent(
+                picked = picked,
+                max = mediaMax,
+                onRemove = { item ->
+                    item.discard()
+                    picked = picked - item
+                },
+                onSend = { caption ->
+                    // The album now belongs to the uploader, which discards its files when done.
+                    if (messages.sendMedia(picked, caption)) picked = emptyList()
+                },
+            )
         }
 
         SadoraBottomSheet(
@@ -701,6 +742,16 @@ fun ConversationScreen(
         viewing?.let { message ->
             val id = liveId
             if (id != null) ImageViewer(message, id, messages, onDismiss = { viewing = null })
+        }
+        viewingMedia?.let { (message, index) ->
+            MediaViewer(
+                items = message.media,
+                start = index,
+                caption = message.body,
+                messages = messages,
+                onToast = onToast,
+                onDismiss = { viewingMedia = null },
+            )
         }
     }
 }
@@ -1054,33 +1105,6 @@ private fun AttachOption(art: DrawableResource, title: String, note: String, onC
     }
 }
 
-/** The photo she picked, a caption if she wants one, and the button that sends both. */
-@Composable
-private fun PhotoSendContent(photo: CapturedPhoto, sending: Boolean, onSend: (String) -> Unit) {
-    val t = strings.community
-    var caption by remember(photo) { mutableStateOf("") }
-    val preview by produceState<ImageBitmap?>(null, photo) {
-        value = withContext(Dispatchers.Default) { decodeBase64(photo.base64)?.let(::decodeImage) }
-    }
-    Box(
-        Modifier.fillMaxWidth().heightIn(max = 280.dp).clip(Radius.cardSmall),
-        contentAlignment = Alignment.Center,
-    ) {
-        val bitmap = preview
-        if (bitmap != null) {
-            Image(bitmap, contentDescription = null, contentScale = ContentScale.Fit, modifier = Modifier.fillMaxWidth().heightIn(max = 280.dp))
-        } else {
-            Skeleton(Modifier.fillMaxWidth().height(200.dp))
-        }
-    }
-    SadoraTextField(
-        value = caption,
-        onValueChange = { caption = acceptText(it, Limits.MESSAGE_MAX) },
-        placeholder = t.photoCaptionHint,
-    )
-    SadoraButton(if (sending) t.sending else t.sendPhoto, onClick = { onSend(caption) }, enabled = !sending, icon = SadoraIcons.Send)
-}
-
 /** One line. Hers on the right in the brand colour; the other side's on the left on a surface. */
 @Composable
 private fun Bubble(
@@ -1088,6 +1112,7 @@ private fun Bubble(
     conversationId: String?,
     messages: MessagesController,
     onOpenImage: () -> Unit,
+    onOpenMedia: (Int) -> Unit,
     onOpenRecord: () -> Unit,
     onAddPrescription: (uz.sadora.contract.Prescription) -> Unit,
     onOpenLab: (String) -> Unit = {},
@@ -1135,8 +1160,8 @@ private fun Bubble(
                 .clip(shape)
                 .background(if (mine) c.heroColors.first() else c.surface)
                 .padding(
-                    horizontal = if (message.kind == MessageKind.Image) 4.dp else Spacing.sm,
-                    vertical = if (message.kind == MessageKind.Image) 4.dp else 10.dp,
+                    horizontal = if (message.kind.isPicture) 4.dp else Spacing.sm,
+                    vertical = if (message.kind.isPicture) 4.dp else 10.dp,
                 ),
         ) {
             when (message.kind) {
@@ -1157,6 +1182,17 @@ private fun Bubble(
                         )
                     }
                 }
+                MessageKind.Media -> {
+                    MediaAlbum(message.media, messages, onOpen = onOpenMedia)
+                    if (message.body.isNotBlank()) {
+                        Text(
+                            message.body,
+                            style = Sadora.type.body,
+                            color = content,
+                            modifier = Modifier.padding(horizontal = Spacing.xs, vertical = Spacing.xxs).widthIn(max = PhotoWidth),
+                        )
+                    }
+                }
                 MessageKind.Record -> RecordInBubble(mine, onOpen = onOpenRecord.takeIf { mine })
                 MessageKind.Report -> message.document
                     ?.let { document -> DocumentInBubble(document, mine, onOpen = { onOpenDocument(message) }) }
@@ -1165,7 +1201,7 @@ private fun Bubble(
             Row(
                 Modifier
                     .align(Alignment.End)
-                    .padding(top = 2.dp, end = if (message.kind == MessageKind.Image) Spacing.xs else 0.dp),
+                    .padding(top = 2.dp, end = if (message.kind.isPicture) Spacing.xs else 0.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
             ) {
@@ -1441,10 +1477,10 @@ private fun rememberMessagePhoto(messageId: String, conversationId: String?, mes
 @OptIn(ExperimentalResourceApi::class)
 private fun decodeImage(bytes: ByteArray): ImageBitmap? = runCatching { bytes.decodeToImageBitmap() }.getOrNull()
 
-@OptIn(ExperimentalEncodingApi::class)
-private fun decodeBase64(value: String): ByteArray? = runCatching { Base64.decode(value) }.getOrNull()
-
 private val PhotoWidth = 232.dp
+
+/** A line drawn edge to edge in its bubble: an older photo, or an album. */
+private val MessageKind.isPicture: Boolean get() = this == MessageKind.Image || this == MessageKind.Media
 private const val PollMillis = 3_000L
 
 /** How close to the top of a thread, in items, the page above is asked for. */

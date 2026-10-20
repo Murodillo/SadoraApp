@@ -266,6 +266,11 @@ class AppState {
     var aiChatEnabled by mutableStateOf(true)
     /** The admin's SOS switch. Off leaves the 103 and 112 buttons; only the alert closes. */
     var sosEnabled by mutableStateOf(true)
+    /**
+     * Videos and albums in a consultation. The one switch that opens rather than closes:
+     * until the server says so a message carries one photo, as it always could.
+     */
+    var chatMediaEnabled by mutableStateOf(false)
 
     // ---- the day ----
     /**

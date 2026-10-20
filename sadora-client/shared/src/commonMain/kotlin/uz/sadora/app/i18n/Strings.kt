@@ -77,6 +77,7 @@ interface Strings {
     val telegram: TelegramStrings
     val sos: SosStrings
     val voice: VoiceStrings
+    val media: MediaStrings
     val pet: PetStrings
     val widgets: WidgetUiStrings
     val frames: FrameStrings

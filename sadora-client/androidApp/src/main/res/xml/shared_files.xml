@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- What the share sheet may read: only the cache folder pictures are written to before
-     they are shared (a prescription card), nothing else of the app's. -->
+<!-- What other apps may touch: the cache folder pictures are written to before they are
+     shared (a prescription card), and the one the camera app writes a message's photo or
+     video into. Nothing else of the app's. -->
 <paths>
     <cache-path name="shared" path="shared/" />
+    <cache-path name="capture" path="capture/" />
 </paths>

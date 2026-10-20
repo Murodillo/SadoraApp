@@ -92,6 +92,7 @@ class SadoraGraph(
     val stageEventApi: StageEventApi = StageEventApi(caller)
     val labApi: uz.sadora.app.data.api.LabApi = uz.sadora.app.data.api.LabApi(caller)
     val communityApi: CommunityApi = CommunityApi(caller)
+    val mediaApi: uz.sadora.app.data.api.MediaApi = uz.sadora.app.data.api.MediaApi(caller, environment.baseUrl)
     val doctorApi: DoctorApi = DoctorApi(caller)
     val aiApi: AiApi = AiApi(caller)
     val insightsApi: InsightsApi = InsightsApi(caller)
@@ -136,7 +137,7 @@ class SadoraGraph(
 
     /** [clock] is for tests: the typing throttle is measured on it. */
     fun messagesController(clock: kotlin.time.Clock = kotlin.time.Clock.System): MessagesController =
-        MessagesController(communityApi, clock)
+        MessagesController(communityApi, clock, mediaApi)
 
     fun doctorController(state: uz.sadora.app.model.AppState): DoctorController = DoctorController(doctorApi, state)
 

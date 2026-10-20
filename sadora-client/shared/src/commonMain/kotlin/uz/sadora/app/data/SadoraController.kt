@@ -162,6 +162,7 @@ class SadoraController(
             state.communityEnabled = flags.isEnabled(COMMUNITY_FLAG)
             state.aiChatEnabled = flags.isEnabled(AI_CHAT_FLAG)
             state.sosEnabled = flags.isEnabled(SOS_FLAG)
+            state.chatMediaEnabled = flags.isEnabled(uz.sadora.contract.FlagKeys.CHAT_MEDIA)
         }
     }
 
