@@ -2,6 +2,7 @@ package uz.sadora.doctor.ui.doctor
 
 import uz.sadora.doctor.resources.Res
 import uz.sadora.doctor.resources.ic3d_camera
+import uz.sadora.doctor.resources.ic3d_gallery
 import uz.sadora.doctor.resources.ic3d_meds
 import uz.sadora.doctor.resources.ic3d_notebook
 import uz.sadora.doctor.resources.ic3d_record
@@ -38,12 +39,14 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
@@ -76,9 +79,9 @@ import uz.sadora.contract.Prescription
 import uz.sadora.contract.QuickReply
 import uz.sadora.contract.ReportReason
 import uz.sadora.doctor.data.ApiFailure
-import uz.sadora.doctor.data.CapturedPhotoData
 import uz.sadora.doctor.data.DoctorController
 import uz.sadora.doctor.data.LabPhotos
+import uz.sadora.doctor.data.PickedMedia
 import uz.sadora.doctor.data.WorkController
 import uz.sadora.doctor.data.insertReply
 import uz.sadora.doctor.data.readable
@@ -105,7 +108,7 @@ import uz.sadora.doctor.ui.components.ScreenContent
 import uz.sadora.doctor.ui.components.Skeleton
 import uz.sadora.doctor.ui.components.acceptText
 import uz.sadora.doctor.ui.components.noRippleClickable
-import uz.sadora.doctor.ui.components.rememberPhotoCapture
+import uz.sadora.doctor.ui.components.rememberMediaPicker
 
 // ---------------------------------------------------------------- the list
 
@@ -216,7 +219,10 @@ private fun ConversationRow(chat: Conversation, onClick: () -> Unit) {
     }
 }
 
-/** "Rasm: caption", "Bemor kartasi", "Tahlil natijalari", "Hisobot (PDF)", or the line itself; the kind's mark is [previewArt]. */
+/**
+ * "Rasm: caption", "3 ta rasm · caption", "Bemor kartasi", "Tahlil natijalari", "Hisobot (PDF)",
+ * or the line itself; the kind's mark is [previewArt].
+ */
 @Composable
 private fun previewOf(chat: Conversation): String {
     val t = strings.tabs
@@ -228,6 +234,7 @@ private fun previewOf(chat: Conversation): String {
         MessageKind.PRESCRIPTION -> strings.prescriptions.title
         MessageKind.LAB -> strings.labs.title
         MessageKind.REPORT -> strings.reports.title
+        MessageKind.MEDIA -> mediaLastLine(strings.media, chat.lastMessageMedia, chat.lastMessageMediaCount, chat.lastMessageVideoCount, text)
     }
 }
 
@@ -239,6 +246,7 @@ private fun previewArt(kind: MessageKind): DrawableResource? = when (kind) {
     MessageKind.PRESCRIPTION -> Res.drawable.ic3d_meds
     MessageKind.LAB -> LabArt
     MessageKind.REPORT -> Res.drawable.ic3d_notebook
+    MessageKind.MEDIA -> Res.drawable.ic3d_gallery
 }
 
 @Composable
@@ -298,8 +306,9 @@ private fun ConsultationChips(window: Consultation) {
 
 /**
  * One consultation: the patient by name and age at the top, the window under it, the
- * messages oldest first — hers left, the doctor's right, with ticks — photos and an
- * attached record inline, "yozmoqda…" when she is typing, and the composer.
+ * messages oldest first — hers left, the doctor's right, with ticks — photos, albums and
+ * an attached record inline, the doctor's albums on their way up under them, "yozmoqda…"
+ * when she is typing, and the composer.
  *
  * The thread is read again every few seconds while it is on screen; each read marks it
  * read, which is what turns the patient's ticks double. When the window closes the
@@ -325,6 +334,9 @@ fun ConversationScreen(
     val scope = rememberCoroutineScope()
     val calls = doctors.chatCalls
 
+    // Whether albums and videos are on: read now and then, so a switch an operator turns
+    // reaches an open consultation without a restart.
+    LaunchedEffect(id) { doctors.loadFlags() }
     LaunchedEffect(id) {
         calls.clearError()
         doctors.openConversation(id)
@@ -351,20 +363,29 @@ fun ConversationScreen(
     LaunchedEffect(summaryMode) { if (summaryMode != null) calls.clearError() }
     var reportOpen by remember { mutableStateOf(false) }
     var viewing by remember { mutableStateOf<DirectMessage?>(null) }
-    var sendingPhoto by remember { mutableStateOf(false) }
+    /** An album line open in the viewer, and the tile she tapped. */
+    var viewingMedia by remember { mutableStateOf<Pair<DirectMessage, Int>?>(null) }
     var attachOpen by remember { mutableStateOf(false) }
+    /** Photos and videos picked and not yet sent: the send sheet is up while there are any. */
+    var picked by remember { mutableStateOf<List<PickedMedia>>(emptyList()) }
     var cancelling by remember { mutableStateOf<Prescription?>(null) }
     /** The lab sheet line opened in full, and a page of it opened over that. */
     var labOpen by remember { mutableStateOf<DirectMessage?>(null) }
     var labPhoto by remember { mutableStateOf<OpenLabPhoto?>(null) }
 
-    val picker = rememberPhotoCapture { photo ->
-        sendingPhoto = true
-        scope.launch {
-            doctors.sendImage(id, CapturedPhotoData(photo.base64, photo.mimeType))
-            sendingPhoto = false
-        }
+    val picker = rememberMediaPicker { chosen ->
+        // A second pick before sending adds to the first; the sheet names anything past the limit.
+        picked = picked + chosen
     }
+    // Leaving with a pick still unsent deletes its copies, as dismissing the sheet does. A
+    // sent album is the uploader's by then, and [picked] is already empty.
+    val unsent by rememberUpdatedState(picked)
+    DisposableEffect(Unit) { onDispose { unsent.forEach { it.discard() } } }
+    // Albums and videos only where the operators' switch is on; otherwise one photo, as before.
+    val albums = window != null && doctors.chatMediaEnabled
+    val mediaMax = if (albums) Limits.MESSAGE_MEDIA_MAX else 1
+    val canSendMedia = picker.available && doctors.canSendMedia
+    val outgoing = doctors.outgoing(id)
 
     // The newest message is at the bottom; the list starts there and follows new ones.
     // Keyed on the newest line, not the count: older lines read in above must not throw
@@ -374,8 +395,9 @@ fun ConversationScreen(
     // Older lines are asked for only once the thread has come to rest at its newest line;
     // before that its top is on screen for a frame.
     var settled by remember(id) { mutableStateOf(false) }
-    LaunchedEffect(messages.lastOrNull()?.id, thread?.otherTyping) {
-        val last = messages.size + (if (thread?.otherTyping == true) 1 else 0)
+    // Her albums on their way sit under the lines; a new one is scrolled to like a new line.
+    LaunchedEffect(messages.lastOrNull()?.id, thread?.otherTyping, outgoing.size) {
+        val last = messages.size + outgoing.size + (if (thread?.otherTyping == true) 1 else 0)
         if (last > 0) {
             list.animateScrollToItem(last + if (hasOlder) 1 else 0)
             settled = true
@@ -452,9 +474,17 @@ fun ConversationScreen(
                         conversationId = id,
                         doctors = doctors,
                         onViewImage = { viewing = message },
+                        onViewMedia = { index -> viewingMedia = message to index },
                         onOpenRecord = { onOpenRecord(message.id) },
                         onCancelPrescription = { cancelling = it },
                         onOpenLab = { labOpen = message },
+                    )
+                }
+                items(outgoing, key = { it.localId }) { album ->
+                    OutgoingAlbumBubble(
+                        album = album,
+                        onRetry = { doctors.retryOutgoing(album.localId) },
+                        onDiscard = { doctors.cancelOutgoing(album.localId) },
                     )
                 }
                 if (thread?.otherTyping == true) {
@@ -487,16 +517,16 @@ fun ConversationScreen(
                         onWriteSummary = if (needsSummary) { { summaryMode = SummaryMode.Write } } else null,
                     )
                     else -> Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-                        // "+": a photo, and in a consultation a prescription. Quick replies keep
-                        // their own button beside it — they are used all day.
-                        if (picker.available || window != null) {
+                        // "+": photos and videos, and in a consultation a prescription. Quick
+                        // replies keep their own button beside it — they are used all day.
+                        if (canSendMedia || window != null) {
                             Box(
                                 Modifier
                                     .padding(bottom = 2.dp)
                                     .size(MinTouchTarget)
                                     .clip(Radius.chip)
                                     .background(c.surface2)
-                                    .noRippleClickable(enabled = canWrite && !sendingPhoto, role = Role.Button, onClick = { attachOpen = true }),
+                                    .noRippleClickable(enabled = canWrite, role = Role.Button, onClick = { attachOpen = true }),
                                 contentAlignment = Alignment.Center,
                             ) {
                                 Icon(SadoraIcons.Plus, contentDescription = rx.attach, Modifier.size(IconSize.md), tint = c.text)
@@ -543,12 +573,52 @@ fun ConversationScreen(
         }
 
         SadoraBottomSheet(visible = attachOpen, title = rx.attachTitle, onDismiss = { attachOpen = false }) {
-            if (picker.available) {
-                AttachRow(SadoraIcons.Camera, rx.photo, onClick = { attachOpen = false; picker.pickFromGallery() })
+            if (canSendMedia) {
+                val m = strings.media
+                // "Rasm yoki video" only where videos may go; one photo is simply "Rasm".
+                AttachRow(null, if (albums) m.attach else m.photo, art = Res.drawable.ic3d_gallery, note = m.attachNote(mediaMax, videos = albums), onClick = {
+                    attachOpen = false
+                    picker.pickFromGallery(mediaMax, videos = albums)
+                })
+                if (picker.canUseCamera) {
+                    AttachRow(null, m.takePhoto, art = Res.drawable.ic3d_camera, note = m.takePhotoNote, onClick = {
+                        attachOpen = false
+                        picker.takePhoto()
+                    })
+                    if (albums) {
+                        AttachRow(SadoraIcons.Play, m.recordVideo, note = m.recordVideoNote, onClick = {
+                            attachOpen = false
+                            picker.recordVideo()
+                        })
+                    }
+                }
             }
             if (window != null) {
                 AttachRow(null, rx.prescription, art = Res.drawable.ic3d_meds, onClick = { attachOpen = false; onWritePrescription() })
             }
+        }
+
+        SadoraBottomSheet(
+            visible = picked.isNotEmpty(),
+            title = strings.media.sendTitle(picked.size),
+            onDismiss = {
+                picked.forEach { it.discard() }
+                picked = emptyList()
+            },
+        ) {
+            MediaSendContent(
+                picked = picked,
+                max = mediaMax,
+                onRemove = { item ->
+                    item.discard()
+                    picked = picked - item
+                },
+                onSend = { caption ->
+                    calls.clearError()
+                    // The album now belongs to the uploader, which deletes its files when done.
+                    if (doctors.sendMedia(id, picked, caption)) picked = emptyList()
+                },
+            )
         }
 
         CancelPrescriptionSheet(
@@ -618,6 +688,16 @@ fun ConversationScreen(
 
         viewing?.let { message ->
             PhotoViewer(message, id, doctors, onDismiss = { viewing = null })
+        }
+        viewingMedia?.let { (message, index) ->
+            MediaViewer(
+                items = message.media,
+                start = index,
+                caption = message.body,
+                doctors = doctors,
+                onToast = onToast,
+                onDismiss = { viewingMedia = null },
+            )
         }
         labPhoto?.let { LabPhotoViewer(it, doctors, onDismiss = { labPhoto = null }) }
     }
@@ -728,6 +808,7 @@ private fun MessageBubble(
     conversationId: String,
     doctors: DoctorController,
     onViewImage: () -> Unit,
+    onViewMedia: (Int) -> Unit,
     onOpenRecord: () -> Unit,
     onCancelPrescription: (Prescription) -> Unit,
     onOpenLab: () -> Unit,
@@ -781,7 +862,7 @@ private fun MessageBubble(
                 .widthIn(max = 290.dp)
                 .clip(Radius.card)
                 .background(if (mine) c.primaryFill else c.surface)
-                .padding(if (message.kind == MessageKind.IMAGE) Spacing.xxs else Spacing.sm),
+                .padding(if (message.kind.isPicture) Spacing.xxs else Spacing.sm),
             verticalArrangement = Arrangement.spacedBy(Spacing.xxs),
         ) {
             when (message.kind) {
@@ -789,6 +870,12 @@ private fun MessageBubble(
                     MessagePhoto(message, conversationId, doctors, Modifier.width(260.dp).clip(Radius.cardSmall).noRippleClickable(role = Role.Image, onClick = onViewImage))
                     if (message.body.isNotEmpty()) {
                         Text(message.body, style = Sadora.type.body, color = fg, modifier = Modifier.padding(horizontal = Spacing.xs))
+                    }
+                }
+                MessageKind.MEDIA -> {
+                    MediaAlbum(message.media, doctors, onOpen = onViewMedia)
+                    if (message.body.isNotEmpty()) {
+                        Text(message.body, style = Sadora.type.body, color = fg, modifier = Modifier.padding(horizontal = Spacing.xs).widthIn(max = 260.dp))
                     }
                 }
                 MessageKind.RECORD -> {
@@ -812,7 +899,7 @@ private fun MessageBubble(
                 }
             }
             Row(
-                Modifier.align(Alignment.End).padding(horizontal = if (message.kind == MessageKind.IMAGE) Spacing.xs else 0.dp),
+                Modifier.align(Alignment.End).padding(horizontal = if (message.kind.isPicture) Spacing.xs else 0.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
             ) {
@@ -827,12 +914,13 @@ private fun MessageBubble(
     }
 }
 
-/** One choice in the "+" sheet: an icon and what it attaches. */
+/** One choice in the "+" sheet: an icon, what it attaches, and — where it helps — how much. */
 @Composable
 private fun AttachRow(
     icon: androidx.compose.ui.graphics.vector.ImageVector?,
     label: String,
     art: org.jetbrains.compose.resources.DrawableResource? = null,
+    note: String? = null,
     onClick: () -> Unit,
 ) {
     val c = Sadora.colors
@@ -852,7 +940,10 @@ private fun AttachRow(
                 icon != null -> Icon(icon, contentDescription = null, Modifier.size(IconSize.md), tint = c.primary)
             }
         }
-        Text(label, style = Sadora.type.h3, color = c.text)
+        Column(Modifier.weight(1f)) {
+            Text(label, style = Sadora.type.h3, color = c.text)
+            note?.let { Text(it, style = Sadora.type.caption.copy(letterSpacing = TextUnit.Unspecified), color = c.muted) }
+        }
     }
 }
 
@@ -959,6 +1050,9 @@ private fun clock(at: Instant): String {
     val time = at.toLocalDateTime(TimeZone.currentSystemDefault()).time
     return "${time.hour.toString().padStart(2, '0')}:${time.minute.toString().padStart(2, '0')}"
 }
+
+/** A line drawn edge to edge in its bubble: an older photo, or an album. */
+private val MessageKind.isPicture: Boolean get() = this == MessageKind.IMAGE || this == MessageKind.MEDIA
 
 /** The longest advice the server keeps. */
 private const val SummaryMax = 2_000

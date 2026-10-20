@@ -23,6 +23,7 @@ fun ApiFailure.readable(t: ErrorStrings): String = when (this) {
     is ApiFailure.Blocked -> t.blocked
     is ApiFailure.Forbidden -> t.forbidden
     is ApiFailure.NotFound -> t.notFound
+    is ApiFailure.LimitReached -> t.limitReached
     is ApiFailure.RateLimited -> retryAfterSeconds?.let { t.retryAfter(it) } ?: t.retrySoon
     is ApiFailure.Otp -> message.ifBlank { t.otpInvalid }
     is ApiFailure.FeatureDisabled -> t.featureClosed

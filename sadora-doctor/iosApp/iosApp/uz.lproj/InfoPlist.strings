@@ -1,3 +1,5 @@
 /* Ruxsat so'rovlari — Info.plist bilan bir xil bo'lsin. */
-"NSPhotoLibraryUsageDescription" = "Diplom va litsenziyangiz rasmini hamda profil rasmingizni galereyadan tanlaysiz.";
-"NSCameraUsageDescription" = "Bemor ko'rsatgan SADORA QR kodini skanerlaysiz va profil rasmingizni suratga olasiz.";
+"NSPhotoLibraryUsageDescription" = "Diplom va litsenziyangiz rasmini, profil rasmingizni hamda bemorga yuboradigan rasm va videolarni galereyadan tanlaysiz.";
+"NSCameraUsageDescription" = "Bemor ko'rsatgan SADORA QR kodini skanerlaysiz, profil rasmingizni hamda bemorga rasm va video olasiz.";
+"NSMicrophoneUsageDescription" = "Bemorga video yozganingizda ovozi ham yoziladi.";
+"NSPhotoLibraryAddUsageDescription" = "Xabardagi rasm yoki videoni o'zingiz so'raganingizda galereyaga saqlaydi. SADORA galereyangizni o'qimaydi.";

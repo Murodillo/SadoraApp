@@ -27,14 +27,22 @@
 	     SADORA_DEV_HOST to the development machine, which the phone can reach. -->
 	<key>SadoraDevHost</key>
 	<string>$(SADORA_DEV_HOST)</string>
-	<!-- The application's documents and her profile photo: iOS terminates the app on
-	     presenting the photo library without this. -->
+	<!-- The application's documents, her profile photo, and photos and videos for a
+	     patient: iOS terminates the app on presenting the photo library without this. -->
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Diplom va litsenziyangiz rasmini hamda profil rasmingizni galereyadan tanlaysiz.</string>
-	<!-- The Scan tab and the profile photo: iOS terminates the app on opening the camera
-	     without this. -->
+	<string>Diplom va litsenziyangiz rasmini, profil rasmingizni hamda bemorga yuboradigan rasm va videolarni galereyadan tanlaysiz.</string>
+	<!-- The Scan tab, the profile photo, and a photo or video for a patient: iOS terminates
+	     the app on opening the camera without this. -->
 	<key>NSCameraUsageDescription</key>
-	<string>Bemor ko'rsatgan SADORA QR kodini skanerlaysiz va profil rasmingizni suratga olasiz.</string>
+	<string>Bemor ko'rsatgan SADORA QR kodini skanerlaysiz, profil rasmingizni hamda bemorga rasm va video olasiz.</string>
+	<!-- A video recorded for a patient has sound: the camera asks for the microphone, and
+	     iOS terminates the app on that request without this. -->
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Bemorga video yozganingizda ovozi ham yoziladi.</string>
+	<!-- "Telefonga saqlash" in the viewer, with add-only access: the app can put a photo or
+	     a video into Photos and never read the library back. -->
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Xabardagi rasm yoki videoni o'zingiz so'raganingizda galereyaga saqlaydi. SADORA galereyangizni o'qimaydi.</string>
 	<!-- The languages the app speaks. The permission texts above are the Uzbek fallback;
 	     uz/ru/en.lproj/InfoPlist.strings translate them. -->
 	<key>CFBundleLocalizations</key>

@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- What the photos FileProvider may hand out: only the camera's capture folder in the
-     cache, and the folder a downloaded PDF report is written to before a viewer opens it. -->
+<!-- What the photos FileProvider may hand out: the camera's capture folder for her profile
+     photo, the one the camera app writes a consultation's photo or video into, and the
+     folder a downloaded PDF report is written to before a viewer opens it. -->
 <paths>
     <cache-path name="photos" path="photos/" />
+    <cache-path name="capture" path="capture/" />
     <cache-path name="shared" path="shared/" />
 </paths>

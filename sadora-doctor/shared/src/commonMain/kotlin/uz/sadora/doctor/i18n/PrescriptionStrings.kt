@@ -15,7 +15,6 @@ interface PrescriptionStrings {
     // ---- the "+" menu
     val attachTitle: String
     val attach: String
-    val photo: String
     val prescription: String
 
     // ---- the writer
@@ -81,7 +80,6 @@ interface PrescriptionStrings {
 object PrescriptionStringsUz : PrescriptionStrings {
     override val attachTitle = "Biriktirish"
     override val attach = "Biriktirish"
-    override val photo = "Rasm"
     override val prescription = "Retsept"
 
     override val writerTitle = "Retsept yozish"
@@ -166,7 +164,6 @@ object PrescriptionStringsUz : PrescriptionStrings {
 object PrescriptionStringsRu : PrescriptionStrings {
     override val attachTitle = "Прикрепить"
     override val attach = "Прикрепить"
-    override val photo = "Фото"
     override val prescription = "Рецепт"
 
     override val writerTitle = "Выписать рецепт"
@@ -251,7 +248,6 @@ object PrescriptionStringsRu : PrescriptionStrings {
 object PrescriptionStringsEn : PrescriptionStrings {
     override val attachTitle = "Attach"
     override val attach = "Attach"
-    override val photo = "Photo"
     override val prescription = "Prescription"
 
     override val writerTitle = "Write a prescription"

@@ -52,6 +52,7 @@ object StringsEn : Strings {
         override val notFound = "Not found — it may have been deleted."
         override fun retryAfter(seconds: Int) = "Too many attempts. Try again in $seconds s."
         override val retrySoon = "Too many attempts. Try again shortly."
+        override val limitReached = "Today's limit is used up. You can send again tomorrow."
         override val otpInvalid = "That code is wrong or has expired."
         override val featureClosed = "This section is closed for now."
         override val unexpected = "Something went wrong. Try again."
@@ -124,4 +125,5 @@ object StringsEn : Strings {
     override val reports: ReportStrings = ReportStringsEn
     override val conditions: ConditionStrings = ConditionStringsEn
     override val kegel: KegelStrings = KegelStringsEn
+    override val media: MediaStrings = MediaStringsEn
 }

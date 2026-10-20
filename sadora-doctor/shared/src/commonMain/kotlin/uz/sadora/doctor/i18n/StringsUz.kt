@@ -53,6 +53,7 @@ object StringsUz : Strings {
         override val notFound = "Topilmadi: u o'chirilgan bo'lishi mumkin."
         override fun retryAfter(seconds: Int) = "Juda ko'p urinish. $seconds soniyadan keyin qayta urining."
         override val retrySoon = "Juda ko'p urinish. Birozdan keyin qayta urining."
+        override val limitReached = "Bugungi limit tugadi. Ertaga yana yuborishingiz mumkin."
         override val otpInvalid = "Kod noto'g'ri yoki muddati tugagan."
         override val featureClosed = "Bu bo'lim hozircha yopiq."
         override val unexpected = "Nimadir noto'g'ri ketdi. Qayta urinib ko'ring."
@@ -121,4 +122,5 @@ object StringsUz : Strings {
     override val reports: ReportStrings = ReportStringsUz
     override val conditions: ConditionStrings = ConditionStringsUz
     override val kegel: KegelStrings = KegelStringsUz
+    override val media: MediaStrings = MediaStringsUz
 }

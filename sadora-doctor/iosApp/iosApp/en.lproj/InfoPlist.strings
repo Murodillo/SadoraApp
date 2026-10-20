@@ -1,3 +1,5 @@
 /* Permission prompts. */
-"NSPhotoLibraryUsageDescription" = "You choose photos of your diploma and licence, and your profile photo, from your gallery.";
-"NSCameraUsageDescription" = "You scan the SADORA QR code a patient shows you and take your profile photo.";
+"NSPhotoLibraryUsageDescription" = "You choose photos of your diploma and licence, your profile photo, and photos and videos for a patient from your gallery.";
+"NSCameraUsageDescription" = "You scan the SADORA QR code a patient shows you, take your profile photo, and take photos and videos for a patient.";
+"NSMicrophoneUsageDescription" = "When you record a video for a patient, its sound is recorded too.";
+"NSPhotoLibraryAddUsageDescription" = "Saves a photo or video from a message to your library, only when you ask. SADORA never reads your library.";

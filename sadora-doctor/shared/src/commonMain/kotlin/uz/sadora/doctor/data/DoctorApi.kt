@@ -11,6 +11,7 @@ import uz.sadora.contract.DoctorEarnings
 import uz.sadora.contract.DoctorPayoutView
 import uz.sadora.contract.DoctorProfile
 import uz.sadora.contract.EarningLine
+import uz.sadora.contract.FeatureFlags
 import uz.sadora.contract.DoctorSettings
 import uz.sadora.contract.DoctorStats
 import uz.sadora.contract.Page
@@ -18,6 +19,7 @@ import uz.sadora.contract.PatientHistory
 import uz.sadora.contract.PatientNote
 import uz.sadora.contract.PhotoUpload
 import uz.sadora.contract.PhotoView
+import uz.sadora.contract.Platform
 import uz.sadora.contract.QuickReply
 import uz.sadora.contract.SavePatientNoteRequest
 import uz.sadora.contract.SaveQuickReplyRequest
@@ -125,6 +127,15 @@ class DoctorApi(private val caller: ApiCaller) {
     /** Every window she has had with this patient, oldest first. */
     suspend fun history(conversationId: String): ApiResult<PatientHistory> =
         caller.authenticated("v1/doctor/patients/$conversationId/history", HttpMethodKind.GET)
+
+    // ---- the operators' switches
+
+    /**
+     * The switches an operator turns from the admin panel, already resolved for her —
+     * the same call the client app makes, since a doctor signs in with the same account.
+     */
+    suspend fun featureFlags(platform: Platform): ApiResult<FeatureFlags> =
+        caller.authenticated("v1/feature-flags?platform=${platform.name.lowercase()}", HttpMethodKind.GET)
 
     companion object {
         /** The work list's page; a page shorter than this is its last. */

@@ -14,8 +14,11 @@
          MainActivity asks once she is signed in. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
-    <!-- Nothing else: the document and profile photos come through the system photo
-         picker, which needs no permission and hands over only the image she picked. -->
+    <!-- Nothing else: the document and profile photos, and the photos and videos she sends
+         a patient, come through the system photo picker, which needs no permission and
+         hands over only what she picked. A video is recorded by the camera app, which
+         records its sound itself, so there is no microphone permission either; one is
+         saved to her gallery through MediaStore, which needs none from Android 10. -->
 
     <application
         android:allowBackup="true"
@@ -44,8 +47,9 @@
             android:value="@string/push_channel_id" />
 
         <!-- The file the phone's camera app writes her profile photo into: one file in the
-             cache, shared for the length of the capture and deleted once it is read; and a
-             patient's PDF report, handed to a viewer. -->
+             cache, shared for the length of the capture and deleted once it is read; the
+             photo or video she takes for a patient, deleted once it is sent or dropped; and
+             a patient's PDF report, handed to a viewer. -->
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.photos"

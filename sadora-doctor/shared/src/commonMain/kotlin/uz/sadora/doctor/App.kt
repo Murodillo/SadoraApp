@@ -264,6 +264,9 @@ private fun MainContent(
 
     val approved = doctors.panelState as? PanelState.Approved
     val tabbed = approved != null
+    // The operators' switches, read once the tabs are there, so the first consultation she
+    // opens already knows whether albums and videos go; a consultation reads them again.
+    LaunchedEffect(tabbed) { if (tabbed) doctors.loadFlags() }
     // The unread count feeds the Messages dot from any tab, not only once she opens it.
     LaunchedEffect(tabbed) {
         while (tabbed) {

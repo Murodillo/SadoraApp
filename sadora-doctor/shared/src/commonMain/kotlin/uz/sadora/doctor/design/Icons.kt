@@ -434,4 +434,29 @@ object SadoraIcons {
         dot(12f, 12f, 2.6f)
         dot(18f, 12f, 2.6f)
     }
+
+    /** A video in a message: its tile, and the viewer's way into the player. */
+    val Play: ImageVector = icon("Play") {
+        stroke {
+            moveTo(8.4f, 5.2f); lineTo(18.6f, 12f); lineTo(8.4f, 18.8f); close()
+        }
+    }
+
+    /** Out of the app: the viewer's "Telefonga saqlash". */
+    val Share: ImageVector = icon("Share") {
+        stroke {
+            moveTo(12f, 15.4f); lineTo(12f, 3.6f)
+            moveTo(8.2f, 7.4f); lineTo(12f, 3.6f); lineTo(15.8f, 7.4f)
+        }
+        stroke {
+            moveTo(5.6f, 11.6f)
+            curveToRelative(-0.9f, 0f, -1.4f, 0.6f, -1.4f, 1.5f)
+            verticalLineToRelative(6.2f)
+            curveToRelative(0f, 0.9f, 0.5f, 1.5f, 1.4f, 1.5f)
+            horizontalLineToRelative(12.8f)
+            curveToRelative(0.9f, 0f, 1.4f, -0.6f, 1.4f, -1.5f)
+            verticalLineToRelative(-6.2f)
+            curveToRelative(0f, -0.9f, -0.5f, -1.5f, -1.4f, -1.5f)
+        }
+    }
 }

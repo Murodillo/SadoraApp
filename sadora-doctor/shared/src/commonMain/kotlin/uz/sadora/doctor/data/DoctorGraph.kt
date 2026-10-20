@@ -30,6 +30,8 @@ class DoctorGraph(
     val doctorApi: DoctorApi = DoctorApi(caller)
     val communityApi: CommunityApi = CommunityApi(caller)
     val patientApi: PatientApi = PatientApi(caller)
+    /** Photos and videos in a consultation; a video is played from an address on [environment]'s host. */
+    val mediaApi: MediaApi = MediaApi(caller, environment.baseUrl)
 
     val repository: AuthRepository = AuthRepository(authApi, session, device, appVersion)
 
@@ -43,7 +45,8 @@ class DoctorGraph(
         photoRequestUrl(environment.baseUrl, photoUrl)?.let { doctorApi.photo(it) }
             ?: ApiResult.Failure(ApiFailure.NotFound("not a photo on this server: $photoUrl"))
 
-    fun doctorController(): DoctorController = DoctorController(doctorApi, communityApi, patientApi)
+    fun doctorController(): DoctorController =
+        DoctorController(doctorApi, communityApi, patientApi, mediaApi, device.platform)
 
     fun workController(): WorkController = WorkController(doctorApi)
 

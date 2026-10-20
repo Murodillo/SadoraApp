@@ -47,6 +47,7 @@ interface Strings {
     val reports: ReportStrings
     val conditions: ConditionStrings
     val kegel: KegelStrings
+    val media: MediaStrings
 }
 
 interface CommonStrings {
@@ -104,6 +105,8 @@ interface ErrorStrings {
     val notFound: String
     fun retryAfter(seconds: Int): String
     val retrySoon: String
+    /** Today's allowance is used up; it comes back at her midnight. */
+    val limitReached: String
     val otpInvalid: String
     val featureClosed: String
     val unexpected: String

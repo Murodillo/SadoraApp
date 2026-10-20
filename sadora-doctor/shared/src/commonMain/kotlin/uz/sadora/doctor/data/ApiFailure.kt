@@ -7,8 +7,9 @@ import uz.sadora.contract.ErrorCodes
  * Every way a call can fail, as one closed set the UI can exhaust.
  *
  * The client app's set, trimmed to what the doctor's endpoints can answer: there is no
- * paywall, allowance or health consent on this side, so those codes fall through to
- * [Unexpected] like any other the app does not know.
+ * paywall or health consent on this side, so those codes fall through to [Unexpected]
+ * like any other the app does not know. The one allowance she has is the daily one on
+ * photos and videos in messages, which is [LimitReached].
  */
 sealed class ApiFailure(open val message: String) {
 
@@ -32,6 +33,9 @@ sealed class ApiFailure(open val message: String) {
 
     /** The thing asked for is gone — a question deleted while she was reading it. */
     data class NotFound(override val message: String) : ApiFailure(message)
+
+    /** Out of allowance for today: photos and videos in messages are counted per day. */
+    data class LimitReached(val featureKey: String, override val message: String) : ApiFailure(message)
 
     /** Too many requests. [retryAfterSeconds] is present when the server said so. */
     data class RateLimited(
@@ -71,6 +75,7 @@ sealed class ApiFailure(open val message: String) {
             ErrorCodes.ACCOUNT_BLOCKED -> Blocked(error.message)
             ErrorCodes.FORBIDDEN -> Forbidden(error.message)
             ErrorCodes.NOT_FOUND -> NotFound(error.message)
+            ErrorCodes.LIMIT_REACHED -> LimitReached(error.details["feature"].orEmpty(), error.message)
             ErrorCodes.RATE_LIMITED ->
                 RateLimited(error.message, error.details["retryAfterSeconds"]?.toIntOrNull())
 

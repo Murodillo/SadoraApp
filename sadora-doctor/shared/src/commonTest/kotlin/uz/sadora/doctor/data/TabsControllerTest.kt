@@ -4,10 +4,15 @@ import io.ktor.http.HttpMethod
 import io.ktor.http.HttpStatusCode
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 import kotlinx.datetime.LocalDate
 import io.ktor.client.engine.mock.respond
 import io.ktor.http.HttpHeaders
@@ -19,17 +24,23 @@ import uz.sadora.contract.ConversationThread
 import uz.sadora.contract.DirectMessage
 import uz.sadora.contract.DoctorSummary
 import uz.sadora.contract.ErrorCodes
+import uz.sadora.contract.FeatureFlags
+import uz.sadora.contract.FlagKeys
 import uz.sadora.contract.Language
 import uz.sadora.contract.LifeStage
+import uz.sadora.contract.MediaKind
+import uz.sadora.contract.MediaUpload
 import uz.sadora.contract.MessageKind
+import uz.sadora.contract.MessageMedia
 import uz.sadora.contract.Page
 import uz.sadora.contract.SharedPerson
 
 /**
  * What the five tabs read from the controller: a QR code's token becomes a patient's
  * record, or a plain "gone"; the Messages dot counts what is unread and a thread opened
- * clears its share; a message sent moves its conversation to the top; the Chat filter
- * is what the server is asked for.
+ * clears its share; a message sent moves its conversation to the top; an album goes up
+ * before the message that names it; albums wait for the operators' switch; the Chat
+ * filter is what the server is asked for.
  */
 class TabsControllerTest {
 
@@ -172,25 +183,103 @@ class TabsControllerTest {
     }
 
     @Test
-    fun `a photo goes as base64 and is fetched once however often the thread is read`() = runTest {
-        val sent = DirectMessage(id = "m9", body = "", createdAt = TestNow, isMine = true, kind = MessageKind.IMAGE)
+    fun `an older photo and a thumbnail are each fetched once however often the thread is read`() = runTest {
         val recording = RecordingEngine { request ->
             when (request.url.encodedPath) {
-                "/v1/community/conversations/c1/messages" -> json(encode(sent), HttpStatusCode.Created)
-                "/v1/community/conversations/c1/messages/m9/image" ->
+                "/v1/community/conversations/c1/messages/m9/image", "/v1/media/p1/thumb" ->
                     respond(ByteReadChannel(byteArrayOf(1, 2, 3)), HttpStatusCode.OK, headersOf(HttpHeaders.ContentType, "image/jpeg"))
                 else -> json(errorBody(ErrorCodes.NOT_FOUND), HttpStatusCode.NotFound)
             }
         }
         val doctors = testGraph(recording).doctorController()
 
-        assertTrue(doctors.sendImage("c1", CapturedPhotoData("AQID", "image/jpeg")))
-        val body = recording.bodyOf(HttpMethod.Post, "/v1/community/conversations/c1/messages").orEmpty()
-        assertTrue("\"imageBase64\":\"AQID\"" in body, body)
-
         assertEquals(listOf<Byte>(1, 2, 3), doctors.image("c1", "m9")?.toList())
         doctors.image("c1", "m9")
         assertEquals(1, recording.countOf("/v1/community/conversations/c1/messages/m9/image"))
+
+        assertEquals(listOf<Byte>(1, 2, 3), doctors.mediaThumb("p1")?.toList())
+        doctors.mediaThumb("p1")
+        assertEquals(1, recording.countOf("/v1/media/p1/thumb"))
+    }
+
+    @Test
+    fun `an album goes up first, then the message names it, and the list says what it was`() = runTest {
+        val photo = MessageMedia("p1", MediaKind.PHOTO, 640, 480, sizeBytes = 3)
+        val sent = DirectMessage(id = "m9", body = "Natija", createdAt = TestNow, isMine = true, kind = MessageKind.MEDIA, media = listOf(photo))
+        val recording = RecordingEngine { request ->
+            when (request.url.encodedPath) {
+                "/v1/community/conversations" -> json(encode(listOf(conversation("c1"))))
+                "/v1/media/uploads" -> json(encode(MediaUpload("u1", MediaKind.PHOTO, 3, 0, 1024)), HttpStatusCode.Created)
+                "/v1/media/uploads/u1" -> json(encode(MediaUpload("u1", MediaKind.PHOTO, 3, 3, 1024)))
+                "/v1/media/uploads/u1/complete" -> json(encode(photo))
+                "/v1/community/conversations/c1/messages" -> json(encode(sent), HttpStatusCode.Created)
+                else -> json(errorBody(ErrorCodes.NOT_FOUND), HttpStatusCode.NotFound)
+            }
+        }
+        val doctors = testGraph(recording).doctorController()
+        doctors.loadConversations()
+        val preview = byteArrayOf(9, 9)
+
+        assertTrue(doctors.sendMedia("c1", listOf(PickedPhoto(byteArrayOf(1, 2, 3), preview)), caption = " Natija "))
+        assertEquals(1, doctors.outgoing("c1").size, "her bubble is there before anything is up")
+        // The uploader works off the screen's thread, on the clock of the real world.
+        withContext(Dispatchers.Default) {
+            withTimeout(5_000) { while (doctors.outgoing("c1").isNotEmpty()) delay(10) }
+        }
+
+        val body = recording.bodyOf(HttpMethod.Post, "/v1/community/conversations/c1/messages").orEmpty()
+        assertTrue("\"mediaIds\":[\"p1\"]" in body, body)
+        assertTrue("\"body\":\"Natija\"" in body, "the caption is trimmed: $body")
+        val row = doctors.conversations.single()
+        assertEquals(MessageKind.MEDIA, row.lastMessageKind)
+        assertEquals(1, row.lastMessageMediaCount)
+        assertEquals("p1", row.lastMessageMedia?.id)
+        // Her own thumbnail is what she picked: it is not downloaded back.
+        assertEquals(preview.toList(), doctors.mediaThumb("p1")?.toList())
+        assertEquals(0, recording.countOf("/v1/media/p1/thumb"))
+    }
+
+    @Test
+    fun `albums and videos stay off until the server switches them on, and sign-out closes them again`() = runTest {
+        var on = false
+        val platforms = mutableListOf<String?>()
+        val recording = RecordingEngine { request ->
+            when (request.url.encodedPath) {
+                "/v1/feature-flags" -> {
+                    platforms.add(request.url.parameters["platform"])
+                    json(encode(FeatureFlags(mapOf(FlagKeys.CHAT_MEDIA to on), TestNow, ttlSeconds = 300)))
+                }
+                else -> json(errorBody(ErrorCodes.NOT_FOUND), HttpStatusCode.NotFound)
+            }
+        }
+        val doctors = testGraph(recording).doctorController()
+        assertFalse(doctors.chatMediaEnabled)
+
+        on = true
+        doctors.loadFlags()
+        assertTrue(doctors.chatMediaEnabled)
+        assertEquals(listOf<String?>("android"), platforms)
+
+        // Within the time the server said the answer holds, it is not asked again.
+        doctors.loadFlags()
+        assertEquals(1, recording.countOf("/v1/feature-flags"))
+
+        doctors.reset()
+        assertFalse(doctors.chatMediaEnabled)
+        on = false
+        doctors.loadFlags()
+        assertFalse(doctors.chatMediaEnabled)
+        assertEquals(2, recording.countOf("/v1/feature-flags"))
+    }
+
+    /** A photo picked in the gallery, already the size it is sent at. */
+    private class PickedPhoto(private val bytes: ByteArray, private val small: ByteArray) : PickedMedia {
+        override val kind = MediaKind.PHOTO
+        override val durationMs: Long? = null
+        override suspend fun preview(): ByteArray = small
+        override suspend fun prepare(onProgress: (Float) -> Unit): PreparedMedia =
+            PreparedMedia(MediaKind.PHOTO, "image/jpeg", MediaBytes.of(bytes), 640, 480, null, null)
+        override fun discard() {}
     }
 
     @Test

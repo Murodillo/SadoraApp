@@ -99,14 +99,15 @@ private fun Context.captureUri(file: File): Uri =
  * The picked image, decoded no larger than it needs to be, with the turn its EXIF asks for.
  *
  * Decoding at full size first is what this avoids: a 200-megapixel frame from an S23
- * Ultra is 800 MB as a bitmap, and the endpoint wants a 1024-pixel edge. `decodeStream`
- * also ignores EXIF, so a portrait photo reached the server lying on its side.
+ * Ultra is 800 MB as a bitmap, and the endpoint wants a [maxEdge]-pixel edge — 1024 for
+ * a document or her profile photo, more for a photo in a message ([MediaPicker]).
+ * `decodeStream` also ignores EXIF, so a portrait photo reached the server lying on its side.
  */
-private fun Context.decodeSampled(uri: Uri): Pair<Bitmap, Int>? = runCatching {
+internal fun Context.decodeSampled(uri: Uri, maxEdge: Int = MaxEdge): Pair<Bitmap, Int>? = runCatching {
     val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
     contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, bounds) }
     var sample = 1
-    while (maxOf(bounds.outWidth, bounds.outHeight) / (sample * 2) >= MaxEdge) sample *= 2
+    while (maxOf(bounds.outWidth, bounds.outHeight) / (sample * 2) >= maxEdge) sample *= 2
 
     val bitmap = contentResolver.openInputStream(uri)?.use {
         BitmapFactory.decodeStream(it, null, BitmapFactory.Options().apply { inSampleSize = sample })

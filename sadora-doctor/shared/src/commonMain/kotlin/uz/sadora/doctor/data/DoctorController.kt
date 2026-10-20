@@ -3,7 +3,16 @@ package uz.sadora.doctor.data
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
+import kotlin.time.TimeMark
+import kotlin.time.TimeSource
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import uz.sadora.contract.CommunityComment
 import uz.sadora.contract.CommunityPost
 import uz.sadora.contract.CommunityTopic
@@ -14,9 +23,11 @@ import uz.sadora.contract.DoctorApplicationRequest
 import uz.sadora.contract.DoctorProfile
 import uz.sadora.contract.DoctorStatus
 import uz.sadora.contract.DoctorSummary
+import uz.sadora.contract.FlagKeys
 import uz.sadora.contract.Language
-import uz.sadora.contract.MessageImageUpload
+import uz.sadora.contract.MediaKind
 import uz.sadora.contract.PhotoUpload
+import uz.sadora.contract.Platform
 import uz.sadora.contract.ReportReason
 import uz.sadora.contract.SendMessageRequest
 import uz.sadora.contract.SendPrescriptionRequest
@@ -27,8 +38,8 @@ import uz.sadora.contract.UpdateDoctorProfileRequest
 /**
  * Everything the doctor does, after signing in: her application and panel, her public
  * page, the questions waiting for a doctor, a question's thread with her answer, a post
- * of her own, the community feed, her private conversations, and the patient records
- * she opens from a QR code.
+ * of her own, the community feed, her private conversations — photos and videos in
+ * them included — and the patient records she opens from a QR code.
  *
  * Ported from the client app's controller. The screens each read their own
  * [ApiCallState], so a failure on one page is not left standing as a banner on the next.
@@ -38,6 +49,10 @@ class DoctorController(
     private val api: DoctorApi?,
     private val community: CommunityApi?,
     private val patients: PatientApi? = null,
+    /** Photos and videos in a consultation; null where nothing can be uploaded (previews, tests without it). */
+    private val media: MediaApi? = null,
+    /** The phone's platform: the server resolves its switches per platform. */
+    private val platform: Platform = Platform.ANDROID,
 ) {
     /** The panel: her account, the edit card and the work list. */
     val calls = ApiCallState()
@@ -563,9 +578,6 @@ class DoctorController(
     /** False when it did not go; the composer then keeps the text. */
     suspend fun sendMessage(id: String, body: String): Boolean = send(id, SendMessageRequest(body = body))
 
-    suspend fun sendImage(id: String, photo: CapturedPhotoData, caption: String = ""): Boolean =
-        send(id, SendMessageRequest(body = caption, image = MessageImageUpload(photo.base64, photo.mimeType)))
-
     private suspend fun send(id: String, request: SendMessageRequest): Boolean {
         val community = community ?: return false
         val message = chatCalls.run { community.sendMessage(id, request) } ?: return false
@@ -612,26 +624,126 @@ class DoctorController(
     private fun placeSent(id: String, message: DirectMessage) {
         openConversation = openConversation?.takeIf { it.conversation.id == id }?.let { thread ->
             thread.copy(
-                conversation = thread.conversation.copy(
-                    lastMessage = message.body,
-                    lastMessageAt = message.createdAt,
-                    lastMessageKind = message.kind,
-                    lastMessageRead = false,
-                ),
+                conversation = thread.conversation.withLastLine(message),
                 // A poll may already have brought it in.
                 messages = if (thread.messages.any { it.id == message.id }) thread.messages else thread.messages + message,
             )
         }
         // The conversation moves to the top of the list with its new last line.
         conversations = conversations
-            .map {
-                if (it.id == id) {
-                    it.copy(lastMessage = message.body, lastMessageAt = message.createdAt, lastMessageKind = message.kind, lastMessageRead = false)
-                } else {
-                    it
-                }
-            }
+            .map { if (it.id == id) it.withLastLine(message) else it }
             .sortedByDescending { it.lastMessageAt }
+    }
+
+    // ---------------------------------------------------------------- photos and videos
+
+    /** Outlives the thread's page: an album keeps going while she reads the list. */
+    private val uploadScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
+    private val uploader: MediaUploader? = media?.let { transport ->
+        MediaUploader(transport, uploadScope) { album, ids -> deliverAlbum(album, ids) }
+    }
+
+    /** Photos and videos can be sent from here at all. */
+    val canSendMedia: Boolean get() = uploader != null
+
+    /** The albums on their way into [conversationId], drawn as her bubbles under the thread. */
+    fun outgoing(conversationId: String): List<OutgoingAlbum> = uploader?.outgoingFor(conversationId).orEmpty()
+
+    /**
+     * Photos and videos with an optional caption, into a consultation. They show as her
+     * bubble at once and go up behind it; false when nothing could be started.
+     */
+    fun sendMedia(conversationId: String, picked: List<PickedMedia>, caption: String = ""): Boolean {
+        val uploader = uploader ?: return false
+        if (picked.isEmpty()) return false
+        uploader.send(conversationId, caption, picked)
+        return true
+    }
+
+    fun retryOutgoing(localId: String) {
+        uploader?.retry(localId)
+    }
+
+    fun cancelOutgoing(localId: String) {
+        uploader?.cancel(localId)
+    }
+
+    /**
+     * The album's message, once every file is up. A failure stays on the album's bubble
+     * rather than the thread's banner: it is that bubble she retries.
+     */
+    private suspend fun deliverAlbum(album: OutgoingAlbum, mediaIds: List<String>): ApiResult<Unit> {
+        val community = community ?: return ApiResult.Failure(ApiFailure.Network("offline"))
+        val result = community.sendMessage(album.conversationId, SendMessageRequest(body = album.caption, mediaIds = mediaIds))
+        if (result is ApiResult.Success) {
+            // Her own thumbnails are what she picked; they are not downloaded back.
+            mediaLock.withLock { mediaIds.zip(album.items).forEach { (id, item) -> item.preview?.let { thumbs[id] = it } } }
+            placeSent(album.conversationId, result.value)
+        }
+        return result.map { }
+    }
+
+    /** Thumbnails by media id, in memory only — the server marks them no-store, and so is a patient's photo here. */
+    private val thumbs = PhotoCache<ByteArray>(ThumbsKept)
+
+    /** Full photos by media id: a few, because each is up to a couple of megabytes. */
+    private val fullPhotos = PhotoCache<ByteArray>(FullPhotosKept)
+
+    /** The uploader puts her own thumbnails in from its thread while the screens read on theirs. */
+    private val mediaLock = Mutex()
+
+    /** A photo's thumbnail or a video's poster, fetched once; null while it cannot be had. */
+    suspend fun mediaThumb(mediaId: String): ByteArray? {
+        mediaLock.withLock { thumbs[mediaId] }?.let { return it }
+        val media = media ?: return null
+        val bytes = (media.thumb(mediaId) as? ApiResult.Success)?.value ?: return null
+        mediaLock.withLock { thumbs[mediaId] = bytes }
+        return bytes
+    }
+
+    /** The photo itself, for the viewer: through a signed address, then from memory. */
+    suspend fun mediaPhoto(mediaId: String): ByteArray? {
+        mediaLock.withLock { fullPhotos[mediaId] }?.let { return it }
+        val media = media ?: return null
+        val link = (media.link(mediaId) as? ApiResult.Success)?.value ?: return null
+        val bytes = (media.fetch(link) as? ApiResult.Success)?.value ?: return null
+        mediaLock.withLock { fullPhotos[mediaId] = bytes }
+        return bytes
+    }
+
+    /** A fresh signed address for a video, as the player opens it. Asked each time: it lasts minutes. */
+    suspend fun mediaUrl(mediaId: String): String? {
+        val media = media ?: return null
+        val link = (media.link(mediaId) as? ApiResult.Success)?.value ?: return null
+        return media.absolute(link)
+    }
+
+    // ---------------------------------------------------------------- the operators' switches
+
+    /**
+     * Videos and albums in a consultation ([FlagKeys.CHAT_MEDIA]). The one switch that
+     * opens rather than closes: until the server says so a message carries one photo,
+     * as it always could.
+     */
+    var chatMediaEnabled by mutableStateOf(false)
+        private set
+
+    /** When the switches were last read, and how long the server said that answer holds. */
+    private var flagsRead: TimeMark? = null
+    private var flagsTtl: Duration = Duration.ZERO
+
+    /**
+     * Reads the switches, at most once in the time the server says they hold. Silent: a
+     * failure leaves the last answer — or the closed default — standing, and is no banner.
+     */
+    suspend fun loadFlags() {
+        val api = api ?: return
+        flagsRead?.let { if (it.elapsedNow() < flagsTtl) return }
+        val flags = (api.featureFlags(platform) as? ApiResult.Success)?.value ?: return
+        chatMediaEnabled = flags.isEnabled(FlagKeys.CHAT_MEDIA)
+        flagsRead = TimeSource.Monotonic.markNow()
+        flagsTtl = flags.ttlSeconds.seconds
     }
 
     /** "yozmoqda…" for the patient: sent at most once per [TypingEveryMillis] while she types. */
@@ -771,6 +883,12 @@ class DoctorController(
         hasMoreConversations = false
         openConversation = null
         images.clear()
+        // Another account may sign in next: her albums stop, and their files are deleted.
+        uploader?.outgoing?.toList()?.forEach { uploader.cancel(it.localId) }
+        thumbs.clear()
+        fullPhotos.clear()
+        chatMediaEnabled = false
+        flagsRead = null
         labPhotos.clear()
         lastTypingSent = 0L
         patient = null
@@ -809,11 +927,31 @@ private const val RecentPatientsMax = 10
 /** Lab sheet pages held in memory: a few sheets' worth, each a phone photo. */
 private const val LabPhotosKept = 16
 
+/** A few albums' worth of thumbnails: each is tens of kilobytes. */
+private const val ThumbsKept = 120
+
+/** Full photos for the viewer: each is up to a couple of megabytes. */
+private const val FullPhotosKept = 6
+
 /** How often "yozmoqda…" is reported while she types; the server holds it a little longer. */
 private const val TypingEveryMillis = 3_000L
 
-/** A photo on its way to a thread: the picker's bytes, already resized and encoded. */
+/** Her profile photo on its way up: the picker's bytes, already resized and encoded. */
 data class CapturedPhotoData(val base64: String, val mimeType: String)
+
+/**
+ * The list's last line, from a line just sent: what it was and, for photos and videos,
+ * the first of them and how many — so the row says "3 ta rasm" before the next poll.
+ */
+private fun Conversation.withLastLine(message: DirectMessage): Conversation = copy(
+    lastMessage = message.body,
+    lastMessageAt = message.createdAt,
+    lastMessageKind = message.kind,
+    lastMessageMedia = message.media.firstOrNull(),
+    lastMessageMediaCount = message.media.size,
+    lastMessageVideoCount = message.media.count { it.kind == MediaKind.VIDEO },
+    lastMessageRead = false,
+)
 
 /** The key a record attached in a consultation is held under, apart from share tokens. */
 fun attachedKey(messageId: String): String = "message:$messageId"

@@ -19,6 +19,7 @@ import uz.sadora.contract.HealthMetric
 import uz.sadora.contract.LifeStage
 import uz.sadora.contract.ReportReason
 import uz.sadora.doctor.data.ApiFailure
+import uz.sadora.doctor.data.PrepareProblem
 import uz.sadora.doctor.data.readable
 
 /**
@@ -50,7 +51,7 @@ class StringsTest {
             addAll(
                 listOf(
                     phoneInvalid, network, validation, sessionExpired, blocked, forbidden,
-                    notFound, retryAfter(30), retrySoon, otpInvalid, featureClosed, unexpected,
+                    notFound, retryAfter(30), retrySoon, limitReached, otpInvalid, featureClosed, unexpected,
                 ),
             )
         }
@@ -191,6 +192,19 @@ class StringsTest {
             (0..4).forEach { add(frequency(it)) }
             (0..3).forEach { add(amount(it)) }
         }
+        with(t.media) {
+            PrepareProblem.entries.forEach { add(problem(it)) }
+            addAll(
+                listOf(
+                    attach, attachNote(10, videos = true), attachNote(1, videos = false), takePhoto, takePhotoNote,
+                    recordVideo, recordVideoNote, sendTitle(1), sendTitle(3), captionHint, remove, tooMany(10),
+                    videoTooLong, preparing, sending(40), failed, retry, discard, limitReached, featureOff, photo,
+                    video, count(3, 0), count(0, 1), count(2, 1), photoLabel(1, 1), photoLabel(2, 3),
+                    videoLabel(0, 42), videoLabel(1, 5), size(18L * 1024 * 1024), save, saved, saveFailed,
+                    videoFailed, play, loading,
+                ),
+            )
+        }
     }
 
     @Test
@@ -323,9 +337,9 @@ class StringsTest {
             t.tabs.days(1), t.tabs.age(1), t.tabs.lastDays(1), t.tabs.lastHours(1), t.tabs.symptomsWindow(1),
             t.tabs.kicksResult(1, "5 min"), t.work.workDays(1), t.work.ratingValue("5", 1), t.dates.daysAgo(1),
             t.prescriptions.everyDays(1), t.prescriptions.timesPerDay(1), t.badges.more(1),
-            t.labs.values(1),
+            t.labs.values(1), t.media.count(1, 1),
         ) + uz.sadora.contract.DoctorBadges.catalogue.map { (key, _) -> t.badges.goal(key, 1) }
-        val plural = Regex("""\b1 (days|hours|years|times|posts|patients|ratings|movements|questions|messages|likes|badges)\b""")
+        val plural = Regex("""\b1 (days|hours|years|times|posts|patients|ratings|movements|questions|messages|likes|badges|photos|videos)\b""")
         ones.forEach { assertTrue(!plural.containsMatchIn(it), "'$it' says one in the plural") }
         assertEquals("1 day", t.tabs.days(1))
         assertEquals("Last 1 day", t.tabs.lastDays(1))
@@ -374,6 +388,7 @@ class StringsTest {
             ApiFailure.Forbidden("x"),
             ApiFailure.NotFound("x"),
             ApiFailure.RateLimited("x", null),
+            ApiFailure.LimitReached("chat_media", "x"),
             ApiFailure.Otp("otp_invalid", ""),
             ApiFailure.FeatureDisabled("community", "x"),
             ApiFailure.Unexpected("x"),
