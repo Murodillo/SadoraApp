@@ -14,29 +14,20 @@ import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.useContents
 import kotlinx.cinterop.usePinned
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
-import platform.AVFoundation.AVAssetExportPreset1280x720
-import platform.AVFoundation.AVAssetExportPreset960x540
-import platform.AVFoundation.AVAssetExportSession
-import platform.AVFoundation.AVAssetExportSessionStatusCompleted
 import platform.AVFoundation.AVAssetImageGenerator
 import platform.AVFoundation.AVAssetTrack
-import platform.AVFoundation.AVFileTypeMPEG4
 import platform.AVFoundation.AVMediaTypeVideo
 import platform.AVFoundation.AVPlayer
 import platform.AVFoundation.AVPlayerItemStatusFailed
 import platform.AVFoundation.AVURLAsset
 import platform.AVFoundation.currentItem
 import platform.AVFoundation.duration
-import platform.AVFoundation.metadata
 import platform.AVFoundation.naturalSize
 import platform.AVFoundation.pause
 import platform.AVFoundation.play
@@ -265,10 +256,8 @@ private class IosPickedPhoto(
 }
 
 /**
- * A video from the gallery or the camera, in a temporary file of the app's. It is exported
- * as MP4 at 720p — at 540p when it runs longer than a minute and a half, which is what
- * keeps three minutes under the server's 100 MB: AVAssetExportSession offers presets, not
- * a bitrate.
+ * A video from the gallery or the camera, in a temporary file of the app's. It is sent as
+ * MP4 at 720p and 2.5 Mbit/s, the same as from Android — see [encodeVideo].
  */
 @OptIn(ExperimentalForeignApi::class)
 private class IosPickedVideo(private var source: NSURL, override val durationMs: Long?) : PickedMedia {
@@ -290,38 +279,10 @@ private class IosPickedVideo(private var source: NSURL, override val durationMs:
 
     override suspend fun prepare(onProgress: (Float) -> Unit): PreparedMedia {
         if ((durationMs ?: 0) > Limits.MEDIA_VIDEO_MAX_MS) throw MediaPrepareException(PrepareProblem.TooLong)
-        val asset = AVURLAsset(uRL = source, options = null)
-        val preset = if ((durationMs ?: 0) > LongVideoMs) AVAssetExportPreset960x540 else AVAssetExportPreset1280x720
-        val session = AVAssetExportSession(asset = asset, presetName = preset) ?: throw MediaPrepareException(PrepareProblem.Unreadable)
         // In the app's own folder, not the temporary one: a restart sends this very file on from where it stopped.
         val out = NSURL.fileURLWithPath(outgoingPath("mp4"))
         output = out
-        session.outputURL = out
-        session.outputFileType = AVFileTypeMPEG4
-        session.shouldOptimizeForNetworkUse = true
-        // An empty list, not none: none copies the original's notes — where it was filmed,
-        // the phone — into the export. The server blanks whatever another client leaves in.
-        session.metadata = emptyList<Any>()
-        val done = CompletableDeferred<Boolean>()
-        session.exportAsynchronouslyWithCompletionHandler { done.complete(session.status == AVAssetExportSessionStatusCompleted) }
-        try {
-            coroutineScope {
-                val ticker = launch {
-                    while (isActive) {
-                        onProgress(session.progress)
-                        delay(250)
-                    }
-                }
-                try {
-                    if (!done.await()) throw MediaPrepareException(PrepareProblem.Unreadable)
-                } finally {
-                    ticker.cancel()
-                }
-            }
-        } catch (cancelled: CancellationException) {
-            session.cancelExport()
-            throw cancelled
-        }
+        if (!encodeVideo(source, out, onProgress)) throw MediaPrepareException(PrepareProblem.Unreadable)
         onProgress(1f)
         return withContext(Dispatchers.Default) {
             val path = out.path ?: throw MediaPrepareException(PrepareProblem.Unreadable)
@@ -492,7 +453,6 @@ private const val ManifestName = "albums.json"
 private const val KeptPhotoEdge = 4096
 private const val PreviewEdge = 480
 private const val PosterEdge = 640
-private const val LongVideoMs = 90_000L
 
 /**
  * `AVPlayerViewController` with the system's own controls, on a signed address. Sound plays
