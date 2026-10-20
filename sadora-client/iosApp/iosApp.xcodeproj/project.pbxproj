@@ -678,6 +678,16 @@
 					"$(inherited)",
 					"-framework",
 					HealthKit,
+					"-framework",
+					AVFoundation,
+					"-framework",
+					AVKit,
+					"-framework",
+					CoreMedia,
+					"-framework",
+					Photos,
+					"-framework",
+					PhotosUI,
 				);
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
@@ -712,6 +722,16 @@
 					"$(inherited)",
 					"-framework",
 					HealthKit,
+					"-framework",
+					AVFoundation,
+					"-framework",
+					AVKit,
+					"-framework",
+					CoreMedia,
+					"-framework",
+					Photos,
+					"-framework",
+					PhotosUI,
 				);
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
