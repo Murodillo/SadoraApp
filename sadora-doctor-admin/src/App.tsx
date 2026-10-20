@@ -1,5 +1,6 @@
 import { QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter } from 'react-router-dom'
+import { clearMediaSends } from './api/mediaSend'
 import { clearPhotoCache } from './api/photos'
 import { createQueryClient } from './api/queryClient'
 import { AuthProvider, useAuth } from './auth/AuthContext'
@@ -16,8 +17,10 @@ export function App() {
       <AuthProvider
         onSessionEnd={() => {
           queryClient.clear()
-          // Photos are held as object URLs outside the query cache; they go with it.
+          // Photos are held as object URLs outside the query cache; they go with it, and
+          // so do photos and videos still on their way.
           clearPhotoCache()
+          clearMediaSends()
         }}
       >
         <ToastProvider>

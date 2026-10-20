@@ -1,14 +1,10 @@
 import { useState } from 'react'
 import { requestBlob } from '../api/client'
+import { formatFileSize } from '../api/media'
 import type { MessageDocument } from '../api/types'
 
-/** "240 KB", "1,4 MB": under a megabyte in whole KB, above it in MB with one decimal. */
-export function formatFileSize(bytes: number): string {
-  const kilo = 1024
-  if (bytes < kilo * kilo) return `${Math.max(1, Math.ceil(bytes / kilo))} KB`
-  const tenths = Math.round((bytes * 10) / (kilo * kilo))
-  return tenths % 10 === 0 ? `${tenths / 10} MB` : `${Math.floor(tenths / 10)},${tenths % 10} MB`
-}
+/** Lives with the photos and videos now, which weigh files the same way. */
+export { formatFileSize }
 
 export function reportDocumentPath(conversationId: string, messageId: string): string {
   return `/v1/community/conversations/${encodeURIComponent(conversationId)}/messages/${encodeURIComponent(messageId)}/document`

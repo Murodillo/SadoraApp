@@ -1,17 +1,14 @@
 import { limits } from './limits'
-import type { MessageImageUpload, PhotoUpload } from './types'
+import type { PhotoUpload } from './types'
 
-/** The longest edge a photo is sent at: plenty for a rash or a test strip, and small on the wire. */
-export const IMAGE_MAX_EDGE = 1280
-export const IMAGE_QUALITY = 0.82
+/** A photo for a message leaves at this quality, no more than `limits.mediaPhotoPx` (2048px) on its longest edge. */
+export const MEDIA_PHOTO_QUALITY = 0.85
 
-/** A photo ready to send, with a preview she sees before it goes. */
-export interface PreparedImage {
-  upload: MessageImageUpload
+/** A picture redrawn as a JPEG, with the size it was drawn at. */
+export interface EncodedJpeg {
+  blob: Blob
   width: number
   height: number
-  bytes: number
-  previewUrl: string
 }
 
 export class ImageProblem extends Error {
@@ -22,7 +19,7 @@ export class ImageProblem extends Error {
 }
 
 /** The size a picture is drawn at so its longest edge is at most `max`; never enlarged. */
-export function fitWithin(width: number, height: number, max: number = IMAGE_MAX_EDGE): { width: number; height: number } {
+export function fitWithin(width: number, height: number, max: number = limits.mediaPhotoPx): { width: number; height: number } {
   const longest = Math.max(width, height)
   if (longest <= max || longest <= 0) return { width: Math.max(1, Math.round(width)), height: Math.max(1, Math.round(height)) }
   const scale = max / longest
@@ -30,22 +27,15 @@ export function fitWithin(width: number, height: number, max: number = IMAGE_MAX
 }
 
 /**
- * A chosen file, redrawn in a canvas at no more than 1280px on its longest edge and
- * saved as a JPEG — whatever it came in as, so the server's JPEG/PNG check always
- * passes and a phone's 12-megapixel photo leaves as a few hundred kilobytes. A result
- * still over the server's 3 MB is refused here rather than there.
+ * A photo for a message, redrawn at no more than 2048px on its longest edge — what the
+ * server keeps anyway — and saved as a JPEG whatever it came in as, so the server's
+ * JPEG/PNG check always passes and a phone's 12-megapixel photo goes up as a megabyte
+ * or two rather than ten. A result over the server's 15 MB is refused here, not there.
  */
-export async function prepareImage(file: File): Promise<PreparedImage> {
-  if (!file.type.startsWith('image/')) throw new ImageProblem('Faqat rasm yuborish mumkin')
-  const encoded = await encodeJpeg(file, IMAGE_MAX_EDGE, IMAGE_QUALITY)
-  if (encoded.blob.size > limits.messageImageMaxBytes) throw new ImageProblem('Rasm juda katta — 3 MB dan oshmasin')
-  return {
-    upload: { imageBase64: base64Of(await readAsDataUrl(encoded.blob)), mimeType: 'image/jpeg' },
-    width: encoded.width,
-    height: encoded.height,
-    bytes: encoded.blob.size,
-    previewUrl: URL.createObjectURL(encoded.blob),
-  }
+export async function prepareMessagePhoto(file: Blob): Promise<EncodedJpeg> {
+  const encoded = await encodeJpeg(file, limits.mediaPhotoPx, MEDIA_PHOTO_QUALITY)
+  if (encoded.blob.size > limits.mediaPhotoMaxBytes) throw new ImageProblem('Rasm juda katta — kichikroq rasm tanlang')
+  return encoded
 }
 
 // ---------------------------------------------------------------- her profile photo
@@ -112,34 +102,53 @@ export function base64Of(dataUrl: string): string {
  * leaves upright — the orientation tag itself is not carried over.
  */
 async function encodeJpeg(
-  file: File,
+  file: Blob,
   maxEdge: number,
   quality: number,
   check?: (width: number, height: number) => string | null,
-): Promise<{ blob: Blob; width: number; height: number }> {
+): Promise<EncodedJpeg> {
   const source = await decode(file)
   try {
     const problem = check?.(source.width, source.height)
     if (problem) throw new ImageProblem(problem)
-    const size = fitWithin(source.width, source.height, maxEdge)
-    const canvas = document.createElement('canvas')
-    canvas.width = size.width
-    canvas.height = size.height
-    const context = canvas.getContext('2d')
-    if (!context) throw new ImageProblem("Rasmni o'qib bo'lmadi")
-    // A transparent PNG would turn black as a JPEG; white is what a photo of paper expects.
-    context.fillStyle = '#fff'
-    context.fillRect(0, 0, size.width, size.height)
-    context.drawImage(source.image, 0, 0, size.width, size.height)
-    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/jpeg', quality))
-    if (!blob) throw new ImageProblem("Rasmni o'qib bo'lmadi")
-    return { blob, ...size }
+    return await drawJpeg(source.image, source.width, source.height, maxEdge, quality)
   } finally {
     source.release()
   }
 }
 
-async function decode(file: File): Promise<{ image: CanvasImageSource; width: number; height: number; release: () => void }> {
+/**
+ * Draws a decoded picture — an `<img>`, or a `<video>` paused on a frame — at no more
+ * than `maxEdge` on its longest side and encodes it as a JPEG.
+ */
+export async function drawJpeg(
+  source: CanvasImageSource,
+  width: number,
+  height: number,
+  maxEdge: number,
+  quality: number,
+): Promise<EncodedJpeg> {
+  const size = fitWithin(width, height, maxEdge)
+  const canvas = document.createElement('canvas')
+  canvas.width = size.width
+  canvas.height = size.height
+  const context = canvas.getContext('2d')
+  if (!context) throw new ImageProblem("Rasmni o'qib bo'lmadi")
+  // A transparent PNG would turn black as a JPEG; white is what a photo of paper expects.
+  context.fillStyle = '#fff'
+  context.fillRect(0, 0, size.width, size.height)
+  context.drawImage(source, 0, 0, size.width, size.height)
+  const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/jpeg', quality))
+  if (!blob) throw new ImageProblem("Rasmni o'qib bo'lmadi")
+  return { blob, ...size }
+}
+
+/** A blob as the base64 the server's `posterBase64` and `imageBase64` expect. */
+export async function base64OfBlob(blob: Blob): Promise<string> {
+  return base64Of(await readAsDataUrl(blob))
+}
+
+async function decode(file: Blob): Promise<{ image: CanvasImageSource; width: number; height: number; release: () => void }> {
   const url = URL.createObjectURL(file)
   try {
     const image = new Image()
@@ -163,10 +172,4 @@ function readAsDataUrl(blob: Blob): Promise<string> {
     reader.onerror = () => reject(new ImageProblem("Rasmni o'qib bo'lmadi"))
     reader.readAsDataURL(blob)
   })
-}
-
-/** `1.4 MB`, `320 KB` — for the chip under the composer. */
-export function formatBytes(bytes: number): string {
-  if (bytes >= 1_000_000) return `${(bytes / 1_000_000).toFixed(1)} MB`
-  return `${Math.max(1, Math.round(bytes / 1000))} KB`
 }

@@ -1,6 +1,7 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { QueryClient } from '@tanstack/react-query'
 import { ApiFailure, query, request } from './client'
+import { CHAT_MEDIA_FLAG } from './media'
 import type {
   Ack,
   BadgeBoard,
@@ -21,6 +22,7 @@ import type {
   DoctorStats,
   DoctorSummary,
   EarningLine,
+  FeatureFlags,
   Page,
   Prescription,
   SendPrescriptionRequest,
@@ -56,6 +58,7 @@ export const keys = {
   note: (conversationId: string) => ['doctor', 'patients', conversationId, 'note'] as const,
   history: (conversationId: string) => ['doctor', 'patients', conversationId, 'history'] as const,
   prescriptions: (conversationId: string) => ['community', 'prescriptions', conversationId] as const,
+  flags: ['me', 'feature-flags'] as const,
 }
 
 /** How often the conversation list and an open thread ask the server again. */
@@ -79,6 +82,26 @@ export function uniqueRows<T>(pages: readonly (readonly T[])[] | undefined, keyO
     }
   }
   return rows
+}
+
+/**
+ * The switches an operator has set for her, already decided by the server. Asked without
+ * a platform, as the server asks itself when it checks a send, so the panel and the
+ * server never disagree about her. Kept for the five minutes the server allows.
+ */
+export const useFeatureFlags = () =>
+  useQuery({
+    queryKey: keys.flags,
+    queryFn: () => request<FeatureFlags>('/v1/feature-flags'),
+    staleTime: 5 * 60_000,
+  })
+
+/**
+ * Whether a consultation message may carry videos and up to ten items. Off while the
+ * flags load or cannot be had: one photo is what the server accepts either way.
+ */
+export function useChatMedia(): boolean {
+  return useFeatureFlags().data?.flags[CHAT_MEDIA_FLAG] === true
 }
 
 /** Her own doctor account — the status that decides what the panel shows at all. */
@@ -258,21 +281,26 @@ function patchConversation(client: QueryClient, conversation: Conversation) {
   )
 }
 
-/** A text, or a photo with an optional caption. The sent line is put in the thread at once. */
+/** The path a line is sent to; photos and videos go there too, by the ids of their uploads. */
+export const messagesPath = (conversationId: string) => `${conversationPath(conversationId)}/messages`
+
+/** A line she sent goes into the open thread at once, and the thread and the list are asked again. */
+export function addSentMessage(client: QueryClient, conversationId: string, message: DirectMessage) {
+  client.setQueryData<ConversationThread>(keys.thread(conversationId), (thread) =>
+    thread && !thread.messages.some((item) => item.id === message.id)
+      ? { ...thread, messages: [...thread.messages, message] }
+      : thread,
+  )
+  void client.invalidateQueries({ queryKey: keys.thread(conversationId) })
+  void client.invalidateQueries({ queryKey: keys.conversations })
+}
+
+/** A text. Photos and videos are uploaded first and sent from `mediaSend`. */
 export const useSendMessage = (conversationId: string) => {
   const client = useQueryClient()
   return useMutation({
-    mutationFn: (body: SendMessageRequest) =>
-      request<DirectMessage>(`${conversationPath(conversationId)}/messages`, { method: 'POST', body }),
-    onSuccess: (message) => {
-      client.setQueryData<ConversationThread>(keys.thread(conversationId), (thread) =>
-        thread && !thread.messages.some((item) => item.id === message.id)
-          ? { ...thread, messages: [...thread.messages, message] }
-          : thread,
-      )
-      void client.invalidateQueries({ queryKey: keys.thread(conversationId) })
-      void client.invalidateQueries({ queryKey: keys.conversations })
-    },
+    mutationFn: (body: SendMessageRequest) => request<DirectMessage>(messagesPath(conversationId), { method: 'POST', body }),
+    onSuccess: (message) => addSentMessage(client, conversationId, message),
   })
 }
 

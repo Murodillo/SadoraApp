@@ -1,11 +1,14 @@
 import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { Link, useSearchParams } from 'react-router-dom'
 import { fieldsOf, messageOf } from '../api/client'
 import { useAuthorizedImage } from '../api/photos'
 import {
+  addSentMessage,
   CONVERSATIONS_POLL_MS,
   sendTyping,
+  useChatMedia,
   useCloseConsultation,
   useConversations,
   usePatientHistory,
@@ -17,10 +20,22 @@ import {
   useSendMessage,
   useThread,
 } from '../api/hooks'
-import { formatBytes, ImageProblem, prepareImage } from '../api/image'
-import type { PreparedImage } from '../api/image'
 import { limits } from '../api/limits'
-import type { Conversation, ConsultationSession, DirectMessage, PatientHistory, Prescription, QuickReply, ReportReason } from '../api/types'
+import { admitFiles, classifyFile, mediaPreview } from '../api/media'
+import { draftProblemText, prepareDraft, releaseDraft } from '../api/mediaDraft'
+import type { DraftMedia } from '../api/mediaDraft'
+import { discardMediaSend, queueMediaSend, retryMediaSend, usePendingSends } from '../api/mediaSend'
+import type { PendingSend } from '../api/mediaSend'
+import type {
+  Conversation,
+  ConsultationSession,
+  DirectMessage,
+  MessageMedia,
+  PatientHistory,
+  Prescription,
+  QuickReply,
+  ReportReason,
+} from '../api/types'
 import { consultationOpen, timeLeft } from '../api/consultation'
 import {
   durationLabel,
@@ -39,6 +54,9 @@ import {
   reportReasonOrder,
 } from '../components/labels'
 import { LabCard, labLinePhotoPath, LabReportDialog, labRecordPhotoPath } from '../components/LabReport'
+import { albumItemOf, MediaAlbum, PendingMediaBubble } from '../components/MediaAlbum'
+import { MediaSendDialog } from '../components/MediaSendDialog'
+import { MediaViewer } from '../components/MediaViewer'
 import { PatientRecord } from '../components/PatientRecord'
 import { ReportCard } from '../components/ReportDocument'
 import { CancelPrescriptionDialog, PatientPrescriptions, PrescriptionCard, PrescriptionDialog } from '../components/Prescription'
@@ -131,6 +149,13 @@ function lastLine(conversation: Conversation): string {
   switch (conversation.lastMessageKind) {
     case 'image':
       return conversation.lastMessage ? `📷 Rasm · ${conversation.lastMessage}` : '📷 Rasm'
+    case 'media':
+      return mediaPreview(
+        conversation.lastMessageMedia,
+        conversation.lastMessageMediaCount,
+        conversation.lastMessage,
+        conversation.lastMessageVideoCount ?? 0,
+      )
     case 'record':
       return '📋 Tibbiy karta'
     case 'prescription':
@@ -349,6 +374,8 @@ function ChatThread({
   const [writing, setWriting] = useState(false)
   const [cancelling, setCancelling] = useState<Prescription | null>(null)
   const [viewing, setViewing] = useState<{ url: string; caption: string } | null>(null)
+  const [viewingMedia, setViewingMedia] = useState<{ items: MessageMedia[]; index: number; caption: string } | null>(null)
+  const pending = usePendingSends(conversationId)
   const records = messages.filter((message) => message.kind === 'record')
   const [pickedRecord, setPickedRecord] = useState<DirectMessage | null>(null)
   const [sideFlash, setSideFlash] = useState(0)
@@ -427,10 +454,12 @@ function ChatThread({
           <MessageList
             conversationId={conversationId}
             messages={messages}
+            pending={pending}
             typing={Boolean(thread.data?.otherTyping)}
             typingName={name}
             now={now}
             onImage={(url, caption) => setViewing({ url, caption })}
+            onMedia={(message, index) => setViewingMedia({ items: message.media ?? [], index, caption: message.body })}
             onRecord={openRecord}
             onCancelPrescription={setCancelling}
             activeRecordId={shownRecord?.id ?? null}
@@ -477,6 +506,14 @@ function ChatThread({
       {cancelling && (
         <CancelPrescriptionDialog conversationId={conversationId} prescription={cancelling} onClose={() => setCancelling(null)} />
       )}
+      {viewingMedia && viewingMedia.items.length > 0 && (
+        <MediaViewer
+          items={viewingMedia.items}
+          start={viewingMedia.index}
+          caption={viewingMedia.caption}
+          onClose={() => setViewingMedia(null)}
+        />
+      )}
       {viewing && (
         <Modal title="Rasm" wide onClose={() => setViewing(null)}>
           <img className="msg-full" src={viewing.url} alt={viewing.caption || 'Bemor yuborgan rasm'} />
@@ -512,20 +549,25 @@ function ConsultationBanner({ conversation, open, now }: { conversation: Convers
 function MessageList({
   conversationId,
   messages,
+  pending,
   typing,
   typingName,
   now,
   onImage,
+  onMedia,
   onRecord,
   onCancelPrescription,
   activeRecordId,
 }: {
   conversationId: string
   messages: DirectMessage[]
+  /** Her photos and videos still on their way, drawn after the last line. */
+  pending: PendingSend[]
   typing: boolean
   typingName: string
   now: number
   onImage: (url: string, caption: string) => void
+  onMedia: (message: DirectMessage, index: number) => void
   onRecord: (message: DirectMessage) => void
   onCancelPrescription: (prescription: Prescription) => void
   activeRecordId: string | null
@@ -534,6 +576,7 @@ function MessageList({
   // Follows new lines only while she is at the bottom; reading back up is left alone.
   const atBottom = useRef(true)
   const last = messages.at(-1)
+  const lastPending = pending.at(-1)?.key
 
   useLayoutEffect(() => {
     const element = scroller.current
@@ -541,7 +584,13 @@ function MessageList({
     if (atBottom.current || last?.isMine) element.scrollTop = element.scrollHeight
   }, [messages.length, last?.id, last?.isMine, typing])
 
-  if (!messages.length) {
+  // A send she just started is hers to watch: brought into view wherever she was.
+  useLayoutEffect(() => {
+    const element = scroller.current
+    if (element && lastPending) element.scrollTop = element.scrollHeight
+  }, [lastPending])
+
+  if (!messages.length && !pending.length) {
     return (
       <div className="chat-scroll" ref={scroller}>
         <Empty art="ic3d_message">Hali xabar yo'q.</Empty>
@@ -575,6 +624,7 @@ function MessageList({
                 conversationId={conversationId}
                 message={message}
                 onImage={onImage}
+                onMedia={onMedia}
                 onRecord={onRecord}
                 onCancelPrescription={onCancelPrescription}
                 activeRecord={message.id === activeRecordId}
@@ -582,6 +632,14 @@ function MessageList({
             </Fragment>
           )
         })}
+        {pending.map((send) => (
+          <PendingMediaBubble
+            key={send.key}
+            send={send}
+            onRetry={() => retryMediaSend(send.key)}
+            onDiscard={() => discardMediaSend(send.key)}
+          />
+        ))}
       </ol>
       {typing && (
         <div className="chat-typing" aria-live="polite">
@@ -601,6 +659,7 @@ function MessageBubble({
   conversationId,
   message,
   onImage,
+  onMedia,
   onRecord,
   onCancelPrescription,
   activeRecord,
@@ -608,6 +667,7 @@ function MessageBubble({
   conversationId: string
   message: DirectMessage
   onImage: (url: string, caption: string) => void
+  onMedia: (message: DirectMessage, index: number) => void
   onRecord: (message: DirectMessage) => void
   onCancelPrescription: (prescription: Prescription) => void
   activeRecord: boolean
@@ -630,11 +690,14 @@ function MessageBubble({
   )
 
   // A lab line whose sheet she has since deleted, or a report line without its file,
-  // keeps only its plain-text copy, drawn as an ordinary line.
+  // keeps only its plain-text copy, drawn as an ordinary line; so does a media line that
+  // came without its items.
   const [openLab, setOpenLab] = useState(false)
   const labReport = kind === 'lab' ? message.labReport : null
   const reportDocument = kind === 'report' ? message.document : null
-  const lineKind = (kind === 'lab' && !labReport) || (kind === 'report' && !reportDocument) ? 'text' : kind
+  const media = kind === 'media' && message.media?.length ? message.media : null
+  const lineKind =
+    (kind === 'lab' && !labReport) || (kind === 'report' && !reportDocument) || (kind === 'media' && !media) ? 'text' : kind
 
   let content: ReactNode
   const prescription = kind === 'prescription' ? message.prescription : null
@@ -664,6 +727,13 @@ function MessageBubble({
     content = <LabCard report={labReport} onOpen={() => setOpenLab(true)} />
   } else if (reportDocument) {
     content = <ReportCard conversationId={conversationId} messageId={message.id} document={reportDocument} />
+  } else if (media) {
+    content = (
+      <>
+        <MediaAlbum items={media.map(albumItemOf)} onOpen={(index) => onMedia(message, index)} />
+        {message.body && <p className="msg-text">{message.body}</p>}
+      </>
+    )
   } else if (kind === 'image') {
     content = (
       <>
@@ -693,9 +763,10 @@ function MessageBubble({
 }
 
 /**
- * A photo in the thread. It is private, so it is fetched with her token and shown from
- * an object URL, which is let go when the bubble leaves. Its box is sized from the
- * width and height the server sent, so the thread does not jump when it arrives.
+ * A photo of an old `image` line, sent before the media store. It is private, so it is
+ * fetched with her token and shown from an object URL, which is let go when the bubble
+ * leaves. Its box is sized from the width and height the server sent, so the thread does
+ * not jump when it arrives.
  */
 function MessagePhoto({
   conversationId,
@@ -744,14 +815,19 @@ function Composer({
   open: boolean
   draft: string
   onDraft: (text: string) => void
-  /** Set in a consultation: the "+" menu offers a prescription beside the photo. */
+  /** Set in a consultation: the "+" menu offers a prescription beside the photos and videos. */
   onPrescription?: () => void
 }) {
   const send = useSendMessage(conversationId)
+  const client = useQueryClient()
+  const chatMedia = useChatMedia()
   const [plus, setPlus] = useState(false)
   const quickReplies = useQuickReplies()
   const { notify } = useToast()
-  const [image, setImage] = useState<PreparedImage | null>(null)
+  // The send preview: open while `previewing`, with what she picked so far and a caption.
+  const [previewing, setPreviewing] = useState(false)
+  const [drafts, setDrafts] = useState<DraftMedia[]>([])
+  const [caption, setCaption] = useState('')
   const [preparing, setPreparing] = useState(false)
   const file = useRef<HTMLInputElement>(null)
   const box = useRef<HTMLTextAreaElement>(null)
@@ -765,10 +841,17 @@ function Composer({
   const [slashClosed, setSlashClosed] = useState(false)
   const [active, setActive] = useState(0)
 
-  // The preview is an object URL: let it go when it is replaced, sent or left behind.
-  useEffect(() => () => {
-    if (image) URL.revokeObjectURL(image.previewUrl)
-  }, [image])
+  // Drafts hold object URLs; whatever is still in the preview when the thread closes goes with it.
+  const draftsRef = useRef(drafts)
+  draftsRef.current = drafts
+  const mounted = useRef(true)
+  useEffect(() => {
+    mounted.current = true
+    return () => {
+      mounted.current = false
+      draftsRef.current.forEach(releaseDraft)
+    }
+  }, [])
 
   const locked = conversation.blocked
     ? "Bu suhbatga yozib bo'lmaydi: bemor bilan aloqa cheklangan."
@@ -804,31 +887,95 @@ function Composer({
   }, [picker])
 
   const length = draft.trim().length
-  const ready = !locked && !send.isPending && !preparing && length <= limits.messageMax && (length > 0 || image !== null)
+  const ready = !locked && !send.isPending && length > 0 && length <= limits.messageMax
 
   function submit() {
     if (!ready) return
-    const body = draft.trim()
-    send.mutate(image ? { body, image: image.upload } : { body }, {
-      onSuccess: () => {
-        onDraft('')
-        setImage(null)
-        lastTyping.current = 0
+    send.mutate(
+      { body: draft.trim() },
+      {
+        onSuccess: () => {
+          onDraft('')
+          lastTyping.current = 0
+        },
+        onError: (error) => notify(messageOf(error), 'error'),
       },
-      onError: (error) => notify(messageOf(error), 'error'),
-    })
+    )
   }
 
-  async function choose(chosen: File | undefined) {
-    if (!chosen) return
-    setPreparing(true)
-    try {
-      setImage(await prepareImage(chosen))
-    } catch (error) {
-      notify(error instanceof ImageProblem ? error.message : "Rasmni o'qib bo'lmadi", 'error')
-    } finally {
-      setPreparing(false)
+  /**
+   * Files from the picker into the send preview. What the message cannot carry is left
+   * out before anything is read; the rest is made ready one file at a time, and every
+   * file that could not be is named in a toast. The text already typed becomes the
+   * caption, as it does in the app.
+   */
+  async function choose(files: File[]) {
+    if (!files.length) return
+    const problems: string[] = []
+    const picked: { file: File; choice: Exclude<ReturnType<typeof classifyFile>, { problem: string }> }[] = []
+    for (const chosen of files) {
+      const choice = classifyFile(chosen.name, chosen.type)
+      if ('problem' in choice) problems.push(`${chosen.name}: ${choice.problem}`)
+      else picked.push({ file: chosen, choice })
     }
+    const admitted = admitFiles(
+      drafts.length,
+      picked.map((item) => ({ ...item, kind: item.choice.kind })),
+      chatMedia,
+    )
+    problems.push(...admitted.problems)
+    const ready: DraftMedia[] = []
+    setPreparing(true)
+    for (const item of admitted.take) {
+      try {
+        ready.push(await prepareDraft(item.file, item.choice))
+      } catch (error) {
+        problems.push(`${item.file.name}: ${draftProblemText(error)}`)
+      }
+    }
+    setPreparing(false)
+    if (!mounted.current) {
+      ready.forEach(releaseDraft)
+      return
+    }
+    for (const problem of new Set(problems)) notify(problem, 'error')
+    if (!ready.length) return
+    setDrafts((current) => [...current, ...ready])
+    if (!previewing) {
+      setCaption(draft.trim())
+      setPreviewing(true)
+    }
+  }
+
+  function removeDraft(key: string) {
+    const gone = drafts.find((item) => item.key === key)
+    if (gone) releaseDraft(gone)
+    const rest = drafts.filter((item) => item.key !== key)
+    setDrafts(rest)
+    if (!rest.length) setPreviewing(false)
+  }
+
+  function closePreview() {
+    drafts.forEach(releaseDraft)
+    setDrafts([])
+    setPreviewing(false)
+  }
+
+  /** Into the thread as a pending album at once; the uploads run from there. The caption took the typed text. */
+  function sendMedia() {
+    const text = caption.trim()
+    if (!drafts.length || text.length > limits.messageMax) return
+    queueMediaSend({
+      conversationId,
+      caption: text,
+      items: drafts,
+      onSent: (message) => addSentMessage(client, conversationId, message),
+    })
+    setDrafts([])
+    setPreviewing(false)
+    setCaption('')
+    onDraft('')
+    lastTyping.current = 0
   }
 
   /** Into the box, never sent: she reads it over and sends it herself. */
@@ -906,16 +1053,18 @@ function Composer({
           {locked}
         </p>
       )}
-      {image && !locked && (
-        <div className="chat-attachment">
-          <img src={image.previewUrl} alt="Yuboriladigan rasm" />
-          <span className="faint">
-            {image.width}×{image.height} · {formatBytes(image.bytes)}
-          </span>
-          <button type="button" className="btn ghost small" onClick={() => setImage(null)} aria-label="Rasmni olib tashlash">
-            ✕
-          </button>
-        </div>
+      {previewing && drafts.length > 0 && !locked && (
+        <MediaSendDialog
+          drafts={drafts}
+          caption={caption}
+          onCaption={setCaption}
+          onRemove={removeDraft}
+          onAdd={() => file.current?.click()}
+          canAdd={chatMedia && drafts.length < limits.messageMediaMax}
+          adding={preparing}
+          onSend={sendMedia}
+          onClose={closePreview}
+        />
       )}
       <div className="chat-input-row">
         <span style={{ position: 'relative' }}>
@@ -923,7 +1072,7 @@ function Composer({
             type="button"
             className={`btn ghost chat-attach${plus ? ' on' : ''}`}
             onClick={() => setPlus((current) => !current)}
-            disabled={Boolean(locked) || preparing || send.isPending}
+            disabled={Boolean(locked) || preparing}
             aria-label="Biriktirish"
             aria-haspopup="menu"
             aria-expanded={plus}
@@ -941,7 +1090,7 @@ function Composer({
                   file.current?.click()
                 }}
               >
-                📷 Rasm
+                {chatMedia ? '🖼 Rasm yoki video' : '📷 Rasm'}
               </button>
               {onPrescription && (
                 <button
@@ -975,10 +1124,13 @@ function Composer({
         <input
           ref={file}
           type="file"
-          accept="image/*"
+          // With the flag off a message carries one photo; with it on, up to ten photos and videos.
+          accept={chatMedia ? 'image/*,video/mp4,video/quicktime,.mov,.m4v' : 'image/*'}
+          multiple={chatMedia}
           hidden
+          aria-label={chatMedia ? 'Rasm yoki video tanlash' : 'Rasm tanlash'}
           onChange={(event) => {
-            void choose(event.target.files?.[0])
+            void choose([...(event.target.files ?? [])])
             event.target.value = ''
           }}
         />
@@ -989,7 +1141,7 @@ function Composer({
           value={draft}
           maxLength={limits.messageMax}
           disabled={Boolean(locked)}
-          placeholder={locked ? '' : image ? 'Rasmga izoh (ixtiyoriy)…' : 'Xabar yozing… ( / — tayyor javoblar)'}
+          placeholder={locked ? '' : 'Xabar yozing… ( / — tayyor javoblar)'}
           onChange={(event) => {
             const text = event.target.value
             onDraft(text)

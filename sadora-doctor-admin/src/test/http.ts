@@ -6,6 +6,8 @@ export interface Call {
   path: string
   search: URLSearchParams
   body: unknown
+  /** What was sent when it was not JSON: the bytes of an upload piece. */
+  raw?: BodyInit | null
   headers: Record<string, string>
 }
 
@@ -39,6 +41,7 @@ export function mockApi(routes: Record<string, Handler | Reply>) {
       path: url.pathname,
       search: url.searchParams,
       body: typeof init.body === 'string' ? JSON.parse(init.body) : undefined,
+      raw: typeof init.body === 'string' ? undefined : init.body,
       headers: { ...(init.headers as Record<string, string> | undefined) },
     }
     calls.push(call)

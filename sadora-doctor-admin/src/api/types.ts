@@ -1,6 +1,7 @@
 /*
  * The wire types this panel reads and writes, mirrored from `sadora-backend/contract`
- * (Common.kt, Auth.kt, Profile.kt, Doctors.kt, Community.kt, Share.kt, DoctorWork.kt).
+ * (Common.kt, Auth.kt, Profile.kt, Doctors.kt, Community.kt, Media.kt, FeatureFlags.kt, Share.kt,
+ * DoctorWork.kt).
  * TypeScript cannot read the Kotlin, so these are written down by hand under the same
  * names; a field the server adds is simply ignored until it is added here. Instants arrive as ISO-8601 strings.
  */
@@ -251,7 +252,11 @@ export interface CreateCommentRequest {
 
 export type LifeStage = 'cycle' | 'trying_to_conceive' | 'pregnancy' | 'postpartum' | 'perimenopause' | 'menopause'
 
-export type MessageKind = 'text' | 'image' | 'record' | 'prescription' | 'lab' | 'report'
+/**
+ * `image` is a photo sent before the media store (one, fetched from `…/messages/{id}/image`);
+ * `media` is what every photo and video is sent as now, its items in [DirectMessage.media].
+ */
+export type MessageKind = 'text' | 'image' | 'record' | 'prescription' | 'lab' | 'report' | 'media'
 
 /** Who a doctor is consulting: her real name, and what a doctor needs at a glance. */
 export interface ConsultationPatient {
@@ -301,10 +306,16 @@ export interface Conversation {
   patient?: ConsultationPatient | null
   consultation?: Consultation | null
   lastMessageKind?: MessageKind
+  /** A `media` last line's first photo or video, so the list can say "Video · 0:42". */
+  lastMessageMedia?: MessageMedia | null
+  /** How many photos and videos the last line carried, and how many of them were videos. */
+  lastMessageMediaCount?: number
+  lastMessageVideoCount?: number
   /** The last line is hers and the other side has read it. */
   lastMessageRead?: boolean
 }
 
+/** A photo of an old `image` line, sent before the media store. */
 export interface MessageImage {
   width: number
   height: number
@@ -330,6 +341,8 @@ export interface DirectMessage {
   labReport?: LabReport | null
   /** Set on a `report` line: her PDF, fetched from `…/messages/{id}/document`. */
   document?: MessageDocument | null
+  /** Set on a `media` line: its photos and videos, in the order they were chosen. */
+  media?: MessageMedia[]
 }
 
 /** The file behind a `report` line. */
@@ -442,15 +455,76 @@ export interface ConversationThread {
   otherReadAt?: string | null
 }
 
-export interface MessageImageUpload {
-  imageBase64: string
-  mimeType: 'image/jpeg' | 'image/png'
-}
-
+/** A text; or finished uploads, in order, with `body` as their caption. */
 export interface SendMessageRequest {
   body: string
-  image?: MessageImageUpload
+  /** Up to 10 in a consultation once `chat_media` is on; one photo while it is off. */
+  mediaIds?: string[]
   attachRecord?: boolean
+}
+
+// ---------------------------------------------------------------- photos and videos (Media.kt)
+
+/*
+ * A file goes up before the message that carries it: start an upload, send the bytes in
+ * pieces of `chunkBytes` at `?offset=`, complete it, then send the message with the
+ * finished ids. Thumbnails are read with the session; the photo itself and a video are
+ * opened through a `MediaLink`, an address signed for 15 minutes, because a `<video>`
+ * cannot send the session's header.
+ */
+
+export type MediaKind = 'photo' | 'video'
+
+/** One photo or video of a `media` line. */
+export interface MessageMedia {
+  id: string
+  kind: MediaKind
+  /** As it is shown: a video recorded upright is taller than it is wide. */
+  width: number
+  height: number
+  /** A video's length. */
+  durationMs?: number | null
+  /** What a download weighs: the photo, or the whole video. */
+  sizeBytes: number
+  /** False for a video sent without a poster; `/thumb` then answers 404. */
+  hasThumbnail?: boolean
+}
+
+/** Photo: `image/jpeg` or `image/png` up to 15 MB; video: `video/mp4` or `video/quicktime` up to 100 MB. */
+export interface StartMediaUploadRequest {
+  kind: MediaKind
+  mimeType: string
+  sizeBytes: number
+}
+
+/** An upload in progress: how much of it the server has. */
+export interface MediaUpload {
+  id: string
+  kind: MediaKind
+  sizeBytes: number
+  receivedBytes: number
+  /** The size of every piece but the last. */
+  chunkBytes: number
+}
+
+/** A video brings its poster: a JPEG as base64 without a `data:` prefix, ≤ 1 MB decoded. */
+export interface CompleteMediaUploadRequest {
+  posterBase64?: string | null
+}
+
+/** A signed address, relative to the API's base, good until `expiresAt`. */
+export interface MediaLink {
+  url: string
+  expiresAt: string
+}
+
+// ---------------------------------------------------------------- feature flags (FeatureFlags.kt)
+
+/** The flags already decided for her; only the verdicts, never the rules. */
+export interface FeatureFlags {
+  flags: Record<string, boolean>
+  evaluatedAt: string
+  ttlSeconds?: number
 }
 
 // ---------------------------------------------------------------- the patient record (Share.kt)

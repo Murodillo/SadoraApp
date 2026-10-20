@@ -1,9 +1,9 @@
-import { render, waitFor } from '@testing-library/react'
+import { render, renderHook, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { Avatar, initialOf } from '../components/ui'
 import { apiError, mockApi } from '../test/http'
 import { signIn } from '../test/render'
-import { acquirePhoto, clearPhotoCache, IDLE_PHOTOS, peekPhoto, photoCacheSize, releasePhoto } from './photos'
+import { acquirePhoto, clearPhotoCache, IDLE_PHOTOS, peekPhoto, photoCacheSize, primePhoto, releasePhoto, usePhotoState } from './photos'
 
 /** A photo as the server answers one: JPEG bytes, not JSON. */
 function jpeg(): Response {
@@ -161,5 +161,42 @@ describe('the photo cache', () => {
     expect(await late).toBeNull()
     expect(photoCacheSize().held).toBe(0)
     expect(made).toBe(1)
+  })
+})
+
+describe('thumbnails', () => {
+  it('tells a thumbnail still loading from one that could not be had', async () => {
+    signIn()
+    let answer: (response: Response) => void = () => {}
+    mockApi({
+      'GET /v1/media/m1/thumb': () => new Promise<Response>((resolve) => (answer = resolve)),
+      'GET /v1/media/m2/thumb': apiError(404, 'not_found', 'Fayl topilmadi'),
+    })
+    const loading = renderHook(() => usePhotoState('/v1/media/m1/thumb'))
+    const missing = renderHook(() => usePhotoState('/v1/media/m2/thumb'))
+
+    expect(loading.result.current).toEqual({ url: null, failed: false })
+    await waitFor(() => expect(missing.result.current).toEqual({ url: null, failed: true }))
+
+    answer(jpeg())
+    await waitFor(() => expect(loading.result.current).toEqual({ url: 'blob:photo-1', failed: false }))
+    expect(renderHook(() => usePhotoState(null)).result.current).toEqual({ url: null, failed: false })
+  })
+
+  it('takes a picture the tab already has without fetching it, and owns it from then on', async () => {
+    signIn()
+    const api = mockApi({})
+    primePhoto('/v1/media/m1/thumb', 'blob:sent-photo')
+    expect(peekPhoto('/v1/media/m1/thumb')).toBe('blob:sent-photo')
+    expect(await acquirePhoto('/v1/media/m1/thumb')).toBe('blob:sent-photo')
+    expect(api.calls).toHaveLength(0)
+
+    // A second offer for a picture already held is let go at once.
+    primePhoto('/v1/media/m1/thumb', 'blob:duplicate')
+    expect(revoked).toEqual(['blob:duplicate'])
+
+    releasePhoto('/v1/media/m1/thumb')
+    clearPhotoCache()
+    expect(revoked).toEqual(['blob:duplicate', 'blob:sent-photo'])
   })
 })

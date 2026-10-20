@@ -92,6 +92,12 @@ const OFFLINE_MESSAGE = "Serverga ulanib bo'lmadi. Internet aloqasini tekshiring
 interface RequestOptions {
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
   body?: unknown
+  /**
+   * Raw bytes instead of a JSON `body`: a piece of a photo or video on its way up, sent
+   * as `application/octet-stream`. A Blob can be read again, so the retry after a token
+   * renewal sends the same bytes.
+   */
+  bytes?: Blob
   signal?: AbortSignal
   /** Sign-in itself: no token is sent, and a refusal must not end a session. */
   anonymous?: boolean
@@ -111,7 +117,7 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
  * The same call for bytes rather than JSON — a photo in a message thread, which is
  * private and so cannot be an `<img src>` the browser fetches without her token.
  */
-export async function requestBlob(path: string, options: Omit<RequestOptions, 'body' | 'anonymous'> = {}): Promise<Blob> {
+export async function requestBlob(path: string, options: Omit<RequestOptions, 'body' | 'bytes' | 'anonymous'> = {}): Promise<Blob> {
   const { response, sentWith } = await exchange(path, options)
   if (!response.ok) return read<never>(response, sentWith)
   return response.blob()
@@ -217,19 +223,19 @@ export async function logout(): Promise<void> {
 }
 
 async function send(path: string, options: RequestOptions, token: string | null): Promise<Response> {
-  const { method = 'GET', body, signal, headers = {} } = options
+  const { method = 'GET', body, bytes, signal, headers = {} } = options
   try {
     return await fetch(API_BASE + path, {
       method,
       signal,
       headers: {
-        'Content-Type': 'application/json',
+        'Content-Type': bytes ? 'application/octet-stream' : 'application/json',
         // The server words its refusals in the language asked for: see panelLanguage.
         'Accept-Language': panelLanguage(),
         ...headers,
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
-      body: body === undefined ? undefined : JSON.stringify(body),
+      body: bytes ?? (body === undefined ? undefined : JSON.stringify(body)),
     })
   } catch (cause) {
     if (signal?.aborted) throw cause

@@ -677,9 +677,9 @@ describe('Profil — consultations switch', () => {
 })
 
 describe('helpers', () => {
-  it('fits a photo within 1280px on its longest edge without enlarging it', () => {
-    expect(fitWithin(4000, 3000)).toEqual({ width: 1280, height: 960 })
-    expect(fitWithin(1080, 1920)).toEqual({ width: 720, height: 1280 })
+  it('fits a photo within 2048px on its longest edge without enlarging it', () => {
+    expect(fitWithin(4000, 3000)).toEqual({ width: 2048, height: 1536 })
+    expect(fitWithin(1080, 1920)).toEqual({ width: 1080, height: 1920 })
     expect(fitWithin(800, 600)).toEqual({ width: 800, height: 600 })
   })
 

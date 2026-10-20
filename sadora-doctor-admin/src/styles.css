@@ -2501,28 +2501,6 @@ button.btn.chat-attach {
   font-size: 13px;
 }
 
-.chat-attachment {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 6px;
-  border-radius: var(--radius-sm);
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  animation: fade-up var(--quick) var(--emphasized) both;
-}
-
-.chat-attachment img {
-  width: 48px;
-  height: 48px;
-  object-fit: cover;
-  border-radius: 6px;
-}
-
-.chat-attachment .faint {
-  flex: 1;
-}
-
 /* --- the patient */
 
 .chat-side {
@@ -4252,4 +4230,458 @@ textarea {
 
 .lab-sheet[open] > summary {
   margin-bottom: 6px;
+}
+
+/* ---------------------------------------------------------------- photos and videos */
+
+/* A media line is the album edge to edge, the caption and the stamp under it. */
+.msg.media .msg-bubble {
+  padding: 3px 3px 5px;
+  gap: 5px;
+}
+
+.msg.media .msg-text,
+.msg.media .msg-stamp,
+.msg.media .pending-failed {
+  padding: 0 7px;
+}
+
+/* The bubble is a grid: without a shrinkable track the album keeps its 300px and spills
+   out of a bubble the thread has narrowed. */
+.msg.media .msg-bubble {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.album {
+  position: relative;
+  display: grid;
+  gap: 2px;
+  width: 300px;
+  max-width: 100%;
+  border-radius: 11px;
+  overflow: hidden;
+}
+
+.album.one {
+  grid-template-columns: 1fr;
+}
+
+.album.two {
+  grid-template-columns: 1fr 1fr;
+  height: 160px;
+}
+
+.album.three {
+  grid-template-columns: 2fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  height: 240px;
+}
+
+.album.three .album-tile:first-child {
+  grid-row: span 2;
+}
+
+.album.grid {
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  aspect-ratio: 1 / 1;
+}
+
+.album-tile {
+  position: relative;
+  display: block;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: var(--surface);
+  overflow: hidden;
+  color: #fff;
+  font: inherit;
+}
+
+button.album-tile {
+  cursor: zoom-in;
+}
+
+button.album-tile:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
+}
+
+.album-tile img,
+.album-tile .skeleton,
+.album-blank {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.album-tile img {
+  transition: transform var(--standard) var(--gentle);
+}
+
+button.album-tile:hover img {
+  transform: scale(1.03);
+}
+
+/* A video without a poster, or a thumbnail that could not be had: a quiet tile. */
+.album-blank {
+  min-height: 90px;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--primary) 26%, var(--surface-2)), var(--surface-2));
+}
+
+.album-play {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  margin: -20px 0 0 -20px;
+  padding-left: 3px;
+  border-radius: 50%;
+  background: rgba(8, 6, 20, 0.55);
+  color: #fff;
+  font-size: 15px;
+  pointer-events: none;
+}
+
+.album-meta {
+  position: absolute;
+  left: 6px;
+  bottom: 6px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: rgba(8, 6, 20, 0.6);
+  color: #fff;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+
+.album-more {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(8, 6, 20, 0.5);
+  color: #fff;
+  font-size: 22px;
+  font-weight: 600;
+  pointer-events: none;
+}
+
+/* --- a send on its way */
+
+.msg.pending .album-tile img {
+  filter: saturate(0.85) brightness(0.85);
+}
+
+.album-progress {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(8, 6, 20, 0.25);
+}
+
+.album-progress > * {
+  grid-area: 1 / 1;
+}
+
+.progress-ring {
+  transform: rotate(-90deg);
+}
+
+.progress-ring circle {
+  fill: none;
+  stroke-width: 3;
+}
+
+.progress-ring .track {
+  stroke: rgba(255, 255, 255, 0.3);
+  fill: rgba(8, 6, 20, 0.5);
+}
+
+.progress-ring .bar {
+  stroke: #fff;
+  stroke-linecap: round;
+  transition: stroke-dashoffset var(--standard) var(--gentle);
+}
+
+button.album-cancel {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: #fff;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+button.album-cancel:focus-visible {
+  outline: 2px solid #fff;
+}
+
+.msg.pending.failed .msg-bubble {
+  border-color: color-mix(in srgb, var(--danger) 55%, var(--border));
+}
+
+.pending-failed {
+  display: grid;
+  gap: 6px;
+  color: var(--danger);
+  font-size: 13px;
+}
+
+.pending-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+/* --- the send preview */
+
+.media-pick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.media-pick-item {
+  position: relative;
+  width: 96px;
+  height: 96px;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  animation: pop var(--quick) var(--emphasized) both;
+}
+
+.media-pick-item img,
+.media-pick-item .album-blank {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  min-height: 0;
+}
+
+.media-pick-item .album-play {
+  width: 30px;
+  height: 30px;
+  margin: -15px 0 0 -15px;
+  font-size: 11px;
+}
+
+button.media-pick-remove {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(8, 6, 20, 0.65);
+  color: #fff;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+button.media-pick-remove:hover,
+button.media-pick-remove:focus-visible {
+  background: var(--danger);
+}
+
+button.media-pick-add {
+  width: 96px;
+  height: 96px;
+  border-radius: 10px;
+  border: 1px dashed var(--border);
+  background: transparent;
+  color: var(--text-dim);
+  font-size: 24px;
+  cursor: pointer;
+}
+
+button.media-pick-add:hover,
+button.media-pick-add:focus-visible {
+  border-color: color-mix(in srgb, var(--primary) 60%, var(--border));
+  color: var(--primary);
+}
+
+/* --- the viewer: always dark, whatever the panel's theme, as a photo is best seen */
+
+.viewer {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  background: rgba(6, 5, 14, 0.94);
+  color: #fff;
+  animation: fade var(--quick) var(--gentle) both;
+}
+
+.viewer:focus {
+  outline: none;
+}
+
+.viewer-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  font-size: 13px;
+}
+
+.viewer-count {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.viewer-meta {
+  color: rgba(255, 255, 255, 0.7);
+  font-variant-numeric: tabular-nums;
+}
+
+.viewer-actions {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.viewer .btn {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: #fff;
+}
+
+.viewer .btn:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.viewer-stage {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 0;
+  padding: 0 64px;
+  overflow: hidden;
+}
+
+.viewer-photo {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+.viewer-media {
+  position: relative;
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  border-radius: 6px;
+}
+
+video.viewer-media {
+  background: #000;
+}
+
+/* The thumbnail, blurred and as large as fits, until the sharp photo has drawn over it. */
+.viewer-under {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: blur(8px);
+}
+
+.viewer-wait {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+}
+
+.viewer-failed {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.viewer-nav {
+  position: absolute;
+  top: 50%;
+  width: 44px;
+  height: 64px;
+  margin-top: -32px;
+  border: 0;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  font-size: 32px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.viewer-nav:hover:not(:disabled),
+.viewer-nav:focus-visible {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.viewer-nav:focus-visible {
+  outline: 2px solid #fff;
+}
+
+.viewer-nav:disabled {
+  opacity: 0.25;
+  cursor: default;
+}
+
+.viewer-nav.prev {
+  left: 12px;
+}
+
+.viewer-nav.next {
+  right: 12px;
+}
+
+.viewer-caption {
+  margin: 0;
+  padding: 10px 16px 16px;
+  max-height: 22vh;
+  overflow-y: auto;
+  text-align: center;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+@media (max-width: 600px) {
+  .viewer-stage {
+    padding: 0 8px;
+  }
+
+  .viewer-nav {
+    top: auto;
+    bottom: 8px;
+    margin-top: 0;
+  }
 }

@@ -11,10 +11,19 @@ export const limits = {
   commentMax: 1000,
   doctorWorkplaceMax: 160,
   doctorBioMax: 500,
-  /** `Limits.MESSAGE_MAX`: a message, or a photo's caption. */
+  /** `Limits.MESSAGE_MAX`: a message, or the caption under photos and videos. */
   messageMax: 1000,
-  /** `Limits.MESSAGE_IMAGE_MAX_BYTES`: a photo after it is decoded. */
-  messageImageMaxBytes: 3_000_000,
+  /** `Limits.MESSAGE_MEDIA_MAX`: photos and videos in one consultation message. */
+  messageMediaMax: 10,
+  /** `Limits.MEDIA_PHOTO_PX`: the longest edge the server keeps of a photo. */
+  mediaPhotoPx: 2048,
+  /** `Limits.MEDIA_PHOTO_MAX_BYTES` and `MEDIA_VIDEO_MAX_BYTES`: what one upload may weigh. */
+  mediaPhotoMaxBytes: 15 * 1024 * 1024,
+  mediaVideoMaxBytes: 100 * 1024 * 1024,
+  /** `Limits.MEDIA_VIDEO_MAX_SECONDS`. */
+  mediaVideoMaxSeconds: 180,
+  /** `Limits.MEDIA_POSTER_MAX_BYTES`: a video's poster frame, decoded. */
+  mediaPosterMaxBytes: 1_000_000,
   /** `Limits.REPORT_NOTE_MAX`. */
   reportNoteMax: 500,
   /** `Limits.MEDICATION_NAME_MAX` and the `PRESCRIPTION_*` limits. */

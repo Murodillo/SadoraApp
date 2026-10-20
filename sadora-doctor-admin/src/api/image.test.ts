@@ -3,13 +3,13 @@ import {
   base64Of,
   fitWithin,
   ImageProblem,
-  IMAGE_MAX_EDGE,
   PHOTO_ACCEPT,
   PHOTO_MAX_EDGE,
   photoSizeProblem,
   photoTypeProblem,
   preparePhoto,
 } from './image'
+import { limits } from './limits'
 
 describe('fitWithin', () => {
   it('shrinks the longest edge to the limit and keeps the proportions', () => {
@@ -28,8 +28,11 @@ describe('fitWithin', () => {
     expect(fitWithin(333.4, 200.6, PHOTO_MAX_EDGE)).toEqual({ width: 333, height: 201 })
   })
 
-  it("keeps the message photos' own limit as the default", () => {
-    expect(fitWithin(2560, 1440)).toEqual({ width: IMAGE_MAX_EDGE, height: 720 })
+  it("keeps the message photos' own limit, the server's 2048px, as the default", () => {
+    expect(limits.mediaPhotoPx).toBe(2048)
+    expect(fitWithin(4096, 2304)).toEqual({ width: 2048, height: 1152 })
+    expect(fitWithin(3024, 4032)).toEqual({ width: 1536, height: 2048 })
+    expect(fitWithin(2048, 1000)).toEqual({ width: 2048, height: 1000 })
   })
 })
 

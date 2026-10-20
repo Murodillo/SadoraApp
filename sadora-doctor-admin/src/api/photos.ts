@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react'
 import { requestBlob } from './client'
 
 /**
- * Profile photos, fetched with her token and kept as object URLs.
+ * Profile photos and the thumbnails of photos and videos in a thread, fetched with her
+ * token and kept as object URLs.
  *
  * Every photo endpoint wants the `Authorization` header — a patient's photo belongs to
  * one consultation, and even a doctor's public one is served to signed-in people only —
@@ -94,6 +95,21 @@ export function clearPhotoCache(): void {
   for (const url of [...entries.keys()]) forget(url)
 }
 
+/**
+ * Hands the cache a picture the tab already has — her own photo or poster just sent,
+ * under its thumbnail's path — so the line that replaces the pending bubble shows it at
+ * once instead of fetching it back. The cache owns `objectUrl` from here on.
+ */
+export function primePhoto(url: string, objectUrl: string): void {
+  if (entries.has(url)) {
+    URL.revokeObjectURL(objectUrl)
+    return
+  }
+  entries.set(url, { promise: Promise.resolve(objectUrl), objectUrl, refs: 0 })
+  idle.push(url)
+  while (idle.length > IDLE_PHOTOS) forget(idle[0]!)
+}
+
 /** For tests: how many photos are held, and how many of those nobody shows. */
 export function photoCacheSize(): { held: number; idle: number } {
   return { held: entries.size, idle: idle.length }
@@ -104,16 +120,26 @@ export function photoCacheSize(): { held: number; idle: number } {
  * when there is no photo at all. The caller draws the initial for null.
  */
 export function usePhoto(url: string | null | undefined): string | null {
-  const [state, setState] = useState<{ url: string | null | undefined; objectUrl: string | null }>(() => ({
+  return usePhotoState(url).url
+}
+
+/**
+ * The same, telling a picture still on its way (`url` null, `failed` false) from one that
+ * could not be had — a thumbnail tile draws a shimmer for the first and a plain tile for
+ * the second.
+ */
+export function usePhotoState(url: string | null | undefined): { url: string | null; failed: boolean } {
+  const [state, setState] = useState<{ url: string | null | undefined; objectUrl: string | null; failed: boolean }>(() => ({
     url,
     objectUrl: url ? peekPhoto(url) : null,
+    failed: false,
   }))
 
   useEffect(() => {
     if (!url) return
     let live = true
     acquirePhoto(url).then((objectUrl) => {
-      if (live) setState({ url, objectUrl })
+      if (live) setState({ url, objectUrl, failed: objectUrl === null })
     })
     return () => {
       live = false
@@ -122,8 +148,8 @@ export function usePhoto(url: string | null | undefined): string | null {
   }, [url])
 
   // A new URL shows its own photo or none — never the previous one while it loads.
-  if (!url) return null
-  return state.url === url ? state.objectUrl : peekPhoto(url)
+  if (!url) return { url: null, failed: false }
+  return state.url === url ? { url: state.objectUrl, failed: state.failed } : { url: peekPhoto(url), failed: false }
 }
 
 /**

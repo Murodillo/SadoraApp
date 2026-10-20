@@ -85,6 +85,29 @@ describe('request', () => {
     expect(call!.headers).toMatchObject({ 'Content-Type': 'application/json', Authorization: 'Bearer access-1' })
   })
 
+  it('sends a piece of an upload as raw bytes, and the same bytes again after a renewal', async () => {
+    tokenStore.writeTokens({ accessToken: 'access-1', refreshToken: 'refresh-1' })
+    const api = mockApi({
+      'PUT /v1/media/uploads/u1': (call) =>
+        bearer(call.headers) === 'access-2'
+          ? { id: 'u1', receivedBytes: 4 }
+          : apiError(401, 'unauthorized', 'Kirish kerak'),
+      [REFRESH]: renewedSession('access-2', 'refresh-2'),
+    })
+    const bytes = new Blob(['abcd'])
+
+    await expect(request('/v1/media/uploads/u1?offset=0', { method: 'PUT', bytes })).resolves.toEqual({ id: 'u1', receivedBytes: 4 })
+
+    const pieces = api.callsTo('PUT', '/v1/media/uploads/u1')
+    expect(pieces).toHaveLength(2)
+    for (const piece of pieces) {
+      expect(piece.headers['Content-Type']).toBe('application/octet-stream')
+      expect(piece.raw).toBe(bytes)
+      expect(piece.body).toBeUndefined()
+    }
+    expect(await (pieces[1]!.raw as Blob).text()).toBe('abcd')
+  })
+
   it('treats 204 as success with no body', async () => {
     mockApi({ 'DELETE /v1/x': () => new Response(null, { status: 204 }) })
     await expect(request('/v1/x', { method: 'DELETE' })).resolves.toBeUndefined()

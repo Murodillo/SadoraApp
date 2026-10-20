@@ -1,6 +1,7 @@
 import '@testing-library/jest-dom/vitest'
 import { cleanup } from '@testing-library/react'
 import { afterEach } from 'vitest'
+import { clearMediaSends } from '../api/mediaSend'
 import { clearPhotoCache } from '../api/photos'
 
 // jsdom's browser asks for en-US; the panel's doctors browse in Uzbek, and the requests
@@ -11,6 +12,7 @@ Object.defineProperty(navigator, 'language', { value: 'uz-UZ', configurable: tru
 // No test globals, so Testing Library cannot register its own cleanup.
 afterEach(() => {
   cleanup()
+  clearMediaSends()
   clearPhotoCache()
   sessionStorage.clear()
   localStorage.clear()
