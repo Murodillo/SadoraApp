@@ -77,7 +77,8 @@ fun Route.doctorRoutes(
             /**
              * The directory, `limit` doctors from `offset`. The recommended order weighs
              * ratings and who is online now, so it is decided over every doctor and the
-             * page is cut from it afterwards; no limit is the whole list, as old builds read it.
+             * page is cut from it afterwards. No limit is the first [CommunityService.DIRECTORY_MAX],
+             * the whole list while there are fewer, as old builds read it.
              */
             get {
                 val limit = call.intParameter("limit", default = CommunityService.DIRECTORY_MAX, max = CommunityService.DIRECTORY_MAX)

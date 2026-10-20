@@ -3047,12 +3047,22 @@ class ApiIntegrationTest {
         val admin = adminToken()
         val profileId = approvedDoctor(doctor, admin, "Dr Page ${Uuid.random().toString().take(6)}")
 
-        // The directory: pages cut from the one recommended order; no limit is the whole list.
-        val whole = get<List<DoctorListItem>>("/v1/doctors", patient.token)
-        assertTrue(whole.any { it.id == profileId })
+        // The directory: pages cut from the one recommended order. The test database keeps
+        // every doctor earlier runs approved — more than one answer carries — so the whole
+        // list is read the way a client reads it, a full page at a time to the end.
+        val most = uz.sadora.server.community.CommunityService.DIRECTORY_MAX
+        val everyone = buildList {
+            do {
+                val page = get<List<DoctorListItem>>("/v1/doctors?limit=$most&offset=$size", patient.token)
+                addAll(page)
+            } while (page.size == most)
+        }
+        assertTrue(everyone.any { it.id == profileId })
+        // No limit is the first page of the most there is, as old builds read it.
+        assertEquals(everyone.take(most).map { it.id }, get<List<DoctorListItem>>("/v1/doctors", patient.token).map { it.id })
         val paged = (0 until 3).flatMap { get<List<DoctorListItem>>("/v1/doctors?limit=2&offset=${it * 2}", patient.token) }
-        assertEquals(whole.take(6).map { it.id }, paged.map { it.id })
-        assertTrue(get<List<DoctorListItem>>("/v1/doctors?limit=2&offset=${whole.size}", patient.token).isEmpty())
+        assertEquals(everyone.take(6).map { it.id }, paged.map { it.id })
+        assertTrue(get<List<DoctorListItem>>("/v1/doctors?limit=2&offset=${everyone.size}", patient.token).isEmpty())
 
         // Reviews: newest first, two and then one; no paging asked is the latest, as before.
         val opened = post<ConversationThread>("/v1/doctors/$profileId/consultations", patient.token, uz.sadora.contract.StartConsultationRequest("Salom"))
