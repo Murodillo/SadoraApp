@@ -1,4 +1,4 @@
-import type { AdminRole, ModerationReport, ReportContextMessage, ReportContextView, ReportReason } from '../api/types'
+import type { AdminRole, MessageMedia, ModerationReport, ReportContextMessage, ReportContextView, ReportReason } from '../api/types'
 
 /*
  * The rules of a reported private message, kept out of the page so they can be tested.
@@ -31,6 +31,7 @@ export const LAB_LINE = "🧪 Tahlil natijalari biriktirilgan (mazmuni ko'rsatil
 export const REPORT_LINE = "📄 PDF hisobot biriktirilgan (mazmuni ko'rsatilmaydi)"
 
 export const IMAGE_PLACEHOLDER = '[rasm]'
+export const MEDIA_PLACEHOLDER = '[rasm/video]'
 
 /** What was reported, as the queue names it. */
 export function reportTarget(report: Pick<ModerationReport, 'messageId' | 'commentId' | 'consultation'>): {
@@ -61,6 +62,8 @@ export function contextLineText(line: Pick<ReportContextMessage, 'kind' | 'body'
       return REPORT_LINE
     case 'image':
       return line.body.trim() ? `${IMAGE_PLACEHOLDER} ${line.body}` : IMAGE_PLACEHOLDER
+    case 'media':
+      return line.body.trim() ? `${MEDIA_PLACEHOLDER} ${line.body}` : MEDIA_PLACEHOLDER
     default:
       return line.body
   }
@@ -87,6 +90,24 @@ export function isDoctorLine(
 /** Only the reported photo can be opened — the server has no route to any other. */
 export function canOpenImage(line: Pick<ReportContextMessage, 'kind' | 'reported'>): boolean {
   return line.reported && line.kind === 'image'
+}
+
+/** The reported line's photos and videos, which the panel may open one by one; none on any other line. */
+export function openableMedia(line: Pick<ReportContextMessage, 'kind' | 'reported' | 'media'>): MessageMedia[] {
+  return line.reported && line.kind === 'media' ? (line.media ?? []) : []
+}
+
+/** "2 ta rasm, 1 ta video" — what the button opens. */
+export function mediaSummary(items: Pick<MessageMedia, 'kind'>[]): string {
+  const photos = items.filter((item) => item.kind === 'photo').length
+  const videos = items.length - photos
+  return [photos > 0 ? `${photos} ta rasm` : '', videos > 0 ? `${videos} ta video` : ''].filter(Boolean).join(', ')
+}
+
+/** A video's length as "1:05". */
+export function formatDuration(ms: number | null | undefined): string {
+  const seconds = Math.max(0, Math.round((ms ?? 0) / 1000))
+  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`
 }
 
 export interface RestrictDuration {

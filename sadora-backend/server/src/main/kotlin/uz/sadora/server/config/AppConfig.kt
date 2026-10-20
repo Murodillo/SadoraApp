@@ -73,6 +73,18 @@ data class AppConfig(
     val mediaDir: String = "build/media",
     /** The page the promo video plays on, as the panel shows it to the operator. */
     val promoVideoPageUrl: String = "https://sadora.app/video/",
+    /**
+     * 32 random bytes, base64: the key every message photo and video is sealed under
+     * (through a key of its own). Without it outside development no upload is taken.
+     * Losing it loses every file — it lives in the password manager too.
+     */
+    val mediaMasterKey: String? = null,
+    /**
+     * How full the media disk may get before new uploads wait, in percent. 100 switches
+     * the guard off — a laptop's disk is not the server's — and is the default here;
+     * deployments read 95 unless MEDIA_DISK_PAUSE_PERCENT says otherwise.
+     */
+    val mediaDiskPausePercent: Int = 100,
 ) {
     companion object {
         fun fromEnvironment(): AppConfig {
@@ -239,6 +251,8 @@ data class AppConfig(
                 adminRequireTotp = env("ADMIN_REQUIRE_TOTP", (environment != Environment.DEV).toString()).toBoolean(),
                 mediaDir = env("MEDIA_DIR", "build/media"),
                 promoVideoPageUrl = env("PROMO_VIDEO_PAGE_URL", "https://sadora.app/video/"),
+                mediaMasterKey = envOrNull("MEDIA_MASTER_KEY"),
+                mediaDiskPausePercent = env("MEDIA_DISK_PAUSE_PERCENT", if (environment == Environment.DEV) "100" else "95").toInt(),
             )
             config.verifyProductionSafety()
             return config

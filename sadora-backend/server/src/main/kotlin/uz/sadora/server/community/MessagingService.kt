@@ -1,8 +1,5 @@
 package uz.sadora.server.community
 
-import java.io.ByteArrayInputStream
-import javax.imageio.ImageIO
-import kotlin.io.encoding.Base64
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.seconds
@@ -26,7 +23,8 @@ import uz.sadora.contract.Language
 import uz.sadora.contract.Limits
 import uz.sadora.server.core.dayIn
 import uz.sadora.contract.MessageImage
-import uz.sadora.contract.MessageImageUpload
+import uz.sadora.contract.FlagKeys
+import uz.sadora.contract.MediaKind
 import uz.sadora.contract.MessageKind
 import uz.sadora.contract.MessagePage
 import uz.sadora.contract.NotificationCategory
@@ -45,6 +43,7 @@ import uz.sadora.server.consultation.ConsultationRepository
 import uz.sadora.server.consultation.SessionRecord
 import uz.sadora.server.core.ConflictException
 import uz.sadora.server.core.ConsultationPaymentRequiredException
+import uz.sadora.server.core.FeatureDisabledException
 import uz.sadora.server.core.ForbiddenException
 import uz.sadora.server.core.NotFoundException
 import uz.sadora.server.core.Photos
@@ -108,6 +107,8 @@ class MessagingService(
     private val labs: uz.sadora.server.lab.LabService? = null,
     /** Makes her PDF report, spending her allowance; null in tests without it. */
     private val reports: (suspend (Uuid, uz.sadora.contract.PdfReportRequest) -> uz.sadora.server.share.ReportFile)? = null,
+    /** Photos and videos behind `media` lines; null in tests without them. */
+    private val media: uz.sadora.server.media.MediaService? = null,
 ) {
     /** What happens after a window is closed — the patient's push. Set at wiring. */
     var onSessionClosed: (suspend (SessionRecord) -> Unit)? = null
@@ -131,13 +132,16 @@ class MessagingService(
         val view = viewFor(userId, threads)
         val last = messages.lastMessages(threads.map { it.id })
         val unread = messages.unreadCounts(threads, userId)
+        val lastMedia = last.values.filter { it.kind == MessageKind.MEDIA }.map { it.id }
+            .takeIf { it.isNotEmpty() }?.let { media?.ofMessages(it) }.orEmpty()
         return threads.map { thread ->
+            val line = last[thread.id]
             view.dto(
                 thread,
-                last = last[thread.id],
+                last = line,
                 unread = unread[thread.id] ?: 0,
                 blocked = identities.blockedEitherWay(userId, thread.other(userId)),
-            )
+            ).withMedia(line?.let { lastMedia[it.id] })
         }
     }
 
@@ -149,14 +153,15 @@ class MessagingService(
         val (lines, hasMore) = messages.messagesOf(conversationId, limit.coerceIn(1, MAX_MESSAGES))
         messages.markRead(thread, userId)
         val otherReadAt = thread.readAt(other)
+        val shown = dtos(userId, lines, otherReadAt)
         return ConversationThread(
             conversation = viewFor(userId, listOf(thread)).dto(
                 thread,
                 last = lines.lastOrNull(),
                 unread = 0,
                 blocked = identities.blockedEitherWay(userId, other),
-            ),
-            messages = dtos(userId, lines, otherReadAt),
+            ).withMedia(shown.lastOrNull()?.media),
+            messages = shown,
             otherTyping = cache?.get(typingKey(conversationId, other)) != null,
             otherReadAt = otherReadAt,
             hasMore = hasMore,
@@ -277,7 +282,12 @@ class MessagingService(
 
         var labReportId: Uuid? = null
         var document: Triple<String, String, ByteArray>? = null
+        var mediaIds: List<Uuid> = emptyList()
         val (kind, body, image) = when {
+            request.mediaIds.isNotEmpty() -> {
+                mediaIds = checkMedia(userId, thread, request.mediaIds)
+                Triple(MessageKind.MEDIA, validateCaption(request.body), null)
+            }
             request.report != null -> {
                 val doctor = thread.doctorId?.let { doctors?.byId(it) }
                 if (doctor == null || doctor.userId == userId) {
@@ -307,10 +317,9 @@ class MessagingService(
                 }
                 Triple(MessageKind.RECORD, "", null)
             }
-            request.image != null -> Triple(MessageKind.IMAGE, validateCaption(request.body), decodeImage(request.image!!))
             else -> Triple(MessageKind.TEXT, validateText(request.body), null)
         }
-        val message = write(userId, thread, body, kind, image, labReportId, document)
+        val message = write(userId, thread, body, kind, image, labReportId, document, mediaIds)
         // The doctor's first line in a window is what "answered" and the reply time mean.
         if (thread.isConsultation && thread.doctorId != null && doctors?.byId(thread.doctorId)?.userId == userId) {
             consultations?.currentSession(thread.id)
@@ -377,12 +386,13 @@ class MessagingService(
         image: MessageImageRecord?,
         labReportId: Uuid? = null,
         document: Triple<String, String, ByteArray>? = null,
+        mediaIds: List<Uuid> = emptyList(),
     ): MessageRecord {
         community.requireCanWrite(userId)
         if (messages.messagesSince(userId, now() - 24.hours) >= MAX_MESSAGES_PER_DAY) {
             throw RateLimitedException("Bir kunda $MAX_MESSAGES_PER_DAY tadan ko'p xabar yozib bo'lmaydi")
         }
-        val message = messages.insertMessage(thread.id, userId, body, kind, image, labReportId, document)
+        val message = messages.insertMessage(thread.id, userId, body, kind, image, labReportId, document, mediaIds)
         notify(thread, recipient = thread.other(userId), sender = userId, message = message)
         return message
     }
@@ -401,25 +411,30 @@ class MessagingService(
     }
 
     /**
-     * A photo is checked for what it claims to be: the size is read from the picture
-     * itself, and bytes that are not a JPEG or PNG are refused rather than stored.
+     * The photos and videos of a `media` line. In a consultation, up to
+     * [Limits.MESSAGE_MEDIA_MAX] and videos too, once [FlagKeys.CHAT_MEDIA] is on;
+     * without it, and always between two aliases, one photo — a stranger's video is
+     * where a private channel goes wrong first.
      */
-    private fun decodeImage(upload: MessageImageUpload): MessageImageRecord {
-        if (upload.mimeType !in IMAGE_MIME) throw ValidationException("image", "Faqat JPEG yoki PNG rasm")
-        val text = upload.imageBase64.trim()
-        if (text.isEmpty()) throw ValidationException("image", "Rasm bo'sh")
-        if (text.length > Limits.MESSAGE_IMAGE_MAX_BYTES / 3 * 4 + 4) {
-            throw ValidationException("image", "Rasm juda katta — kichikroq qilib yuboring")
+    private suspend fun checkMedia(userId: Uuid, thread: ConversationRecord, ids: List<String>): List<Uuid> {
+        val store = media ?: throw ValidationException("mediaIds", uz.sadora.server.media.MediaService.UNAVAILABLE)
+        if (ids.size > Limits.MESSAGE_MEDIA_MAX) {
+            throw ValidationException("mediaIds", "Bitta xabarda eng ko'pi ${Limits.MESSAGE_MEDIA_MAX} ta rasm yoki video")
         }
-        val bytes = runCatching { Base64.decode(text) }.getOrElse { throw ValidationException("image", "Rasmni o'qib bo'lmadi") }
-        val picture = runCatching { ImageIO.read(ByteArrayInputStream(bytes)) }.getOrNull()
-            ?: throw ValidationException("image", "Rasmni o'qib bo'lmadi")
-        return MessageImageRecord(upload.mimeType, picture.width, picture.height, bytes)
+        val records = store.forMessage(userId, ids)
+        val hasVideo = records.any { it.kind == MediaKind.VIDEO }
+        if (!thread.isConsultation) {
+            if (hasVideo) throw ValidationException("mediaIds", "Video faqat shifokor bilan suhbatda yuboriladi")
+            if (records.size > 1) throw ValidationException("mediaIds", "Bu suhbatga bir xabarda bitta rasm yuboriladi")
+        } else if ((hasVideo || records.size > 1) && !store.isChatMediaOn(userId)) {
+            throw FeatureDisabledException(FlagKeys.CHAT_MEDIA)
+        }
+        return records.map { it.id }
     }
 
     // ---------------------------------------------------------------- attachments
 
-    /** A photo in a thread, for the two people in it. */
+    /** A photo sent before the media store (an `image` line not moved yet), for the two people in the thread. */
     suspend fun image(userId: Uuid, conversationId: Uuid, messageId: Uuid): MessageImageRecord {
         val thread = requireParticipant(userId, conversationId)
         val message = messages.messageById(messageId)
@@ -691,6 +706,9 @@ class MessagingService(
         }
     }
 
+    private fun Conversation.withMedia(items: List<uz.sadora.contract.MessageMedia>?): Conversation =
+        if (items.isNullOrEmpty()) this else copy(lastMessageMedia = items.first(), lastMessageMediaCount = items.size)
+
     private fun MessageRecord.preview(): String = when (kind) {
         MessageKind.TEXT -> body.take(PREVIEW_LENGTH)
         // The apps word these themselves from lastMessageKind; a caption rides along.
@@ -699,6 +717,8 @@ class MessagingService(
         MessageKind.PRESCRIPTION -> ""
         MessageKind.LAB -> ""
         MessageKind.REPORT -> ""
+        // The caption, if she wrote one; the apps say "Rasm" or "Video" from lastMessageMedia.
+        MessageKind.MEDIA -> body.take(PREVIEW_LENGTH)
     }
 
     /**
@@ -716,6 +736,8 @@ class MessagingService(
         val language = if (sheets.isEmpty()) Language.UZ else users?.findById(viewer)?.language ?: Language.UZ
         val documents = lines.filter { it.kind == MessageKind.REPORT }.map { it.id }
             .takeIf { it.isNotEmpty() }?.let { messages.documentsOf(it) }.orEmpty()
+        val mediaByLine = lines.filter { it.kind == MessageKind.MEDIA }.map { it.id }
+            .takeIf { it.isNotEmpty() }?.let { media?.ofMessages(it) }.orEmpty()
         return lines.map { line ->
             val prescription = byMessage[line.id]?.let { record ->
                 doctorsById[record.doctorId]?.let { PrescriptionRules.dto(record, it, patientName = null) }
@@ -723,7 +745,12 @@ class MessagingService(
             val labReport = line.labReportId?.let { sheets[it] }
                 ?.takeIf { it.userId == line.senderId }
                 ?.let { labs!!.dto(it, language) }
-            line.toDto(viewer, otherReadAt).copy(prescription = prescription, labReport = labReport, document = documents[line.id])
+            line.toDto(viewer, otherReadAt).copy(
+                prescription = prescription,
+                labReport = labReport,
+                document = documents[line.id],
+                media = mediaByLine[line.id].orEmpty(),
+            )
         }
     }
 
@@ -753,6 +780,5 @@ class MessagingService(
         const val CONSULTATION_CLOSED = "Konsultatsiya yopilgan — yangisini oching"
         const val PATIENT_FALLBACK = "Bemor"
         const val SUMMARY_MAX = 2000
-        val IMAGE_MIME = setOf("image/jpeg", "image/png")
     }
 }

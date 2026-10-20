@@ -169,6 +169,7 @@ private class ReportedMessage(val body: String, val status: ContentStatus, val k
         MessageKind.PRESCRIPTION -> "[retsept] $body"
         MessageKind.LAB -> "[tahlil natijalari]"
         MessageKind.REPORT -> "[hisobot PDF]"
+        MessageKind.MEDIA -> "[rasm/video]" + body.takeIf { it.isNotEmpty() }?.let { " $it" }.orEmpty()
     }
 }
 

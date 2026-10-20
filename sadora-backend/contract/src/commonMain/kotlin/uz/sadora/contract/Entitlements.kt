@@ -48,6 +48,18 @@ object FeatureKeys {
 
     /** The companion's tips after her actions. Premium; free accounts only see it asleep. */
     const val AI_PET = "ai_pet"
+
+    /** Photos and videos sent in messages: how many a day. Free and Premium alike. */
+    const val CHAT_MEDIA = "chat_media"
+
+    /** Photos and videos sent in messages: how many megabytes a day. */
+    const val CHAT_MEDIA_MB = "chat_media_mb"
+}
+
+/** Switches an operator turns from the panel, by key. */
+object FlagKeys {
+    /** Videos and albums in consultations. Off: one photo at a time, as before. */
+    const val CHAT_MEDIA = "chat_media"
 }
 
 /**

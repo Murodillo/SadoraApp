@@ -351,7 +351,7 @@ class BabyService(
         if (upload.mimeType !in IMAGE_MIME) throw ValidationException("photo", "Faqat JPEG yoki PNG rasm")
         val text = upload.imageBase64.trim()
         if (text.isEmpty()) throw ValidationException("photo", "Rasm bo'sh")
-        if (text.length > Limits.MESSAGE_IMAGE_MAX_BYTES / 3 * 4 + 4) {
+        if (text.length > Limits.INLINE_PHOTO_MAX_BYTES / 3 * 4 + 4) {
             throw ValidationException("photo", "Rasm juda katta — kichikroq qilib yuboring")
         }
         val bytes = runCatching { Base64.decode(text) }.getOrElse { throw ValidationException("photo", "Rasmni o'qib bo'lmadi") }

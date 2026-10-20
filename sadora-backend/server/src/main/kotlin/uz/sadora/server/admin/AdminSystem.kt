@@ -42,6 +42,25 @@ data class SystemHealth(
     val database: DatabaseHealth,
     val services: List<ServiceHealth>,
     val generatedAt: Instant,
+    /** The disk message photos and videos live on, and their backup. */
+    val media: MediaHealth? = null,
+)
+
+/**
+ * [status] is `ok`, `warn` from [uz.sadora.server.media.MediaService.DISK_WARN] of the disk,
+ * and `full` from the pause share (95% on a server), where new uploads wait.
+ * Without [keyConfigured] no upload is taken at all. [lastBackupAt] is written by the
+ * nightly backup; null means it has never reported.
+ */
+@Serializable
+data class MediaHealth(
+    val keyConfigured: Boolean,
+    val status: String,
+    val totalBytes: Long,
+    val freeBytes: Long,
+    val mediaBytes: Long,
+    val usedPercent: Int,
+    val lastBackupAt: Instant? = null,
 )
 
 @Serializable
@@ -73,6 +92,8 @@ class SystemHealthService(
     private val config: AppConfig,
     private val version: String,
     private val startedAt: Instant = now(),
+    /** The media store's facts; null in tests without it. */
+    private val media: (suspend () -> uz.sadora.server.media.MediaHealthFacts)? = null,
 ) {
 
     suspend fun health(): SystemHealth {
@@ -97,6 +118,24 @@ class SystemHealthService(
                 payments("app_store", true, since),
             ),
             generatedAt = now(),
+            media = media?.let { facts -> runCatching { mediaHealth(facts()) }.getOrNull() },
+        )
+    }
+
+    private fun mediaHealth(facts: uz.sadora.server.media.MediaHealthFacts): MediaHealth {
+        val used = facts.disk.usedFraction
+        return MediaHealth(
+            keyConfigured = facts.keyConfigured,
+            status = when {
+                used >= minOf(facts.pauseAt, uz.sadora.server.media.MediaService.DISK_PAUSE) -> "full"
+                used >= uz.sadora.server.media.MediaService.DISK_WARN -> "warn"
+                else -> "ok"
+            },
+            totalBytes = facts.disk.totalBytes,
+            freeBytes = facts.disk.freeBytes,
+            mediaBytes = facts.disk.mediaBytes,
+            usedPercent = (used * 100).toInt(),
+            lastBackupAt = facts.lastBackupAt,
         )
     }
 

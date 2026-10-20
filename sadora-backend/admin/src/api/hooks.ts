@@ -2,6 +2,7 @@ import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tansta
 import { query, request, requestBlob } from './client'
 import { adminPhotoPath } from './photos'
 import type {
+  MediaLink,
   PromoVideoView,
   AdminAnalytics,
   AdminArticle,
@@ -407,6 +408,20 @@ export const useReportContext = (reportId: string | null) =>
 export const useReportImage = () =>
   useMutation({
     mutationFn: (reportId: string) => requestBlob(reportImagePath(reportId)),
+  })
+
+/** One photo's or video's thumbnail from the reported line; each fetch is audited. */
+export const useReportMediaThumb = () =>
+  useMutation({
+    mutationFn: ({ reportId, mediaId }: { reportId: string; mediaId: string }) =>
+      requestBlob(`/v1/admin/community/reports/${reportId}/media/${mediaId}/thumb`),
+  })
+
+/** A signed address for the reported video or photo itself, for the panel's player. */
+export const useReportMediaLink = () =>
+  useMutation({
+    mutationFn: ({ reportId, mediaId }: { reportId: string; mediaId: string }) =>
+      request<MediaLink>(`/v1/admin/community/reports/${reportId}/media/${mediaId}/link`),
   })
 
 /** Restricts whoever sent the reported message; the panel never learns who that is. */

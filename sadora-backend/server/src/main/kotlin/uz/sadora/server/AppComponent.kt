@@ -136,6 +136,11 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
     /** Outcomes the system health page cannot read off the product's rows (SMS, the bot). */
     val opsRecorder = uz.sadora.server.ops.OpsRecorder()
     val promoVideoStore = PromoVideoStore(File(config.mediaDir))
+    /** Message photos and videos, sealed, under MEDIA_DIR/messages. */
+    val mediaStore = uz.sadora.server.media.MediaStore(File(config.mediaDir, "messages"))
+    val mediaKeys: uz.sadora.server.media.MediaKeys? =
+        uz.sadora.server.media.MediaKeys.from(config.mediaMasterKey, config.environment, config.jwt.secret)
+    val mediaRepository = uz.sadora.server.media.MediaRepository()
     val auditRepository = AuditRepository()
     val statsRepository = AdminStatsRepository()
     val analyticsRepository = AdminAnalyticsRepository()
@@ -395,6 +400,24 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
         messaging = messagingRepository,
     )
     val doctorBadgeService = DoctorBadgeService(doctorRepository)
+    val mediaService = uz.sadora.server.media.MediaService(
+        repository = mediaRepository,
+        store = mediaStore,
+        keys = mediaKeys,
+        entitlements = entitlementService,
+        timezoneOf = { userId -> userRepository.findById(userId)?.timezone ?: "Asia/Tashkent" },
+        chatMediaOn = { userId ->
+            val user = userRepository.findById(userId)
+            user != null && flagService.isEnabled(
+                uz.sadora.contract.FlagKeys.CHAT_MEDIA,
+                uz.sadora.server.flags.FlagContext(userId = user.id, environment = config.environment, language = user.language, lifeStage = user.lifeStage),
+            )
+        },
+        mediaDir = File(config.mediaDir),
+        diskPause = config.mediaDiskPausePercent / 100.0,
+    )
+    val mediaMigration = uz.sadora.server.media.LegacyImageMigration(mediaRepository, mediaStore, mediaKeys)
+    val mediaJob = uz.sadora.server.media.MediaJob(mediaService, mediaMigration)
     val messagingService = MessagingService(
         messages = messagingRepository,
         community = communityService,
@@ -413,6 +436,7 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
         labs = labService,
         // Read at call time: the share service is built further down.
         reports = { userId, request -> reportService.pdf(userId, request) },
+        media = mediaService,
     )
     val prescriptionService = PrescriptionService(
         prescriptions = prescriptionRepository,
@@ -422,7 +446,15 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
         medications = medicationService,
         notifications = notificationRepository,
     )
-    val communityModerationService = CommunityModerationService(communityRepository, auditService, messagingRepository, doctorRepository, prescriptionRepository)
+    val communityModerationService = CommunityModerationService(
+        communityRepository,
+        auditService,
+        messagingRepository,
+        doctorRepository,
+        prescriptionRepository,
+        media = mediaService,
+        mediaItems = mediaRepository,
+    )
 
     val contentRepository = ContentRepository()
     val contentService = ContentService(
@@ -721,7 +753,7 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
     val adminOperatorService = AdminOperatorService(auditService)
     val adminSupportService = AdminSupportService(auditService)
     val adminSearchService = AdminSearchService(userRepository, entitlementRepository)
-    val systemHealthService = uz.sadora.server.admin.SystemHealthService(config, SERVER_VERSION)
+    val systemHealthService = uz.sadora.server.admin.SystemHealthService(config, SERVER_VERSION, media = mediaService::health)
     val campaignService = uz.sadora.server.admin.CampaignService(notificationRepository, auditService)
     val campaignJob = uz.sadora.server.admin.CampaignJob(campaignService)
     val appReleaseService = uz.sadora.server.admin.AppReleaseService(auditService)
@@ -743,6 +775,7 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
         notificationScheduler.stop()
         wearableSyncJob.stop()
         accountErasureJob.stop()
+        mediaJob.stop()
         consultationJob.stop()
         partnerAlertJob.stop()
         vaccineReminderJob.stop()

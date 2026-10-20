@@ -80,8 +80,20 @@ object Limits {
     const val BIO_MAX = 160
     /** One private message. */
     const val MESSAGE_MAX = 1000
-    /** A photo in a message, decoded. The apps resize to a 1280-pixel edge well under it. */
-    const val MESSAGE_IMAGE_MAX_BYTES = 3_000_000
+    /** A photo sent base64 inside a request — a baby's milestone — decoded. The apps resize well under it. */
+    const val INLINE_PHOTO_MAX_BYTES = 3_000_000
+    /** Photos and videos in one message — an album — in a consultation. Between aliases, one photo. */
+    const val MESSAGE_MEDIA_MAX = 10
+    /** A photo's long side as the apps send it and the server keeps it. */
+    const val MEDIA_PHOTO_PX = 2048
+    /** A photo upload: already resized by the phone, so this is room to spare. */
+    const val MEDIA_PHOTO_MAX_BYTES = 15L * 1024 * 1024
+    /** A video upload, after the phone compressed it to 720p. */
+    const val MEDIA_VIDEO_MAX_BYTES = 100L * 1024 * 1024
+    /** The longest video a message carries. */
+    const val MEDIA_VIDEO_MAX_SECONDS = 180
+    /** A video's poster frame, a JPEG sent base64 with the upload's last call. */
+    const val MEDIA_POSTER_MAX_BYTES = 1_000_000
     /** How long a consultation takes messages once the patient opens it. */
     const val CONSULTATION_HOURS = 24
 

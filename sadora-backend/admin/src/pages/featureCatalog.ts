@@ -81,6 +81,15 @@ export const catalog: CatalogGroup[] = [
     title: 'Muloqot va xavfsizlik',
     entries: [
       { title: 'Chat', about: 'Lenta, izohlar va xabarlar', art: 'ic3d_chats', flag: 'community' },
+      {
+        title: 'Rasm va video xabarlar',
+        about: "Konsultatsiyada video va 10 tagacha albom; o'chiq bo'lsa — bittadan rasm. Limit: kuniga fayllar soni",
+        art: 'ic3d_camera',
+        flag: 'chat_media',
+        entitlement: 'chat_media',
+        metered: true,
+      },
+      { title: 'Rasm va video hajmi', about: 'Kuniga necha MB yuklash mumkin', art: 'ic3d_camera', entitlement: 'chat_media_mb', metered: true },
       { title: 'SOS', about: "Yaqinlarga signal. O'chirilsa ham 103/112 tugmalari qoladi", art: 'ic3d_shield', flag: 'sos' },
       { title: 'Nishonni taqish', about: 'Ism yonida nishon', art: 'ic3d_trophy', entitlement: 'badge_wear' },
     ],

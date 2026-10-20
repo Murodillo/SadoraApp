@@ -1,4 +1,4 @@
-import type { ServiceHealth } from '../api/types'
+import type { MediaHealth, ServiceHealth } from '../api/types'
 
 /*
  * The words of the system health page. The server decides each service's status from what
@@ -65,4 +65,29 @@ export function uptime(startedAt: string, now: Date = new Date()): string {
   if (days > 0) return `${days} kun ${hours} soat`
   if (hours > 0) return `${hours} soat ${rest} daq`
   return `${rest} daq`
+}
+
+export const mediaStatusLabels: Record<MediaHealth['status'], { text: string; tone: string }> = {
+  ok: { text: 'Joy yetarli', tone: 'ok' },
+  warn: { text: 'Disk 80% dan ortiq', tone: 'warn' },
+  full: { text: "To'lgan — yuklash to'xtagan", tone: 'danger' },
+}
+
+/** "1.4 GB", "820 MB", "12 KB". */
+export function formatBytes(bytes: number): string {
+  const units = ['B', 'KB', 'MB', 'GB', 'TB']
+  let value = bytes
+  let unit = 0
+  while (value >= 1024 && unit < units.length - 1) {
+    value /= 1024
+    unit++
+  }
+  return `${value >= 10 || unit === 0 ? Math.round(value) : value.toFixed(1)} ${units[unit]}`
+}
+
+/** A backup older than two days is as good as none: the nightly run has stopped. */
+export function backupIsStale(lastBackupAt: string | null | undefined, now: Date = new Date()): boolean {
+  if (!lastBackupAt) return true
+  const then = Date.parse(lastBackupAt)
+  return Number.isNaN(then) || now.getTime() - then > 48 * 3_600_000
 }

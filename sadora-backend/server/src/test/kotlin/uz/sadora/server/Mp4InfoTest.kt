@@ -1,0 +1,58 @@
+package uz.sadora.server
+
+import kotlin.random.Random
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
+import uz.sadora.server.media.ByteSource
+import uz.sadora.server.media.Mp4Info
+
+/**
+ * The fixtures are real files made with ffmpeg (see the commit that added them): a
+ * faststart MP4 with sound, a MOV whose picture is stored sideways with a rotation
+ * matrix — what a phone held upright records — and an MP4 with its index at the end.
+ */
+class Mp4InfoTest {
+
+    private fun fixture(name: String): ByteArray =
+        requireNotNull(javaClass.getResourceAsStream("/media/$name")) { "missing fixture $name" }.use { it.readBytes() }
+
+    private fun read(bytes: ByteArray): Mp4Info? = Mp4Info.read(ByteSource.of(bytes))
+
+    @Test
+    fun `a landscape mp4 reads its length and its size`() {
+        val info = assertNotNull(read(fixture("landscape.mp4")))
+        assertTrue(info.durationMs in 2450..2550, "duration ${info.durationMs}")
+        assertEquals(320, info.width)
+        assertEquals(240, info.height)
+    }
+
+    @Test
+    fun `a video stored sideways is as tall as it is shown`() {
+        val info = assertNotNull(read(fixture("rotated.mov")))
+        assertTrue(info.durationMs in 1150..1250, "duration ${info.durationMs}")
+        assertEquals(240, info.width)
+        assertEquals(320, info.height)
+    }
+
+    @Test
+    fun `the index after the media is found too`() {
+        val info = assertNotNull(read(fixture("tail_moov.mp4")))
+        assertTrue(info.durationMs in 950..1050, "duration ${info.durationMs}")
+        assertEquals(160, info.width)
+        assertEquals(120, info.height)
+    }
+
+    @Test
+    fun `anything else is not a video`() {
+        assertNull(read(Random(1).nextBytes(4096)))
+        assertNull(read(ByteArray(0)))
+        // A JPEG's first bytes.
+        assertNull(read(byteArrayOf(0xFF.toByte(), 0xD8.toByte(), 0xFF.toByte(), 0xE0.toByte()) + ByteArray(200)))
+        // A video cut before its index: the container starts right but says nothing.
+        val whole = fixture("tail_moov.mp4")
+        assertNull(read(whole.copyOf(whole.size / 2)))
+    }
+}

@@ -59,6 +59,14 @@ import org.junit.jupiter.api.Assumptions.assumeTrue
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.TestInstance
 import uz.sadora.contract.AdminArticle
+import uz.sadora.contract.CompleteMediaUploadRequest
+import uz.sadora.contract.FeatureKeys
+import uz.sadora.contract.FlagKeys
+import uz.sadora.contract.MediaKind
+import uz.sadora.contract.MediaLink
+import uz.sadora.contract.MediaUpload
+import uz.sadora.contract.MessageMedia
+import uz.sadora.contract.StartMediaUploadRequest
 import uz.sadora.contract.AdjustCoinsRequest
 import uz.sadora.contract.AdminRedemption
 import uz.sadora.contract.AiGreeting
@@ -5099,27 +5107,15 @@ class ApiIntegrationTest {
         assertTrue(get<List<Conversation>>("/v1/community/conversations?scope=patients", patient.token).isEmpty())
 
         // A photo: its size is read from the picture, and only the two of them may open it.
-        val picture = java.awt.image.BufferedImage(40, 30, java.awt.image.BufferedImage.TYPE_INT_RGB)
-        val png = java.io.ByteArrayOutputStream().also { javax.imageio.ImageIO.write(picture, "png", it) }.toByteArray()
-        val photo = post<DirectMessage>(
-            "/v1/community/conversations/$id/messages",
-            patient.token,
-            SendMessageRequest("Tahlil natijasi", image = uz.sadora.contract.MessageImageUpload(kotlin.io.encoding.Base64.encode(png), "image/png")),
-        )
-        assertEquals(uz.sadora.contract.MessageKind.IMAGE, photo.kind)
-        assertEquals(40, photo.image?.width)
-        assertEquals(30, photo.image?.height)
-        val fetched = raw { client.get("/v1/community/conversations/$id/messages/${photo.id}/image") { auth(doctor.token) } }
+        val uploaded = upload(patient, MediaKind.PHOTO, "image/png", testPng(40, 30))
+        val photo = post<DirectMessage>("/v1/community/conversations/$id/messages", patient.token, SendMessageRequest("Tahlil natijasi", mediaIds = listOf(uploaded.id)))
+        assertEquals(uz.sadora.contract.MessageKind.MEDIA, photo.kind)
+        assertEquals(40, photo.media.single().width)
+        assertEquals(30, photo.media.single().height)
+        val fetched = raw { client.get("/v1/media/${uploaded.id}/thumb") { auth(doctor.token) } }
         assertEquals(HttpStatusCode.OK, fetched.status)
-        assertEquals("image/png", fetched.headers["Content-Type"])
-        assertEquals(HttpStatusCode.NotFound, raw { client.get("/v1/community/conversations/$id/messages/${photo.id}/image") { auth(stranger.token) } }.status)
-        val notAPicture = raw {
-            client.post("/v1/community/conversations/$id/messages") {
-                auth(patient.token)
-                json(SendMessageRequest(image = uz.sadora.contract.MessageImageUpload(kotlin.io.encoding.Base64.encode(byteArrayOf(1, 2, 3)), "image/png")))
-            }
-        }
-        assertEquals(HttpStatusCode.BadRequest, notAPicture.status)
+        assertEquals("image/jpeg", fetched.headers["Content-Type"])
+        assertEquals(HttpStatusCode.NotFound, raw { client.get("/v1/media/${uploaded.id}/thumb") { auth(stranger.token) } }.status)
 
         // Her record, attached by her, read live by her doctor; a doctor cannot attach one.
         val record = post<DirectMessage>("/v1/community/conversations/$id/messages", patient.token, SendMessageRequest(attachRecord = true))
@@ -5185,6 +5181,243 @@ class ApiIntegrationTest {
         val counts = assertNotNull(card.consultations)
         assertEquals(1, counts.total)
         assertEquals(1, counts.messagesFromDoctor)
+    }
+
+    // ---------------------------------------------------------------- photos and videos
+
+    @Test
+    fun `a patient sends her doctor an album and only the two of them can open it`() = api {
+        val c = consultation()
+        setFlag(c.admin, FlagKeys.CHAT_MEDIA, enabled = true)
+        val photo = upload(c.patient, MediaKind.PHOTO, "image/jpeg", testJpeg(3000, 1500))
+        assertEquals(2048, photo.width)
+        assertEquals(1024, photo.height)
+        val videoBytes = bigVideo()
+        val video = upload(c.patient, MediaKind.VIDEO, "video/mp4", videoBytes, poster = testJpeg(320, 240))
+        assertEquals(320, video.width)
+        assertEquals(240, video.height)
+        assertTrue(video.durationMs!! in 2450..2550)
+        assertTrue(video.hasThumbnail)
+
+        val sent = post<DirectMessage>(
+            "/v1/community/conversations/${c.id}/messages",
+            c.patient.token,
+            SendMessageRequest("Natijalar", mediaIds = listOf(photo.id, video.id)),
+        )
+        assertEquals(uz.sadora.contract.MessageKind.MEDIA, sent.kind)
+        assertEquals("Natijalar", sent.body)
+        assertEquals(listOf(photo.id, video.id), sent.media.map { it.id }, "in the order she chose them")
+
+        // The doctor's thread and list carry it; the list knows it was a photo first and two in all.
+        val line = get<ConversationThread>("/v1/community/conversations/${c.id}", c.doctor.token).messages.single { it.id == sent.id }
+        assertEquals(listOf(MediaKind.PHOTO, MediaKind.VIDEO), line.media.map { it.kind })
+        val listed = get<List<Conversation>>("/v1/community/conversations?scope=patients", c.doctor.token).single { it.id == c.id }
+        assertEquals(uz.sadora.contract.MessageKind.MEDIA, listed.lastMessageKind)
+        assertEquals(MediaKind.PHOTO, listed.lastMessageMedia?.kind)
+        assertEquals(2, listed.lastMessageMediaCount)
+
+        // Thumbnails with the session, never cached; nobody else gets one.
+        val thumb = raw { client.get("/v1/media/${photo.id}/thumb") { auth(c.doctor.token) } }
+        assertEquals(HttpStatusCode.OK, thumb.status)
+        assertEquals("private, no-store", thumb.headers[HttpHeaders.CacheControl])
+        val thumbPicture = javax.imageio.ImageIO.read(java.io.ByteArrayInputStream(thumb.readRawBytes()))
+        assertEquals(480, thumbPicture.width)
+        assertEquals(HttpStatusCode.OK, raw { client.get("/v1/media/${video.id}/thumb") { auth(c.patient.token) } }.status)
+        assertEquals(HttpStatusCode.NotFound, raw { client.get("/v1/media/${photo.id}/thumb") { auth(c.stranger.token) } }.status)
+        assertEquals(HttpStatusCode.NotFound, raw { client.get("/v1/media/${photo.id}/link") { auth(c.stranger.token) } }.status)
+
+        // The video through a signed address: whole, and by range as a player asks.
+        val link = get<MediaLink>("/v1/media/${video.id}/link", c.doctor.token)
+        assertTrue(link.expiresAt > Clock.System.now() + 10.minutes && link.expiresAt < Clock.System.now() + 20.minutes)
+        val whole = raw { client.get(link.url) }
+        assertEquals(HttpStatusCode.OK, whole.status)
+        assertEquals("video/mp4", whole.headers[HttpHeaders.ContentType])
+        assertTrue(whole.readRawBytes().contentEquals(videoBytes), "the file comes back as it went up")
+        val part = raw { client.get(link.url) { header(HttpHeaders.Range, "bytes=1048570-1048589") } }
+        assertEquals(HttpStatusCode.PartialContent, part.status)
+        assertTrue(part.readRawBytes().contentEquals(videoBytes.copyOfRange(1048570, 1048590)))
+        // The photo itself the same way.
+        val full = raw { client.get(get<MediaLink>("/v1/media/${photo.id}/link", c.doctor.token).url) }
+        assertEquals(HttpStatusCode.OK, full.status)
+        assertEquals(2048, javax.imageio.ImageIO.read(java.io.ByteArrayInputStream(full.readRawBytes())).width)
+
+        // A changed signature, a changed id, or an address past its time opens nothing.
+        assertEquals(HttpStatusCode.Forbidden, raw { client.get(link.url.replace("sig=", "sig=x")) }.status)
+        assertEquals(HttpStatusCode.Forbidden, raw { client.get(link.url.replace(video.id, photo.id)) }.status)
+        val past = Clock.System.now().epochSeconds - 5
+        val keys = assertNotNull(component.mediaKeys)
+        val stale = "/v1/media/${video.id}/file?v=full&exp=$past&sig=${keys.sign(Uuid.parse(video.id), uz.sadora.server.media.MediaVariant.FULL, past)}"
+        assertEquals(HttpStatusCode.Forbidden, raw { client.get(stale) }.status)
+
+        // An item goes in one message only, and only its owner sends it.
+        val again = raw { client.post("/v1/community/conversations/${c.id}/messages") { auth(c.patient.token); json(SendMessageRequest(mediaIds = listOf(photo.id))) } }
+        assertEquals(HttpStatusCode.BadRequest, again.status)
+        val hers = upload(c.patient, MediaKind.PHOTO, "image/jpeg", testJpeg(200, 200))
+        val notHis = raw { client.post("/v1/community/conversations/${c.id}/messages") { auth(c.doctor.token); json(SendMessageRequest(mediaIds = listOf(hers.id))) } }
+        assertEquals(HttpStatusCode.BadRequest, notHis.status)
+        // Eleven is one too many.
+        val many = (1..11).map { upload(c.doctor, MediaKind.PHOTO, "image/jpeg", testJpeg(50, 50)).id }
+        assertEquals(HttpStatusCode.BadRequest, raw { client.post("/v1/community/conversations/${c.id}/messages") { auth(c.doctor.token); json(SendMessageRequest(mediaIds = many)) } }.status)
+        // The doctor answers with ten.
+        assertEquals(10, post<DirectMessage>("/v1/community/conversations/${c.id}/messages", c.doctor.token, SendMessageRequest(mediaIds = many.take(10))).media.size)
+    }
+
+    @Test
+    fun `between aliases one photo goes, and videos and albums wait for the switch`() = api {
+        val admin = adminToken()
+        val a = signUp().also { onboard(it) }
+        val b = signUp().also { onboard(it) }
+        val alias = get<CommunityIdentity>("/v1/community/me", b.token).alias
+        get<CommunityIdentity>("/v1/community/me", a.token)
+        val thread = post<ConversationThread>("/v1/community/conversations", a.token, StartConversationRequest(alias, "Salom"))
+        val id = thread.conversation.id
+        setFlag(admin, FlagKeys.CHAT_MEDIA, enabled = true)
+
+        val one = upload(a, MediaKind.PHOTO, "image/jpeg", testJpeg(300, 300))
+        assertEquals(1, post<DirectMessage>("/v1/community/conversations/$id/messages", a.token, SendMessageRequest(mediaIds = listOf(one.id))).media.size)
+        val two = (1..2).map { upload(a, MediaKind.PHOTO, "image/jpeg", testJpeg(100, 100)).id }
+        assertEquals(HttpStatusCode.BadRequest, raw { client.post("/v1/community/conversations/$id/messages") { auth(a.token); json(SendMessageRequest(mediaIds = two)) } }.status)
+        val clip = upload(a, MediaKind.VIDEO, "video/mp4", fixture("landscape.mp4"))
+        assertEquals(HttpStatusCode.BadRequest, raw { client.post("/v1/community/conversations/$id/messages") { auth(a.token); json(SendMessageRequest(mediaIds = listOf(clip.id))) } }.status)
+
+        // With the switch off, a consultation takes one photo at a time and no video at all.
+        val c = consultation()
+        setFlag(admin, FlagKeys.CHAT_MEDIA, enabled = false)
+        val pair = (1..2).map { upload(c.patient, MediaKind.PHOTO, "image/jpeg", testJpeg(100, 100)).id }
+        val refused = raw { client.post("/v1/community/conversations/${c.id}/messages") { auth(c.patient.token); json(SendMessageRequest(mediaIds = pair)) } }
+        assertEquals(HttpStatusCode.Forbidden, refused.status)
+        assertEquals(1, post<DirectMessage>("/v1/community/conversations/${c.id}/messages", c.patient.token, SendMessageRequest(mediaIds = pair.take(1))).media.size)
+        val noVideo = raw { client.post("/v1/media/uploads") { auth(c.patient.token); json(StartMediaUploadRequest(MediaKind.VIDEO, "video/mp4", 1000)) } }
+        assertEquals(HttpStatusCode.Forbidden, noVideo.status)
+    }
+
+    @Test
+    fun `an upload resumes, refuses holes and strangers, and is forgotten if never sent`() = api {
+        val admin = adminToken()
+        setFlag(admin, FlagKeys.CHAT_MEDIA, enabled = true)
+        val her = signUp().also { onboard(it) }
+        val other = signUp().also { onboard(it) }
+        val bytes = bigVideo()
+        val started = post<MediaUpload>("/v1/media/uploads", her.token, StartMediaUploadRequest(MediaKind.VIDEO, "video/mp4", bytes.size.toLong()))
+        val chunk = started.chunkBytes
+        assertEquals(1024 * 1024, chunk)
+        assertEquals(HttpStatusCode.OK, putChunk(her, started.id, 0, bytes.copyOfRange(0, chunk)).status)
+        // The network dropped: the phone asks where it was.
+        assertEquals(chunk.toLong(), get<MediaUpload>("/v1/media/uploads/${started.id}", her.token).receivedBytes)
+        assertEquals(HttpStatusCode.Conflict, putChunk(her, started.id, 2L * chunk, bytes.copyOfRange(0, chunk)).status, "a hole")
+        assertEquals(HttpStatusCode.NotFound, putChunk(other, started.id, chunk.toLong(), bytes.copyOfRange(chunk, 2 * chunk)).status, "not hers")
+        assertEquals(HttpStatusCode.Conflict, raw { client.post("/v1/media/uploads/${started.id}/complete") { auth(her.token); json(CompleteMediaUploadRequest()) } }.status, "not all there")
+        assertEquals(HttpStatusCode.OK, putChunk(her, started.id, 0, bytes.copyOfRange(0, chunk)).status, "a piece sent again")
+        var offset = chunk
+        while (offset < bytes.size) {
+            val end = minOf(offset + chunk, bytes.size)
+            assertEquals(HttpStatusCode.OK, putChunk(her, started.id, offset.toLong(), bytes.copyOfRange(offset, end)).status)
+            offset = end
+        }
+        val done = post<MessageMedia>("/v1/media/uploads/${started.id}/complete", her.token, CompleteMediaUploadRequest())
+        assertFalse(done.hasThumbnail, "no poster was sent")
+
+        // Bytes that are not a video, and a video over three minutes, are refused at the end.
+        val junk = ByteArray(5000) { 7 }
+        val junkUpload = post<MediaUpload>("/v1/media/uploads", her.token, StartMediaUploadRequest(MediaKind.VIDEO, "video/mp4", junk.size.toLong()))
+        putChunk(her, junkUpload.id, 0, junk)
+        assertEquals(HttpStatusCode.BadRequest, raw { client.post("/v1/media/uploads/${junkUpload.id}/complete") { auth(her.token); json(CompleteMediaUploadRequest()) } }.status)
+        val long = fixture("long.mp4")
+        val longUpload = post<MediaUpload>("/v1/media/uploads", her.token, StartMediaUploadRequest(MediaKind.VIDEO, "video/mp4", long.size.toLong()))
+        putChunk(her, longUpload.id, 0, long)
+        assertEquals(HttpStatusCode.BadRequest, raw { client.post("/v1/media/uploads/${longUpload.id}/complete") { auth(her.token); json(CompleteMediaUploadRequest()) } }.status)
+        assertEquals(HttpStatusCode.BadRequest, raw { client.post("/v1/media/uploads") { auth(her.token); json(StartMediaUploadRequest(MediaKind.VIDEO, "video/mp4", 101L * 1024 * 1024)) } }.status)
+        assertEquals(HttpStatusCode.BadRequest, raw { client.post("/v1/media/uploads") { auth(her.token); json(StartMediaUploadRequest(MediaKind.PHOTO, "image/gif", 1000)) } }.status)
+
+        // She cancels one; the one she never sent is gone a day later, files and all.
+        val cancelled = upload(her, MediaKind.PHOTO, "image/jpeg", testJpeg(100, 100))
+        assertEquals(HttpStatusCode.OK, raw { client.delete("/v1/media/uploads/${cancelled.id}") { auth(her.token) } }.status)
+        assertEquals(HttpStatusCode.NotFound, raw { client.get("/v1/media/${cancelled.id}/thumb") { auth(her.token) } }.status)
+        assertEquals(HttpStatusCode.OK, raw { client.get("/v1/media/${done.id}/link") { auth(her.token) } }.status, "her own unsent upload is hers to see")
+        component.mediaService.collectGarbage(Clock.System.now() + 25.hours)
+        assertEquals(HttpStatusCode.NotFound, raw { client.get("/v1/media/${done.id}/link") { auth(her.token) } }.status)
+        val left = java.io.File(component.config.mediaDir, "messages").walkTopDown().filter { it.isFile && it.name.startsWith(done.id) }.toList()
+        assertTrue(left.isEmpty(), "its files went with it: $left")
+    }
+
+    @Test
+    fun `the day's allowance stops new uploads`() = api {
+        val admin = adminToken()
+        val her = signUp().also { onboard(it) }
+        val override = raw {
+            client.put("/v1/admin/users/${her.userId}/features/${FeatureKeys.CHAT_MEDIA}") {
+                auth(admin)
+                json(uz.sadora.server.admin.SetOverrideRequest(dailyLimit = 2, reason = "test"))
+            }
+        }
+        assertEquals(HttpStatusCode.OK, override.status)
+        repeat(2) { upload(her, MediaKind.PHOTO, "image/jpeg", testJpeg(60, 60)) }
+        val third = raw { client.post("/v1/media/uploads") { auth(her.token); json(StartMediaUploadRequest(MediaKind.PHOTO, "image/jpeg", 1000)) } }
+        assertEquals(HttpStatusCode.TooManyRequests, third.status)
+    }
+
+    @Test
+    fun `old photos move into media, and a report shows the reported album`() = api {
+        val c = consultation()
+        setFlag(c.admin, FlagKeys.CHAT_MEDIA, enabled = true)
+        // A photo from before: a message of kind `image` with its bytes in the table.
+        val legacyId = Uuid.random()
+        val png = testPng(64, 48)
+        dbQuery {
+            uz.sadora.server.db.CommunityMessages.insert {
+                it[id] = legacyId
+                it[conversationId] = Uuid.parse(c.id)
+                it[senderId] = Uuid.parse(c.patient.userId)
+                it[body] = "eski rasm"
+                it[kind] = "image"
+                it[status] = "visible"
+                it[createdAt] = now().toOffsetDateTime()
+            }
+            uz.sadora.server.db.CommunityMessageImages.insert {
+                it[messageId] = legacyId
+                it[mimeType] = "image/png"
+                it[width] = 64
+                it[height] = 48
+                it[content] = png
+                it[createdAt] = now().toOffsetDateTime()
+            }
+        }
+        assertTrue(component.mediaMigration.runAll() >= 1)
+        val moved = get<ConversationThread>("/v1/community/conversations/${c.id}", c.doctor.token).messages.single { it.id == legacyId.toString() }
+        assertEquals(uz.sadora.contract.MessageKind.MEDIA, moved.kind)
+        assertEquals("eski rasm", moved.body)
+        assertEquals(64 to 48, moved.media.single().width to moved.media.single().height)
+        assertEquals(HttpStatusCode.OK, raw { client.get("/v1/media/${moved.media.single().id}/thumb") { auth(c.doctor.token) } }.status)
+        assertEquals(0, dbQuery { uz.sadora.server.db.CommunityMessageImages.selectAll().where { uz.sadora.server.db.CommunityMessageImages.messageId eq legacyId }.count() })
+        assertEquals(0, component.mediaMigration.runOnce(), "nothing is moved twice")
+
+        // The doctor sends an album the patient reports: the staff panel sees all of it, audited.
+        val items = listOf(
+            upload(c.doctor, MediaKind.PHOTO, "image/jpeg", testJpeg(100, 80)),
+            upload(c.doctor, MediaKind.VIDEO, "video/mp4", fixture("landscape.mp4"), poster = testJpeg(80, 60)),
+        )
+        post<DirectMessage>("/v1/community/conversations/${c.id}/messages", c.doctor.token, SendMessageRequest(mediaIds = items.map { it.id }))
+        postAck("/v1/community/conversations/${c.id}/report", c.patient.token, ReportRequest(ReportReason.ABUSE))
+        val report = get<Page<ModerationReportView>>("/v1/admin/community/reports?open=true&limit=200", c.admin)
+            .items.first { it.messageKind == uz.sadora.contract.MessageKind.MEDIA }
+        val context = get<uz.sadora.server.community.ReportContextView>("/v1/admin/community/reports/${report.id}/context", c.admin)
+        val reported = context.messages.single { it.reported }
+        assertEquals(items.map { it.id }, reported.media.map { it.id })
+        assertTrue(context.messages.filter { !it.reported }.all { it.media.isEmpty() }, "only the reported line's media is shown")
+        assertEquals(HttpStatusCode.OK, raw { client.get("/v1/admin/community/reports/${report.id}/media/${items[0].id}/thumb") { auth(c.admin) } }.status)
+        val adminLink = get<MediaLink>("/v1/admin/community/reports/${report.id}/media/${items[1].id}/link", c.admin)
+        assertEquals(HttpStatusCode.OK, raw { client.get(adminLink.url) }.status)
+        assertEquals(HttpStatusCode.NotFound, raw { client.get("/v1/admin/community/reports/${report.id}/media/${moved.media.single().id}/thumb") { auth(c.admin) } }.status, "a photo from another line")
+
+        // Hidden by the moderator: neither side opens it any more.
+        postAck("/v1/admin/community/reports/${report.id}/resolve", c.admin, uz.sadora.server.community.ResolveReportRequest("hide", "test"))
+        assertEquals(HttpStatusCode.NotFound, raw { client.get("/v1/media/${items[0].id}/thumb") { auth(c.patient.token) } }.status)
+
+        // The system page reports the media disk.
+        val health = get<uz.sadora.server.admin.SystemHealth>("/v1/admin/system/health", c.admin)
+        val media = assertNotNull(health.media)
+        assertTrue(media.keyConfigured)
+        assertTrue(media.totalBytes > 0 && media.mediaBytes > 0)
     }
 
     @Test
@@ -5859,6 +6092,75 @@ class ApiIntegrationTest {
         java.security.MessageDigest.getInstance("MD5")
             .digest(source.toByteArray())
             .joinToString("") { "%02x".format(it) }
+
+    private class Consult(
+        val doctor: TestUser,
+        val patient: TestUser,
+        val stranger: TestUser,
+        val admin: String,
+        val id: String,
+    )
+
+    /** An approved doctor, a patient with a consultation open with her, and someone else. */
+    private suspend fun Api.consultation(): Consult {
+        val doctor = signUp().also { onboard(it) }
+        val patient = signUp().also { onboard(it) }
+        val stranger = signUp().also { onboard(it) }
+        val admin = adminToken()
+        val name = "Dr Media ${Uuid.random().toString().take(6)}"
+        val jpeg = kotlin.io.encoding.Base64.encode(byteArrayOf(0xFF.toByte(), 0xD8.toByte(), 0xFF.toByte(), 0xE0.toByte(), 1, 2, 3))
+        post<DoctorAccount>(
+            "/v1/doctor/application",
+            doctor.token,
+            DoctorApplicationRequest(name, DoctorSpecialty.GYNECOLOGIST, "Klinika", 9, "LIC-9", documents = listOf(DoctorDocumentUpload(DoctorDocumentKind.DIPLOMA, jpeg))),
+        )
+        val profileId = get<Page<uz.sadora.server.doctor.AdminDoctorRow>>("/v1/admin/doctors?status=pending&limit=200", admin)
+            .items.first { it.fullName == name }.id
+        postAck("/v1/admin/doctors/$profileId/review", admin, uz.sadora.server.doctor.DoctorReviewRequest("approve"))
+        val opened = post<ConversationThread>("/v1/doctors/$profileId/consultations", patient.token, uz.sadora.contract.StartConsultationRequest("Salom"))
+        return Consult(doctor, patient, stranger, admin, opened.conversation.id)
+    }
+
+    /** Starts, sends in pieces and finishes an upload, as the apps do. */
+    private suspend fun Api.upload(user: TestUser, kind: MediaKind, mimeType: String, bytes: ByteArray, poster: ByteArray? = null): MessageMedia {
+        val started = post<MediaUpload>("/v1/media/uploads", user.token, StartMediaUploadRequest(kind, mimeType, bytes.size.toLong()))
+        var offset = 0
+        while (offset < bytes.size) {
+            val end = minOf(offset + started.chunkBytes, bytes.size)
+            val response = putChunk(user, started.id, offset.toLong(), bytes.copyOfRange(offset, end))
+            assertEquals(HttpStatusCode.OK, response.status, response.bodyAsTextSafe())
+            offset = end
+        }
+        return post<MessageMedia>("/v1/media/uploads/${started.id}/complete", user.token, CompleteMediaUploadRequest(poster?.let { kotlin.io.encoding.Base64.encode(it) }))
+    }
+
+    private suspend fun Api.putChunk(user: TestUser, id: String, offset: Long, bytes: ByteArray): HttpResponse =
+        client.put("/v1/media/uploads/$id?offset=$offset") {
+            auth(user.token)
+            setBody(io.ktor.http.content.ByteArrayContent(bytes, ContentType.Application.OctetStream))
+        }
+
+    private fun testJpeg(width: Int, height: Int): ByteArray {
+        val picture = java.awt.image.BufferedImage(width, height, java.awt.image.BufferedImage.TYPE_INT_RGB)
+        return java.io.ByteArrayOutputStream().also { javax.imageio.ImageIO.write(picture, "jpeg", it) }.toByteArray()
+    }
+
+    private fun testPng(width: Int, height: Int): ByteArray {
+        val picture = java.awt.image.BufferedImage(width, height, java.awt.image.BufferedImage.TYPE_INT_RGB)
+        return java.io.ByteArrayOutputStream().also { javax.imageio.ImageIO.write(picture, "png", it) }.toByteArray()
+    }
+
+    private fun fixture(name: String): ByteArray =
+        requireNotNull(javaClass.getResourceAsStream("/media/$name")) { "missing fixture $name" }.use { it.readBytes() }
+
+    /** A real video followed by a `free` box: a valid file that takes three pieces to send. */
+    private fun bigVideo(): ByteArray {
+        val video = fixture("landscape.mp4")
+        val filler = 2 * 1024 * 1024 + 70_000
+        val box = java.nio.ByteBuffer.allocate(filler).putInt(filler).put("free".toByteArray()).array()
+        for (i in 8 until filler) box[i] = (i * 31).toByte()
+        return video + box
+    }
 
     private suspend fun Api.raw(block: suspend () -> HttpResponse): HttpResponse = block()
 

@@ -119,6 +119,26 @@ else
   echo "    generated server/.env.prod"
 fi
 
+echo "==> media key"
+# Every message photo and video is sealed under this key. Made once, on the server, like the
+# JWT secret; an environment from before the media store gets one on its next deploy.
+if remote "grep -q '^MEDIA_MASTER_KEY=.' $DIR/server/.env.prod"; then
+  echo "    kept"
+else
+  remote "cd $DIR && umask 077 && printf '\n# Seals every message photo and video. Losing it loses them all: keep a copy in the password manager.\nMEDIA_MASTER_KEY=%s\n' \$(head -c 32 /dev/urandom | base64) >> server/.env.prod"
+  echo "    generated MEDIA_MASTER_KEY — copy it into the password manager now:"
+  echo "    ssh $HOST grep MEDIA_MASTER_KEY $DIR/server/.env.prod"
+fi
+
+echo "==> media backup"
+# Nightly restic of media/messages, once server/media-backup.env names where it goes.
+if remote "test -f $DIR/server/media-backup.env"; then
+  remote "printf '30 2 * * * root %s/deploy/media_backup.sh >> /var/log/sadora-media-backup.log 2>&1\n' $DIR > /etc/cron.d/sadora-media-backup && chmod 644 /etc/cron.d/sadora-media-backup"
+  echo "    nightly at 02:30 UTC"
+else
+  echo "    NOT CONFIGURED — media/messages has no backup. See deploy/media_backup.sh."
+fi
+
 echo "==> backup"
 if remote "docker ps --format '{{.Names}}' | grep -qx sadora-prod-postgres-1"; then
   # Flyway only moves forward; this dump is what undoes a migration.

@@ -54,7 +54,8 @@ object Photos {
         return ProfilePhoto(jpeg(square), target)
     }
 
-    private fun jpeg(image: BufferedImage): ByteArray {
+    /** [image] as a JPEG with no metadata of any kind: ImageIO writes only what it is given. */
+    internal fun jpeg(image: BufferedImage): ByteArray {
         val writer = ImageIO.getImageWritersByFormatName("jpeg").next()
         val out = ByteArrayOutputStream()
         ImageIO.createImageOutputStream(out).use { stream ->

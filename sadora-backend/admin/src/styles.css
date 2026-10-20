@@ -2043,6 +2043,31 @@ tbody tr.selected:hover {
   object-fit: contain;
 }
 
+/* The reported line's photos and videos: thumbnails first, the file itself on request. */
+.report-media {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 8px;
+}
+
+.report-media-item {
+  margin: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.report-media-item img,
+.report-media-empty {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  display: grid;
+  place-items: center;
+}
+
+
 @media (max-width: 560px) {
   .chat-line {
     max-width: 92%;

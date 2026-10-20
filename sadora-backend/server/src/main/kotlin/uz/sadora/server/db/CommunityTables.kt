@@ -182,3 +182,31 @@ object CommunityMessageDocuments : Table("community_message_documents") {
 
     override val primaryKey = PrimaryKey(messageId)
 }
+
+/**
+ * A photo or video of a message (V69). Born when its upload starts, without a message;
+ * sending attaches it. The bytes are files in the media store, sealed with the key
+ * [wrappedKey] holds under the master key.
+ */
+object MessageMediaTable : Table("message_media") {
+    val id = uuid("id")
+    val ownerId = uuid("owner_id").references(Users.id)
+    val messageId = uuid("message_id").references(CommunityMessages.id).nullable()
+    val position = integer("position")
+    /** `photo` or `video`. */
+    val kind = text("kind")
+    /** `uploading` or `ready`. */
+    val status = text("status")
+    val mimeType = text("mime_type")
+    val sizeBytes = long("size_bytes")
+    val thumbBytes = long("thumb_bytes")
+    val width = integer("width")
+    val height = integer("height")
+    val durationMs = long("duration_ms").nullable()
+    val wrappedKey = text("wrapped_key")
+    val createdAt = timestampWithTimeZone("created_at")
+    val readyAt = timestampWithTimeZone("ready_at").nullable()
+    val attachedAt = timestampWithTimeZone("attached_at").nullable()
+
+    override val primaryKey = PrimaryKey(id)
+}

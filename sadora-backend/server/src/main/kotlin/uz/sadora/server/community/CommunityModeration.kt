@@ -143,6 +143,8 @@ data class ReportContextMessage(
     /** The message the report is about. */
     val reported: Boolean,
     val hidden: Boolean,
+    /** The photos and videos of the reported line — no other line's. */
+    val media: List<uz.sadora.contract.MessageMedia> = emptyList(),
 )
 
 @Serializable
@@ -181,6 +183,9 @@ class CommunityModerationService(
     private val doctors: uz.sadora.server.doctor.DoctorRepository? = null,
     /** Prescription counts for the stats; none without it. */
     private val prescriptions: uz.sadora.server.prescription.PrescriptionRepository? = null,
+    /** The photos and videos of a reported line; none without it. */
+    private val media: uz.sadora.server.media.MediaService? = null,
+    private val mediaItems: uz.sadora.server.media.MediaRepository? = null,
 ) {
 
     suspend fun posts(
@@ -245,6 +250,7 @@ class CommunityModerationService(
                 context = context,
             ),
         )
+        val reportedMedia = if (target.kind == MessageKind.MEDIA) media?.ofMessages(listOf(messageId))?.get(messageId).orEmpty() else emptyList()
         return ReportContextView(
             reportId = reportId.toString(),
             consultation = thread.isConsultation,
@@ -261,6 +267,7 @@ class CommunityModerationService(
                     createdAt = line.createdAt,
                     reported = line.id == messageId,
                     hidden = line.status == ContentStatus.HIDDEN,
+                    media = if (line.id == messageId) reportedMedia else emptyList(),
                 )
             },
         )
@@ -281,6 +288,31 @@ class CommunityModerationService(
         )
         return image
     }
+
+    /**
+     * One photo or video of the reported line — and only of that line — for the staff
+     * panel. Audited like the context: opening a private picture is an act.
+     */
+    suspend fun reportMedia(reportId: Uuid, mediaId: Uuid, admin: AdminPrincipal, context: RequestContext): uz.sadora.server.media.MediaRecord {
+        val (_, messageId) = messaging.messageReport(reportId) ?: throw NotFoundException("Xabar shikoyati topilmadi")
+        val record = mediaItems?.byId(mediaId)?.takeIf { it.messageId == messageId } ?: throw NotFoundException("Fayl topilmadi")
+        audit.record(
+            admin.entry(
+                action = AuditActions.COMMUNITY_REPORT_CONTEXT_VIEWED,
+                entityType = "community_message",
+                entityId = messageId.toString(),
+                metadata = mapOf("reportId" to reportId.toString(), "media" to mediaId.toString()),
+                context = context,
+            ),
+        )
+        return record
+    }
+
+    suspend fun reportMediaThumb(record: uz.sadora.server.media.MediaRecord): ByteArray =
+        media?.thumbOf(record) ?: throw NotFoundException("Fayl topilmadi")
+
+    fun reportMediaLink(record: uz.sadora.server.media.MediaRecord): uz.sadora.contract.MediaLink =
+        media?.linkOf(record) ?: throw NotFoundException("Fayl topilmadi")
 
     /** Silences the sender of a reported message, named by the report and never by account. */
     suspend fun restrictSender(reportId: Uuid, request: RestrictAuthorRequest, admin: AdminPrincipal, context: RequestContext) {
@@ -543,6 +575,31 @@ fun Route.adminCommunityRoutes(moderation: CommunityModerationService) {
                 val image = moderation.reportImage(parseUuid(call.parameters["id"].orEmpty(), "id"), admin, call.requestContext())
                 call.response.header(HttpHeaders.CacheControl, "no-store")
                 call.respondBytes(image.bytes, ContentType.parse(image.mimeType))
+            }
+
+            get("/reports/{id}/media/{mediaId}/thumb") {
+                val admin = call.requireAdminRole(AdminRole.OWNER, AdminRole.ADMIN, AdminRole.SUPPORT)
+                val record = moderation.reportMedia(
+                    parseUuid(call.parameters["id"].orEmpty(), "id"),
+                    parseUuid(call.parameters["mediaId"].orEmpty(), "mediaId"),
+                    admin,
+                    call.requestContext(),
+                )
+                call.response.header(HttpHeaders.CacheControl, "no-store")
+                call.respondBytes(moderation.reportMediaThumb(record), ContentType.Image.JPEG)
+            }
+
+            /** A signed address for the photo or the video itself, for the panel's player. */
+            get("/reports/{id}/media/{mediaId}/link") {
+                val admin = call.requireAdminRole(AdminRole.OWNER, AdminRole.ADMIN, AdminRole.SUPPORT)
+                val record = moderation.reportMedia(
+                    parseUuid(call.parameters["id"].orEmpty(), "id"),
+                    parseUuid(call.parameters["mediaId"].orEmpty(), "mediaId"),
+                    admin,
+                    call.requestContext(),
+                )
+                call.response.header(HttpHeaders.CacheControl, "no-store")
+                call.respond(moderation.reportMediaLink(record))
             }
 
             post("/reports/{id}/restrict-sender") {

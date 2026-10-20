@@ -2,6 +2,10 @@ import { describe, expect, it } from 'vitest'
 import type { ReportContextView } from '../api/types'
 import {
   canOpenImage,
+  contextLineText as mediaLine,
+  formatDuration,
+  mediaSummary,
+  openableMedia,
   canViewMessageContext,
   contextLineAuthor,
   contextLineText,
@@ -79,5 +83,31 @@ describe('restrict durations', () => {
     expect(restrictDurations.map((option) => option.days)).toEqual([1, 7, 30, null])
     expect(restrictDone(7)).toBe('Yuboruvchi 7 kunga cheklandi')
     expect(restrictDone(null)).toBe('Yuboruvchi muddatsiz cheklandi')
+  })
+})
+
+describe('photos and videos of a reported line', () => {
+  const items = [
+    { id: 'a', kind: 'photo' as const, width: 10, height: 10, sizeBytes: 1 },
+    { id: 'b', kind: 'video' as const, width: 10, height: 10, sizeBytes: 1, durationMs: 65_400 },
+    { id: 'c', kind: 'photo' as const, width: 10, height: 10, sizeBytes: 1 },
+  ]
+
+  it('names the line by a placeholder, with its caption', () => {
+    expect(mediaLine({ kind: 'media', body: '' })).toBe('[rasm/video]')
+    expect(mediaLine({ kind: 'media', body: 'natija' })).toBe('[rasm/video] natija')
+  })
+
+  it('opens only the reported line’s items', () => {
+    expect(openableMedia({ kind: 'media', reported: true, media: items })).toHaveLength(3)
+    expect(openableMedia({ kind: 'media', reported: false, media: items })).toEqual([])
+    expect(openableMedia({ kind: 'text', reported: true, media: items })).toEqual([])
+  })
+
+  it('says what the button opens and how long a video is', () => {
+    expect(mediaSummary(items)).toBe('2 ta rasm, 1 ta video')
+    expect(mediaSummary(items.slice(1, 2))).toBe('1 ta video')
+    expect(formatDuration(65_400)).toBe('1:05')
+    expect(formatDuration(null)).toBe('0:00')
   })
 })

@@ -29,6 +29,7 @@ import uz.sadora.server.db.CommunityMessageImages
 import uz.sadora.server.db.CommunityReports
 import uz.sadora.server.db.CommunityMessages
 import uz.sadora.server.db.ContentStatus
+import uz.sadora.server.db.MessageMediaTable
 import uz.sadora.server.db.dbQuery
 import uz.sadora.server.db.dbValue
 import uz.sadora.server.db.enumFromDb
@@ -286,6 +287,8 @@ class MessagingRepository {
         labReportId: Uuid? = null,
         /** The file of a `report` line: name, mime type, bytes. */
         document: Triple<String, String, ByteArray>? = null,
+        /** The finished uploads a `media` line carries, in order; each must still be the sender's and unsent. */
+        mediaIds: List<Uuid> = emptyList(),
     ): MessageRecord = dbQuery {
         val id = Uuid.random()
         val timestamp = now()
@@ -307,6 +310,18 @@ class MessagingRepository {
                 it[content] = document.third
                 it[createdAt] = timestamp.toOffsetDateTime()
             }
+        }
+        mediaIds.forEachIndexed { index, mediaId ->
+            val attached = MessageMediaTable.update({
+                (MessageMediaTable.id eq mediaId) and (MessageMediaTable.ownerId eq senderId) and
+                    MessageMediaTable.messageId.isNull() and (MessageMediaTable.status eq "ready")
+            }) {
+                it[MessageMediaTable.messageId] = id
+                it[position] = index
+                it[attachedAt] = timestamp.toOffsetDateTime()
+            }
+            // Sent in another message a moment ago, or cancelled: the whole line is refused.
+            if (attached != 1) throw uz.sadora.server.core.ConflictException("Rasm yoki video topilmadi yoki allaqachon yuborilgan")
         }
         if (image != null) {
             CommunityMessageImages.insert {

@@ -134,30 +134,37 @@ class EntitlementService(
         featureKey: String,
         timezone: String,
         costMicros: Long = 0,
+        /** Uses at once — the megabytes of an upload against a megabyte allowance. */
+        amount: Int = 1,
     ) {
         val entitlements = resolve(userId, timezone)
         val feature = entitlements.feature(featureKey)
             ?: throw EntitlementRequiredException(featureKey)
         if (!feature.enabled) throw EntitlementRequiredException(featureKey)
-        if (feature.remainingToday == 0) throw LimitReachedException(featureKey, "day")
-        if (feature.remainingThisMonth == 0) throw LimitReachedException(featureKey, "month")
+        if (feature.remainingToday.let { it != null && it < amount }) throw LimitReachedException(featureKey, "day")
+        if (feature.remainingThisMonth.let { it != null && it < amount }) throw LimitReachedException(featureKey, "month")
 
         // The check above and the increment are separate statements, so a burst of
         // parallel requests all read "one left" and all pass it. The increment itself is
         // atomic and answers with the count it produced; anything past the limit is
         // handed back and refused, so the limit holds however many arrive together.
         val day = now().dayIn(timezone)
-        val usedToday = repository.recordUse(userId, featureKey, day, costMicros)
+        val usedToday = repository.recordUse(userId, featureKey, day, costMicros, amount)
         val dailyLimit = feature.dailyLimit
         if (dailyLimit != null && usedToday > dailyLimit) {
-            repository.releaseUse(userId, featureKey, day, costMicros)
+            repository.releaseUse(userId, featureKey, day, costMicros, amount)
             throw LimitReachedException(featureKey, "day")
         }
         val monthlyLimit = feature.monthlyLimit
         if (monthlyLimit != null && feature.usedThisMonth + (usedToday - feature.usedToday) > monthlyLimit) {
-            repository.releaseUse(userId, featureKey, day, costMicros)
+            repository.releaseUse(userId, featureKey, day, costMicros, amount)
             throw LimitReachedException(featureKey, "month")
         }
+    }
+
+    /** Hands back a use [consume] recorded, when the work it paid for was refused after all. */
+    suspend fun release(userId: Uuid, featureKey: String, timezone: String, amount: Int = 1) {
+        repository.releaseUse(userId, featureKey, now().dayIn(timezone), 0, amount)
     }
 
     private companion object {

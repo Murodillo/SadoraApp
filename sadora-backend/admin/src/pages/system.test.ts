@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { ServiceHealth } from '../api/types'
-import { ago, serviceCopy, sortServices, uptime } from './system'
+import { ago, backupIsStale, formatBytes, serviceCopy, sortServices, uptime } from './system'
 
 const now = new Date('2026-10-20T10:00:00Z')
 
@@ -28,5 +28,20 @@ describe('system helpers', () => {
     expect(serviceCopy('sms').name).toBe('SMS · Play Mobile')
     expect(serviceCopy('telegram').okLabel).toBeNull()
     expect(serviceCopy('newthing').name).toBe('newthing')
+  })
+})
+
+describe('media disk', () => {
+  it('writes sizes the way an operator reads them', () => {
+    expect(formatBytes(512)).toBe('512 B')
+    expect(formatBytes(1536)).toBe('1.5 KB')
+    expect(formatBytes(820 * 1024 * 1024)).toBe('820 MB')
+    expect(formatBytes(1.4 * 1024 ** 3)).toBe('1.4 GB')
+  })
+
+  it('calls a backup older than two days stale, and none at all too', () => {
+    expect(backupIsStale(null, now)).toBe(true)
+    expect(backupIsStale('2026-10-19T23:00:00Z', now)).toBe(false)
+    expect(backupIsStale('2026-10-17T09:00:00Z', now)).toBe(true)
   })
 })

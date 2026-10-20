@@ -144,6 +144,10 @@ data class Conversation(
     val consultation: Consultation? = null,
     /** What the last line was, so the list can say "Rasm" or "Tibbiy karta" for it. */
     val lastMessageKind: MessageKind = MessageKind.TEXT,
+    /** The last line's first photo or video, so the list can say "Video · 0:42" for it. */
+    val lastMessageMedia: MessageMedia? = null,
+    /** How many photos and videos the last line carried. */
+    val lastMessageMediaCount: Int = 0,
     /** The last line is the viewer's own and the other side has read it. */
     val lastMessageRead: Boolean = false,
     /** The frame the other alias wears ([AvatarFrames] key); never set in a consultation. */
@@ -212,6 +216,9 @@ enum class MessageKind(val wire: String) {
 
     /** Her PDF report, sent to her doctor: [DirectMessage.document]; [DirectMessage.body] says what it is. */
     REPORT("report"),
+
+    /** Photos and videos, [DirectMessage.media] in order; [DirectMessage.body] is the caption. */
+    MEDIA("media"),
 }
 
 object MessageKindSerializer : KSerializer<MessageKind> {
@@ -250,6 +257,8 @@ data class DirectMessage(
     val labReport: LabReport? = null,
     /** Set on a [MessageKind.REPORT] line: the file, fetched as `…/messages/{id}/document`. */
     val document: MessageDocument? = null,
+    /** Set on a [MessageKind.MEDIA] line: its photos and videos, in the order she chose them. */
+    val media: List<MessageMedia> = emptyList(),
 )
 
 /**
@@ -283,26 +292,23 @@ data class StartConversationRequest(
 )
 
 /**
- * One message. Text, or a photo with an optional caption in [body], or — in a
- * consultation, from the patient — her health record with [attachRecord] or one of her
- * lab sheets with [labReportId].
+ * One message. Text; or photos and videos, uploaded first, with an optional caption in
+ * [body]; or — in a consultation, from the patient — her health record with
+ * [attachRecord] or one of her lab sheets with [labReportId].
  */
 @Serializable
 data class SendMessageRequest(
     val body: String = "",
-    val image: MessageImageUpload? = null,
+    /**
+     * Finished uploads, in the order she chose them: up to [Limits.MESSAGE_MEDIA_MAX] in
+     * a consultation, one photo between aliases.
+     */
+    val mediaIds: List<String> = emptyList(),
     val attachRecord: Boolean = false,
     /** In a consultation, from the patient: one of her lab sheets, sent as a card. */
     val labReportId: String? = null,
     /** In a consultation, from the patient: her PDF report, made now and sent as a file. */
     val report: PdfReportRequest? = null,
-)
-
-/** A photo, resized by the phone and sent base64 like a document page. */
-@Serializable
-data class MessageImageUpload(
-    val imageBase64: String,
-    val mimeType: String = "image/jpeg",
 )
 
 /** Opens a consultation with a doctor — or opens it again — with an optional first line. */

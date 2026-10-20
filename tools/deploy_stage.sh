@@ -115,6 +115,12 @@ else
   [[ -n $GEMINI ]] && printf 'GEMINI_API_KEY=%s\n' "$GEMINI" | remote "cat >> $DIR/server/.env.stage"
   echo "    generated server/.env.stage"
 fi
+# Every message photo and video is sealed under this key; an environment from before the
+# media store gets one here.
+if ! remote "grep -q '^MEDIA_MASTER_KEY=.' $DIR/server/.env.stage"; then
+  remote "cd $DIR && umask 077 && printf '\nMEDIA_MASTER_KEY=%s\n' \$(head -c 32 /dev/urandom | base64) >> server/.env.stage"
+  echo "    generated MEDIA_MASTER_KEY"
+fi
 
 echo "==> deploy gate"
 remote "install -m 755 $DIR/deploy/stage/sadora-ci /usr/local/bin/sadora-ci && mkdir -p $DIR/downloads $DIR/releases $DIR/media/video && touch $DIR/.release.env"

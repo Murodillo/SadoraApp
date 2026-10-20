@@ -1,7 +1,7 @@
 import { useSystemHealth } from '../api/hooks'
-import type { ServiceHealth } from '../api/types'
+import type { MediaHealth, ServiceHealth } from '../api/types'
 import { Card, ErrorNotice, formatDateTime, formatTime, Loading } from '../components/ui'
-import { ago, serviceCopy, sortServices, statusLabels, uptime } from './system'
+import { ago, backupIsStale, formatBytes, mediaStatusLabels, serviceCopy, sortServices, statusLabels, uptime } from './system'
 
 /**
  * "Is anything broken?" for the Owner and Admin: the server itself, its database, and every
@@ -41,6 +41,8 @@ export function SystemPage() {
         </div>
       </Card>
 
+      {data.media && <MediaCard media={data.media} />}
+
       <div className="system-grid">
         {services.map((service) => (
           <ServiceCard key={service.key} service={service} />
@@ -52,6 +54,34 @@ export function SystemPage() {
         qarori. Sozlanmagan xizmat — serverda uning kaliti yo'q.
       </p>
     </div>
+  )
+}
+
+/** The disk message photos and videos live on, its key, and its nightly backup. */
+function MediaCard({ media }: { media: MediaHealth }) {
+  const status = mediaStatusLabels[media.status]
+  const stale = backupIsStale(media.lastBackupAt)
+  return (
+    <Card title="Chat rasmlari va videolari">
+      <div className="system-facts">
+        <Fact label="Disk" value={`${media.usedPercent}% band · ${formatBytes(media.freeBytes)} bo'sh`} tone={status.tone === 'ok' ? undefined : status.tone} />
+        <Fact label="Media" value={formatBytes(media.mediaBytes)} />
+        <Fact
+          label="Shifrlash kaliti"
+          value={media.keyConfigured ? "O'rnatilgan" : "Yo'q — yuklash yopiq"}
+          tone={media.keyConfigured ? undefined : 'danger'}
+        />
+        <Fact
+          label="Zaxira nusxa"
+          value={media.lastBackupAt ? ago(media.lastBackupAt) : "Hali bo'lmagan"}
+          hint={media.lastBackupAt ? formatDateTime(media.lastBackupAt) : undefined}
+          tone={stale ? 'warn' : undefined}
+        />
+      </div>
+      <p className="faint" style={{ margin: '8px 0 0' }}>
+        {status.text}. 95% dan oshsa yangi yuklashlar to'xtaydi. Zaxira har kecha tools/media_backup.sh bilan olinadi.
+      </p>
+    </Card>
   )
 }
 

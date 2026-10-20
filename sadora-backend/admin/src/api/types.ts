@@ -306,7 +306,7 @@ export interface CommunityStats {
   prescriptionsAdded?: number
 }
 
-export type MessageKind = 'text' | 'image' | 'record' | 'prescription' | 'lab' | 'report'
+export type MessageKind = 'text' | 'image' | 'record' | 'prescription' | 'lab' | 'report' | 'media'
 
 /**
  * One line around a reported private message. `fromReported` is the side the report is
@@ -322,6 +322,25 @@ export interface ReportContextMessage {
   /** The message the report is about. */
   reported: boolean
   hidden: boolean
+  /** The photos and videos of the reported line; empty on every other line. */
+  media?: MessageMedia[]
+}
+
+/** One photo or video of a message, as the server describes it (no bytes). */
+export interface MessageMedia {
+  id: string
+  kind: 'photo' | 'video'
+  width: number
+  height: number
+  durationMs?: number | null
+  sizeBytes: number
+  hasThumbnail?: boolean
+}
+
+/** An address signed for a few minutes, relative to the API's base. */
+export interface MediaLink {
+  url: string
+  expiresAt: string
 }
 
 /** The only view of a private thread the panel has, and each opening is audited. */
@@ -970,6 +989,18 @@ export interface SystemHealth {
   database: { ok: boolean; latencyMs?: number | null; schemaVersion?: string | null }
   services: ServiceHealth[]
   generatedAt: string
+  media?: MediaHealth | null
+}
+
+/** The disk message photos and videos live on. `full` means new uploads wait. */
+export interface MediaHealth {
+  keyConfigured: boolean
+  status: 'ok' | 'warn' | 'full'
+  totalBytes: number
+  freeBytes: number
+  mediaBytes: number
+  usedPercent: number
+  lastBackupAt?: string | null
 }
 
 // ---- push campaigns ----

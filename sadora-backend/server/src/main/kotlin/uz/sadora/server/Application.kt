@@ -43,6 +43,7 @@ import uz.sadora.server.share.publicShareRoutes
 import uz.sadora.server.share.shareRoutes
 import uz.sadora.server.community.adminCommunityRoutes
 import uz.sadora.server.community.communityRoutes
+import uz.sadora.server.media.mediaRoutes
 import uz.sadora.server.config.Environment
 import uz.sadora.server.consultation.adminConsultationRoutes
 import uz.sadora.server.consultation.consultationRoutes
@@ -105,6 +106,9 @@ fun main() {
 
     // Cloud wearables are pulled, not pushed: the job is the floor under the webhooks.
     component.wearableSyncJob.start()
+
+    // Message media: older photos moved in once, then unsent uploads and orphaned files hourly.
+    component.mediaJob.start()
 
     // A consultation window nobody closed still has to end, and be refunded if unanswered.
     component.consultationJob.start()
@@ -206,6 +210,7 @@ fun Application.apiModule(component: AppComponent) {
             wearablePublicRoutes(component.wearableConnectService, component.wearableSyncJob)
             adminWearableRoutes(component.wearableService, component.wearableRepository, component.auditService)
             communityRoutes(component.communityService, component.messagingService)
+            mediaRoutes(component.mediaService)
             prescriptionRoutes(component.messagingService, component.prescriptionService)
             adminCommunityRoutes(component.communityModerationService)
             doctorRoutes(component.doctorService, component.communityService, component.messagingService, component.consultationService)

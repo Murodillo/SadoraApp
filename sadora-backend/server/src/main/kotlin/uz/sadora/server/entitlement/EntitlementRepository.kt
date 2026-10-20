@@ -286,20 +286,21 @@ class EntitlementRepository {
         featureKey: String,
         day: LocalDate,
         costMicros: Long = 0,
+        amount: Int = 1,
     ): Int = dbQuery {
         FeatureUsageDaily.upsert(
             FeatureUsageDaily.userId,
             FeatureUsageDaily.featureKey,
             FeatureUsageDaily.usageDate,
             onUpdate = {
-                it[FeatureUsageDaily.used] = FeatureUsageDaily.used + 1
+                it[FeatureUsageDaily.used] = FeatureUsageDaily.used + amount
                 it[FeatureUsageDaily.costMicros] = FeatureUsageDaily.costMicros + costMicros
             },
         ) {
             it[FeatureUsageDaily.userId] = userId
             it[FeatureUsageDaily.featureKey] = featureKey
             it[usageDate] = day
-            it[used] = 1
+            it[used] = amount
             it[FeatureUsageDaily.costMicros] = costMicros
         }
         FeatureUsageDaily.selectAll()
@@ -317,14 +318,15 @@ class EntitlementRepository {
         featureKey: String,
         day: LocalDate,
         costMicros: Long = 0,
+        amount: Int = 1,
     ): Unit = dbQuery {
         FeatureUsageDaily.update({
             (FeatureUsageDaily.userId eq userId) and
                 (FeatureUsageDaily.featureKey eq featureKey) and
                 (FeatureUsageDaily.usageDate eq day) and
-                (FeatureUsageDaily.used greater 0)
+                (FeatureUsageDaily.used greaterEq amount)
         }) {
-            it[used] = FeatureUsageDaily.used - 1
+            it[used] = FeatureUsageDaily.used - amount
             it[FeatureUsageDaily.costMicros] = FeatureUsageDaily.costMicros - costMicros
         }
     }

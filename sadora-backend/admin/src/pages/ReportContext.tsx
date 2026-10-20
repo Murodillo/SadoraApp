@@ -1,7 +1,8 @@
-import { useState } from 'react'
-import { useReportContext, useReportImage, useResolveReport, useRestrictSender } from '../api/hooks'
+import { useEffect, useState } from 'react'
+import { useReportContext, useReportImage, useReportMediaLink, useReportMediaThumb, useResolveReport, useRestrictSender } from '../api/hooks'
+import { API_BASE } from '../api/client'
 import { limits } from '../api/limits'
-import type { ModerationReport, ReportContextMessage, ReportContextView } from '../api/types'
+import type { MessageMedia, ModerationReport, ReportContextMessage, ReportContextView } from '../api/types'
 import { useToast } from '../components/toast'
 import { ErrorNotice, Field, formatDateTime, Loading, Modal, Spinner, useObjectUrl } from '../components/ui'
 import {
@@ -9,7 +10,10 @@ import {
   contextLineAuthor,
   contextLineText,
   conversationLabel,
+  formatDuration,
   isDoctorLine,
+  mediaSummary,
+  openableMedia,
   PRIVACY_LINE,
   reasonLabels,
   restrictDone,
@@ -154,6 +158,7 @@ function ContextBubble({ view, line, reportId }: { view: ReportContextView; line
         </div>
       )}
       {canOpenImage(line) && <ReportedImage reportId={reportId} />}
+      {openableMedia(line).length > 0 && <ReportedMedia reportId={reportId} items={openableMedia(line)} />}
     </li>
   )
 }
@@ -171,6 +176,61 @@ function ReportedImage({ reportId }: { reportId: string }) {
       </button>
       {image.error && <span className="faint">Yuklab bo'lmadi: {image.error.message}</span>}
     </div>
+  )
+}
+
+/**
+ * The reported line's photos and videos, opened only on request — each thumbnail and
+ * each player is a fetch the server audits. A video plays from a signed address that
+ * lasts a few minutes.
+ */
+function ReportedMedia({ reportId, items }: { reportId: string; items: MessageMedia[] }) {
+  const [open, setOpen] = useState(false)
+  if (!open) {
+    return (
+      <div className="row" style={{ gap: 8 }}>
+        <button className="btn small" onClick={() => setOpen(true)}>
+          Ochish · {mediaSummary(items)}
+        </button>
+      </div>
+    )
+  }
+  return (
+    <div className="report-media">
+      {items.map((item) => (
+        <ReportedMediaItem key={item.id} reportId={reportId} item={item} />
+      ))}
+    </div>
+  )
+}
+
+function ReportedMediaItem({ reportId, item }: { reportId: string; item: MessageMedia }) {
+  const thumb = useReportMediaThumb()
+  const link = useReportMediaLink()
+  const url = useObjectUrl(thumb.data)
+  const { mutate } = thumb
+  useEffect(() => {
+    if (item.hasThumbnail !== false) mutate({ reportId, mediaId: item.id })
+  }, [mutate, reportId, item.id, item.hasThumbnail])
+
+  if (item.kind === 'video' && link.data) {
+    return <video className="chat-image" src={API_BASE + link.data.url} poster={url ?? undefined} controls autoPlay />
+  }
+  if (item.kind === 'photo' && link.data) {
+    return <img className="chat-image" src={API_BASE + link.data.url} alt="Shikoyat qilingan rasm" />
+  }
+  return (
+    <figure className="report-media-item">
+      {url ? <img src={url} alt={item.kind === 'video' ? 'Video muqovasi' : 'Rasm'} /> : <div className="report-media-empty">{thumb.isPending && <Spinner />}</div>}
+      <figcaption className="row" style={{ gap: 6 }}>
+        {item.kind === 'video' && <span className="badge free">Video · {formatDuration(item.durationMs)}</span>}
+        <button className="btn small" disabled={link.isPending} onClick={() => link.mutate({ reportId, mediaId: item.id })}>
+          {link.isPending && <Spinner />}
+          {item.kind === 'video' ? "Videoni ko'rish" : "To'liq o'lchamda"}
+        </button>
+        {(thumb.error || link.error) && <span className="faint">Yuklab bo'lmadi</span>}
+      </figcaption>
+    </figure>
   )
 }
 
