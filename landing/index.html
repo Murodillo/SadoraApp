@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>SADORA</title>
-<meta name="description" content="SADORA — ayollar salomatligi ilovasi. Sikl, homiladorlik, menopauza, uyqu, ovqatlanish va kayfiyat bir joyda, tasdiqlangan shifokorlar bilan. Android va iOS, o'zbek, rus va ingliz tillarida.">
+<meta name="description" content="SADORA — ayollar salomatligi ilovasi. Sikl, homiladorlik, chaqaloq, menopauza, uyqu, ovqatlanish va kayfiyat bir joyda; ovoz bilan belgilash, tahlil natijalari va tasdiqlangan shifokorlar. Android va iOS, o'zbek, rus va ingliz tillarida.">
 <meta property="og:title" content="SADORA — Har bir ayol. Har bir lahza.">
 <meta property="og:description" content="Ayollar salomatligi ilovasi: sikl, homiladorlik, menopauza, uyqu, ovqatlanish va kayfiyat bir joyda — va kerak bo'lganda tasdiqlangan shifokor.">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
@@ -705,10 +705,9 @@ body {
 .foot .links a:hover { color: var(--text); }
 
 
-/* ---------- Gullar va ayol chizmalari ----------
+/* ---------- Gullar ----------
    Gul geometriyasi ilovaning drawBloom funksiyasidan: olti gulbarg bitta
-   yadro atrofida. Ayol figuralari bitta qalam zarbida chiziladi — logotip
-   qanday chizilsa, shunday. ---------------------------------------- */
+   yadro atrofida. ---------------------------------------- */
 
 /* Hero ustidan sekin suzuvchi gul maydoni */
 .petalfield { position: absolute; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; }
@@ -725,47 +724,101 @@ body {
 }
 @media (max-width: 900px) { .petalfield .fl:not(.m) { display: none; } }
 
-/* Chiziq bilan chizilgan ayol */
-.figure { display: block; width: 100%; height: auto; overflow: visible; }
-.figure .ln, .figure .thin {
-  fill: none; stroke: url(#brandGrad);
-  stroke-linecap: round; stroke-linejoin: round;
-}
-.figure .ln { stroke-width: 2.6; }
-.figure .thin { stroke-width: 1.7; opacity: .72; }
-.figure .bl { opacity: 0; transform: scale(.4); transform-box: fill-box; transform-origin: center; }
-.figure.on .bl { animation: blpop .7s var(--pop) forwards; animation-delay: calc(var(--bd, 0ms) + var(--i, 0) * 120ms); }
 @keyframes blpop { to { opacity: 1; transform: scale(1); } }
 
 /* Manifest bo'limi */
 .manifesto-grid {
-  display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr);
+  display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr);
   gap: clamp(28px, 5vw, 72px); align-items: center;
 }
 @media (max-width: 820px) { .manifesto-grid { grid-template-columns: minmax(0,1fr); } }
-.portrait { position: relative; display: grid; place-items: center; }
-.portrait .figure { max-width: 360px; margin-inline: auto; }
-.portrait-svg .ln, .portrait-svg .thin { stroke: url(#portraitGrad); }
-.portrait-svg .pen { opacity: 0; offset-distance: 0%; offset-rotate: 0deg; }
-.portrait-svg.on .pen { animation: pen 2400ms cubic-bezier(.2, 0, 0, 1) forwards; }
-@keyframes pen { 0% { opacity: 0; offset-distance: 0%; } 6% { opacity: 1; } 90% { opacity: 1; } 100% { opacity: 0; offset-distance: 100%; } }
-.portrait::before {
-  content: ''; position: absolute; inset: 6% 10% 10%; z-index: -1; border-radius: 999px;
-  background: radial-gradient(circle at 45% 40%, color-mix(in srgb, var(--secondary) 24%, transparent), transparent 68%);
-  filter: blur(26px);
+
+/* Bosqichlar orbitasi: markazda bosqich rangida nafas oladigan gul va uning
+   ko'rsatkichi, atrofida oltita bosqich. Bosqich almashganda kometa keyingisiga
+   uchadi, gul qayta ochiladi, ranglar @property orqali silliq o'tadi. */
+.orbit { --sa: #7B61FF; --sb: #FF6FB8; position: relative; width: 100%; max-width: 470px; margin-inline: auto; aspect-ratio: 1;
+  container-type: inline-size; isolation: isolate; transition: --sa 1.1s var(--gentle), --sb 1.1s var(--gentle); }
+.orbit::before { content: ''; position: absolute; inset: 12%; z-index: -1; border-radius: 999px; filter: blur(34px);
+  background: radial-gradient(circle, color-mix(in srgb, var(--sa) 42%, transparent), color-mix(in srgb, var(--sb) 20%, transparent) 55%, transparent 72%);
+  animation: halo 6s ease-in-out infinite; }
+.ob-spin { position: absolute; inset: 0; z-index: 3; pointer-events: none; rotate: var(--par, 0deg); animation: spin 140s linear infinite; }
+.ob-rings { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.ob-rings .r1 { fill: none; stroke: var(--line); stroke-width: 1.2; stroke-dasharray: 2 7; stroke-linecap: round; }
+.ob-rings .r2 { fill: none; stroke: color-mix(in srgb, var(--sa) 22%, var(--line)); stroke-width: 1; }
+.ob-rings .trail { fill: none; stroke: url(#obGrad); stroke-width: 3; stroke-linecap: round; transition: stroke-dasharray 1.2s var(--ease); }
+.ob-rings .tk { fill: var(--muted-2); opacity: .35; transform-box: fill-box; transform-origin: center; animation: tickrun 2.8s linear infinite; animation-delay: calc(var(--i) * 100ms); }
+@keyframes tickrun { 0% { opacity: 1; fill: var(--sb); transform: scale(1.8); } 30%, 100% { opacity: .35; fill: var(--muted-2); transform: scale(1); } }
+.ob-arm { position: absolute; inset: 0; transform: rotate(var(--arm, 0deg)); transition: transform 1.2s var(--ease); }
+.ob-arm::before { content: ''; position: absolute; left: 50%; top: 8%; width: 12px; height: 12px; margin: -6px 0 0 -6px; border-radius: 999px; background: #fff;
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--sb) 45%, transparent), 0 0 22px 6px var(--sb); }
+.ob-pos { position: absolute; width: 0; height: 0; }
+.ob-node { --ns: clamp(50px, 15cqw, 66px); position: absolute; left: calc(var(--ns) / -2); top: calc(var(--ns) / -2); width: var(--ns); height: var(--ns);
+  display: grid; place-items: center; padding: 0; border-radius: 999px; pointer-events: auto;
+  background: linear-gradient(to bottom, var(--clay-hi), transparent 55%, var(--clay-lo)), var(--surface);
+  border: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
+  box-shadow: inset 0 1px 0 var(--clay-rim), 0 8px 18px -10px color-mix(in srgb, var(--primary) 50%, transparent);
+  animation: spin 140s linear infinite reverse; rotate: calc(var(--par, 0deg) * -1);
+  transition: scale .6s var(--pop), box-shadow .5s var(--gentle), filter .4s var(--gentle); }
+.ob-node img { width: 72%; height: 72%; object-fit: contain; transition: opacity .4s; }
+.ob-node:not(.on) { filter: saturate(.7); }
+.ob-node:not(.on) img { opacity: .78; }
+.ob-node:hover { scale: 1.08; }
+.ob-node.on { scale: 1.2; box-shadow: inset 0 1px 0 var(--clay-rim), 0 0 0 3px color-mix(in srgb, var(--sb) 60%, transparent), 0 14px 30px -10px var(--sa); }
+.ob-node .tip { position: absolute; top: calc(100% + 7px); left: 50%; translate: -50% 4px; white-space: nowrap; font-size: 11px; font-weight: 700; letter-spacing: .02em;
+  padding: 3px 9px; border-radius: 999px; color: var(--text); background: var(--surface); border: 1px solid var(--line);
+  opacity: 0; transition: opacity .35s var(--gentle), translate .5s var(--ease); pointer-events: none; }
+.ob-node.on .tip { opacity: 1; translate: -50% 0; }
+.ob-bloom { position: absolute; left: 17%; top: 17%; width: 66%; height: 66%; z-index: 1; overflow: visible; animation: spin 60s linear infinite; }
+.ob-petals { transform-box: view-box; transform-origin: 0 0; }
+.ob-petals.re { animation: rebloom 1s var(--pop); }
+@keyframes rebloom { 0% { transform: scale(1) rotate(0deg); } 35% { transform: scale(.8) rotate(-18deg); } 100% { transform: scale(1) rotate(0deg); } }
+.ob-bloom .pt { transform-box: fill-box; transform-origin: 50% 100%; animation: petal 5.4s ease-in-out infinite; animation-delay: calc(var(--k) * -.9s); }
+.ob-bloom .pt.inner { opacity: .9; animation-duration: 4.2s; }
+@keyframes petal { 0%, 100% { transform: scale(.9); } 50% { transform: scale(1.05); } }
+.ob-prog { position: absolute; left: 31%; top: 31%; width: 38%; height: 38%; z-index: 2; transform: rotate(-90deg); overflow: visible; }
+.ob-prog .trk { fill: none; stroke: color-mix(in srgb, var(--surface) 70%, transparent); stroke-width: 3.4; }
+.ob-prog .arc { fill: none; stroke: url(#obGrad); stroke-width: 3.4; stroke-linecap: round; transition: stroke-dasharray 1.3s var(--ease); }
+.ob-disk { position: absolute; left: 34.5%; top: 34.5%; width: 31%; height: 31%; z-index: 2; border-radius: 999px;
+  display: grid; place-content: center; justify-items: center; text-align: center; gap: .4cqw;
+  background: linear-gradient(to bottom, var(--clay-hi), transparent 50%, var(--clay-lo)), var(--surface);
+  box-shadow: inset 0 1px 0 var(--clay-rim), 0 16px 34px -14px color-mix(in srgb, var(--sa) 70%, transparent), 0 2px 6px var(--shadow-2);
+  animation: breathe 4.8s ease-in-out infinite; }
+.ob-disk .nm { font-size: max(9px, 2.3cqw); font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: color-mix(in srgb, var(--sa) 70%, var(--text)); max-width: 26cqw; line-height: 1.15; }
+.ob-disk .big { font-family: var(--disp); font-weight: 800; font-size: max(30px, 10cqw); line-height: .95; letter-spacing: -.04em; font-variant-numeric: tabular-nums; color: var(--text); }
+.ob-disk .big.sm { font-size: max(22px, 7cqw); }
+.ob-disk .lbl { font-size: max(10px, 2.5cqw); color: var(--muted); font-weight: 600; max-width: 24cqw; line-height: 1.2; }
+.ob-pollen { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
+.ob-pollen i { position: absolute; left: 50%; top: 50%; width: var(--sz); height: var(--sz); margin: calc(var(--sz) / -2) 0 0 calc(var(--sz) / -2); color: var(--c);
+  opacity: 0; animation: pollen var(--t) linear infinite; animation-delay: var(--dl); }
+.ob-pollen svg { width: 100%; height: 100%; }
+@keyframes pollen {
+  0%   { opacity: 0; transform: rotate(var(--a)) translateY(-14cqw) rotate(0deg) scale(.4); }
+  15%  { opacity: .9; }
+  100% { opacity: 0; transform: rotate(var(--a)) translateY(calc(var(--dist) * -1)) rotate(200deg) scale(1); }
 }
+.ob-hint { margin-top: 18px; text-align: center; font-size: 12.5px; color: var(--muted); }
+.ob-hint b { color: var(--text); }
+
 .manifesto-copy { display: grid; gap: 20px; }
 .manifesto-copy .quiet { display: grid; gap: 12px; }
 .quiet-row { display: grid; grid-template-columns: 24px 1fr; gap: 12px; align-items: start; font-size: 15px; line-height: 1.55; color: var(--muted); }
 .quiet-row b { color: var(--text); font-weight: 600; }
 .quiet-row svg { margin-top: 2px; color: var(--secondary); }
 
-/* Bosqich figurasi halqa yonida */
+/* Bosqich ikonkasi halqa yonida: to'lqinlar bosqich rangida tarqaladi */
 .stage-viz { min-height: 168px; display: grid; grid-template-columns: auto auto; gap: clamp(12px, 3vw, 30px); place-items: center; place-content: center; }
 @media (max-width: 430px) { .stage-viz { grid-template-columns: auto; gap: 8px; } }
-.stage-fig { width: 130px; flex: none; }
-.stage-fig .ln, .stage-fig .thin { stroke: url(#stageGrad); }
-.stage-fig .bl { color: var(--sb); }
+.st-icon { position: relative; width: 140px; height: 140px; display: grid; place-items: center; flex: none; }
+.st-icon::before { content: ''; position: absolute; inset: 16%; border-radius: 999px;
+  background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--sa) 26%, var(--surface)), color-mix(in srgb, var(--sb) 16%, var(--surface)) 72%);
+  box-shadow: inset 0 1px 0 var(--clay-rim), 0 16px 32px -16px var(--sa); transition: box-shadow .8s var(--gentle); }
+.st-icon i { position: absolute; inset: 16%; border-radius: 999px; border: 1.5px solid color-mix(in srgb, var(--sb) 60%, transparent); opacity: 0; animation: ripple 3.6s var(--gentle) infinite; }
+.st-icon i:nth-child(2) { animation-delay: 1.2s; } .st-icon i:nth-child(3) { animation-delay: 2.4s; }
+@keyframes ripple { 0% { transform: scale(.85); opacity: 0; } 15% { opacity: .75; } 100% { transform: scale(1.5); opacity: 0; } }
+.st-icon img { position: relative; width: 58%; height: 58%; object-fit: contain; animation: bob 4.6s var(--gentle) infinite;
+  filter: drop-shadow(0 8px 10px color-mix(in srgb, var(--sa) 35%, transparent)); }
+.st-icon img.pop { animation: iconpop .75s var(--pop), bob 4.6s var(--gentle) .75s infinite; }
+@keyframes iconpop { from { transform: scale(.35) rotate(-28deg); opacity: 0; } to { transform: none; opacity: 1; } }
 
 /* Sarlavha yonidagi kichik gul */
 .eyebrow { display: inline-flex; align-items: center; gap: 8px; }
@@ -1081,14 +1134,378 @@ body {
 .tabbar button[aria-current="true"] img { filter: drop-shadow(0 4px 6px color-mix(in srgb, var(--primary) 30%, transparent)); }
 .tabbar button[aria-current="true"] span { display: block; }
 
+/* ---------- Hero: yangiliklar pill'i ---------- */
+.news { align-self: flex-start; display: inline-flex; align-items: center; gap: 10px; max-width: 100%; padding: 5px 14px 5px 5px; border-radius: 999px;
+  font-size: 13.5px; font-weight: 600; color: var(--text); translate: var(--tx, 0px) var(--ty, 0px);
+  background: linear-gradient(to bottom, var(--clay-hi), transparent 55%, var(--clay-lo)), var(--surface);
+  border: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
+  box-shadow: inset 0 1px 0 var(--clay-rim), 0 8px 20px -12px color-mix(in srgb, var(--primary) 60%, transparent);
+  transition: translate .4s var(--ease), box-shadow .4s var(--gentle); }
+.news:hover { --ty: -2px; box-shadow: inset 0 1px 0 var(--clay-rim), 0 14px 26px -12px color-mix(in srgb, var(--primary) 70%, transparent); }
+.news-tag { position: relative; overflow: hidden; flex: none; font-size: 10.5px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: #fff;
+  padding: 5px 10px; border-radius: 999px; background: linear-gradient(120deg, var(--primary), var(--secondary)); box-shadow: inset 0 1px 0 rgba(255,255,255,.45); }
+.news-tag::after { content: ''; position: absolute; inset: 0; background: linear-gradient(110deg, transparent 30%, rgba(255,255,255,.5) 50%, transparent 70%);
+  transform: translateX(-130%); animation: sheen 4.5s var(--gentle) 2.6s infinite; }
+.news-roll { display: grid; overflow: hidden; min-width: 0; }
+.news-roll span { grid-area: 1 / 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.js .news-roll span { transform: translateY(110%); opacity: 0; transition: transform .7s var(--ease), opacity .5s var(--gentle); }
+.js .news-roll span.on { transform: none; opacity: 1; }
+.js .news-roll span.off { transform: translateY(-110%); opacity: 0; }
+.news > svg { flex: none; color: var(--muted); transition: transform .4s var(--ease); }
+.news:hover > svg { transform: translateX(3px); }
+
+/* Telefondagi mikrofon — Bugun ekranidagi ovozli belgilash tugmasi */
+.scr-acts { display: flex; align-items: center; gap: 6px; flex: none; }
+.mic-btn { position: relative; width: 28px; height: 28px; border-radius: 999px; display: grid; place-items: center; color: #fff;
+  background: linear-gradient(135deg, var(--primary), var(--secondary)); box-shadow: inset 0 1px 0 rgba(255,255,255,.45), 0 4px 10px -4px var(--primary); }
+.mic-btn svg { width: 14px; height: 14px; position: relative; z-index: 1; }
+.mic-btn::after { content: ''; position: absolute; inset: 0; border-radius: inherit; border: 2px solid var(--secondary); animation: micring 2.4s var(--gentle) 3s infinite; opacity: 0; }
+
+/* Telefon yonida navbat bilan chiqadigan bildirishnomalar */
+.phone-stage { position: relative; }
+.toasts { position: absolute; inset: 0; z-index: 4; pointer-events: none; }
+.toast { position: absolute; width: 238px; display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: 10px; align-items: center; padding: 10px 14px 10px 10px; border-radius: 18px;
+  font-size: 12px; line-height: 1.38; color: var(--muted);
+  background: var(--glass); -webkit-backdrop-filter: blur(16px) saturate(1.4); backdrop-filter: blur(16px) saturate(1.4);
+  border: 1px solid color-mix(in srgb, var(--line) 80%, transparent);
+  box-shadow: inset 0 1px 0 var(--clay-rim), 0 20px 40px -20px color-mix(in srgb, var(--primary) 60%, transparent), 0 2px 8px var(--shadow-2);
+  opacity: 0; transform: translate3d(var(--fx, -26px), 10px, 0) scale(.9); transition: opacity .5s var(--gentle), transform .85s var(--pop); }
+.toast b { display: block; font-size: 13px; font-weight: 700; color: var(--text); }
+.toast img, .toast .ic { width: 40px; height: 40px; object-fit: contain; }
+.toast .ic { border-radius: 12px; display: grid; place-items: center; color: #fff; background: linear-gradient(135deg, var(--primary), var(--secondary)); }
+.toast .ic svg { width: 18px; height: 18px; }
+.toast.on { opacity: 1; transform: none; }
+.toast.off { opacity: 0; transform: translate3d(0, -18px, 0) scale(.96); transition: opacity .45s var(--gentle), transform .6s var(--ease); }
+.toast.tl { left: calc(50% - 280px); top: 20%; --fx: -30px; }
+.toast.tr { left: calc(50% + 62px); top: 58%; --fx: 30px; }
+@media (max-width: 1180px) and (min-width: 941px) { .toast.tl { left: -12px; } .toast.tr { left: auto; right: -12px; } }
+@media (max-width: 600px) { .toast.tl, .toast.tr { left: 50%; right: auto; top: auto; bottom: 104px; margin-left: -119px; --fx: 0px; } }
+
+/* ---------- Yangiliklar lentasi ---------- */
+.ticker { padding-block: 22px; display: grid; gap: 10px; overflow: hidden; border-bottom: 1px solid var(--line);
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 7%, #000 93%, transparent); mask-image: linear-gradient(90deg, transparent, #000 7%, #000 93%, transparent); }
+.tick-row { display: flex; overflow: hidden; }
+.tick-track { display: flex; gap: 10px; flex: none; padding-right: 10px; }
+.js .tick-track { animation: tick var(--tt, 70s) linear infinite; }
+.tick-row.rev .tick-track { animation-direction: reverse; }
+.ticker:hover .tick-track { animation-play-state: paused; }
+@keyframes tick { to { transform: translateX(-50%); } }
+.tchip { display: inline-flex; align-items: center; gap: 9px; padding: 6px 16px 6px 7px; border-radius: 999px; white-space: nowrap; font-size: 14px; font-weight: 600; color: var(--text);
+  background: linear-gradient(to bottom, var(--clay-hi), transparent 55%, var(--clay-lo)), var(--surface);
+  border: 1px solid color-mix(in srgb, var(--line) 70%, transparent); box-shadow: inset 0 1px 0 var(--clay-rim); }
+.tchip img { width: 30px; height: 30px; object-fit: contain; flex: none; }
+.tchip small { font-size: 10.5px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--ink); }
+.gi { width: 30px; height: 30px; border-radius: 999px; flex: none; display: grid; place-items: center; color: #fff; font-size: 8.5px; font-weight: 800; letter-spacing: .04em;
+  background: linear-gradient(135deg, var(--primary), var(--secondary)); box-shadow: inset 0 1px 0 rgba(255,255,255,.45); }
+.gi svg { width: 15px; height: 15px; }
+.gi.red { background: linear-gradient(135deg, #FF6B6B, #E2364A); }
+.gi.sky { background: linear-gradient(135deg, #63D8FF, #3B8BFF); }
+
+/* ---------- Yangi bo'lim ----------
+   Har bir karta o'z kichik sahnasini o'ynaydi: ekranga kirganda boshlanadi, chiqqanda to'xtaydi. */
+.scene:not(.live) *, .scene:not(.live) *::before, .scene:not(.live) *::after { animation-play-state: paused !important; }
+.ntag { font-size: 10.5px; font-weight: 700; letter-spacing: .06em; padding: 5px 10px; border-radius: 999px; white-space: nowrap; margin-left: auto;
+  color: var(--ink); background: color-mix(in srgb, var(--ink) 9%, transparent); border: 1px solid color-mix(in srgb, var(--ink) 22%, transparent); }
+.ntag.free { color: var(--success); background: color-mix(in srgb, var(--success) 10%, transparent); border-color: color-mix(in srgb, var(--success) 28%, transparent); }
+.ntag.soon { color: var(--warning); background: color-mix(in srgb, var(--warning) 10%, transparent); border-color: color-mix(in srgb, var(--warning) 30%, transparent); }
+.nfoot { font-size: 12px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 4px 12px; padding-top: 12px; border-top: 1px dashed var(--line); margin-top: 14px; }
+.nfoot span { display: inline-flex; align-items: center; gap: 6px; }
+.nfoot span::before { content: ''; width: 5px; height: 5px; border-radius: 999px; background: var(--secondary); flex: none; }
+.nw .tile { transform-style: preserve-3d; }
+.nw .tile:hover { transform: perspective(1100px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)) translateY(-4px); }
+.well { border-radius: var(--r-lg); padding: 12px; background: linear-gradient(to bottom, var(--clay-hi), transparent 55%, var(--clay-lo)), var(--surface-2); box-shadow: inset 0 1px 0 var(--clay-rim); }
+
+/* Ovoz bilan belgilash */
+.vc-top { display: grid; grid-template-columns: 52px minmax(0, 1fr) auto; gap: 14px; align-items: center; padding: 8px 16px 8px 8px; border-radius: 999px;
+  background: linear-gradient(to bottom, var(--clay-hi), transparent 55%, var(--clay-lo)), var(--surface-2); box-shadow: inset 0 1px 0 var(--clay-rim); }
+.vc-mic { position: relative; width: 52px; height: 52px; border-radius: 999px; display: grid; place-items: center; color: #fff;
+  background: linear-gradient(to bottom, rgba(255,255,255,.2), transparent 50%, rgba(0,0,0,.1)), linear-gradient(135deg, var(--primary), var(--secondary));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.5), 0 10px 20px -8px var(--primary); }
+.vc-mic svg { width: 22px; height: 22px; position: relative; z-index: 1; }
+.vc-mic i { position: absolute; inset: 0; border-radius: inherit; border: 2px solid var(--secondary); opacity: 0; }
+.vc.v1 .vc-mic i { animation: micring 1.6s var(--gentle) infinite; }
+.vc.v1 .vc-mic i + i { animation-delay: .8s; }
+@keyframes micring { 0% { transform: scale(1); opacity: .65; } 100% { transform: scale(1.75); opacity: 0; } }
+.vc-wave { display: flex; align-items: center; gap: 3px; height: 34px; }
+.vc-wave i { flex: 1; min-width: 2px; height: 100%; border-radius: 3px; background: linear-gradient(180deg, var(--primary), var(--secondary)); transform: scaleY(var(--rest, .1)); transition: transform .5s var(--ease); }
+.vc.v1 .vc-wave i { animation: wave var(--wd, .8s) ease-in-out infinite alternate; animation-delay: calc(var(--i) * -71ms); }
+@keyframes wave { from { transform: scaleY(var(--lo, .15)); } to { transform: scaleY(var(--hi, .9)); } }
+.vc-time { font-size: 12.5px; font-weight: 700; color: var(--muted); }
+.vc.v1 .vc-time { color: var(--secondary); }
+.vc-heard { margin-top: 14px; font-size: 14.5px; line-height: 1.5; color: var(--text); min-height: 4.6em; }
+.vc-heard small { display: block; font-size: 11.5px; color: var(--muted); margin-bottom: 2px; }
+.caret { display: inline-block; width: 2px; height: 1.05em; margin-left: 2px; vertical-align: -2px; background: var(--primary); opacity: 0; }
+.vc.v2 .caret { animation: blink .8s steps(1) infinite; }
+@keyframes blink { 0% { opacity: 1; } 50% { opacity: 0; } }
+.vc-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; min-height: 36px; }
+.vc-chips small { width: 100%; font-size: 11.5px; color: var(--muted); }
+.vc-chips > span { display: inline-flex; align-items: center; gap: 6px; padding: 5px 11px 5px 6px; border-radius: 999px; font-size: 12.5px; font-weight: 600;
+  background: linear-gradient(to bottom, var(--clay-hi), transparent 55%, var(--clay-lo)), var(--surface-2); box-shadow: inset 0 1px 0 var(--clay-rim);
+  transition: opacity .4s var(--gentle), transform .6s var(--pop), background-color .4s; transition-delay: calc(var(--i) * 150ms); }
+.vc-chips img { width: 22px; height: 22px; object-fit: contain; }
+.vc-chips span i { font-style: normal; color: var(--muted-2); font-size: 11px; margin-left: 2px; }
+.vc-chips .save { margin-left: auto; padding: 7px 15px; color: #fff; background: linear-gradient(120deg, var(--primary), var(--secondary)); box-shadow: inset 0 1px 0 rgba(255,255,255,.45), 0 6px 14px -6px var(--primary); }
+.vc.v4 .vc-chips .save { background: var(--success); box-shadow: inset 0 1px 0 rgba(255,255,255,.4); }
+.js .vc .vc-chips > span { opacity: 0; transform: translateY(8px) scale(.9); }
+.js .vc.v3 .vc-chips > span, .js .vc.v4 .vc-chips > span { opacity: 1; transform: none; }
+
+/* Tahlil natijalari: nur varaq bo'ylab o'tadi, o'qilgan qatorda belgi chiqadi */
+.lb-sheet { position: relative; overflow: hidden; border-radius: var(--r-lg); padding: 12px 14px 6px; background: var(--surface); border: 1px solid var(--line);
+  box-shadow: inset 0 1px 0 var(--clay-rim), 0 12px 26px -18px var(--shadow-2); }
+.lb-hd { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding-bottom: 8px; border-bottom: 1px dashed var(--line); }
+.lb-hd b { font-size: 13.5px; } .lb-hd span { font-size: 11px; color: var(--muted); }
+.lb-row { display: grid; grid-template-columns: minmax(0, 1.3fr) auto minmax(0, .9fr) 78px; gap: 10px; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--line); font-size: 12.5px; }
+.lb-row:last-of-type { border-bottom: 0; }
+.lb-row > span { font-weight: 600; } .lb-row em { font-style: normal; color: var(--muted); font-size: 11.5px; }
+.lb-row b { font-variant-numeric: tabular-nums; }
+.lb-row .fl { justify-self: end; font-style: normal; font-size: 10.5px; font-weight: 700; padding: 4px 9px; border-radius: 999px; white-space: nowrap; }
+.fl.lo { color: var(--warning); background: color-mix(in srgb, var(--warning) 13%, transparent); }
+.fl.ok { color: var(--success); background: color-mix(in srgb, var(--success) 12%, transparent); }
+.lb-beam { position: absolute; left: 0; right: 0; top: 0; height: 34px; margin-top: -17px; pointer-events: none; opacity: 0;
+  background: linear-gradient(180deg, transparent, color-mix(in srgb, var(--accent) 22%, transparent) 46%, color-mix(in srgb, var(--accent) 80%, #fff) 50%, color-mix(in srgb, var(--accent) 22%, transparent) 54%, transparent); }
+.js .lb .lb-beam { animation: beam 7s var(--gentle) infinite; }
+.js .lb .lb-row b, .js .lb .lb-row em { animation: lbread 7s linear infinite; animation-delay: calc(var(--i) * .55s); }
+.js .lb .lb-row .fl { animation: lbflag 7s linear infinite; animation-delay: calc(var(--i) * .55s); }
+@keyframes beam { 0% { top: 0%; opacity: 0; } 5% { opacity: 1; } 45% { top: 100%; opacity: 1; } 50%, 100% { top: 100%; opacity: 0; } }
+@keyframes lbread { 0%, 15% { filter: blur(3px); opacity: .45; } 18%, 90% { filter: none; opacity: 1; } 96%, 100% { filter: blur(3px); opacity: .45; } }
+@keyframes lbflag { 0%, 17% { opacity: 0; transform: scale(.5); } 21% { opacity: 1; transform: scale(1.12); } 24%, 90% { opacity: 1; transform: none; } 96%, 100% { opacity: 0; transform: scale(.8); } }
+.lb-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-top: 12px; }
+.lb-ai { display: inline-flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 600; color: var(--muted); }
+.lb-ai::before { content: ''; width: 8px; height: 8px; border-radius: 999px; background: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent); }
+.lb-send { font-size: 12px; font-weight: 700; padding: 7px 13px; border-radius: 999px; color: var(--on-primary); background: var(--primary); box-shadow: inset 0 1px 0 rgba(255,255,255,.4), 0 4px 10px -4px var(--primary); }
+@media (max-width: 460px) { .lb-row { grid-template-columns: minmax(0, 1fr) auto 70px; } .lb-row em { display: none; } }
+
+/* Kegel: loy shar qisiladi va bo'shaydi, har fazada titrash to'lqini */
+.kg { display: grid; justify-items: center; gap: 12px; }
+.kg-ring { position: relative; width: 156px; height: 156px; display: grid; place-items: center; }
+.kg-ring svg { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); }
+.kg-ring .trk { fill: none; stroke: var(--surface-2); stroke-width: 5; }
+.kg-ring .arc { fill: none; stroke: url(#brandGrad); stroke-width: 5; stroke-linecap: round; stroke-dasharray: 100 100; stroke-dashoffset: 100; }
+.kg-ball { width: 104px; height: 104px; border-radius: 999px; transition: transform 1.1s var(--ease), box-shadow 1.1s var(--ease);
+  background: radial-gradient(circle at 34% 28%, rgba(255,255,255,.75), transparent 34%), linear-gradient(135deg, var(--b1), var(--b3));
+  box-shadow: inset 0 -8px 16px rgba(80,30,140,.25), 0 18px 30px -14px var(--primary); }
+.kg.sq .kg-ball { transform: scale(.7); box-shadow: inset 0 -5px 10px rgba(80,30,140,.35), 0 8px 16px -10px var(--primary); }
+.kg-buzz { position: absolute; inset: 22px; border-radius: 999px; border: 2px solid var(--secondary); opacity: 0; }
+.kg-buzz.go { animation: micring .9s var(--gentle); }
+.kg-say { display: flex; align-items: baseline; gap: 8px; font-family: var(--disp); }
+.kg-say b { font-size: 21px; font-weight: 700; letter-spacing: -.02em; }
+.kg-say span { font-size: 21px; font-weight: 800; color: var(--secondary); min-width: 1ch; }
+.kg-lv { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
+.kg-lv span { font-size: 11px; font-weight: 700; padding: 5px 10px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); }
+.kg-lv .ok { color: var(--success); border-color: color-mix(in srgb, var(--success) 30%, transparent); }
+
+/* SOS: 5 soniyalik ortga sanash, keyin kimga ketgani */
+.sos { display: grid; justify-items: center; gap: 12px; text-align: center; }
+.sos-btn { position: relative; width: 132px; height: 132px; display: grid; place-items: center; }
+.sos-btn svg.rg { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); }
+.sos-btn .trk { fill: none; stroke: color-mix(in srgb, var(--danger) 16%, transparent); stroke-width: 5; }
+.sos-btn .arc { fill: none; stroke: var(--danger); stroke-width: 5; stroke-linecap: round; stroke-dasharray: 100 100; stroke-dashoffset: 0; }
+.sos.count .sos-btn .arc { stroke-dashoffset: 100; transition: stroke-dashoffset 5s linear; }
+.sos-core { width: 96px; height: 96px; border-radius: 999px; display: grid; place-items: center; color: #fff; font-family: var(--disp); font-weight: 800; font-size: 25px; letter-spacing: .02em;
+  background: radial-gradient(circle at 34% 28%, rgba(255,255,255,.45), transparent 36%), linear-gradient(135deg, #FF6B6B, #D92D45);
+  box-shadow: inset 0 -6px 12px rgba(120,0,20,.25), 0 16px 30px -12px #E2364A; transition: background .6s var(--gentle), transform .5s var(--pop); position: relative; }
+.sos.count .sos-core { animation: sospulse 1s var(--gentle) infinite; }
+@keyframes sospulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(.94); } }
+.sos-core span { position: absolute; inset: 0; display: grid; place-items: center; transition: opacity .3s, transform .5s var(--pop); }
+.sos-core .n, .sos-core .ok { opacity: 0; transform: scale(.5); }
+.sos.count .sos-core .w { opacity: 0; transform: scale(.5); } .sos.count .sos-core .n { opacity: 1; transform: none; font-size: 34px; }
+.sos.sent .sos-core { background: radial-gradient(circle at 34% 28%, rgba(255,255,255,.45), transparent 36%), linear-gradient(135deg, #3FCF98, #1F9E73); box-shadow: inset 0 -6px 12px rgba(0,60,40,.25), 0 16px 30px -12px #2BA57A; }
+.sos.sent .sos-core .w { opacity: 0; }
+.sos.sent .sos-btn .arc { stroke: var(--success); } .sos.sent .sos-btn .trk { stroke: color-mix(in srgb, var(--success) 16%, transparent); } .sos.sent .sos-core .ok { opacity: 1; transform: none; }
+.sos-core .ok svg { width: 38px; height: 38px; }
+.sos-say b { display: block; font-size: 15px; } .sos-say span { font-size: 12px; color: var(--muted); }
+.sos-to { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; min-height: 30px; }
+.sos-to li { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 600; padding: 5px 10px; border-radius: 999px; background: var(--surface-2);
+  transition: opacity .4s, transform .6s var(--pop); transition-delay: calc(var(--i) * 140ms); }
+.sos-to li em { font-style: normal; color: var(--muted); font-weight: 500; }
+.js .sos .sos-to li { opacity: 0; transform: translateY(8px) scale(.9); }
+.js .sos.sent .sos-to li { opacity: 1; transform: none; }
+.sos-call { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
+.sos-call span { font-size: 11.5px; font-weight: 700; padding: 5px 10px; border-radius: 999px; border: 1px solid color-mix(in srgb, var(--danger) 30%, transparent); color: var(--danger); }
+
+/* Sikl yakuni: 9:16 hikoya slaydlari */
+.wr { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 16px; align-items: center; }
+.wr-story { position: relative; width: 150px; aspect-ratio: 9 / 16; border-radius: 18px; overflow: hidden; color: #fff; padding: 22px 14px 14px;
+  background: radial-gradient(120% 70% at 80% 0%, #FF8EC8 0%, transparent 60%), linear-gradient(160deg, #8E6CFF, #5B3FE0 60%, #3A2A9A);
+  box-shadow: 0 22px 40px -22px #5B3FE0, inset 0 1px 0 rgba(255,255,255,.35); }
+.wr-bars { position: absolute; left: 10px; right: 10px; top: 9px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+.wr-bars i { height: 3px; border-radius: 3px; background: rgba(255,255,255,.3); overflow: hidden; }
+.wr-bars b { display: block; height: 100%; width: 0; background: #fff; }
+.wr-bars i.done b { width: 100%; }
+.wr-bars i.cur b { animation: wrbar var(--wt, 2400ms) linear forwards; }
+@keyframes wrbar { to { width: 100%; } }
+.wr-slide { position: absolute; inset: 26px 14px 30px; display: flex; flex-direction: column; justify-content: center; gap: 4px; opacity: 0; transform: translateY(10px) scale(.97);
+  transition: opacity .3s var(--gentle), transform .4s var(--ease); }
+.wr-slide.on { opacity: 1; transform: none; transition: opacity .5s var(--gentle) .28s, transform .8s var(--ease) .28s; }
+.wr-slide small { font-size: 10px; letter-spacing: .08em; text-transform: uppercase; opacity: .85; font-weight: 700; }
+.wr-slide .num { font-family: var(--disp); font-size: 50px; font-weight: 800; letter-spacing: -.04em; line-height: .95; transition: filter .5s var(--gentle); }
+.wr-slide span { font-size: 12px; line-height: 1.35; opacity: .92; }
+.wr-slide .ch { align-self: flex-start; font-size: 11.5px; font-weight: 600; padding: 4px 9px; border-radius: 999px; background: rgba(255,255,255,.18); margin-top: 3px; opacity: 1; }
+.wr-slide .flw { width: 66px; height: 66px; border-radius: 999px; background: rgba(255,255,255,.92); display: grid; place-items: center; margin-bottom: 4px; box-shadow: 0 8px 18px -8px rgba(0,0,0,.4); }
+.wr-slide .flw img { width: 52px; height: 52px; object-fit: contain; }
+.wr-slide b.pn { font-family: var(--disp); font-size: 24px; letter-spacing: -.02em; line-height: 1.05; }
+.wr.hide .wr-slide .num { filter: blur(9px); }
+.wr-brand { position: absolute; left: 0; right: 0; bottom: 10px; text-align: center; font-size: 8.5px; letter-spacing: .14em; font-weight: 700; opacity: .7; }
+.wr-side { display: grid; gap: 10px; align-content: center; }
+.wr-tg { display: flex; align-items: center; gap: 10px; font-size: 13px; font-weight: 600; }
+.wr-share { justify-self: start; font-size: 12px; font-weight: 700; padding: 8px 14px; border-radius: 999px; color: var(--on-primary); background: var(--primary); box-shadow: inset 0 1px 0 rgba(255,255,255,.4), 0 4px 10px -4px var(--primary); }
+.wr-side p { font-size: 12.5px; color: var(--muted); line-height: 1.5; }
+
+/* Chaqaloq kuzatuvi */
+.bb { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: clamp(16px, 2.6vw, 28px); align-items: stretch; }
+@media (max-width: 760px) { .bb { grid-template-columns: minmax(0, 1fr); } }
+.bb-left { display: grid; gap: 10px; align-content: start; }
+.bb-kids { display: flex; gap: 6px; }
+.bb-kids span { font-size: 12.5px; font-weight: 600; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); transition: background-color .4s, color .4s, border-color .4s; }
+.bb-kids span.on { background: var(--text); border-color: var(--text); color: var(--bg); }
+.bb-sleep { display: grid; grid-template-columns: 40px 1fr auto; gap: 12px; align-items: center; }
+.bb-sleep .moon { width: 40px; height: 40px; border-radius: 13px; display: grid; place-items: center; font-size: 19px; background: color-mix(in srgb, var(--primary) 14%, var(--surface)); }
+.bb-sleep small { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--muted); }
+.bb-sleep small::before { content: ''; width: 7px; height: 7px; border-radius: 999px; background: var(--primary); animation: halo 1.6s ease-in-out infinite; }
+.bb-sleep b { font-family: var(--disp); font-size: 24px; font-weight: 800; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.bb-stop { font-size: 11.5px; font-weight: 700; padding: 7px 12px; border-radius: 999px; color: var(--on-primary); background: var(--primary); }
+.bb-quick { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.bb-q { display: grid; grid-template-columns: 34px 1fr auto; gap: 8px; align-items: center; font-size: 12.5px; font-weight: 600; transition: transform .4s var(--pop), box-shadow .4s; }
+.bb-q img { width: 34px; height: 34px; object-fit: contain; }
+.bb-q b { font-family: var(--disp); font-size: 17px; font-variant-numeric: tabular-nums; display: inline-block; }
+.bb-q.tap { transform: scale(.95); box-shadow: inset 0 1px 0 var(--clay-rim), 0 0 0 2px color-mix(in srgb, var(--accent) 50%, transparent); }
+.bb-q.tap b { animation: numpop .6s var(--pop); }
+@keyframes numpop { 0% { transform: translateY(6px); opacity: 0; } 100% { transform: none; opacity: 1; } }
+.bb-vac { display: grid; grid-template-columns: 38px 1fr; gap: 10px; align-items: center; }
+.bb-vac img { width: 38px; height: 38px; object-fit: contain; }
+.bb-vac b { display: block; font-size: 13px; } .bb-vac span { font-size: 11.5px; color: var(--muted); }
+.bb-chart { margin: 0; display: grid; gap: 6px; align-content: start; }
+.bb-chart figcaption { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); }
+.bb-chart figcaption b { color: var(--text); font-size: 13px; }
+.bb-chart svg { width: 100%; height: auto; overflow: visible; }
+.bb-chart .pband { fill: color-mix(in srgb, var(--primary) 9%, transparent); }
+.bb-chart .pband2 { fill: color-mix(in srgb, var(--primary) 9%, transparent); }
+.bb-chart .p50 { fill: none; stroke: color-mix(in srgb, var(--primary) 45%, transparent); stroke-width: 1.4; stroke-dasharray: 4 4; }
+.bb-chart .ax { stroke: var(--line); stroke-width: 1; }
+.bb-chart text { font-size: 9.5px; fill: var(--muted-2); font-family: var(--sans); }
+.bb-chart .me { fill: none; stroke: var(--secondary); stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 300; stroke-dashoffset: 300; transition: stroke-dashoffset 2s var(--ease) .3s; }
+.in .bb-chart .me { stroke-dashoffset: 0; }
+.bb-chart .dt { fill: var(--surface); stroke: var(--secondary); stroke-width: 2.4; transform-box: fill-box; transform-origin: center; transform: scale(0); transition: transform .5s var(--pop); transition-delay: calc(.4s + var(--i) * 360ms); }
+.in .bb-chart .dt { transform: none; }
+.bb-chart .tip { opacity: 0; transition: opacity .5s var(--gentle) 2.2s; }
+.in .bb-chart .tip { opacity: 1; }
+.bb-chart .tip rect { fill: var(--text); } .bb-chart .tip text { fill: var(--bg); font-weight: 700; font-size: 10px; }
+
+/* Shifokor uchun PDF */
+.pf { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 18px; align-items: center; }
+.pf-stack { position: relative; height: 148px; }
+.pf-stack .pg { position: absolute; left: 6px; top: 4px; width: 100px; height: 136px; border-radius: 10px; background: var(--surface); border: 1px solid var(--line);
+  box-shadow: 0 10px 22px -14px var(--shadow-2); transform-origin: 50% 100%; }
+.js .pf .pg.p3 { animation: fan3 6s var(--ease) infinite; } .js .pf .pg.p2 { animation: fan2 6s var(--ease) infinite; }
+@keyframes fan3 { 0%, 12%, 88%, 100% { transform: rotate(0deg); } 30%, 70% { transform: rotate(-12deg) translateX(-8px); } }
+@keyframes fan2 { 0%, 12%, 88%, 100% { transform: rotate(0deg); } 30%, 70% { transform: rotate(-5deg) translateX(-3px); } }
+.pf-stack .p1 { padding: 11px 10px; display: grid; align-content: start; gap: 6px; }
+.pf-stack .p1 b { font-size: 8px; letter-spacing: .2em; color: var(--ink); }
+.pf-stack .p1 i { display: block; height: 4px; border-radius: 3px; background: var(--surface-2); }
+.pf-stack .p1 i:nth-of-type(2) { width: 70%; }
+.pf-stack .p1 .ch { height: 34px; border-radius: 6px; background: linear-gradient(to top, color-mix(in srgb, var(--secondary) 28%, transparent), transparent), var(--surface-2); position: relative; overflow: hidden; }
+.pf-stack .p1 .ch::after { content: ''; position: absolute; inset: 0; background: linear-gradient(105deg, transparent 30%, rgba(255,255,255,.55) 50%, transparent 70%); transform: translateX(-120%); animation: sheen 3.4s var(--gentle) infinite; }
+.pf-stack .pdf { position: absolute; right: -2px; bottom: 6px; font-size: 9px; font-weight: 800; letter-spacing: .08em; color: #fff; padding: 4px 7px; border-radius: 7px; background: var(--danger); box-shadow: 0 6px 12px -6px var(--danger); }
+.pf-ctl { display: grid; gap: 10px; }
+.seg { position: relative; display: grid; grid-template-columns: 1fr 1fr; padding: 4px; border-radius: 999px; background: var(--surface-2); font-size: 12.5px; font-weight: 700; }
+.seg span { position: relative; z-index: 1; text-align: center; padding: 6px 0; color: var(--muted); transition: color .4s; }
+.seg span.on { color: var(--on-primary); }
+.seg i { position: absolute; z-index: 0; left: 4px; top: 4px; bottom: 4px; width: calc(50% - 4px); border-radius: 999px; background: var(--primary);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.4), 0 4px 10px -4px var(--primary); transition: transform .6s var(--ease); }
+.seg.six i { transform: translateX(100%); }
+.pf-sec { display: flex; flex-wrap: wrap; gap: 5px 10px; font-size: 12px; font-weight: 600; }
+.pf-sec li { display: inline-flex; align-items: center; gap: 5px; }
+.pf-sec svg { width: 14px; height: 14px; color: var(--success); }
+.pf-sec path { stroke-dasharray: 20; stroke-dashoffset: 20; transition: stroke-dashoffset .5s var(--ease); transition-delay: calc(.3s + var(--i) * 150ms); }
+.in .pf-sec path { stroke-dashoffset: 0; }
+.pf-lang { display: flex; gap: 5px; }
+.pf-lang span { font-size: 10.5px; font-weight: 700; padding: 3px 8px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); }
+.pf-lang span:first-child { color: var(--ink); border-color: color-mix(in srgb, var(--ink) 35%, transparent); }
+
+/* Holatlarim: PCOS va endometrioz */
+.cd { display: grid; gap: 12px; }
+.cd-st { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.cd-st > span { display: grid; gap: 4px; padding: 10px 12px; border-radius: var(--r-md); background: linear-gradient(to bottom, var(--clay-hi), transparent 55%, var(--clay-lo)), var(--surface-2); box-shadow: inset 0 1px 0 var(--clay-rim); }
+.cd-st b { font-size: 13.5px; }
+.cd-st em { justify-self: start; font-style: normal; font-size: 10.5px; font-weight: 700; padding: 3px 8px; border-radius: 999px; }
+.cd-st .dx { color: var(--ink); background: color-mix(in srgb, var(--ink) 10%, transparent); }
+.cd-st .sus { color: var(--warning); background: color-mix(in srgb, var(--warning) 12%, transparent); }
+.cd-hd { display: flex; justify-content: space-between; align-items: baseline; font-size: 12.5px; color: var(--muted); margin-bottom: 8px; }
+.cd-hd b { font-family: var(--disp); font-size: 22px; font-weight: 800; color: var(--text); font-variant-numeric: tabular-nums; }
+.cd-scale { position: relative; height: 10px; border-radius: 999px; background: linear-gradient(90deg, #3FCF98, #FFC46B 50%, #FF5C64); }
+.cd-thumb { position: absolute; top: 50%; left: calc(var(--v, 0) * 10%); width: 22px; height: 22px; margin: -11px 0 0 -11px; border-radius: 999px; background: #fff;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--text) 12%, transparent), 0 4px 10px rgba(0,0,0,.25); transition: left 1.2s var(--ease); }
+.cd-ticks { display: flex; justify-content: space-between; font-size: 10px; color: var(--muted-2); margin-top: 6px; font-variant-numeric: tabular-nums; }
+.cd-kinds { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.cd-kinds span { font-size: 11.5px; font-weight: 600; padding: 5px 10px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); transition: background-color .4s, color .4s, border-color .4s; }
+.cd-kinds span.on { background: color-mix(in srgb, var(--secondary) 14%, transparent); border-color: color-mix(in srgb, var(--secondary) 40%, transparent); color: var(--text); }
+.cd-days { display: grid; grid-template-columns: repeat(14, minmax(0, 1fr)); gap: 3px; align-items: center; }
+.cd-days i { grid-row: 1; position: relative; z-index: 1; aspect-ratio: 1; border-radius: 999px; display: grid; place-items: center; font-style: normal; font-size: 9.5px; font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; }
+.cd-band { grid-row: 1; grid-column: 3 / 11; height: 100%; border-radius: 999px; border: 1.5px dashed var(--ph-period); position: relative; overflow: hidden;
+  background: color-mix(in srgb, var(--ph-period) 10%, transparent); }
+.cd-band::after { content: ''; position: absolute; inset: 0; background: linear-gradient(100deg, transparent 20%, color-mix(in srgb, var(--ph-period) 35%, transparent) 50%, transparent 80%); transform: translateX(-100%); animation: bandrun 3.2s var(--gentle) infinite; }
+@keyframes bandrun { to { transform: translateX(100%); } }
+.cd-pred p { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin-top: 8px; font-size: 12.5px; color: var(--muted); }
+.cd-pred p b { color: var(--text); }
+
+/* Ilovadan tashqarida: Telegram bot va soat */
+.ox { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 18px; align-items: center; }
+.tgm { border-radius: var(--r-lg); overflow: hidden; border: 1px solid var(--line); background: var(--surface); box-shadow: inset 0 1px 0 var(--clay-rim); }
+.tgm-hd { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+.tgm-av { width: 30px; height: 30px; border-radius: 999px; display: grid; place-items: center; flex: none; background: linear-gradient(135deg, var(--b1), var(--b3)); }
+.tgm-av svg { height: 62%; width: auto; }
+.tgm-hd b { display: block; font-size: 13px; } .tgm-hd span { font-size: 11px; color: var(--muted); }
+.tgm-hd .ntag { margin-left: auto; }
+.tgm-body { display: grid; gap: 7px; padding: 12px; min-height: 150px; align-content: start; background: var(--surface-2); }
+.tgm-msg { justify-self: start; max-width: 90%; font-size: 12.5px; line-height: 1.45; padding: 8px 11px; border-radius: 14px; border-bottom-left-radius: 5px; background: var(--surface); }
+.tgm-msg small { display: block; font-size: 10px; color: var(--muted); margin-top: 2px; }
+.tgm-btns { display: grid; grid-template-columns: repeat(3, auto); justify-content: start; gap: 5px; }
+.tgm-btns span { font-size: 11.5px; font-weight: 600; padding: 6px 10px; border-radius: 10px; text-align: center; background: color-mix(in srgb, var(--primary) 12%, var(--surface)); color: var(--ink); transition: transform .3s var(--pop), background-color .3s; }
+.ox.tap .tgm-btns span:nth-child(2) { transform: scale(.92); background: color-mix(in srgb, var(--primary) 30%, var(--surface)); }
+.tgm-msg.rep { transition: opacity .4s, transform .5s var(--ease); }
+.js .ox .tgm-msg.rep { opacity: 0; transform: translateY(8px); }
+.js .ox.done .tgm-msg.rep { opacity: 1; transform: none; }
+.wch { display: grid; justify-items: center; gap: 10px; }
+.wch-face { position: relative; width: 112px; height: 132px; border-radius: 34px; padding: 8px; background: linear-gradient(160deg, #3A3568, #15122E);
+  box-shadow: 0 18px 30px -16px rgba(20,10,60,.6), inset 0 1px 0 rgba(255,255,255,.18); }
+.wch-face::before, .wch-face::after { content: ''; position: absolute; left: 30px; right: 30px; height: 18px; background: linear-gradient(180deg, #4A4580, #2A2552); z-index: -1; }
+.wch-face::before { top: -14px; border-radius: 8px 8px 0 0; } .wch-face::after { bottom: -14px; border-radius: 0 0 8px 8px; }
+.wch-in { position: relative; width: 100%; height: 100%; border-radius: 27px; background: #0B0919; display: grid; place-items: center; color: #fff; }
+.wch-in svg { position: absolute; inset: 9px; width: calc(100% - 18px); height: calc(100% - 18px); transform: rotate(-90deg); }
+.wch-in .trk { fill: none; stroke: rgba(99,216,255,.18); stroke-width: 7; }
+.wch-in .arc { fill: none; stroke: #63D8FF; stroke-width: 7; stroke-linecap: round; transition: stroke-dasharray 1.2s var(--ease); }
+.wch-in div { display: grid; justify-items: center; line-height: 1; position: relative; }
+.wch-in b { font-family: var(--disp); font-size: 25px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.wch-in span { font-size: 9px; opacity: .7; margin-top: 3px; letter-spacing: .06em; }
+@media (max-width: 480px) { .ox { grid-template-columns: minmax(0, 1fr); } }
+
+/* ---------- Yangilangan qismlar ---------- */
+.sources { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+@media (max-width: 1040px) { .sources { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.doc-points.six { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (max-width: 960px) { .doc-points.six { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 520px) { .doc-points.six { grid-template-columns: minmax(0, 1fr); } }
+.album { display: grid; grid-template-columns: repeat(3, 44px); gap: 4px; margin-top: 8px; }
+.album i { position: relative; width: 44px; height: 44px; border-radius: 9px; overflow: hidden; display: grid; place-items: center; font-style: normal; background: rgba(255,255,255,.2); }
+.album img { width: 70%; height: 70%; object-fit: contain; }
+.album .vid::after { content: '▶ 0:24'; position: absolute; left: 3px; bottom: 3px; font-size: 7.5px; font-weight: 800; padding: 1px 4px; border-radius: 4px; background: rgba(0,0,0,.45); color: #fff; }
+
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   *, *::before, *::after { animation-duration: .01ms !important; animation-delay: 0ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; transition-delay: 0ms !important; }
   .js .r, .js .lift, .chat .bub, .reveal-logo .tag, .moodwk em, .cal i { opacity: 1 !important; transform: none !important; }
-  .figure .bl, .close-art .wreath .fl { opacity: 1 !important; transform: none !important; }
+  .close-art .wreath .fl { opacity: 1 !important; transform: none !important; }
   .petalfield .fl { opacity: var(--o, .5) !important; }
-  .figure .ln, .figure .thin { stroke-dashoffset: 0 !important; }
-  .portrait-svg .pen { display: none; }
+  .ob-pollen, .toasts, .lb-beam, .kg-buzz { display: none; }
+  .js .news-roll span.on, .toast, .wr-slide.on { transition: none; }
+  .js .lb .lb-row b, .js .lb .lb-row em, .js .lb .lb-row .fl { animation: none !important; opacity: 1; filter: none; transform: none; }
+  .js .tick-track { animation: none !important; }
+  .tchip.dup { display: none; }
+  .tick-row { flex-wrap: wrap; justify-content: center; }
+  .tick-row .tick-track { flex-wrap: wrap; justify-content: center; flex: 1; }
+  .ticker { -webkit-mask-image: none; mask-image: none; }
+  .bb-chart .me { stroke-dashoffset: 0 !important; } .bb-chart .dt, .bb-chart .tip { transform: none !important; opacity: 1 !important; }
+  .pf-sec path { stroke-dashoffset: 0 !important; }
   .pen { stroke-dashoffset: 0 !important; }
   .mark-dot { transform: scale(1) !important; opacity: 1 !important; }
   .play .word path { opacity: 1; transform: none; }
@@ -1152,12 +1569,12 @@ body {
     </a>
     <nav class="nav-links" aria-label="Bo'limlar">
       <a href="#ilova">Ilova</a>
+      <a href="#yangi">Yangi</a>
       <a href="#bosqichlar">Bosqichlar</a>
       <a href="#ai">AI va Chat</a>
       <a href="#shifokorlar">Shifokorlar</a>
       <a href="#yaqinim">Yaqinim</a>
       <a href="#premium">Premium</a>
-      <a href="#holat">Holat</a>
       <span class="nav-ind" id="navInd" aria-hidden="true"></span>
     </nav>
     <button class="theme-btn" id="themeBtn" type="button" aria-label="Mavzuni almashtirish">
@@ -1205,6 +1622,12 @@ body {
         </div>
       </div>
 
+      <a class="news lift" style="--d:1380ms" href="#yangi" aria-label="Yangi: ovoz bilan belgilash, tahlil natijalari, chaqaloq kuzatuvi, Kegel, SOS, sikl yakuni va shifokor uchun PDF">
+        <span class="news-tag" aria-hidden="true">Yangi</span>
+        <span class="news-roll" id="newsRoll" aria-hidden="true"><span class="on">Ovoz bilan belgilash</span><span>Tahlil natijalarini AI o'qiydi</span><span>Chaqaloq kuzatuvi va emlash</span><span>Kegel mashqlari</span><span>SOS — yaqinlarga signal</span><span>Sikl yakuni hikoyasi</span><span>Shifokor uchun PDF</span></span>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      </a>
+
       <h1 class="display lift" style="--d:1500ms">Har bir ayol.<br><span class="grad-text">Har bir lahza.</span></h1>
       <p class="lede lift" style="--d:1640ms">
         Sikl, homiladorlik, tug'ruqdan keyingi davr va menopauza &mdash; uyqu, ovqatlanish
@@ -1228,6 +1651,14 @@ body {
     </div>
 
     <div class="phone-stage lift" style="--d:900ms" id="phoneStage">
+      <div class="toasts" id="toasts" aria-hidden="true">
+        <div class="toast tl"><img src="img/ic_lab.webp" alt="" width="40" height="40" decoding="async"><span><b>Tahlil o'qildi</b>4 ko'rsatkich &middot; 2 tasi normadan past</span></div>
+        <div class="toast tr"><img src="img/ic_partner.webp" alt="" width="40" height="40" decoding="async"><span><b>Yaqinim</b>&laquo;Hozir!&raquo; &mdash; choy yo'lda ☕</span></div>
+        <div class="toast tl"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></span><span><b>Ovozdan saqlandi</b>Bosh og'rig'i &middot; +500 ml suv</span></div>
+        <div class="toast tr"><img src="img/ic_kegel.webp" alt="" width="40" height="40" decoding="async"><span><b>Kegel &middot; 5 daqiqa</b>7 kunlik seriya &middot; +10 Gul</span></div>
+        <div class="toast tl"><img src="img/ic_bottle.webp" alt="" width="40" height="40" decoding="async"><span><b>Oysha uyg'ondi</b>Uyqu 1 s 12 daq &middot; emizish vaqti</span></div>
+        <div class="toast tr"><img src="img/ic_doctor.webp" alt="" width="40" height="40" decoding="async"><span><b>Nodira Karimova</b>Albomni ko'rdi &middot; javob yozmoqda&hellip;</span></div>
+      </div>
       <div class="phone-tilt" id="phoneTilt">
         <div class="phone-float">
         <div class="phone">
@@ -1239,7 +1670,10 @@ body {
                   <h4>Xayrli tong, Malika</h4>
                   <p><span class="streak">🔥 12 kunlik seriya</span></p>
                 </div>
-                <span class="gulpill" id="gulPill" aria-label="Gul balansi"><svg viewBox="-11 -11 22 22" aria-hidden="true"><use href="#bloomArt"/></svg><span class="tnum" id="gulNum">340</span><span class="plus">+10</span></span>
+                <div class="scr-acts">
+                  <span class="mic-btn" aria-label="Ovoz bilan belgilash"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></span>
+                  <span class="gulpill" id="gulPill" aria-label="Gul balansi"><svg viewBox="-11 -11 22 22" aria-hidden="true"><use href="#bloomArt"/></svg><span class="tnum" id="gulNum">340</span><span class="plus">+10</span></span>
+                </div>
               </div>
 
               <div class="ai-card">
@@ -1285,7 +1719,7 @@ body {
               <div class="quick" aria-hidden="true">
                 <div><i><img src="img/ic_notebook.webp" alt="" width="48" height="48" loading="lazy" decoding="async"></i>Jurnal</div>
                 <div><i><img src="img/ic_meditation.webp" alt="" width="48" height="48" loading="lazy" decoding="async"></i>Meditatsiya</div>
-                <div><i><img src="img/ic_breath.webp" alt="" width="48" height="48" loading="lazy" decoding="async"></i>Nafas</div>
+                <div><i><img src="img/ic_kegel.webp" alt="" width="48" height="48" loading="lazy" decoding="async"></i>Kegel</div>
                 <div><i><img src="img/ic_bell.webp" alt="" width="48" height="48" loading="lazy" decoding="async"></i>Eslatmalar</div>
               </div>
             </div>
@@ -1313,45 +1747,64 @@ body {
     <div class="stat"><b><span data-count="3">0</span></b><span>til &mdash; interfeys va AI</span></div>
     <div class="stat"><b><span data-count="5">0</span></b><span>ulanadigan manba</span></div>
     <div class="stat"><b><span data-count="24">0</span><small>soat</small></b><span>shifokor bilan oyna</span></div>
-    <div class="stat"><b><span data-count="4">0</span></b><span>to'lov yo'li</span></div>
+    <div class="stat"><b><span data-count="28">0</span></b><span>tahlil ko'rsatkichini AI taniydi</span></div>
     <div class="stat"><b><span data-count="2">0</span></b><span>ilova: Sadora va Doctor</span></div>
   </div>
+</section>
+
+<!-- ==================== YANGILIKLAR LENTASI ==================== -->
+<section class="ticker" id="ticker" aria-label="Yangi imkoniyatlar">
+  <div class="tick-row"><div class="tick-track" style="--tt:64s">
+    <span class="tchip"><span class="gi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></span>Ovoz bilan belgilash</span>
+    <span class="tchip"><img src="img/ic_lab.webp" alt="" width="30" height="30" loading="lazy" decoding="async">Tahlil natijalari <small>AI</small></span>
+    <span class="tchip"><img src="img/ic_bottle.webp" alt="" width="30" height="30" loading="lazy" decoding="async">Chaqaloq kuzatuvi</span>
+    <span class="tchip"><img src="img/ic_kegel.webp" alt="" width="30" height="30" loading="lazy" decoding="async">Kegel mashqlari</span>
+    <span class="tchip"><span class="gi red">SOS</span>Yaqinlarga signal</span>
+    <span class="tchip"><img src="img/flower_lotus.webp" alt="" width="30" height="30" loading="lazy" decoding="async">Sikl yakuni</span>
+    <span class="tchip"><img src="img/ic_record.webp" alt="" width="30" height="30" loading="lazy" decoding="async">Shifokor uchun PDF</span>
+    <span class="tchip"><img src="img/ic_cramps.webp" alt="" width="30" height="30" loading="lazy" decoding="async">PCOS va endometrioz</span>
+  </div></div>
+  <div class="tick-row rev"><div class="tick-track" style="--tt:76s">
+    <span class="tchip"><img src="img/ic_calendar.webp" alt="" width="30" height="30" loading="lazy" decoding="async">Milliy emlash taqvimi</span>
+    <span class="tchip"><img src="img/ic_health.webp" alt="" width="30" height="30" loading="lazy" decoding="async">WHO o'sish grafigi <small>Premium</small></span>
+    <span class="tchip"><img src="img/ic_gallery.webp" alt="" width="30" height="30" loading="lazy" decoding="async">Konsultatsiyada albom</span>
+    <span class="tchip"><span class="gi sky"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 4 3 11l7 2.5L12.5 21 16 15l5 4z"/><path d="m10 13.5 6-4.5"/></svg></span>Telegram bot <small>Tez orada</small></span>
+    <span class="tchip"><img src="img/ic_watch.webp" alt="" width="30" height="30" loading="lazy" decoding="async">Vidjet va soat <small>1.1</small></span>
+    <span class="tchip"><img src="img/ic_period.webp" alt="" width="30" height="30" loading="lazy" decoding="async">Og'riq kundaligi</span>
+    <span class="tchip"><img src="img/ic_diaper.webp" alt="" width="30" height="30" loading="lazy" decoding="async">Bir teginishda taglik</span>
+    <span class="tchip"><img src="img/badge_kegel.webp" alt="" width="30" height="30" loading="lazy" decoding="async">Lotus nishoni</span>
+  </div></div>
 </section>
 
 
 <!-- ==================== MANIFEST ==================== -->
 <section class="sec" id="nega">
   <div class="wrap manifesto-grid">
-    <div class="portrait r">
-      <svg class="figure portrait-svg" id="portrait" viewBox="0 0 300 400" data-replay="1" role="img" aria-label="Sochiga gul taqqan ayolning bir chiziqda chizilgan profili">
-        <defs>
-          <!-- Tovlanuvchi gradient: ranglar brend palitrasi bo'ylab aylanadi, gradient o'zi sekin buriladi -->
-          <linearGradient id="portraitGrad" gradientUnits="userSpaceOnUse" x1="40" y1="30" x2="260" y2="380">
-            <stop offset="0" stop-color="#B06CFF"><animate attributeName="stop-color" values="#B06CFF;#63D8FF;#F68CCB;#8A8CFF;#B06CFF" dur="9s" repeatCount="indefinite"/></stop>
-            <stop offset=".5" stop-color="#8A8CFF"><animate attributeName="stop-color" values="#8A8CFF;#B06CFF;#63D8FF;#F68CCB;#8A8CFF" dur="9s" repeatCount="indefinite"/></stop>
-            <stop offset="1" stop-color="#F68CCB"><animate attributeName="stop-color" values="#F68CCB;#8A8CFF;#B06CFF;#63D8FF;#F68CCB" dur="9s" repeatCount="indefinite"/></stop>
-            <animateTransform attributeName="gradientTransform" type="rotate" from="0 150 200" to="360 150 200" dur="16s" repeatCount="indefinite"/>
-          </linearGradient>
-          <radialGradient id="penGlow"><stop offset="0" stop-color="#fff" stop-opacity=".95"/><stop offset=".35" stop-color="#E7D6FF" stop-opacity=".7"/><stop offset="1" stop-color="#B06CFF" stop-opacity="0"/></radialGradient>
-        </defs>
-        <path class="ln" style="stroke-width:2.4" data-dur="2400" data-delay="0" d="M170.0,64.0 C172.9,66.6 180.7,72.1 186.0,78.0 C191.3,83.9 195.3,89.0 199.0,96.0 C202.7,103.0 204.5,109.4 206.0,116.0 C207.5,122.6 207.6,127.0 207.0,132.0 C206.4,136.9 203.2,139.0 203.0,143.0 C202.8,147.0 204.3,150.2 206.0,154.0 C207.7,157.8 209.6,160.5 212.0,164.0 C214.4,167.5 217.3,170.1 219.0,173.0 C220.7,175.9 221.6,177.8 221.0,180.0 C220.4,182.2 218.2,183.7 216.0,185.0 C213.8,186.3 210.5,185.2 209.0,187.0 C207.5,188.8 207.3,192.4 208.0,195.0 C208.7,197.6 212.8,199.2 213.0,201.0 C213.2,202.8 209.0,203.0 209.0,205.0 C209.0,207.0 213.4,209.4 213.0,212.0 C212.6,214.6 207.4,215.7 207.0,219.0 C206.6,222.3 211.7,226.0 211.0,230.0 C210.3,234.0 207.6,237.9 203.0,241.0 C198.4,244.1 190.6,242.4 186.0,247.0 C181.4,251.6 179.8,258.1 178.0,266.0 C176.2,273.9 174.2,281.4 176.0,290.0 C177.8,298.6 178.8,304.6 188.0,313.0 C197.2,321.4 212.4,329.6 226.0,336.0 C239.6,342.4 255.4,345.8 262.0,348.0"/>
-        <path class="ln" style="stroke-width:2.4" data-dur="1100" data-delay="900" d="M150.0,252.0 C149.5,256.7 148.7,271.3 147.0,280.0 C145.3,288.7 144.8,296.0 140.0,304.0 C135.2,312.0 127.3,321.3 118.0,328.0 C108.7,334.7 96.0,340.0 84.0,344.0 C72.0,348.0 52.3,350.7 46.0,352.0"/>
-        <path class="thin" style="stroke-width:1.9" data-dur="1800" data-delay="1300" opacity=".9" d="M170.0,64.0 C166.7,60.7 158.3,48.0 150.0,44.0 C141.7,40.0 129.7,37.7 120.0,40.0 C110.3,42.3 100.0,48.7 92.0,58.0 C84.0,67.3 76.3,81.7 72.0,96.0 C67.7,110.3 66.0,127.7 66.0,144.0 C66.0,160.3 68.7,178.3 72.0,194.0 C75.3,209.7 82.7,223.0 86.0,238.0 C89.3,253.0 92.3,268.7 92.0,284.0 C91.7,299.3 87.3,315.7 84.0,330.0 C80.7,344.3 76.3,360.0 72.0,370.0 C67.7,380.0 60.3,386.7 58.0,390.0"/>
-        <path class="thin" style="stroke-width:1.6" data-dur="1600" data-delay="1650" opacity=".75" d="M174.0,70.0 C170.7,68.0 161.7,59.0 154.0,58.0 C146.3,57.0 136.3,58.3 128.0,64.0 C119.7,69.7 109.7,79.7 104.0,92.0 C98.3,104.3 95.0,122.3 94.0,138.0 C93.0,153.7 95.3,170.7 98.0,186.0 C100.7,201.3 107.0,214.7 110.0,230.0 C113.0,245.3 116.3,261.7 116.0,278.0 C115.7,294.3 111.3,313.3 108.0,328.0 C104.7,342.7 98.0,359.7 96.0,366.0"/>
-        <path class="thin" style="stroke-width:1.3" data-dur="1300" data-delay="2000" opacity=".55" d="M160.0,92.0 C156.7,95.3 145.3,102.3 140.0,112.0 C134.7,121.7 130.0,136.0 128.0,150.0 C126.0,164.0 127.0,181.7 128.0,196.0 C129.0,210.3 132.0,222.7 134.0,236.0 C136.0,249.3 140.0,262.0 140.0,276.0 C140.0,290.0 135.0,312.7 134.0,320.0"/>
-        <path class="thin" style="stroke-width:1.3" data-dur="900" data-delay="2300" opacity=".6" d="M170.0,64.0 C169.2,68.3 166.7,81.0 165.0,90.0 C163.3,99.0 161.2,108.3 160.0,118.0 C158.8,127.7 158.7,138.0 158.0,148.0 C157.3,158.0 155.7,169.3 156.0,178.0 C156.3,186.7 159.3,196.3 160.0,200.0"/>
-        <path class="ln" style="stroke-width:1.8" data-dur="500" data-delay="2700" d="M172.0,130.0 C174.8,128.4 179.8,122.8 186.0,122.0 C192.2,121.2 199.6,125.2 203.0,126.0"/>
-        <path class="ln" style="stroke-width:1.8" data-dur="500" data-delay="2900" d="M178.0,149.0 C180.0,149.8 183.8,153.0 188.0,153.0 C192.2,153.0 196.8,149.8 199.0,149.0"/>
-        <path class="ln" style="stroke-width:1.4" data-dur="250" data-delay="3250" d="M198.0,147.0 C199.0,147.8 203.0,151.2 204.0,152.0"/>
-        <path class="ln" style="stroke-width:1.4" data-dur="250" data-delay="3350" d="M194.0,152.0 C194.8,153.0 198.2,157.0 199.0,158.0"/>
-        <g transform="translate(126,44) scale(.9)"><g class="bl" style="--i:0; color:var(--secondary)"><use href="#bloomArt"/></g></g>
-        <g transform="translate(70,122) scale(1.35)"><g class="bl" style="--i:1; color:var(--primary)"><use href="#bloomArt"/></g></g>
-        <g transform="translate(76,198) scale(1.05)"><g class="bl" style="--i:2; color:var(--secondary)"><use href="#bloomArt"/></g></g>
-        <g transform="translate(90,264) scale(.85)"><g class="bl" style="--i:3; color:var(--accent)"><use href="#bloomArt"/></g></g>
-        <g transform="translate(80,334) scale(.7)"><g class="bl" style="--i:4; color:var(--secondary)"><use href="#bloomArt"/></g></g>
-        <!-- Qalam uchi: yuz chizig'i bo'ylab chiziq bilan birga yuradi -->
-        <circle class="pen" r="9" fill="url(#penGlow)" style="offset-path: path('M170.0,64.0 C172.9,66.6 180.7,72.1 186.0,78.0 C191.3,83.9 195.3,89.0 199.0,96.0 C202.7,103.0 204.5,109.4 206.0,116.0 C207.5,122.6 207.6,127.0 207.0,132.0 C206.4,136.9 203.2,139.0 203.0,143.0 C202.8,147.0 204.3,150.2 206.0,154.0 C207.7,157.8 209.6,160.5 212.0,164.0 C214.4,167.5 217.3,170.1 219.0,173.0 C220.7,175.9 221.6,177.8 221.0,180.0 C220.4,182.2 218.2,183.7 216.0,185.0 C213.8,186.3 210.5,185.2 209.0,187.0 C207.5,188.8 207.3,192.4 208.0,195.0 C208.7,197.6 212.8,199.2 213.0,201.0 C213.2,202.8 209.0,203.0 209.0,205.0 C209.0,207.0 213.4,209.4 213.0,212.0 C212.6,214.6 207.4,215.7 207.0,219.0 C206.6,222.3 211.7,226.0 211.0,230.0 C210.3,234.0 207.6,237.9 203.0,241.0 C198.4,244.1 190.6,242.4 186.0,247.0 C181.4,251.6 179.8,258.1 178.0,266.0 C176.2,273.9 174.2,281.4 176.0,290.0 C177.8,298.6 178.8,304.6 188.0,313.0 C197.2,321.4 212.4,329.6 226.0,336.0 C239.6,342.4 255.4,345.8 262.0,348.0')"/>
-      </svg>
+    <div class="orbit-wrap r">
+      <div class="orbit scene" id="orbit" role="group" aria-label="Oltita hayot bosqichi va har birining asosiy ko'rsatkichi">
+        <svg width="0" height="0" aria-hidden="true" style="position:absolute"><defs>
+          <linearGradient id="obGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" style="stop-color:var(--sa)"/><stop offset="1" style="stop-color:var(--sb)"/></linearGradient>
+          <linearGradient id="obPetal" x1="0" y1="1" x2="0" y2="0"><stop offset="0" style="stop-color:var(--sa)"/><stop offset="1" style="stop-color:var(--sb)"/></linearGradient>
+          <linearGradient id="obPetalIn" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#fff" stop-opacity=".95"/><stop offset="1" style="stop-color:var(--sb)" stop-opacity=".55"/></linearGradient>
+        </defs></svg>
+        <div class="ob-pollen" id="obPollen" aria-hidden="true"></div>
+        <svg class="ob-bloom" viewBox="-100 -100 200 200" aria-hidden="true">
+          <g class="ob-petals" id="obPetals"></g>
+        </svg>
+        <svg class="ob-prog" viewBox="0 0 100 100" aria-hidden="true"><circle class="trk" cx="50" cy="50" r="45"/><circle class="arc" id="obArc" cx="50" cy="50" r="45" pathLength="100" style="stroke-dasharray:0 100"/></svg>
+        <div class="ob-disk"><span class="nm swap" id="obName">Sikl</span><b class="big swap tnum" id="obBig">14</b><span class="lbl swap" id="obLbl">Sikl kuni</span></div>
+        <div class="ob-spin">
+          <svg class="ob-rings" viewBox="0 0 400 400" aria-hidden="true">
+            <circle class="r2" cx="200" cy="200" r="128"/>
+            <g id="obTicks"></g>
+            <circle class="r1" cx="200" cy="200" r="168"/>
+            <circle class="trail" id="obTrail" cx="200" cy="200" r="168" pathLength="360" transform="rotate(-90 200 200)" style="stroke-dasharray:0 360"/>
+          </svg>
+          <span class="ob-arm" id="obArm" aria-hidden="true"></span>
+          <div id="obNodes"></div>
+        </div>
+      </div>
+      <p class="ob-hint">Bosqichni tanlang &mdash; <b>ko'rsatkich ham, rang ham</b> almashadi.</p>
     </div>
     <div class="manifesto-copy r" style="--d:120ms">
       <p class="eyebrow"><svg class="eb" viewBox="-11 -11 22 22" aria-hidden="true"><use href="#bloomArt"/></svg>Nega shunday</p>
@@ -1487,7 +1940,7 @@ body {
       <article class="tile spot t-12 r" style="--d:0ms">
         <div class="tile-hd">
           <span class="tile-ico art"><img src="img/ic_insights.webp" alt="" width="48" height="48" loading="lazy" decoding="async"></span>
-          <h3>Tahlil va tavsiyalar</h3>
+          <h3>Xulosa va tavsiyalar</h3>
           <span class="small" style="margin-left:auto;white-space:nowrap">7 &middot; 30 &middot; 90 kun</span>
         </div>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:clamp(18px,3vw,40px)">
@@ -1579,6 +2032,231 @@ body {
   </div>
 </section>
 
+<!-- ==================== YANGI ==================== -->
+<section class="sec" id="yangi" style="border-top:1px solid var(--line)">
+  <div class="wrap">
+    <div class="sec-head split r">
+      <div>
+        <p class="eyebrow"><svg class="eb" viewBox="-11 -11 22 22" aria-hidden="true"><use href="#bloomArt"/></svg>Yangi &middot; oktyabr</p>
+        <h2 class="h1" style="margin-top:12px">Gapiring, suratga oling, bir teginishda belgilang.</h2>
+      </div>
+      <p class="lede">Oxirgi haftalarda ilovaga to'qqizta yangi vosita qo'shildi. Hammasi uch tilda, bepul rejada ham ishlaydi &mdash; chegarasi bor joyda u kartaning o'zida yozilgan.</p>
+    </div>
+
+    <div class="bento nw">
+      <!-- Ovoz bilan belgilash -->
+      <article class="tile spot t-6 r scene" data-demo="voice" style="--d:0ms">
+        <div class="tile-hd">
+          <span class="tile-ico art"><span class="gi" style="width:46px;height:46px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></span></span>
+          <h3>Ovoz bilan belgilash</h3>
+          <span class="ntag free">3 ta / kun bepul</span>
+        </div>
+        <p>Bugun qandayligingizni ayting &mdash; o'zbekcha yoki ruscha. AI simptom, kayfiyat, suv, dori va hayzni ajratib beradi, siz keraksizini olib tashlab saqlaysiz.</p>
+        <div class="viz vc v4" id="vcDemo">
+          <div class="vc-top">
+            <span class="vc-mic"><i></i><i></i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></span>
+            <div class="vc-wave" id="vcWave" aria-hidden="true"></div>
+            <span class="vc-time tnum" id="vcTime">0:06</span>
+          </div>
+          <p class="vc-heard"><small>Siz aytdingiz:</small><span id="vcText">&laquo;Boshim og'riyapti, kayfiyatim yo'q, yarim litr suv ichdim.&raquo;</span><span class="caret" aria-hidden="true"></span></p>
+          <div class="vc-chips">
+            <small>Tushunganim &mdash; keraksizini olib tashlang:</small>
+            <span style="--i:0"><img src="img/ic_headache.webp" alt="" width="22" height="22" loading="lazy" decoding="async">Bosh og'rig'i<i aria-hidden="true">✕</i></span>
+            <span style="--i:1"><img src="img/ic_mood_low.webp" alt="" width="22" height="22" loading="lazy" decoding="async">Kayfiyat past<i aria-hidden="true">✕</i></span>
+            <span style="--i:2"><img src="img/ic_water.webp" alt="" width="22" height="22" loading="lazy" decoding="async">+500 ml suv<i aria-hidden="true">✕</i></span>
+            <span class="save" style="--i:3" id="vcSave">Saqlandi ✓</span>
+          </div>
+        </div>
+        <div class="nfoot"><span>Yozuv saqlanmaydi: tushunilgach o'chiriladi</span><span>Premium'da cheksiz</span></div>
+      </article>
+
+      <!-- Tahlil natijalari -->
+      <article class="tile spot t-6 r scene" data-demo="lab" style="--d:70ms">
+        <div class="tile-hd">
+          <span class="tile-ico art"><img src="img/ic_lab.webp" alt="" width="48" height="48" loading="lazy" decoding="async"></span>
+          <h3>Tahlil natijalari</h3>
+          <span class="ntag free">3 ta skan / oy bepul</span>
+        </div>
+        <p>Laboratoriya varag'ini suratga oling &mdash; raqamlarni AI o'qiydi, siz varaq bilan solishtirib saqlaysiz. Past yoki yuqori belgisi faqat laboratoriyangiz yozgan norma bo'yicha qo'yiladi.</p>
+        <div class="viz lb">
+          <div class="lb-sheet">
+            <div class="lb-hd"><b>Umumiy tahlil</b><span>Laboratoriya &middot; 12.10.2026</span></div>
+            <div class="lb-row" style="--i:0"><span>Gemoglobin</span><b>108 g/L</b><em>Norma 120&ndash;150</em><i class="fl lo">↓ Past</i></div>
+            <div class="lb-row" style="--i:1"><span>Ferritin</span><b>9 ng/mL</b><em>Norma 13&ndash;150</em><i class="fl lo">↓ Past</i></div>
+            <div class="lb-row" style="--i:2"><span>TTG (TSH)</span><b>2,1 mIU/L</b><em>Norma 0,4&ndash;4,0</em><i class="fl ok">Normada</i></div>
+            <div class="lb-row" style="--i:3"><span>D vitamini</span><b>34 ng/mL</b><em>Norma 30&ndash;100</em><i class="fl ok">Normada</i></div>
+            <span class="lb-beam" aria-hidden="true"></span>
+          </div>
+          <div class="lb-foot"><span class="lb-ai">AI o'qidi &middot; 4 ko'rsatkich, grafikka qo'shildi</span><span class="lb-send">Shifokorga ko'rsatish</span></div>
+        </div>
+        <div class="nfoot"><span>Bu tashxis emas</span><span>Chatda karta, QR sahifada va PDF'da ko'rinadi</span></div>
+      </article>
+
+      <!-- Kegel -->
+      <article class="tile spot t-4 r scene" data-demo="kegel" style="--d:0ms">
+        <div class="tile-hd">
+          <span class="tile-ico art"><img src="img/ic_kegel.webp" alt="" width="48" height="48" loading="lazy" decoding="async"></span>
+          <h3>Kegel mashqlari</h3>
+        </div>
+        <p>Bosqichingizga mos dastur: homiladorlikda yengil, tug'ruqdan keyin 6 haftadan so'ng. Telefon har fazada titraydi &mdash; ko'z yumib ham bajarasiz.</p>
+        <div class="viz kg" id="kgDemo">
+          <div class="kg-ring">
+            <svg viewBox="0 0 100 100" aria-hidden="true"><circle class="trk" cx="50" cy="50" r="46"/><circle class="arc" id="kgArc" cx="50" cy="50" r="46" pathLength="100"/></svg>
+            <span class="kg-ball"></span><span class="kg-buzz" id="kgBuzz"></span>
+          </div>
+          <div class="kg-say" aria-live="off"><b id="kgPhase">Qising</b><span class="tnum" id="kgNum">5</span></div>
+          <div class="kg-lv"><span class="ok">1-daraja ✓</span><span class="ok">2-daraja ✓</span><span>3+ &middot; Premium</span></div>
+        </div>
+        <div class="nfoot"><span>Eslatmada mashq nomi yozilmaydi</span><span>Har 4 haftada qisqa so'rov</span></div>
+      </article>
+
+      <!-- SOS -->
+      <article class="tile spot t-4 r scene" data-demo="sos" style="--d:60ms">
+        <div class="tile-hd">
+          <span class="tile-ico art"><span class="gi red" style="width:46px;height:46px;font-size:12px">SOS</span></span>
+          <h3>SOS</h3>
+          <span class="ntag free">Hammaga bepul</span>
+        </div>
+        <p>Bitta tugma: Yaqinim va 3 tagacha kontaktga SMS boradi &mdash; yordam kerakligi va joylashuvingiz, bir marta. Tasodifan bosilsa, 5 soniyada bekor qilasiz.</p>
+        <div class="viz sos sent" id="sosDemo">
+          <div class="sos-btn">
+            <svg class="rg" viewBox="0 0 100 100" aria-hidden="true"><circle class="trk" cx="50" cy="50" r="46"/><circle class="arc" cx="50" cy="50" r="46" pathLength="100"/></svg>
+            <span class="sos-core"><span class="w">SOS</span><span class="n tnum" id="sosNum">5</span><span class="ok"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7"/></svg></span></span>
+          </div>
+          <div class="sos-say"><b id="sosTitle">Signal yuborildi</b><span id="sosSub">Joylashuv bir marta yuborildi</span></div>
+          <ul class="sos-to"><li style="--i:0">Yaqinim <em>push + SMS</em></li><li style="--i:1">Onam <em>SMS</em></li><li style="--i:2">Dugonam <em>SMS</em></li></ul>
+          <div class="sos-call"><span>📞 103</span><span>112</span></div>
+        </div>
+        <div class="nfoot"><span>SADORA tez yordam o'rnini bosmaydi &mdash; avval 103</span></div>
+      </article>
+
+      <!-- Sikl yakuni -->
+      <article class="tile spot t-4 r scene" data-demo="wrapped" style="--d:120ms">
+        <div class="tile-hd">
+          <span class="tile-ico art"><img src="img/flower_lotus.webp" alt="" width="48" height="48" loading="lazy" decoding="async"></span>
+          <h3>Sikl yakuni</h3>
+          <span class="ntag free">Bepul</span>
+        </div>
+        <p>Har sikl va har yil oxirida &mdash; siz haqingizda qisqa hikoya. Har bir slayd 9:16 rasm bo'lib ulashiladi.</p>
+        <div class="viz wr" id="wrDemo">
+          <div class="wr-story" aria-hidden="true">
+            <div class="wr-bars"><i><b></b></i><i><b></b></i><i><b></b></i><i><b></b></i></div>
+            <div class="wr-slide on"><small>Siklingiz yakunlandi</small><b class="num tnum">28</b><span>kun davom etdi</span></div>
+            <div class="wr-slide"><small>Eng ko'p sezganingiz</small><span class="ch">Charchoq</span><span class="ch">Bosh og'rig'i</span><span class="ch">Shishish</span></div>
+            <div class="wr-slide"><small>Odatlaringiz</small><b class="num tnum">12</b><span>kun suv maqsadi bajarildi</span></div>
+            <div class="wr-slide"><small>Bu safar siz &mdash;</small><span class="flw"><img src="img/flower_lotus.webp" alt="" width="52" height="52" loading="lazy" decoding="async"></span><b class="pn">Nilufar</b><span>Sikl barqaror, kayfiyat yaxshi.</span></div>
+            <span class="wr-brand">SADORA &middot; sadora.app</span>
+          </div>
+          <div class="wr-side">
+            <div class="wr-tg"><i class="tg" id="wrTg"></i>Raqamlarni yashirish</div>
+            <span class="wr-share">Ulashish &middot; 9:16</span>
+            <p>Personaj &mdash; o'yin, tibbiy xulosa emas.</p>
+          </div>
+        </div>
+      </article>
+
+      <!-- Chaqaloq kuzatuvi -->
+      <article class="tile spot t-8 r scene" data-demo="baby" style="--d:0ms">
+        <div class="tile-hd">
+          <span class="tile-ico art"><img src="img/ic_bottle.webp" alt="" width="48" height="48" loading="lazy" decoding="async"></span>
+          <h3>Chaqaloq kuzatuvi</h3>
+          <span class="small" style="margin-left:auto;white-space:nowrap">Egizaklar ham</span>
+        </div>
+        <p>Emizish yonida endi uyqu, bir teginishda taglik, o'sish, emlash va rivojlanish. Emlash taqvimi tug'ilgan sanadan milliy jadval bo'yicha tuziladi va 3 kun oldin eslatadi. Yaqinim xulosani faqat ko'radi.</p>
+        <div class="viz bb">
+          <div class="bb-left">
+            <div class="bb-kids" id="bbKids"><span class="on">Oysha &middot; 4 oy</span><span>Ali &middot; 4 oy</span></div>
+            <div class="well bb-sleep"><span class="moon" aria-hidden="true">🌙</span><div><small>Uxlamoqda</small><b id="bbTimer">1:12:08</b></div><span class="bb-stop">Uyg'ondi</span></div>
+            <div class="bb-quick">
+              <span class="well bb-q" id="bbDiaper"><img src="img/ic_diaper.webp" alt="" width="34" height="34" loading="lazy" decoding="async">Taglik<b id="bbDiaperN">5</b></span>
+              <span class="well bb-q"><img src="img/ic_bottle.webp" alt="" width="34" height="34" loading="lazy" decoding="async">Emizish<b>7</b></span>
+            </div>
+            <div class="well bb-vac"><img src="img/ic_calendar.webp" alt="" width="38" height="38" loading="lazy" decoding="async"><div><b>Navbatdagi emlash &middot; 3 kundan keyin</b><span>Penta-3 &middot; OPV-3 &middot; IPV-1 &middot; Rota-3</span></div></div>
+          </div>
+          <figure class="well bb-chart">
+            <figcaption><b>Vazn &middot; WHO, qizlar</b><span class="pred">Premium</span></figcaption>
+            <svg viewBox="0 0 318 190" role="img" aria-label="WHO vazn grafigi: 4 oylikda 6,2 kg, taxminan 40-persentil">
+              <line class="ax" x1="30" y1="166" x2="290" y2="166"/>
+              <path class="pband" d="M30.0,152.5 L73.3,137.5 L116.7,124.4 L160.0,113.1 L203.3,103.8 L246.7,96.2 L290.0,90.6 L290.0,23.1 L246.7,32.5 L203.3,43.8 L160.0,56.9 L116.7,73.8 L73.3,94.4 L30.0,118.8 Z"/>
+              <path class="pband2" d="M30.0,145.0 L73.3,130.0 L116.7,113.1 L160.0,100.0 L203.3,90.6 L246.7,83.1 L290.0,77.5 L290.0,41.9 L246.7,51.2 L203.3,60.6 L160.0,73.8 L116.7,88.8 L73.3,107.5 L30.0,128.1 Z"/>
+              <path class="p50" d="M30.0,137.5 L73.3,118.8 L116.7,101.9 L160.0,88.8 L203.3,77.5 L246.7,68.1 L290.0,60.6"/>
+              <text x="294" y="26">P97</text><text x="294" y="64">P50</text><text x="294" y="94">P3</text>
+              <text x="30" y="182">0</text><text x="113" y="182" text-anchor="middle">2 oy</text><text x="203" y="182" text-anchor="middle">4 oy</text><text x="290" y="182" text-anchor="middle">6 oy</text>
+              <path class="me" d="M30.0,139.4 L73.3,122.5 L116.7,105.6 L160.0,92.5 L203.3,81.2"/>
+              <circle class="dt" style="--i:0" cx="30.0" cy="139.4" r="4"/><circle class="dt" style="--i:1" cx="73.3" cy="122.5" r="4"/><circle class="dt" style="--i:2" cx="116.7" cy="105.6" r="4"/><circle class="dt" style="--i:3" cx="160.0" cy="92.5" r="4"/><circle class="dt" style="--i:4" cx="203.3" cy="81.2" r="4.6"/>
+              <g class="tip"><rect x="154.3" y="93.2" width="98" height="20" rx="10"/><text x="203.3" y="107.2" text-anchor="middle">6,2 kg &middot; P40</text></g>
+            </svg>
+          </figure>
+        </div>
+      </article>
+
+      <!-- PDF hisobot -->
+      <article class="tile spot t-4 r scene" data-demo="pdf" style="--d:80ms">
+        <div class="tile-hd">
+          <span class="tile-ico art"><img src="img/ic_record.webp" alt="" width="48" height="48" loading="lazy" decoding="async"></span>
+          <h3>Shifokor uchun PDF</h3>
+        </div>
+        <p>3 yoki 6 oylik ma'lumot bitta faylda: davr, bo'limlar va tilni o'zingiz tanlaysiz. Ulashing, konsultatsiyaga yuboring yoki shifokor QR sahifasidan yuklab oladi.</p>
+        <div class="viz pf">
+          <div class="pf-stack" aria-hidden="true"><span class="pg p3"></span><span class="pg p2"></span><span class="pg p1"><b>SADORA</b><i></i><i></i><i class="ch"></i><i></i><i></i></span><span class="pdf">PDF</span></div>
+          <div class="pf-ctl">
+            <div class="seg" id="pfSeg" aria-hidden="true"><i></i><span class="on">3 oy</span><span>6 oy</span></div>
+            <ul class="pf-sec"><li style="--i:0"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7"/></svg>Sikl</li><li style="--i:1"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7"/></svg>Alomatlar</li><li style="--i:2"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7"/></svg>Dorilar</li><li style="--i:3"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7"/></svg>Tahlillar</li><li style="--i:4"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7"/></svg>Kayfiyat</li></ul>
+            <div class="pf-lang"><span>UZ</span><span>RU</span><span>EN</span></div>
+          </div>
+        </div>
+        <div class="nfoot"><span>Oyiga 1 ta bepul</span><span>Premium'da cheksiz</span></div>
+      </article>
+
+      <!-- Holatlarim -->
+      <article class="tile spot t-6 r scene" data-demo="cond" style="--d:0ms">
+        <div class="tile-hd">
+          <span class="tile-ico art"><img src="img/ic_cramps.webp" alt="" width="48" height="48" loading="lazy" decoding="async"></span>
+          <h3>Holatlarim: PCOS va endometrioz</h3>
+        </div>
+        <p>Shifokor qo'ygan tashxisni yoki gumoningizni belgilaysiz &mdash; kuzatuv shunga moslashadi. Ilova tashxis qo'ymaydi; &laquo;gumon&raquo; tanlansa, shifokor topishni taklif qiladi.</p>
+        <div class="viz cd">
+          <div class="cd-st"><span><b>PCOS</b><em class="dx">Tashxis qo'yilgan</em></span><span><b>Endometrioz</b><em class="sus">Gumon qilaman</em></span></div>
+          <div class="well">
+            <div class="cd-hd"><span>Og'riq kundaligi &middot; bugun</span><b id="cdNum">6</b></div>
+            <div class="cd-scale" aria-hidden="true"><i class="cd-thumb" id="cdThumb" style="--v:6"></i></div>
+            <div class="cd-ticks" aria-hidden="true"><span>0</span><span>2</span><span>4</span><span>6</span><span>8</span><span>10</span></div>
+            <div class="cd-kinds" id="cdKinds"><span class="on">Hayz paytida</span><span>Jinsiy aloqada</span><span>Ichak</span><span>Siydik</span><span>Ishga bora olmadim</span></div>
+          </div>
+          <div class="cd-pred">
+            <div class="cd-days" aria-hidden="true"><span class="cd-band"></span><i style="grid-column:1">10</i><i style="grid-column:2">11</i><i style="grid-column:3">12</i><i style="grid-column:4">13</i><i style="grid-column:5">14</i><i style="grid-column:6">15</i><i style="grid-column:7">16</i><i style="grid-column:8">17</i><i style="grid-column:9">18</i><i style="grid-column:10">19</i><i style="grid-column:11">20</i><i style="grid-column:12">21</i><i style="grid-column:13">22</i><i style="grid-column:14">23</i></div>
+            <p><b>Keyingi hayz: 12&ndash;19 noyabr</b><span class="pred">Taxminiy</span>notekis siklda sana emas, oraliq</p>
+          </div>
+        </div>
+        <div class="nfoot"><span>Kuzatuv bepul</span><span>3&ndash;6 oylik holat hisoboti Premium</span></div>
+      </article>
+
+      <!-- Ilovadan tashqarida -->
+      <article class="tile spot t-6 r scene" data-demo="outside" style="--d:70ms">
+        <div class="tile-hd">
+          <span class="tile-ico art"><img src="img/ic_watch.webp" alt="" width="48" height="48" loading="lazy" decoding="async"></span>
+          <h3>Ilovani ochmasdan</h3>
+        </div>
+        <p>Eslatma Telegramga ham keladi va tugma bilan belgilanadi; ekran vidjeti va soatda bugungi sikl kuni va suv. Odatiy holatda matn betaraf: &laquo;Sizda yangi eslatma bor&raquo;.</p>
+        <div class="viz ox done" id="oxDemo">
+          <div class="tgm">
+            <div class="tgm-hd"><span class="tgm-av" aria-hidden="true"><svg viewBox="20 -10 160 250"><use href="#markWhite"/></svg></span><div><b>Sadora bot</b><span>Telegram</span></div><span class="ntag soon">Tez orada</span></div>
+            <div class="tgm-body">
+              <span class="tgm-msg">Sizda yangi eslatma bor<small>20:00</small></span>
+              <div class="tgm-btns" aria-hidden="true"><span>✓ Bajarildi</span><span>💧 +250 ml</span><span>🙂 Kayfiyat</span></div>
+              <span class="tgm-msg rep">+250 ml belgilandi ✓ Ilovada ham ko'rinadi.<small>20:01</small></span>
+            </div>
+          </div>
+          <div class="wch">
+            <div class="wch-face" aria-hidden="true"><div class="wch-in"><svg viewBox="0 0 100 100"><circle class="trk" cx="50" cy="50" r="44"/><circle class="arc" id="oxArc" cx="50" cy="50" r="44" pathLength="100" style="stroke-dasharray:60 100"/></svg><div><b>14</b><span>KUN</span></div></div></div>
+            <span class="ntag soon" style="margin-left:0">Vidjet va soat &middot; 1.1</span>
+          </div>
+        </div>
+      </article>
+    </div>
+  </div>
+</section>
+
 <!-- ==================== BOSQICHLAR ==================== -->
 <section class="sec stagescope" id="bosqichlar">
   <svg width="0" height="0" aria-hidden="true"><defs>
@@ -1607,7 +2285,7 @@ body {
           </div>
           <div class="stage-body">
             <div class="stage-viz">
-              <svg class="figure stage-fig" id="stFig" viewBox="0 0 120 140" role="img" aria-label="Bosqichdagi ayol figurasi"></svg>
+              <div class="st-icon" aria-hidden="true"><i></i><i></i><i></i><img id="stIconImg" src="img/ic_cycle.webp" alt="" width="96" height="96" decoding="async"></div>
               <div class="ring ring-150" id="stRing">
                 <svg viewBox="0 0 150 150"><circle class="trk" cx="75" cy="75" r="64" stroke-width="12"/><circle class="arc" id="stArc" cx="75" cy="75" r="64" stroke-width="12" stroke-dasharray="402.1" stroke-dashoffset="402.1"/></svg>
                 <div class="mid"><div><b class="tnum" id="stBig">14</b><span id="stBigLbl">Sikl kuni</span></div></div>
@@ -1693,7 +2371,7 @@ body {
         <p class="eyebrow"><svg class="eb" viewBox="-11 -11 22 22" aria-hidden="true"><use href="#bloomArt"/></svg>Shifokorlar</p>
         <h2 class="h1" style="margin-top:12px">Savol jiddiy bo&rsquo;lsa &mdash; javobni shifokor beradi.</h2>
       </div>
-      <p class="lede">Diplomi tekshirilgan shifokorlar katalogi, ishonsa bo&rsquo;ladigan reyting, 24 soatlik yozishma oynasi va dorilaringizga qo&rsquo;shiladigan retsept. Shifokor javob bermasa &mdash; pul qaytariladi.</p>
+      <p class="lede">Diplomi tekshirilgan shifokorlar katalogi, ishonsa bo&rsquo;ladigan reyting, 24 soatlik yozishma oynasi, tahlil va PDF hisobot yuborish, dorilaringizga qo&rsquo;shiladigan retsept. Shifokor javob bermasa &mdash; pul qaytariladi.</p>
     </div>
 
     <div class="doc-grid">
@@ -1741,8 +2419,9 @@ body {
           </div>
         </div>
         <div class="thread" id="thread">
-          <span class="bub me">Siklim 3 oydir 36&ndash;38 kun. Xulosamni biriktirdim.
+          <span class="bub me">Siklim 3 oydir 36&ndash;38 kun. Xulosam va tahlilimni biriktirdim.
             <span class="rec"><i>📋</i><span><b>Sog&rsquo;liq xulosasi</b><span>Sikl, uyqu, dorilar &middot; faqat oyna ochiq paytda</span></span></span>
+            <span class="album" aria-label="Albom: 2 rasm va 1 video"><i><img src="img/ic_lab.webp" alt="" width="31" height="31" loading="lazy" decoding="async"></i><i><img src="img/ic_record.webp" alt="" width="31" height="31" loading="lazy" decoding="async"></i><i class="vid"><img src="img/ic_gallery.webp" alt="" width="31" height="31" loading="lazy" decoding="async"></i></span>
             <span class="ticks" aria-label="O'qildi"><svg viewBox="0 0 16 10" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M1 5.5l3 3L10 1.5"/><path class="second" d="M6 8.5L13 1.5"/></svg>10:24</span>
           </span>
           <span class="bub ai">Rahmat, ko&rsquo;rdim. Oxirgi uch siklda ikkinchi yarmi uzaygan. Qalqonsimon bez tahlilini topshiring va natijani shu yerga rasm qilib yuboring.</span>
@@ -1758,7 +2437,7 @@ body {
       </div>
     </div>
 
-    <div class="doc-points">
+    <div class="doc-points six">
       <div class="dpt spot r" style="--d:0ms">
         <span class="ico art"><img src="img/ic_shield.webp" alt="" width="48" height="48" loading="lazy" decoding="async"></span>
         <b>Tasdiqlangan</b>
@@ -1777,6 +2456,16 @@ body {
       <div class="dpt spot r" style="--d:210ms">
         <div class="qr-wrap"><svg class="qr" viewBox="0 0 21 21" shape-rendering="crispEdges" aria-hidden="true"><rect x="0" y="0" width="1" height="1" style="--q:110ms"/><rect x="0" y="1" width="1" height="1" style="--q:88ms"/><rect x="1" y="0" width="1" height="1" style="--q:91ms"/><rect x="0" y="2" width="1" height="1" style="--q:118ms"/><rect x="2" y="0" width="1" height="1" style="--q:58ms"/><rect x="0" y="3" width="1" height="1" style="--q:136ms"/><rect x="3" y="0" width="1" height="1" style="--q:105ms"/><rect x="0" y="4" width="1" height="1" style="--q:112ms"/><rect x="2" y="2" width="1" height="1" style="--q:207ms"/><rect x="4" y="0" width="1" height="1" style="--q:132ms"/><rect x="0" y="5" width="1" height="1" style="--q:196ms"/><rect x="2" y="3" width="1" height="1" style="--q:227ms"/><rect x="3" y="2" width="1" height="1" style="--q:206ms"/><rect x="5" y="0" width="1" height="1" style="--q:179ms"/><rect x="0" y="6" width="1" height="1" style="--q:230ms"/><rect x="2" y="4" width="1" height="1" style="--q:234ms"/><rect x="3" y="3" width="1" height="1" style="--q:262ms"/><rect x="4" y="2" width="1" height="1" style="--q:180ms"/><rect x="6" y="0" width="1" height="1" style="--q:235ms"/><rect x="1" y="6" width="1" height="1" style="--q:225ms"/><rect x="3" y="4" width="1" height="1" style="--q:229ms"/><rect x="4" y="3" width="1" height="1" style="--q:288ms"/><rect x="6" y="1" width="1" height="1" style="--q:256ms"/><rect x="0" y="8" width="1" height="1" style="--q:291ms"/><rect x="2" y="6" width="1" height="1" style="--q:315ms"/><rect x="4" y="4" width="1" height="1" style="--q:333ms"/><rect x="6" y="2" width="1" height="1" style="--q:277ms"/><rect x="8" y="0" width="1" height="1" style="--q:297ms"/><rect x="0" y="9" width="1" height="1" style="--q:312ms"/><rect x="1" y="8" width="1" height="1" style="--q:313ms"/><rect x="3" y="6" width="1" height="1" style="--q:335ms"/><rect x="6" y="3" width="1" height="1" style="--q:306ms"/><rect x="8" y="1" width="1" height="1" style="--q:315ms"/><rect x="9" y="0" width="1" height="1" style="--q:309ms"/><rect x="1" y="9" width="1" height="1" style="--q:392ms"/><rect x="2" y="8" width="1" height="1" style="--q:363ms"/><rect x="4" y="6" width="1" height="1" style="--q:385ms"/><rect x="6" y="4" width="1" height="1" style="--q:393ms"/><rect x="10" y="0" width="1" height="1" style="--q:311ms"/><rect x="0" y="11" width="1" height="1" style="--q:375ms"/><rect x="2" y="9" width="1" height="1" style="--q:421ms"/><rect x="3" y="8" width="1" height="1" style="--q:408ms"/><rect x="5" y="6" width="1" height="1" style="--q:324ms"/><rect x="6" y="5" width="1" height="1" style="--q:322ms"/><rect x="1" y="11" width="1" height="1" style="--q:389ms"/><rect x="2" y="10" width="1" height="1" style="--q:344ms"/><rect x="6" y="6" width="1" height="1" style="--q:364ms"/><rect x="8" y="4" width="1" height="1" style="--q:344ms"/><rect x="10" y="2" width="1" height="1" style="--q:416ms"/><rect x="12" y="0" width="1" height="1" style="--q:430ms"/><rect x="1" y="12" width="1" height="1" style="--q:471ms"/><rect x="4" y="9" width="1" height="1" style="--q:382ms"/><rect x="5" y="8" width="1" height="1" style="--q:449ms"/><rect x="9" y="4" width="1" height="1" style="--q:443ms"/><rect x="10" y="3" width="1" height="1" style="--q:381ms"/><rect x="11" y="2" width="1" height="1" style="--q:469ms"/><rect x="12" y="1" width="1" height="1" style="--q:480ms"/><rect x="0" y="14" width="1" height="1" style="--q:418ms"/><rect x="2" y="12" width="1" height="1" style="--q:506ms"/><rect x="5" y="9" width="1" height="1" style="--q:439ms"/><rect x="10" y="4" width="1" height="1" style="--q:450ms"/><rect x="11" y="3" width="1" height="1" style="--q:510ms"/><rect x="12" y="2" width="1" height="1" style="--q:491ms"/><rect x="14" y="0" width="1" height="1" style="--q:411ms"/><rect x="0" y="15" width="1" height="1" style="--q:471ms"/><rect x="1" y="14" width="1" height="1" style="--q:481ms"/><rect x="3" y="12" width="1" height="1" style="--q:460ms"/><rect x="4" y="11" width="1" height="1" style="--q:443ms"/><rect x="6" y="9" width="1" height="1" style="--q:458ms"/><rect x="7" y="8" width="1" height="1" style="--q:506ms"/><rect x="11" y="4" width="1" height="1" style="--q:422ms"/><rect x="12" y="3" width="1" height="1" style="--q:486ms"/><rect x="14" y="1" width="1" height="1" style="--q:472ms"/><rect x="15" y="0" width="1" height="1" style="--q:422ms"/><rect x="0" y="16" width="1" height="1" style="--q:487ms"/><rect x="2" y="14" width="1" height="1" style="--q:522ms"/><rect x="4" y="12" width="1" height="1" style="--q:509ms"/><rect x="5" y="11" width="1" height="1" style="--q:455ms"/><rect x="10" y="6" width="1" height="1" style="--q:566ms"/><rect x="11" y="5" width="1" height="1" style="--q:542ms"/><rect x="12" y="4" width="1" height="1" style="--q:564ms"/><rect x="14" y="2" width="1" height="1" style="--q:460ms"/><rect x="16" y="0" width="1" height="1" style="--q:479ms"/><rect x="0" y="17" width="1" height="1" style="--q:480ms"/><rect x="3" y="14" width="1" height="1" style="--q:569ms"/><rect x="6" y="11" width="1" height="1" style="--q:508ms"/><rect x="7" y="10" width="1" height="1" style="--q:491ms"/><rect x="8" y="9" width="1" height="1" style="--q:526ms"/><rect x="10" y="7" width="1" height="1" style="--q:585ms"/><rect x="12" y="5" width="1" height="1" style="--q:574ms"/><rect x="14" y="3" width="1" height="1" style="--q:507ms"/><rect x="17" y="0" width="1" height="1" style="--q:493ms"/><rect x="0" y="18" width="1" height="1" style="--q:614ms"/><rect x="2" y="16" width="1" height="1" style="--q:572ms"/><rect x="4" y="14" width="1" height="1" style="--q:588ms"/><rect x="6" y="12" width="1" height="1" style="--q:514ms"/><rect x="7" y="11" width="1" height="1" style="--q:510ms"/><rect x="9" y="9" width="1" height="1" style="--q:586ms"/><rect x="12" y="6" width="1" height="1" style="--q:555ms"/><rect x="14" y="4" width="1" height="1" style="--q:512ms"/><rect x="16" y="2" width="1" height="1" style="--q:616ms"/><rect x="18" y="0" width="1" height="1" style="--q:580ms"/><rect x="0" y="19" width="1" height="1" style="--q:628ms"/><rect x="2" y="17" width="1" height="1" style="--q:542ms"/><rect x="3" y="16" width="1" height="1" style="--q:634ms"/><rect x="5" y="14" width="1" height="1" style="--q:539ms"/><rect x="8" y="11" width="1" height="1" style="--q:635ms"/><rect x="12" y="7" width="1" height="1" style="--q:586ms"/><rect x="14" y="5" width="1" height="1" style="--q:572ms"/><rect x="16" y="3" width="1" height="1" style="--q:598ms"/><rect x="17" y="2" width="1" height="1" style="--q:643ms"/><rect x="19" y="0" width="1" height="1" style="--q:564ms"/><rect x="0" y="20" width="1" height="1" style="--q:575ms"/><rect x="2" y="18" width="1" height="1" style="--q:623ms"/><rect x="3" y="17" width="1" height="1" style="--q:588ms"/><rect x="4" y="16" width="1" height="1" style="--q:573ms"/><rect x="6" y="14" width="1" height="1" style="--q:579ms"/><rect x="8" y="12" width="1" height="1" style="--q:566ms"/><rect x="12" y="8" width="1" height="1" style="--q:584ms"/><rect x="14" y="6" width="1" height="1" style="--q:597ms"/><rect x="16" y="4" width="1" height="1" style="--q:596ms"/><rect x="17" y="3" width="1" height="1" style="--q:651ms"/><rect x="18" y="2" width="1" height="1" style="--q:594ms"/><rect x="20" y="0" width="1" height="1" style="--q:620ms"/><rect x="1" y="20" width="1" height="1" style="--q:609ms"/><rect x="3" y="18" width="1" height="1" style="--q:629ms"/><rect x="4" y="17" width="1" height="1" style="--q:590ms"/><rect x="6" y="15" width="1" height="1" style="--q:618ms"/><rect x="12" y="9" width="1" height="1" style="--q:589ms"/><rect x="15" y="6" width="1" height="1" style="--q:675ms"/><rect x="17" y="4" width="1" height="1" style="--q:654ms"/><rect x="18" y="3" width="1" height="1" style="--q:610ms"/><rect x="20" y="1" width="1" height="1" style="--q:644ms"/><rect x="2" y="20" width="1" height="1" style="--q:728ms"/><rect x="4" y="18" width="1" height="1" style="--q:628ms"/><rect x="6" y="16" width="1" height="1" style="--q:714ms"/><rect x="8" y="14" width="1" height="1" style="--q:667ms"/><rect x="10" y="12" width="1" height="1" style="--q:675ms"/><rect x="12" y="10" width="1" height="1" style="--q:716ms"/><rect x="13" y="9" width="1" height="1" style="--q:663ms"/><rect x="16" y="6" width="1" height="1" style="--q:676ms"/><rect x="18" y="4" width="1" height="1" style="--q:698ms"/><rect x="20" y="2" width="1" height="1" style="--q:733ms"/><rect x="3" y="20" width="1" height="1" style="--q:685ms"/><rect x="6" y="17" width="1" height="1" style="--q:743ms"/><rect x="9" y="14" width="1" height="1" style="--q:728ms"/><rect x="10" y="13" width="1" height="1" style="--q:720ms"/><rect x="11" y="12" width="1" height="1" style="--q:692ms"/><rect x="13" y="10" width="1" height="1" style="--q:685ms"/><rect x="17" y="6" width="1" height="1" style="--q:650ms"/><rect x="20" y="3" width="1" height="1" style="--q:659ms"/><rect x="4" y="20" width="1" height="1" style="--q:680ms"/><rect x="6" y="18" width="1" height="1" style="--q:760ms"/><rect x="8" y="16" width="1" height="1" style="--q:702ms"/><rect x="9" y="15" width="1" height="1" style="--q:691ms"/><rect x="10" y="14" width="1" height="1" style="--q:682ms"/><rect x="13" y="11" width="1" height="1" style="--q:772ms"/><rect x="18" y="6" width="1" height="1" style="--q:776ms"/><rect x="20" y="4" width="1" height="1" style="--q:752ms"/><rect x="5" y="20" width="1" height="1" style="--q:733ms"/><rect x="6" y="19" width="1" height="1" style="--q:729ms"/><rect x="12" y="13" width="1" height="1" style="--q:735ms"/><rect x="13" y="12" width="1" height="1" style="--q:755ms"/><rect x="16" y="9" width="1" height="1" style="--q:718ms"/><rect x="19" y="6" width="1" height="1" style="--q:753ms"/><rect x="20" y="5" width="1" height="1" style="--q:731ms"/><rect x="6" y="20" width="1" height="1" style="--q:843ms"/><rect x="9" y="17" width="1" height="1" style="--q:844ms"/><rect x="12" y="14" width="1" height="1" style="--q:793ms"/><rect x="14" y="12" width="1" height="1" style="--q:757ms"/><rect x="20" y="6" width="1" height="1" style="--q:843ms"/><rect x="9" y="18" width="1" height="1" style="--q:793ms"/><rect x="10" y="17" width="1" height="1" style="--q:798ms"/><rect x="12" y="15" width="1" height="1" style="--q:756ms"/><rect x="13" y="14" width="1" height="1" style="--q:801ms"/><rect x="14" y="13" width="1" height="1" style="--q:812ms"/><rect x="18" y="9" width="1" height="1" style="--q:816ms"/><rect x="9" y="19" width="1" height="1" style="--q:808ms"/><rect x="10" y="18" width="1" height="1" style="--q:844ms"/><rect x="11" y="17" width="1" height="1" style="--q:784ms"/><rect x="12" y="16" width="1" height="1" style="--q:815ms"/><rect x="13" y="15" width="1" height="1" style="--q:794ms"/><rect x="14" y="14" width="1" height="1" style="--q:831ms"/><rect x="15" y="13" width="1" height="1" style="--q:789ms"/><rect x="17" y="11" width="1" height="1" style="--q:786ms"/><rect x="18" y="10" width="1" height="1" style="--q:820ms"/><rect x="19" y="9" width="1" height="1" style="--q:811ms"/><rect x="20" y="8" width="1" height="1" style="--q:854ms"/><rect x="9" y="20" width="1" height="1" style="--q:875ms"/><rect x="10" y="19" width="1" height="1" style="--q:902ms"/><rect x="11" y="18" width="1" height="1" style="--q:890ms"/><rect x="12" y="17" width="1" height="1" style="--q:897ms"/><rect x="16" y="13" width="1" height="1" style="--q:917ms"/><rect x="20" y="9" width="1" height="1" style="--q:858ms"/><rect x="10" y="20" width="1" height="1" style="--q:879ms"/><rect x="11" y="19" width="1" height="1" style="--q:958ms"/><rect x="15" y="15" width="1" height="1" style="--q:857ms"/><rect x="16" y="14" width="1" height="1" style="--q:926ms"/><rect x="19" y="11" width="1" height="1" style="--q:917ms"/><rect x="20" y="10" width="1" height="1" style="--q:845ms"/><rect x="13" y="18" width="1" height="1" style="--q:968ms"/><rect x="15" y="16" width="1" height="1" style="--q:975ms"/><rect x="16" y="15" width="1" height="1" style="--q:943ms"/><rect x="18" y="13" width="1" height="1" style="--q:956ms"/><rect x="19" y="12" width="1" height="1" style="--q:965ms"/><rect x="12" y="20" width="1" height="1" style="--q:912ms"/><rect x="14" y="18" width="1" height="1" style="--q:958ms"/><rect x="15" y="17" width="1" height="1" style="--q:956ms"/><rect x="16" y="16" width="1" height="1" style="--q:996ms"/><rect x="18" y="14" width="1" height="1" style="--q:992ms"/><rect x="20" y="12" width="1" height="1" style="--q:995ms"/><rect x="13" y="20" width="1" height="1" style="--q:994ms"/><rect x="14" y="19" width="1" height="1" style="--q:1031ms"/><rect x="15" y="18" width="1" height="1" style="--q:1005ms"/><rect x="16" y="17" width="1" height="1" style="--q:1007ms"/><rect x="18" y="15" width="1" height="1" style="--q:951ms"/><rect x="20" y="13" width="1" height="1" style="--q:927ms"/><rect x="15" y="19" width="1" height="1" style="--q:967ms"/><rect x="17" y="17" width="1" height="1" style="--q:995ms"/><rect x="20" y="14" width="1" height="1" style="--q:964ms"/><rect x="17" y="19" width="1" height="1" style="--q:1108ms"/><rect x="18" y="18" width="1" height="1" style="--q:1075ms"/><rect x="19" y="17" width="1" height="1" style="--q:1083ms"/><rect x="20" y="16" width="1" height="1" style="--q:1083ms"/><rect x="20" y="17" width="1" height="1" style="--q:1117ms"/><rect x="19" y="20" width="1" height="1" style="--q:1150ms"/><rect x="20" y="20" width="1" height="1" style="--q:1120ms"/></svg><div><b>Qabulda &mdash; QR</b><p style="margin-top:8px">Shifokor ilovasi QR&rsquo;ni o&rsquo;qib, xulosangizni ochadi. Havolani istalgan payt bekor qilasiz.</p></div></div>
       </div>
+      <div class="dpt spot r" style="--d:0ms">
+        <span class="ico art"><img src="img/ic_gallery.webp" alt="" width="48" height="48" loading="lazy" decoding="async"></span>
+        <b>Rasm va video albom</b>
+        <p>Konsultatsiyada 10 tagacha rasm va video izoh bilan. Fayllar serverda shifrlangan holda saqlanadi, video 720p ga siqiladi.</p>
+      </div>
+      <div class="dpt spot r" style="--d:70ms">
+        <span class="ico art"><img src="img/ic_record.webp" alt="" width="48" height="48" loading="lazy" decoding="async"></span>
+        <b>Tahlil va PDF</b>
+        <p>Tahlil natijasi chatda karta bo&rsquo;lib keladi, 3&ndash;6 oylik hisobot esa PDF fayl. Shifokor ikkalasini QR sahifada ham ko&rsquo;radi.</p>
+      </div>
     </div>
 
     <div class="doc-app r" style="--d:120ms">
@@ -1794,7 +2483,7 @@ body {
         <p class="eyebrow"><svg class="eb" viewBox="-11 -11 22 22" aria-hidden="true"><use href="#bloomArt"/></svg>Yaqinim</p>
         <h2 class="h1" style="margin-top:12px">Yaqiningiz taxmin qilmasin &mdash; bilsin.</h2>
       </div>
-      <p class="lede">Turmush o&rsquo;rtog&rsquo;ingiz, onangiz yoki dugonangiz o&rsquo;z telefonida bugungi holatingizni ko&rsquo;radi va qanday yordam berishni biladi. Nimani ko&rsquo;rsatishni o&rsquo;zingiz tanlaysiz va istalgan payt to&rsquo;xtatasiz.</p>
+      <p class="lede">Turmush o&rsquo;rtog&rsquo;ingiz, onangiz yoki dugonangiz o&rsquo;z telefonida bugungi holatingizni ko&rsquo;radi va qanday yordam berishni biladi &mdash; chaqaloq xulosasini ham. Nimani ko&rsquo;rsatishni o&rsquo;zingiz tanlaysiz va istalgan payt to&rsquo;xtatasiz.</p>
     </div>
 
     <div class="doc-grid">
@@ -1843,7 +2532,7 @@ body {
       <div class="dpt spot r" style="--d:70ms">
         <span class="ico art"><img src="img/ic_bell.webp" alt="" width="48" height="48" loading="lazy" decoding="async"></span>
         <b>O&rsquo;z vaqtida xabar</b>
-        <p>Hayz boshlandi, hayzga ikki kun qoldi, ertaga ko&rsquo;rik. To&rsquo;lg&rsquo;oq ekranidagi bitta tugma yaqiningizni darhol chaqiradi.</p>
+        <p>Hayz boshlandi, hayzga ikki kun qoldi, ertaga ko&rsquo;rik. To&rsquo;lg&rsquo;oq ekranidagi tugma yoki SOS yaqiningizni darhol chaqiradi.</p>
       </div>
       <div class="dpt spot r" style="--d:140ms">
         <span class="ico art"><img src="img/ic_message.webp" alt="" width="48" height="48" loading="lazy" decoding="async"></span>
@@ -1872,7 +2561,7 @@ body {
         <p class="eyebrow"><svg class="eb" viewBox="-11 -11 22 22" aria-hidden="true"><use href="#bloomArt"/></svg>Ma'lumot manbalari</p>
         <h2 class="h1" style="margin-top:12px">Qaysi raqam qayerdan kelgani ko'rinadi.</h2>
       </div>
-      <p class="lede">Apple Health va Health Connect telefonning o'zidan, butun tarixi bilan o'qiladi &mdash; faqat ilova ishlatadigan 14 tur so'raladi. WHOOP va Oura hisob orqali ulanadi; Garmin va Fitbit ulanishi yozilgan va sinovdan o'tmoqda. Har bir manba oxirgi sinxron vaqtini ko'rsatadi; muddati o'tgan ruxsat yashirilmaydi.</p>
+      <p class="lede">Apple Health va Health Connect telefonning o'zidan, butun tarixi bilan o'qiladi &mdash; faqat ilova ishlatadigan 14 tur so'raladi. WHOOP va Oura hisob orqali ulanadi; Garmin, Fitbit va Huawei ulanishi yozilgan va sinovdan o'tmoqda. Har bir manba oxirgi sinxron vaqtini ko'rsatadi; muddati o'tgan ruxsat yashirilmaydi.</p>
     </div>
     <div class="sources">
       <div class="src spot r" style="--d:0ms"><span class="kind">Telefonda</span><b>Apple Health</b><span>iPhone, Apple Watch</span><div class="metrics"><span>Uyqu</span><span>Qadam</span><span>Puls</span><span>Hayz</span></div><span class="st on"><i></i>Ulanadi</span></div>
@@ -1882,7 +2571,9 @@ body {
       <div class="src spot r" style="--d:200ms"><span class="kind">Hisob orqali</span><b>Oura</b><span>Uzuk: uyqu va tiklanish</span><span class="st on"><i></i>Ulanadi</span></div>
       <div class="src spot r" style="--d:250ms"><span class="kind">Hisob orqali</span><b>Garmin</b><span>Sport soatlari &middot; kun yakuni o'zi keladi</span><span class="st exp"><i></i>Sinovda</span></div>
       <div class="src spot r" style="--d:300ms"><span class="kind">Hisob orqali</span><b>Fitbit</b><span>Charge, Sense &middot; Google Health orqali</span><span class="st exp"><i></i>Sinovda</span></div>
-      <div class="src spot r" style="--d:350ms"><span class="kind">Har doim</span><b>Qo'lda</b><span>Soat yo'q bo'lsa &mdash; uyquni o'zingiz yozasiz</span><span class="st off"><i></i>Har doim</span></div>
+      <div class="src spot r" style="--d:350ms"><span class="kind">Hisob orqali</span><b>Huawei Health</b><span>Watch GT, Band &middot; Health Kit orqali</span><span class="st exp"><i></i>Sinovda</span></div>
+      <div class="src spot r" style="--d:400ms"><span class="kind">Har doim</span><b>Ovozingiz</b><span>&laquo;Boshim og'riyapti, yarim litr suv ichdim&raquo; &mdash; ilova o'zi ajratadi</span><span class="st on"><i></i>Ishlaydi</span></div>
+      <div class="src spot r" style="--d:450ms"><span class="kind">Har doim</span><b>Qo'lda</b><span>Soat yo'q bo'lsa &mdash; uyquni o'zingiz yozasiz</span><span class="st off"><i></i>Har doim</span></div>
     </div>
   </div>
 </section>
@@ -1900,16 +2591,23 @@ body {
         <table>
           <thead><tr><th>Imkoniyat</th><th>Bepul</th><th class="pr">Premium</th></tr></thead>
           <tbody>
-            <tr><td>Sikl va kayfiyat</td><td class="ck">✓</td><td class="ck">✓</td></tr>
-            <tr><td>Ovqat kundaligi</td><td class="ck">✓</td><td class="ck">✓</td></tr>
+            <tr><td>Sikl, kayfiyat va ovqat kundaligi</td><td class="ck">✓</td><td class="ck">✓</td></tr>
             <tr><td>Chat va shifokorlar katalogi</td><td class="ck">✓</td><td class="ck">✓</td></tr>
-            <tr><td>Seriya, Gul va do'kon</td><td class="ck">✓</td><td class="ck">✓</td></tr>
+            <tr><td>Seriya, Gul, nishon va ramkalar</td><td class="ck">✓</td><td class="ck">✓</td></tr>
             <tr><td>Telefon va soatdan ma'lumot</td><td class="ck">✓</td><td class="ck">✓</td></tr>
             <tr><td>Yaqinim va shifokor retsepti</td><td class="ck">✓</td><td class="ck">✓</td></tr>
-            <tr><td>Nishonlar va Gul ramkalari</td><td class="ck">✓</td><td class="ck">✓</td></tr>
+            <tr><td>SOS va sikl yakuni</td><td class="ck">✓</td><td class="ck">✓</td></tr>
+            <tr><td>Chaqaloq kuzatuvi va emlash taqvimi</td><td class="ck">✓</td><td class="ck">✓</td></tr>
+            <tr><td>PCOS / endometrioz kundaligi</td><td class="ck">✓</td><td class="ck">✓</td></tr>
             <tr><td>AI suhbat</td><td class="no">Tanishuv</td><td class="pr">20 / kun</td></tr>
             <tr><td>Ovqat skaneri</td><td class="no">&mdash;</td><td class="pr">10 / kun</td></tr>
-            <tr><td>30 va 90 kunlik tahlil</td><td class="no">&mdash;</td><td class="ck">✓</td></tr>
+            <tr><td>Ovoz bilan belgilash</td><td class="no">3 / kun</td><td class="pr">Cheksiz</td></tr>
+            <tr><td>Tahlil varag'ini o'qish</td><td class="no">3 / oy</td><td class="pr">20 / kun</td></tr>
+            <tr><td>Shifokor uchun PDF</td><td class="no">1 / oy</td><td class="pr">Cheksiz</td></tr>
+            <tr><td>Kegel darajalari va dasturlar</td><td class="no">1&ndash;2 daraja</td><td class="ck">✓</td></tr>
+            <tr><td>WHO o'sish grafigi</td><td class="no">&mdash;</td><td class="ck">✓</td></tr>
+            <tr><td>Holat hisoboti (3&ndash;6 oy)</td><td class="no">&mdash;</td><td class="ck">✓</td></tr>
+            <tr><td>30 va 90 kunlik xulosalar</td><td class="no">&mdash;</td><td class="ck">✓</td></tr>
             <tr><td>Kuzatilgan bog'liqliklar</td><td class="no">&mdash;</td><td class="ck">✓</td></tr>
             <tr><td>AI hamroh maslahatlari</td><td class="no">Uxlaydi</td><td class="ck">✓</td></tr>
             <tr><td>Nishonni ism yonida taqish</td><td class="no">&mdash;</td><td class="ck">✓</td></tr>
@@ -2000,13 +2698,22 @@ body {
           <li>Bosqich asboblari<span>Tepkilar sanog'i, to'lg'oq taymeri, emizish va issiq to'lqinlar qaydi; qayd etilganlar shifokor xulosasida ko'rinadi.</span></li>
           <li>Premium va to'lovlar<span>Google Play va App Store obunalari serverda tekshiriladi; Payme va Click &mdash; to'g'ridan-to'g'ri o'rnatishda va konsultatsiyalarda.</span></li>
           <li>Seriya, Gul va do'kon<span>Kunlik harakatlar uchun Gul, do'st taklifi, seriyaga qarab o'zgaradigan ilova belgisi.</span></li>
+          <li>Ovoz bilan belgilash<span>O'zbek yoki rus tilida gapirasiz; AI simptom, kayfiyat, suv, dori va hayzni ajratadi. Yozuv saqlanmaydi.</span></li>
+          <li>Tahlil natijalari<span>Varaqni AI o'qiydi, belgi laboratoriya normasi bo'yicha; grafik, shifokorga karta, QR sahifa va PDF.</span></li>
+          <li>Chaqaloq kuzatuvi<span>Bir nechta chaqaloq, uyqu, taglik, emizish, WHO o'sish grafigi, milliy emlash taqvimi va rivojlanish bosqichlari.</span></li>
+          <li>PCOS va endometrioz<span>Og'riq kundaligi, belgilar, notekis sikl uchun oraliq bashorat, shifokorga holat hisoboti.</span></li>
+          <li>Kegel, SOS va sikl yakuni<span>Bosqichga mos mashqlar va titrash; 5 soniyali SOS signali; har sikl va yil oxirida ulashiladigan hikoya.</span></li>
+          <li>Shifokor uchun PDF<span>3 yoki 6 oy, bo'limlar va til tanlanadi; telefon orqali ulashish, konsultatsiya yoki QR sahifa.</span></li>
         </ul>
       </div>
       <div class="road-col">
         <h3><i></i>Keyingi sprintlarda</h3>
         <ul>
           <li>Shifokor bilan jonli efir<span>Shifokor videoda, foydalanuvchilar savol yozadi; har bir efirni admin tasdiqlaydi.</span></li>
-          <li>Garmin va Fitbit<span>Ulanish yozilgan; ishlab chiquvchi kalitlari tasdiqlanib, haqiqiy qurilmada sinalgach yoqiladi.</span></li>
+          <li>Garmin, Fitbit va Huawei<span>Ulanish yozilgan; ishlab chiquvchi kalitlari tasdiqlanib, haqiqiy qurilmada sinalgach yoqiladi.</span></li>
+          <li>Telegram bot<span>Eslatmalar va tugma bilan belgilash tayyor; bot ochilgach ishga tushadi.</span></li>
+          <li>Vidjetlar va soat<span>Android va iOS vidjetlari, Apple Watch va Wear OS &mdash; 1.1 versiyada.</span></li>
+          <li>Konsultatsiyada rasm va video albom<span>10 tagacha rasm va video, serverda shifrlangan holda; zaxira nusxa sozlangach hammaga yoqiladi.</span></li>
           <li>Do'kon ichida sovg'a va maxsus ramkalar<span>Mahsulotlar Google Play va App Store'da yaratilgach ochiladi; Gul ramkalari hozir ham ishlaydi.</span></li>
           <li>Apple va Google bilan kirish<span>Server tokenni tekshira oladi; ilovadagi tugmalar platforma SDK'si ulangach qaytadi.</span></li>
           <li>Huquqiy matnlar tarjimasi<span>Ilova ichidagi shartlar hozircha o'zbekcha &mdash; tarjimani yurist ko'rib chiqadi.</span></li>
@@ -2142,8 +2849,6 @@ body {
     if (el.classList.contains('chat')) converse(el, '.bub', 0);
     var th = el.querySelector && el.querySelector('.thread');
     if (th && !th.__run) { th.__run = true; converse(th, '.bub', 1); }
-    var fig = el.querySelector && el.querySelector('.figure:not([data-replay])');
-    if (fig && !fig.__drawn) { fig.__drawn = true; drawFigure(fig, 1600, 180); }
     var counters = el.querySelectorAll('[data-count]');
     for (var i = 0; i < counters.length; i++) if (!counters[i].__done) { counters[i].__done = true; countUp(counters[i]); }
     fillRings(el);
@@ -2156,20 +2861,6 @@ body {
       entries.forEach(function (e) { if (e.isIntersecting) { activate(e.target); io.unobserve(e.target); } });
     }, { threshold: .12, rootMargin: '0px 0px -6% 0px' });
     for (var m = 0; m < revealables.length; m++) io.observe(revealables[m]);
-  }
-
-  /* Portret har safar ko'rinishga kirganda qaytadan chiziladi */
-  var replays = document.querySelectorAll('.figure[data-replay]');
-  if (!('IntersectionObserver' in window) || reduce) {
-    for (var q = 0; q < replays.length; q++) drawFigure(replays[q], 1600, 180);
-  } else {
-    var rio = new IntersectionObserver(function (entries) {
-      entries.forEach(function (e) {
-        if (e.isIntersecting) { if (e.target.__away !== false) { e.target.__away = false; drawFigure(e.target, 1600, 180); } }
-        else e.target.__away = true;
-      });
-    }, { threshold: .35 });
-    for (var w = 0; w < replays.length; w++) { replays[w].__away = true; rio.observe(replays[w]); }
   }
 
   /* ---- Suhbat: xabarlar birin-ketin, javobdan oldin «yozmoqda…» ----
@@ -2292,43 +2983,7 @@ body {
   }
 
 
-  /* ---- Gullar va ayol chizmalari ----
-     Chiziqlar bitta qalam zarbida chiziladi: har bir yo'l o'z uzunligicha
-     qirqilib, keyin ochiladi. Gullar chizib bo'lingach ochiladi. ---- */
-
-  function drawFigure(svg, dur, stagger) {
-    var strokes = svg.querySelectorAll('.ln, .thin');
-    var i;
-    if (reduce) {
-      for (i = 0; i < strokes.length; i++) {
-        strokes[i].style.strokeDasharray = 'none';
-        strokes[i].style.strokeDashoffset = 0;
-      }
-      svg.classList.add('on');
-      return;
-    }
-    for (i = 0; i < strokes.length; i++) {
-      var el = strokes[i], len = 400;
-      try { len = el.getTotalLength() || 400; } catch (e) {}
-      el.style.transition = 'none';
-      el.style.strokeDasharray = len;
-      el.style.strokeDashoffset = len;
-    }
-    svg.classList.remove('on');
-    void svg.getBoundingClientRect();
-    var last = 0;
-    for (i = 0; i < strokes.length; i++) {
-      var d = +strokes[i].getAttribute('data-dur') || dur;
-      var dl = strokes[i].hasAttribute('data-delay') ? +strokes[i].getAttribute('data-delay') : i * stagger;
-      strokes[i].style.transition = 'stroke-dashoffset ' + d + 'ms cubic-bezier(.2,0,0,1) ' + dl + 'ms';
-      strokes[i].style.strokeDashoffset = 0;
-      if (dl + d > last) last = dl + d;
-    }
-    // Birinchi gul oxirgi chiziq tugashidan sal oldin ochiladi.
-    svg.style.setProperty('--bd', Math.round(last * 0.7) + 'ms');
-    svg.classList.add('on');
-  }
-
+  /* ---- Gullar ---- */
   function bloomSvg(size, tone, extra) {
     return '<svg width="' + size + '" height="' + size + '" viewBox="-11 -11 22 22" ' +
       'style="color:' + tone + (extra || '') + '" aria-hidden="true"><use href="#bloomArt"/></svg>';
@@ -2379,79 +3034,39 @@ body {
   });
 
 
-  /* Har bir bosqich uchun bitta figura: bir xil bosh va tana, boshqa imo.
-     Homiladorlikda tana chizig'ining o'zi o'zgaradi — bu bosqich "o'chirilgan
-     Sikl" emas, boshqa shakl. */
-  var F_HEAD = '<circle class="ln" cx="56" cy="28" r="14"/>' +
-    '<circle class="thin" cx="38" cy="33" r="7"/>' +
-    '<path class="ln" d="M56,42 C56,46 56,49 56,52"/>';
-  var F_BACK = '<path class="ln" d="M56,52 C42,57 34,70 35,86 C36,98 39,112 41,128"/>';
-  var F_FRONT = '<path class="ln" d="M56,52 C70,57 78,68 78,84 C78,96 75,112 73,128"/>';
-  function fBloom(x, y, sc, i) {
-    return '<g transform="translate(' + x + ',' + y + ') scale(' + sc + ')">' +
-      '<g class="bl" style="--i:' + i + '"><use href="#bloomArt"/></g></g>';
-  }
-  var FIG = {
-    // Qo'l qorinda, kaftda gul.
-    cycle: F_HEAD + F_BACK + F_FRONT +
-      '<path class="ln" d="M68,60 C79,69 78,85 68,93 C64,96 60,97 57,97"/>' + fBloom(47, 97, 1, 0),
-    // Ikki qo'l gulni avaylab ushlagan.
-    ttc: F_HEAD + F_BACK + F_FRONT +
-      '<path class="ln" d="M68,60 C80,70 77,88 64,93"/>' +
-      '<path class="ln" d="M43,66 C38,79 46,91 60,93"/>' + fBloom(62, 82, 1, 0),
-    // Tana chizig'i qorinni aylanib o'tadi, qo'l ustida.
-    pregnancy: F_HEAD +
-      '<path class="ln" d="M56,52 C42,57 34,70 35,86 C36,100 39,114 41,128"/>' +
-      '<path class="ln" d="M56,52 C72,57 83,70 86,87 C89,103 80,114 67,114 C61,115 61,121 61,128"/>' +
-      '<path class="ln" d="M68,58 C84,64 94,80 88,96 C85,104 78,108 70,109"/>' + fBloom(45, 66, .9, 0),
-    // Ko'krakda beshik, ichida chaqaloq.
-    postpartum: F_HEAD + F_BACK + F_FRONT +
-      '<path class="ln" d="M42,64 C38,80 52,93 70,88 C81,85 84,73 77,65"/>' +
-      '<circle class="thin" cx="62" cy="76" r="9"/>' + fBloom(86, 58, .85, 0),
-    // Qo'l chakkada, yonida issiqlik to'lqinlari.
-    perimenopause: F_HEAD + F_BACK + F_FRONT +
-      '<path class="ln" d="M66,57 C82,60 88,42 73,31"/>' +
-      '<path class="thin" d="M88,16 C96,24 96,34 88,42"/>' +
-      '<path class="thin" d="M97,8 C109,21 109,39 97,52"/>' + fBloom(46, 100, .9, 0),
-    // Qo'l ochiq, uchida gul.
-    menopause: F_HEAD + F_BACK + F_FRONT +
-      '<path class="ln" d="M68,58 C82,63 93,55 97,43"/>' +
-      fBloom(99, 35, 1, 0) + fBloom(46, 102, .85, 1)
-  };
-
   /* ---- Bosqichlar — LifeStage.kt, StagePalettes, StringsUz.tabs.journey ---- */
   var STAGES = [
-    { id: 'cycle', fig: FIG.cycle, name: 'Sikl kuzatuvi', sub: 'Hayz, ovulyatsiya, simptomlar', glyph: '◔', tab: 'Sikl',
+    { id: 'cycle', name: 'Sikl kuzatuvi', sub: 'Hayz, ovulyatsiya, simptomlar', glyph: '◔', tab: 'Sikl',
       a: '#7B61FF', b: '#FF6FB8', inkL: '#6247E0', inkD: '#B2A6FF', warm: false,
       chart: 'ring', pct: 14 / 28, big: '14', bigLbl: 'Sikl kuni', metric: '14', metricSub: 'Kun / 28',
       factMetric: 'Sikl kuni', pred: true,
-      chips: ['Ovulyatsiya davri', 'Unumdor oyna 12–16', 'Keyingi hayz 15 kundan keyin', 'Stress past'],
+      chips: ['Ovulyatsiya davri', 'Unumdor oyna 12–16', 'Keyingi hayz 15 kundan keyin', 'Stress past', 'PCOS rejimi: oraliq bashorat'],
       body: "Sikl kuni, unumdor oyna va keyingi hayz bashorati. Bashorat ko'rsatilgan har bir joyda «Taxminiy» nishoni turadi — ilova taxminni hech qachon fakt qilib ko'rsatmaydi." },
-    { id: 'ttc', fig: FIG.ttc, name: 'Homiladorlikni rejalashtirish', sub: 'Unumdor kunlar, tayyorgarlik', glyph: '◌', tab: 'Reja',
+    { id: 'ttc', name: 'Homiladorlikni rejalashtirish', sub: 'Unumdor kunlar, tayyorgarlik', glyph: '◌', tab: 'Reja',
       a: '#7B61FF', b: '#FF6FB8', inkL: '#6247E0', inkD: '#B2A6FF', warm: false,
       chart: 'ring', pct: 14 / 28, big: '14', bigLbl: 'Unumdor kun', metric: '12–16', metricSub: 'Unumdor oyna',
       factMetric: 'Unumdor oyna', pred: true,
       chips: ['Homiladorlik ehtimoli yuqori', 'Folik kislota 400 mkg · qabul qilindi', 'Ovulyatsiya 14-kun'],
       body: "Sikl bilan bir xil hisob, lekin urg'u boshqa: ekran unumdor oynani birinchi o'ringa qo'yadi va vitamin qabulini kunning boshiga chiqaradi." },
-    { id: 'pregnancy', fig: FIG.pregnancy, name: 'Homiladorlik', sub: 'Haftalar, rivojlanish, uchrashuvlar', glyph: '◕', tab: 'Homilador',
+    { id: 'pregnancy', name: 'Homiladorlik', sub: 'Haftalar, rivojlanish, uchrashuvlar', glyph: '◕', tab: 'Homilador',
       a: '#FFB020', b: '#FF8E92', inkL: '#A85C2E', inkD: '#FFB020', warm: true,
       chart: 'ring', pct: 24 / 40, big: '24', bigLbl: 'Hafta', metric: '24', metricSub: 'Hafta / 40',
       factMetric: 'Hafta', pred: false,
-      chips: ['Ikkinchi trimestr', 'Skrining UTT · 27-avgust 10:30', 'Tepkilar sanog\'i', 'To\'lg\'oq taymeri'],
+      chips: ['Ikkinchi trimestr', 'Skrining UTT · 27-avgust 10:30', 'Tepkilar sanog\'i', 'To\'lg\'oq taymeri', 'Kegel · yengil dastur'],
       body: "Sikl bashorati umuman ko'rsatilmaydi. Ekran haftalar bo'yicha quriladi, tadbirlar ro'yxatini foydalanuvchi o'zi to'ldiradi va yagona tibbiy ko'rsatma shu yerda: bola harakati sezilarli kamaysa, ilova kechiktirmasdan shifokorga murojaat qilishni aytadi. Tepkilar sanog'i va to'lg'oq taymeri ham shu tabda." },
-    { id: 'postpartum', fig: FIG.postpartum, name: "Tug'ruqdan keyin", sub: 'Tiklanish, emizish, kayfiyat', glyph: '◑', tab: 'Tiklanish',
+    { id: 'postpartum', name: "Tug'ruqdan keyin", sub: 'Tiklanish, emizish, kayfiyat', glyph: '◑', tab: 'Tiklanish',
       a: '#FF8AA3', b: '#FFB020', inkL: '#B23A5C', inkD: '#FF8AA3', warm: true,
       chart: 'ring', pct: 7 / 12, big: '7', bigLbl: 'Tiklanish haftasi', metric: '7', metricSub: 'Hafta / 12',
       factMetric: 'Tiklanish haftasi', pred: false,
-      chips: ['Emizish 7 marta', "Uyqu bo'lakli — kutilgan holat", 'Kayfiyat 3/5'],
+      chips: ['Emizish 7 marta', "Uyqu bo'lakli — kutilgan holat", 'Kayfiyat 3/5', 'Chaqaloq: uyqu, taglik, emlash'],
       body: "Emizish, bo'lakli uyqu va kayfiyat bir joyda. Ilova tiklanishni haftalar bilan o'lchaydi va kayfiyat pasayishini alohida kuzatadi — lekin tashxis qo'ymaydi." },
-    { id: 'perimenopause', fig: FIG.perimenopause, name: 'Perimenopauza', sub: 'Simptomlar, uyqu, energiya', glyph: '◒', tab: 'Bosqich',
+    { id: 'perimenopause', name: 'Perimenopauza', sub: 'Simptomlar, uyqu, energiya', glyph: '◒', tab: 'Bosqich',
       a: '#7B61FF', b: '#63D8FF', inkL: '#5A41D6', inkD: '#9B85FF', warm: false,
       chart: 'bars', bars: [26, 31, 24, 35, 28, 33, 27], metric: '24–35', metricSub: 'Kun · tarqalish',
       factMetric: 'Muntazamlik grafigi', pred: false,
       chips: ["Issiqlik to'lqini 2", 'Uyqu 6s 10d', 'Terlash', "Kayfiyat o'zgarishi"],
       body: "Halqa o'rnini grafik egallaydi. Bashorat qilinadigan sana yo'q, shuning uchun ilova sana ko'rsatmaydi — u oxirgi yetti sikl uzunligining qanday tarqalayotganini ko'rsatadi." },
-    { id: 'menopause', fig: FIG.menopause, name: 'Menopauza', sub: 'Salomatlik maqsadlari', glyph: '◐', tab: 'Salomatlik',
+    { id: 'menopause', name: 'Menopauza', sub: 'Salomatlik maqsadlari', glyph: '◐', tab: 'Salomatlik',
       a: '#63D8FF', b: '#2FBF8F', inkL: '#12786B', inkD: '#63D8FF', warm: false,
       chart: 'ring', pct: .70, big: '70', bigLbl: 'Balans', metric: '70', metricSub: 'Balans / 100',
       factMetric: 'Balans balli', pred: false,
@@ -2490,10 +3105,10 @@ body {
   }
   window.addEventListener('resize', function () { moveGlide(true); });
 
+  var stIcon = $('stIconImg');
   function render(s) {
-    var fig = $('stFig');
-    fig.innerHTML = s.fig;
-    drawFigure(fig, 900, 90);
+    stIcon.src = 'img/ic_' + s.id + '.webp';
+    if (!reduce) { stIcon.classList.remove('pop'); void stIcon.offsetWidth; stIcon.classList.add('pop'); }
     $('stEyebrow').textContent = "Yo'l tabi · " + s.tab;
     $('stTitle').textContent = s.name;
     $('stMetric').innerHTML = s.metric + '<small>' + s.metricSub + '</small>';
@@ -2584,6 +3199,318 @@ body {
     }, { rootMargin: '-40% 0px -55% 0px' });
     Object.keys(byId).forEach(function (id) { var sec = $(id); if (sec) sio.observe(sec); });
     window.addEventListener('resize', placeInd);
+  }
+
+  /* ================= Yangi harakatlar ================= */
+
+  /* Sahna faqat ko'rinishda o'ynaydi: kirganda boshlanadi, chiqqanda to'xtaydi. */
+  function whenSeen(el, start, threshold) {
+    if (!el || reduce || !('IntersectionObserver' in window)) return;
+    var stop = null;
+    new IntersectionObserver(function (es) {
+      es.forEach(function (e) {
+        if (e.isIntersecting) { el.classList.add('live'); if (!stop) stop = start(el) || function () {}; }
+        else { el.classList.remove('live'); if (stop) { stop(); stop = null; } }
+      });
+    }, { threshold: threshold == null ? .25 : threshold }).observe(el);
+  }
+  /* Qadamlar [vaqt, fn] davr bilan qaytadi; to'xtatuvchi funksiyani qaytaradi. */
+  function loop(steps, period) {
+    var timers = [], alive = true;
+    (function cycle() {
+      steps.forEach(function (st) { timers.push(setTimeout(st[1], st[0])); });
+      timers.push(setTimeout(function () { timers = []; if (alive) cycle(); }, period));
+    })();
+    return function () { alive = false; timers.forEach(clearTimeout); timers = []; };
+  }
+  function every(fn, ms) { var id = setInterval(fn, ms); return function () { clearInterval(id); }; }
+  function both() { var fns = arguments; return function () { for (var i = 0; i < fns.length; i++) fns[i](); }; }
+
+  /* ---- Hero: yangiliklar pill'i so'zma-so'z almashadi ---- */
+  var roll = $('newsRoll');
+  if (roll && !reduce) {
+    var rollItems = roll.children, ri = 0;
+    setTimeout(function () {
+      setInterval(function () {
+        var prev = ri; ri = (ri + 1) % rollItems.length;
+        rollItems[prev].className = 'off'; rollItems[ri].className = 'on';
+        setTimeout(function () { if (rollItems[prev].className === 'off') rollItems[prev].className = ''; }, 750);
+      }, 2600);
+    }, 3400);
+  }
+
+  /* ---- Telefon yonidagi bildirishnomalar: chap va o'ng navbat bilan ---- */
+  var toastBox = $('toasts');
+  if (toastBox && !reduce) {
+    var toastEls = toastBox.children, tIdx = -1;
+    var nextToast = function () {
+      if (tIdx >= 0) {
+        var old = toastEls[tIdx];
+        old.classList.remove('on'); old.classList.add('off');
+        setTimeout(function () { old.classList.remove('off'); }, 700);
+      }
+      tIdx = (tIdx + 1) % toastEls.length;
+      toastEls[tIdx].classList.add('on');
+    };
+    setTimeout(function () {
+      whenSeen(phone, function () { nextToast(); return every(nextToast, 3400); }, .3);
+    }, 2800);
+  }
+
+  /* ---- Yangiliklar lentasi: ekranni to'ldirguncha nusxalanadi ---- */
+  var ticker = $('ticker');
+  if (ticker && !reduce) {
+    Array.prototype.forEach.call(ticker.querySelectorAll('.tick-track'), function (tr) {
+      var base = tr.scrollWidth, kids = Array.prototype.slice.call(tr.children);
+      var copies = Math.max(2, Math.ceil(2 * window.innerWidth / Math.max(base, 1)));
+      if (copies % 2) copies++;
+      for (var c = 1; c < copies; c++) kids.forEach(function (k) {
+        var d = k.cloneNode(true); d.classList.add('dup'); d.setAttribute('aria-hidden', 'true'); tr.appendChild(d);
+      });
+      var dur = parseFloat(tr.style.getPropertyValue('--tt')) || 70;
+      tr.style.setProperty('--tt', (dur * copies / 2) + 's');
+    });
+    ticker.classList.add('scene');
+    whenSeen(ticker, function () {}, 0);
+  }
+
+  /* ---- Bosqichlar orbitasi ---- */
+  var orbit = $('orbit');
+  if (orbit) (function () {
+    var OB = [
+      { name: 'Sikl', big: '14', lbl: 'Sikl kuni', pct: 14 / 28 },
+      { name: 'Rejalashtirish', big: '12–16', lbl: 'Unumdor oyna', pct: 16 / 28 },
+      { name: 'Homiladorlik', big: '24', lbl: 'Hafta / 40', pct: 24 / 40 },
+      { name: "Tug'ruqdan keyin", big: '7', lbl: 'Tiklanish haftasi', pct: 7 / 12 },
+      { name: 'Perimenopauza', big: '24–35', lbl: 'Sikl tarqalishi', pct: .5 },
+      { name: 'Menopauza', big: '70', lbl: 'Balans / 100', pct: .7 }
+    ];
+    var html = '', k;
+    for (k = 0; k < 6; k++) html += '<g transform="rotate(' + (k * 60) + ')"><path class="pt" style="--k:' + k + '" fill="url(#obPetal)" d="M0,0 C42.2,-19.2 38.4,-69.1 0,-88.3 C-38.4,-69.1 -42.2,-19.2 0,0"/></g>';
+    for (k = 0; k < 6; k++) html += '<g transform="rotate(' + (k * 60 + 30) + ')"><path class="pt inner" style="--k:' + (k + .5) + '" fill="url(#obPetalIn)" d="M0,0 C27.3,-12.4 24.8,-44.6 0,-57 C-24.8,-44.6 -27.3,-12.4 0,0"/></g>';
+    var pet = $('obPetals'); pet.innerHTML = html;
+
+    var tk = '';
+    for (k = 0; k < 28; k++) {
+      var ta = k / 28 * Math.PI * 2 - Math.PI / 2;
+      tk += '<circle class="tk" style="--i:' + k + '" cx="' + (200 + Math.cos(ta) * 148).toFixed(1) + '" cy="' + (200 + Math.sin(ta) * 148).toFixed(1) + '" r="1.8"/>';
+    }
+    $('obTicks').innerHTML = tk;
+
+    if (!reduce) {
+      var COLS = ['var(--sa)', 'var(--sb)', 'var(--b1)', 'var(--sb)'], ph = '';
+      for (k = 0; k < 16; k++) ph += '<i style="--a:' + (k * 137.5 % 360).toFixed(1) + 'deg;--dist:' + (36 + (k * 7) % 12) + 'cqw;--sz:' + (8 + (k * 5) % 9) +
+        'px;--t:' + (5 + (k % 5) * .9).toFixed(1) + 's;--dl:' + (-(k * .63)).toFixed(2) + 's;--c:' + COLS[k % 4] + '"><svg viewBox="-11 -11 22 22"><use href="#bloomArt"/></svg></i>';
+      $('obPollen').innerHTML = ph;
+    }
+
+    var box = $('obNodes'), nodes = [];
+    STAGES.forEach(function (s, i) {
+      var an = (-90 + i * 60) * Math.PI / 180;
+      var pos = document.createElement('span');
+      pos.className = 'ob-pos';
+      pos.style.left = (50 + Math.cos(an) * 42).toFixed(2) + '%';
+      pos.style.top = (50 + Math.sin(an) * 42).toFixed(2) + '%';
+      var b = document.createElement('button');
+      b.type = 'button'; b.className = 'ob-node';
+      b.setAttribute('aria-label', OB[i].name); b.setAttribute('aria-pressed', 'false');
+      b.innerHTML = '<img src="img/ic_' + s.id + '.webp" alt="" width="48" height="48" decoding="async"><span class="tip" aria-hidden="true">' + OB[i].name + '</span>';
+      b.addEventListener('click', function () { pick(i, true); });
+      pos.appendChild(b); box.appendChild(pos); nodes.push(b);
+    });
+
+    var cur = -1, armDeg = 0, resumeAt = 0;
+    var nameEl = $('obName'), bigEl = $('obBig'), lblEl = $('obLbl'), arcEl = $('obArc'), trail = $('obTrail'), arm = $('obArm');
+    function pick(i, byUser) {
+      if (byUser) resumeAt = Date.now() + 9000;
+      if (i === cur) return;
+      var prev = cur, s = STAGES[i], o = OB[i];
+      cur = i;
+      orbit.style.setProperty('--sa', s.a); orbit.style.setProperty('--sb', s.b);
+      nodes.forEach(function (n, j) { n.classList.toggle('on', j === i); n.setAttribute('aria-pressed', j === i ? 'true' : 'false'); });
+      // Kometa doim soat yo'nalishida — hayot bosqichlari ham bir tomonga yuradi.
+      armDeg += (prev < 0 ? i : (i - prev + 6) % 6) * 60;
+      arm.style.setProperty('--arm', armDeg + 'deg');
+      trail.style.strokeDasharray = (i * 60) + ' 360';
+      arcEl.style.strokeDasharray = (o.pct * 100).toFixed(1) + ' 100';
+      function fill() {
+        nameEl.textContent = o.name; bigEl.textContent = o.big; lblEl.textContent = o.lbl;
+        bigEl.classList.toggle('sm', o.big.length > 3);
+      }
+      if (reduce || prev < 0) { fill(); return; }
+      pet.classList.remove('re'); void pet.getBoundingClientRect(); pet.classList.add('re');
+      var sw = [nameEl, bigEl, lblEl];
+      sw.forEach(function (e) { e.classList.add('out'); });
+      setTimeout(function () { fill(); sw.forEach(function (e) { e.classList.remove('out'); }); }, 260);
+    }
+    pick(0);
+
+    whenSeen(orbit, function () {
+      return every(function () {
+        if (Date.now() < resumeAt || orbit.matches(':hover') || orbit.contains(document.activeElement)) return;
+        pick((cur + 1) % 6);
+      }, 3200);
+    }, .3);
+
+    // Skroll bilan halqa sal buriladi, tugunlar esa tik turaveradi.
+    if (!reduce) {
+      var parBusy = false;
+      window.addEventListener('scroll', function () {
+        if (parBusy) return; parBusy = true;
+        requestAnimationFrame(function () {
+          parBusy = false;
+          var r = orbit.getBoundingClientRect(), vh = window.innerHeight;
+          if (r.bottom < 0 || r.top > vh) return;
+          orbit.style.setProperty('--par', (((vh - r.top) / (vh + r.height) - .5) * 50).toFixed(2) + 'deg');
+        });
+      }, { passive: true });
+    }
+  })();
+
+  /* ---- Yangi bo'lim sahnalari ---- */
+  function tileOf(el) { return el && el.closest('.scene'); }
+
+  // Ovoz: tinglash → matn yoziladi → tushunilganlar chiqadi → saqlandi.
+  var vc = $('vcDemo');
+  if (vc) {
+    var wv = '', k;
+    for (k = 0; k < 34; k++) {
+      wv += '<i style="--i:' + k + ';--lo:' + (.12 + (k * 37 % 10) / 60).toFixed(2) + ';--hi:' + Math.min(1, .45 + (k * 53 % 11) / 20).toFixed(2) +
+        ';--rest:' + (.16 + Math.abs(Math.sin(k * 1.7)) * .6).toFixed(2) + ';--wd:' + (.55 + (k % 4) * .12).toFixed(2) + 's"></i>';
+    }
+    $('vcWave').innerHTML = wv;
+    var vText = $('vcText'), vFull = vText.textContent, vTime = $('vcTime'), vSave = $('vcSave');
+    whenSeen(tileOf(vc), function () {
+      var typer = null, clock = null;
+      function set(c) { vc.className = 'viz vc ' + c; }
+      return both(loop([
+        [0, function () {
+          set('v1'); vText.textContent = ''; vSave.textContent = 'Saqlash';
+          var t0 = Date.now(); clearInterval(clock);
+          clock = setInterval(function () { vTime.textContent = '0:0' + Math.min(9, Math.floor((Date.now() - t0) / 1000)); }, 250);
+        }],
+        [2800, function () {
+          clearInterval(clock); set('v2');
+          var n = 0; clearInterval(typer);
+          typer = setInterval(function () { n += 2; vText.textContent = vFull.slice(0, n); if (n >= vFull.length) clearInterval(typer); }, 36);
+        }],
+        [5200, function () { set('v3'); }],
+        [7200, function () { set('v4'); vSave.textContent = 'Saqlandi ✓'; }]
+      ], 10400), function () { clearInterval(typer); clearInterval(clock); });
+    });
+  }
+
+  // Tahlil: nur va belgilar CSS'da; bu yerda faqat ko'rinish holati.
+  Array.prototype.forEach.call(document.querySelectorAll('.scene[data-demo="lab"]'), function (el) { whenSeen(el, function () {}); });
+
+  // Kegel: 5 soniya qisish, 5 soniya bo'shatish; har fazada titrash to'lqini.
+  var kg = $('kgDemo');
+  if (kg) whenSeen(tileOf(kg), function () {
+    var ph = $('kgPhase'), num = $('kgNum'), arcK = $('kgArc'), buzz = $('kgBuzz'), sec = 5, sq = true;
+    function phase() {
+      kg.classList.toggle('sq', sq); ph.textContent = sq ? 'Qising' : "Bo'shating";
+      buzz.classList.remove('go'); void buzz.offsetWidth; buzz.classList.add('go');
+      arcK.style.transition = 'none'; arcK.style.strokeDashoffset = 100; void arcK.getBoundingClientRect();
+      arcK.style.transition = 'stroke-dashoffset 5s linear'; arcK.style.strokeDashoffset = 0;
+    }
+    num.textContent = sec; phase();
+    return every(function () {
+      sec--;
+      if (sec <= 0) { sq = !sq; sec = 5; phase(); }
+      num.textContent = sec;
+    }, 1000);
+  });
+
+  // SOS: tugma → 5 soniya ortga → kimga ketgani.
+  var sos = $('sosDemo');
+  if (sos) whenSeen(tileOf(sos), function () {
+    var n = $('sosNum'), tt = $('sosTitle'), sub = $('sosSub'), cnt = null;
+    return both(loop([
+      [0, function () { sos.classList.remove('sent', 'count'); tt.textContent = 'SOS — favqulodda yordam'; sub.textContent = 'Bosilsa, 5 soniyadan keyin signal ketadi'; }],
+      [1400, function () {
+        sos.classList.add('count'); tt.textContent = 'Signal yuboriladi'; sub.textContent = 'Bekor qilish mumkin';
+        var c = 5; n.textContent = c; clearInterval(cnt);
+        cnt = setInterval(function () { c--; if (c > 0) n.textContent = c; else clearInterval(cnt); }, 1000);
+      }],
+      [6400, function () { sos.classList.remove('count'); sos.classList.add('sent'); tt.textContent = 'Signal yuborildi'; sub.textContent = 'Joylashuv bir marta yuborildi'; }]
+    ], 11600), function () { clearInterval(cnt); });
+  });
+
+  // Sikl yakuni: slaydlar 2,4 soniyadan; har ikkinchi aylanishda raqamlar yashiriladi.
+  var wr = $('wrDemo');
+  if (wr) whenSeen(tileOf(wr), function () {
+    var slides = wr.querySelectorAll('.wr-slide'), bars = wr.querySelectorAll('.wr-bars i'), tg = $('wrTg'), si = 0, laps = 0;
+    function show(i) {
+      for (var j = 0; j < slides.length; j++) {
+        slides[j].classList.toggle('on', j === i);
+        bars[j].className = j < i ? 'done' : (j === i ? 'cur' : '');
+      }
+    }
+    show(0);
+    return every(function () {
+      si = (si + 1) % slides.length;
+      if (si === 0) { laps++; var hide = laps % 2 === 1; wr.classList.toggle('hide', hide); tg.classList.toggle('on', hide); }
+      show(si);
+    }, 2400);
+  });
+
+  // Chaqaloq: uyqu taymeri yuradi, taglik bir teginishda qo'shiladi.
+  var bbTimer = $('bbTimer');
+  if (bbTimer) whenSeen(tileOf(bbTimer), function () {
+    var start = 3600 + 12 * 60 + 8, t0 = Date.now(), dp = $('bbDiaper'), dn = $('bbDiaperN');
+    function pad(x) { return (x < 10 ? '0' : '') + x; }
+    return both(every(function () {
+      var v = start + Math.floor((Date.now() - t0) / 1000);
+      bbTimer.textContent = Math.floor(v / 3600) + ':' + pad(Math.floor(v / 60) % 60) + ':' + pad(v % 60);
+    }, 1000), loop([
+      [0, function () { dn.textContent = '5'; }],
+      [2400, function () { dp.classList.add('tap'); dn.textContent = '6'; }],
+      [2900, function () { dp.classList.remove('tap'); }]
+    ], 9000));
+  });
+
+  // PDF: davr 3 va 6 oy orasida almashadi.
+  var seg = $('pfSeg');
+  if (seg) whenSeen(tileOf(seg), function () {
+    var sp = seg.querySelectorAll('span');
+    return every(function () {
+      var six = !seg.classList.contains('six');
+      seg.classList.toggle('six', six); sp[0].classList.toggle('on', !six); sp[1].classList.toggle('on', six);
+    }, 3000);
+  });
+
+  // Holatlarim: og'riq kuchi va turi kunma-kun o'zgaradi.
+  var cdT = $('cdThumb');
+  if (cdT) whenSeen(tileOf(cdT), function () {
+    var vals = [6, 4, 7, 3, 6], kindOf = [0, 0, 1, 2, 0], kinds = $('cdKinds').children, cn = $('cdNum'), vi = 0;
+    return every(function () {
+      vi = (vi + 1) % vals.length;
+      cdT.style.setProperty('--v', vals[vi]); cn.textContent = vals[vi];
+      for (var j = 0; j < kinds.length; j++) kinds[j].classList.toggle('on', j === kindOf[vi]);
+    }, 2600);
+  });
+
+  // Telegram: «+250 ml» bosiladi, javob keladi, soatdagi suv halqasi to'ladi.
+  var ox = $('oxDemo');
+  if (ox) whenSeen(tileOf(ox), function () {
+    var arcO = $('oxArc');
+    return loop([
+      [0, function () { ox.classList.remove('tap', 'done'); arcO.style.strokeDasharray = '60 100'; }],
+      [1800, function () { ox.classList.add('tap'); }],
+      [2250, function () { ox.classList.remove('tap'); ox.classList.add('done'); }],
+      [3000, function () { arcO.style.strokeDasharray = '72 100'; }]
+    ], 8200);
+  });
+
+  /* ---- Yangi kartalar kursorga qarab sal egiladi ---- */
+  if (fine && !reduce) {
+    document.addEventListener('pointermove', function (e) {
+      var t = e.target.closest && e.target.closest('.nw .tile');
+      if (!t) return;
+      var r = t.getBoundingClientRect();
+      t.style.setProperty('--ry', (((e.clientX - r.left) / r.width - .5) * 5).toFixed(2) + 'deg');
+      t.style.setProperty('--rx', ((.5 - (e.clientY - r.top) / r.height) * 4).toFixed(2) + 'deg');
+    }, { passive: true });
   }
 })();
 </script>
