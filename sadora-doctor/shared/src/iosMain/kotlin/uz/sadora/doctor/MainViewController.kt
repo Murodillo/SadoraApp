@@ -23,6 +23,7 @@ private val iosGraph: DoctorGraph by lazy {
         environment = if (isDebugBuild()) debugEnvironment() else releaseEnvironment(),
         appVersion = NSBundle.mainBundle.objectForInfoDictionaryKey("CFBundleShortVersionString") as? String,
         prefs = IosAppPrefs(),
+        outgoingFiles = uz.sadora.doctor.ui.components.IosOutgoingFiles(),
     )
 }
 

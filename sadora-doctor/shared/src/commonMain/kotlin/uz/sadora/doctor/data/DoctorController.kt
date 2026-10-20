@@ -53,6 +53,8 @@ class DoctorController(
     private val media: MediaApi? = null,
     /** The phone's platform: the server resolves its switches per platform. */
     private val platform: Platform = Platform.ANDROID,
+    /** Where an album waits on the phone, so one cut off by a closed app comes back; null keeps them in memory. */
+    private val outgoingFiles: OutgoingFiles? = null,
 ) {
     /** The panel: her account, the edit card and the work list. */
     val calls = ApiCallState()
@@ -641,7 +643,12 @@ class DoctorController(
     private val uploadScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     private val uploader: MediaUploader? = media?.let { transport ->
-        MediaUploader(transport, uploadScope) { album, ids -> deliverAlbum(album, ids) }
+        MediaUploader(transport, uploadScope, outgoingFiles) { album, ids -> deliverAlbum(album, ids) }
+    }
+
+    /** Brings back the albums the app was sending when it closed, as unsent bubbles; once she is in. */
+    suspend fun restoreOutgoing() {
+        uploader?.restore(account?.profileId)
     }
 
     /** Photos and videos can be sent from here at all. */
@@ -884,7 +891,7 @@ class DoctorController(
         openConversation = null
         images.clear()
         // Another account may sign in next: her albums stop, and their files are deleted.
-        uploader?.outgoing?.toList()?.forEach { uploader.cancel(it.localId) }
+        uploader?.discardAll()
         thumbs.clear()
         fullPhotos.clear()
         chatMediaEnabled = false

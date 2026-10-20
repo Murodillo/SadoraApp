@@ -266,7 +266,13 @@ private fun MainContent(
     val tabbed = approved != null
     // The operators' switches, read once the tabs are there, so the first consultation she
     // opens already knows whether albums and videos go; a consultation reads them again.
-    LaunchedEffect(tabbed) { if (tabbed) doctors.loadFlags() }
+    LaunchedEffect(tabbed) {
+        if (tabbed) {
+            doctors.loadFlags()
+            // Albums cut off when the app closed come back as unsent bubbles, hers only.
+            doctors.restoreOutgoing()
+        }
+    }
     // The unread count feeds the Messages dot from any tab, not only once she opens it.
     LaunchedEffect(tabbed) {
         while (tabbed) {

@@ -268,7 +268,7 @@ private fun failureText(t: MediaStrings, failed: OutgoingState.Failed): String {
     return when (val failure = failed.failure) {
         is ApiFailure.LimitReached -> t.limitReached
         is ApiFailure.FeatureDisabled -> t.featureOff
-        null -> t.failed
+        null -> t.interrupted
         // Validation is the server's own reason — "Video 3 daqiqadan uzun bo'lmasin".
         else -> failure.readable(strings.errors)
     }

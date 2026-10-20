@@ -51,6 +51,7 @@ class MainActivity : ComponentActivity() {
             },
             appVersion = BuildConfig.VERSION_NAME,
             prefs = AndroidAppPrefs(applicationContext),
+            outgoingFiles = uz.sadora.doctor.ui.components.AndroidOutgoingFiles(applicationContext),
         )
     }
 

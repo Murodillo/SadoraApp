@@ -17,6 +17,8 @@ class DoctorGraph(
     val appVersion: String? = null,
     val prefs: AppPrefs = InMemoryAppPrefs(),
     engine: HttpClientEngine? = null,
+    /** Where unsent albums wait on the phone; none in previews and tests. */
+    private val outgoingFiles: OutgoingFiles? = null,
 ) {
     private val client: HttpClient =
         engine?.let { createSadoraHttpClient(environment, it) } ?: createSadoraHttpClient(environment)
@@ -46,7 +48,7 @@ class DoctorGraph(
             ?: ApiResult.Failure(ApiFailure.NotFound("not a photo on this server: $photoUrl"))
 
     fun doctorController(): DoctorController =
-        DoctorController(doctorApi, communityApi, patientApi, mediaApi, device.platform)
+        DoctorController(doctorApi, communityApi, patientApi, mediaApi, device.platform, outgoingFiles)
 
     fun workController(): WorkController = WorkController(doctorApi)
 
