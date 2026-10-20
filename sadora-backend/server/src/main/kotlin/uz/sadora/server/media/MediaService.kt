@@ -159,11 +159,17 @@ class MediaService(
             MediaKind.VIDEO -> {
                 val info = io { Mp4Info.read(ByteSource.of(part, record.sizeBytes)) }
                     ?: throw ValidationException("file", "Bu fayl video emas yoki buzilgan")
-                if (info.durationMs > Limits.MEDIA_VIDEO_MAX_SECONDS * 1000L + DURATION_GRACE_MS) {
+                if (info.durationMs > Limits.MEDIA_VIDEO_MAX_MS) {
                     throw ValidationException("file", "Video ${Limits.MEDIA_VIDEO_MAX_SECONDS / 60} daqiqadan uzun bo'lmasin")
                 }
                 val poster = posterBase64?.trim()?.takeIf { it.isNotEmpty() }?.let { decodePoster(it) }
                 io {
+                    // A video is kept as it came, but not its notes: where it was filmed and
+                    // on which phone are blanked in place, as a photo's are by re-encoding.
+                    val notes = info.metadataBoxes
+                    store.editPart(id, cipher, record.sizeBytes, notes.map { it.edited }) { offset ->
+                        notes.firstNotNullOf { it.blankedAt(offset) }
+                    }
                     if (poster != null) store.write(id, MediaVariant.THUMB, cipher, poster)
                     store.promotePart(id)
                 }
@@ -217,44 +223,40 @@ class MediaService(
     // ---------------------------------------------------------------- reading
 
     /** A thumbnail, for someone who may see the item. */
-    suspend fun thumb(viewer: Uuid, id: Uuid): ByteArray = thumbOf(viewable(viewer, id))
+    suspend fun thumb(viewer: Uuid, id: Uuid): ByteArray = thumbForModerator(viewable(viewer, id))
 
-    /** A signed address for the photo or the video, for someone who may see it. */
-    suspend fun link(viewer: Uuid, id: Uuid, variant: MediaVariant = MediaVariant.FULL): MediaLink = linkOf(viewable(viewer, id), variant)
+    /** A signed address for the photo or the video itself, for someone who may see it. */
+    suspend fun link(viewer: Uuid, id: Uuid): MediaLink = linkForModerator(viewable(viewer, id))
 
-    /** The moderator's door: the caller has checked the item belongs to the reported line. */
-    suspend fun thumbOf(record: MediaRecord): ByteArray {
+    /**
+     * The thumbnail without asking who is looking: the moderator's door, whose caller has
+     * checked the item belongs to the reported line. Everyone else comes through [thumb].
+     */
+    suspend fun thumbForModerator(record: MediaRecord): ByteArray {
         if (record.thumbBytes <= 0) throw NotFoundException(NOT_FOUND)
         val cipher = requireKeys().cipher(record.wrappedKey)
         return io { store.open(record.id, MediaVariant.THUMB, cipher, record.thumbBytes, 0 until record.thumbBytes).use { it.readBytes() } }
     }
 
-    fun linkOf(record: MediaRecord, variant: MediaVariant = MediaVariant.FULL): MediaLink {
+    /** A signed address without asking who is looking; see [thumbForModerator]. */
+    fun linkForModerator(record: MediaRecord): MediaLink {
         val keys = requireKeys()
-        if (variant == MediaVariant.THUMB && record.thumbBytes <= 0) throw NotFoundException(NOT_FOUND)
-        val expires = clock.now() + LINK_TTL
-        val seconds = expires.epochSeconds
-        val signature = keys.sign(record.id, variant, seconds)
-        return MediaLink("/v1/media/${record.id}/file?v=${variant.extension}&exp=$seconds&sig=$signature", Instant.fromEpochSeconds(seconds))
+        val seconds = (clock.now() + LINK_TTL).epochSeconds
+        val signature = keys.sign(record.id, MediaVariant.FULL, seconds)
+        return MediaLink("/v1/media/${record.id}/file?exp=$seconds&sig=$signature", Instant.fromEpochSeconds(seconds))
     }
 
-    /** What a signed address opens, once its signature and time are checked. */
-    suspend fun signed(id: Uuid, variant: MediaVariant, expiresAtEpochSeconds: Long, signature: String): MediaContent {
+    /** Opens what a signed address points at, once its signature and its time are checked. */
+    suspend fun openSigned(id: Uuid, expiresAtEpochSeconds: Long, signature: String): MediaContent {
         val keys = requireKeys()
-        if (expiresAtEpochSeconds < clock.now().epochSeconds || !keys.verify(id, variant, expiresAtEpochSeconds, signature)) {
+        if (expiresAtEpochSeconds < clock.now().epochSeconds || !keys.verify(id, MediaVariant.FULL, expiresAtEpochSeconds, signature)) {
             throw ForbiddenException(message = LINK_EXPIRED)
         }
         val record = repository.byId(id)?.takeIf { it.status == MediaStatus.READY } ?: throw NotFoundException(NOT_FOUND)
         val cipher = keys.cipher(record.wrappedKey)
-        val size = if (variant == MediaVariant.THUMB) record.thumbBytes else record.sizeBytes
-        if (size <= 0) throw NotFoundException(NOT_FOUND)
-        val mime = when {
-            variant == MediaVariant.THUMB -> JPEG
-            // A MOV of H.264 plays as MP4 everywhere; Chrome refuses the QuickTime type itself.
-            record.kind == MediaKind.VIDEO -> "video/mp4"
-            else -> record.mimeType
-        }
-        return MediaContent(size, mime) { range -> store.open(id, variant, cipher, size, range) }
+        // A MOV of H.264 plays as MP4 everywhere; Chrome refuses the QuickTime type itself.
+        val mime = if (record.kind == MediaKind.VIDEO) "video/mp4" else record.mimeType
+        return MediaContent(record.sizeBytes, mime) { range -> store.open(id, MediaVariant.FULL, cipher, record.sizeBytes, range) }
     }
 
     /**
@@ -319,7 +321,6 @@ class MediaService(
     companion object {
         private const val MEGABYTE = 1024L * 1024
         private const val JPEG = "image/jpeg"
-        private const val DURATION_GRACE_MS = 999L
         private const val GC_BATCH = 200
         val PHOTO_MIME = setOf("image/jpeg", "image/png")
         val VIDEO_MIME = setOf("video/mp4", "video/quicktime")
@@ -330,13 +331,13 @@ class MediaService(
         private val DISK_CHECK_EVERY = 60.seconds
         const val DISK_WARN = 0.80
         const val DISK_PAUSE = 0.95
-        /** Written by tools/media_backup.sh after each good run: an ISO instant. */
+        /** Written by sadora-backend/deploy/media_backup.sh after each good run: an ISO instant. */
         const val BACKUP_MARKER = ".last-backup"
 
         const val UNAVAILABLE = "Rasm va video yuborish hozircha ishlamayapti"
         const val DISK_FULL = "Server xotirasi to'lgan — birozdan keyin urinib ko'ring"
-        const val NOT_FOUND = "Fayl topilmadi"
-        const val UPLOAD_NOT_FOUND = "Yuklash topilmadi — qaytadan boshlang"
+        const val NOT_FOUND = MediaStore.NOT_FOUND
+        const val UPLOAD_NOT_FOUND = MediaStore.UPLOAD_NOT_FOUND
         const val NOT_SENDABLE = "Rasm yoki video topilmadi yoki allaqachon yuborilgan"
         const val LINK_EXPIRED = "Havolaning muddati o'tgan"
     }

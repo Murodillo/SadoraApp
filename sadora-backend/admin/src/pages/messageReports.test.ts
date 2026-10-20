@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest'
 import type { ReportContextView } from '../api/types'
 import {
   canOpenImage,
-  contextLineText as mediaLine,
   formatDuration,
   mediaSummary,
   openableMedia,
@@ -94,8 +93,8 @@ describe('photos and videos of a reported line', () => {
   ]
 
   it('names the line by a placeholder, with its caption', () => {
-    expect(mediaLine({ kind: 'media', body: '' })).toBe('[rasm/video]')
-    expect(mediaLine({ kind: 'media', body: 'natija' })).toBe('[rasm/video] natija')
+    expect(contextLineText({ kind: 'media', body: '' })).toBe('[rasm/video]')
+    expect(contextLineText({ kind: 'media', body: 'natija' })).toBe('[rasm/video] natija')
   })
 
   it('opens only the reported line’s items', () => {

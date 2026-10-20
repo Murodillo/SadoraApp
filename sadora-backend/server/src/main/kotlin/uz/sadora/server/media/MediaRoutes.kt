@@ -65,10 +65,10 @@ fun Route.mediaRoutes(media: MediaService) {
                 call.response.header(HttpHeaders.CacheControl, "private, no-store")
                 call.respondBytes(bytes, ContentType.Image.JPEG)
             }
-            /** A signed address for the photo itself or the video: `v=full` (default) or `thumb`. */
+            /** A signed address for the photo itself or the video, good for a few minutes. */
             get("/{id}/link") {
                 call.response.header(HttpHeaders.CacheControl, "no-store")
-                call.respond(media.link(call.requireUserId(), call.mediaId(), call.variant()))
+                call.respond(media.link(call.requireUserId(), call.mediaId()))
             }
         }
     }
@@ -79,9 +79,9 @@ fun Route.mediaRoutes(media: MediaService) {
         get {
             val expires = call.request.queryParameters["exp"]?.toLongOrNull() ?: throw ForbiddenException(message = MediaService.LINK_EXPIRED)
             val signature = call.request.queryParameters["sig"].orEmpty()
-            val content = media.signed(call.mediaId(), call.variant(), expires, signature)
-            // The address expires on its own; a phone may keep what it fetched no longer than that.
-            call.response.header(HttpHeaders.CacheControl, "private, max-age=600")
+            val content = media.openSigned(call.mediaId(), expires, signature)
+            // Private like every other picture of hers: nothing on the way, or on the phone, keeps it.
+            call.response.header(HttpHeaders.CacheControl, "private, no-store")
             call.respond(SealedContent(content))
         }
     }
@@ -98,9 +98,3 @@ private class SealedContent(private val content: MediaContent) : OutgoingContent
 
 private fun io.ktor.server.application.ApplicationCall.mediaId() = parseUuid(parameters["id"].orEmpty(), "id")
 
-private fun io.ktor.server.application.ApplicationCall.variant(): MediaVariant =
-    when (request.queryParameters["v"]) {
-        null, "", MediaVariant.FULL.extension -> MediaVariant.FULL
-        MediaVariant.THUMB.extension -> MediaVariant.THUMB
-        else -> throw ValidationException("v", "full yoki thumb")
-    }

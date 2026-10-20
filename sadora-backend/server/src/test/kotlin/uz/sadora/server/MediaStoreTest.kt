@@ -93,6 +93,18 @@ class MediaStoreTest {
     }
 
     @Test
+    fun `bytes of an upload can be changed in place, across a segment boundary`() {
+        val id = Uuid.random()
+        send(id, video)
+        val from = SegmentedCipher.SEGMENT_BYTES - 3L
+        val edited = video.copyOf()
+        store.editPart(id, cipher, video.size.toLong(), listOf(from..from + 9)) { offset -> edited[offset.toInt()] = 0; 0 }
+        store.promotePart(id)
+        assertContentEquals(edited, readAll(id, MediaVariant.FULL, video.size))
+        assertTrue((0 until 10).all { edited[(from + it).toInt()] == 0.toByte() })
+    }
+
+    @Test
     fun `a photo's variants are written whole and deleted together`() {
         val id = Uuid.random()
         val full = Random(1).nextBytes(300_000)

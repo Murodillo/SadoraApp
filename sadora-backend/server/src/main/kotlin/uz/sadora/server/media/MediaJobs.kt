@@ -16,9 +16,11 @@ import kotlinx.coroutines.withContext
 import org.slf4j.LoggerFactory
 
 /**
- * Moves the photos sent before V69 out of `community_message_images` and into the media
- * store, as `media` lines of one photo each. Each is decoded and written again like a new
- * upload, so the old ones lose their camera notes too.
+ * Moves the photos sent before V69 into the media store, as `media` lines of one photo
+ * each. Each is decoded and written again like a new upload, so the old ones lose their
+ * camera notes too. The old bytes stay in `community_message_images` — and so in the
+ * database's dumps — until a later migration drops the table, so a media disk lost
+ * before its backup runs loses no photo sent before this.
  *
  * Runs once at start, in batches, until nothing is left. A picture that cannot be read
  * stays where it is, an `image` line the old route still serves, and is not tried again

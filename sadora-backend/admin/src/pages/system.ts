@@ -69,7 +69,7 @@ export function uptime(startedAt: string, now: Date = new Date()): string {
 
 export const mediaStatusLabels: Record<MediaHealth['status'], { text: string; tone: string }> = {
   ok: { text: 'Joy yetarli', tone: 'ok' },
-  warn: { text: 'Disk 80% dan ortiq', tone: 'warn' },
+  warn: { text: "Disk to'lib qolyapti", tone: 'warn' },
   full: { text: "To'lgan — yuklash to'xtagan", tone: 'danger' },
 }
 

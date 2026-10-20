@@ -46,6 +46,24 @@ class Mp4InfoTest {
     }
 
     @Test
+    fun `the boxes that say where and what are found, and the video plays without them`() {
+        val bytes = fixture("geotagged.mov")
+        val info = assertNotNull(read(bytes))
+        assertTrue(info.metadataBoxes.isNotEmpty(), "the phone's notes are in udta/meta")
+        info.metadataBoxes.forEach { box ->
+            assertTrue(String(bytes, box.start.toInt() + 4, 4, Charsets.ISO_8859_1) in setOf("udta", "meta"), "box at ${box.start}")
+        }
+        val blanked = bytes.copyOf()
+        info.metadataBoxes.forEach { box -> Mp4Info.blank(box) { offset, value -> blanked[offset.toInt()] = value } }
+        val text = String(blanked, Charsets.ISO_8859_1)
+        assertEquals(-1, text.indexOf("+41.3111"), "where it was filmed is gone")
+        assertEquals(-1, text.indexOf("SECRET-TITLE"))
+        val after = assertNotNull(read(blanked), "still a video")
+        assertEquals(info.durationMs to (info.width to info.height), after.durationMs to (after.width to after.height))
+        assertTrue(after.metadataBoxes.isEmpty())
+    }
+
+    @Test
     fun `anything else is not a video`() {
         assertNull(read(Random(1).nextBytes(4096)))
         assertNull(read(ByteArray(0)))

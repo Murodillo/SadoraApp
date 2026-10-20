@@ -2050,6 +2050,12 @@ tbody tr.selected:hover {
   gap: 8px;
 }
 
+/* Opened, a video or a photo takes the whole row: a player in a 140px cell is unusable. */
+.report-media > .chat-image {
+  grid-column: 1 / -1;
+  width: 100%;
+}
+
 .report-media-item {
   margin: 0;
   display: grid;

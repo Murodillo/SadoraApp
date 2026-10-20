@@ -146,8 +146,9 @@ data class Conversation(
     val lastMessageKind: MessageKind = MessageKind.TEXT,
     /** The last line's first photo or video, so the list can say "Video · 0:42" for it. */
     val lastMessageMedia: MessageMedia? = null,
-    /** How many photos and videos the last line carried. */
+    /** How many photos and videos the last line carried, and how many of them were videos. */
     val lastMessageMediaCount: Int = 0,
+    val lastMessageVideoCount: Int = 0,
     /** The last line is the viewer's own and the other side has read it. */
     val lastMessageRead: Boolean = false,
     /** The frame the other alias wears ([AvatarFrames] key); never set in a consultation. */

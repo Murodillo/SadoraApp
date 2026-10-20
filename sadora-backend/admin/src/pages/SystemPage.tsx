@@ -79,7 +79,7 @@ function MediaCard({ media }: { media: MediaHealth }) {
         />
       </div>
       <p className="faint" style={{ margin: '8px 0 0' }}>
-        {status.text}. 95% dan oshsa yangi yuklashlar to'xtaydi. Zaxira har kecha tools/media_backup.sh bilan olinadi.
+        {status.text}. Disk to'lsa yangi yuklashlar kutib turadi. Zaxira har kecha deploy/media_backup.sh bilan olinadi.
       </p>
     </Card>
   )

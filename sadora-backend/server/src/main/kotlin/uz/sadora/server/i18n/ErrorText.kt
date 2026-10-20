@@ -166,7 +166,6 @@ object ErrorText {
         Entry("Rasm va video yuborish hozircha ishlamayapti", "Отправка фото и видео пока не работает", "Sending photos and videos is not working right now"),
         Entry("Server xotirasi to'lgan — birozdan keyin urinib ko'ring", "Память сервера заполнена — попробуйте немного позже", "The server's storage is full — try again a little later"),
         Entry("Havolaning muddati o'tgan", "Срок действия ссылки истёк", "The link has expired"),
-        Entry("full yoki thumb", "full или thumb", "full or thumb"),
         Entry("Rasm bo'sh", "Изображение пустое", "The image is empty"),
         Entry("Rasm juda katta — kichikroq qilib yuboring", "Изображение слишком большое — отправьте поменьше", "The image is too large — send a smaller one"),
         Entry("Rasm juda kichik", "Изображение слишком маленькое", "The image is too small"),

@@ -2,7 +2,6 @@ package uz.sadora.server.media
 
 import kotlin.time.Instant
 import kotlin.uuid.Uuid
-import org.jetbrains.exposed.v1.core.Op
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.and
@@ -172,18 +171,25 @@ class MediaRepository {
 
     // ---------------------------------------------------------------- photos from before V69
 
-    /** Up to [limit] photos still in `community_message_images`, but not [skip]: id, sender, bytes. */
+    /**
+     * Up to [limit] photos of `image` lines not moved yet, but not [skip]: id, sender, bytes.
+     * A moved line is `media`; its old bytes stay in the table, in the database's backups,
+     * until a later migration drops it.
+     */
     suspend fun legacyImages(limit: Int, skip: Set<Uuid>): List<LegacyImage> = dbQuery {
         (CommunityMessageImages innerJoin CommunityMessages)
             .select(CommunityMessageImages.messageId, CommunityMessages.senderId, CommunityMessageImages.content)
-            .where { if (skip.isEmpty()) Op.TRUE else CommunityMessageImages.messageId notInList skip }
+            .where {
+                val notMoved = CommunityMessages.kind eq uz.sadora.contract.MessageKind.IMAGE.dbValue()
+                if (skip.isEmpty()) notMoved else notMoved and (CommunityMessageImages.messageId notInList skip)
+            }
             .limit(limit)
             .map { LegacyImage(it[CommunityMessageImages.messageId], it[CommunityMessages.senderId], it[CommunityMessageImages.content]) }
     }
 
     /**
-     * The photo of [image] becomes item [record], whose files are already written: the
-     * row, the line's kind, and the old bytes go in one transaction.
+     * The photo of [image] becomes item [record], whose files are already written: the row
+     * and the line's kind change in one transaction. The old bytes are left where they are.
      */
     suspend fun adoptLegacy(image: LegacyImage, record: MediaRecord, at: Instant): Unit = dbQuery {
         MessageMediaTable.insert {
@@ -206,7 +212,6 @@ class MediaRepository {
         CommunityMessages.update({ CommunityMessages.id eq image.messageId }) {
             it[kind] = uz.sadora.contract.MessageKind.MEDIA.dbValue()
         }
-        CommunityMessageImages.deleteWhere { CommunityMessageImages.messageId eq image.messageId }
     }
 
     private fun ResultRow.toRecord() = MediaRecord(

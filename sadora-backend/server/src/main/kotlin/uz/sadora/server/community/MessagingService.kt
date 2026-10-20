@@ -707,7 +707,11 @@ class MessagingService(
     }
 
     private fun Conversation.withMedia(items: List<uz.sadora.contract.MessageMedia>?): Conversation =
-        if (items.isNullOrEmpty()) this else copy(lastMessageMedia = items.first(), lastMessageMediaCount = items.size)
+        if (items.isNullOrEmpty()) {
+            this
+        } else {
+            copy(lastMessageMedia = items.first(), lastMessageMediaCount = items.size, lastMessageVideoCount = items.count { it.kind == MediaKind.VIDEO })
+        }
 
     private fun MessageRecord.preview(): String = when (kind) {
         MessageKind.TEXT -> body.take(PREVIEW_LENGTH)

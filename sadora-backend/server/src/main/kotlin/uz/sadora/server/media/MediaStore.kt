@@ -89,6 +89,37 @@ class MediaStore(private val root: File, private val clock: () -> Instant = ::no
         return SealedFile(partOf(id), cipher, plainSize)
     }
 
+    /**
+     * Changes bytes of a finished upload in place: each segment that [ranges] touch is
+     * opened, given [byteAt] for every offset in a range, and sealed again where it was.
+     * Sizes never change, so nothing else in the file moves.
+     */
+    fun editPart(id: Uuid, cipher: SegmentedCipher, plainSize: Long, ranges: List<LongRange>, byteAt: (Long) -> Byte): Unit = synchronized(lockFor(id)) {
+        if (ranges.isEmpty()) return
+        if (received(id) != plainSize) throw ConflictException(INCOMPLETE)
+        val segment = SegmentedCipher.SEGMENT_BYTES.toLong()
+        val touched = ranges.filter { !it.isEmpty() }
+            .flatMap { (it.first / segment)..(it.last / segment) }
+            .toSortedSet()
+        RandomAccessFile(partOf(id), "rw").use { file ->
+            touched.forEach { index ->
+                val plainLength = minOf(segment, plainSize - index * segment).toInt()
+                val sealed = ByteArray(plainLength + SegmentedCipher.OVERHEAD)
+                file.seek(SegmentedCipher.sealedOffset(index))
+                file.readFully(sealed)
+                val plain = cipher.open(index, sealed)
+                val from = index * segment
+                ranges.forEach { range ->
+                    val first = maxOf(range.first, from)
+                    val last = minOf(range.last, from + plainLength - 1)
+                    for (offset in first..last) plain[(offset - from).toInt()] = byteAt(offset)
+                }
+                file.seek(SegmentedCipher.sealedOffset(index))
+                file.write(cipher.seal(index, plain))
+            }
+        }
+    }
+
     /** The upload becomes the item's file as it is: a video, already sealed. */
     fun promotePart(id: Uuid): Unit = synchronized(lockFor(id)) {
         val part = partOf(id)

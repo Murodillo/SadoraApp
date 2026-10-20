@@ -48,7 +48,8 @@ data class SystemHealth(
 
 /**
  * [status] is `ok`, `warn` from [uz.sadora.server.media.MediaService.DISK_WARN] of the disk,
- * and `full` from the pause share (95% on a server), where new uploads wait.
+ * and `full` from the pause share (95% on a server), where new uploads wait; with the
+ * guard off (a laptop) it never says `full`.
  * Without [keyConfigured] no upload is taken at all. [lastBackupAt] is written by the
  * nightly backup; null means it has never reported.
  */
@@ -127,7 +128,8 @@ class SystemHealthService(
         return MediaHealth(
             keyConfigured = facts.keyConfigured,
             status = when {
-                used >= minOf(facts.pauseAt, uz.sadora.server.media.MediaService.DISK_PAUSE) -> "full"
+                // "full" means uploads are waiting, which only a guard that is on can make true.
+                facts.pauseAt < 1.0 && used >= facts.pauseAt -> "full"
                 used >= uz.sadora.server.media.MediaService.DISK_WARN -> "warn"
                 else -> "ok"
             },

@@ -92,6 +92,8 @@ object Limits {
     const val MEDIA_VIDEO_MAX_BYTES = 100L * 1024 * 1024
     /** The longest video a message carries. */
     const val MEDIA_VIDEO_MAX_SECONDS = 180
+    /** [MEDIA_VIDEO_MAX_SECONDS] as checked: a phone's three-minute recording runs a few frames over. */
+    const val MEDIA_VIDEO_MAX_MS = MEDIA_VIDEO_MAX_SECONDS * 1000L + 999
     /** A video's poster frame, a JPEG sent base64 with the upload's last call. */
     const val MEDIA_POSTER_MAX_BYTES = 1_000_000
     /** How long a consultation takes messages once the patient opens it. */

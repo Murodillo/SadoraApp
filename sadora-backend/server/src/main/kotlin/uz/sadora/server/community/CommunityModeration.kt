@@ -295,7 +295,8 @@ class CommunityModerationService(
      */
     suspend fun reportMedia(reportId: Uuid, mediaId: Uuid, admin: AdminPrincipal, context: RequestContext): uz.sadora.server.media.MediaRecord {
         val (_, messageId) = messaging.messageReport(reportId) ?: throw NotFoundException("Xabar shikoyati topilmadi")
-        val record = mediaItems?.byId(mediaId)?.takeIf { it.messageId == messageId } ?: throw NotFoundException("Fayl topilmadi")
+        val record = mediaItems?.byId(mediaId)?.takeIf { it.messageId == messageId }
+            ?: throw NotFoundException(uz.sadora.server.media.MediaService.NOT_FOUND)
         audit.record(
             admin.entry(
                 action = AuditActions.COMMUNITY_REPORT_CONTEXT_VIEWED,
@@ -309,10 +310,10 @@ class CommunityModerationService(
     }
 
     suspend fun reportMediaThumb(record: uz.sadora.server.media.MediaRecord): ByteArray =
-        media?.thumbOf(record) ?: throw NotFoundException("Fayl topilmadi")
+        media?.thumbForModerator(record) ?: throw NotFoundException(uz.sadora.server.media.MediaService.NOT_FOUND)
 
     fun reportMediaLink(record: uz.sadora.server.media.MediaRecord): uz.sadora.contract.MediaLink =
-        media?.linkOf(record) ?: throw NotFoundException("Fayl topilmadi")
+        media?.linkForModerator(record) ?: throw NotFoundException(uz.sadora.server.media.MediaService.NOT_FOUND)
 
     /** Silences the sender of a reported message, named by the report and never by account. */
     suspend fun restrictSender(reportId: Uuid, request: RestrictAuthorRequest, admin: AdminPrincipal, context: RequestContext) {

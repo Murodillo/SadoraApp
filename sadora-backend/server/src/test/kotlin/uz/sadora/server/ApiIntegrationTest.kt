@@ -282,7 +282,11 @@ class ApiIntegrationTest {
 
     @AfterAll
     fun shutDown() {
-        if (::component.isInitialized) component.close()
+        if (::component.isInitialized) {
+            component.close()
+            // The run's own media folder: photos and videos the media tests sent.
+            java.io.File(component.config.mediaDir).deleteRecursively()
+        }
     }
 
     // ---------------------------------------------------------------- onboarding
@@ -5215,6 +5219,7 @@ class ApiIntegrationTest {
         assertEquals(uz.sadora.contract.MessageKind.MEDIA, listed.lastMessageKind)
         assertEquals(MediaKind.PHOTO, listed.lastMessageMedia?.kind)
         assertEquals(2, listed.lastMessageMediaCount)
+        assertEquals(1, listed.lastMessageVideoCount)
 
         // Thumbnails with the session, never cached; nobody else gets one.
         val thumb = raw { client.get("/v1/media/${photo.id}/thumb") { auth(c.doctor.token) } }
@@ -5232,10 +5237,15 @@ class ApiIntegrationTest {
         val whole = raw { client.get(link.url) }
         assertEquals(HttpStatusCode.OK, whole.status)
         assertEquals("video/mp4", whole.headers[HttpHeaders.ContentType])
-        assertTrue(whole.readRawBytes().contentEquals(videoBytes), "the file comes back as it went up")
+        // As it went up, but for its notes (the encoder's name here), blanked where they sat.
+        val expected = videoBytes.copyOf().also { copy ->
+            uz.sadora.server.media.Mp4Info.read(uz.sadora.server.media.ByteSource.of(videoBytes))!!.metadataBoxes
+                .forEach { box -> uz.sadora.server.media.Mp4Info.blank(box) { at, value -> copy[at.toInt()] = value } }
+        }
+        assertTrue(whole.readRawBytes().contentEquals(expected), "the file comes back as it went up, notes blanked")
         val part = raw { client.get(link.url) { header(HttpHeaders.Range, "bytes=1048570-1048589") } }
         assertEquals(HttpStatusCode.PartialContent, part.status)
-        assertTrue(part.readRawBytes().contentEquals(videoBytes.copyOfRange(1048570, 1048590)))
+        assertTrue(part.readRawBytes().contentEquals(expected.copyOfRange(1048570, 1048590)))
         // The photo itself the same way.
         val full = raw { client.get(get<MediaLink>("/v1/media/${photo.id}/link", c.doctor.token).url) }
         assertEquals(HttpStatusCode.OK, full.status)
@@ -5246,7 +5256,7 @@ class ApiIntegrationTest {
         assertEquals(HttpStatusCode.Forbidden, raw { client.get(link.url.replace(video.id, photo.id)) }.status)
         val past = Clock.System.now().epochSeconds - 5
         val keys = assertNotNull(component.mediaKeys)
-        val stale = "/v1/media/${video.id}/file?v=full&exp=$past&sig=${keys.sign(Uuid.parse(video.id), uz.sadora.server.media.MediaVariant.FULL, past)}"
+        val stale = "/v1/media/${video.id}/file?exp=$past&sig=${keys.sign(Uuid.parse(video.id), uz.sadora.server.media.MediaVariant.FULL, past)}"
         assertEquals(HttpStatusCode.Forbidden, raw { client.get(stale) }.status)
 
         // An item goes in one message only, and only its owner sends it.
@@ -5341,6 +5351,21 @@ class ApiIntegrationTest {
     }
 
     @Test
+    fun `a video loses where it was filmed on the way in, and still plays`() = api {
+        setFlag(adminToken(), FlagKeys.CHAT_MEDIA, enabled = true)
+        val her = signUp().also { onboard(it) }
+        val bytes = fixture("geotagged.mov")
+        assertTrue(String(bytes, Charsets.ISO_8859_1).contains("+41.3111"), "the fixture carries a location")
+        val video = upload(her, MediaKind.VIDEO, "video/quicktime", bytes)
+        val stored = raw { client.get(get<MediaLink>("/v1/media/${video.id}/link", her.token).url) }.readRawBytes()
+        assertEquals(bytes.size, stored.size, "nothing in the file moved")
+        val text = String(stored, Charsets.ISO_8859_1)
+        assertEquals(-1, text.indexOf("+41.3111"))
+        assertEquals(-1, text.indexOf("SECRET-TITLE"))
+        assertNotNull(uz.sadora.server.media.Mp4Info.read(uz.sadora.server.media.ByteSource.of(stored)), "still a video")
+    }
+
+    @Test
     fun `the day's allowance stops new uploads`() = api {
         val admin = adminToken()
         val her = signUp().also { onboard(it) }
@@ -5388,7 +5413,7 @@ class ApiIntegrationTest {
         assertEquals("eski rasm", moved.body)
         assertEquals(64 to 48, moved.media.single().width to moved.media.single().height)
         assertEquals(HttpStatusCode.OK, raw { client.get("/v1/media/${moved.media.single().id}/thumb") { auth(c.doctor.token) } }.status)
-        assertEquals(0, dbQuery { uz.sadora.server.db.CommunityMessageImages.selectAll().where { uz.sadora.server.db.CommunityMessageImages.messageId eq legacyId }.count() })
+        assertEquals(1, dbQuery { uz.sadora.server.db.CommunityMessageImages.selectAll().where { uz.sadora.server.db.CommunityMessageImages.messageId eq legacyId }.count() }, "the old bytes stay in the dumps until the table is dropped")
         assertEquals(0, component.mediaMigration.runOnce(), "nothing is moved twice")
 
         // The doctor sends an album the patient reports: the staff panel sees all of it, audited.

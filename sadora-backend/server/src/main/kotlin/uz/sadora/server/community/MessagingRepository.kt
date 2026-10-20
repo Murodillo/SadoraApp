@@ -314,14 +314,14 @@ class MessagingRepository {
         mediaIds.forEachIndexed { index, mediaId ->
             val attached = MessageMediaTable.update({
                 (MessageMediaTable.id eq mediaId) and (MessageMediaTable.ownerId eq senderId) and
-                    MessageMediaTable.messageId.isNull() and (MessageMediaTable.status eq "ready")
+                    MessageMediaTable.messageId.isNull() and (MessageMediaTable.status eq uz.sadora.server.media.MediaStatus.READY.dbValue())
             }) {
                 it[MessageMediaTable.messageId] = id
                 it[position] = index
                 it[attachedAt] = timestamp.toOffsetDateTime()
             }
             // Sent in another message a moment ago, or cancelled: the whole line is refused.
-            if (attached != 1) throw uz.sadora.server.core.ConflictException("Rasm yoki video topilmadi yoki allaqachon yuborilgan")
+            if (attached != 1) throw uz.sadora.server.core.ConflictException(uz.sadora.server.media.MediaService.NOT_SENDABLE)
         }
         if (image != null) {
             CommunityMessageImages.insert {

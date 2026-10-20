@@ -43,26 +43,68 @@ interface ByteSource {
 }
 
 /**
+ * A box that carries notes rather than the video — where it was filmed, the phone, a
+ * title — at [start] in the file, [end] exclusive.
+ */
+data class Mp4Box(val start: Long, val end: Long, val headerSize: Int) {
+    /** What blanking it writes at [offset]: `free` over its type, zeros over its contents; null elsewhere. */
+    fun blankedAt(offset: Long): Byte? = when {
+        offset in (start + 4) until (start + 8) -> FREE[(offset - start - 4).toInt()]
+        offset in (start + headerSize) until end -> 0
+        else -> null
+    }
+
+    /** The bytes blanking changes: its type and its contents, never its size. */
+    val edited: LongRange get() = (start + 4) until end
+
+    private companion object {
+        val FREE = "free".toByteArray(Charsets.ISO_8859_1)
+    }
+}
+
+/**
  * What the server needs to know about a video without decoding it: how long it plays and
  * how large it is shown. Read from the ISO base media boxes every MP4 and MOV share —
  * `ftyp` first, then the `moov` index wherever it sits — with no ffmpeg on the server.
  *
  * The size is the one a player shows: a phone held upright stores its picture sideways
  * and says so in the track's matrix, and the bubble must be tall, not wide.
+ *
+ * [metadataBoxes] are the boxes a phone writes its notes into — `udta` and `meta` in the
+ * index and in each track, and anything at the top level a player has no use for. A
+ * video's location is in one of them; blanking them ([Mp4Box.blankedAt]) turns each into
+ * a `free` box of the same size, so no offset in the file moves and it still plays.
  */
-data class Mp4Info(val durationMs: Long, val width: Int, val height: Int) {
+data class Mp4Info(
+    val durationMs: Long,
+    val width: Int,
+    val height: Int,
+    val metadataBoxes: List<Mp4Box> = emptyList(),
+) {
 
     companion object {
         /** The video's facts, or null when this is not a playable MP4 or MOV with a picture. */
         fun read(source: ByteSource): Mp4Info? = runCatching { parse(source) }.getOrNull()
 
+        /** Writes [box] blanked through [set]: every byte it changes, one at a time. */
+        fun blank(box: Mp4Box, set: (Long, Byte) -> Unit) {
+            for (offset in box.edited) set(offset, box.blankedAt(offset) ?: continue)
+        }
+
         private const val MAX_INDEX_BYTES = 16 * 1024 * 1024
         private const val MAX_TOP_BOXES = 256
+
+        /** What a player needs at the top level; every other top-level box is notes. */
+        private val STRUCTURAL = setOf("ftyp", "moov", "mdat", "free", "skip", "wide", "pnot", "moof", "mfra", "sidx", "styp")
+
+        /** Where notes live inside the index and inside each track. */
+        private val NOTES = setOf("udta", "meta", "uuid")
 
         private fun parse(source: ByteSource): Mp4Info? {
             var offset = 0L
             var first = true
-            var moov: ByteBuffer? = null
+            var info: Mp4Info? = null
+            val notes = mutableListOf<Mp4Box>()
             var boxes = 0
             while (offset + 8 <= source.size && boxes++ < MAX_TOP_BOXES) {
                 val header = ByteBuffer.wrap(source.read(offset, 16))
@@ -78,30 +120,38 @@ data class Mp4Info(val durationMs: Long, val width: Int, val height: Int) {
                     }
                     0L -> size = source.size - offset
                 }
-                if (size < headerSize) return null
+                if (size < headerSize || offset + size > source.size) {
+                    // A box running past the end: a file cut short, which is fine only if the index came first.
+                    if (info != null) break else return null
+                }
                 if (first) {
                     if (type != "ftyp") return null
                     first = false
                 }
-                if (type == "moov") {
-                    val body = size - headerSize
-                    if (body > MAX_INDEX_BYTES || offset + size > source.size) return null
-                    moov = ByteBuffer.wrap(source.read(offset + headerSize, body.toInt()))
-                    break
+                when {
+                    type == "moov" && info == null -> {
+                        val body = size - headerSize
+                        if (body > MAX_INDEX_BYTES) return null
+                        info = readMoov(ByteBuffer.wrap(source.read(offset + headerSize, body.toInt())), offset + headerSize, notes) ?: return null
+                    }
+                    type !in STRUCTURAL -> notes += Mp4Box(offset, offset + size, headerSize)
                 }
                 offset += size
             }
-            val index = moov ?: return null
-            return readMoov(index)
+            return info?.copy(metadataBoxes = notes.sortedBy { it.start })
         }
 
-        private fun readMoov(moov: ByteBuffer): Mp4Info? {
+        private fun readMoov(moov: ByteBuffer, base: Long, notes: MutableList<Mp4Box>): Mp4Info? {
             var durationMs: Long? = null
             var picture: Pair<Int, Int>? = null
-            children(moov) { type, body ->
+            children(moov, base) { type, body, box ->
                 when (type) {
                     "mvhd" -> durationMs = movieDuration(body)
-                    "trak" -> if (picture == null) picture = videoTrackSize(body)
+                    "trak" -> {
+                        val size = videoTrackSize(body, box.start + box.headerSize, notes)
+                        if (picture == null) picture = size
+                    }
+                    in NOTES -> notes += box
                 }
             }
             val duration = durationMs ?: return null
@@ -124,19 +174,20 @@ data class Mp4Info(val durationMs: Long, val width: Int, val height: Int) {
             return duration * 1000 / timescale
         }
 
-        /** The shown size of a video track, or null for sound and anything else. */
-        private fun videoTrackSize(trak: ByteBuffer): Pair<Int, Int>? {
+        /** The shown size of a video track, or null for sound and anything else; its notes go to [notes]. */
+        private fun videoTrackSize(trak: ByteBuffer, base: Long, notes: MutableList<Mp4Box>): Pair<Int, Int>? {
             var size: Pair<Int, Int>? = null
             var isVideo = false
-            children(trak) { type, body ->
+            children(trak, base) { type, body, box ->
                 when (type) {
                     "tkhd" -> size = trackSize(body)
-                    "mdia" -> children(body) { inner, innerBody ->
+                    "mdia" -> children(body, box.start + box.headerSize) { inner, innerBody, _ ->
                         if (inner == "hdlr") {
                             innerBody.position(innerBody.position() + 8)
                             isVideo = innerBody.fourCc() == "vide"
                         }
                     }
+                    in NOTES -> notes += box
                 }
             }
             return size?.takeIf { isVideo }
@@ -156,8 +207,11 @@ data class Mp4Info(val durationMs: Long, val width: Int, val height: Int) {
             return if (quarterTurn) height to width else width to height
         }
 
-        /** Calls [visit] with each child box of [parent] and a buffer over its body. */
-        private fun children(parent: ByteBuffer, visit: (String, ByteBuffer) -> Unit) {
+        /**
+         * Calls [visit] with each child box of [parent] — its type, a buffer over its body,
+         * and where it sits in the file, [base] being where [parent]'s body starts.
+         */
+        private fun children(parent: ByteBuffer, base: Long, visit: (String, ByteBuffer, Mp4Box) -> Unit) {
             val buffer = parent.slice()
             while (buffer.remaining() >= 8) {
                 val start = buffer.position()
@@ -176,7 +230,7 @@ data class Mp4Info(val durationMs: Long, val width: Int, val height: Int) {
                     position(start + headerSize)
                     limit((start + size).toInt())
                 }.slice()
-                visit(type, body)
+                visit(type, body, Mp4Box(base + start, base + start + size, headerSize))
                 buffer.position((start + size).toInt())
             }
         }
