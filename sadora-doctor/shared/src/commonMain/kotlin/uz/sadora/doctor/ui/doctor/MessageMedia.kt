@@ -528,7 +528,8 @@ private fun ViewerPhoto(item: MessageMedia, doctors: DoctorController, onZoomed:
                 contentScale = ContentScale.Fit,
                 modifier = Modifier
                     .fillMaxSize()
-                    .transformable(transform)
+                    // One finger pans only a zoomed photo; otherwise it swipes the album or pulls the viewer shut.
+                    .transformable(transform, canPan = { scale > 1f })
                     .graphicsLayer {
                         scaleX = scale
                         scaleY = scale
