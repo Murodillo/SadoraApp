@@ -433,7 +433,7 @@ private fun ByteArray.writeTo(path: String): Boolean =
 /** The unsent albums' list and files, for [uz.sadora.doctor.data.MediaUploader]; built by MainViewController. */
 @OptIn(ExperimentalForeignApi::class, BetaInteropApi::class)
 class IosOutgoingFiles : OutgoingFiles {
-    private val manifest get() = outgoingDir() + "/albums.json"
+    private val manifest get() = outgoingDir() + "/" + ManifestName
 
     override suspend fun readManifest(): String? = withContext(Dispatchers.Default) {
         NSString.stringWithContentsOfFile(manifest, NSUTF8StringEncoding, null)
@@ -454,30 +454,41 @@ class IosOutgoingFiles : OutgoingFiles {
     }
 
     override fun open(path: String): MediaBytes? =
-        if (NSFileManager.defaultManager.fileExistsAtPath(path)) FileBytes(path) else null
+        here(path).takeIf { NSFileManager.defaultManager.fileExistsAtPath(it) }?.let(::FileBytes)
 
     override fun delete(path: String) {
-        NSFileManager.defaultManager.removeItemAtPath(path, null)
+        NSFileManager.defaultManager.removeItemAtPath(here(path), null)
     }
 
     override fun restore(ref: PickRef): PickedMedia? {
-        if (!NSFileManager.defaultManager.fileExistsAtPath(ref.source)) return null
+        val path = here(ref.source)
+        if (!NSFileManager.defaultManager.fileExistsAtPath(path)) return null
         return when (ref.kind) {
-            MediaKind.PHOTO -> UIImage.imageWithContentsOfFile(ref.source)?.let { IosPickedPhoto(it, keptPath = ref.source) }
-            MediaKind.VIDEO -> IosPickedVideo(NSURL.fileURLWithPath(ref.source), ref.durationMs)
+            MediaKind.PHOTO -> UIImage.imageWithContentsOfFile(path)?.let { IosPickedPhoto(it, keptPath = path) }
+            MediaKind.VIDEO -> IosPickedVideo(NSURL.fileURLWithPath(path), ref.durationMs)
         }
     }
 
     override suspend fun sweep(keep: Set<String>) = withContext(Dispatchers.Default) {
         val dir = outgoingDir()
+        val kept = keep.map(::nameOf).toSet()
         NSFileManager.defaultManager.contentsOfDirectoryAtPath(dir, null).orEmpty()
             .filterIsInstance<String>()
-            .map { "$dir/$it" }
-            .filter { it != manifest && it !in keep }
-            .forEach { NSFileManager.defaultManager.removeItemAtPath(it, null) }
+            .filter { it != ManifestName && it !in kept }
+            .forEach { NSFileManager.defaultManager.removeItemAtPath("$dir/$it", null) }
     }
+
+    /**
+     * Where a saved [path] is now. An update moves the app's whole container, so a path
+     * written before it points nowhere; every file here sits straight in [outgoingDir]
+     * under a name of its own, and the name is what is looked up.
+     */
+    private fun here(path: String): String = outgoingDir() + "/" + nameOf(path)
+
+    private fun nameOf(path: String): String = path.substringAfterLast('/')
 }
 
+private const val ManifestName = "albums.json"
 private const val KeptPhotoEdge = 4096
 private const val PreviewEdge = 480
 private const val PosterEdge = 640
