@@ -272,6 +272,14 @@ class MessagingService(
         community.openIdentity(userId)
         val thread = requireParticipant(userId, conversationId)
         val other = thread.other(userId)
+        // An album sent again because the app closed before the answer came is the line it
+        // already is — answered as such even once the window has closed since.
+        if (request.mediaIds.isNotEmpty()) {
+            media?.sentIn(userId, request.mediaIds)
+                ?.let { messages.messageById(it) }
+                ?.takeIf { it.conversationId == thread.id && it.senderId == userId }
+                ?.let { return dtos(userId, listOf(it), thread.readAt(other)).single() }
+        }
         if (identities.blockedEitherWay(userId, other)) throw ForbiddenException(message = UNAVAILABLE)
         if (!thread.isOpen(clock.now())) throw ForbiddenException(message = CONSULTATION_CLOSED)
         if (thread.isConsultation) {

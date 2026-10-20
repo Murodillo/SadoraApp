@@ -5259,6 +5259,17 @@ class ApiIntegrationTest {
         val stale = "/v1/media/${video.id}/file?exp=$past&sig=${keys.sign(Uuid.parse(video.id), uz.sadora.server.media.MediaVariant.FULL, past)}"
         assertEquals(HttpStatusCode.Forbidden, raw { client.get(stale) }.status)
 
+        // The app closed after the server took the album and before it crossed it off its
+        // list: sending the same album again answers the message it already is, not a second one.
+        val resent = post<DirectMessage>(
+            "/v1/community/conversations/${c.id}/messages",
+            c.patient.token,
+            SendMessageRequest("Natijalar", mediaIds = listOf(photo.id, video.id)),
+        )
+        assertEquals(sent.id, resent.id)
+        assertEquals(listOf(photo.id, video.id), resent.media.map { it.id })
+        assertEquals(1, get<ConversationThread>("/v1/community/conversations/${c.id}", c.patient.token).messages.count { it.kind == uz.sadora.contract.MessageKind.MEDIA })
+
         // An item goes in one message only, and only its owner sends it.
         val again = raw { client.post("/v1/community/conversations/${c.id}/messages") { auth(c.patient.token); json(SendMessageRequest(mediaIds = listOf(photo.id))) } }
         assertEquals(HttpStatusCode.BadRequest, again.status)

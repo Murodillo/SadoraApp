@@ -214,6 +214,20 @@ class MediaService(
         }
     }
 
+    /**
+     * The message [ids] already went out in, when they are all of that message's items, in
+     * its order, and hers: a send repeated because the app closed before it heard the answer.
+     * Null for anything else, which [forMessage] then refuses as usual.
+     */
+    suspend fun sentIn(userId: Uuid, ids: List<String>): Uuid? {
+        val parsed = ids.map { raw -> runCatching { Uuid.parse(raw) }.getOrNull() ?: return null }
+        val records = repository.byIds(parsed).associateBy { it.id }
+        val messageId = records[parsed.firstOrNull()]?.messageId ?: return null
+        if (parsed.any { id -> records[id]?.let { it.ownerId == userId && it.messageId == messageId } != true }) return null
+        val carried = repository.ofMessages(listOf(messageId))[messageId].orEmpty().map { it.id }
+        return messageId.takeIf { carried == parsed }
+    }
+
     suspend fun isChatMediaOn(userId: Uuid): Boolean = chatMediaOn(userId)
 
     /** Each message's items, as the apps read them. */
