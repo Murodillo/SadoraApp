@@ -14,6 +14,8 @@ import io.ktor.server.plugins.callid.callId
 import io.ktor.server.plugins.statuspages.StatusPages
 import io.ktor.server.response.ApplicationSendPipeline
 import io.ktor.server.response.respond
+import io.ktor.util.cio.ChannelIOException
+import io.ktor.utils.io.ClosedWriteChannelException
 import kotlinx.serialization.SerializationException
 import org.slf4j.LoggerFactory
 import uz.sadora.contract.ApiError
@@ -109,6 +111,12 @@ fun Application.configureStatusPages() {
         }
 
         exception<Throwable> { call, cause ->
+            // Nobody is there to answer, and nothing on our side failed: a player that let go
+            // of one range for the next, an app closed mid-upload.
+            if (cause.isClientGone()) {
+                logger.debug("Client went away on {} {}", call.request.local.method.value, redactPath(call.request.path()))
+                return@exception
+            }
             // The path, masked — not the URI, whose query can hold an OAuth code.
             logger.error("Unhandled failure on {} {}", call.request.local.method.value, redactPath(call.request.path()), cause)
             call.respond(
@@ -155,6 +163,17 @@ fun Application.configureStatusPages() {
         }
     }
 }
+
+/**
+ * The connection to the client broke while the engine read the request or wrote the
+ * answer: the engine wraps a broken socket in a [ChannelIOException], and a body still
+ * being copied into an answer it has already closed meets a [ClosedWriteChannelException]
+ * — no code of ours writes to a channel. An IOException of our own, a media file that
+ * cannot be read, is neither and still counts as a fault.
+ */
+internal fun Throwable.isClientGone(): Boolean =
+    generateSequence(this) { it.cause.takeIf { cause -> cause !== it } }
+        .any { it is ChannelIOException || it is ClosedWriteChannelException }
 
 private suspend fun io.ktor.server.application.ApplicationCall.respondUnsupportedMedia() {
     respond(
