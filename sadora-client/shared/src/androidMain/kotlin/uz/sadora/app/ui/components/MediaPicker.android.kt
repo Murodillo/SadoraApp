@@ -57,6 +57,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import uz.sadora.app.data.MediaBytes
 import uz.sadora.app.data.MediaPrepareException
+import uz.sadora.app.data.OutgoingFiles
+import uz.sadora.app.data.PickRef
 import uz.sadora.app.data.PickedMedia
 import uz.sadora.app.data.PrepareProblem
 import uz.sadora.app.data.PreparedMedia
@@ -166,13 +168,37 @@ private class CaptureVideoUpTo(private val seconds: Int) : ActivityResultContrac
  */
 private class AndroidPickedMedia(
     private val context: Context,
-    private val uri: Uri,
+    private var uri: Uri,
     override val kind: MediaKind,
     override val durationMs: Long?,
     /** A file the app made (a camera capture), deleted with the pick. */
-    private val owned: File?,
+    private var owned: File?,
+    /** A gallery pick the app holds a lasting read grant on, given back with the pick. */
+    private var persisted: Boolean = false,
 ) : PickedMedia {
     private var output: File? = null
+
+    /**
+     * A camera capture moves out of the cache, which the system may clear, into the app's own
+     * files; a gallery pick keeps a lasting read grant, which the system photo picker gives.
+     */
+    override suspend fun keep(): PickRef? = withContext(Dispatchers.IO) {
+        val file = owned
+        if (file != null) {
+            val kept = File(outgoingDir(context), file.name)
+            if (file != kept && file.renameTo(kept)) {
+                owned = kept
+                uri = Uri.fromFile(kept)
+            }
+            return@withContext PickRef(kind, uri.toString(), durationMs)
+        }
+        runCatching { context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION) }
+            .map {
+                persisted = true
+                PickRef(kind, uri.toString(), durationMs)
+            }
+            .getOrNull()
+    }
 
     override suspend fun preview(): ByteArray? = withContext(Dispatchers.IO) {
         when (kind) {
@@ -195,7 +221,8 @@ private class AndroidPickedMedia(
     private suspend fun prepareVideo(onProgress: (Float) -> Unit): PreparedMedia {
         if ((durationMs ?: 0) > Limits.MEDIA_VIDEO_MAX_MS) throw MediaPrepareException(PrepareProblem.TooLong)
         val source = withContext(Dispatchers.IO) { size(uri) } ?: throw MediaPrepareException(PrepareProblem.Unreadable)
-        val out = File(File(context.cacheDir, "media-out").apply { mkdirs() }, "${UUID.randomUUID()}.mp4")
+        // In the app's own files, not the cache: a restart sends this very file on from where it stopped.
+        val out = File(outgoingDir(context), "${UUID.randomUUID()}.mp4")
         output = out
         withContext(Dispatchers.Main) {
             val done = CompletableDeferred<Unit>()
@@ -247,7 +274,7 @@ private class AndroidPickedMedia(
             val (width, height) = size(outUri) ?: source
             val duration = metadata(outUri) { it.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull() } ?: durationMs
             val poster = frame(outUri)?.jpeg(0, PosterEdge, PosterQuality)?.bytes
-            PreparedMedia(MediaKind.VIDEO, "video/mp4", FileBytes(out), width, height, duration, poster)
+            PreparedMedia(MediaKind.VIDEO, "video/mp4", FileBytes(out), width, height, duration, poster, out.absolutePath)
         }
     }
 
@@ -274,9 +301,21 @@ private class AndroidPickedMedia(
     override fun discard() {
         owned?.delete()
         output?.delete()
+        if (persisted) runCatching { context.contentResolver.releasePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION) }
     }
 
     companion object {
+        /** The pick behind [ref] after a restart, while its file is still there to read. */
+        fun restore(context: Context, ref: PickRef): AndroidPickedMedia? {
+            val uri = Uri.parse(ref.source)
+            if (uri.scheme == "file") {
+                val file = uri.path?.let(::File)?.takeIf { it.isFile } ?: return null
+                return AndroidPickedMedia(context, uri, ref.kind, ref.durationMs, owned = file)
+            }
+            val readable = runCatching { context.contentResolver.openInputStream(uri)?.use { true } == true }.getOrDefault(false)
+            return if (readable) AndroidPickedMedia(context, uri, ref.kind, ref.durationMs, owned = null, persisted = true) else null
+        }
+
         fun from(context: Context, uri: Uri, owned: File?): AndroidPickedMedia? {
             val type = context.contentResolver.getType(uri)
                 ?: owned?.extension?.let { if (it == "mp4") "video/mp4" else "image/jpeg" }
@@ -309,6 +348,50 @@ private class AndroidPickedMedia(
         private const val TargetShortSide = 720
         /** 2.5 Mbit/s: three minutes of 720p near 60 MB with its sound. */
         private const val VideoBitrate = 2_500_000
+    }
+}
+
+/**
+ * Where photos and videos she was sending wait while the app is closed: the app's
+ * no-backup files, so a private picture is never copied into a cloud backup of the phone.
+ */
+private fun outgoingDir(context: Context): File = File(context.noBackupFilesDir, "outgoing").apply { mkdirs() }
+
+/** The unsent albums' list and files, for [uz.sadora.app.data.MediaUploader]; built by MainActivity. */
+class AndroidOutgoingFiles(context: Context) : OutgoingFiles {
+    private val app = context.applicationContext
+    private val manifest get() = File(outgoingDir(app), "albums.json")
+
+    override suspend fun readManifest(): String? = withContext(Dispatchers.IO) { manifest.takeIf { it.isFile }?.readText() }
+
+    override suspend fun writeManifest(text: String?) = withContext(Dispatchers.IO) {
+        if (text == null) {
+            manifest.delete()
+        } else {
+            // Written beside and moved over, so a close mid-write leaves the old list, not half a new one.
+            val next = File(outgoingDir(app), "albums.json.next")
+            next.writeText(text)
+            next.renameTo(manifest)
+        }
+        Unit
+    }
+
+    override suspend fun write(bytes: ByteArray): String = withContext(Dispatchers.IO) {
+        File(outgoingDir(app), "${UUID.randomUUID()}.bin").apply { writeBytes(bytes) }.absolutePath
+    }
+
+    override fun open(path: String): MediaBytes? = File(path).takeIf { it.isFile }?.let(::FileBytes)
+
+    override fun delete(path: String) {
+        File(path).delete()
+    }
+
+    override fun restore(ref: PickRef): PickedMedia? = AndroidPickedMedia.restore(app, ref)
+
+    override suspend fun sweep(keep: Set<String>) = withContext(Dispatchers.IO) {
+        outgoingDir(app).listFiles().orEmpty()
+            .filter { it.isFile && it.name != manifest.name && it.absolutePath !in keep && Uri.fromFile(it).toString() !in keep }
+            .forEach { it.delete() }
     }
 }
 

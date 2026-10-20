@@ -66,6 +66,8 @@ class MainActivity : ComponentActivity() {
             healthPlatform = HealthConnectPlatform(applicationContext),
             healthPrefs = AndroidHealthSyncPrefs(applicationContext),
             storeBilling = storeBilling,
+            // Photos and videos she was sending, kept while the app is closed.
+            outgoingFiles = uz.sadora.app.ui.components.AndroidOutgoingFiles(applicationContext),
             widgetPlatform = uz.sadora.app.widget.AndroidWidgetPlatform(applicationContext),
         )
     }

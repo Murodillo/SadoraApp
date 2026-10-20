@@ -39,6 +39,8 @@ class MessagesController(
     private val clock: Clock = Clock.System,
     /** Photos and videos; null where nothing can be uploaded (previews, tests without it). */
     private val media: MediaApi? = null,
+    /** Where unsent albums wait while the app is closed; memory only without it. */
+    outgoingFiles: OutgoingFiles? = null,
 ) {
     val calls = ApiCallState()
 
@@ -247,7 +249,20 @@ class MessagesController(
     private val uploadScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     private val uploader: MediaUploader? = media?.let { transport ->
-        MediaUploader(transport, uploadScope) { album, ids -> deliverAlbum(album, ids) }
+        MediaUploader(transport, uploadScope, outgoingFiles, clock) { album, ids -> deliverAlbum(album, ids) }
+    }
+
+    /**
+     * Brings back the albums the app was sending when it closed — hers only, as "Yuborilmadi"
+     * bubbles she can send again. Called once she is inside, with her account.
+     */
+    suspend fun restoreOutgoing(owner: String?) {
+        uploader?.restore(owner)
+    }
+
+    /** She signed out: nothing she was sending stays on the phone. */
+    fun discardOutgoing() {
+        uploader?.discardAll()
     }
 
     /** Photos and videos can be sent from here at all. */

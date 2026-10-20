@@ -20,6 +20,8 @@ interface MediaStrings {
     val preparing: String
     fun sending(percent: Int): String
     val failed: String
+    /** Under a bubble the app brought back after it was closed mid-send. */
+    val interrupted: String
     val retry: String
     val discard: String
     fun problem(problem: PrepareProblem): String
@@ -56,6 +58,7 @@ object MediaStringsUz : MediaStrings {
     override val preparing = "Tayyorlanmoqda…"
     override fun sending(percent: Int) = "Yuborilmoqda · $percent%"
     override val failed = "Yuborilmadi"
+    override val interrupted = "Ilova yopilib qolgan edi — qayta yuboring"
     override val retry = "Qayta yuborish"
     override val discard = "O'chirish"
     override fun problem(problem: PrepareProblem) = when (problem) {
@@ -98,6 +101,7 @@ object MediaStringsRu : MediaStrings {
     override val preparing = "Подготовка…"
     override fun sending(percent: Int) = "Отправляется · $percent%"
     override val failed = "Не отправлено"
+    override val interrupted = "Приложение было закрыто — отправьте снова"
     override val retry = "Отправить снова"
     override val discard = "Удалить"
     override fun problem(problem: PrepareProblem) = when (problem) {
@@ -140,6 +144,7 @@ object MediaStringsEn : MediaStrings {
     override val preparing = "Preparing…"
     override fun sending(percent: Int) = "Sending · $percent%"
     override val failed = "Not sent"
+    override val interrupted = "The app was closed — send it again"
     override val retry = "Send again"
     override val discard = "Delete"
     override fun problem(problem: PrepareProblem) = when (problem) {

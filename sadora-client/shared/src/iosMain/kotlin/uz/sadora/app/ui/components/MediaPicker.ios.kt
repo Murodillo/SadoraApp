@@ -50,6 +50,16 @@ import platform.CoreGraphics.CGSizeMake
 import platform.CoreMedia.CMTimeGetSeconds
 import platform.CoreMedia.CMTimeMakeWithSeconds
 import platform.Foundation.NSData
+import platform.Foundation.NSApplicationSupportDirectory
+import platform.Foundation.NSNumber
+import platform.Foundation.NSString
+import platform.Foundation.NSURLIsExcludedFromBackupKey
+import platform.Foundation.NSUTF8StringEncoding
+import platform.Foundation.NSUserDomainMask
+import platform.Foundation.stringWithContentsOfFile
+import platform.Foundation.writeToFile
+import uz.sadora.app.data.OutgoingFiles
+import uz.sadora.app.data.PickRef
 import platform.Foundation.NSFileHandle
 import platform.Foundation.NSFileManager
 import platform.Foundation.NSTemporaryDirectory
@@ -222,9 +232,24 @@ private fun copyToTemp(url: NSURL, extension: String): NSURL? {
 }
 
 /** A photo, drawn upright at the size it is sent and written as a JPEG with nothing but pixels. */
-private class IosPickedPhoto(private val image: UIImage) : PickedMedia {
+@OptIn(ExperimentalForeignApi::class)
+private class IosPickedPhoto(
+    private val image: UIImage,
+    /** Where [keep] wrote it down for a restart; deleted with the pick. */
+    private var keptPath: String? = null,
+) : PickedMedia {
     override val kind = MediaKind.PHOTO
     override val durationMs: Long? = null
+
+    /** The picker gave the picture in memory; a restart needs it on disk, at a size still worth resizing. */
+    override suspend fun keep(): PickRef? = withContext(Dispatchers.Default) {
+        keptPath?.let { return@withContext PickRef(kind, it, null) }
+        val (bytes, _) = image.jpeg(KeptPhotoEdge, 0.92) ?: return@withContext null
+        val path = outgoingPath("jpg")
+        if (!bytes.writeTo(path)) return@withContext null
+        keptPath = path
+        PickRef(kind, path, null)
+    }
 
     override suspend fun preview(): ByteArray? = withContext(Dispatchers.Default) { image.jpeg(PreviewEdge, 0.8)?.first }
 
@@ -234,7 +259,9 @@ private class IosPickedPhoto(private val image: UIImage) : PickedMedia {
         PreparedMedia(MediaKind.PHOTO, "image/jpeg", MediaBytes.of(bytes), size.first, size.second, null, null)
     }
 
-    override fun discard() {}
+    override fun discard() {
+        keptPath?.let { NSFileManager.defaultManager.removeItemAtPath(it, null) }
+    }
 }
 
 /**
@@ -244,9 +271,20 @@ private class IosPickedPhoto(private val image: UIImage) : PickedMedia {
  * a bitrate.
  */
 @OptIn(ExperimentalForeignApi::class)
-private class IosPickedVideo(private val source: NSURL, override val durationMs: Long?) : PickedMedia {
+private class IosPickedVideo(private var source: NSURL, override val durationMs: Long?) : PickedMedia {
     override val kind = MediaKind.VIDEO
     private var output: NSURL? = null
+
+    /** The copy in the temporary folder, which iOS may empty while the app is closed, moves into the app's own. */
+    override suspend fun keep(): PickRef? = withContext(Dispatchers.Default) {
+        val path = source.path ?: return@withContext null
+        if (!path.startsWith(outgoingDir())) {
+            val target = outgoingPath(source.pathExtension ?: "mov")
+            if (!NSFileManager.defaultManager.moveItemAtPath(path, target, null)) return@withContext null
+            source = NSURL.fileURLWithPath(target)
+        }
+        PickRef(kind, source.path!!, durationMs)
+    }
 
     override suspend fun preview(): ByteArray? = withContext(Dispatchers.Default) { poster(source, PreviewEdge)?.first }
 
@@ -255,7 +293,8 @@ private class IosPickedVideo(private val source: NSURL, override val durationMs:
         val asset = AVURLAsset(uRL = source, options = null)
         val preset = if ((durationMs ?: 0) > LongVideoMs) AVAssetExportPreset960x540 else AVAssetExportPreset1280x720
         val session = AVAssetExportSession(asset = asset, presetName = preset) ?: throw MediaPrepareException(PrepareProblem.Unreadable)
-        val out = NSURL.fileURLWithPath(NSTemporaryDirectory() + "media-out-" + NSUUID().UUIDString + ".mp4")
+        // In the app's own folder, not the temporary one: a restart sends this very file on from where it stopped.
+        val out = NSURL.fileURLWithPath(outgoingPath("mp4"))
         output = out
         session.outputURL = out
         session.outputFileType = AVFileTypeMPEG4
@@ -289,7 +328,7 @@ private class IosPickedVideo(private val source: NSURL, override val durationMs:
             val bytes = FileBytes(path)
             if (bytes.size > Limits.MEDIA_VIDEO_MAX_BYTES) throw MediaPrepareException(PrepareProblem.TooLarge)
             val (width, height) = shownSize(out) ?: (0 to 0)
-            PreparedMedia(MediaKind.VIDEO, "video/mp4", bytes, width, height, durationOf(out) ?: durationMs, poster(out, PosterEdge)?.first)
+            PreparedMedia(MediaKind.VIDEO, "video/mp4", bytes, width, height, durationOf(out) ?: durationMs, poster(out, PosterEdge)?.first, path)
         }
     }
 
@@ -370,6 +409,76 @@ private class FileBytes(private val path: String) : MediaBytes {
     }
 }
 
+/**
+ * Where photos and videos she was sending wait while the app is closed: Application Support,
+ * marked so it never goes into an iCloud backup of the phone.
+ */
+@OptIn(ExperimentalForeignApi::class, BetaInteropApi::class)
+private fun outgoingDir(): String {
+    val base = NSFileManager.defaultManager.URLsForDirectory(NSApplicationSupportDirectory, NSUserDomainMask).first() as NSURL
+    val dir = base.URLByAppendingPathComponent("outgoing")!!
+    if (!NSFileManager.defaultManager.fileExistsAtPath(dir.path!!)) {
+        NSFileManager.defaultManager.createDirectoryAtURL(dir, withIntermediateDirectories = true, attributes = null, error = null)
+        dir.setResourceValue(NSNumber(bool = true), forKey = NSURLIsExcludedFromBackupKey, error = null)
+    }
+    return dir.path!!
+}
+
+private fun outgoingPath(extension: String): String = outgoingDir() + "/" + NSUUID().UUIDString + "." + extension
+
+@OptIn(ExperimentalForeignApi::class, BetaInteropApi::class)
+private fun ByteArray.writeTo(path: String): Boolean =
+    usePinned { NSData.create(bytes = it.addressOf(0), length = size.toULong()) }.writeToFile(path, atomically = true)
+
+/** The unsent albums' list and files, for [uz.sadora.app.data.MediaUploader]; built by MainViewController. */
+@OptIn(ExperimentalForeignApi::class, BetaInteropApi::class)
+class IosOutgoingFiles : OutgoingFiles {
+    private val manifest get() = outgoingDir() + "/albums.json"
+
+    override suspend fun readManifest(): String? = withContext(Dispatchers.Default) {
+        NSString.stringWithContentsOfFile(manifest, NSUTF8StringEncoding, null)
+    }
+
+    override suspend fun writeManifest(text: String?) = withContext(Dispatchers.Default) {
+        if (text == null) {
+            NSFileManager.defaultManager.removeItemAtPath(manifest, null)
+        } else {
+            // Atomically: a close mid-write leaves the old list, not half a new one.
+            NSString.create(string = text).writeToFile(manifest, atomically = true, encoding = NSUTF8StringEncoding, error = null)
+        }
+        Unit
+    }
+
+    override suspend fun write(bytes: ByteArray): String = withContext(Dispatchers.Default) {
+        outgoingPath("bin").also { bytes.writeTo(it) }
+    }
+
+    override fun open(path: String): MediaBytes? =
+        if (NSFileManager.defaultManager.fileExistsAtPath(path)) FileBytes(path) else null
+
+    override fun delete(path: String) {
+        NSFileManager.defaultManager.removeItemAtPath(path, null)
+    }
+
+    override fun restore(ref: PickRef): PickedMedia? {
+        if (!NSFileManager.defaultManager.fileExistsAtPath(ref.source)) return null
+        return when (ref.kind) {
+            MediaKind.PHOTO -> UIImage.imageWithContentsOfFile(ref.source)?.let { IosPickedPhoto(it, keptPath = ref.source) }
+            MediaKind.VIDEO -> IosPickedVideo(NSURL.fileURLWithPath(ref.source), ref.durationMs)
+        }
+    }
+
+    override suspend fun sweep(keep: Set<String>) = withContext(Dispatchers.Default) {
+        val dir = outgoingDir()
+        NSFileManager.defaultManager.contentsOfDirectoryAtPath(dir, null).orEmpty()
+            .filterIsInstance<String>()
+            .map { "$dir/$it" }
+            .filter { it != manifest && it !in keep }
+            .forEach { NSFileManager.defaultManager.removeItemAtPath(it, null) }
+    }
+}
+
+private const val KeptPhotoEdge = 4096
 private const val PreviewEdge = 480
 private const val PosterEdge = 640
 private const val LongVideoMs = 90_000L

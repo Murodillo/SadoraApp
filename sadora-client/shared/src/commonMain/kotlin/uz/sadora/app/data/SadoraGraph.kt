@@ -71,6 +71,8 @@ class SadoraGraph(
     healthPrefs: HealthSyncPrefs = InMemoryHealthSyncPrefs(),
     /** The home-screen widgets and the watch; none in tests and previews. */
     widgetPlatform: uz.sadora.app.data.widget.WidgetPlatform = uz.sadora.app.data.widget.WidgetPlatform.None,
+    /** Where photos and videos she was sending wait while the app is closed; none in tests. */
+    private val outgoingFiles: OutgoingFiles? = null,
     engine: HttpClientEngine? = null,
 ) {
     private val client: HttpClient =
@@ -137,7 +139,7 @@ class SadoraGraph(
 
     /** [clock] is for tests: the typing throttle is measured on it. */
     fun messagesController(clock: kotlin.time.Clock = kotlin.time.Clock.System): MessagesController =
-        MessagesController(communityApi, clock, mediaApi)
+        MessagesController(communityApi, clock, mediaApi, outgoingFiles)
 
     fun doctorController(state: uz.sadora.app.model.AppState): DoctorController = DoctorController(doctorApi, state)
 

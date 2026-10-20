@@ -181,7 +181,11 @@ fun App(graph: SadoraGraph? = null) {
     var wasInside by remember { mutableStateOf(false) }
     LaunchedEffect(navigator.phase) {
         val inside = navigator.phase == AppPhase.Main || navigator.phase == AppPhase.Partner
+        // Albums she was sending when the app closed come back once it is known whose they are.
+        if (inside && !wasInside) controllers.messages.restoreOutgoing(controllers.account.currentUserId)
         if (wasInside && !inside) {
+            // Signed out: what she was sending goes with her, before the next account's store.
+            controllers.messages.discardOutgoing()
             navigator.select(Tab.Today)
             // What belongs to the phone rather than to her account is carried over.
             store = AppState().also {

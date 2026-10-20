@@ -43,6 +43,8 @@ internal val iosGraph: SadoraGraph by lazy {
         // StoreKit — the bridge Swift registered at launch. Payme and Click are never offered.
         storeBilling = IosStore.bridge?.let(::IosStoreBilling),
         widgetPlatform = IosWidgetPlatform(bundleString("SadoraKeychainGroup")),
+        // Photos and videos she was sending, kept while the app is closed.
+        outgoingFiles = uz.sadora.app.ui.components.IosOutgoingFiles(),
     )
 }
 
