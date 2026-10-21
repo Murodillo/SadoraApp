@@ -36,9 +36,16 @@ check() {
 }
 
 # fetch <method> <url> [curl args…] → CODE, BODY (first 64 KiB)
+# The office gateway now and then refuses a connection outright (about one in five on
+# 2026-10-21), so a request that got no answer at all — 000 — is tried again, a few times;
+# any HTTP answer, right or wrong, is taken as it is.
 fetch() {
-  local method=$1 url=$2; shift 2
-  CODE=$(curl -sS -m 60 -X "$method" -o "$TMP/body" -w '%{http_code}' "$@" "$url" 2>/dev/null) || CODE=000
+  local method=$1 url=$2 try; shift 2
+  for try in 1 2 3 4 5; do
+    CODE=$(curl -sS -m 60 -X "$method" -o "$TMP/body" -w '%{http_code}' "$@" "$url" 2>/dev/null) || CODE=000
+    [[ $CODE != 000 ]] && break
+    sleep $((try * 2))
+  done
   BODY=$(head -c 65536 "$TMP/body" 2>/dev/null || true)
 }
 has() { [[ $CODE == "$1" && $BODY == *"$2"* ]]; }
@@ -83,7 +90,7 @@ case $CODE in
 esac
 # The doctors' panel renews its session with an X-Device-Id header, which the browser
 # asks the API about first.
-cors=$(curl -sS -m 30 -o /dev/null -D - -X OPTIONS "$API/v1/auth/refresh" -H "Origin: $DOCTOR" \
+cors=$(curl -sS -m 30 --retry 4 --retry-connrefused --retry-delay 2 -o /dev/null -D - -X OPTIONS "$API/v1/auth/refresh" -H "Origin: $DOCTOR" \
   -H 'Access-Control-Request-Method: POST' -H 'Access-Control-Request-Headers: content-type,x-device-id' 2>/dev/null \
   | tr -d '\r' | sed -n 's/^[Aa]ccess-[Cc]ontrol-[Aa]llow-[Oo]rigin: //p')
 check "doctors' panel may call the API" "CORS answered '${cors:-nothing}'" test "$cors" == "$DOCTOR"
@@ -112,7 +119,7 @@ if [[ -n $BUILD ]]; then
   else
     pass "APK manifest names build #$BUILD of ${RELEASE:0:7}"
     path=$(jq -r .path <<<"$manifest")
-    meta=$(curl -sS -m 300 -o "$TMP/app.apk" -w '%{http_code}|%{content_type}' "$LANDING$path" 2>/dev/null) || meta="000|"
+    meta=$(curl -sS -m 300 --retry 4 --retry-connrefused --retry-delay 2 -o "$TMP/app.apk" -w '%{http_code}|%{content_type}' "$LANDING$path" 2>/dev/null) || meta="000|"
     if [[ ${meta%%|*} != 200 || ${meta#*|} != application/vnd.android.package-archive* ]]; then
       fail "APK downloads" "HTTP ${meta%%|*}, ${meta#*|}"
     elif [[ -n $APK_SHA256 && $(sha256 "$TMP/app.apk") != "$APK_SHA256" ]]; then
