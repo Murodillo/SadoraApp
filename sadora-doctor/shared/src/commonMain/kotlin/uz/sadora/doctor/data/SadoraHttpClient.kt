@@ -8,6 +8,8 @@ import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.defaultRequest
 import io.ktor.client.request.header
 import io.ktor.http.HttpHeaders
+import uz.sadora.doctor.data.netlog.NetworkLog
+import uz.sadora.doctor.data.netlog.recordInto
 import uz.sadora.doctor.i18n.RequestLanguage
 import io.ktor.client.plugins.logging.LogLevel
 import io.ktor.client.plugins.logging.Logging
@@ -35,7 +37,9 @@ internal expect fun platformHttpEngine(): HttpClientEngine
 internal fun createSadoraHttpClient(
     environment: SadoraEnvironment,
     engine: HttpClientEngine = platformHttpEngine(),
+    networkLog: NetworkLog? = null,
 ): HttpClient = HttpClient(engine) { configureSadoraClient(environment) }
+    .also { client -> networkLog?.let(client::recordInto) }
 
 internal fun HttpClientConfig<*>.configureSadoraClient(environment: SadoraEnvironment) {
     // Errors are read from the body rather than raised as exceptions, so the client

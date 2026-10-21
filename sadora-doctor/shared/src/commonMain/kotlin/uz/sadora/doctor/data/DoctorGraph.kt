@@ -20,8 +20,12 @@ class DoctorGraph(
     /** Where unsent albums wait on the phone; none in previews and tests. */
     private val outgoingFiles: OutgoingFiles? = null,
 ) {
+    /** What the network inspector shows; null in a production build, which records nothing. */
+    val networkLog: uz.sadora.doctor.data.netlog.NetworkLog? =
+        if (environment.networkInspector) uz.sadora.doctor.data.netlog.NetworkLog() else null
+
     private val client: HttpClient =
-        engine?.let { createSadoraHttpClient(environment, it) } ?: createSadoraHttpClient(environment)
+        engine?.let { createSadoraHttpClient(environment, it, networkLog) } ?: createSadoraHttpClient(environment, networkLog = networkLog)
 
     val session: SessionStore = SessionStore(tokenStorage)
     private val caller: ApiCaller = ApiCaller(client, session)

@@ -58,6 +58,7 @@ import uz.sadora.app.ui.modules.wearableQuestionDue
 import uz.sadora.app.ui.modules.wearableSnoozedUntil
 import uz.sadora.app.data.applyServerProfile
 import uz.sadora.app.design.SadoraTheme
+import uz.sadora.app.ui.netlog.NetworkInspectorHost
 import uz.sadora.app.design.Spacing
 import uz.sadora.app.i18n.ProvideStrings
 import uz.sadora.app.i18n.strings
@@ -267,6 +268,8 @@ fun App(graph: SadoraGraph? = null) {
                 // Her companion, for the places outside the AI chat that show it. None without the pet.
                 LocalCompanion provides controllers.pet.let { if (it.active) Companion(it.pet, it.cheers, it.lastWin, it::cheerShown) else null },
             ) {
+                // Staging and development builds: a button above everything opens the network inspector.
+                NetworkInspectorHost(graph?.networkLog) {
                 // A build the server has retired, or maintenance, stands in front of everything.
                 AppStatusGate(graph) {
                 AnimatedContent(
@@ -327,6 +330,7 @@ fun App(graph: SadoraGraph? = null) {
                             MainShell(state, navigator, controllers)
                         }
                     }
+                }
                 }
                 }
             }

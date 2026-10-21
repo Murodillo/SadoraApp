@@ -49,6 +49,7 @@ import uz.sadora.doctor.design.SadoraTheme
 import uz.sadora.doctor.design.Spacing
 import uz.sadora.doctor.i18n.AppLanguage
 import uz.sadora.doctor.i18n.ProvideStrings
+import uz.sadora.doctor.ui.netlog.NetworkInspectorHost
 import uz.sadora.doctor.i18n.strings
 import uz.sadora.doctor.nav.AppPhase
 import uz.sadora.doctor.nav.Navigator
@@ -155,6 +156,8 @@ fun App(graph: DoctorGraph? = null) {
                 LocalRemoteImages provides photos,
             ) {
                 val words = strings
+                // Staging and development builds: a button above everything opens the network inspector.
+                NetworkInspectorHost(graph?.networkLog) {
                 Box(Modifier.fillMaxSize()) {
                     AnimatedContent(
                         targetState = navigator.phase,
@@ -233,6 +236,7 @@ fun App(graph: DoctorGraph? = null) {
                         },
                         onDismiss = { confirmSignOut = false },
                     )
+                }
                 }
             }
         }

@@ -10,6 +10,13 @@ data class SadoraEnvironment(
     /** Full request and response logging. Never enabled in a release build. */
     val verboseLogging: Boolean = false,
 ) {
+    /**
+     * Whether the in-app network inspector records requests: every build except one that
+     * talks to production — development, and the staging builds testers get from App
+     * Distribution and TestFlight. A production build never keeps a request.
+     */
+    val networkInspector: Boolean get() = baseUrl.trimEnd('/') != Production.baseUrl
+
     companion object {
         fun development(): SadoraEnvironment =
             SadoraEnvironment(baseUrl = developmentBaseUrl(), verboseLogging = true)

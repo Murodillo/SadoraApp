@@ -75,8 +75,12 @@ class SadoraGraph(
     private val outgoingFiles: OutgoingFiles? = null,
     engine: HttpClientEngine? = null,
 ) {
+    /** What the network inspector shows; null in a production build, which records nothing. */
+    val networkLog: uz.sadora.app.data.netlog.NetworkLog? =
+        if (environment.networkInspector) uz.sadora.app.data.netlog.NetworkLog() else null
+
     private val client: HttpClient =
-        engine?.let { createSadoraHttpClient(environment, it) } ?: createSadoraHttpClient(environment)
+        engine?.let { createSadoraHttpClient(environment, it, networkLog) } ?: createSadoraHttpClient(environment, networkLog = networkLog)
 
     val session: SessionStore = SessionStore(tokenStorage)
     private val caller: ApiCaller = ApiCaller(client, session)
