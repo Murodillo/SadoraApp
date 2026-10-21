@@ -9,7 +9,10 @@ name: CI
 # A pull request into dev — and dev itself once it merges — is also delivered to staging
 # (stage.yml): the API image, the admin panel and the landing page, then an APK built
 # against the staging API and published beside the landing page, then smoke tests against
-# the public URLs. Pull requests into main are checked only: main is the store release.
+# the public URLs; both Android apps then go to Firebase App Distribution. Pull requests
+# into main are checked only. A push to main — the store release — sends production builds
+# of both Android apps to Google Play's internal track (release.yml); nothing else reaches
+# the Play Console.
 on:
   pull_request:
     branches: [dev, main]
@@ -459,9 +462,18 @@ jobs:
       packages: write
     secrets: inherit
 
+  release:
+    name: Release
+    needs: [backend, android, ios, admin, doctor, doctor-admin, infra]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/release.yml
+    permissions:
+      contents: read
+    secrets: inherit
+
   report:
     name: Report
-    needs: [plan, backend, android, ios, admin, doctor, doctor-admin, infra, stage]
+    needs: [plan, backend, android, ios, admin, doctor, doctor-admin, infra, stage, release]
     if: always() && !cancelled()
     runs-on: ubuntu-latest
     timeout-minutes: 5

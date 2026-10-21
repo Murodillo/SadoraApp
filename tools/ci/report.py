@@ -95,6 +95,7 @@ JOBS = {
     "doctor-admin": "Doctor web panel",
     "infra": "Deploy tooling",
     "stage": "Staging",
+    "release": "Release (Play)",
 }
 ICONS = {"success": "✅", "failure": "❌", "cancelled": "⏹️", "skipped": "⏭️"}
 

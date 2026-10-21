@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Gives GitHub Actions what it needs to deliver to staging. Run once, by a person:
+# Gives GitHub Actions what it needs to deliver to staging and to Play. Run once, by a person:
 #
 #   ./tools/ci_secrets.sh
 #
@@ -21,14 +21,21 @@
 #   ASC_ISSUER_ID               given in the shell: ASC_ISSUER_ID=… ./tools/ci_secrets.sh
 #   ASC_KEY_P8                  ~/.appstoreconnect/private_keys/AuthKey_<id>.p8
 #
-# And for Google Play's internal track, whatever of these is on this machine:
+# For Firebase App Distribution, where staging builds of both Android apps go:
+#
+#   FIREBASE_DISTRIBUTION_JSON  sadora-backend/server/secrets/fcm-service-account.json  the
+#                               Firebase Admin SDK account (it has App Distribution Admin)
+#
+# And for Google Play's internal track — production builds only, from main (release.yml) —
+# whatever of these is on this machine, stored in the `production` environment:
 #
 #   PLAY_SERVICE_ACCOUNT_JSON   ~/.config/sadora/play-service-account.json   a Google Cloud
 #                               service account invited to the Play Console with "Release
 #                               apps to testing tracks" on both apps
 #   PLAY_KEYSTORE_<APP>_B64     sadora-<app>/androidApp/<storeFile>          each app's upload key,
 #   PLAY_KEYSTORE_<APP>_PASSWORD  from its keystore.properties               alias `upload`, one password
-#   GOOGLE_SERVICES_<APP>_JSON  sadora-<app>/androidApp/google-services.json  push in the staging APK and store builds
+#   GOOGLE_SERVICES_<APP>_JSON  sadora-<app>/androidApp/google-services.json  push in the staging APK and store
+#                               builds, and the app's id for App Distribution — set in both environments
 #   GOOGLE_SERVICE_INFO_<APP>_PLIST  sadora-<app>/iosApp/iosApp/GoogleService-Info.plist  push in TestFlight builds
 #
 # (<APP> is CLIENT or DOCTOR.)
@@ -72,6 +79,22 @@ else
   echo "    (no App Store Connect key, or no ASC_ISSUER_ID in the shell — TestFlight from CI stays off)"
 fi
 
+FIREBASE_ACCOUNT=${SADORA_FIREBASE_ACCOUNT:-sadora-backend/server/secrets/fcm-service-account.json}
+if [[ -s $FIREBASE_ACCOUNT ]]; then
+  set_secret FIREBASE_DISTRIBUTION_JSON < "$FIREBASE_ACCOUNT"
+else
+  echo "    (no Firebase service account at $FIREBASE_ACCOUNT — App Distribution from CI stays off)"
+fi
+for app in client doctor; do
+  APP=$(printf '%s' "$app" | tr '[:lower:]' '[:upper:]')
+  dir=sadora-$app/androidApp
+  [[ -s $dir/google-services.json ]] && set_secret "GOOGLE_SERVICES_${APP}_JSON" < "$dir/google-services.json"
+  plist=sadora-$app/iosApp/iosApp/GoogleService-Info.plist
+  [[ -s $plist ]] && set_secret "GOOGLE_SERVICE_INFO_${APP}_PLIST" < "$plist"
+done
+ENV_NAME=production
+echo "==> $REPO · environment '$ENV_NAME'"
+gh api --silent -X PUT "repos/$REPO/environments/$ENV_NAME"
 PLAY_ACCOUNT=${SADORA_PLAY_ACCOUNT:-$HOME/.config/sadora/play-service-account.json}
 if [[ -s $PLAY_ACCOUNT ]]; then
   set_secret PLAY_SERVICE_ACCOUNT_JSON < "$PLAY_ACCOUNT"
@@ -89,9 +112,13 @@ for app in client doctor; do
     sed -n 's/^storePassword=//p' "$dir/keystore.properties" | tr -d '\n' | set_secret "PLAY_KEYSTORE_${APP}_PASSWORD"
   fi
   [[ -s $dir/google-services.json ]] && set_secret "GOOGLE_SERVICES_${APP}_JSON" < "$dir/google-services.json"
-  plist=sadora-$app/iosApp/iosApp/GoogleService-Info.plist
-  [[ -s $plist ]] && set_secret "GOOGLE_SERVICE_INFO_${APP}_PLIST" < "$plist"
 done
+
+# Play left staging with release.yml; a copy of its secrets there would only be a leak.
+for name in PLAY_SERVICE_ACCOUNT_JSON PLAY_KEYSTORE_CLIENT_B64 PLAY_KEYSTORE_CLIENT_PASSWORD PLAY_KEYSTORE_DOCTOR_B64 PLAY_KEYSTORE_DOCTOR_PASSWORD; do
+  gh secret delete "$name" --env staging --repo "$REPO" > /dev/null 2>&1 && echo "    removed $name from staging"
+done
+
 
 echo "==> done. Re-run the latest CI run of an open pull request into dev to deliver it:"
 echo "    gh run rerun \$(gh run list --workflow CI --limit 1 --json databaseId --jq '.[0].databaseId')"

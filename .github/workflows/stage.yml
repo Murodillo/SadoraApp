@@ -3,7 +3,9 @@ name: Stage
 # Delivers one commit to the staging server, through the gate in deploy/stage/sadora-ci.
 #
 #   preflight ─┬─ image  (API image → GHCR, by digest) ─┬─ deploy ── apk ── smoke ─┬─ testflight (both apps)
-#              └─ bundle (admin panels + landing page) ──┘                          └─ play       (both apps)
+#              └─ bundle (admin panels + landing page) ──┘                          └─ distribute (both apps → Firebase App Distribution)
+#
+# Google Play is not reached from here: only production builds go there (release.yml).
 #
 # Called by ci.yml once the checks pass. Also runnable by hand — Actions → Stage → Run
 # workflow — to redeploy a branch or to roll staging back to an earlier release.
@@ -534,11 +536,12 @@ jobs:
         if: always()
         run: rm -rf ~/.appstoreconnect/private_keys "$APP_DIR/iosApp/iosApp/GoogleService-Info.plist"
 
-  # The Android twin of TestFlight: a signed bundle of each app against the same staging
-  # API, on its Play internal testing track. Needs a Play service account and each app's
-  # upload key in the staging environment (tools/ci_secrets.sh); without them, a skip.
-  play:
-    name: Play internal (${{ matrix.app.name }})
+  # Staging builds of both Android apps, for the testers: Firebase App Distribution, never
+  # Google Play — Play only gets production builds (release.yml, from main). Each app is
+  # a debug build against the staging API, signed with the staging key like the APK beside
+  # the landing page, so a tester's phone updates it in place.
+  distribute:
+    name: App Distribution (${{ matrix.app.name }})
     needs: smoke
     if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
     runs-on: ubuntu-latest
@@ -551,18 +554,21 @@ jobs:
           - { name: Sadora, dir: sadora-client, package: uz.sadora.app, key: CLIENT }
           - { name: Sadora Doctor, dir: sadora-doctor, package: uz.sadora.doctor, key: DOCTOR }
     concurrency:
-      group: stage-play-${{ matrix.app.dir }}
+      group: stage-distribute-${{ matrix.app.dir }}
       cancel-in-progress: false
     env:
       APP_DIR: ${{ matrix.app.dir }}
       PACKAGE: ${{ matrix.app.package }}
+      # The App Distribution group every staging build goes to. Created empty the first
+      # time; testers are added to it in the Firebase console.
+      DISTRIBUTION_GROUPS: testers
     steps:
       - id: secrets
         env:
-          HAVE: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON != '' && secrets[format('PLAY_KEYSTORE_{0}_B64', matrix.app.key)] != '' && secrets[format('PLAY_KEYSTORE_{0}_PASSWORD', matrix.app.key)] != '' }}
+          HAVE: ${{ secrets.FIREBASE_DISTRIBUTION_JSON != '' && secrets[format('GOOGLE_SERVICES_{0}_JSON', matrix.app.key)] != '' }}
         run: |
           echo "ready=$HAVE" >> "$GITHUB_OUTPUT"
-          [[ $HAVE == true ]] || echo "::notice::No Play service account or no upload key for $PACKAGE in the staging environment — run tools/ci_secrets.sh. Play upload skipped."
+          [[ $HAVE == true ]] || echo "::notice::No Firebase service account or no google-services.json for $PACKAGE in the staging environment — run tools/ci_secrets.sh. App Distribution skipped."
 
       - if: steps.secrets.outputs.ready == 'true'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -591,50 +597,62 @@ jobs:
           jump: ${{ secrets.STAGE_JUMP }}
           host: ${{ secrets.STAGE_HOST }}
 
-      # The upload key and Firebase's file go where Gradle looks for them, readable by the
+      # The staging key and Firebase's file go where Gradle looks for them, readable by the
       # runner only; the service account goes to a temp file the uploader reads.
-      - name: Keys, API and versionCode
+      - name: Keys and API
         if: steps.secrets.outputs.ready == 'true'
         id: plan
         env:
-          KEYSTORE: ${{ secrets[format('PLAY_KEYSTORE_{0}_B64', matrix.app.key)] }}
-          PASSWORD: ${{ secrets[format('PLAY_KEYSTORE_{0}_PASSWORD', matrix.app.key)] }}
+          KEYSTORE: ${{ secrets.STAGE_KEYSTORE_B64 }}
           GOOGLE_SERVICES: ${{ secrets[format('GOOGLE_SERVICES_{0}_JSON', matrix.app.key)] }}
-          ACCOUNT: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          ACCOUNT: ${{ secrets.FIREBASE_DISTRIBUTION_JSON }}
         run: |
           url=$(stage url | jq -r .api)
           [[ $url =~ ^https://[a-z0-9.-]+$ ]] || { echo "::error::the server reports no API URL"; exit 1; }
           echo "::add-mask::$url"
           umask 077
-          printf '%s' "$KEYSTORE" | base64 -d > "$APP_DIR/androidApp/upload.jks"
-          printf 'storeFile=upload.jks\nstorePassword=%s\nkeyAlias=upload\nkeyPassword=%s\n' "$PASSWORD" "$PASSWORD" > "$APP_DIR/androidApp/keystore.properties"
-          # Without Firebase's file the build still passes; the app just has no push.
-          [[ -n $GOOGLE_SERVICES ]] && printf '%s' "$GOOGLE_SERVICES" > "$APP_DIR/androidApp/google-services.json"
-          printf '%s' "$ACCOUNT" > "$RUNNER_TEMP/play.json"
+          keystore=""
+          if [[ -n $KEYSTORE ]]; then
+            keystore="$RUNNER_TEMP/stage-debug.keystore"
+            printf '%s' "$KEYSTORE" | base64 -d > "$keystore"
+          else
+            echo "::warning title=Unstable signing key::STAGE_KEYSTORE_B64 is not set, so this build is signed with a throwaway key — testers must remove the installed app first."
+          fi
+          printf '%s' "$GOOGLE_SERVICES" > "$APP_DIR/androidApp/google-services.json"
+          printf '%s' "$ACCOUNT" > "$RUNNER_TEMP/firebase.json"
           python3 -m pip install --quiet --break-system-packages cryptography
-          code=$(PLAY_SERVICE_ACCOUNT=$RUNNER_TEMP/play.json python3 tools/ci/play_upload.py next "$PACKAGE")
-          { echo "url=$url"; echo "code=$code"; } >> "$GITHUB_OUTPUT"
+          { echo "url=$url"; echo "keystore=$keystore"; } >> "$GITHUB_OUTPUT"
 
-      - name: Bundle
+      - name: Build
         if: steps.secrets.outputs.ready == 'true'
         working-directory: ${{ matrix.app.dir }}
         env:
           API: ${{ steps.plan.outputs.url }}
-          CODE: ${{ steps.plan.outputs.code }}
-        run: ./gradlew --no-daemon :androidApp:bundleRelease -Psadora.apiUrl="$API" -Psadora.versionCode="$CODE" -Psadora.versionName=1.0
+          BUILD: ${{ github.run_number }}
+          KEYSTORE_PATH: ${{ steps.plan.outputs.keystore }}
+        run: >-
+          ./gradlew --no-daemon :androidApp:assembleDebug
+          -Psadora.devHost="$API"
+          -Psadora.versionCode="$BUILD"
+          -Psadora.versionName="1.0.$BUILD"
+          ${KEYSTORE_PATH:+-Psadora.debugKeystore="$KEYSTORE_PATH"}
 
-      - name: Upload to the internal track
+      - name: Send to the testers
         if: steps.secrets.outputs.ready == 'true'
         env:
-          CODE: ${{ steps.plan.outputs.code }}
+          BUILD: ${{ github.run_number }}
+          SUBJECT: ${{ github.event.head_commit.message }}
         run: |
-          PLAY_SERVICE_ACCOUNT=$RUNNER_TEMP/play.json python3 tools/ci/play_upload.py upload "$PACKAGE" \
-            "$APP_DIR/androidApp/build/outputs/bundle/release/androidApp-release.aab" "$CODE (1.0) · ${GITHUB_SHA::7}"
-          printf '### Play internal · %s\n\nversionCode **%s** is on the internal track; testers get it once Play has processed it.\n' "${{ matrix.app.name }}" "$CODE" >> "$GITHUB_STEP_SUMMARY"
+          notes=$(printf '%s 1.0.%s (staging) · %s\n\n%s' "${{ matrix.app.name }}" "$BUILD" "${GITHUB_SHA::7}" "${SUBJECT%%$'\n'*}")
+          release=$(FIREBASE_SERVICE_ACCOUNT=$RUNNER_TEMP/firebase.json python3 tools/ci/firebase_distribute.py \
+            "$APP_DIR/androidApp/google-services.json" "$PACKAGE" \
+            "$APP_DIR/androidApp/build/outputs/apk/debug/androidApp-debug.apk" "$notes" "$DISTRIBUTION_GROUPS")
+          # shellcheck disable=SC2016 # the backticks are Markdown, not a substitution
+          printf '### App Distribution · %s\n\nBuild **1.0.%s** (release `%s`) went to the group `%s`.\n' "${{ matrix.app.name }}" "$BUILD" "$release" "$DISTRIBUTION_GROUPS" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Forget the keys
         if: always()
-        run: rm -f "$RUNNER_TEMP/play.json" "$APP_DIR/androidApp/upload.jks" "$APP_DIR/androidApp/keystore.properties" "$APP_DIR/androidApp/google-services.json"
+        run: rm -f "$RUNNER_TEMP/firebase.json" "$RUNNER_TEMP/stage-debug.keystore" "$APP_DIR/androidApp/google-services.json"
 
   rollback:
     name: Roll back

@@ -1,0 +1,104 @@
+name: Release
+
+# Production builds of both Android apps to Google Play's internal testing track — the only
+# way a build reaches the Play Console. They talk to the production API (api.sadora.app:
+# no -Psadora.apiUrl, so the app's own Production environment), and are promoted from the
+# internal track to production by a person in the Play Console.
+#
+# Called by ci.yml once main's checks pass — main only moves at a store release. Also
+# runnable by hand: Actions → Release → Run workflow, on main.
+#
+# Staging and dev builds never come here; they go to Firebase App Distribution (stage.yml).
+on:
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  play:
+    name: Play internal (${{ matrix.app.name }})
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    environment: production
+    strategy:
+      fail-fast: false
+      matrix:
+        app:
+          - { name: Sadora, dir: sadora-client, package: uz.sadora.app, key: CLIENT }
+          - { name: Sadora Doctor, dir: sadora-doctor, package: uz.sadora.doctor, key: DOCTOR }
+    concurrency:
+      group: release-play-${{ matrix.app.dir }}
+      cancel-in-progress: false
+    env:
+      APP_DIR: ${{ matrix.app.dir }}
+      PACKAGE: ${{ matrix.app.package }}
+    steps:
+      - id: secrets
+        env:
+          HAVE: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON != '' && secrets[format('PLAY_KEYSTORE_{0}_B64', matrix.app.key)] != '' && secrets[format('PLAY_KEYSTORE_{0}_PASSWORD', matrix.app.key)] != '' }}
+        run: |
+          echo "ready=$HAVE" >> "$GITHUB_OUTPUT"
+          [[ $HAVE == true ]] || echo "::notice::No Play service account or no upload key for $PACKAGE in the production environment — run tools/ci_secrets.sh. Play upload skipped."
+
+      - if: steps.secrets.outputs.ready == 'true'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - if: steps.secrets.outputs.ready == 'true'
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: zulu
+          java-version: '21'
+
+      - if: steps.secrets.outputs.ready == 'true'
+        uses: android-actions/setup-android@40fd30fb8d7440372e1316f5d1809ec01dcd3699 # v4.0.1
+        with:
+          packages: platform-tools
+
+      - if: steps.secrets.outputs.ready == 'true'
+        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+        with:
+          cache-read-only: true
+
+      # The upload key and Firebase's file go where Gradle looks for them, readable by the
+      # runner only; the service account goes to a temp file the uploader reads.
+      - name: Keys and versionCode
+        if: steps.secrets.outputs.ready == 'true'
+        id: plan
+        env:
+          KEYSTORE: ${{ secrets[format('PLAY_KEYSTORE_{0}_B64', matrix.app.key)] }}
+          PASSWORD: ${{ secrets[format('PLAY_KEYSTORE_{0}_PASSWORD', matrix.app.key)] }}
+          GOOGLE_SERVICES: ${{ secrets[format('GOOGLE_SERVICES_{0}_JSON', matrix.app.key)] }}
+          ACCOUNT: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+        run: |
+          umask 077
+          printf '%s' "$KEYSTORE" | base64 -d > "$APP_DIR/androidApp/upload.jks"
+          printf 'storeFile=upload.jks\nstorePassword=%s\nkeyAlias=upload\nkeyPassword=%s\n' "$PASSWORD" "$PASSWORD" > "$APP_DIR/androidApp/keystore.properties"
+          # Without Firebase's file the build still passes; the app just has no push.
+          [[ -n $GOOGLE_SERVICES ]] && printf '%s' "$GOOGLE_SERVICES" > "$APP_DIR/androidApp/google-services.json"
+          printf '%s' "$ACCOUNT" > "$RUNNER_TEMP/play.json"
+          python3 -m pip install --quiet --break-system-packages cryptography
+          code=$(PLAY_SERVICE_ACCOUNT=$RUNNER_TEMP/play.json python3 tools/ci/play_upload.py next "$PACKAGE")
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+
+      - name: Bundle
+        if: steps.secrets.outputs.ready == 'true'
+        working-directory: ${{ matrix.app.dir }}
+        env:
+          CODE: ${{ steps.plan.outputs.code }}
+        run: ./gradlew --no-daemon :androidApp:bundleRelease -Psadora.versionCode="$CODE" -Psadora.versionName=1.0
+
+      - name: Upload to the internal track
+        if: steps.secrets.outputs.ready == 'true'
+        env:
+          CODE: ${{ steps.plan.outputs.code }}
+        run: |
+          PLAY_SERVICE_ACCOUNT=$RUNNER_TEMP/play.json python3 tools/ci/play_upload.py upload "$PACKAGE" \
+            "$APP_DIR/androidApp/build/outputs/bundle/release/androidApp-release.aab" "$CODE (1.0) · ${GITHUB_SHA::7}"
+          printf '### Play internal · %s\n\nProduction versionCode **%s** is on the internal track; promote it in the Play Console.\n' "${{ matrix.app.name }}" "$CODE" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Forget the keys
+        if: always()
+        run: rm -f "$RUNNER_TEMP/play.json" "$APP_DIR/androidApp/upload.jks" "$APP_DIR/androidApp/keystore.properties" "$APP_DIR/androidApp/google-services.json"
