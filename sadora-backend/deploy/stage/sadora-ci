@@ -39,7 +39,7 @@ INFRA_FILES=(docker-compose.prod.yml docker-compose.stage.yml deploy/nginx/spa.c
 API_URL=${SADORA_API_URL:-https://dev-api.sadora.app}
 ADMIN_URL=${SADORA_ADMIN_URL:-https://dev-admin.sadora.app}
 DOCTOR_URL=${SADORA_DOCTOR_URL:-https://dev-doctor.sadora.app}
-LANDING_URL=${SADORA_LANDING_URL:-https://dev.sadora.app}
+LANDING_URL=${SADORA_LANDING_URL:-https://devv.sadora.app}
 # nginx containers serving the directories a deploy swaps in.
 STATIC_SERVICES=(landing admin doctor-admin)
 

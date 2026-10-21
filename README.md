@@ -299,7 +299,7 @@ imzolanadi — telefondagi eski yig'ma ustidan yangilanadi.
 
 - **Qayta deploy yoki rollback:** Actions → Stage → Run workflow. `rollback_to` bo'sh
   bo'lsa — oldingi sog'lom relizga.
-- **Smoke test:** `tools/ci/smoke.sh https://dev-api.sadora.app https://dev-admin.sadora.app https://dev-doctor.sadora.app https://dev.sadora.app <commit sha>`
+- **Smoke test:** `tools/ci/smoke.sh https://dev-api.sadora.app https://dev-admin.sadora.app https://dev-doctor.sadora.app https://devv.sadora.app <commit sha>`
 - **Testlar lokal:**
   - gate — `docker run --rm -v "$PWD":/src -w /src ubuntu:24.04 bash sadora-backend/deploy/stage/test/sadora-ci.test.sh`
   - admin — `npm --prefix sadora-backend/admin run test:coverage`

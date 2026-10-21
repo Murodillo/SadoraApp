@@ -95,7 +95,7 @@ t_refuses_a_shell() {
 }
 
 t_url_is_json() {
-  gate url; expect_status 0 && expect_out '{"api":"https://dev-api.sadora.app","admin":"https://dev-admin.sadora.app","doctor":"https://dev-doctor.sadora.app","landing":"https://dev.sadora.app"}'
+  gate url; expect_status 0 && expect_out '{"api":"https://dev-api.sadora.app","admin":"https://dev-admin.sadora.app","doctor":"https://dev-doctor.sadora.app","landing":"https://devv.sadora.app"}'
 }
 
 t_deploy_validates_arguments() {

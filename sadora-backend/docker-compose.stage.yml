@@ -9,7 +9,7 @@
 # ports the gateway forwards the dev- hostnames to:
 #
 #   dev-doctor.sadora.app  → 8080  doctor-admin
-#   dev.sadora.app         → 8081  landing
+#   devv.sadora.app        → 8081  landing
 #   dev-admin.sadora.app   → 8082  admin
 #   dev-api.sadora.app     → 8083  api
 #
@@ -48,7 +48,7 @@ services:
       BILLING_DEV_PAY: "true"
       STORE_ALLOW_TEST_PURCHASES: "true"
       # The page the panel names as where the promo video plays.
-      PROMO_VIDEO_PAGE_URL: https://dev.sadora.app/video/
+      PROMO_VIDEO_PAGE_URL: https://devv.sadora.app/video/
       # The agent, and where it sends. Every request is kept on staging; production will
       # want a sampler. The JDBC statements it records have their literals masked.
       SADORA_OTEL: "1"

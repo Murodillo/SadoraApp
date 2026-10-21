@@ -8,7 +8,7 @@
 #
 # Ships the source, builds the API image on the server, and brings up Postgres, Redis,
 # the API and the three static sites (admin panel, doctors' panel, landing page), each on
-# the port the gateway forwards its dev- hostname to (docker-compose.stage.yml). Prints
+# the port the gateway forwards its hostname to (docker-compose.stage.yml). Prints
 # the public URLs at the end and writes them to build/stage/urls.txt.
 #
 # Access is by key only. The script never asks for a password and never passes one:
@@ -71,7 +71,7 @@ remote 'docker --version'
 API_URL=https://dev-api.sadora.app
 ADMIN_URL=https://dev-admin.sadora.app
 DOCTOR_URL=https://dev-doctor.sadora.app
-LANDING_URL=https://dev.sadora.app
+LANDING_URL=https://devv.sadora.app
 
 echo "==> admin panels"
 # Each panel is a hostname of its own beside the API's, so it is built to call that one.

@@ -6,7 +6,7 @@
 #
 # Run by stage.yml after every deploy, and by hand against whatever staging is serving:
 #   tools/ci/smoke.sh https://dev-api.sadora.app https://dev-admin.sadora.app \
-#     https://dev-doctor.sadora.app https://dev.sadora.app <sha>
+#     https://dev-doctor.sadora.app https://devv.sadora.app <sha>
 #
 # Every check runs even after one fails, so a broken deploy is described completely in one
 # go.
