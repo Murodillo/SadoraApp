@@ -140,6 +140,20 @@ class NetworkLogTest {
     }
 
     @Test
+    fun `a production build has no inspector and staging has one`() {
+        fun graph(environment: SadoraEnvironment) = uz.sadora.doctor.data.DoctorGraph(
+            tokenStorage = uz.sadora.doctor.data.InMemoryTokenStorage(),
+            device = uz.sadora.doctor.data.FixedDeviceIdentity(),
+            environment = environment,
+            engine = MockEngine { error("no request is expected") },
+        )
+
+        assertNull(graph(SadoraEnvironment.Production).networkLog)
+        assertNull(graph(SadoraEnvironment("https://api.sadora.app/")).networkLog)
+        assertNotNull(graph(SadoraEnvironment.Stage).networkLog)
+    }
+
+    @Test
     fun `production records nothing`() {
         assertFalse(SadoraEnvironment.Production.networkInspector)
         assertTrue(SadoraEnvironment.Stage.networkInspector)
