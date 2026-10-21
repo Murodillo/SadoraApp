@@ -2,6 +2,7 @@
 "NSCameraUsageDescription" = "SADORA reads a photo of your meal and shows estimated calories, protein, fat and carbs. You can also take your profile photo, or a photo or video for your doctor.";
 "NSPhotoLibraryUsageDescription" = "You choose a photo from your gallery: to scan a meal, set your profile photo or add it to a message.";
 "NSHealthShareUsageDescription" = "SADORA reads sleep, steps, heart rate, temperature and period days to fill in your cycle forecast and the Balance and Sleep screens. Your data is never sold or shared for advertising.";
+"NSHealthUpdateUsageDescription" = "SADORA never writes to Apple Health, it only reads. If saving your period days there is ever offered, you will be asked for permission separately first.";
 "NSLocationWhenInUseUsageDescription" = "SOS sends your location to your people once, with the alert.";
 "NSMicrophoneUsageDescription" = "Voice logging: to understand what you say and log it; the recording is not kept. When you record a video for your doctor, its sound is recorded too.";
 "NSPhotoLibraryAddUsageDescription" = "Saves a photo or video from a message to your library, only when you ask. SADORA never reads your library.";
