@@ -260,7 +260,7 @@ class MediaUploaderTest {
     }
 
     @Test
-    fun `an album cut off by a restart comes back unsent, and a retry goes on from what the server has`() = runTest {
+    fun `an album cut off by a restart comes back unsent — and a retry goes on from what the server has`() = runTest {
         val server = FakeServer().apply { failPut = 2 }
         val sent = mutableListOf<Sent>()
         val files = FakeFiles()
@@ -329,7 +329,7 @@ class MediaUploaderTest {
     }
 
     @Test
-    fun `another account, a day gone by, or signing out leaves nothing behind`() = runTest {
+    fun `another account — a day gone by — or signing out leaves nothing behind`() = runTest {
         val server = FakeServer().apply { failPut = 1 }
         val sent = mutableListOf<Sent>()
         val files = FakeFiles()

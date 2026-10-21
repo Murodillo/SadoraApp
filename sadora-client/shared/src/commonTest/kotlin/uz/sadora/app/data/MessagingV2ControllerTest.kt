@@ -132,7 +132,7 @@ class MessagingV2ControllerTest {
     }
 
     @Test
-    fun `an older photo and a thumbnail are each fetched once, then served from memory`() = runTest {
+    fun `an older photo and a thumbnail are each fetched once — then served from memory`() = runTest {
         val jpeg = byteArrayOf(0xFF.toByte(), 0xD8.toByte(), 1, 2, 3)
         val recording = RecordingEngine { request ->
             val path = request.url.encodedPath
@@ -156,7 +156,7 @@ class MessagingV2ControllerTest {
     }
 
     @Test
-    fun `a media line keeps its photos and videos in order, and the list says what it was`() {
+    fun `a media line keeps its photos and videos in order — and the list says what it was`() {
         val items = listOf(
             MessageMedia("p1", MediaKind.PHOTO, 640, 480, sizeBytes = 1000),
             MessageMedia("v1", MediaKind.VIDEO, 720, 1280, durationMs = 42_000, sizeBytes = 9000),

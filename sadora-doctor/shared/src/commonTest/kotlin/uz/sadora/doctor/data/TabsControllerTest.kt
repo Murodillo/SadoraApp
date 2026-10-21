@@ -203,7 +203,7 @@ class TabsControllerTest {
     }
 
     @Test
-    fun `an album goes up first, then the message names it, and the list says what it was`() = runTest {
+    fun `an album goes up first — then the message names it — and the list says what it was`() = runTest {
         val photo = MessageMedia("p1", MediaKind.PHOTO, 640, 480, sizeBytes = 3)
         val sent = DirectMessage(id = "m9", body = "Natija", createdAt = TestNow, isMine = true, kind = MessageKind.MEDIA, media = listOf(photo))
         val recording = RecordingEngine { request ->
@@ -240,7 +240,7 @@ class TabsControllerTest {
     }
 
     @Test
-    fun `albums and videos stay off until the server switches them on, and sign-out closes them again`() = runTest {
+    fun `albums and videos stay off until the server switches them on — and sign-out closes them again`() = runTest {
         var on = false
         val platforms = mutableListOf<String?>()
         val recording = RecordingEngine { request ->
