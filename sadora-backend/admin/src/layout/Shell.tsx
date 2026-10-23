@@ -49,7 +49,15 @@ export function Shell({ setupOnly = false }: { setupOnly?: boolean }) {
     return () => document.removeEventListener('keydown', onKey)
   }, [setupOnly])
 
-  const title = titles[location.pathname] ?? (location.pathname.startsWith('/users/') ? 'Foydalanuvchi kartochkasi' : 'SADORA')
+  const title =
+    titles[location.pathname] ??
+    (location.pathname.startsWith('/users/')
+      ? 'Foydalanuvchi kartochkasi'
+      : location.pathname.startsWith('/pm/docs/')
+        ? 'Hujjatlar'
+        : location.pathname.startsWith('/pm/')
+          ? decodeURIComponent(location.pathname.slice(4)).toUpperCase()
+          : 'SADORA')
 
   function toggleTheme() {
     setTheme(theme === 'dark' ? 'light' : 'dark')

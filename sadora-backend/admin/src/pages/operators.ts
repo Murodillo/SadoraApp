@@ -6,13 +6,14 @@ import type { AdminOperator, AdminRole } from '../api/types'
  * offer what it would refuse.
  */
 
-export const roleOrder: AdminRole[] = ['OWNER', 'ADMIN', 'SUPPORT', 'ANALYST']
+export const roleOrder: AdminRole[] = ['OWNER', 'ADMIN', 'SUPPORT', 'ANALYST', 'DEVELOPER']
 
 export const roleLabels: Record<AdminRole, string> = {
   OWNER: 'Owner',
   ADMIN: 'Admin',
   SUPPORT: 'Support',
   ANALYST: 'Analitik',
+  DEVELOPER: 'Dasturchi',
 }
 
 /** What each role opens, in one line, for the role picker. */
@@ -21,6 +22,7 @@ export const roleHints: Record<AdminRole, string> = {
   ADMIN: "Sozlamalar, pul va moderatsiya — operatorlar va auditsiz",
   SUPPORT: 'Foydalanuvchi kartochkasi, shifokorlar, chat — sozlamalarsiz',
   ANALYST: "Faqat o'qish: analitika, hisobotlar va sozlamalarni ko'rish",
+  DEVELOPER: "Faqat «Loyiha»: tasklar, hujjatlar — foydalanuvchilar ma'lumotisiz",
 }
 
 export interface OperatorStatus {

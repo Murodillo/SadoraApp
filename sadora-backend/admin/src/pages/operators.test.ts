@@ -43,7 +43,7 @@ describe('roles', () => {
       expect(roleLabels[role]).toBeTruthy()
       expect(roleHints[role]).toBeTruthy()
     })
-    expect(roleOrder).toEqual(['OWNER', 'ADMIN', 'SUPPORT', 'ANALYST'])
+    expect(roleOrder).toEqual(['OWNER', 'ADMIN', 'SUPPORT', 'ANALYST', 'DEVELOPER'])
   })
 })
 

@@ -8,6 +8,7 @@ import { ErrorBoundary } from './components/ErrorBoundary'
 import { Loading } from './components/ui'
 import { ToastProvider } from './components/toast'
 import { Shell } from './layout/Shell'
+import { PM_ROLES } from './layout/nav'
 import { AnalyticsPage } from './pages/AnalyticsPage'
 import { AppReleasePage } from './pages/AppReleasePage'
 import { AuditPage } from './pages/AuditPage'
@@ -30,6 +31,11 @@ import { SystemPage } from './pages/SystemPage'
 import { UserCardPage } from './pages/UserCardPage'
 import { UsersPage } from './pages/UsersPage'
 import { WearablesPage } from './pages/WearablesPage'
+import { BoardPage } from './pm/BoardPage'
+import { DocsPage } from './pm/DocsPage'
+import { EpicsPage } from './pm/EpicsPage'
+import { TaskPage } from './pm/TaskPage'
+import { TokensPage } from './pm/TokensPage'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -69,6 +75,17 @@ function AppRoutes() {
   return <SignedInRoutes />
 }
 
+const pmRoutes = (
+  <>
+    <Route path="pm" element={<BoardPage />} />
+    <Route path="pm/epics" element={<EpicsPage />} />
+    <Route path="pm/docs" element={<DocsPage />} />
+    <Route path="pm/docs/:id" element={<DocsPage />} />
+    <Route path="pm/tokens" element={<TokensPage />} />
+    <Route path="pm/:key" element={<TaskPage />} />
+  </>
+)
+
 function SignedInRoutes() {
   const { can } = useAuth()
   const me = useAdminMe()
@@ -93,10 +110,25 @@ function SignedInRoutes() {
     )
   }
 
+  // A developer's panel is the Loyiha section and her own account; everything else is about
+  // the app's users, which the server refuses her anyway.
+  if (me.data?.role === 'DEVELOPER') {
+    return (
+      <Routes>
+        <Route element={<Shell />}>
+          {pmRoutes}
+          <Route path="security" element={<SecurityPage />} />
+          <Route path="*" element={<Navigate to="/pm" replace />} />
+        </Route>
+      </Routes>
+    )
+  }
+
   return (
     <Routes>
       <Route element={<Shell />}>
         <Route index element={<DashboardPage />} />
+        {can(PM_ROLES) && pmRoutes}
         <Route
           path="analytics"
           element={can(['OWNER', 'ADMIN', 'ANALYST']) ? <AnalyticsPage /> : <Navigate to="/" replace />}

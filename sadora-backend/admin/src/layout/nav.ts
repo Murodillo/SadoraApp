@@ -17,6 +17,8 @@ export interface NavGroup {
 }
 
 const ALL: AdminRole[] = ['OWNER', 'ADMIN', 'SUPPORT', 'ANALYST']
+/** The team building the app: "Loyiha" and nothing about its users. */
+export const PM_ROLES: AdminRole[] = ['OWNER', 'ADMIN', 'DEVELOPER']
 
 /*
  * Grouped by the job an operator came to do, not by the server module behind the page:
@@ -72,11 +74,20 @@ export const groups: NavGroup[] = [
     ],
   },
   {
+    title: 'Loyiha',
+    entries: [
+      { to: '/pm', label: 'Doska', art: 'ic3d_target', roles: PM_ROLES, keywords: ['task', 'jira', 'kanban', 'vazifa', 'bug'] },
+      { to: '/pm/epics', label: 'Epic va relizlar', art: 'ic3d_trophy', roles: PM_ROLES, keywords: ['epic', 'reliz', 'release', 'sprint'] },
+      { to: '/pm/docs', label: 'Hujjatlar', art: 'ic3d_notebook', roles: PM_ROLES, keywords: ['wiki', 'spec', 'doc', 'audit'] },
+      { to: '/pm/tokens', label: 'API tokenlar', art: 'ic3d_lock', roles: PM_ROLES, keywords: ['cli', 'claude', 'token', 'zaxira', 'backup'] },
+    ],
+  },
+  {
     title: 'Hisob',
     entries: [
       // Every role: 2FA is each operator's own to switch on, and one that cannot enrol
       // is one whose account stays a password.
-      { to: '/security', label: 'Hisobim va 2FA', art: 'ic3d_lock', roles: ALL, keywords: ['parol', 'profil'] },
+      { to: '/security', label: 'Hisobim va 2FA', art: 'ic3d_lock', roles: [...ALL, 'DEVELOPER'], keywords: ['parol', 'profil'] },
       { to: '/operators', label: 'Operatorlar', art: 'ic3d_shield', roles: ['OWNER'], keywords: ['xodim', 'admin', 'rol'] },
     ],
   },

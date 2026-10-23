@@ -1,4 +1,5 @@
 import type { AdminRole, AdminSearchResults } from '../api/types'
+import type { PmSearchResults } from '../pm/types'
 import type { NavGroup } from '../layout/nav'
 import type { ArtName } from './art'
 import { formatSom } from '../pages/consultations'
@@ -7,7 +8,7 @@ import { doctorStatusLabels, specialtyLabels } from '../pages/doctorReview'
 /** One line in the Ctrl+K list: where Enter goes, and what the line says. */
 export interface PaletteItem {
   key: string
-  section: 'Sahifalar' | 'Foydalanuvchilar' | 'Shifokorlar' | "To'lovlar"
+  section: 'Sahifalar' | 'Foydalanuvchilar' | 'Shifokorlar' | "To'lovlar" | 'Tasklar' | 'Hujjatlar'
   title: string
   subtitle?: string
   to: string
@@ -77,6 +78,28 @@ export function resultItems(results: AdminSearchResults | undefined): PaletteIte
       subtitle: paymentStates[payment.state] ?? payment.state,
       to: `/users/${payment.userId}`,
       art: 'ic3d_gem' as const,
+    })),
+  ]
+}
+
+/** The Loyiha section's finds: a task opens on its page, a doc in the docs tree. */
+export function pmResultItems(results: PmSearchResults | undefined): PaletteItem[] {
+  if (!results) return []
+  return [
+    ...results.tasks.map((task) => ({
+      key: `task:${task.key}`,
+      section: 'Tasklar' as const,
+      title: `${task.key} · ${task.title}`,
+      to: `/pm/${task.key}`,
+      art: 'ic3d_target' as const,
+    })),
+    ...results.docs.map((doc) => ({
+      key: `doc:${doc.id}`,
+      section: 'Hujjatlar' as const,
+      title: doc.title,
+      subtitle: doc.snippet,
+      to: `/pm/docs/${doc.id}`,
+      art: 'ic3d_notebook' as const,
     })),
   ]
 }

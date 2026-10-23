@@ -3,9 +3,10 @@ import type { KeyboardEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAdminSearch } from '../api/hooks'
 import { useAuth } from '../auth/AuthContext'
-import { groups } from '../layout/nav'
+import { groups, PM_ROLES } from '../layout/nav'
+import { usePmSearch } from '../pm/api'
 import { Art } from './art'
-import { matchPages, moveIndex, resultItems } from './palette'
+import { matchPages, moveIndex, pmResultItems, resultItems } from './palette'
 import type { PaletteItem } from './palette'
 import { ErrorNotice, Modal, Spinner } from './ui'
 
@@ -38,12 +39,18 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
     return () => window.cancelAnimationFrame(frame)
   }, [])
 
+  // The team's tasks and docs, for the roles that reach the Loyiha section.
+  const searchesPm = can(PM_ROLES)
   const search = useAdminSearch(settled, searchable)
-  const asked = searchable && settled.trim().length >= 2
+  const pmSearch = usePmSearch(settled, searchesPm)
+  const long = settled.trim().length >= 2
+  const asked = searchable && long
   // Still typing, or the server has not answered: "nothing found" would be a guess.
-  const waiting = searchable && text.trim().length >= 2 && (text !== settled || search.isFetching)
+  const waiting =
+    (searchable || searchesPm) && text.trim().length >= 2 && (text !== settled || search.isFetching || pmSearch.isFetching)
   const items: PaletteItem[] = [
     ...matchPages(groups, text, can).slice(0, text.trim() ? 6 : 8),
+    ...(searchesPm && long ? pmResultItems(pmSearch.data) : []),
     ...(asked ? resultItems(search.data) : []),
   ]
   const active = items[Math.min(index, Math.max(items.length - 1, 0))]
@@ -74,7 +81,7 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
             value={text}
             onChange={(event) => setText(event.target.value)}
             onKeyDown={onKeyDown}
-            placeholder={searchable ? "Sahifa, telefon, ism, shifokor yoki to'lov ID" : 'Sahifa nomi'}
+            placeholder={searchable ? "Sahifa, telefon, ism, shifokor, to'lov ID yoki SAD-12" : searchesPm ? 'Sahifa, task (SAD-12) yoki hujjat' : 'Sahifa nomi'}
             aria-label="Qidirish"
             role="combobox"
             aria-expanded={items.length > 0}
@@ -85,7 +92,7 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
           {waiting && <Spinner />}
         </div>
 
-        <ErrorNotice error={asked ? search.error : null} />
+        <ErrorNotice error={asked ? search.error : searchesPm && long ? pmSearch.error : null} />
 
         <div className="palette-list" id={listId} role="listbox" aria-label="Natijalar">
           {items.map((item, position) => {

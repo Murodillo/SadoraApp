@@ -48,7 +48,7 @@ Birinchi Owner hisobi backend birinchi marta ko'tarilganda yaratiladi —
 ## Tayyor sahifalar
 
 Menyu ish bo'yicha guruhlangan: **Odamlar**, **Kontent**, **Pul**, **Ilova**,
-**Hisobot**. Sahifaning sarlavhasi menyudagi nomi bilan bir xil.
+**Hisobot**, **Loyiha**. Sahifaning sarlavhasi menyudagi nomi bilan bir xil.
 
 | Sahifa | Rol | Nima |
 |---|---|---|
@@ -67,11 +67,20 @@ Menyu ish bo'yicha guruhlangan: **Odamlar**, **Kontent**, **Pul**, **Ilova**,
 | Ilova versiyasi | Owner/Admin (Analyst o'qiydi) | Android/iOS uchun majburiy va taklif qilinadigan build, do'kon havolasi, texnik ishlar xabari (UZ/RU/EN) |
 | Tizim holati | Owner/Admin | Server, ma'lumotlar bazasi va har bir tashqi xizmat (SMS, push, Gemini, Telegram, Payme, Click, Play, App Store) — bugungi muvaffaqiyat va xatolar, oxirgi xato matni |
 | Operatorlar | faqat Owner | Operator qo'shish (vaqtinchalik parol bir marta ko'rsatiladi), rol, o'chirish/yoqish, parol va 2FA'ni tiklash |
+| Loyiha → Doska | Owner/Admin/Dasturchi | Jamoaning tasklari (`SAD-12`): 5 ustunli Kanban (sudrab yoki karta ichidagi tanlov bilan ko'chiriladi), ro'yxat va arxiv; filtrlar URL'da. Task sahifasi: Markdown tavsif, subtasklar, izohlar, tarix, kalitni eslatgan commitlar va hujjatlar |
+| Loyiha → Epic va relizlar | Owner/Admin/Dasturchi (arxivlash Owner/Admin) | Feature'lar (epic) va reliz sanalari, har birining bajarilish foizi |
+| Loyiha → Hujjatlar | Owner/Admin/Dasturchi | Markdown wiki daraxti: chapda matn, o'ngda ko'rinish, rasm paste/drag, har saqlash — versiya, eski versiyani tiklash; ikki kishi bir vaqtda saqlasa ikkinchisiga aytiladi |
+| Loyiha → API tokenlar | Owner/Admin/Dasturchi | `tools/pm` va Claude sessiyalari uchun token (bir marta ko'rsatiladi, faqat Loyiha'ni ochadi, «Tayyor»ga o'tkaza olmaydi, butunlay o'chira olmaydi); Owner uchun zaxirani yuklab olish |
 
 **Ctrl+K (⌘K)** — har qanday sahifadan bitta qidiruv oynasi: sahifa nomi (yoki «bayroq», «payme»
 kabi kalit so'z), telefon (bo'shliq bilan yozilsa ham), ism, email, shifokor ismi yoki litsenziyasi,
 to'lov ID'si. Hisob, shifokor va to'lov qidiruvi Owner/Admin/Support uchun (`/admin/search`);
-Analitik faqat sahifalarni topadi, chunki kartochkani ocha olmaydi.
+Analitik faqat sahifalarni topadi, chunki kartochkani ocha olmaydi. Loyiha'ga kira oladiganlar
+uchun tasklar (`SAD-12` yoki so'z) va hujjatlar ham chiqadi (`/admin/pm/search`).
+
+**Dasturchi** (`DEVELOPER`) roli faqat Loyiha bo'limi va o'z hisobini ko'radi: foydalanuvchilar,
+pul va moderatsiya unga yopiq — server ham, panel ham. Jamoa a'zosi «Operatorlar» sahifasida shu rol
+bilan qo'shiladi.
 
 Barcha sahifalarning backend'i bor — o'chirilgan punkt qolmadi. Alohida
 "qo'llab-quvvatlash" sahifasi ataylab yo'q: operatorning ish oqimi (hisobni topish,

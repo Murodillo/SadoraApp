@@ -19,7 +19,7 @@ export type LifeStage =
 export type AccountStatus = 'active' | 'blocked' | 'deletion_pending'
 export type SubscriptionTier = 'free' | 'premium'
 export type SubscriptionSource = 'app_store' | 'google_play' | 'payme' | 'click' | 'manual'
-export type AdminRole = 'OWNER' | 'ADMIN' | 'SUPPORT' | 'ANALYST'
+export type AdminRole = 'OWNER' | 'ADMIN' | 'SUPPORT' | 'ANALYST' | 'DEVELOPER'
 
 export interface ApiError {
   code: string
