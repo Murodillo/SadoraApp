@@ -85,6 +85,8 @@ data class AppConfig(
      * deployments read 95 unless MEDIA_DISK_PAUSE_PERCENT says otherwise.
      */
     val mediaDiskPausePercent: Int = 100,
+    /** The team's "Loyiha" section: where commits are read from, and the nightly backup. */
+    val pm: PmConfig = PmConfig(),
 ) {
     companion object {
         fun fromEnvironment(): AppConfig {
@@ -253,6 +255,12 @@ data class AppConfig(
                 promoVideoPageUrl = env("PROMO_VIDEO_PAGE_URL", "https://sadora.app/video/"),
                 mediaMasterKey = envOrNull("MEDIA_MASTER_KEY"),
                 mediaDiskPausePercent = env("MEDIA_DISK_PAUSE_PERCENT", if (environment == Environment.DEV) "100" else "95").toInt(),
+                pm = PmConfig(
+                    githubRepo = env("PM_GITHUB_REPO", PmConfig.DEFAULT_REPO),
+                    githubToken = envOrNull("PM_GITHUB_TOKEN"),
+                    commitPoll = env("PM_COMMIT_POLL", (environment != Environment.DEV).toString()).toBoolean(),
+                    backup = env("PM_BACKUP", (environment != Environment.DEV).toString()).toBoolean(),
+                ),
             )
             config.verifyProductionSafety()
             return config
@@ -316,6 +324,22 @@ data class AppConfig(
 
         private fun envOrNull(key: String): String? =
             System.getenv(key)?.takeIf { it.isNotBlank() }
+    }
+}
+
+/**
+ * [githubRepo] is public, so reading its commits needs no key; [githubToken] only lifts
+ * GitHub's 60-calls-an-hour limit. Both jobs are off on a laptop unless switched on.
+ */
+data class PmConfig(
+    val githubRepo: String = DEFAULT_REPO,
+    val githubToken: String? = null,
+    val branches: List<String> = listOf("dev", "main"),
+    val commitPoll: Boolean = false,
+    val backup: Boolean = false,
+) {
+    companion object {
+        const val DEFAULT_REPO = "Murodillo/SadoraApp"
     }
 }
 

@@ -27,6 +27,8 @@ private const val DEFAULT_BODY_LIMIT: Long = 2L * 1024 * 1024
 private const val SCAN_BODY_LIMIT: Long = 8L * 1024 * 1024
 /** A lab sheet travels as up to three photographed pages, when read and again when saved. */
 private const val LAB_BODY_LIMIT: Long = 14L * 1024 * 1024
+private const val PM_IMAGE_BODY_LIMIT: Long = 11L * 1024 * 1024
+private const val PM_RESTORE_BODY_LIMIT: Long = 64L * 1024 * 1024
 
 fun Application.configureHttp(config: AppConfig) {
     install(RequestBodyLimit) {
@@ -37,6 +39,9 @@ fun Application.configureHttp(config: AppConfig) {
                 path.endsWith("/labs") || path.endsWith("/labs/scan") -> LAB_BODY_LIMIT
                 // A milestone may carry its photo.
                 path.contains("/milestones/") -> SCAN_BODY_LIMIT
+                // A picture pasted into a team doc, up to 10 MB; a Loyiha backup's rows coming back.
+                path.endsWith("/admin/pm/images") || path.contains("/admin/pm/images/") -> PM_IMAGE_BODY_LIMIT
+                path.endsWith("/admin/pm/restore") -> PM_RESTORE_BODY_LIMIT
                 else -> DEFAULT_BODY_LIMIT
             }
         }

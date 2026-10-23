@@ -55,6 +55,7 @@ import uz.sadora.server.doctor.doctorBadgeRoutes
 import uz.sadora.server.doctor.doctorRoutes
 import uz.sadora.server.admin.adminRoutes
 import uz.sadora.server.admin.appStatusRoutes
+import uz.sadora.server.admin.pm.pmRoutes
 import uz.sadora.server.api.healthCheckRoutes
 import uz.sadora.server.auth.authRoutes
 import uz.sadora.server.config.AppConfig
@@ -124,6 +125,10 @@ fun main() {
 
     // The team's push campaigns, when their time comes.
     component.campaignJob.start()
+    // Commits that name a Loyiha task, read from GitHub; off unless PM_COMMIT_POLL says so.
+    component.pmCommitSync.start()
+    // The Loyiha section's daily file beside the media; off unless PM_BACKUP says so.
+    if (config.pm.backup) component.pmBackupJob.start()
 
     // The Telegram bot, when it has a token: its updates, and the period-coming reminder.
     component.telegramPoller?.start()
@@ -155,7 +160,7 @@ fun Application.apiModule(component: AppComponent) {
     configureHttp(config)
     configureStatusPages()
     configureRateLimit(config)
-    configureSecurity(component.jwtService, component.accountGate, config.adminRequireTotp)
+    configureSecurity(component.jwtService, component.accountGate, config.adminRequireTotp, component.pmTokenService::principal)
     install(uz.sadora.server.widget.widgetRefreshPlugin(component.widgetRefresher))
 
     routing {
@@ -242,6 +247,7 @@ fun Application.apiModule(component: AppComponent) {
             clickWebhook(component.clickGateway, component.billingRepository)
             // Stands in for the providers where no merchant keys are set; only where BILLING_DEV_PAY says so.
             if (config.billing.devPay) devPayRoutes(component.billingService)
+            pmRoutes(component.pmTaskService, component.pmDocService, component.pmTokenService, component.pmCommitSync, component.pmBackupService)
             adminRoutes(
                 adminAuth = component.adminAuthService,
                 adminService = component.adminService,

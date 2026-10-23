@@ -4,6 +4,7 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.Application
 import io.ktor.server.application.install
 import io.ktor.server.auth.Authentication
+import io.ktor.server.auth.bearer
 import io.ktor.server.auth.jwt.jwt
 import io.ktor.server.plugins.callid.callId
 import io.ktor.server.response.respond
@@ -20,6 +21,8 @@ import uz.sadora.server.db.dbQuery
 
 const val USER_AUTH: String = "user-jwt"
 const val ADMIN_AUTH: String = "admin-jwt"
+/** A tools/pm token: mounted on /admin/pm only, beside [ADMIN_AUTH]. */
+const val PM_TOKEN_AUTH: String = "pm-token"
 
 /** The signed-in mobile user. Nothing but identity — everything else is read fresh. */
 data class UserPrincipal(val userId: Uuid)
@@ -44,22 +47,31 @@ data class AdminPrincipal(
     val role: AdminRole,
     val totpSetupRequired: Boolean = false,
     val passwordChangeRequired: Boolean = false,
+    /** Signed in with a tools/pm token rather than the panel: it reaches /admin/pm and nothing else. */
+    val viaToken: Boolean = false,
 )
 
 /**
- * Admin roles, narrowest last. The proposal fixes these four and the page list each one
- * may reach; [AdminRole.SUPPORT] in particular can open a user card but never her health
- * data, which is enforced by the user card containing none.
+ * Admin roles. The proposal fixes the first four and the page list each one may reach;
+ * [AdminRole.SUPPORT] in particular can open a user card but never her health data, which
+ * is enforced by the user card containing none. [AdminRole.DEVELOPER] is the team building
+ * the app: the "Loyiha" section and nothing about its users — every other route lists the
+ * roles it allows, so a new role starts with no access there.
  */
 enum class AdminRole {
-    OWNER, ADMIN, SUPPORT, ANALYST;
+    OWNER, ADMIN, SUPPORT, ANALYST, DEVELOPER;
 
     fun canManageContent(): Boolean = this == OWNER || this == ADMIN
     fun canManageUsers(): Boolean = this == OWNER || this == ADMIN || this == SUPPORT
     fun canReadAudit(): Boolean = this == OWNER
 }
 
-fun Application.configureSecurity(jwtService: JwtService, accountGate: AccountGate, adminRequireTotp: Boolean) {
+fun Application.configureSecurity(
+    jwtService: JwtService,
+    accountGate: AccountGate,
+    adminRequireTotp: Boolean,
+    pmTokenPrincipal: suspend (String) -> AdminPrincipal?,
+) {
     install(Authentication) {
         jwt(USER_AUTH) {
             realm = jwtService.realm
@@ -98,6 +110,10 @@ fun Application.configureSecurity(jwtService: JwtService, accountGate: AccountGa
                 )
             }
             challenge { _, _ -> call.respondUnauthorized() }
+        }
+
+        bearer(PM_TOKEN_AUTH) {
+            authenticate { credential -> pmTokenPrincipal(credential.token) }
         }
     }
 }

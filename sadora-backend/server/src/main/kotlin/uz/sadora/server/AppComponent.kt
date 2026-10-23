@@ -757,6 +757,12 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
     val campaignService = uz.sadora.server.admin.CampaignService(notificationRepository, auditService)
     val campaignJob = uz.sadora.server.admin.CampaignJob(campaignService)
     val appReleaseService = uz.sadora.server.admin.AppReleaseService(auditService)
+    val pmTaskService = uz.sadora.server.admin.pm.PmTaskService(auditService)
+    val pmTokenService = uz.sadora.server.admin.pm.PmTokenService(auditService, requireTotp = config.adminRequireTotp)
+    val pmDocService = uz.sadora.server.admin.pm.PmDocService(auditService, java.io.File(config.mediaDir, "pm"))
+    val pmBackupService = uz.sadora.server.admin.pm.PmBackupService(auditService, java.io.File(config.mediaDir, "pm"), java.io.File(config.mediaDir, "pm-backups"))
+    val pmBackupJob = uz.sadora.server.admin.pm.PmBackupJob(pmBackupService)
+    val pmCommitSync = uz.sadora.server.admin.pm.PmCommitSync(config.pm, outboundHttpClient)
 
     val adminService = AdminService(
         users = userRepository,
@@ -781,6 +787,8 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
         vaccineReminderJob.stop()
         kegelReminderJob.stop()
         campaignJob.stop()
+        pmCommitSync.stop()
+        pmBackupJob.stop()
         telegramPoller?.stop()
         telegramPeriodJob.stop()
         outboundHttpClient.close()
