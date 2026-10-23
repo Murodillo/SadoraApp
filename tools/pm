@@ -1,0 +1,666 @@
+#!/usr/bin/env python3
+"""tools/pm — the "Loyiha" section of the Sadora admin panel from the command line.
+
+Tasks (SAD-12), epics, releases and docs, read and written through /v1/admin/pm with a
+token made on the panel's "API tokenlar" page. Claude sessions use it to keep the board
+true; see CLAUDE.md for when.
+
+  tools/pm login                      save the server address and a token
+  tools/pm task list [--mine] [--status todo,in_progress] [--epic NAME] ...
+  tools/pm task show SAD-12
+  tools/pm task new "Title" [--type bug] [--priority high] [--component backend] [--epic NAME] [--desc-file spec.md]
+  tools/pm task move SAD-12 review    backlog | todo | in_progress | review  (done is the panel's)
+  tools/pm task edit SAD-12 [--title ..] [--assignee me] [--clear epicId]
+  tools/pm task comment SAD-12 "text"
+  tools/pm epic list | epic new "Baby tracker"
+  tools/pm release list | release new "Play Store 1.0" --date 2026-11-15
+  tools/pm doc list | doc show "Chat media" | doc put --title "Chat media" --parent "Speclar" file.md
+  tools/pm search "chat media"
+  tools/pm backup [--out DIR]        the whole section as a folder: loyiha.json + images/ (Owner)
+  tools/pm restore FOLDER            a backup folder back into an empty section (Owner)
+
+The token lives in ~/.config/sadora/pm_token (or $PM_TOKEN), the address in
+~/.config/sadora/pm.json (or $PM_URL). Only the standard library is used.
+"""
+
+import argparse
+import getpass
+import json
+import os
+import sys
+import urllib.error
+import urllib.parse
+import urllib.request
+from pathlib import Path
+
+CONFIG_DIR = Path.home() / ".config" / "sadora"
+TOKEN_FILE = CONFIG_DIR / "pm_token"
+CONFIG_FILE = CONFIG_DIR / "pm.json"
+DEFAULT_URL = "https://api.sadora.app"
+
+STATUSES = ["backlog", "todo", "in_progress", "review", "done"]
+STATUS_LABELS = {"backlog": "Backlog", "todo": "Navbatda", "in_progress": "Jarayonda", "review": "Ko'rib chiqish", "done": "Tayyor"}
+TYPES = ["bug", "feature", "task"]
+PRIORITIES = ["critical", "high", "medium", "low"]
+COMPONENTS = ["android", "ios", "doctor_app", "backend", "admin", "doctor_admin", "landing", "infra", "design"]
+CLEARABLE = ["assigneeId", "epicId", "releaseId", "parentKey", "dueDate"]
+
+
+class PmError(Exception):
+    pass
+
+
+# ---------------------------------------------------------------- transport
+
+
+def base_url():
+    if os.environ.get("PM_URL"):
+        return os.environ["PM_URL"].rstrip("/")
+    if CONFIG_FILE.exists():
+        return json.loads(CONFIG_FILE.read_text()).get("url", DEFAULT_URL).rstrip("/")
+    return DEFAULT_URL
+
+
+def token():
+    if os.environ.get("PM_TOKEN"):
+        return os.environ["PM_TOKEN"].strip()
+    if TOKEN_FILE.exists():
+        return TOKEN_FILE.read_text().strip()
+    raise PmError("Token yo'q. Avval: tools/pm login (token panelning «API tokenlar» sahifasida yaratiladi)")
+
+
+def call(method, path, body=None, raw=None, params=None, expect_json=True):
+    url = base_url() + "/v1/admin/pm" + path
+    if params:
+        clean = {k: v for k, v in params.items() if v not in (None, "", False)}
+        if clean:
+            url += "?" + urllib.parse.urlencode(clean)
+    headers = {"Authorization": "Bearer " + token(), "Accept-Language": "uz", "User-Agent": "sadora-pm-cli"}
+    data = None
+    if raw is not None:
+        data = raw
+        headers["Content-Type"] = "application/octet-stream"
+    elif body is not None:
+        data = json.dumps(body).encode()
+        headers["Content-Type"] = "application/json"
+    request = urllib.request.Request(url, data=data, method=method, headers=headers)
+    try:
+        with urllib.request.urlopen(request, timeout=60) as response:
+            payload = response.read()
+    except urllib.error.HTTPError as error:
+        text = error.read().decode(errors="replace")
+        try:
+            problem = json.loads(text)["error"]
+            details = problem.get("details") or {}
+            extra = "; ".join(f"{k}: {v}" for k, v in details.items())
+            raise PmError(f"{error.code}: {problem.get('message')}" + (f" ({extra})" if extra else ""))
+        except (ValueError, KeyError, TypeError):
+            raise PmError(f"{error.code}: {text[:300]}")
+    except urllib.error.URLError as error:
+        raise PmError(f"Serverga ulanib bo'lmadi ({base_url()}): {error.reason}")
+    if not expect_json:
+        return payload
+    return json.loads(payload) if payload else None
+
+
+# ---------------------------------------------------------------- lookups
+
+
+_meta = None
+
+
+def meta():
+    global _meta
+    if _meta is None:
+        _meta = call("GET", "/meta")
+    return _meta
+
+
+def find(kind, items, text, label):
+    """An id from an exact id, an exact name, or a single name containing the text."""
+    if text is None:
+        return None
+    for item in items:
+        if item["id"] == text:
+            return item["id"]
+    lowered = text.lower()
+    exact = [item for item in items if label(item).lower() == lowered]
+    if len(exact) == 1:
+        return exact[0]["id"]
+    partial = [item for item in items if lowered in label(item).lower()]
+    if len(partial) == 1:
+        return partial[0]["id"]
+    if not partial:
+        raise PmError(f"{kind} topilmadi: {text}")
+    raise PmError(f"{kind} aniq emas: {text} — {', '.join(label(item) for item in partial)}")
+
+
+def person_id(text):
+    if text is None:
+        return None
+    if text == "me":
+        return meta()["me"]["id"]
+    return find("Odam", meta()["people"], text, lambda p: f"{p['name']} {p['email']}")
+
+
+def epic_id(text):
+    return find("Epic", meta()["epics"], text, lambda e: e["title"])
+
+
+def release_id(text):
+    return find("Reliz", meta()["releases"], text, lambda r: r["name"])
+
+
+def person_name(pid):
+    if not pid:
+        return "—"
+    for person in meta()["people"]:
+        if person["id"] == pid:
+            return person["name"]
+    return "?"
+
+
+def norm_key(key):
+    key = key.strip().upper()
+    return key if key.startswith("SAD-") else "SAD-" + key
+
+
+def split_list(values):
+    out = []
+    for value in values or []:
+        out.extend(part.strip() for part in value.split(",") if part.strip())
+    return out
+
+
+def read_text(text, file):
+    if file == "-":
+        return sys.stdin.read()
+    if file:
+        return Path(file).read_text()
+    return text
+
+
+# ---------------------------------------------------------------- output
+
+
+def print_tasks(tasks):
+    if not tasks:
+        print("Hech narsa topilmadi.")
+        return
+    epics = {e["id"]: e["title"] for e in meta()["epics"]}
+    for task in tasks:
+        extra = []
+        if task.get("epicId"):
+            extra.append(epics.get(task["epicId"], "epic"))
+        if task.get("assigneeId"):
+            extra.append("@" + person_name(task["assigneeId"]))
+        if task.get("subtasks"):
+            extra.append(f"{task['subtasksDone']}/{task['subtasks']} subtask")
+        print(f"{task['key']:<8} {STATUS_LABELS[task['status']]:<15} {task['priority']:<8} {task['type']:<8} {task['title']}"
+              + (f"  [{' · '.join(extra)}]" if extra else ""))
+
+
+def print_task(task):
+    epics = {e["id"]: e["title"] for e in meta()["epics"]}
+    releases = {r["id"]: r["name"] for r in meta()["releases"]}
+    print(f"{task['key']}  {task['title']}")
+    print(f"  holat: {STATUS_LABELS[task['status']]}   tur: {task['type']}   prioritet: {task['priority']}"
+          + ("   (arxivda)" if task.get("archived") else ""))
+    print(f"  ijrochi: {person_name(task.get('assigneeId'))}   muallif: {person_name(task.get('reporterId'))}")
+    if task.get("epicId") or task.get("releaseId"):
+        print(f"  epic: {epics.get(task.get('epicId'), '—')}   reliz: {releases.get(task.get('releaseId'), '—')}")
+    if task.get("components") or task.get("labels"):
+        print(f"  komponent: {', '.join(task.get('components', [])) or '—'}   label: {', '.join(task.get('labels', [])) or '—'}")
+    if task.get("parentKey"):
+        print(f"  asosiy task: {task['parentKey']}")
+    if task.get("dueDate"):
+        print(f"  muddat: {task['dueDate']}")
+    if task.get("description"):
+        print("\n" + task["description"].rstrip())
+    if task.get("subtasks"):
+        print("\nSubtasklar:")
+        for sub in task["subtasks"]:
+            print(f"  {sub['key']:<8} {STATUS_LABELS[sub['status']]:<15} {sub['title']}")
+    if task.get("comments"):
+        print("\nIzohlar:")
+        for comment in task["comments"]:
+            print(f"  — {person_name(comment.get('authorId'))}, {comment['createdAt'][:16].replace('T', ' ')}")
+            for line in comment["body"].splitlines():
+                print("    " + line)
+    if task.get("commits"):
+        print("\nCommitlar:")
+        for commit in task["commits"]:
+            print(f"  {commit['sha'][:7]} {commit['branch']:<5} {commit['message'].splitlines()[0]}")
+
+
+def emit(args, value, printer):
+    if getattr(args, "json", False):
+        print(json.dumps(value, ensure_ascii=False, indent=2))
+    else:
+        printer(value)
+
+
+# ---------------------------------------------------------------- commands
+
+
+def cmd_login(args):
+    url = (args.url or input(f"Server manzili [{base_url()}]: ").strip() or base_url()).rstrip("/")
+    secret = args.token or getpass.getpass("Token (sadpm_…): ").strip()
+    if not secret.startswith("sadpm_"):
+        raise PmError("Bu Loyiha tokeni emas: u sadpm_ bilan boshlanadi")
+    CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+    CONFIG_FILE.write_text(json.dumps({"url": url}))
+    # Created readable by its owner only, never for a moment with the umask's permissions.
+    descriptor = os.open(TOKEN_FILE, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(descriptor, "w") as handle:
+        handle.write(secret + "\n")
+    os.chmod(TOKEN_FILE, 0o600)
+    os.environ.pop("PM_URL", None)
+    os.environ.pop("PM_TOKEN", None)
+    me = call("GET", "/meta")["me"]
+    print(f"Saqlandi. Siz: {me['name']} ({me['role'].lower()}) — {url}")
+
+
+def cmd_whoami(args):
+    me = meta()["me"]
+    print(f"{me['name']} <{me['email']}> — {me['role'].lower()} — {base_url()}")
+
+
+def task_fields(args, creating):
+    body = {}
+    if getattr(args, "title", None) is not None and not creating:
+        body["title"] = args.title
+    if args.type:
+        body["type"] = args.type
+    if args.priority:
+        body["priority"] = args.priority
+    if args.status:
+        body["status"] = args.status
+    if args.component:
+        body["components"] = split_list(args.component)
+    if args.label:
+        body["labels"] = split_list(args.label)
+    if args.epic:
+        body["epicId"] = epic_id(args.epic)
+    if args.release:
+        body["releaseId"] = release_id(args.release)
+    if args.assignee:
+        body["assigneeId"] = person_id(args.assignee)
+    if args.parent:
+        body["parentKey"] = norm_key(args.parent)
+    if args.due:
+        body["dueDate"] = args.due
+    description = read_text(args.desc, args.desc_file)
+    if description is not None:
+        body["description"] = description
+    return body
+
+
+def cmd_task_list(args):
+    params = {
+        "status": ",".join(split_list(args.status)) if args.status else None,
+        "assignee": person_id("me" if args.mine else args.assignee),
+        "epic": epic_id(args.epic),
+        "release": release_id(args.release),
+        "component": args.component,
+        "label": args.label,
+        "type": args.type,
+        "q": args.q,
+        "archived": "true" if args.archived else None,
+        "subtasks": "true" if args.all else None,
+    }
+    emit(args, call("GET", "/tasks", params=params), print_tasks)
+
+
+def cmd_task_show(args):
+    emit(args, call("GET", f"/tasks/{norm_key(args.key)}"), print_task)
+
+
+def cmd_task_new(args):
+    body = task_fields(args, creating=True)
+    body["title"] = args.title
+    task = call("POST", "/tasks", body=body)
+    if args.json:
+        print(json.dumps(task, ensure_ascii=False, indent=2))
+    else:
+        print(f"{task['key']} yaratildi: {task['title']}")
+
+
+def cmd_task_edit(args):
+    body = task_fields(args, creating=False)
+    if args.clear:
+        wrong = [field for field in split_list(args.clear) if field not in CLEARABLE]
+        if wrong:
+            raise PmError(f"Bo'shatib bo'lmaydi: {', '.join(wrong)} (mumkin: {', '.join(CLEARABLE)})")
+        body["clear"] = split_list(args.clear)
+    if not body:
+        raise PmError("O'zgartirish berilmadi")
+    task = call("PATCH", f"/tasks/{norm_key(args.key)}", body=body)
+    print(f"{task['key']} yangilandi ({STATUS_LABELS[task['status']]})")
+
+
+def cmd_task_move(args):
+    task = call("PATCH", f"/tasks/{norm_key(args.key)}", body={"status": args.status})
+    print(f"{task['key']} → {STATUS_LABELS[task['status']]}")
+
+
+def cmd_task_comment(args):
+    text = read_text(args.text, args.file)
+    if not text or not text.strip():
+        raise PmError("Izoh matni bo'sh")
+    call("POST", f"/tasks/{norm_key(args.key)}/comments", body={"body": text})
+    print(f"{norm_key(args.key)}: izoh qo'shildi")
+
+
+def cmd_task_archive(args):
+    action = "restore" if args.restore else "archive"
+    task = call("POST", f"/tasks/{norm_key(args.key)}/{action}", body={})
+    print(f"{task['key']} {'arxivdan qaytarildi' if args.restore else 'arxivlandi'}")
+
+
+def cmd_epic_list(args):
+    epics = call("GET", "/epics", params={"archived": "true" if args.archived else None})
+
+    def show(items):
+        for epic in items:
+            print(f"{epic['id']}  {epic['done']:>3}/{epic['tasks']:<3} {epic['status']:<5} {epic['title']}" + ("  (arxiv)" if epic["archived"] else ""))
+
+    emit(args, epics, show)
+
+
+def cmd_epic_new(args):
+    epic = call("POST", "/epics", body={"title": args.title, "description": read_text(args.desc, args.desc_file) or ""})
+    print(f"Epic yaratildi: {epic['title']} ({epic['id']})")
+
+
+def cmd_epic_edit(args):
+    current = next((e for e in call("GET", "/epics", params={"archived": "true"}) if e["id"] == epic_id_any(args.epic)), None)
+    if current is None:
+        raise PmError("Epic topilmadi")
+    body = {
+        "title": args.title or current["title"],
+        "description": read_text(args.desc, args.desc_file) if (args.desc is not None or args.desc_file) else current["description"],
+        "status": args.status or current["status"],
+    }
+    call("PUT", f"/epics/{current['id']}", body=body)
+    print(f"Epic yangilandi: {body['title']}")
+
+
+def epic_id_any(text):
+    return find("Epic", call("GET", "/epics", params={"archived": "true"}), text, lambda e: e["title"])
+
+
+def cmd_release_list(args):
+    releases = call("GET", "/releases", params={"archived": "true" if args.archived else None})
+
+    def show(items):
+        for release in items:
+            print(f"{release['id']}  {release['done']:>3}/{release['tasks']:<3} {release.get('targetDate') or '—':<10} {release['status']:<8} {release['name']}")
+
+    emit(args, releases, show)
+
+
+def cmd_release_new(args):
+    release = call("POST", "/releases", body={"name": args.name, "targetDate": args.date, "description": args.desc or ""})
+    print(f"Reliz yaratildi: {release['name']} ({release['id']})")
+
+
+def doc_tree():
+    return call("GET", "/docs")
+
+
+def doc_find(text, nodes=None, parent_id="any"):
+    nodes = nodes if nodes is not None else doc_tree()
+    if parent_id != "any":
+        nodes = [n for n in nodes if n.get("parentId") == parent_id]
+    return find("Hujjat", nodes, text, lambda n: n["title"])
+
+
+def cmd_doc_list(args):
+    nodes = doc_tree()
+    if args.json:
+        print(json.dumps(nodes, ensure_ascii=False, indent=2))
+        return
+    children = {}
+    for node in nodes:
+        children.setdefault(node.get("parentId"), []).append(node)
+    ids = {node["id"] for node in nodes}
+
+    def walk(parent, depth):
+        for node in children.get(parent, []):
+            print(f"{'  ' * depth}- {node['title']}  (v{node['version']}, {node['id']})")
+            walk(node["id"], depth + 1)
+
+    walk(None, 0)
+    for orphan_parent in [p for p in children if p is not None and p not in ids]:
+        walk(orphan_parent, 0)
+
+
+def cmd_doc_show(args):
+    doc = call("GET", f"/docs/{doc_find(args.doc)}")
+    if args.json:
+        print(json.dumps(doc, ensure_ascii=False, indent=2))
+    elif args.raw:
+        sys.stdout.write(doc["body"] + "\n")
+    else:
+        print(f"# {doc['title']}  (v{doc['version']}, {doc['updatedAt'][:16].replace('T', ' ')}, {person_name(doc.get('updatedBy'))})\n")
+        print(doc["body"])
+
+
+def cmd_doc_put(args):
+    """Creates the page, or saves a new version of the one with that title under that parent."""
+    body = read_text(None, args.file)
+    nodes = doc_tree()
+    parent = doc_find(args.parent, nodes) if args.parent else None
+    siblings = [n for n in nodes if n.get("parentId") == parent and n["title"].lower() == args.title.lower()]
+    if siblings:
+        doc = call("GET", f"/docs/{siblings[0]['id']}")
+        saved = call("PUT", f"/docs/{doc['id']}", body={"title": args.title, "body": body, "baseVersion": doc["version"], "parentId": parent})
+        print(f"Hujjat yangilandi: {saved['title']} (v{saved['version']}, {saved['id']})")
+    else:
+        saved = call("POST", "/docs", body={"title": args.title, "body": body, "parentId": parent})
+        print(f"Hujjat yaratildi: {saved['title']} ({saved['id']})")
+
+
+def cmd_search(args):
+    found = call("GET", "/search", params={"q": args.q})
+    if args.json:
+        print(json.dumps(found, ensure_ascii=False, indent=2))
+        return
+    print_tasks(found["tasks"]) if found["tasks"] else print("Tasklar: yo'q")
+    for doc in found["docs"]:
+        print(f"[hujjat] {doc['title']} ({doc['id']}) — {doc['snippet']}")
+
+
+def cmd_image(args):
+    data = Path(args.file).read_bytes()
+    image = call("POST", "/images", raw=data)
+    alt = Path(args.file).stem
+    print(f"![{alt}](pm-image:{image['id']})")
+
+
+def cmd_backup(args):
+    """The rows as loyiha.json and every picture under images/, in one folder."""
+    data = call("GET", "/backup", expect_json=False)
+    snapshot = json.loads(data)
+    taken = snapshot.get("takenAt", "")[:10] or "now"
+    folder = Path(args.out).expanduser() / f"sadora-loyiha-{taken}"
+    images = folder / "images"
+    images.mkdir(parents=True, exist_ok=True)
+    (folder / "loyiha.json").write_bytes(data)
+    ids = [row["id"] for row in snapshot["tables"].get("pm_images", [])]
+    for image_id in ids:
+        target = images / image_id
+        if not target.exists():
+            target.write_bytes(call("GET", f"/images/{image_id}", expect_json=False))
+    print(f"Saqlandi: {folder} ({len(data) // 1024} KB, {len(ids)} rasm)")
+
+
+def cmd_restore(args):
+    """Puts a backup folder back into an empty Loyiha section (Owner, the server refuses otherwise)."""
+    folder = Path(args.folder).expanduser()
+    data = (folder / "loyiha.json").read_bytes()
+    call("POST", "/restore", raw=data, expect_json=False)
+    restored = 0
+    for picture in sorted((folder / "images").glob("*")):
+        call("PUT", f"/images/{picture.name}", raw=picture.read_bytes())
+        restored += 1
+    print(f"Tiklandi: {folder.name} ({restored} rasm)")
+
+
+# ---------------------------------------------------------------- arguments
+
+
+def add_task_fields(parser, creating):
+    if not creating:
+        parser.add_argument("--title")
+    parser.add_argument("--type", choices=TYPES)
+    parser.add_argument("--priority", choices=PRIORITIES)
+    parser.add_argument("--status", choices=STATUSES)
+    parser.add_argument("--component", action="append", help=f"bir nechta: vergul bilan ({', '.join(COMPONENTS)})")
+    parser.add_argument("--label", action="append")
+    parser.add_argument("--epic", help="nomi yoki id")
+    parser.add_argument("--release", help="nomi yoki id")
+    parser.add_argument("--assignee", help="'me', ism, email yoki id")
+    parser.add_argument("--parent", help="subtask uchun: SAD-12")
+    parser.add_argument("--due", help="YYYY-MM-DD")
+    parser.add_argument("--desc", help="tavsif matni (Markdown)")
+    parser.add_argument("--desc-file", help="tavsif fayldan; '-' — stdin")
+
+
+def build_parser():
+    parser = argparse.ArgumentParser(prog="tools/pm", description="Sadora «Loyiha»: tasklar va hujjatlar")
+    sub = parser.add_subparsers(dest="command", required=True)
+
+    login = sub.add_parser("login", help="server manzili va tokenni saqlash")
+    login.add_argument("--url")
+    login.add_argument("--token")
+    login.set_defaults(func=cmd_login)
+
+    sub.add_parser("whoami", help="kim sifatida ulanganini ko'rsatish").set_defaults(func=cmd_whoami)
+
+    task = sub.add_parser("task", help="tasklar").add_subparsers(dest="action", required=True)
+    listing = task.add_parser("list")
+    listing.add_argument("--status", help="vergul bilan: todo,in_progress")
+    listing.add_argument("--mine", action="store_true")
+    listing.add_argument("--assignee")
+    listing.add_argument("--epic")
+    listing.add_argument("--release")
+    listing.add_argument("--component", choices=COMPONENTS)
+    listing.add_argument("--label")
+    listing.add_argument("--type", choices=TYPES)
+    listing.add_argument("--q", help="so'z yoki kalit")
+    listing.add_argument("--archived", action="store_true")
+    listing.add_argument("--all", action="store_true", help="subtasklar ham")
+    listing.add_argument("--json", action="store_true")
+    listing.set_defaults(func=cmd_task_list)
+
+    show = task.add_parser("show")
+    show.add_argument("key")
+    show.add_argument("--json", action="store_true")
+    show.set_defaults(func=cmd_task_show)
+
+    new = task.add_parser("new")
+    new.add_argument("title")
+    add_task_fields(new, creating=True)
+    new.add_argument("--json", action="store_true")
+    new.set_defaults(func=cmd_task_new)
+
+    edit = task.add_parser("edit")
+    edit.add_argument("key")
+    add_task_fields(edit, creating=False)
+    edit.add_argument("--clear", action="append", help=f"bo'shatish: {', '.join(CLEARABLE)}")
+    edit.set_defaults(func=cmd_task_edit)
+
+    move = task.add_parser("move")
+    move.add_argument("key")
+    move.add_argument("status", choices=STATUSES)
+    move.set_defaults(func=cmd_task_move)
+
+    comment = task.add_parser("comment")
+    comment.add_argument("key")
+    comment.add_argument("text", nargs="?")
+    comment.add_argument("--file", help="matn fayldan; '-' — stdin")
+    comment.set_defaults(func=cmd_task_comment)
+
+    archive = task.add_parser("archive")
+    archive.add_argument("key")
+    archive.add_argument("--restore", action="store_true")
+    archive.set_defaults(func=cmd_task_archive)
+
+    epic = sub.add_parser("epic", help="epiclar").add_subparsers(dest="action", required=True)
+    epic_list = epic.add_parser("list")
+    epic_list.add_argument("--archived", action="store_true")
+    epic_list.add_argument("--json", action="store_true")
+    epic_list.set_defaults(func=cmd_epic_list)
+    epic_new = epic.add_parser("new")
+    epic_new.add_argument("title")
+    epic_new.add_argument("--desc")
+    epic_new.add_argument("--desc-file")
+    epic_new.set_defaults(func=cmd_epic_new)
+    epic_edit = epic.add_parser("edit")
+    epic_edit.add_argument("epic", help="nomi yoki id")
+    epic_edit.add_argument("--title")
+    epic_edit.add_argument("--status", choices=["open", "done"])
+    epic_edit.add_argument("--desc")
+    epic_edit.add_argument("--desc-file")
+    epic_edit.set_defaults(func=cmd_epic_edit)
+
+    release = sub.add_parser("release", help="relizlar").add_subparsers(dest="action", required=True)
+    release_list = release.add_parser("list")
+    release_list.add_argument("--archived", action="store_true")
+    release_list.add_argument("--json", action="store_true")
+    release_list.set_defaults(func=cmd_release_list)
+    release_new = release.add_parser("new")
+    release_new.add_argument("name")
+    release_new.add_argument("--date", help="YYYY-MM-DD")
+    release_new.add_argument("--desc")
+    release_new.set_defaults(func=cmd_release_new)
+
+    doc = sub.add_parser("doc", help="hujjatlar").add_subparsers(dest="action", required=True)
+    doc_list = doc.add_parser("list")
+    doc_list.add_argument("--json", action="store_true")
+    doc_list.set_defaults(func=cmd_doc_list)
+    doc_show = doc.add_parser("show")
+    doc_show.add_argument("doc", help="sarlavha yoki id")
+    doc_show.add_argument("--raw", action="store_true", help="faqat Markdown")
+    doc_show.add_argument("--json", action="store_true")
+    doc_show.set_defaults(func=cmd_doc_show)
+    doc_put = doc.add_parser("put", help="yaratish yoki yangi versiya saqlash")
+    doc_put.add_argument("file", help="Markdown fayl; '-' — stdin")
+    doc_put.add_argument("--title", required=True)
+    doc_put.add_argument("--parent", help="yuqori sahifa sarlavhasi yoki id")
+    doc_put.set_defaults(func=cmd_doc_put)
+
+    search = sub.add_parser("search", help="tasklar va hujjatlardan qidirish")
+    search.add_argument("q")
+    search.add_argument("--json", action="store_true")
+    search.set_defaults(func=cmd_search)
+
+    image = sub.add_parser("image", help="rasm yuklash va Markdown'ini chiqarish")
+    image.add_argument("file")
+    image.set_defaults(func=cmd_image)
+
+    backup = sub.add_parser("backup", help="butun bo'limni papkaga yuklab olish: loyiha.json + images/ (Owner)")
+    backup.add_argument("--out", default=".")
+    backup.set_defaults(func=cmd_backup)
+
+    restore = sub.add_parser("restore", help="backup papkasini bo'sh Loyiha'ga tiklash (Owner)")
+    restore.add_argument("folder")
+    restore.set_defaults(func=cmd_restore)
+    return parser
+
+
+def main():
+    args = build_parser().parse_args()
+    try:
+        args.func(args)
+    except PmError as error:
+        print(f"pm: {error}", file=sys.stderr)
+        sys.exit(1)
+    except KeyboardInterrupt:
+        sys.exit(130)
+
+
+if __name__ == "__main__":
+    main()
