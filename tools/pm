@@ -298,7 +298,7 @@ def task_fields(args, creating):
 
 def cmd_task_list(args):
     params = {
-        "status": ",".join(split_list(args.status)) if args.status else None,
+        "status": ",".join(split_list([args.status])) if args.status else None,
         "assignee": person_id("me" if args.mine else args.assignee),
         "epic": epic_id(args.epic),
         "release": release_id(args.release),
