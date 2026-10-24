@@ -36,7 +36,8 @@ from pathlib import Path
 CONFIG_DIR = Path.home() / ".config" / "sadora"
 TOKEN_FILE = CONFIG_DIR / "pm_token"
 CONFIG_FILE = CONFIG_DIR / "pm.json"
-DEFAULT_URL = "https://api.sadora.app"
+# Loyiha lives on staging (dev-admin.sadora.app), which CI redeploys on every dev push.
+DEFAULT_URL = "https://dev-api.sadora.app"
 
 STATUSES = ["backlog", "todo", "in_progress", "review", "done"]
 STATUS_LABELS = {"backlog": "Backlog", "todo": "Navbatda", "in_progress": "Jarayonda", "review": "Ko'rib chiqish", "done": "Tayyor"}

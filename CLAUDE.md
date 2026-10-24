@@ -3,7 +3,7 @@
 ## Tasks and docs live in "Loyiha"
 
 The team's tasks (`SAD-12`), epics, releases and docs live in the staff panel's **Loyiha**
-section (`admin.sadora.app` → Loyiha). From a session, use `tools/pm`. It signs in with the
+section on staging (`dev-admin.sadora.app` → Loyiha; API `dev-api.sadora.app`). From a session, use `tools/pm`. It signs in with the
 token in `~/.config/sadora/pm_token`; `tools/pm --help` lists the commands.
 
 - **Starting multi-step work:** find the task (`tools/pm task list --q "…"` or
