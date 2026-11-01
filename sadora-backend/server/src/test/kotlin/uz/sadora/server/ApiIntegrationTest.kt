@@ -217,6 +217,7 @@ import uz.sadora.server.admin.AdminStats
 import uz.sadora.server.auth.PasswordHasher
 import uz.sadora.server.billing.AdminPaymentView
 import uz.sadora.server.billing.BillingService
+import uz.sadora.server.billing.ClickGateway
 import uz.sadora.server.community.CommunityBadges
 import uz.sadora.contract.DoctorAccount
 import uz.sadora.contract.DoctorApplicationRequest
@@ -402,6 +403,65 @@ class ApiIntegrationTest {
         postAck("/v1/auth/logout", appSession.accessToken, uz.sadora.contract.LogoutRequest(appSession.refreshToken))
         val after = client.post("/v1/auth/refresh") { json(RefreshRequest(next)) }
         assertEquals(HttpStatusCode.Unauthorized, after.status, "signing the app out ends the widget's session")
+    }
+
+    /** A retried refresh leaves two live successors; signing out with one ends the other. */
+    @Test
+    fun `signing out ends every token a retried refresh left behind`() = api {
+        val her = signUp()
+        onboard(her)
+        val first = client.post("/v1/auth/refresh") { json(RefreshRequest(her.refreshToken)) }.body<AuthSession>().tokens
+        val second = client.post("/v1/auth/refresh") { json(RefreshRequest(her.refreshToken)) }.body<AuthSession>().tokens
+
+        postAck("/v1/auth/logout", first.accessToken, uz.sadora.contract.LogoutRequest(first.refreshToken))
+
+        // The other one first: refreshing with the signed-out token would end the family
+        // through reuse detection and hide a survivor.
+        listOf(second.refreshToken, first.refreshToken).forEach { token ->
+            assertEquals(
+                HttpStatusCode.Unauthorized,
+                client.post("/v1/auth/refresh") { json(RefreshRequest(token)) }.status,
+            )
+        }
+    }
+
+    /** The token spent just before signing out is still inside the retry window. */
+    @Test
+    fun `a token rotated moments before signing out is no longer taken for a retry`() = api {
+        val her = signUp()
+        onboard(her)
+        val current = client.post("/v1/auth/refresh") { json(RefreshRequest(her.refreshToken)) }.body<AuthSession>().tokens
+
+        postAck("/v1/auth/logout", current.accessToken, uz.sadora.contract.LogoutRequest(current.refreshToken))
+
+        assertEquals(
+            HttpStatusCode.Unauthorized,
+            client.post("/v1/auth/refresh") { json(RefreshRequest(her.refreshToken)) }.status,
+        )
+    }
+
+    @Test
+    fun `signing out everywhere closes the retry window too`() = api {
+        val her = signUp()
+        onboard(her)
+        val current = client.post("/v1/auth/refresh") { json(RefreshRequest(her.refreshToken)) }.body<AuthSession>().tokens
+
+        postAck("/v1/auth/logout", current.accessToken, uz.sadora.contract.LogoutRequest(allDevices = true))
+
+        assertEquals(
+            HttpStatusCode.Unauthorized,
+            client.post("/v1/auth/refresh") { json(RefreshRequest(her.refreshToken)) }.status,
+        )
+    }
+
+    @Test
+    fun `a refresh retried without signing out still works`() = api {
+        val her = signUp()
+        onboard(her)
+        val first = client.post("/v1/auth/refresh") { json(RefreshRequest(her.refreshToken)) }
+        val retried = client.post("/v1/auth/refresh") { json(RefreshRequest(her.refreshToken)) }
+        assertEquals(HttpStatusCode.OK, first.status, first.bodyAsTextSafe())
+        assertEquals(HttpStatusCode.OK, retried.status, retried.bodyAsTextSafe())
     }
 
     @Test
@@ -3477,6 +3537,132 @@ class ApiIntegrationTest {
         val status = get<PaymentStatus>("/v1/billing/payments/$order", user.token)
         assertEquals(PaymentState.PAID, status.state)
         assertEquals(SubscriptionSource.CLICK, assertNotNull(status.subscription).source)
+    }
+
+    /** A signed callback, in Click's form fields. */
+    private fun clickForm(
+        clickId: String,
+        order: String,
+        prepareId: String?,
+        action: Int,
+        error: Int = 0,
+        amount: String = "39900.00",
+    ): Map<String, String> {
+        val signTime = "2026-09-05 10:00:00"
+        val sign = clickSignature(
+            clickId + "12345" + "test_click_secret" + order + prepareId.orEmpty() + amount + action + signTime,
+        )
+        return buildMap {
+            put("click_trans_id", clickId)
+            put("service_id", "12345")
+            put("merchant_trans_id", order)
+            prepareId?.let { put("merchant_prepare_id", it) }
+            put("amount", amount)
+            put("action", action.toString())
+            put("error", error.toString())
+            put("sign_time", signTime)
+            put("sign_string", sign)
+        }
+    }
+
+    private suspend fun Api.clickOrder(user: TestUser): String {
+        setFlag(adminToken(), BillingService.CLICK_FLAG, enabled = true)
+        return post<CheckoutSession>(
+            "/v1/billing/checkout",
+            user.token,
+            CheckoutRequest("premium_month", PaymentProvider.CLICK),
+        ).transactionId
+    }
+
+    private fun clickId() = Random.nextLong(1_000_000_000_000).toString()
+
+    private fun JsonObject.clickError() = this["error"]?.jsonPrimitive?.int
+
+    @Test
+    fun `a Prepare replayed at Complete grants nothing`() = api {
+        val user = signUp().also { onboard(it) }
+        val order = clickOrder(user)
+        val id = clickId()
+        val prepare = clickForm(id, order, prepareId = null, action = 0)
+        assertEquals(0, click("prepare", prepare).clickError())
+
+        assertEquals(ClickGateway.ACTION_NOT_FOUND, click("complete", prepare).clickError())
+        // The same replay with the action changed cannot keep its signature, and one signed
+        // without a prepare id is refused for that.
+        assertEquals(
+            ClickGateway.TRANSACTION_NOT_FOUND,
+            click("complete", clickForm(id, order, prepareId = null, action = 1)).clickError(),
+        )
+
+        assertEquals(PaymentState.PENDING, get<PaymentStatus>("/v1/billing/payments/$order", user.token).state)
+        assertEquals(SubscriptionTier.FREE, get<Entitlements>("/v1/entitlements", user.token).tier)
+    }
+
+    @Test
+    fun `a Complete that never had a Prepare grants nothing`() = api {
+        val user = signUp().also { onboard(it) }
+        val order = clickOrder(user)
+
+        val answer = click("complete", clickForm(clickId(), order, prepareId = order, action = 1))
+
+        assertEquals(ClickGateway.TRANSACTION_NOT_FOUND, answer.clickError())
+        assertEquals(PaymentState.PENDING, get<PaymentStatus>("/v1/billing/payments/$order", user.token).state)
+    }
+
+    @Test
+    fun `a Complete naming another order or prepare id grants nothing`() = api {
+        val user = signUp().also { onboard(it) }
+        val other = signUp().also { onboard(it) }
+        val order = clickOrder(user)
+        val otherOrder = clickOrder(other)
+        val id = clickId()
+        assertEquals(0, click("prepare", clickForm(id, order, prepareId = null, action = 0)).clickError())
+
+        listOf(
+            clickForm(id, otherOrder, prepareId = order, action = 1),
+            clickForm(id, otherOrder, prepareId = otherOrder, action = 1),
+            clickForm(id, order, prepareId = otherOrder, action = 1),
+        ).forEach { form ->
+            assertEquals(ClickGateway.TRANSACTION_NOT_FOUND, click("complete", form).clickError())
+        }
+
+        assertEquals(PaymentState.PENDING, get<PaymentStatus>("/v1/billing/payments/$order", user.token).state)
+        assertEquals(PaymentState.PENDING, get<PaymentStatus>("/v1/billing/payments/$otherOrder", other.token).state)
+    }
+
+    @Test
+    fun `Click cannot take another provider's order`() = api {
+        val user = signUp().also { onboard(it) }
+        setFlag(adminToken(), BillingService.PAYME_FLAG, enabled = true)
+        val order = post<CheckoutSession>(
+            "/v1/billing/checkout",
+            user.token,
+            CheckoutRequest("premium_month", PaymentProvider.PAYME),
+        ).transactionId
+
+        val answer = click("prepare", clickForm(clickId(), order, prepareId = null, action = 0))
+
+        assertEquals(ClickGateway.ORDER_NOT_FOUND, answer.clickError())
+        assertEquals(PaymentState.PENDING, get<PaymentStatus>("/v1/billing/payments/$order", user.token).state)
+    }
+
+    @Test
+    fun `a closed Click order is not answered as a success`() = api {
+        val user = signUp().also { onboard(it) }
+        val order = clickOrder(user)
+        val id = clickId()
+        assertEquals(0, click("prepare", clickForm(id, order, prepareId = null, action = 0)).clickError())
+        assertEquals(
+            ClickGateway.TRANSACTION_CANCELLED,
+            click("complete", clickForm(id, order, prepareId = order, action = 1, error = -5017)).clickError(),
+        )
+        assertEquals(PaymentState.FAILED, get<PaymentStatus>("/v1/billing/payments/$order", user.token).state)
+
+        val again = click("complete", clickForm(id, order, prepareId = order, action = 1))
+
+        assertEquals(ClickGateway.TRANSACTION_CANCELLED, again.clickError())
+        assertEquals(PaymentState.FAILED, get<PaymentStatus>("/v1/billing/payments/$order", user.token).state)
+        assertEquals(SubscriptionTier.FREE, get<Entitlements>("/v1/entitlements", user.token).tier)
     }
 
     @Test

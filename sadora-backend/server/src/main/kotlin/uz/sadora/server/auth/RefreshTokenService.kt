@@ -5,8 +5,10 @@ import kotlin.time.Instant
 import kotlin.uuid.Uuid
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.jetbrains.exposed.v1.core.Op
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.greater
 import org.jetbrains.exposed.v1.core.isNull
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
@@ -197,43 +199,39 @@ class RefreshTokenService(
         }
     }
 
+    /**
+     * Ends the session the token belongs to. A family is one sign-in on one device, and a
+     * retried refresh can leave it more than one live token, so all of them go.
+     */
     suspend fun revoke(rawToken: String, reason: String = "logout"): Unit = dbQuery {
         val family = RefreshTokens.selectAll().where { RefreshTokens.tokenHash eq sha256(rawToken) }
             .singleOrNull()?.get(RefreshTokens.familyId)
-        RefreshTokens.update({
-            (RefreshTokens.tokenHash eq sha256(rawToken)) and RefreshTokens.revokedAt.isNull()
-        }) {
-            it[revokedAt] = now().toOffsetDateTime()
-            it[revokedReason] = reason
-        }
-        // Her widget and watch sign out with the app they came from.
-        family?.let { revokeChildrenOf(it, reason) }
+        family?.let { revokeFamilyIn(it, reason) }
     }
 
     suspend fun revokeAllForUser(userId: Uuid, reason: String): Unit = dbQuery {
-        RefreshTokens.update({
-            (RefreshTokens.userId eq userId) and RefreshTokens.revokedAt.isNull()
-        }) {
-            it[revokedAt] = now().toOffsetDateTime()
-            it[revokedReason] = reason
-        }
+        endSessions(RefreshTokens.userId eq userId, reason)
     }
 
     private fun revokeFamilyIn(familyId: Uuid, reason: String) {
-        RefreshTokens.update({
-            (RefreshTokens.familyId eq familyId) and RefreshTokens.revokedAt.isNull()
-        }) {
-            it[revokedAt] = now().toOffsetDateTime()
-            it[revokedReason] = reason
-        }
-        revokeChildrenOf(familyId, reason)
+        endSessions(RefreshTokens.familyId eq familyId, reason)
+        // Her widget and watch sign out with the app they came from.
+        endSessions(RefreshTokens.parentFamilyId eq familyId, reason)
     }
 
-    private fun revokeChildrenOf(familyId: Uuid, reason: String) {
+    private fun endSessions(scope: Op<Boolean>, reason: String) {
+        val timestamp = now()
+        RefreshTokens.update({ scope and RefreshTokens.revokedAt.isNull() }) {
+            it[revokedAt] = timestamp.toOffsetDateTime()
+            it[revokedReason] = reason
+        }
+        // A token rotated moments ago would still pass as a retry in [rotate] and get a
+        // successor of its own, so it stops reading as merely rotated. Its time stays: the
+        // grace window must not move, and older rows keep their history.
         RefreshTokens.update({
-            (RefreshTokens.parentFamilyId eq familyId) and RefreshTokens.revokedAt.isNull()
+            scope and (RefreshTokens.revokedReason eq ROTATED) and
+                (RefreshTokens.revokedAt greater (timestamp - REUSE_GRACE).toOffsetDateTime())
         }) {
-            it[revokedAt] = now().toOffsetDateTime()
             it[revokedReason] = reason
         }
     }

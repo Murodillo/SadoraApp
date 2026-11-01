@@ -77,9 +77,12 @@ class ClickGateway(
         val failure = verify(request, prepareStage = false)
         if (failure != null) return failure
 
+        // Complete only ever follows a Prepare: that is what attached Click's id to the row,
+        // and the row must be the order and the prepare id Click names. A signature alone
+        // is not enough, because a Prepare's signature also fits a Complete with no prepare id.
         val transaction = repository.byExternalId(PaymentProvider.CLICK, request.clickTransId)
-            ?: transactionFor(request)
-            ?: return error(request, ORDER_NOT_FOUND, "Order not found")
+            ?.takeIf { transactionFor(request)?.id == it.id && request.merchantPrepareId == it.id.toString() }
+            ?: return error(request, TRANSACTION_NOT_FOUND, "Transaction not found")
 
         // Click reports its own failure by sending a negative error with Complete; the
         // order goes back to being unpaid rather than being granted.
@@ -87,6 +90,12 @@ class ClickGateway(
             if (transaction.state == PaymentState.PENDING) {
                 repository.markCancelled(transaction.id, request.error, PaymentState.FAILED)
             }
+            return error(request, TRANSACTION_CANCELLED, "Transaction cancelled")
+        }
+
+        // Nothing below grants a closed order, so it must not be answered as a success:
+        // Click would take the money for an order that gives her nothing.
+        if (transaction.state == PaymentState.CANCELLED || transaction.state == PaymentState.FAILED) {
             return error(request, TRANSACTION_CANCELLED, "Transaction cancelled")
         }
 
@@ -122,12 +131,15 @@ class ClickGateway(
         if (config.serviceId != null && request.serviceId != config.serviceId) {
             return error(request, SIGN_CHECK_FAILED, "Unknown service")
         }
+        if (request.action != if (prepareStage) ACTION_PREPARE else ACTION_COMPLETE) {
+            return error(request, ACTION_NOT_FOUND, "Action not found")
+        }
         return null
     }
 
     private suspend fun transactionFor(request: Request): TransactionRecord? {
         val id = runCatching { Uuid.parse(request.merchantTransId) }.getOrNull() ?: return null
-        return repository.transaction(id)
+        return repository.transaction(id)?.takeIf { it.provider == PaymentProvider.CLICK }
     }
 
     private fun error(request: Request, code: Int, note: String) = Response(
@@ -142,9 +154,14 @@ class ClickGateway(
         const val SUCCESS = 0
         const val SIGN_CHECK_FAILED = -1
         const val INCORRECT_AMOUNT = -2
+        const val ACTION_NOT_FOUND = -3
         const val ALREADY_PAID = -4
         const val ORDER_NOT_FOUND = -5
+        const val TRANSACTION_NOT_FOUND = -6
         const val TRANSACTION_CANCELLED = -9
+
+        private const val ACTION_PREPARE = 0
+        private const val ACTION_COMPLETE = 1
     }
 }
 
