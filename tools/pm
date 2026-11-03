@@ -27,6 +27,7 @@ import argparse
 import getpass
 import json
 import os
+import ssl
 import sys
 import urllib.error
 import urllib.parse
@@ -70,6 +71,14 @@ def token():
     raise PmError("Token yo'q. Avval: tools/pm login (token panelning «API tokenlar» sahifasida yaratiladi)")
 
 
+def tls_context():
+    # python.org's Python on a Mac has no CA file until its "Install Certificates" is run.
+    paths = ssl.get_default_verify_paths()
+    if not paths.cafile and not paths.capath and os.path.exists("/etc/ssl/cert.pem"):
+        return ssl.create_default_context(cafile="/etc/ssl/cert.pem")
+    return ssl.create_default_context()
+
+
 def call(method, path, body=None, raw=None, params=None, expect_json=True):
     url = base_url() + "/v1/admin/pm" + path
     if params:
@@ -86,7 +95,7 @@ def call(method, path, body=None, raw=None, params=None, expect_json=True):
         headers["Content-Type"] = "application/json"
     request = urllib.request.Request(url, data=data, method=method, headers=headers)
     try:
-        with urllib.request.urlopen(request, timeout=60) as response:
+        with urllib.request.urlopen(request, timeout=60, context=tls_context()) as response:
             payload = response.read()
     except urllib.error.HTTPError as error:
         text = error.read().decode(errors="replace")
