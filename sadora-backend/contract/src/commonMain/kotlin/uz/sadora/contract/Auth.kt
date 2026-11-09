@@ -9,6 +9,8 @@ enum class AuthProvider {
     @SerialName("phone") PHONE,
     @SerialName("apple") APPLE,
     @SerialName("google") GOOGLE,
+    /** The Telegram Mini App, for an account already linked to the bot. */
+    @SerialName("telegram") TELEGRAM,
 }
 
 /**

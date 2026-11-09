@@ -16,9 +16,9 @@ class TelegramWords(private val language: Language) {
         "SADORA is connected ✓\nYour reminders now come here too. Use the buttons below to log without opening the app.",
     )
     val notLinked get() = pick(
-        "Bu bot SADORA ilovasi bilan ishlaydi. Ilovada Profil → Telegram bot → «Ulash» tugmasini bosing.",
-        "Этот бот работает с приложением SADORA. В приложении откройте Профиль → Telegram-бот → «Подключить».",
-        "This bot works with the SADORA app. In the app, open Profile → Telegram bot → \"Connect\".",
+        "Bu bot SADORA bilan ishlaydi. Pastdagi «Sadora» tugmasini bosib, telefon raqamingiz bilan kiring — yoki ilovada Profil → Telegram bot → «Ulash».",
+        "Этот бот работает с SADORA. Нажмите кнопку «Sadora» внизу и войдите по номеру телефона — или в приложении откройте Профиль → Telegram-бот → «Подключить».",
+        "This bot works with SADORA. Tap the \"Sadora\" button below and sign in with your phone number, or in the app open Profile → Telegram bot → \"Connect\".",
     )
     val codeExpired get() = pick(
         "Havola eskirgan yoki ishlatilgan. Ilovada «Ulash» tugmasini qaytadan bosing.",

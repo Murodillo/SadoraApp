@@ -229,6 +229,12 @@ object ErrorText {
         Entry("Xulosa topilmadi", "Итоги не найдены", "Recap not found"),
         Entry("Telegram bot hali ulanmagan", "Telegram-бот ещё не подключён", "The Telegram bot is not set up yet"),
         Entry("Telegram ulanmagan", "Telegram не подключён", "Telegram is not connected"),
+        Entry("Telegram hali Sadora hisobiga ulanmagan", "Telegram ещё не привязан к аккаунту Sadora", "This Telegram account is not linked to a Sadora account yet"),
+        Entry(
+            "Telegram ma'lumoti tasdiqlanmadi. Mini ilovani botdan qayta oching.",
+            "Данные Telegram не подтверждены. Откройте мини-приложение из бота заново.",
+            "The Telegram data could not be verified. Open the mini app from the bot again.",
+        ),
         Entry("Ko'pi bilan {0} ta kontakt", "Не больше {0} контактов", "At most {0} contacts"),
         Entry("Ismni yozing", "Напишите имя", "Write a name"),
         Entry("Ovoz bilan belgilash hozircha ishlamayapti", "Голосовая отметка сейчас недоступна", "Voice logging is not available right now"),

@@ -628,7 +628,7 @@ class AppComponent(val config: AppConfig) : AutoCloseable {
         notificationScheduler.telegram = bot::deliver
         notificationScheduler.telegramLinked = bot::isLinked
     }
-    val telegramPoller = telegramGateway?.let { uz.sadora.server.telegram.TelegramPoller(it, telegramRepository, telegramService, opsRecorder) }
+    val telegramPoller = telegramGateway?.let { uz.sadora.server.telegram.TelegramPoller(it, telegramRepository, telegramService, opsRecorder, config.telegram.webAppUrl) }
     val telegramPeriodJob = uz.sadora.server.telegram.TelegramPeriodJob(telegramRepository, userRepository, healthService, notificationRepository)
 
     val billingRepository = BillingRepository()

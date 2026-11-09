@@ -22,6 +22,9 @@ interface TelegramGateway {
     suspend fun edit(chatId: Long, messageId: Long, text: String)
 
     suspend fun answer(callbackId: String, text: String? = null)
+
+    /** The button beside every chat's input field that opens the Mini App at [url]. */
+    suspend fun setMenuButton(text: String, url: String) {}
 }
 
 /** An inline button; its [data] comes back as the callback, at most 64 bytes. */
@@ -91,6 +94,15 @@ private data class TgEditMessage(
 private data class TgAnswer(@SerialName("callback_query_id") val id: String, val text: String? = null)
 
 @Serializable
+private data class TgWebAppInfo(val url: String)
+
+@Serializable
+private data class TgMenuButton(val type: String, val text: String, @SerialName("web_app") val webApp: TgWebAppInfo)
+
+@Serializable
+private data class TgSetMenuButton(@SerialName("menu_button") val button: TgMenuButton)
+
+@Serializable
 private data class TgGetUpdates(
     val offset: Long,
     val timeout: Int,
@@ -120,6 +132,10 @@ class HttpTelegramGateway(private val client: HttpClient, private val config: Te
 
     override suspend fun answer(callbackId: String, text: String?) {
         call("answerCallbackQuery", TgAnswer(callbackId, text))
+    }
+
+    override suspend fun setMenuButton(text: String, url: String) {
+        call("setChatMenuButton", TgSetMenuButton(TgMenuButton("web_app", text, TgWebAppInfo(url))))
     }
 
     private suspend inline fun <reified T : Any> call(method: String, body: T): HttpResponse =

@@ -24,6 +24,7 @@ import io.ktor.server.testing.testApplication
 import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
@@ -4825,6 +4826,33 @@ class ApiIntegrationTest {
         assertFalse(bot.unlink(herId).linked)
         assertTrue("uzildi" in fake.sent.last().text)
         assertFalse(bot.deliver(reminder))
+
+        // The Mini App: a Telegram user nobody linked is sent to the phone sign-in, then links.
+        val now = kotlin.time.Clock.System.now().epochSeconds
+        val initData = uz.sadora.server.telegram.TelegramWebAppVerifierTest.signed(
+            "test",
+            user = "{\"id\":$chat,\"username\":\"malika\"}",
+            authDate = now,
+        )
+        val notLinked = assertFailsWith<uz.sadora.server.core.ApiException> { bot.webAppAccount(initData) }
+        assertEquals(uz.sadora.contract.ErrorCodes.TELEGRAM_NOT_LINKED, notLinked.code)
+        assertFailsWith<uz.sadora.server.core.UnauthorizedException> { bot.webAppAccount(initData.replace("hash=", "hash=0")) }
+        assertTrue(bot.linkWebApp(herId, initData).linked)
+        assertTrue("ulandi" in fake.sent.last().text, "linking from the Mini App greets her in the chat")
+        assertEquals(herId, bot.webAppAccount(initData))
+        val session = component.authService.signInLinked(
+            herId,
+            uz.sadora.contract.DeviceInfo(deviceId = "tg-$chat", platform = uz.sadora.contract.Platform.WEB),
+            uz.sadora.contract.AuthProvider.TELEGRAM,
+            uz.sadora.server.auth.RequestContext(null, null),
+        )
+        assertEquals(today, get<CycleStatus>("/v1/cycle/status", session.tokens.accessToken).today)
+        // The API's own bot has no token in tests: the Mini App is told so, not signed in.
+        val refused = client.post("/v1/telegram/webapp/session") {
+            contentType(ContentType.Application.Json)
+            setBody(uz.sadora.contract.TelegramWebAppSignInRequest(initData, uz.sadora.contract.DeviceInfo(deviceId = "tg", platform = uz.sadora.contract.Platform.WEB)))
+        }
+        assertEquals(HttpStatusCode.ServiceUnavailable, refused.status)
     }
 
     // ---------------------------------------------------------------- sos

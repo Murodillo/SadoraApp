@@ -249,6 +249,7 @@ data class AppConfig(
                     token = envOrNull("TELEGRAM_BOT_TOKEN"),
                     username = envOrNull("TELEGRAM_BOT_USERNAME")?.removePrefix("@"),
                     apiBase = env("TELEGRAM_API_BASE", "https://api.telegram.org"),
+                    webAppUrl = envOrNull("TELEGRAM_WEBAPP_URL") ?: "https://sadora.app/tg/",
                 ),
                 adminRequireTotp = env("ADMIN_REQUIRE_TOTP", (environment != Environment.DEV).toString()).toBoolean(),
                 mediaDir = env("MEDIA_DIR", "build/media"),
@@ -620,9 +621,11 @@ data class TelegramConfig(
     val token: String? = null,
     val username: String? = null,
     val apiBase: String = "https://api.telegram.org",
+    /** The Mini App the bot's menu button opens; served by the landing at /tg/. */
+    val webAppUrl: String? = null,
 ) {
     val isConfigured: Boolean get() = !token.isNullOrBlank() && !username.isNullOrBlank()
 
     override fun toString(): String =
-        "TelegramConfig(token=${if (token == null) "null" else "***"}, username=$username, apiBase=$apiBase)"
+        "TelegramConfig(token=${if (token == null) "null" else "***"}, username=$username, apiBase=$apiBase, webAppUrl=$webAppUrl)"
 }

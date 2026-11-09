@@ -110,6 +110,9 @@ object ErrorCodes {
     /** A service the API depends on could not answer — the model behind the food scanner. */
     const val UPSTREAM_UNAVAILABLE = "upstream_unavailable"
     const val INTERNAL_ERROR = "internal_error"
+
+    /** The Telegram Mini App was opened from an account no Sadora account is linked to yet. */
+    const val TELEGRAM_NOT_LINKED = "telegram_not_linked"
 }
 
 @Serializable

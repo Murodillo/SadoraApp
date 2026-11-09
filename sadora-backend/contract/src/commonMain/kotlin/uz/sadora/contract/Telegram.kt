@@ -26,3 +26,19 @@ data class TelegramLink(val url: String, val expiresAt: Instant)
 
 @Serializable
 data class TelegramSettingsRequest(val detailed: Boolean)
+
+/**
+ * The Mini App inside the bot signs in with what Telegram hands it: [initData] is the
+ * signed query string from `Telegram.WebApp.initData`, checked against the bot's token.
+ * A Telegram account not yet linked to a Sadora account gets [ErrorCodes.TELEGRAM_NOT_LINKED];
+ * the Mini App then signs in by phone code and links with [TelegramWebAppLinkRequest].
+ */
+@Serializable
+data class TelegramWebAppSignInRequest(
+    val initData: String,
+    val device: DeviceInfo,
+)
+
+/** Links the Telegram account behind [initData] to the signed-in Sadora account. */
+@Serializable
+data class TelegramWebAppLinkRequest(val initData: String)

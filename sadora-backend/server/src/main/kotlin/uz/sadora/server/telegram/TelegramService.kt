@@ -82,6 +82,36 @@ class TelegramService(
         return status(userId)
     }
 
+    // ---------------------------------------------------------------- the Mini App
+
+    /** The Sadora account the Mini App's Telegram user is linked to; refused when there is none. */
+    suspend fun webAppAccount(initData: String): Uuid {
+        val user = webAppUser(initData)
+        return telegram.linkByChat(user.id)?.userId ?: throw uz.sadora.server.core.ApiException(
+            io.ktor.http.HttpStatusCode.NotFound,
+            uz.sadora.contract.ErrorCodes.TELEGRAM_NOT_LINKED,
+            "Telegram hali Sadora hisobiga ulanmagan",
+        )
+    }
+
+    /**
+     * Links the Mini App's Telegram user to [userId] after she signed in there by phone code.
+     * Her private chat with the bot has her user id as its id, so reminders reach it as before.
+     */
+    suspend fun linkWebApp(userId: Uuid, initData: String): TelegramStatus {
+        val user = webAppUser(initData)
+        telegram.link(userId, user.id, user.username)
+        val words = TelegramWords(users.findById(userId)?.language ?: Language.UZ)
+        runCatching { gateway?.send(user.id, words.welcome, menu(words)) }
+        return status(userId)
+    }
+
+    private fun webAppUser(initData: String): TgUser {
+        val token = config.token?.takeIf { config.isConfigured }
+            ?: throw UpstreamUnavailableException("Telegram bot hali ulanmagan")
+        return TelegramWebAppVerifier(token).verify(initData)
+    }
+
     suspend fun isLinked(userId: Uuid): Boolean = config.isConfigured && telegram.linkOf(userId) != null
 
     // ---------------------------------------------------------------- the bot's side

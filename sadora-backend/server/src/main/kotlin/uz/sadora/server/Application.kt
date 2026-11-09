@@ -201,7 +201,7 @@ fun Application.apiModule(component: AppComponent) {
             conditionRoutes(component.conditionService)
             kegelRoutes(component.kegelService)
             wrappedRoutes(component.wrappedService)
-            telegramRoutes(component.telegramService)
+            telegramRoutes(component.telegramService, component.authService)
             sosRoutes(component.sosService)
             voiceRoutes(component.voiceService)
             reportRoutes(component.reportService)

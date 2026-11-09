@@ -97,6 +97,23 @@ class AuthService(
     // and a credential path no client uses is one nobody is watching. The admin realm
     // keeps its own, behind 2FA, in `admin_users`.
 
+    // ---------------------------------------------------------------- linked accounts
+
+    /**
+     * A session for an account another channel already proved — the Telegram Mini App,
+     * whose signed initData names a chat linked to [userId]. Same checks as any sign-in.
+     */
+    suspend fun signInLinked(
+        userId: Uuid,
+        device: DeviceInfo,
+        provider: AuthProvider,
+        context: RequestContext,
+    ): AuthSession {
+        val user = users.findById(userId)
+            ?: throw UnauthorizedException(message = "Foydalanuvchi topilmadi")
+        return completeSignIn(user, device, false, provider, context)
+    }
+
     // ---------------------------------------------------------------- tokens
 
     suspend fun refresh(rawRefreshToken: String, deviceId: String?): AuthSession {

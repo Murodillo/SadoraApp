@@ -36,6 +36,8 @@ class TelegramPoller(
     private val service: TelegramService,
     /** The health page's "last worked": a good poll stamps it, a failed one is counted. */
     private val ops: uz.sadora.server.ops.OpsRecorder? = null,
+    /** Where the menu button beside the chat's input opens the Mini App; null leaves it alone. */
+    private val webAppUrl: String? = null,
 ) {
     private val logger = LoggerFactory.getLogger(TelegramPoller::class.java)
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -44,6 +46,7 @@ class TelegramPoller(
     fun start() {
         job = scope.launch {
             logger.info("Telegram poller started")
+            webAppUrl?.let { url -> runCatching { gateway.setMenuButton("Sadora", url) }.onFailure { logger.warn("Telegram menu button not set", it) } }
             while (isActive) {
                 runCatching { poll() }
                     .onSuccess { ops?.alive(uz.sadora.server.ops.OpsServices.TELEGRAM) }

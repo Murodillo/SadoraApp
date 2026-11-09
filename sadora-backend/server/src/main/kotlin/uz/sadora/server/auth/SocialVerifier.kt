@@ -141,4 +141,5 @@ private fun AuthProvider.displayName(): String = when (this) {
     AuthProvider.APPLE -> "Apple"
     AuthProvider.GOOGLE -> "Google"
     AuthProvider.PHONE -> "Telefon"
+    AuthProvider.TELEGRAM -> "Telegram"
 }
