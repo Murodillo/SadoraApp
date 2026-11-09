@@ -438,7 +438,7 @@ fun PartnerCodeSheet(
     val t = strings.partner
     val scope = rememberCoroutineScope()
     val focus = LocalFocusManager.current
-    var code by remember(visible, initialCode) { mutableStateOf(formatCode(initialCode)) }
+    var code by remember(visible, initialCode) { mutableStateOf(normaliseCode(initialCode)) }
     SadoraBottomSheet(visible = visible, title = t.enterCodeTitle, onDismiss = {
         partner.clearError()
         onDismiss()
@@ -446,9 +446,10 @@ fun PartnerCodeSheet(
         SadoraTextField(
             value = code,
             onValueChange = {
-                code = formatCode(it)
+                code = normaliseCode(it)
                 partner.clearError()
             },
+            visualTransformation = PartnerCodeMask,
             label = t.codeLabel,
             placeholder = t.codeHint,
             imeAction = ImeAction.Done,
@@ -476,5 +477,25 @@ internal const val CodeLength = 8
 
 internal fun normaliseCode(raw: String): String = raw.uppercase().filter { it in CodeAlphabet }.take(CodeLength)
 
-/** `k7m2qp4x` as typed becomes `K7M2-QP4X`, the way it was handed over. */
-internal fun formatCode(raw: String): String = normaliseCode(raw).chunked(4).joinToString("-")
+/**
+ * Draws the stored code (`K7M2QP4X`) as `K7M2-QP4X` without putting the dash in the text.
+ *
+ * The fields used to store the code with its dash. The dash appeared under the caret at the
+ * fifth character and the caret stayed in front of it, so every later character went in
+ * before the last one: `6KGPX2EV` typed by hand arrived as `6KGP-2EVX`, and the server
+ * said the code did not exist. The value is now only the code; the dash is drawing.
+ */
+internal object PartnerCodeMask : androidx.compose.ui.text.input.VisualTransformation {
+    override fun filter(text: androidx.compose.ui.text.AnnotatedString): androidx.compose.ui.text.input.TransformedText {
+        val raw = text.text
+        val length = raw.length
+        return androidx.compose.ui.text.input.TransformedText(
+            androidx.compose.ui.text.AnnotatedString(raw.chunked(4).joinToString("-")),
+            object : androidx.compose.ui.text.input.OffsetMapping {
+                override fun originalToTransformed(offset: Int): Int = if (offset <= 4) offset else offset + 1
+                override fun transformedToOriginal(offset: Int): Int =
+                    (if (offset <= 4) offset else offset - 1).coerceIn(0, length)
+            },
+        )
+    }
+}

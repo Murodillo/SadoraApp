@@ -69,7 +69,7 @@ fun PartnerJoinFlow(
     val partner = controllers.partner
     val scope = rememberCoroutineScope()
     var step by remember { mutableStateOf(JoinStep.Code) }
-    var code by remember { mutableStateOf(formatCode(state.pendingPartnerCode.orEmpty())) }
+    var code by remember { mutableStateOf(normaliseCode(state.pendingPartnerCode.orEmpty())) }
     var name by remember { mutableStateOf("") }
     var challenge by remember { mutableStateOf<OtpChallenge?>(null) }
     var otp by remember(challenge) { mutableStateOf(challenge?.devCode.orEmpty()) }
@@ -125,7 +125,7 @@ fun PartnerJoinFlow(
             JoinStep.Code -> CodeStep(
                 code = code,
                 onCode = {
-                    code = formatCode(it)
+                    code = normaliseCode(it)
                     partner.clearError()
                 },
                 name = name,
@@ -222,6 +222,7 @@ private fun CodeStep(
                 SadoraTextField(
                     value = code,
                     onValueChange = onCode,
+                    visualTransformation = PartnerCodeMask,
                     label = t.codeLabel,
                     placeholder = t.codeHint,
                     leadingIcon = SadoraIcons.Heart,
