@@ -23,7 +23,7 @@ class TelegramWebAppVerifierTest {
     }
 
     @Test
-    fun `refuses another bot's signature, a changed field, an old one and a missing user`() {
+    fun `refuses another bot's signature — a changed field — an old one — a missing user`() {
         assertFailsWith<UnauthorizedException> { verifier.verify(signed("999:other")) }
         assertFailsWith<UnauthorizedException> { verifier.verify(signed(token).replace("%22id%22%3A42", "%22id%22%3A43")) }
         assertFailsWith<UnauthorizedException> {

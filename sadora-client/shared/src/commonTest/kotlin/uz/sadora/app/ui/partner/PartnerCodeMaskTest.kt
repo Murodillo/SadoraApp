@@ -17,7 +17,7 @@ class PartnerCodeMaskTest {
     }
 
     @Test
-    fun `the dash is only drawn, and the caret maps across it`() {
+    fun `the dash is only drawn — the caret maps across it`() {
         val shown = PartnerCodeMask.filter(AnnotatedString("6KGPX2EV"))
         assertEquals("6KGP-X2EV", shown.text.text)
         val map = shown.offsetMapping
